@@ -44,6 +44,11 @@ container runtime configuration.`,
   # Log in to a private registry
   devguard-scanner login -u admin -p secret registry.example.com`,
 		RunE: runLogin,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner login — Log in to a container registry",
+			"description":     "Authenticate devguard-scanner with a remote container registry using a username and password so it can pull and push images.",
+			"keyword_primary": "devguard-scanner login",
+		},
 	}
 
 	cmd.Flags().StringP("username", "u", "", "The username to authenticate to the container registry (required)")

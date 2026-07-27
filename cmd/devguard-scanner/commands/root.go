@@ -73,6 +73,11 @@ and 'attest' to interact with the platform. Configuration can be provided via a
 
   # Upload a SARIF report
   devguard-scanner sarif results.sarif.json`,
+	Annotations: map[string]string{
+		"title":           "DevGuard-Scanner — Secure your software supply chain",
+		"description":     "DevGuard Scanner is a CLI to generate, sign and upload SBOMs, SARIF reports and attestations to a DevGuard backend and secure your software supply chain.",
+		"keyword_primary": "devguard-scanner",
+	},
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// init the logger - get the level
@@ -135,6 +140,11 @@ func init() {
 			fmt.Printf("Built:      %s\n", firstNonEmpty(buildconfig.BuildDate, date))
 			fmt.Printf("Built by:   %s\n", builtBy)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner version — Show version information",
+			"description":     "Display version, commit, build date and builder information for the installed devguard-scanner CLI.",
+			"keyword_primary": "devguard-scanner version",
+		},
 	}
 
 	RootCmd.AddCommand(
@@ -185,7 +195,7 @@ func initLogger(level slog.Leveler) {
 
 	// set global logger with custom options
 	slog.SetDefault(slog.New(
-		tint.NewHandler(w, &tint.Options{
+		tint.NewTextHandler(w, &tint.Options{
 			Level:      level,
 			TimeFormat: time.Kitchen,
 			AddSource:  true,

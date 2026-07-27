@@ -74,6 +74,11 @@ provided token or the DEVGUARD_TOKEN environment variable.`,
 			fmt.Print(string(b))
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner get — Authenticated GET request",
+			"description":     "Perform a simple GET request signed with a DevGuard Personal Access Token using devguard-scanner get; deprecated in favor of the curl command.",
+			"keyword_primary": "devguard-scanner get",
+		},
 	}
 
 	getCmd.Flags().StringP("token", "t", "", "DevGuard Personal Access Token (or set DEVGUARD_TOKEN env var). Used to sign the outgoing request. If empty, command will print help.")

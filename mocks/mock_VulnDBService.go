@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -142,6 +143,68 @@ func (_c *VulnDBService_ExportRCWithDiff_Call) Return(err error) *VulnDBService_
 }
 
 func (_c *VulnDBService_ExportRCWithDiff_Call) RunAndReturn(run func(ctx context.Context, localArchive bool) error) *VulnDBService_ExportRCWithDiff_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FetchAllCSAFSources provides a mock function for the type VulnDBService
+func (_mock *VulnDBService) FetchAllCSAFSources(ctx context.Context) ([]models.CVE, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchAllCSAFSources")
+	}
+
+	var r0 []models.CVE
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]models.CVE, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []models.CVE); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVE)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnDBService_FetchAllCSAFSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchAllCSAFSources'
+type VulnDBService_FetchAllCSAFSources_Call struct {
+	*mock.Call
+}
+
+// FetchAllCSAFSources is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *VulnDBService_Expecter) FetchAllCSAFSources(ctx interface{}) *VulnDBService_FetchAllCSAFSources_Call {
+	return &VulnDBService_FetchAllCSAFSources_Call{Call: _e.mock.On("FetchAllCSAFSources", ctx)}
+}
+
+func (_c *VulnDBService_FetchAllCSAFSources_Call) Run(run func(ctx context.Context)) *VulnDBService_FetchAllCSAFSources_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnDBService_FetchAllCSAFSources_Call) Return(cVEs []models.CVE, err error) *VulnDBService_FetchAllCSAFSources_Call {
+	_c.Call.Return(cVEs, err)
+	return _c
+}
+
+func (_c *VulnDBService_FetchAllCSAFSources_Call) RunAndReturn(run func(ctx context.Context) ([]models.CVE, error)) *VulnDBService_FetchAllCSAFSources_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -118,6 +118,19 @@
             ]
         },
         {
+            "name": "VulnDB Local Import",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "vulndb",
+                "import",
+                "--localArchive"
+            ]
+        },
+                {
             "name": "Migrate",
             "type": "go",
             "request": "launch",

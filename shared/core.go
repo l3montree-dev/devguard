@@ -35,7 +35,7 @@ func InitLogger() {
 
 	// set global logger with custom options
 	slog.SetDefault(slog.New(
-		tint.NewHandler(w, &tint.Options{
+		tint.NewTextHandler(w, &tint.Options{
 			Level:      slog.LevelDebug,
 			AddSource:  true,
 			TimeFormat: time.Kitchen,

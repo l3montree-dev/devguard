@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"gorm.io/datatypes"
 )
 
@@ -56,6 +57,7 @@ type CVEDTO struct {
 	Risk                  RiskMetrics       `json:"risk"`
 	Exploits              []ExploitDTO      `json:"exploits"`
 	Relationships         []RelationshipDTO `json:"relationships"`
+	EUVDExploitAdd        *datatypes.Date   `json:"euvdExploitAdd" format:"date"`
 }
 
 type VulnState string
@@ -137,4 +139,14 @@ type BatchDependencyVulnStatus struct {
 	StatusType              string                      `json:"status"`
 	Justification           string                      `json:"justification" validate:"max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+}
+
+type DetailedDependencyVulnWithRelationsDTO struct {
+	DetailedDependencyVulnDTO
+	Related map[RelationshipType][]CVEDTO `json:"related"`
+}
+
+type CVEWithRelationsDTO struct {
+	CVEDTO
+	Related map[RelationshipType][]CVEDTO `json:"related"`
 }

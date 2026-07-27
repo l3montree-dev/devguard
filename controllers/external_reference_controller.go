@@ -66,7 +66,7 @@ func NewExternalReferenceController(
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {array} ExternalReferenceDTO
+// @Success 200 {array} dtos.ExternalReferenceDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references [get]
 func (c *ExternalReferenceController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -100,8 +100,8 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param request body CreateExternalReferenceRequest true "Create request"
-// @Success 201 {object} ExternalReferenceDTO
+// @Param request body dtos.CreateExternalReferenceRequest true "Create request"
+// @Success 201 {object} dtos.ExternalReferenceDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references [post]
 func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)

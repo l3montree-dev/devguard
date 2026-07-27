@@ -80,6 +80,11 @@ VEX documents use the CycloneDX format. Most tools that generate SBOMs can also 
 			slog.Info("vex document uploaded successfully")
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner vex — Upload a VEX document",
+			"description":     "Upload a CycloneDX VEX document to DevGuard with devguard-scanner vex to suppress non-exploitable CVEs so they no longer count against your risk score.",
+			"keyword_primary": "devguard-scanner vex",
+		},
 	}
 	scanner.AddDependencyVulnsScanFlags(vexCommand)
 	if err := vexCommand.MarkPersistentFlagRequired("assetName"); err != nil {

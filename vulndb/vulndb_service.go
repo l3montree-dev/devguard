@@ -27,6 +27,7 @@ import (
 )
 
 const vulnDBArchiveName = "vulndb.tar.zst"
+const vulnDBURI = "ghcr.io/l3montree-dev/devguard/vulndb/v3"
 
 var _ shared.VulnDBService = (*VulnDBService)(nil)
 
@@ -39,8 +40,10 @@ const debugImport = false
 // and malicious packages.
 type VulnDBService struct {
 	osv               osvService
+	euvdService       euvdService
 	epss              epssService
 	cisaKEV           cisaKEVService
+	euvdKEV           euvdKEVService
 	githubExploits    *githubExploitDBService
 	exploitDB         exploitDBService
 	maliciousPackages *MaliciousPackageChecker
@@ -59,8 +62,10 @@ func NewVulnDBService(
 ) *VulnDBService {
 	return &VulnDBService{
 		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
+		euvdService:       NewEUVDService(cveRepository, cveRelationshipRepository, pool),
 		epss:              NewEPSSService(cveRepository, cveRelationshipRepository),
 		cisaKEV:           NewCISAKEVService(cveRepository, cveRelationshipRepository),
+		euvdKEV:           NewEUVDKEVService(cveRepository, cveRelationshipRepository),
 		githubExploits:    NewGithubExploitDBService(exploitRepository),
 		exploitDB:         NewExploitDBService(exploitRepository),
 		maliciousPackages: maliciousPackageChecker,
@@ -71,8 +76,8 @@ func NewVulnDBService(
 
 // ExportRC fetches all vulnerability data sources, writes gob files for each,
 // populates the database, and writes a full integrity_checks.json.
-func (s *VulnDBService) ExportRC(ctx context.Context) error {
-	return s.exportRC(ctx, false)
+func (service *VulnDBService) ExportRC(ctx context.Context) error {
+	return service.exportRC(ctx, false)
 }
 
 // ExportRCWithDiff is like ExportRC but also computes a QuickDiff against the
@@ -80,20 +85,20 @@ func (s *VulnDBService) ExportRC(ctx context.Context) error {
 // on exactly the previous version can skip staging tables and apply the patch directly.
 // It first imports the current artifact to establish a known baseline in the DB, then
 // exports fresh data and computes the diff — making it self-contained in CI.
-func (s *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
+func (service *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
 	slog.Info("quick-diff: importing previous artifact to establish baseline")
-	if err := s.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
+	if err := service.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
 		slog.Info("quick-diff: failed to import previous artifact, proceeding with export without diff", "error", err)
-		return s.exportRC(ctx, false)
+		return service.exportRC(ctx, false)
 	}
-	return s.exportRC(ctx, true)
+	return service.exportRC(ctx, true)
 }
 
-func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
+func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	slog.Info("start vulndb export", "compute_diff", computeDiff)
 	start := time.Now()
 
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := service.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("could not acquire db connection: %w", err)
 	}
@@ -114,7 +119,7 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	var prevVersion time.Time
 	if computeDiff {
 		var lastImportStr string
-		if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err != nil || lastImportStr == "" {
+		if err := service.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err != nil || lastImportStr == "" {
 			slog.Info("quick-diff: no previous import timestamp in config, skipping diff")
 			computeDiff = false
 		} else {
@@ -133,28 +138,71 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		return fmt.Errorf("could not truncate malicious package tables: %w", err)
 	}
 
+	// prepare the tables for bulk insert before any loading begins
+	if err := PrepareBulkInsert(ctx, tx); err != nil {
+		return fmt.Errorf("could not prepare bulk insert: %w", err)
+	}
+
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
-	osvEntries, survivingCVEs, err := s.osv.fetchAndImportOSV(ctx, tx, start)
+	allOSVVulns, err := service.osv.fetchAndImportOSV(ctx, tx, start)
 	if err != nil {
 		return fmt.Errorf("OSV fetch failed: %w", err)
 	}
+
+	csafAdvisories, err := fetchAllCSAFSources(ctx)
+	if err != nil {
+		return fmt.Errorf("could not fetch CSAF sources: %w", err)
+	}
+
+	// then we can add the additional data sources
+	// load the EUVD aliases into the cve_relationship table
+	euvdRelationships, err := service.euvdService.importEUVDAliases(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
+	}
+
+	if err := importCSAFAdvisories(ctx, tx, csafAdvisories); err != nil {
+		return fmt.Errorf("could not import CSAF advisories: %w", err)
+	}
+
+	osvEntries, survivingCVEs, err := cleanUpAndFilterSurvivors(ctx, tx, allOSVVulns)
+	if err != nil {
+		return fmt.Errorf("could not clean up and filter OSV entries: %w", err)
+	}
+
+	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
+		return fmt.Errorf("could not re-add indexes and constraints: %w", err)
+	}
+
 	if err := writeGobFileItems(osvEntries, "osv.gob"); err != nil {
 		return fmt.Errorf("could not write OSV gob: %w", err)
 	}
 	slog.Info("wrote osv.gob", "entries", len(osvEntries))
 
+	euvdRelationships = filterRelationshipsBySurvivingSource(euvdRelationships, survivingCVEs)
+	if err := writeGobFileItems(euvdRelationships, "euvd_relationships.gob"); err != nil {
+		return fmt.Errorf("could not write EUVD gob: %w", err)
+	}
+	slog.Info("wrote euvd relationships data", "entries", len(euvdRelationships))
+
+	survivingAdvisories := filterSurvivingAdvisories(csafAdvisories, survivingCVEs)
+	if err := writeGobFileItems(survivingAdvisories, "csaf_advisories.gob"); err != nil {
+		return fmt.Errorf("could not write csaf advisories gob: %w", err)
+	}
+	slog.Info("wrote csaf advisories data", "entries", len(survivingAdvisories))
+
 	// Fetch the remaining sources in parallel (network only — no DB writes yet).
 	var (
 		epssData    map[string]dtos.EPSS
-		kevEntries  []CISAKEVEntry
+		kevEntries  []KEVEntry
 		allExploits []models.Exploit
 	)
 	group, groupCtx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
 		slog.Info("start fetching EPSS data")
-		data, err := s.epss.Fetch(groupCtx)
+		data, err := service.epss.Fetch(groupCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch EPSS data: %w", err)
 		}
@@ -168,20 +216,31 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	})
 
 	group.Go(func() error {
-		slog.Info("start fetching CISA KEV data")
+		slog.Info("start fetching KEV data")
 		kevFetchCtx, kevCancel := context.WithTimeout(groupCtx, 30*time.Second)
 		defer kevCancel()
-		kevCVEs, err := s.cisaKEV.Fetch(kevFetchCtx)
+		cisaKEVCVEs, err := service.cisaKEV.Fetch(kevFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch CISA KEV data: %w", err)
 		}
-		filtered := kevCVEs[:0]
-		for _, c := range kevCVEs {
+		slog.Info("successfully fetched CISA KEV data")
+
+		euvdKEVCVEs, err := service.euvdKEV.Fetch(kevFetchCtx)
+		if err != nil {
+			return fmt.Errorf("could not fetch EUVD KEV data: %w", err)
+		}
+		slog.Info("successfully fetched EUVD KEV data")
+
+		allKEVCVEs := mergeKEVInformation(cisaKEVCVEs, euvdKEVCVEs)
+
+		filtered := make([]models.CVE, 0, len(allKEVCVEs))
+		for _, c := range allKEVCVEs {
 			if _, ok := survivingCVEs[c.CVE]; ok {
 				filtered = append(filtered, c)
 			}
 		}
-		kevEntries = cisaKEVEntriesToGob(filtered)
+
+		kevEntries = kevEntriesToGob(filtered)
 		return nil
 	})
 
@@ -189,13 +248,13 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 		slog.Info("start fetching exploit data")
 		exploitFetchCtx, exploitCancel := context.WithTimeout(groupCtx, 5*time.Minute)
 		defer exploitCancel()
-		edbExploits, err := s.exploitDB.Fetch(exploitFetchCtx)
+		edbExploits, err := service.exploitDB.Fetch(exploitFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch ExploitDB data: %w", err)
 		}
 		ghFetchCtx, ghCancel := context.WithTimeout(groupCtx, 10*time.Minute)
 		defer ghCancel()
-		ghExploits, err := s.githubExploits.Fetch(ghFetchCtx)
+		ghExploits, err := service.githubExploits.Fetch(ghFetchCtx)
 		if err != nil {
 			return fmt.Errorf("could not fetch GitHub exploit data: %w", err)
 		}
@@ -224,9 +283,9 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not write EPSS data: %w", err)
 	}
-	slog.Info("writing CISA KEV data to database")
-	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
-		return fmt.Errorf("could not write CISA KEV data: %w", err)
+	slog.Info("writing KEV data to database")
+	if err := InsertKEVBulk(ctx, tx, kevEntries); err != nil {
+		return fmt.Errorf("could not write KEV data: %w", err)
 	}
 	slog.Info("writing exploit data to database")
 	if err := insertExploitsBulk(ctx, tx, allExploits, "exploits_stage"); err != nil {
@@ -293,6 +352,8 @@ func (s *VulnDBService) exportRC(ctx context.Context, computeDiff bool) error {
 
 	archiveFiles := []string{
 		"osv.gob",
+		"euvd_relationships.gob",
+		"csaf_advisories.gob",
 		"epss.gob",
 		"cisakev.gob",
 		"exploits.gob",
@@ -334,7 +395,7 @@ func readIntegrityInformation(workingDir string) (IntegrityInformation, error) {
 // all data sources (OSV, CISA KEV, exploits, malicious packages) to the database.
 // If the integrity check fails after an incremental import, it alerts and retries
 // as a full import (ignoring the last-import watermark).
-func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) (err error) {
+func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions) (err error) {
 	ctx, span := vulndbTracer.Start(ctx, "VulnDBService.ImportRC")
 
 	defer func() {
@@ -373,7 +434,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 
 	var lastImportTime time.Time
 	var lastImportStr string
-	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
+	if err := service.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
 		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
 	}
 
@@ -391,7 +452,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 	}
 
 	// Open a single pgx connection and transaction for all DB writes.
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := service.pool.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("could not acquire db connection: %w", err)
 	}
@@ -402,7 +463,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		return fmt.Errorf("could not begin transaction: %w", err)
 	}
 
-	failingTables, err := s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, true)
+	failingTables, err := service.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, true)
 	if err == errQuickDiffFailed {
 		// Quickdiff path was tried but failed or didn't pass integrity. Roll back the
 		// current transaction (which may have polluted temp tables) and retry with a
@@ -415,7 +476,7 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 		if err != nil {
 			return fmt.Errorf("could not begin retry transaction: %w", err)
 		}
-		failingTables, err = s.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, false)
+		failingTables, err = service.applyFromWorkingDir(ctx, tx, workingDir, integrity, opts.Bulk, false)
 	}
 	if err != nil {
 		if opts.Debug {
@@ -433,10 +494,10 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 
 	slog.Info("successfully passed integrity validation", "importTimestamp", integrity.ImportTimestamp)
 
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
+	if err := service.configService.SetJSONConfig(ctx, "vulndb.lastRCImport", integrity.ImportTimestamp.Format(time.RFC3339Nano)); err != nil {
 		return fmt.Errorf("could not update last import time: %w", err)
 	}
-	if err := s.configService.SetJSONConfig(ctx, "vulndb.lastRCIntegrity", integrity); err != nil {
+	if err := service.configService.SetJSONConfig(ctx, "vulndb.lastRCIntegrity", integrity); err != nil {
 		return fmt.Errorf("could not save integrity information: %w", err)
 	}
 
@@ -452,13 +513,23 @@ func (s *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOptions)
 // staging tables per-batch, then applies an EXCEPT-based sync to update the live tables.
 // All entries are always staged (no lastImportTime filtering) — the EXCEPT sync handles
 // incremental updates, deletes, and inserts correctly regardless of import history.
-func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx, workingDir string) error {
+func (service *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx, workingDir string) error {
 	group, groupCtx := errgroup.WithContext(ctx)
 
 	var (
 		epssData   map[string]dtos.EPSS
-		kevEntries []CISAKEVEntry
+		kevEntries []KEVEntry
 	)
+
+	euvdRelationships, err := readAllGobItems[models.CVERelationship](workingDir + "/euvd_relationships.gob")
+	if err != nil {
+		return fmt.Errorf("could not read euvd relationships gob: %w", err)
+	}
+
+	csafAdvisories, err := readAllGobItems[models.CVE](workingDir + "/csaf_advisories.gob")
+	if err != nil {
+		return fmt.Errorf("could not read csaf advisories gob: %w", err)
+	}
 
 	vulndbChan := make(chan vulndbRows, 4)
 	exploitChan := make(chan []models.Exploit, 4)
@@ -513,7 +584,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan)
+		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, euvdRelationships, csafAdvisories)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -527,7 +598,7 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 	slog.Info("applied epss data", "entries", len(epssData), "took", time.Since(t))
 
 	t = time.Now()
-	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not apply CISA KEV data: %w", err)
 	}
 	slog.Info("applied cisa kev data", "entries", len(kevEntries), "took", time.Since(t))
@@ -538,14 +609,16 @@ func (s *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx pgx.Tx,
 // populateDBFromGobsBulk reads all gob files fully into RAM then writes everything to the
 // database via writeToDatabase. Intended for full (initial) imports where truncating live
 // tables and rebuilding indexes afterward is faster than the EXCEPT-based incremental sync.
-func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, workingDir string) error {
+func (service *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, workingDir string) error {
 	group, _ := errgroup.WithContext(ctx)
 
 	var (
-		osvEntries []OSVEntry
-		epssData   map[string]dtos.EPSS
-		kevEntries []CISAKEVEntry
-		gobExploit []GobExploit
+		osvEntries        []OSVEntry
+		euvdRelationships []models.CVERelationship
+		csafAdvisories    []models.CVE
+		epssData          map[string]dtos.EPSS
+		kevEntries        []KEVEntry
+		gobExploit        []GobExploit
 	)
 
 	group.Go(func() error {
@@ -556,6 +629,26 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 			return fmt.Errorf("could not read OSV gob: %w", err)
 		}
 		slog.Info("decoded osv.gob", "entries", len(osvEntries), "took", time.Since(t))
+		return nil
+	})
+	group.Go(func() error {
+		t := time.Now()
+		var err error
+		euvdRelationships, err = readAllGobItems[models.CVERelationship](workingDir + "/euvd_relationships.gob")
+		if err != nil {
+			return fmt.Errorf("could not read EUVD gob: %w", err)
+		}
+		slog.Info("decoded euvd_relationships.gob", "entries", len(euvdRelationships), "took", time.Since(t))
+		return nil
+	})
+	group.Go(func() error {
+		t := time.Now()
+		var err error
+		csafAdvisories, err = readAllGobItems[models.CVE](workingDir + "/csaf_advisories.gob")
+		if err != nil {
+			return fmt.Errorf("could not read csaf advisory gob: %w", err)
+		}
+		slog.Info("decoded csaf_advisories.gob", "entries", len(csafAdvisories), "took", time.Since(t))
 		return nil
 	})
 	group.Go(func() error {
@@ -593,7 +686,7 @@ func (s *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx.Tx, w
 	malRows := gobOSVToMalTransformer(osvEntries)
 	exploits := gobExploitFilterTransformer(gobExploit)
 
-	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries); err != nil {
+	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, euvdRelationships, csafAdvisories); err != nil {
 		return err
 	}
 	return nil
@@ -608,7 +701,13 @@ func heapMB() uint64 {
 	return m.HeapAlloc / 1024 / 1024
 }
 
-func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []CISAKEVEntry) error {
+func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry, euvdRelationships []models.CVERelationship, csafAdvisories []models.CVE) error {
+	advisoryRelationships := make([]models.CVERelationship, 0, len(csafAdvisories)*8)
+	for i := range csafAdvisories {
+		advisoryRelationships = append(advisoryRelationships, csafAdvisories[i].Relationships...)
+		csafAdvisories[i].Relationships = nil
+	}
+
 	slog.Info("start writing rows to database", "heap_alloc_mb", heapMB())
 	start := time.Now()
 
@@ -625,16 +724,22 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	}
 
 	t := time.Now()
-	if err := InsertCVEsBulk(ctx, tx, rows.CVEs, "cves_stage"); err != nil {
+	if err := InsertCVEsBulk(ctx, tx, append(rows.CVEs, csafAdvisories...), "cves_stage"); err != nil {
 		return fmt.Errorf("could not copy cves to staging: %w", err)
 	}
 	slog.Info("copied cves to staging", "count", len(rows.CVEs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := InsertCVERelationshipsBulk(ctx, tx, rows.CVERelationships, "cve_relationships_stage"); err != nil {
+	if err := InsertCVERelationshipsBulk(ctx, tx, append(rows.CVERelationships, advisoryRelationships...), "cve_relationships_stage"); err != nil {
 		return fmt.Errorf("could not copy cve relationships to staging: %w", err)
 	}
 	slog.Info("copied cve_relationships to staging", "count", len(rows.CVERelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
+
+	t = time.Now()
+	if err := InsertCVERelationshipsBulk(ctx, tx, euvdRelationships, "cve_relationships_stage"); err != nil {
+		return fmt.Errorf("could not copy euvd cve relationships to staging: %w", err)
+	}
+	slog.Info("copied euvd cve_relationships to staging", "count", len(euvdRelationships), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
 	if err := insertAffectedComponentsBulk(ctx, tx, rows.AffectedComponents, "affected_components_stage"); err != nil {
@@ -661,22 +766,22 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	slog.Info("copied malicious_packages to staging", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
+	if err := SyncAllTables(ctx, tx); err != nil {
+		return fmt.Errorf("could not sync staging tables to live: %w", err)
+	}
+	slog.Info("synced staging tables to live", "took", time.Since(t), "heap_alloc_mb", heapMB())
+
+	t = time.Now()
 	if err := InsertEPSSBulk(ctx, tx, epssData); err != nil {
 		return fmt.Errorf("could not insert epss: %w", err)
 	}
 	slog.Info("inserted epss", "count", len(epssData), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
-	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertKEVBulk(ctx, tx, kevEntries); err != nil {
 		return fmt.Errorf("could not insert cisa kev: %w", err)
 	}
 	slog.Info("inserted cisa_kev", "count", len(kevEntries), "took", time.Since(t), "heap_alloc_mb", heapMB())
-
-	t = time.Now()
-	if err := SyncAllTables(ctx, tx); err != nil {
-		return fmt.Errorf("could not sync staging tables to live: %w", err)
-	}
-	slog.Info("synced staging tables to live", "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 		return fmt.Errorf("could not rebuild indexes and constraints: %w", err)
@@ -706,7 +811,7 @@ func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error
 // tryApplyQuickDiff attempts to apply a pre-computed QuickDiff from the archive.
 // Returns (nil, true, nil) on success, (nil, false, nil) if no quickdiff is present
 // or the version doesn't match, and (nil, false, err) on a hard failure.
-func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation) (bool, error) {
+func (service *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation) (bool, error) {
 	var diff QuickDiff
 	if err := readGobFile(workingDir+"/quickdiff.gob", &diff); err != nil {
 		slog.Info("no quickdiff found in archive, skipping quick diff application")
@@ -715,7 +820,7 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 
 	var lastImportStr string
 	var lastImportTime time.Time
-	if err := s.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
+	if err := service.configService.GetJSONConfig(ctx, "vulndb.lastRCImport", &lastImportStr); err == nil {
 		lastImportTime, _ = time.Parse(time.RFC3339Nano, lastImportStr)
 	}
 	if !diff.FromVersion.Equal(lastImportTime) {
@@ -738,11 +843,11 @@ func (s *VulnDBService) tryApplyQuickDiff(ctx context.Context, tx pgx.Tx, workin
 		return false, fmt.Errorf("quick-diff: could not apply epss: %w", err)
 	}
 
-	var kevEntries []CISAKEVEntry
+	var kevEntries []KEVEntry
 	if err := readGobFile(workingDir+"/cisakev.gob", &kevEntries); err != nil {
 		return false, fmt.Errorf("quick-diff: could not read cisakev.gob: %w", err)
 	}
-	if err := InsertCISAKEVBulk(ctx, tx, kevEntries); err != nil {
+	if err := InsertKEVBulk(ctx, tx, kevEntries); err != nil {
 		return false, fmt.Errorf("quick-diff: could not apply cisa kev: %w", err)
 	}
 
@@ -759,9 +864,9 @@ var errQuickDiffFailed = fmt.Errorf("quick-diff failed, needs full sync in a new
 // bulk=false uses streaming with EXCEPT-based sync (correct for incremental updates).
 // When tryQuickDiff=true the quickdiff path is attempted first; on failure it returns
 // errQuickDiffFailed so the caller can rollback and retry with tryQuickDiff=false.
-func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
+func (service *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, workingDir string, integrityGroundTruth IntegrityInformation, bulk bool, tryQuickDiff bool) ([]string, error) {
 	if tryQuickDiff {
-		ok, err := s.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
+		ok, err := service.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
 		if err != nil {
 			slog.Warn("quick-diff apply failed, will retry as full sync", "err", err)
 			monitoring.Alert("vulndb quick-diff apply failed", fmt.Errorf("quick-diff apply failed: %w, will retry as full sync", err))
@@ -790,9 +895,9 @@ func (s *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx, work
 	slog.Info("populating database from gob files")
 	var err error
 	if bulk {
-		err = s.populateDBFromGobsBulk(ctx, tx, workingDir)
+		err = service.populateDBFromGobsBulk(ctx, tx, workingDir)
 	} else {
-		err = s.populateDBFromGobsStream(ctx, tx, workingDir)
+		err = service.populateDBFromGobsStream(ctx, tx, workingDir)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not populate database from gob files: %w", err)
@@ -854,8 +959,7 @@ func pullVulnDBDebug(ctx context.Context) (string, string, error) {
 }
 
 func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
-	reg := "ghcr.io/l3montree-dev/devguard/vulndb/v2"
-	repo, err := remote.NewRepository(reg)
+	repo, err := remote.NewRepository(vulnDBURI)
 	if err != nil {
 		return "", "", fmt.Errorf("could not connect to remote repository: %w", err)
 	}
@@ -904,7 +1008,7 @@ func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 // streamToDatabase drains all three input channels in a single goroutine, writes all rows
 // into staging tables, then syncs to live tables. When direct=true (empty DB) it uses
 // flushStagingTables (simple INSERT) instead of SyncAllTables (expensive EXCEPT diff).
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows) error {
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, euvdRelationships []models.CVERelationship, advisories []models.CVE) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -1010,6 +1114,21 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		}
 	}
 
+	advisoryRelationships := make([]models.CVERelationship, 0, len(advisories)*8)
+	for i := range advisories {
+		advisoryRelationships = append(advisoryRelationships, advisories[i].Relationships...)
+		advisories[i].Relationships = nil
+	}
+
+	if err := InsertCVEsBulk(ctx, tx, advisories, "cves_stage"); err != nil {
+		return fmt.Errorf("could not insert advisories: %w", err)
+	}
+
+	if err := InsertCVERelationshipsBulk(ctx, tx, append(euvdRelationships, advisoryRelationships...), "cve_relationships_stage"); err != nil {
+		return fmt.Errorf("could not insert euvd cve relationships: %w", err)
+	}
+	relationshipCount += len(euvdRelationships)
+
 	if err := SyncAllTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not sync staging tables to live: %w", err)
 	}
@@ -1025,4 +1144,34 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		"took", time.Since(start),
 	)
 	return nil
+}
+
+// builds the union of 2 KEV slices - if we have duplicate entries from the EUVD we overwrite the CISA data with the EUVD data
+func mergeKEVInformation(cisaKEV, euvdKEV []models.CVE) []models.CVE {
+	cveIDToKev := make(map[string]models.CVE, len(cisaKEV)+len(euvdKEV))
+
+	// first fill the map with all KEV data from the CISA
+	for i := range cisaKEV {
+		cveIDToKev[cisaKEV[i].CVE] = cisaKEV[i]
+	}
+
+	// then for each KEV entry from the EUVD check if it already exists and if it does merge existing information
+	for _, kev := range euvdKEV {
+		if cve, ok := cveIDToKev[kev.CVE]; ok {
+			cve.EUVDExploitAdd = kev.EUVDExploitAdd
+			if kev.CISAExploitAdd != nil {
+				cve.CISAExploitAdd = kev.CISAExploitAdd
+			}
+			cveIDToKev[kev.CVE] = cve
+		} else {
+			cveIDToKev[kev.CVE] = kev
+		}
+	}
+
+	// at the end build a slice from the map
+	unionSlice := make([]models.CVE, 0, len(cveIDToKev))
+	for _, cve := range cveIDToKev {
+		unionSlice = append(unionSlice, cve)
+	}
+	return unionSlice
 }

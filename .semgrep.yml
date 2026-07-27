@@ -358,7 +358,6 @@ rules:
             withOwnershipScope(...)
             ...
           }
-
   - id: session-getactorid-without-sessionactortype
     severity: WARNING
     message: |

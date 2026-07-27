@@ -1,29 +1,6 @@
 {
     "components": {
         "schemas": {
-            "controllers.CreateExternalReferenceRequest": {
-                "properties": {
-                    "csafPackageScope": {
-                        "description": "only relevant for csaf references - NEEDS TO BE A VALID PURL",
-                        "type": "string"
-                    },
-                    "type": {
-                        "enum": [
-                            "cyclonedxvex",
-                            "csaf"
-                        ],
-                        "type": "string"
-                    },
-                    "url": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "type",
-                    "url"
-                ],
-                "type": "object"
-            },
             "controllers.CreateVEXRuleRequest": {
                 "properties": {
                     "cveId": {
@@ -49,26 +26,6 @@
                     "justification",
                     "pathPattern"
                 ],
-                "type": "object"
-            },
-            "controllers.ExternalReferenceDTO": {
-                "properties": {
-                    "assetId": {
-                        "type": "string"
-                    },
-                    "assetVersionName": {
-                        "type": "string"
-                    },
-                    "id": {
-                        "type": "string"
-                    },
-                    "type": {
-                        "type": "string"
-                    },
-                    "url": {
-                        "type": "string"
-                    }
-                },
                 "type": "object"
             },
             "controllers.UpdateVEXRuleRequest": {
@@ -4628,12 +4585,22 @@
             "dtos.AssetCreateRequest": {
                 "properties": {
                     "availabilityRequirement": {
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                        ],
                         "type": "string"
                     },
                     "centralDependencyVulnManagement": {
                         "type": "boolean"
                     },
                     "confidentialityRequirement": {
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                        ],
                         "type": "string"
                     },
                     "cvssAutomaticTicketThreshold": {
@@ -4649,6 +4616,11 @@
                         "type": "integer"
                     },
                     "integrityRequirement": {
+                        "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                        ],
                         "type": "string"
                     },
                     "name": {
@@ -4713,9 +4685,6 @@
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
                     "isPublic": {
-                        "type": "boolean"
-                    },
-                    "keepOriginalSbomRootComponent": {
                         "type": "boolean"
                     },
                     "name": {
@@ -4809,9 +4778,6 @@
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
                     "isPublic": {
-                        "type": "boolean"
-                    },
-                    "keepOriginalSbomRootComponent": {
                         "type": "boolean"
                     },
                     "members": {
@@ -4922,9 +4888,6 @@
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
                     "isPublic": {
-                        "type": "boolean"
-                    },
-                    "keepOriginalSbomRootComponent": {
                         "type": "boolean"
                     },
                     "name": {
@@ -5163,6 +5126,10 @@
                     "epss": {
                         "type": "number"
                     },
+                    "euvdExploitAdd": {
+                        "format": "date",
+                        "type": "string"
+                    },
                     "exploits": {
                         "items": {
                             "$ref": "#/components/schemas/dtos.ExploitDTO"
@@ -5269,6 +5236,25 @@
                     "ComponentTypeOS",
                     "ComponentTypePlatform"
                 ]
+            },
+            "dtos.CreateExternalReferenceRequest": {
+                "properties": {
+                    "csafPackageScope": {
+                        "description": "only relevant for csaf references - NEEDS TO BE A VALID PURL",
+                        "type": "string"
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "type",
+                    "url"
+                ],
+                "type": "object"
             },
             "dtos.DependencyVulnDTO": {
                 "properties": {
@@ -5593,6 +5579,45 @@
                 },
                 "type": "object"
             },
+            "dtos.ExternalReferenceDTO": {
+                "properties": {
+                    "assetId": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "description": "optional error message if the reference could not be processed",
+                        "type": "string"
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.ExternalReferenceType": {
+                "enum": [
+                    "cyclonedx",
+                    "csaf",
+                    "openvex",
+                    "unknown",
+                    "cyclonedx",
+                    "csaf",
+                    "openvex"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "ExternalReferenceTypeCycloneDX",
+                    "ExternalReferenceTypeCSAF",
+                    "ExternalReferenceTypeOpenVEX",
+                    "ExternalReferenceTypeUnknown"
+                ]
+            },
             "dtos.ExternalSubprojectRequestDTO": {
                 "type": "object"
             },
@@ -5733,6 +5758,17 @@
                 },
                 "type": "object"
             },
+            "dtos.InvitationStatus": {
+                "enum": [
+                    "pending",
+                    "expired"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "InvitationStatusPending",
+                    "InvitationStatusExpired"
+                ]
+            },
             "dtos.InviteRequest": {
                 "properties": {
                     "email": {
@@ -5742,6 +5778,23 @@
                 "required": [
                     "email"
                 ],
+                "type": "object"
+            },
+            "dtos.InvitedUserDTO": {
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "expiryDate": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "invitationStatus": {
+                        "$ref": "#/components/schemas/dtos.InvitationStatus"
+                    }
+                },
                 "type": "object"
             },
             "dtos.JiraIntegrationDTO": {
@@ -5920,6 +5973,13 @@
                     },
                     "industry": {
                         "type": "string"
+                    },
+                    "invitedMembers": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.InvitedUserDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "isPublic": {
                         "type": "boolean"
@@ -6119,25 +6179,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
-                    "cvePurlFixableCriticalCVSS": {
+                    "cvePurlFixableCriticalCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableHigh": {
                         "type": "integer"
                     },
-                    "cvePurlFixableHighCVSS": {
+                    "cvePurlFixableHighCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
-                    "cvePurlFixableLowCVSS": {
+                    "cvePurlFixableLowCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableMedium": {
                         "type": "integer"
                     },
-                    "cvePurlFixableMediumCVSS": {
+                    "cvePurlFixableMediumCvss": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -6252,6 +6312,13 @@
                     },
                     "industry": {
                         "type": "string"
+                    },
+                    "invitedMembers": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.InvitedUserDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "isPublic": {
                         "type": "boolean"
@@ -6717,13 +6784,21 @@
                 "enum": [
                     "alias",
                     "upstream",
-                    "related"
+                    "related",
+                    "euvd",
+                    "advisory"
                 ],
                 "type": "string",
+                "x-enum-comments": {
+                    "RelationshipTypeAdvisory": "flag relationships which stem from ingested security advisories",
+                    "RelationshipTypeEUVD": "flag relationships only imported through euvd explicitly"
+                },
                 "x-enum-varnames": [
                     "RelationshipTypeAlias",
                     "RelationshipTypeUpstream",
-                    "RelationshipTypeRelated"
+                    "RelationshipTypeRelated",
+                    "RelationshipTypeEUVD",
+                    "RelationshipTypeAdvisory"
                 ]
             },
             "dtos.ReleaseCreateRequest": {
@@ -6853,6 +6928,15 @@
                 "enum": [
                     "low",
                     "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
                     "high"
                 ],
                 "type": "string",
@@ -6905,25 +6989,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
-                    "cvePurlFixableCriticalCVSS": {
+                    "cvePurlFixableCriticalCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableHigh": {
                         "type": "integer"
                     },
-                    "cvePurlFixableHighCVSS": {
+                    "cvePurlFixableHighCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
-                    "cvePurlFixableLowCVSS": {
+                    "cvePurlFixableLowCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableMedium": {
                         "type": "integer"
                     },
-                    "cvePurlFixableMediumCVSS": {
+                    "cvePurlFixableMediumCvss": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -7220,6 +7304,10 @@
                     "falsePositive",
                     "markedForTransfer",
                     "comment",
+                    "implemented",
+                    "notApplicable",
+                    "attachedComplianceComponent",
+                    "removedComplianceComponent",
                     "detected",
                     "rawRiskAssessmentUpdated"
                 ],
@@ -7233,6 +7321,10 @@
                     "EventTypeFalsePositive",
                     "EventTypeMarkedForTransfer",
                     "EventTypeComment",
+                    "EventTypeImplemented",
+                    "EventTypeNotApplicable",
+                    "EventTypeAttachedComplianceComponent",
+                    "EventTypeRemovedComplianceComponent",
                     "EventTypeDetected",
                     "EventTypeRawRiskAssessmentUpdated"
                 ]
@@ -7272,33 +7364,41 @@
                     "fixed",
                     "accepted",
                     "falsePositive",
-                    "markedForTransfer"
+                    "markedForTransfer",
+                    "implemented",
+                    "notApplicable"
                 ],
                 "type": "string",
                 "x-enum-comments": {
                     "VulnStateAccepted": "like ignore",
                     "VulnStateFalsePositive": "we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either",
-                    "VulnStateFixed": "we did not find the dependencyVuln anymore in the last scan!"
+                    "VulnStateFixed": "we did not find the dependencyVuln anymore in the last scan!",
+                    "VulnStateImplemented": "for compliance posture",
+                    "VulnStateNotApplicable": "for compliance posture"
                 },
                 "x-enum-varnames": [
                     "VulnStateOpen",
                     "VulnStateFixed",
                     "VulnStateAccepted",
                     "VulnStateFalsePositive",
-                    "VulnStateMarkedForTransfer"
+                    "VulnStateMarkedForTransfer",
+                    "VulnStateImplemented",
+                    "VulnStateNotApplicable"
                 ]
             },
             "dtos.VulnType": {
                 "enum": [
                     "dependencyVuln",
                     "firstPartyVuln",
-                    "licenseRisk"
+                    "licenseRisk",
+                    "compliancePosture"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
                     "VulnTypeDependencyVuln",
                     "VulnTypeFirstPartyVuln",
-                    "VulnTypeLicenseRisk"
+                    "VulnTypeLicenseRisk",
+                    "VulnTypeCompliancePosture"
                 ]
             },
             "dtos.WebhookIntegrationDTO": {
@@ -7446,25 +7546,25 @@
                     "cvePurlFixableCritical": {
                         "type": "integer"
                     },
-                    "cvePurlFixableCriticalCVSS": {
+                    "cvePurlFixableCriticalCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableHigh": {
                         "type": "integer"
                     },
-                    "cvePurlFixableHighCVSS": {
+                    "cvePurlFixableHighCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableLow": {
                         "type": "integer"
                     },
-                    "cvePurlFixableLowCVSS": {
+                    "cvePurlFixableLowCvss": {
                         "type": "integer"
                     },
                     "cvePurlFixableMedium": {
                         "type": "integer"
                     },
-                    "cvePurlFixableMediumCVSS": {
+                    "cvePurlFixableMediumCvss": {
                         "type": "integer"
                     },
                     "cvePurlHigh": {
@@ -7597,9 +7697,6 @@
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
                     "isPublic": {
-                        "type": "boolean"
-                    },
-                    "keepOriginalSbomRootComponent": {
                         "type": "boolean"
                     },
                     "metadata": {
@@ -7848,6 +7945,9 @@
                     "epss": {
                         "type": "number"
                     },
+                    "euvdExploitAdd": {
+                        "type": "string"
+                    },
                     "exploits": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Exploit"
@@ -7893,9 +7993,11 @@
                         "$ref": "#/components/schemas/dtos.RelationshipType"
                     },
                     "source_cve": {
+                        "description": "an external CVE-ID (like DEBIAN-CVE-...)",
                         "type": "string"
                     },
                     "target_cve": {
+                        "description": "the official CVE-XXXX-...  the external CVE-ID relates to",
                         "type": "string"
                     },
                     "target_cve_data": {
@@ -8609,6 +8711,9 @@
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
                     "arbitraryJSONData": {
+                        "type": "string"
+                    },
+                    "compliancePostureId": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -11544,6 +11649,26 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "CSAF advisory in JSON format"
+                    }
+                },
+                "summary": "Get an aggregated CSAF VEX for all of the artifact's vulnerabilities",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/": {
             "get": {
                 "parameters": [
@@ -12523,7 +12648,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/controllers.ExternalReferenceDTO"
+                                        "$ref": "#/components/schemas/dtos.ExternalReferenceDTO"
                                     },
                                     "type": "array"
                                 }
@@ -12591,7 +12716,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.CreateExternalReferenceRequest",
+                                "$ref": "#/components/schemas/dtos.CreateExternalReferenceRequest",
                                 "summary": "request",
                                 "description": "Create request"
                             }
@@ -12605,7 +12730,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/controllers.ExternalReferenceDTO"
+                                    "$ref": "#/components/schemas/dtos.ExternalReferenceDTO"
                                 }
                             }
                         },
@@ -12691,7 +12816,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{id}": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{url}": {
             "delete": {
                 "parameters": [
                     {
@@ -12729,6 +12854,15 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "description": "URL-encoded external reference URL",
+                        "in": "path",
+                        "name": "url",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -12747,7 +12881,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "summary": "Delete all external references for an asset version",
+                "summary": "Delete an external reference by URL",
                 "tags": [
                     "ExternalReferences"
                 ]
@@ -14632,6 +14766,15 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/csaf.json": {
+            "get": {
+                "responses": null,
+                "summary": "Get release VEX as CSAF",
+                "tags": [
+                    "Releases"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items": {
             "post": {
                 "parameters": [
@@ -14762,6 +14905,15 @@
                     }
                 ],
                 "summary": "Remove item from release",
+                "tags": [
+                    "Releases"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/openvex.json": {
+            "get": {
+                "responses": null,
+                "summary": "Get release VEX as OpenVEX",
                 "tags": [
                     "Releases"
                 ]
@@ -16066,7 +16218,7 @@
                                 }
                             }
                         },
-                        "description": "Details of the specified CVE"
+                        "description": "Details of the specified CVE\" and optional advisories"
                     },
                     "500": {
                         "content": {
@@ -16365,7 +16517,10 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "userID": {
+                                        "ownerID": {
+                                            "type": "string"
+                                        },
+                                        "ownerType": {
                                             "type": "string"
                                         }
                                     },
@@ -16384,7 +16539,7 @@
                         "PATAuth": []
                     }
                 ],
-                "summary": "Get current user info",
+                "summary": "Get current session info",
                 "tags": [
                     "Authentication"
                 ]

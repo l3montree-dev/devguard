@@ -41,11 +41,12 @@ type DependencyVulnController struct {
 	projectService           shared.ProjectService
 	statisticsService        shared.StatisticsService
 	vulnEventRepository      shared.VulnEventRepository
+	cveRepository            shared.CveRepository
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 }
 
-func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer) *DependencyVulnController {
+func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer, cveRepository shared.CveRepository) *DependencyVulnController {
 	return &DependencyVulnController{
 		dependencyVulnRepository:  dependencyVulnRepository,
 		dependencyVulnService:     dependencyVulnService,
@@ -53,6 +54,7 @@ func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnR
 		statisticsService:         statisticsService,
 		vulnEventRepository:       vulnEventRepository,
 		FireAndForgetSynchronizer: synchronizer,
+		cveRepository:             cveRepository,
 	}
 }
 
@@ -252,7 +254,6 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Success 200 {object} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
 func (controller DependencyVulnController) Read(ctx shared.Context) error {
-
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
@@ -264,13 +265,28 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
+	related, err := controller.cveRepository.GetAllRelatedCVEsForCVE(ctx.Request().Context(), nil, dependencyVuln.CVEID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get advisories for dependency vuln").WithInternal(err)
+	}
+	// convert the related CVEs to DTOs
+	relatedDTOs := map[dtos.RelationshipType][]dtos.CVEDTO{}
+	for relationshipType, cves := range related {
+		relatedDTOs[relationshipType] = utils.Map(cves, func(cve models.CVE) dtos.CVEDTO {
+			return transformer.CVEToDTO(cve)
+		})
+	}
+
 	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
 	if dependencyVuln.CVE != nil {
 		dependencyVuln.CVE.Risk = risk
 		dependencyVuln.CVE.Vector = vector
 	}
 
-	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
+	return ctx.JSON(200, dtos.DetailedDependencyVulnWithRelationsDTO{
+		DetailedDependencyVulnDTO: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
+		Related:                   relatedDTOs,
+	})
 }
 
 func (controller DependencyVulnController) Hints(ctx shared.Context) error {

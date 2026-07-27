@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -259,39 +260,61 @@ func (g *cveRepository) UpdateEpssBatch(ctx context.Context, tx *gorm.DB, batch 
 	return g.GetDB(ctx, tx).Exec(sql, ids, epss, percentiles).Error
 }
 
-// this function is used by the CISA KEV mirror function to update the KEV information for all cves
-func (g *cveRepository) UpdateCISAKEVBatch(ctx context.Context, tx *gorm.DB, batch []models.CVE) error {
-	ids := make([]string, len(batch))
-	exploitAdds := make([]any, len(batch))
-	actionDues := make([]any, len(batch))
-	requiredActions := make([]string, len(batch))
-	vulnNames := make([]string, len(batch))
+// fetches all related cves recursively via their relationships
+// and return them grouped by their relationship type
+// fetched cves do not have any affected components or relationships
+func (g *cveRepository) GetAllRelatedCVEsForCVE(ctx context.Context, tx *gorm.DB, cveID string) (map[dtos.RelationshipType][]models.CVE, error) {
+	type cveWithRelationType struct {
+		models.CVE
+		TargetCVE        string                `gorm:"column:target_cve"`
+		RelationshipType dtos.RelationshipType `gorm:"column:relationship_type"`
+	}
+	results := make([]cveWithRelationType, 0, 64)
 
-	for i := range batch {
-		ids[i] = batch[i].CVE
-		if batch[i].CISAExploitAdd != nil {
-			exploitAdds[i] = time.Time(*batch[i].CISAExploitAdd).Format("2006-01-02")
-		}
-		if batch[i].CISAActionDue != nil {
-			actionDues[i] = time.Time(*batch[i].CISAActionDue).Format("2006-01-02")
-		}
-		requiredActions[i] = *batch[i].CISARequiredAction
-		vulnNames[i] = *batch[i].CISAVulnerabilityName
+	err := g.GetDB(ctx, tx).Raw(`
+	SELECT 
+		sub.*, cves.* 
+	FROM(
+		WITH RECURSIVE related_cves
+	AS(
+		SELECT 
+			cr.target_cve, cr.relationship_type 
+		FROM 
+			cve_relationships cr 
+		WHERE 
+			cr.source_cve = ?
+		UNION 	--union remove duplicates natively; the query terminates after no new rows can be found
+		SELECT 
+			cr2.target_cve, cr2.relationship_type 
+		FROM 
+			cve_relationships cr2 
+		INNER JOIN 
+			related_cves rc ON rc.target_cve = cr2.source_cve
+	)
+	SELECT 
+		 target_cve, relationship_type 
+	FROM 
+		related_cves) as sub 
+	LEFT JOIN 
+		cves ON cves.cve = sub.target_cve
+	WHERE 
+		target_cve != ?;`, cveID, cveID).Find(&results).Error
+	if err != nil {
+		return nil, err
 	}
 
-	sql := `UPDATE cves SET
-		cisa_exploit_add = new.cisa_exploit_add::date,
-		cisa_action_due = new.cisa_action_due::date,
-		cisa_required_action = new.cisa_required_action,
-		cisa_vulnerability_name = new.cisa_vulnerability_name
-	FROM (SELECT
-		unnest($1::text[]) as cve,
-		unnest($2::text[]) as cisa_exploit_add,
-		unnest($3::text[]) as cisa_action_due,
-		unnest($4::text[]) as cisa_required_action,
-		unnest($5::text[]) as cisa_vulnerability_name
-	) as new
-	WHERE cves.cve = new.cve;`
+	// map each cve to its relationship
+	relationshipTypeToCVEs := make(map[dtos.RelationshipType][]models.CVE, 5)
+	for i := range results {
+		if results[i].CVE.CVE != "" {
+			// we use a left join so we don't want to add null cves rows
+			relationshipTypeToCVEs[results[i].RelationshipType] = append(relationshipTypeToCVEs[results[i].RelationshipType], results[i].CVE)
+		} else {
+			// if we have a null row at least make sure to add the cveID (via targetCVE)
+			// this way the relationships information does not get lost
+			relationshipTypeToCVEs[results[i].RelationshipType] = append(relationshipTypeToCVEs[results[i].RelationshipType], models.CVE{CVE: results[i].TargetCVE})
+		}
+	}
 
-	return g.GetDB(ctx, tx).Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)}).Exec(sql, ids, exploitAdds, actionDues, requiredActions, vulnNames).Error
+	return relationshipTypeToCVEs, err
 }
