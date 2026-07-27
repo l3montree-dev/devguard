@@ -914,6 +914,7 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE public.exploits DROP CONSTRAINT IF EXISTS fk_cves_exploits;
 	ALTER TABLE public.weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
 	ALTER TABLE public.vex_rules DROP CONSTRAINT IF EXISTS fk_vex_rules_cve;
+	ALTER TABLE public.system_vex_rules DROP CONSTRAINT IF EXISTS fk_system_vex_rules_cve;
 
 	-- then drop all primary key (and unique) constraints
 	-- do not drop cves_pkey since we still need that index to detect and resolve duplicates
@@ -974,6 +975,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id) ON DELETE CASCADE;
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cve_id) REFERENCES public.cves (id) ON DELETE CASCADE;
+	ALTER TABLE public.system_vex_rules ADD CONSTRAINT fk_system_vex_rules_cve FOREIGN KEY (cve_id) REFERENCES public.cves(cve) ON DELETE CASCADE;
 
 	ALTER TABLE public.exploits ADD CONSTRAINT fk_cves_exploits FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;`)
 	if err != nil {

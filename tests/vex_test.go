@@ -224,6 +224,8 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 		mock.Anything,
 	).Return(vulns, nil)
 
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234", "CVE-2024-5678"}).Return(models.CVEMap{}, nil)
+
 	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 	counts, err := service.CountMatchingVulnsForRules(context.Background(), nil, rules)
 
@@ -278,6 +280,8 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 		assetID,
 		mock.Anything,
 	).Return(vulns, nil)
+
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(models.CVEMap{}, nil)
 
 	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 	count, err := service.CountMatchingVulns(context.Background(), nil, rule)
@@ -364,6 +368,8 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 			totalEventsSaved += len(events)
 		}).
 		Return(nil)
+
+	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(models.CVEMap{}, nil)
 
 	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 

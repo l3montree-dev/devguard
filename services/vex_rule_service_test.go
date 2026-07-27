@@ -483,7 +483,7 @@ func TestVEXRuleEnabledBasedOnParanoidMode(t *testing.T) {
 				},
 			}).Return([]models.DependencyVuln{}, nil)
 
-			cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(models.CVEMap{}, nil)
+			cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-0001"}).Return(models.CVEMap{}, nil)
 
 			service := NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
 
