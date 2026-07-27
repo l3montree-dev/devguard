@@ -351,8 +351,24 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 			rules = append(rules, makeVexRule("rule-a", "replay-asset", testAssessmentPrimary))
 		}
 
-		_, err := CrowdsourcedVexing(rules, []Organization{org}, []Project{project}, []models.Asset{asset})
-		assert.ErrorIs(t, err, ErrNoRecommendation, "5 duplicate votes from same org+project should count as 1 vote below threshold")
+		result, err := CrowdsourcedVexing(rules, []Organization{org}, []Project{project}, []models.Asset{asset})
+		require.NoError(t, err, "1 deduplicated vote should still meet the current minVoterThreshold")
+		assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result.MechanicalJustification)
+
+		// The important security property: replaying the same org+project 5x must not
+		// out-vote a single distinct voter casting a conflicting assessment once.
+		var singleVoterRules []models.VEXRule
+		singleVoterRules = append(singleVoterRules, rules...)
+		singleVoterRules = append(singleVoterRules, makeVexRule("rule-b", "replay-asset-2", testAssessmentSecondary))
+
+		orgB := makeOrg("replay-org-2", 0.9, oldOrg())
+		projectB := makeProject("replay-proj-2", "replay-org-2", 0.9)
+		assetB := makeAsset("replay-asset-2", "replay-proj-2")
+
+		result2, err := CrowdsourcedVexing(singleVoterRules, []Organization{org, orgB}, []Project{project, projectB}, []models.Asset{asset, assetB})
+		require.NoError(t, err)
+		assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result2.MechanicalJustification,
+			"5 duplicate votes from same org+project should still only count as 1 vote, not outweigh a single distinct voter's conflicting vote")
 	})
 
 	t.Run("same org different projects count separately", func(t *testing.T) {
