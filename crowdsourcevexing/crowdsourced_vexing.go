@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	minVoterThreshold        = 4
+	//minVoterThreshold        = 4
+	//todo: we need to adjust the minVoterThreshold to 4 again
+	minVoterThreshold        = 1
 	minOrganizationAgeInDays = 30
 	minTrustscore            = 0.01
 	baseDiminishmentFactor   = 0.1

@@ -51,7 +51,7 @@ func (r *vexRuleRepository) Begin(ctx context.Context) shared.DB {
 func (r *vexRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.VEXRule, error) {
 	var result []models.VEXRule
 
-	err := r.GetDB(ctx, tx).Model(models.VEXRule{}).Find(&result).Error
+	err := r.GetDB(ctx, tx).Model(models.VEXRule{}).Preload("Asset").Find(&result).Error
 	return result, err
 }
 
