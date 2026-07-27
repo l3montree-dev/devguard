@@ -321,10 +321,16 @@ func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		Timeout:   10 * time.Minute,
+		Transport: utils.EgressTransport,
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	switch resp.StatusCode {
 	case http.StatusOK:

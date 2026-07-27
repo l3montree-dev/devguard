@@ -545,7 +545,7 @@ type CrowdSourcedVexingService interface {
 
 type CVERelationshipService interface {
 	CreateAliasRelationshipMapBatch(ctx context.Context, tx DB, cveIDs []string) (models.CVEMap, error)
-	IsAlias(cveSource, cveTarget string, cveMap models.CVEMap) bool
+	IsAlias(ctx context.Context, cveSource, cveTarget string, cveMap models.CVEMap) bool
 }
 
 type VulnEventRepository interface {

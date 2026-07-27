@@ -466,8 +466,8 @@ func (s *VEXRuleService) MatchRulesToVulns(ctx context.Context, tx shared.DB, ru
 
 		for _, rule := range rulesForCVE {
 			pattern := dtos.PathPattern(rule.PathPattern)
-			if vuln.Vulnerability.AssetID == rule.AssetID &&
-				vuln.Vulnerability.AssetVersionName == rule.AssetVersionName &&
+			if vuln.AssetID == rule.AssetID &&
+				vuln.AssetVersionName == rule.AssetVersionName &&
 				pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, vuln.ArtifactPurls()) {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}

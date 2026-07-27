@@ -319,36 +319,6 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, so
 	return rules, nil
 }
 
-// openVexStatementPurls returns the vulnerable-component PURLs a statement scopes to:
-// the subcomponent PURLs, or the product PURLs when no subcomponent is listed.
-func openVexStatementPurls(statement vex.Statement) []string {
-	var purls []string
-	for _, product := range statement.Products {
-		if len(product.Subcomponents) > 0 {
-			for _, sub := range product.Subcomponents {
-				if p := componentPurl(sub.Component); p != "" {
-					purls = append(purls, p)
-				}
-			}
-			continue
-		}
-		if p := componentPurl(product.Component); p != "" {
-			purls = append(purls, p)
-		}
-	}
-	return purls
-}
-
-func componentPurl(c vex.Component) string {
-	if p, ok := c.Identifiers[vex.PURL]; ok && p != "" {
-		return p
-	}
-	if strings.HasPrefix(c.ID, "pkg:") {
-		return c.ID
-	}
-	return ""
-}
-
 func mapOpenVEXToEventType(s *vex.Statement) (dtos.VulnEventType, error) {
 	if s == nil {
 		return "", fmt.Errorf("statement is nil")

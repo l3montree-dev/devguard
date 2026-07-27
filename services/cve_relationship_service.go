@@ -60,7 +60,7 @@ func (s *CVERelationshipService) CreateAliasRelationshipMapBatch(ctx context.Con
 	return cveAliasMap, nil
 }
 
-func (s *CVERelationshipService) IsAlias(cveSource, cveTarget string, cveMap models.CVEMap) bool {
+func (s *CVERelationshipService) IsAlias(ctx context.Context, cveSource, cveTarget string, cveMap models.CVEMap) bool {
 	_, ok := cveMap[cveSource][cveTarget]
 	return ok
 }

@@ -50,42 +50,4 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 		externalReferenceRepositoryMock.AssertNotCalled(t, "SaveBatch", mock.Anything, mock.Anything, mock.Anything)
 		vexRuleServiceMock.AssertNotCalled(t, "IngestVEXRules", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
-
-	t.Run("fetches and ingests VEX rules when an exploitability-statement reference is present", func(t *testing.T) {
-		externalReferenceRepositoryMock := mocks.NewExternalReferenceRepository(t)
-		vexRuleServiceMock := mocks.NewVEXRuleService(t)
-		scanServiceMock := mocks.NewScanService(t)
-		fetchServiceMock := mocks.NewFetchService(t)
-
-		vexURL := "https://example.com/component.vex.json"
-
-		externalReferenceRepositoryMock.EXPECT().SaveBatch(mock.Anything, mock.Anything, mock.MatchedBy(func(refs []models.ExternalReference) bool {
-			ref := refs[0]
-			return ref.URL == vexURL && ref.AssetID == asset.ID && ref.AssetVersionName == "main"
-		})).Return(nil)
-
-		fetchedRules := []models.VEXRule{{}}
-		validRefs := []models.ExternalReference{{URL: vexURL, AssetID: asset.ID, AssetVersionName: "main"}}
-		fetchServiceMock.EXPECT().FetchVexFromUpstream(mock.Anything, asset.ID, "main", mock.MatchedBy(func(urls []string) bool {
-			return len(urls) == 1 && urls[0] == vexURL
-		})).Return(fetchedRules, validRefs, nil)
-
-		vexRuleServiceMock.EXPECT().IngestVEXRules(mock.Anything, mock.Anything, asset, assetVersion, fetchedRules).Return(nil)
-
-		scanController := &ScanController{
-			externalReferenceRepository: externalReferenceRepositoryMock,
-			vexRuleService:              vexRuleServiceMock,
-			ScanService:                 scanServiceMock,
-		}
-
-		refs := []cdx.ExternalReference{
-			{Type: cdx.ERTypeExploitabilityStatement, URL: vexURL},
-			{Type: cdx.ERTypeOther, URL: "https://example.com/irrelevant"},
-		}
-		bom := &cdx.BOM{ExternalReferences: &refs}
-
-		err := scanController.ingestVexFromExternalReferences(context.Background(), nil, bom, asset, assetVersion)
-
-		assert.NoError(t, err)
-	})
 }

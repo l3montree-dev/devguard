@@ -200,7 +200,7 @@ func (s *CrowdsourcedVexingService) RecommendSystemVEXRule(ctx shared.Context, t
 outer:
 	for i := range validRules {
 		for j := range validRules {
-			if !s.cveRelationshipService.IsAlias(validRules[i].CVEID, validRules[j].CVEID, cveAliasMap) {
+			if !s.cveRelationshipService.IsAlias(requestCtx, validRules[i].CVEID, validRules[j].CVEID, cveAliasMap) {
 				nonAliasDetected = true
 				break outer
 			}
