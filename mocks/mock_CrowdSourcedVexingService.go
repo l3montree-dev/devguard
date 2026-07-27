@@ -109,3 +109,77 @@ func (_c *CrowdSourcedVexingService_Recommend_Call) RunAndReturn(run func(ctx sh
 	_c.Call.Return(run)
 	return _c
 }
+
+// RecommendBatch provides a mock function for the type CrowdSourcedVexingService
+func (_mock *CrowdSourcedVexingService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[uuid.UUID]models.VEXRule, error) {
+	ret := _mock.Called(ctx, tx, vulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecommendBatch")
+	}
+
+	var r0 map[uuid.UUID]models.VEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) (map[uuid.UUID]models.VEXRule, error)); ok {
+		return returnFunc(ctx, tx, vulns)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) map[uuid.UUID]models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx, vulns)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uuid.UUID]models.VEXRule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.DB, []models.DependencyVuln) error); ok {
+		r1 = returnFunc(ctx, tx, vulns)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CrowdSourcedVexingService_RecommendBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecommendBatch'
+type CrowdSourcedVexingService_RecommendBatch_Call struct {
+	*mock.Call
+}
+
+// RecommendBatch is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - tx shared.DB
+//   - vulns []models.DependencyVuln
+func (_e *CrowdSourcedVexingService_Expecter) RecommendBatch(ctx interface{}, tx interface{}, vulns interface{}) *CrowdSourcedVexingService_RecommendBatch_Call {
+	return &CrowdSourcedVexingService_RecommendBatch_Call{Call: _e.mock.On("RecommendBatch", ctx, tx, vulns)}
+}
+
+func (_c *CrowdSourcedVexingService_RecommendBatch_Call) Run(run func(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln)) *CrowdSourcedVexingService_RecommendBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CrowdSourcedVexingService_RecommendBatch_Call) Return(uUIDToVEXRule map[uuid.UUID]models.VEXRule, err error) *CrowdSourcedVexingService_RecommendBatch_Call {
+	_c.Call.Return(uUIDToVEXRule, err)
+	return _c
+}
+
+func (_c *CrowdSourcedVexingService_RecommendBatch_Call) RunAndReturn(run func(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[uuid.UUID]models.VEXRule, error)) *CrowdSourcedVexingService_RecommendBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}

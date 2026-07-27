@@ -87,7 +87,7 @@ func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) err
 	asset := shared.GetAsset(ctx)
 	span.SetAttributes(attribute.String("asset.id", asset.ID.String()))
 
-	vulns, err := c.dependencyVulnRepository.GetAllVulnsByAssetID(reqCtx, nil, asset.ID)
+	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(reqCtx, nil, asset.ID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -95,18 +95,16 @@ func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) err
 	}
 	span.SetAttributes(attribute.Int("dependencyVulns.total", len(vulns)))
 
-	recommendations := make(map[uuid.UUID]dtos.VexRuleRecommendation)
-	for _, vuln := range vulns {
-		rule, err := c.crowdsourcedVexingService.Recommend(ctx, nil, vuln.ID)
-		if err != nil {
-			if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
-				continue
-			}
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return echo.NewHTTPError(500, "Could not calculate recommendation.").WithInternal(err)
-		}
-		recommendations[vuln.ID] = transformer.VEXRuleToRecommendationDTO(rule)
+	rules, err := c.crowdsourcedVexingService.RecommendBatch(ctx, nil, vulns)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return echo.NewHTTPError(500, "Could not calculate recommendation.").WithInternal(err)
+	}
+
+	recommendations := make(map[uuid.UUID]dtos.VexRuleRecommendation, len(rules))
+	for vulnID, rule := range rules {
+		recommendations[vulnID] = transformer.VEXRuleToRecommendationDTO(rule)
 	}
 	span.SetAttributes(attribute.Int("recommendations.total", len(recommendations)))
 
