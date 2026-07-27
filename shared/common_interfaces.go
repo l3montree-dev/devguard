@@ -524,8 +524,8 @@ type VEXRuleService interface {
 }
 
 type CrowdSourcedVexingService interface {
-	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (models.VEXRule, error)
-	RecommendBatch(ctx Context, tx DB, vulns []models.DependencyVuln) (map[uuid.UUID]models.VEXRule, error)
+	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error)
+	RecommendBatch(ctx Context, tx DB, vulns []models.DependencyVuln) (map[uuid.UUID]dtos.VexRuleRecommendation, error)
 }
 
 type VulnEventRepository interface {

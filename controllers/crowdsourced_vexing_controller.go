@@ -5,9 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -66,7 +64,7 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(500, "Could not calculate recommendation.").WithInternal(err)
 	}
-	return ctx.JSON(200, transformer.VEXRuleToRecommendationDTO(rule))
+	return ctx.JSON(200, rule)
 }
 
 // @Summary Get crowdsourced VEX recommendations for all vulns of an asset
@@ -102,11 +100,7 @@ func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) err
 		return echo.NewHTTPError(500, "Could not calculate recommendation.").WithInternal(err)
 	}
 
-	recommendations := make(map[uuid.UUID]dtos.VexRuleRecommendation, len(rules))
-	for vulnID, rule := range rules {
-		recommendations[vulnID] = transformer.VEXRuleToRecommendationDTO(rule)
-	}
-	span.SetAttributes(attribute.Int("recommendations.total", len(recommendations)))
+	span.SetAttributes(attribute.Int("recommendations.total", len(rules)))
 
-	return ctx.JSON(200, recommendations)
+	return ctx.JSON(200, rules)
 }

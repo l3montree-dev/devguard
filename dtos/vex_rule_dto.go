@@ -48,6 +48,7 @@ type VexRuleRecommendation struct {
 	Justification           string                      `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType               VulnEventType               `json:"eventType"`
+	Confidence              float64                     `json:"confidence"`
 }
 
 type TestVEXRulesRequest struct {
