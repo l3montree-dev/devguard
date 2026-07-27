@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -700,92 +699,6 @@ func (_c *ScanService_ScanSarifWithoutSaving_Call) Return(firstPartyScanResponse
 }
 
 func (_c *ScanService_ScanSarifWithoutSaving_Call) RunAndReturn(run func(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)) *ScanService_ScanSarifWithoutSaving_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// VexRulesFromDocument provides a mock function for the type ScanService
-func (_mock *ScanService) VexRulesFromDocument(bytes []byte, uUID uuid.UUID, s string, s1 string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
-	ret := _mock.Called(bytes, uUID, s, s1)
-
-	if len(ret) == 0 {
-		panic("no return value specified for VexRulesFromDocument")
-	}
-
-	var r0 []models.VEXRule
-	var r1 dtos.ExternalReferenceType
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func([]byte, uuid.UUID, string, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)); ok {
-		return returnFunc(bytes, uUID, s, s1)
-	}
-	if returnFunc, ok := ret.Get(0).(func([]byte, uuid.UUID, string, string) []models.VEXRule); ok {
-		r0 = returnFunc(bytes, uUID, s, s1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func([]byte, uuid.UUID, string, string) dtos.ExternalReferenceType); ok {
-		r1 = returnFunc(bytes, uUID, s, s1)
-	} else {
-		r1 = ret.Get(1).(dtos.ExternalReferenceType)
-	}
-	if returnFunc, ok := ret.Get(2).(func([]byte, uuid.UUID, string, string) error); ok {
-		r2 = returnFunc(bytes, uUID, s, s1)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
-}
-
-// ScanService_VexRulesFromDocument_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VexRulesFromDocument'
-type ScanService_VexRulesFromDocument_Call struct {
-	*mock.Call
-}
-
-// VexRulesFromDocument is a helper method to define mock.On call
-//   - bytes []byte
-//   - uUID uuid.UUID
-//   - s string
-//   - s1 string
-func (_e *ScanService_Expecter) VexRulesFromDocument(bytes interface{}, uUID interface{}, s interface{}, s1 interface{}) *ScanService_VexRulesFromDocument_Call {
-	return &ScanService_VexRulesFromDocument_Call{Call: _e.mock.On("VexRulesFromDocument", bytes, uUID, s, s1)}
-}
-
-func (_c *ScanService_VexRulesFromDocument_Call) Run(run func(bytes []byte, uUID uuid.UUID, s string, s1 string)) *ScanService_VexRulesFromDocument_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []byte
-		if args[0] != nil {
-			arg0 = args[0].([]byte)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *ScanService_VexRulesFromDocument_Call) Return(vEXRules []models.VEXRule, externalReferenceType dtos.ExternalReferenceType, err error) *ScanService_VexRulesFromDocument_Call {
-	_c.Call.Return(vEXRules, externalReferenceType, err)
-	return _c
-}
-
-func (_c *ScanService_VexRulesFromDocument_Call) RunAndReturn(run func(bytes []byte, uUID uuid.UUID, s string, s1 string) ([]models.VEXRule, dtos.ExternalReferenceType, error)) *ScanService_VexRulesFromDocument_Call {
 	_c.Call.Return(run)
 	return _c
 }
