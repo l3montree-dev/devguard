@@ -17,15 +17,14 @@ package services
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +35,7 @@ import (
 // each reconstructed rule still matches the exact same DependencyVuln it was generated from.
 //
 // The CSAF product tree is always rooted at the artifact, so PathPattern carries an artifact
-// purl prefix that VulnerabilityPath itself never has (see dtos.PathPattern.MatchesSuffixForArtifacts
+// purl prefix that VulnerabilityPath itself never has (see vexrules.PathPattern.MatchesSuffixForArtifacts
 // and models.DependencyVuln.ArtifactPurls) - without stripping that prefix during matching, a
 // downloaded CSAF report re-uploaded to devguard would never match any of its own vulns.
 func TestAggregatedCSAFRoundTrip(t *testing.T) {
@@ -82,38 +81,39 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, advisory.Vulnerabilities, 2, "one CSAF vulnerability object per CVE")
 
-	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "main", "aggregated")
+	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "aggregated")
 	require.NoError(t, err)
 
 	// exactly the two false-positive paths become rules, each with its exact (non-wildcard) path,
 	// prefixed with the artifact product since CSAF's product tree is rooted at the artifact
-	artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
 	require.Len(t, rules, 2)
-	byCVE := map[string]dtos.PathPattern{}
 	for _, r := range rules {
 		assert.Equal(t, dtos.EventTypeFalsePositive, r.EventType)
-		byCVE[r.CVEID] = r.PathPattern
 	}
-	assert.Equal(t, append([]string{artifactPurl}, pathA1...), []string(byCVE["CVE-2024-0001"]))
-	assert.Equal(t, append([]string{artifactPurl}, pathB1...), []string(byCVE["CVE-2024-0002"]))
 
-	// The crucial roundtrip step: re-matching each rule against the exact DependencyVuln it
-	// was generated from must succeed, even though the rule's PathPattern carries the artifact
-	// prefix that VulnerabilityPath itself never does.
-	artifactPurls := vulnA1.ArtifactPurls()
+	// The crucial roundtrip step: re-matching each rule's CEL expression against the exact
+	// DependencyVuln it was generated from must succeed, even though the rule's path pattern
+	// carries the artifact prefix that VulnerabilityPath itself never does.
 	for cveID, vuln := range map[string]models.DependencyVuln{"CVE-2024-0001": vulnA1, "CVE-2024-0002": vulnB1} {
-		pattern := byCVE[cveID]
-		assert.False(t, pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, nil),
-			"sanity check: matching should fail without the artifact-aware strip, since the pattern carries the artifact prefix")
-		assert.True(t, pattern.MatchesSuffixForArtifacts(vuln.VulnerabilityPath, artifactPurls),
-			"reconstructed rule for %s must match the vuln it was generated from", cveID)
+		var matched bool
+		for _, r := range rules {
+			match, err := vexrules.EvalRule(context.Background(), r, vuln)
+			require.NoError(t, err)
+			if match {
+				matched = true
+			}
+		}
+		assert.True(t, matched, "reconstructed rule for %s must match the vuln it was generated from", cveID)
 	}
 
 	// And the open (non-false-positive) paths must NOT match any reconstructed rule -
 	// otherwise re-uploading the CSAF report would incorrectly resolve an open vuln too.
 	openA := mk("CVE-2024-0001", compA, pathA2, dtos.VulnStateOpen, false)
-	assert.False(t, byCVE["CVE-2024-0001"].MatchesSuffixForArtifacts(openA.VulnerabilityPath, openA.ArtifactPurls()),
-		"the open path must not match the false-positive path's rule")
+	for _, r := range rules {
+		match, err := vexrules.EvalRule(context.Background(), r, openA)
+		require.NoError(t, err)
+		assert.False(t, match, "the open path must not match the false-positive path's rule")
+	}
 }
 
 // TestCSAFRoundTripMultiplePathsToSharedComponent verifies that when the same vulnerable
@@ -174,43 +174,26 @@ func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, advisory.Vulnerabilities, 1, "one CSAF vulnerability object for the single CVE")
 
-	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "main", "test")
+	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "test")
 	require.NoError(t, err)
 
 	// each of the 4 distinct paths must round-trip into its own exact-path rule, each prefixed
 	// with the artifact product since CSAF's product tree is rooted at the artifact
 	require.Len(t, rules, 4, "each distinct path must yield its own VEX rule")
 
-	artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
-	seen := map[string]dtos.PathPattern{}
 	for _, r := range rules {
 		assert.Equal(t, dtos.EventTypeFalsePositive, r.EventType)
-		seen[strings.Join(r.PathPattern, ",")] = r.PathPattern
-	}
-
-	withArtifact := func(path []string) dtos.PathPattern {
-		return dtos.PathPattern(append([]string{artifactPurl}, path...))
-	}
-	expected := []dtos.PathPattern{
-		withArtifact(pathDirect),
-		withArtifact(pathViaOPA),
-		withArtifact(pathViaGoWitness),
-		withArtifact(pathViaCosign),
-	}
-	for _, exp := range expected {
-		got, ok := seen[strings.Join(exp, ",")]
-		assert.True(t, ok, "expected path %v to be present among the round-tripped rules", []string(exp))
-		assert.Equal(t, []string(exp), []string(got), "path elements and order must be preserved exactly")
 	}
 
 	// Each reconstructed rule must match back onto exactly the vuln whose path it encodes,
 	// and none of the others - proving distinct paths through a shared component (opa)
 	// don't bleed into each other once the artifact prefix is stripped for matching.
-	artifactPurls := vulns[0].ArtifactPurls()
 	for i, vuln := range vulns {
 		matchCount := 0
 		for _, r := range rules {
-			if dtos.PathPattern(r.PathPattern).MatchesSuffixForArtifacts(vuln.VulnerabilityPath, artifactPurls) {
+			match, err := vexrules.EvalRule(context.Background(), r, vuln)
+			require.NoError(t, err)
+			if match {
 				matchCount++
 			}
 		}

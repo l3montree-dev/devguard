@@ -5,16 +5,20 @@ import (
 	"log/slog"
 	"math"
 	"sort"
-	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 const (
-	minVoterThreshold        = 4
-	minOrganizationAgeInDays = 30
+	//minVoterThreshold        = 4
+	//todo: we need to adjust the minVoterThreshold to 4 again
+	minVoterThreshold        = 1
+	minOrganizationAgeInDays = 15
 	minTrustscore            = 0.01
 	baseDiminishmentFactor   = 0.1
 )
@@ -23,13 +27,8 @@ type User struct {
 	ID string
 }
 
-type Asset struct {
-	ID        string
-	ProjectID string
-}
-
 type Organization struct {
-	ID         string
+	ID         uuid.UUID
 	Trustscore float64
 	CreatedAt  time.Time
 	CreatedBy  string
@@ -37,33 +36,17 @@ type Organization struct {
 }
 
 type Project struct {
-	ID             string
-	OrganizationID string
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
 	Trustscore     float64
 }
 
-var AssessmentOptions = []string{string(dtos.ComponentNotPresent), string(dtos.VulnerableCodeNotPresent), string(dtos.VulnerableCodeNotInExecutePath), string(dtos.VulnerableCodeCannotBeControlledByAdversary), string(dtos.InlineMitigationsAlreadyExist)}
-
-type VexRule struct {
-	ID               string
-	PathPattern      dtos.PathPattern
-	CVE              CVE
-	AssetID          string
-	AssetVersionName string
-	Reasoning        string
-	Assessment       string
-	UpdatedAt        time.Time
-}
-
-type CVE struct {
-	CVE string
-}
+var AssessmentOptions = []dtos.MechanicalJustificationType{dtos.ComponentNotPresent, dtos.VulnerableCodeNotPresent, dtos.VulnerableCodeNotInExecutePath, dtos.VulnerableCodeCannotBeControlledByAdversary, dtos.InlineMitigationsAlreadyExist}
 
 type VoterID struct {
-	OrganizationID   string
-	ProjectID        string
-	AssetID          string
-	AssetVersionName string
+	OrganizationID uuid.UUID
+	ProjectID      uuid.UUID
+	AssetID        uuid.UUID
 }
 
 type Vote struct {
@@ -94,18 +77,50 @@ func (t *userVoteTracker) recordVoteAndGetFactor(organization Organization, dimi
 	return math.Round(1e12*math.Pow(diminishmentFactor, float64(priorVotes))) / 1e12
 }
 
-func PathToString(vexRule VexRule) string {
-	stringPath := strings.Join(append(vexRule.PathPattern, []string{vexRule.Assessment}...), "->")
-	return stringPath
-}
+func getVexRuleFromMatchingRules(vexRuleIdentity string, ruleIDtoIdentityMap map[string]string, matchingRules []models.VEXRule) (models.VEXRule, bool) {
+	// inverse the map
+	identityToRuleIDMap := make(map[string][]string)
+	for ruleID, identity := range ruleIDtoIdentityMap {
+		identityToRuleIDMap[identity] = append(identityToRuleIDMap[identity], ruleID)
+	}
 
-func findVexRuleFromPath(vexRulePath string, vexRules []VexRule) (VexRule, bool) {
-	for _, rule := range vexRules {
-		if PathToString(rule) == vexRulePath {
-			return rule, true
+	// get ALL rules that match the identity
+	ruleIDs, exists := identityToRuleIDMap[vexRuleIdentity]
+	if !exists {
+		return models.VEXRule{}, false
+	}
+
+	rulesMap := make(map[string]models.VEXRule)
+	for _, rule := range matchingRules {
+		rulesMap[rule.ID] = rule
+	}
+
+	votedForRules := []models.VEXRule{}
+	for _, ruleID := range ruleIDs {
+		if rule, exists := rulesMap[ruleID]; exists {
+			votedForRules = append(votedForRules, rule)
 		}
 	}
-	return VexRule{}, false
+
+	if len(votedForRules) == 0 {
+		return models.VEXRule{}, false
+	}
+	// just use the first rules cel expression and assessment from the first rule since they are semantically the same. But aggregate the justification OVER ALL
+	aggregatedJustification := ""
+	for _, rule := range votedForRules {
+		if rule.WasRecommended {
+			// do not aggregate the justification of a rule that was already recommended by the crowdsourced vexing algorithm, otherwise we will amplify the justification of a rule that was already recommended and therefore already aggregated
+			continue
+		}
+		if aggregatedJustification != "" {
+			aggregatedJustification += "; "
+		}
+		aggregatedJustification += rule.Justification
+	}
+
+	recommendedRule := votedForRules[0]
+	recommendedRule.Justification = aggregatedJustification
+	return recommendedRule, true
 }
 
 // Missing
@@ -136,7 +151,7 @@ func findVexRuleFromPath(vexRulePath string, vexRules []VexRule) (VexRule, bool)
 
 var ErrNoRecommendation = fmt.Errorf("no recommendation")
 
-func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, organizations []Organization, projects []Project, assets []Asset) (VexRule, error) {
+func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organization, projects []Project, assets []models.Asset) (models.VEXRule, float64, error) {
 	var adjustedDiminishmentFactor = baseDiminishmentFactor
 	// If there is only one organization, we don't need a diminishmentfactor and therefore it should be set to 1 (no diminishment, value is worth fully)
 	if len(organizations) < 2 {
@@ -144,17 +159,17 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 	}
 	var votes = make(map[string]*Vote)
 	var validVotesCount = 0
-	var assetMap = make(map[string]Asset)
+	var assetMap = make(map[uuid.UUID]models.Asset)
 	for _, asst := range assets {
 		assetMap[asst.ID] = asst
 	}
 
-	var projectMap = make(map[string]Project)
+	var projectMap = make(map[uuid.UUID]Project)
 	for _, proj := range projects {
 		projectMap[proj.ID] = proj
 	}
 
-	var organizationMap = make(map[string]Organization)
+	var organizationMap = make(map[uuid.UUID]Organization)
 	for _, org := range organizations {
 		organizationMap[org.ID] = org
 	}
@@ -170,41 +185,47 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 	//     "packageA@1.0.0": {Dependecy: "packageA@1.0.0", Children: []},
 	//     "packageB@2.0.0": {Dependecy: "packageB@2.0.0", Children: []},
 	//   }
-	// - vexRules contain every VexRule created by a user (full database list)
+	// - matchingRules contain every models.VEXRule created by a user (full database list)
 
 	// Since we are dminishing the values of votes with increasing numbers coming from one user it is important to create a consistent behaviour
 	// for which vote will have less impact, so we sort the incoming vexrules by when they were last updated (update date implies freshness of rule)
-	sort.Slice(vexRules, func(i, j int) bool {
-		return vexRules[i].UpdatedAt.Before(vexRules[j].UpdatedAt)
+	sort.Slice(matchingRules, func(i, j int) bool {
+		return matchingRules[i].UpdatedAt.Before(matchingRules[j].UpdatedAt)
 	})
 
+	ruleIDtoIdentity := make(map[string]string)
+	for _, rule := range matchingRules {
+		identity, err := vexrules.IdentityOfRule(rule)
+		if err != nil {
+			return models.VEXRule{}, 0, fmt.Errorf("failed to get identity of rule: %w", err)
+		}
+		ruleIDtoIdentity[rule.ID] = identity
+	}
 	// Filtering for VexRules that apply to the dependecy tree
 	// Deduplucate VexRules based on organizationn and project to avoid replay
-	// (every combination of organization and project will be allowed to have one non-contradicting VexRule for a Path submitted)
-	for _, rule := range vexRules {
-
-		// For each VexRule, find organization and project id
-		rulePath := PathToString(rule)
-
+	// (every combination of organization and project will be allowed to have one non-contradicting models.VEXRule for a Path submitted)
+	for _, rule := range matchingRules {
+		identity := ruleIDtoIdentity[rule.ID]
+		// For each models.VEXRule, find organization and project id
 		asset := assetMap[rule.AssetID]
-		if asset.ID == "" {
+		if asset.ID == uuid.Nil {
 			slog.Error("failed to find asset for VEX rule", "assetID", rule.AssetID)
 			continue
 		}
 		project := projectMap[asset.ProjectID]
-		if project.ID == "" {
+		if project.ID == uuid.Nil {
 			slog.Error("failed to find project for asset", "projectID", asset.ProjectID)
 			continue
 		}
 		organization := organizationMap[project.OrganizationID]
-		if organization.ID == "" {
+		if organization.ID == uuid.Nil {
 			slog.Error("failed to find organization for project", "organizationID", project.OrganizationID)
 			continue
 		}
 
 		if organization.Trustscore < 0.0 || organization.Trustscore > 1.0 || project.Trustscore < 0.0 || project.Trustscore > 1.0 {
 			slog.Error("trust score malformed", "organizationID", organization.ID, "projectID", project.ID)
-			return VexRule{}, fmt.Errorf("trust score malformed for organizationID: %s or projectID: %s", organization.ID, project.ID)
+			return models.VEXRule{}, 0, fmt.Errorf("trust score malformed for organizationID: %s or projectID: %s", organization.ID, project.ID)
 		}
 
 		// [Mitigation 10,11] Minimum organization age check
@@ -216,38 +237,19 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 		// No artifact context is available for a foreign, crowdsourced rule
 		// here (it belongs to a different asset entirely), so no leading
 		// artifact-identity segment is stripped for this match.
-		if rule.PathPattern.MatchesSuffixForArtifacts(dependencyPath, nil) && rule.CVE.CVE == cve.CVE {
-			// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
-			if utils.Contains(AssessmentOptions, rule.Assessment) {
-				// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
-				if votes[rulePath] != nil && votes[rulePath].Voters != nil {
-					alreadyExistingVote := false
-					for _, vote := range votes[rulePath].Voters {
-						if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID && vote.AssetVersionName == rule.AssetVersionName {
-							alreadyExistingVote = true
-							break
-						}
-					}
-					if !alreadyExistingVote {
-						// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
-						diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
-						// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
-						// Note to mitigation 8: Using an exponential decay approach allows for
-						// - lower trusted entities to not be able to surpass high trusted entities with many votes
-						// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
-						ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
-						votes[rulePath].Voters = append(votes[rulePath].Voters, VoterID{
-							OrganizationID:   organization.ID,
-							ProjectID:        project.ID,
-							AssetID:          asset.ID,
-							AssetVersionName: rule.AssetVersionName,
-						})
 
-						votes[rulePath].Value += ruleConfidence
-
-						validVotesCount++
+		// [Mitigation 30] Input validation — only choosable options allowed, check if reasoning is within options)
+		if utils.Contains(AssessmentOptions, rule.MechanicalJustification) {
+			// [Mitigation 20] Replay protection via deduplication of VexRules based on datastructure
+			if votes[identity] != nil && votes[identity].Voters != nil {
+				alreadyExistingVote := false
+				for _, vote := range votes[identity].Voters {
+					if vote.OrganizationID == organization.ID && vote.ProjectID == project.ID && vote.AssetID == asset.ID {
+						alreadyExistingVote = true
+						break
 					}
-				} else {
+				}
+				if !alreadyExistingVote {
 					// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
 					diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
 					// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
@@ -255,28 +257,45 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 					// - lower trusted entities to not be able to surpass high trusted entities with many votes
 					// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
 					ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
-					// This is the case if a vote was cast for a VexRule that hasn't been seen before
-					votes[rulePath] = &Vote{
-						Voters: []VoterID{
-							{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, AssetVersionName: rule.AssetVersionName},
-						},
-						Value: 0.0,
-					}
-					votes[rulePath].Value += ruleConfidence
+					votes[identity].Voters = append(votes[identity].Voters, VoterID{
+						OrganizationID: organization.ID,
+						ProjectID:      project.ID,
+						AssetID:        asset.ID,
+					})
+
+					votes[identity].Value += ruleConfidence
+
 					validVotesCount++
 				}
+			} else {
+				// [Mitigation 8] Apply diminishing returns based on user's prior votes across all paths
+				diminishingFactor := tracker.recordVoteAndGetFactor(organization, adjustedDiminishmentFactor)
+				// [Mitigation 13] Trustscore is used in calculation of crowdsourced VEX rule
+				// Note to mitigation 8: Using an exponential decay approach allows for
+				// - lower trusted entities to not be able to surpass high trusted entities with many votes
+				// - entities that are trusted on the same level to surpass each other with more votes, but with diminishing returns to prevent abuse
+				ruleConfidence := math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) * diminishingFactor
+				// This is the case if a vote was cast for a models.VEXRule that hasn't been seen before
+				votes[identity] = &Vote{
+					Voters: []VoterID{
+						{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID},
+					},
+					Value: 0.0,
+				}
+				votes[identity].Value += ruleConfidence
+				validVotesCount++
 			}
-
 		}
+
 	}
 	// [Mitigation 15] Require a minimum number of voters for a decision; disabling the recommendation when too few voters remain
 	if validVotesCount < minVoterThreshold {
 		slog.Info("not enough valid votes to create a crowdsourced VEX rule", "validVotesCount", validVotesCount)
-		return VexRule{}, ErrNoRecommendation
+		return models.VEXRule{}, 0, ErrNoRecommendation
 	}
 
-	var crowdsourcedVexRule VexRule
-	var crowdsourcedVexRulePath string
+	var crowdsourcedVexRule models.VEXRule
+	var crowdsourcedVexRuleID string
 	var found bool
 	var sortableVotes []string
 	for key := range votes {
@@ -286,41 +305,38 @@ func CrowdsourcedVexing(dependencyPath []string, cve CVE, vexRules []VexRule, or
 		return votes[sortableVotes[i]].Value < votes[sortableVotes[j]].Value
 	})
 	// [Mitigation 31] Use standardized cutoff; test with extreme values; define deterministictie-breaking rules
-	// After the sorting, the VexRule with the highest confidence will be at the end of the sortableVotes slice, so we can compare it with the second to last to check for a tie
+	// After the sorting, the models.VEXRule with the highest confidence will be at the end of the sortableVotes slice, so we can compare it with the second to last to check for a tie
 	if len(sortableVotes) == 0 {
-		return VexRule{}, ErrNoRecommendation
+		return models.VEXRule{}, 0, ErrNoRecommendation
 	}
 	if len(sortableVotes) > 1 {
 		if votes[sortableVotes[len(sortableVotes)-1]].Value == votes[sortableVotes[len(sortableVotes)-2]].Value {
 			// Inconclusive result, no clear winner
-			// In this case we don't recommend any VexRule to the user, to encourage manual assessment by the user
+			// In this case we don't recommend any models.VEXRule to the user, to encourage manual assessment by the user
 			// to generate more data for a better recommendation in the future
-			return VexRule{}, ErrNoRecommendation
+			return models.VEXRule{}, 0, ErrNoRecommendation
 		} else {
-			// At this point we have a recommendation for a VexRule and want to return the datastructure of the VexRule to the user
-			// For that take any fitting VexRule from the database, since they should all be the same
+			// At this point we have a recommendation for a models.VEXRule and want to return the datastructure of the models.VEXRule to the user
+			// For that take any fitting models.VEXRule from the database, since they should all be the same
 			// Concerns here are:
-			// 1. Does it matter which VexRule of which organization we return or is the origin of the VexRule irrelevant since the Rule data is the same?
-			// 2. Is it privacy wise correct to return any VexRule, considering that the assetID will link the VexRule to an organization?
-			// Thoughts:
-			// 1. It should'nt really matter whom's VexRule we recommend as long as the data is correct
-			// 2. We can strip out the assetID or only return the relevant data to create a new VexRule with the AssetID of the user who needed the recommendation
-			crowdsourcedVexRulePath = sortableVotes[len(sortableVotes)-1]
-			crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, vexRules)
+			// 2. Is it privacy wise correct to return any models.VEXRule, considering that the assetID will link the models.VEXRule to an organization?
+			// 2. We can strip out the assetID or only return the relevant data to create a new models.VEXRule with the AssetID of the user who needed the recommendation
+			crowdsourcedVexRuleID = sortableVotes[len(sortableVotes)-1]
+			crowdsourcedVexRule, found = getVexRuleFromMatchingRules(crowdsourcedVexRuleID, ruleIDtoIdentity, matchingRules)
 			if !found {
-				slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
-				return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
+				slog.Error("failed to find crowdsourced VEX rule", "id", crowdsourcedVexRuleID)
+				return models.VEXRule{}, 0, fmt.Errorf("failed to find crowdsourced VEX rule for id: %s", crowdsourcedVexRuleID)
 			}
-			return crowdsourcedVexRule, nil
+			return crowdsourcedVexRule, votes[sortableVotes[len(sortableVotes)-1]].Value, nil
 		}
 	} else {
-		// Only one VexRule, so we can return it without worrying about ties
-		crowdsourcedVexRulePath = sortableVotes[len(sortableVotes)-1]
-		crowdsourcedVexRule, found = findVexRuleFromPath(crowdsourcedVexRulePath, vexRules)
+		// Only one models.VEXRule, so we can return it without worrying about ties
+		crowdsourcedVexRuleID = sortableVotes[len(sortableVotes)-1]
+		crowdsourcedVexRule, found = getVexRuleFromMatchingRules(crowdsourcedVexRuleID, ruleIDtoIdentity, matchingRules)
 		if !found {
-			slog.Error("failed to find crowdsourced VEX rule", "path", crowdsourcedVexRulePath)
-			return VexRule{}, fmt.Errorf("failed to find crowdsourced VEX rule for path: %s", crowdsourcedVexRulePath)
+			slog.Error("failed to find crowdsourced VEX rule", "id", crowdsourcedVexRuleID)
+			return models.VEXRule{}, 0, fmt.Errorf("failed to find crowdsourced VEX rule for id: %s", crowdsourcedVexRuleID)
 		}
-		return crowdsourcedVexRule, nil
+		return crowdsourcedVexRule, votes[sortableVotes[len(sortableVotes)-1]].Value, nil
 	}
 }

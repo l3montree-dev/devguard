@@ -135,8 +135,8 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx con
 }
 
 // FetchVexFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
-	ret := _mock.Called(ctx, assetID, assetVersionName, upstreamURLs)
+func (_mock *ScanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
+	ret := _mock.Called(ctx, assetID, upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchVexFromUpstream")
@@ -145,25 +145,25 @@ func (_mock *ScanService) FetchVexFromUpstream(ctx context.Context, assetID uuid
 	var r0 []models.VEXRule
 	var r1 []models.ExternalReference
 	var r2 []models.ExternalReference
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)); ok {
-		return returnFunc(ctx, assetID, assetVersionName, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)); ok {
+		return returnFunc(ctx, assetID, upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, []string) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, assetID, assetVersionName, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, []string) []models.VEXRule); ok {
+		r0 = returnFunc(ctx, assetID, upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VEXRule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, []string) []models.ExternalReference); ok {
-		r1 = returnFunc(ctx, assetID, assetVersionName, upstreamURLs)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, []string) []models.ExternalReference); ok {
+		r1 = returnFunc(ctx, assetID, upstreamURLs)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.ExternalReference)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uuid.UUID, string, []string) []models.ExternalReference); ok {
-		r2 = returnFunc(ctx, assetID, assetVersionName, upstreamURLs)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uuid.UUID, []string) []models.ExternalReference); ok {
+		r2 = returnFunc(ctx, assetID, upstreamURLs)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.ExternalReference)
@@ -180,13 +180,12 @@ type ScanService_FetchVexFromUpstream_Call struct {
 // FetchVexFromUpstream is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetID uuid.UUID
-//   - assetVersionName string
 //   - upstreamURLs []string
-func (_e *ScanService_Expecter) FetchVexFromUpstream(ctx interface{}, assetID interface{}, assetVersionName interface{}, upstreamURLs interface{}) *ScanService_FetchVexFromUpstream_Call {
-	return &ScanService_FetchVexFromUpstream_Call{Call: _e.mock.On("FetchVexFromUpstream", ctx, assetID, assetVersionName, upstreamURLs)}
+func (_e *ScanService_Expecter) FetchVexFromUpstream(ctx interface{}, assetID interface{}, upstreamURLs interface{}) *ScanService_FetchVexFromUpstream_Call {
+	return &ScanService_FetchVexFromUpstream_Call{Call: _e.mock.On("FetchVexFromUpstream", ctx, assetID, upstreamURLs)}
 }
 
-func (_c *ScanService_FetchVexFromUpstream_Call) Run(run func(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string)) *ScanService_FetchVexFromUpstream_Call {
+func (_c *ScanService_FetchVexFromUpstream_Call) Run(run func(ctx context.Context, assetID uuid.UUID, upstreamURLs []string)) *ScanService_FetchVexFromUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -196,19 +195,14 @@ func (_c *ScanService_FetchVexFromUpstream_Call) Run(run func(ctx context.Contex
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 string
+		var arg2 []string
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []string
-		if args[3] != nil {
-			arg3 = args[3].([]string)
+			arg2 = args[2].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -219,7 +213,7 @@ func (_c *ScanService_FetchVexFromUpstream_Call) Return(vEXRules []models.VEXRul
 	return _c
 }
 
-func (_c *ScanService_FetchVexFromUpstream_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)) *ScanService_FetchVexFromUpstream_Call {
+func (_c *ScanService_FetchVexFromUpstream_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)) *ScanService_FetchVexFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -489,8 +483,8 @@ func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.C
 }
 
 // RunArtifactSecurityLifecycle provides a mock function for the type ScanService
-func (_mock *ScanService) RunArtifactSecurityLifecycle(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+func (_mock *ScanService) RunArtifactSecurityLifecycle(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RunArtifactSecurityLifecycle")
@@ -500,32 +494,32 @@ func (_mock *ScanService) RunArtifactSecurityLifecycle(ctx context.Context, tx s
 	var r1 []models.VEXRule
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) *normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) *normalize.SBOMGraph); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.SBOMGraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) []models.VEXRule); ok {
-		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) []models.VEXRule); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.VEXRule)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) []models.DependencyVuln); ok {
-		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) []models.DependencyVuln); ok {
+		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) error); ok {
-		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, []models.ExternalReference, *string) error); ok {
+		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -546,12 +540,13 @@ type ScanService_RunArtifactSecurityLifecycle_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
 //   - userID string
+//   - vexRefs []models.ExternalReference
 //   - userAgent *string
-func (_e *ScanService_Expecter) RunArtifactSecurityLifecycle(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}, userAgent interface{}) *ScanService_RunArtifactSecurityLifecycle_Call {
-	return &ScanService_RunArtifactSecurityLifecycle_Call{Call: _e.mock.On("RunArtifactSecurityLifecycle", ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)}
+func (_e *ScanService_Expecter) RunArtifactSecurityLifecycle(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}, vexRefs interface{}, userAgent interface{}) *ScanService_RunArtifactSecurityLifecycle_Call {
+	return &ScanService_RunArtifactSecurityLifecycle_Call{Call: _e.mock.On("RunArtifactSecurityLifecycle", ctx, tx, org, project, asset, assetVersion, artifact, userID, vexRefs, userAgent)}
 }
 
-func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string)) *ScanService_RunArtifactSecurityLifecycle_Call {
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string)) *ScanService_RunArtifactSecurityLifecycle_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -585,9 +580,13 @@ func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx contex
 		if args[7] != nil {
 			arg7 = args[7].(string)
 		}
-		var arg8 *string
+		var arg8 []models.ExternalReference
 		if args[8] != nil {
-			arg8 = args[8].(*string)
+			arg8 = args[8].([]models.ExternalReference)
+		}
+		var arg9 *string
+		if args[9] != nil {
+			arg9 = args[9].(*string)
 		}
 		run(
 			arg0,
@@ -599,6 +598,7 @@ func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Run(run func(ctx contex
 			arg6,
 			arg7,
 			arg8,
+			arg9,
 		)
 	})
 	return _c
@@ -609,7 +609,7 @@ func (_c *ScanService_RunArtifactSecurityLifecycle_Call) Return(sBOMGraph *norma
 	return _c
 }
 
-func (_c *ScanService_RunArtifactSecurityLifecycle_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)) *ScanService_RunArtifactSecurityLifecycle_Call {
+func (_c *ScanService_RunArtifactSecurityLifecycle_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)) *ScanService_RunArtifactSecurityLifecycle_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -885,8 +885,8 @@ func (_c *ScanService_ScanSarifWithoutSaving_Call) RunAndReturn(run func(ctx con
 }
 
 // VexRulesFromDocument provides a mock function for the type ScanService
-func (_mock *ScanService) VexRulesFromDocument(bytes []byte, uUID uuid.UUID, s string, s1 string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
-	ret := _mock.Called(bytes, uUID, s, s1)
+func (_mock *ScanService) VexRulesFromDocument(bytes []byte, uUID uuid.UUID, s string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
+	ret := _mock.Called(bytes, uUID, s)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VexRulesFromDocument")
@@ -895,23 +895,23 @@ func (_mock *ScanService) VexRulesFromDocument(bytes []byte, uUID uuid.UUID, s s
 	var r0 []models.VEXRule
 	var r1 dtos.ExternalReferenceType
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func([]byte, uuid.UUID, string, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)); ok {
-		return returnFunc(bytes, uUID, s, s1)
+	if returnFunc, ok := ret.Get(0).(func([]byte, uuid.UUID, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)); ok {
+		return returnFunc(bytes, uUID, s)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]byte, uuid.UUID, string, string) []models.VEXRule); ok {
-		r0 = returnFunc(bytes, uUID, s, s1)
+	if returnFunc, ok := ret.Get(0).(func([]byte, uuid.UUID, string) []models.VEXRule); ok {
+		r0 = returnFunc(bytes, uUID, s)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VEXRule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]byte, uuid.UUID, string, string) dtos.ExternalReferenceType); ok {
-		r1 = returnFunc(bytes, uUID, s, s1)
+	if returnFunc, ok := ret.Get(1).(func([]byte, uuid.UUID, string) dtos.ExternalReferenceType); ok {
+		r1 = returnFunc(bytes, uUID, s)
 	} else {
 		r1 = ret.Get(1).(dtos.ExternalReferenceType)
 	}
-	if returnFunc, ok := ret.Get(2).(func([]byte, uuid.UUID, string, string) error); ok {
-		r2 = returnFunc(bytes, uUID, s, s1)
+	if returnFunc, ok := ret.Get(2).(func([]byte, uuid.UUID, string) error); ok {
+		r2 = returnFunc(bytes, uUID, s)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -927,12 +927,11 @@ type ScanService_VexRulesFromDocument_Call struct {
 //   - bytes []byte
 //   - uUID uuid.UUID
 //   - s string
-//   - s1 string
-func (_e *ScanService_Expecter) VexRulesFromDocument(bytes interface{}, uUID interface{}, s interface{}, s1 interface{}) *ScanService_VexRulesFromDocument_Call {
-	return &ScanService_VexRulesFromDocument_Call{Call: _e.mock.On("VexRulesFromDocument", bytes, uUID, s, s1)}
+func (_e *ScanService_Expecter) VexRulesFromDocument(bytes interface{}, uUID interface{}, s interface{}) *ScanService_VexRulesFromDocument_Call {
+	return &ScanService_VexRulesFromDocument_Call{Call: _e.mock.On("VexRulesFromDocument", bytes, uUID, s)}
 }
 
-func (_c *ScanService_VexRulesFromDocument_Call) Run(run func(bytes []byte, uUID uuid.UUID, s string, s1 string)) *ScanService_VexRulesFromDocument_Call {
+func (_c *ScanService_VexRulesFromDocument_Call) Run(run func(bytes []byte, uUID uuid.UUID, s string)) *ScanService_VexRulesFromDocument_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 []byte
 		if args[0] != nil {
@@ -946,15 +945,10 @@ func (_c *ScanService_VexRulesFromDocument_Call) Run(run func(bytes []byte, uUID
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -965,7 +959,7 @@ func (_c *ScanService_VexRulesFromDocument_Call) Return(vEXRules []models.VEXRul
 	return _c
 }
 
-func (_c *ScanService_VexRulesFromDocument_Call) RunAndReturn(run func(bytes []byte, uUID uuid.UUID, s string, s1 string) ([]models.VEXRule, dtos.ExternalReferenceType, error)) *ScanService_VexRulesFromDocument_Call {
+func (_c *ScanService_VexRulesFromDocument_Call) RunAndReturn(run func(bytes []byte, uUID uuid.UUID, s string) ([]models.VEXRule, dtos.ExternalReferenceType, error)) *ScanService_VexRulesFromDocument_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database"
@@ -182,7 +181,6 @@ func CalculateConfidenceScoreForPath(ctx context.Context, rules []models.VEXRule
 		) error {
 
 			for _, rule := range rules {
-				rulaPath := strings.Join(rule.PathPattern, "->")
 
 				asset, err := assetRepo.Read(ctx, nil, rule.AssetID)
 				if err != nil {
@@ -211,11 +209,10 @@ func CalculateConfidenceScoreForPath(ctx context.Context, rules []models.VEXRule
 				}
 
 				ruleConfidence := 1.0 * math.Max(projectTrustscore, organizationTrustscore)
-				confidenceValues[rulaPath] += ruleConfidence
+				confidenceValues[rule.ID] += ruleConfidence
 			}
 
 			for _, rule := range markedAsAffected {
-				rulaPath := strings.Join(rule.PathPattern, "")
 
 				asset, err := assetRepo.Read(ctx, nil, rule.AssetID)
 				if err != nil {
@@ -244,7 +241,7 @@ func CalculateConfidenceScoreForPath(ctx context.Context, rules []models.VEXRule
 				}
 
 				ruleConfidence := 1.0 * math.Max(projectTrustscore, organizationTrustscore)
-				confidenceValues[rulaPath] += ruleConfidence
+				confidenceValues[rule.ID] += ruleConfidence
 			}
 
 			totalConfidence := 0.0

@@ -192,6 +192,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.MaliciousPackageChecker,
 		f.App.VulnDBService,
 		f.App.VexRuleService,
+		f.App.ExternalReferenceRepository,
 		f.App.FixedVersionResolver,
 	)
 }

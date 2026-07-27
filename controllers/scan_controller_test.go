@@ -28,7 +28,6 @@ import (
 
 func TestIngestVexFromExternalReferences(t *testing.T) {
 	asset := models.Asset{}
-	assetVersion := models.AssetVersion{Name: "main"}
 
 	t.Run("does nothing when the SBOM has no exploitability-statement references", func(t *testing.T) {
 		externalReferenceRepositoryMock := mocks.NewExternalReferenceRepository(t)
@@ -43,12 +42,12 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 
 		bom := &cdx.BOM{}
 
-		err := scanController.ingestVexFromExternalReferences(context.Background(), nil, bom, asset, assetVersion)
+		err := scanController.ingestVexFromExternalReferences(context.Background(), nil, bom, asset)
 
 		assert.NoError(t, err)
 		// no external reference should have been stored and no VEX ingestion should be attempted
 		externalReferenceRepositoryMock.AssertNotCalled(t, "SaveBatch", mock.Anything, mock.Anything, mock.Anything)
-		vexRuleServiceMock.AssertNotCalled(t, "IngestVEXRules", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+		vexRuleServiceMock.AssertNotCalled(t, "IngestVEXRules", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("fetches and ingests VEX rules when an exploitability-statement reference is present", func(t *testing.T) {
@@ -60,16 +59,16 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 
 		externalReferenceRepositoryMock.EXPECT().SaveBatch(mock.Anything, mock.Anything, mock.MatchedBy(func(refs []models.ExternalReference) bool {
 			ref := refs[0]
-			return ref.URL == vexURL && ref.AssetID == asset.ID && ref.AssetVersionName == "main"
+			return ref.URL == vexURL && ref.AssetID == asset.ID
 		})).Return(nil)
 
 		fetchedRules := []models.VEXRule{{}}
-		validRefs := []models.ExternalReference{{URL: vexURL, AssetID: asset.ID, AssetVersionName: "main"}}
-		scanServiceMock.EXPECT().FetchVexFromUpstream(mock.Anything, asset.ID, "main", mock.MatchedBy(func(urls []string) bool {
+		validRefs := []models.ExternalReference{{URL: vexURL, AssetID: asset.ID}}
+		scanServiceMock.EXPECT().FetchVexFromUpstream(mock.Anything, asset.ID, mock.MatchedBy(func(urls []string) bool {
 			return len(urls) == 1 && urls[0] == vexURL
 		})).Return(fetchedRules, validRefs, nil)
 
-		vexRuleServiceMock.EXPECT().IngestVEXRules(mock.Anything, mock.Anything, asset, assetVersion, fetchedRules).Return(nil)
+		vexRuleServiceMock.EXPECT().IngestVEXRules(mock.Anything, mock.Anything, asset, fetchedRules).Return(nil)
 
 		scanController := &ScanController{
 			externalReferenceRepository: externalReferenceRepositoryMock,
@@ -83,7 +82,7 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 		}
 		bom := &cdx.BOM{ExternalReferences: &refs}
 
-		err := scanController.ingestVexFromExternalReferences(context.Background(), nil, bom, asset, assetVersion)
+		err := scanController.ingestVexFromExternalReferences(context.Background(), nil, bom, asset)
 
 		assert.NoError(t, err)
 	})

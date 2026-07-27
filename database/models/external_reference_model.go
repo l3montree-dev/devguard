@@ -9,13 +9,11 @@ import (
 )
 
 type ExternalReference struct {
-	AssetID          uuid.UUID                  `json:"assetId" gorm:"primarykey;type:uuid;not null;index"`
-	AssetVersionName string                     `json:"assetVersionName" gorm:"primarykey;type:text;not null;index"`
-	URL              string                     `json:"url" gorm:"primarykey;type:text;not null"`
-	Type             dtos.ExternalReferenceType `json:"type" gorm:"type:text;not null"` // "cyclonedx", "csaf", etc.
-	Asset            Asset                      `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	AssetVersion     AssetVersion               `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
-	Error            *string                    `gorm:"type:text"` // optional error message if the reference could not be processed
+	AssetID uuid.UUID                  `json:"assetId" gorm:"primarykey;type:uuid;not null;index"`
+	URL     string                     `json:"url" gorm:"primarykey;type:text;not null"`
+	Type    dtos.ExternalReferenceType `json:"type" gorm:"type:text;not null"` // "cyclonedx", "csaf", etc.
+	Asset   Asset                      `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
+	Error   *string                    `gorm:"type:text"` // optional error message if the reference could not be processed
 }
 
 func (e ExternalReference) TableName() string {

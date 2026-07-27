@@ -618,6 +618,16 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 			project := assetWithDetails.project
 			org := assetWithDetails.org
 
+			vexRefs, err := runner.externalReferenceRepository.FindByAssetID(assetWithDetails.ctx, runner.db, asset.ID)
+			if err != nil {
+				slog.Error("failed to fetch vex references for asset", "error", err, "assetID", asset.ID)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not fetch vex references: %w", err),
+				}
+				continue
+			}
+
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-upstream")
 			errs := make([]error, 0)
 
@@ -626,7 +636,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 
-					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
+					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", vexRefs, nil); err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()

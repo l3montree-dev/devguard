@@ -1,0 +1,249 @@
+// Copyright (C) 2026 l3montree GmbH
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+package vexrules
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/Masterminds/semver"
+	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/package-url/packageurl-go"
+)
+
+// PathPattern wildcard for VEX rules
+const (
+	// PathPatternWildcard matches any path element at that position
+	PathPatternWildcard = "*"
+)
+
+// PathPattern represents a path pattern with wildcards.
+// Patterns use suffix matching where "*" can match any number of path elements.
+// A wildcard "*" can appear at any position to match zero or more path elements.
+// Examples:
+//   - ["pkg:golang/lib@v1.0"] matches paths ending with exactly this element
+//   - ["*", "pkg:golang/lib@v1.0"] matches paths ending with any elements followed by this element
+//   - ["*"] matches any path suffix
+type PathPattern []string
+
+// isWildcard returns true if the element is a wildcard (*).
+func isWildcard(elem string) bool {
+	return elem == PathPatternWildcard
+}
+
+// matchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
+// The pattern is matched against suffixes of the path.
+// A wildcard in the pattern matches zero or more path elements.
+//
+// Example:
+//   - Pattern ["pkg:golang/lib"] matches path ["pkg:golang/lib"] or ["a", "b", "pkg:golang/lib"]
+//   - Pattern ["*", "lib"] matches ["lib"] or ["a", "lib"] or ["a", "b", "lib"]
+//   - Pattern ["a", "*", "b"] matches ["a", "b"] or ["a", "x", "b"] or ["a", "x", "y", "z", "b"]
+//
+// Unexported: callers should use MatchesSuffixForArtifacts, which also
+// strips a leading artifact-identity path segment before delegating here.
+func (p PathPattern) matchesSuffix(path []string) bool {
+	if len(p) == 0 {
+		return true
+	}
+
+	// ROOT is a stop marker meaning "direct dependency only". When the pattern
+	// contains ROOT, skip suffix scanning and match the full path from position 0.
+	if slices.Contains(p, normalize.GraphRootNodeID) {
+		return matchPattern(p, path)
+	}
+
+	// For suffix matching, we try increasingly longer suffixes
+	// Count non-wildcard elements to determine minimum suffix length
+	minLen := 0
+	for _, elem := range p {
+		if !isWildcard(elem) {
+			minLen++
+		}
+	}
+
+	if len(path) < minLen {
+		return false
+	}
+
+	// Try matching against suffixes of increasing length
+	for suffixStart := len(path) - minLen; suffixStart >= 0; suffixStart-- {
+		suffix := path[suffixStart:]
+		if matchPattern(p, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func ToCELExpression(cveID string, pattern PathPattern) string {
+	quoted := make([]string, len(pattern))
+	for i, elem := range pattern {
+		quoted[i] = fmt.Sprintf("%q", elem)
+	}
+	return fmt.Sprintf("vuln.cveId == %s && matchesPattern(vuln, [%s])", fmt.Sprintf("%q", cveID), strings.Join(quoted, ", "))
+}
+
+func VexRuleTitle(cveID string, pattern PathPattern) string {
+	return fmt.Sprintf("%s not exploitable in %s", cveID, pattern[len(pattern)-1])
+}
+
+// elementMatches checks whether a single pattern element matches a single
+// path element. Besides a plain literal comparison, it supports semver
+// constraints in the pattern element's version: a pattern purl like
+// "pkg:npm/lib@>=1.0.0,<2.0.0" matches any path purl of the same package
+// whose version satisfies that constraint (e.g. "pkg:npm/lib@1.5.0").
+// Wildcards are already consumed
+func elementMatches(patternElem, pathElem string) bool {
+	if patternElem == pathElem {
+		return true
+	}
+
+	patternPurl, err := packageurl.FromString(patternElem)
+	if err != nil {
+		return false
+	}
+	pathPurl, err := packageurl.FromString(pathElem)
+	if err != nil {
+		return false
+	}
+
+	matches, err := PurlVersionMatches(patternPurl, pathPurl)
+	if err != nil {
+		return false
+	}
+	return matches
+}
+
+func PurlVersionMatches(patternPurl, pathPurl packageurl.PackageURL) (bool, error) {
+	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
+		return false, nil
+	}
+
+	constraint, err := semver.NewConstraint(patternPurl.Version)
+	if err != nil {
+		return false, fmt.Errorf("invalid pattern version constraint: %w", err)
+	}
+	version, err := semver.NewVersion(pathPurl.Version)
+	if err != nil {
+		return false, fmt.Errorf("invalid path version: %w", err)
+	}
+	return constraint.Check(version), nil
+}
+
+// matchPattern checks if the pattern exactly matches the path.
+// Wildcards can match zero or more elements.
+func matchPattern(pattern, path []string) bool {
+	if len(pattern) == 0 {
+		return len(path) == 0
+	}
+
+	pIdx := 0
+	pathIdx := 0
+
+	for pIdx < len(pattern) {
+		if isWildcard(pattern[pIdx]) {
+			// Wildcard: try to match zero or more elements
+			// If this is the last element in pattern, it matches everything remaining
+			if pIdx == len(pattern)-1 {
+				return true
+			}
+
+			// If the next pattern element is ROOT (stop marker), try a zero-length
+			// match for this wildcard. [*, ROOT, pkg:A] is equivalent to [ROOT, pkg:A]:
+			// ROOT anchors the remainder to the current path position.
+			if pattern[pIdx+1] == normalize.GraphRootNodeID {
+				if matchPattern(pattern[pIdx+1:], path[pathIdx:]) {
+					return true
+				}
+			}
+
+			// Try to find the next pattern element in the path
+			nextPattern := pattern[pIdx+1]
+
+			for i := pathIdx; i < len(path); i++ {
+				if elementMatches(nextPattern, path[i]) {
+					// Found next pattern element, recursively match the rest
+					if matchPattern(pattern[pIdx+1:], path[i:]) {
+						return true
+					}
+				}
+			}
+
+			// Handle the case where we've exhausted the path (i == len(path) in the original loop)
+			// Check if remaining pattern is all wildcards or empty
+			allWildcards := true
+			for j := pIdx + 1; j < len(pattern); j++ {
+				if !isWildcard(pattern[j]) {
+					allWildcards = false
+					break
+				}
+			}
+			if allWildcards {
+				return true
+			}
+			return pathIdx == len(path)
+		}
+
+		// ROOT is a stop marker — it is never stored in VulnerabilityPath,
+		// so skip it in the pattern without consuming a path element.
+		if pattern[pIdx] == normalize.GraphRootNodeID {
+			pIdx++
+			continue
+		}
+
+		// Literal match
+		if pathIdx >= len(path) || !elementMatches(pattern[pIdx], path[pathIdx]) {
+			return false
+		}
+
+		pIdx++
+		pathIdx++
+	}
+
+	return pathIdx == len(path)
+}
+
+// Matches is like matchesSuffix, but first strips a leading
+// pattern element that identifies one of the vulnerability's own artifacts.
+//
+// VulnerabilityPath is always component-only and never includes the
+// artifact's own identity, but devguard's own exports (CSAF, CycloneDX VEX)
+// always include the artifact as the path's root. A pattern reconstructed
+// from such an export - e.g. a downloaded VEX document being re-uploaded -
+// would otherwise carry that artifact element as its first path segment and
+// never match any real vulnerability path.
+//
+// Once stripped, the remainder is matched exactly from the start of path
+// (like the ROOT stop-marker case in matchesSuffix), not as a generic
+// suffix: the artifact anchors the pattern to the absolute root of the
+// dependency graph, so a shorter pattern must not match as a mere suffix of
+// a longer, distinct path through a shared component - that per-path
+// distinction is exactly what CSAF's product tree encodes.
+func (p PathPattern) Matches(path []string, artifactPurls []string) bool {
+	if len(p) > 0 {
+		// check if at least one artifact purl matches the first element of the pattern
+		// we are only checking for AT LEAST ONE artifact purl matches, because that is our semantic how artifacts
+		// should work: Compiled from the same source
+		for _, artifactPurl := range artifactPurls {
+			if elementMatches(p[0], artifactPurl) {
+				// strip the first element of the pattern and continue matching the rest
+				return matchPattern(p[1:], path)
+			}
+		}
+	}
+	return p.matchesSuffix(path)
+}
