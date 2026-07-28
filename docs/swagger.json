@@ -4956,6 +4956,9 @@
                     "name": {
                         "type": "string"
                     },
+                    "projectSlug": {
+                        "type": "string"
+                    },
                     "slug": {
                         "type": "string"
                     }

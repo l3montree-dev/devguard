@@ -84,8 +84,9 @@ type ProjectVulnDistribution struct {
 }
 
 type AssetVulnDistribution struct {
-	Name string `json:"name" gorm:"column:aname"`
-	Slug string `json:"slug" gorm:"column:aslug"`
+	Name        string `json:"name"        gorm:"column:asset_name"`
+	ProjectSlug string `json:"projectSlug" gorm:"column:project_slug"`
+	Slug        string `json:"slug"        gorm:"column:asset_slug"`
 
 	VulnSeverityDistribution
 }
