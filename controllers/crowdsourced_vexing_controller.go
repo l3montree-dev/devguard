@@ -85,7 +85,7 @@ func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) err
 	asset := shared.GetAsset(ctx)
 	span.SetAttributes(attribute.String("asset.id", asset.ID.String()))
 
-	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(reqCtx, nil, asset.ID)
+	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, asset.ID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

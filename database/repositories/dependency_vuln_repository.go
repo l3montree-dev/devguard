@@ -428,13 +428,52 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 
 }
 
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+// GetAllOpenVulnsByAssetIDWithoutEvents omits CVE.Description/References - they're large
+// text/jsonb columns that dominate scan/materialization cost for thousands of rows, and
+// aren't needed by CEL VEX rule matching or the crowdsourced-vexing recommendation response.
+// Artifacts are loaded manually (not via Preload) so the dependency_vuln_id filter stays a
+// subquery on (asset_id, state) instead of GORM's Preload building a literal IN(...) list of
+// every already-fetched vuln ID, which is expensive for Postgres to plan at thousands of IDs.
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	db := repository.Repository.GetDB(ctx, tx)
+
 	var vulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE").Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
-		return db.Order("created_at ASC")
+	if err := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
+		return db.Omit("Description", "References")
 	}).Distinct("ON (cve_id, vulnerability_path) *").Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).Order("cve_id, vulnerability_path, created_at ASC").Find(&vulns).Error; err != nil {
 		return nil, err
 	}
+
+	if len(vulns) == 0 {
+		return vulns, nil
+	}
+
+	dedupedIDs := db.Table("dependency_vulns").
+		Select("DISTINCT ON (cve_id, vulnerability_path) id").
+		Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).
+		Order("cve_id, vulnerability_path, created_at ASC")
+
+	type artifactRow struct {
+		models.Artifact
+		DependencyVulnID uuid.UUID
+	}
+	var rows []artifactRow
+	if err := db.Table("artifact_dependency_vulns AS adv").
+		Select("artifacts.*, adv.dependency_vuln_id").
+		Joins("JOIN artifacts ON adv.artifact_artifact_name = artifacts.artifact_name AND adv.artifact_asset_version_name = artifacts.asset_version_name AND adv.artifact_asset_id = artifacts.asset_id").
+		Where("adv.dependency_vuln_id IN (?)", dedupedIDs).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	artifactsByVulnID := make(map[uuid.UUID][]models.Artifact, len(vulns))
+	for _, r := range rows {
+		artifactsByVulnID[r.DependencyVulnID] = append(artifactsByVulnID[r.DependencyVulnID], r.Artifact)
+	}
+	for i := range vulns {
+		vulns[i].Artifacts = artifactsByVulnID[vulns[i].ID]
+	}
+
 	return vulns, nil
 }
 

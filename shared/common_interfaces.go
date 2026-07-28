@@ -263,7 +263,7 @@ type DependencyVulnRepository interface {
 	utils.Repository[uuid.UUID, models.DependencyVuln, DB]
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(ctx context.Context, tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)

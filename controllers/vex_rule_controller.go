@@ -154,7 +154,7 @@ func (c *VEXRuleController) cachedVulns(ctx shared.Context) []models.DependencyV
 		return vulns
 	}
 
-	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx.Request().Context(), nil, assetID)
+	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(ctx.Request().Context(), nil, assetID)
 	if err != nil {
 		ctx.Logger().Error("failed to retrieve vulnerabilities", "error", err)
 		return nil

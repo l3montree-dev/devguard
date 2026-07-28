@@ -772,12 +772,12 @@ func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) RunAndReturn(ru
 	return _c
 }
 
-// GetAllOpenVulnsByAssetID provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+// GetAllOpenVulnsByAssetIDWithoutEvents provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAllOpenVulnsByAssetID")
+		panic("no return value specified for GetAllOpenVulnsByAssetIDWithoutEvents")
 	}
 
 	var r0 []models.DependencyVuln
@@ -800,20 +800,20 @@ func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Cont
 	return r0, r1
 }
 
-// DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetID'
-type DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call struct {
+// DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetIDWithoutEvents'
+type DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call struct {
 	*mock.Call
 }
 
-// GetAllOpenVulnsByAssetID is a helper method to define mock.On call
+// GetAllOpenVulnsByAssetIDWithoutEvents is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
-	return &DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetID", ctx, tx, assetID)}
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDWithoutEvents(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
+	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDWithoutEvents", ctx, tx, assetID)}
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID)) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -836,12 +836,12 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Run(run func(c
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
 	_c.Call.Return(dependencyVulns, err)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }
