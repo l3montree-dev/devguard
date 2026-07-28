@@ -12,4 +12,4 @@ ALTER TABLE public.vex_rules DROP COLUMN path_pattern;
 
 ALTER TABLE public.vex_rules DROP COLUMN cve_id;
 
-ALTER TABLE public.vex_rules DROP COLUMN asset_version_name;
+ALTER TABLE public.vex_rules DROP COLUMN IF EXISTS asset_version_name;
