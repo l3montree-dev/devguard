@@ -432,7 +432,7 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context
 	var vulns = []models.DependencyVuln{}
 	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE").Preload("Artifacts").Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).Find(&vulns).Error; err != nil {
+	}).Distinct("ON (cve_id, vulnerability_path) *").Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).Order("cve_id, vulnerability_path, created_at ASC").Find(&vulns).Error; err != nil {
 		return nil, err
 	}
 	return vulns, nil

@@ -209,34 +209,48 @@ func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared
 		return traceErr(err)
 	}
 
-	recommendations := make(map[string]dtos.VexRuleRecommendation, len(vulns))
-	for _, vuln := range vulns {
-		rule, confidence, err := s.recommend(requestCtx, vexCtx, vuln)
-		if err != nil {
-			if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
-				continue
-			}
-			return traceErr(err)
-		}
-		id, err := vexrules.IdentityOfRule(models.VEXRule{
-			CELExpression:           rule.CELExpression,
-			MechanicalJustification: rule.MechanicalJustification,
-			EventType:               rule.EventType,
-		})
-		if err != nil {
-			slog.Warn("could not calculate identity of rule", "err", err)
-			continue
-		}
-
-		// check if the rule already matches a vuln
-		if r, ok := recommendations[id]; ok {
-			r.AppliesToAmountOfDependencyVulns++
-			recommendations[id] = r
-		} else {
-			recommendations[id] = transformer.VEXRuleToRecommendationDTO(rule, confidence)
-		}
-
+	type vulnRecommendation struct {
+		id  string
+		dto dtos.VexRuleRecommendation
 	}
+
+	eg := utils.ErrGroup[*vulnRecommendation](100)
+	for _, vuln := range vulns {
+		eg.Go(func() (*vulnRecommendation, error) {
+			rule, confidence, err := s.recommend(requestCtx, vexCtx, vuln)
+			if err != nil {
+				if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
+					return nil, nil
+				}
+				return nil, err
+			}
+			id, err := vexrules.IdentityOfRule(models.VEXRule{
+				CELExpression:           rule.CELExpression,
+				MechanicalJustification: rule.MechanicalJustification,
+				EventType:               rule.EventType,
+			})
+			if err != nil {
+				slog.Warn("could not calculate identity of rule", "err", err)
+				return nil, nil
+			}
+			return &vulnRecommendation{id: id, dto: transformer.VEXRuleToRecommendationDTO(rule, confidence)}, nil
+		})
+	}
+	results, err := eg.WaitAndCollect()
+	if err != nil {
+		return traceErr(err)
+	}
+
+	found := utils.Filter(results, func(res *vulnRecommendation) bool { return res != nil })
+	recommendations := utils.Reduce(found, func(acc map[string]dtos.VexRuleRecommendation, res *vulnRecommendation) map[string]dtos.VexRuleRecommendation {
+		if r, ok := acc[res.id]; ok {
+			r.AppliesToAmountOfDependencyVulns++
+			acc[res.id] = r
+		} else {
+			acc[res.id] = res.dto
+		}
+		return acc
+	}, make(map[string]dtos.VexRuleRecommendation, len(found)))
 	span.SetAttributes(attribute.Int("recommendations.total", len(recommendations)))
 
 	return recommendations, nil

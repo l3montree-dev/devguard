@@ -290,7 +290,6 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 	}
 	// [Mitigation 15] Require a minimum number of voters for a decision; disabling the recommendation when too few voters remain
 	if validVotesCount < minVoterThreshold {
-		slog.Info("not enough valid votes to create a crowdsourced VEX rule", "validVotesCount", validVotesCount)
 		return models.VEXRule{}, 0, ErrNoRecommendation
 	}
 
