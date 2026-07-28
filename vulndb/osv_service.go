@@ -925,6 +925,7 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE cve_affected_component DROP CONSTRAINT IF EXISTS cve_affected_component_pkey;
 	
 	-- lastly drop all indexes (might be redundant but safe)
+	DROP INDEX IF EXISTS idx_cves_lower_cve;
 	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
     DROP INDEX IF EXISTS idx_affected_components_semver_introduced;
     DROP INDEX IF EXISTS idx_affected_components_version_fixed;
@@ -984,6 +985,8 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	start = time.Now()
 	_, err = tx.Exec(ctx, `
 	-- Lastly rebuild the indexes
+	CREATE INDEX IF NOT EXISTS idx_cves_lower_cve ON public.cves USING hash (LOWER(cve));
+
     CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
 
 	CREATE INDEX idx_cve_relationships_source_cve ON public.cve_relationships USING btree (source_cve);
