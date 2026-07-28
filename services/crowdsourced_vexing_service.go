@@ -137,13 +137,14 @@ func (s *CrowdsourcedVexingService) loadCrowdsourcedVexingContext(ctx context.Co
 // access itself - callers evaluating multiple vulns should load the context
 // once and call this per vuln.
 func (s *CrowdsourcedVexingService) recommend(ctx context.Context, vexCtx crowdsourcedVexingContext, vuln models.DependencyVuln) (models.VEXRule, float64, error) {
+	matches, err := vexrules.EvalRules(ctx, vexCtx.vexRules, vuln)
+	if err != nil {
+		return models.VEXRule{}, 0, err
+	}
+
 	matchedRules := []models.VEXRule{}
 	for _, rule := range vexCtx.vexRules {
-		match, err := vexrules.EvalRule(ctx, rule, vuln)
-		if err != nil {
-			return models.VEXRule{}, 0, err
-		}
-		if match {
+		if matches[rule.ID] {
 			matchedRules = append(matchedRules, rule)
 		}
 	}

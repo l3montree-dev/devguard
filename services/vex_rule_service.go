@@ -95,13 +95,13 @@ func (s *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx s
 	}
 
 	// Filter rules to only those matching the vulnerability path pattern
+	matches, err := vexrules.EvalRules(ctx, rules, vuln)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate CEL expressions: %w", err)
+	}
 	var matchingRules []models.VEXRule
 	for _, rule := range rules {
-		match, err := vexrules.EvalRule(ctx, rule, vuln)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate CEL expression for rule %s: %w", rule.ID, err)
-		}
-		if match {
+		if matches[rule.ID] {
 			matchingRules = append(matchingRules, rule)
 		}
 	}
@@ -409,13 +409,13 @@ func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.V
 	)
 
 	for _, vuln := range vulns {
+		matches, err := vexrules.EvalRules(ctx, celRules, vuln)
+		if err != nil {
+			slog.Error("failed to evaluate CEL expressions for VEX rules", "error", err)
+			continue
+		}
 		for _, rule := range celRules {
-			match, err := vexrules.EvalRule(ctx, rule, vuln)
-			if err != nil {
-				slog.Error("failed to evaluate CEL expression for VEX rule", "ruleId", rule.ID, "error", err)
-				continue
-			}
-			if match {
+			if matches[rule.ID] {
 				result[rule.ID] = append(result[rule.ID], vuln)
 			}
 		}

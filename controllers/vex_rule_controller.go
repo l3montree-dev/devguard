@@ -186,13 +186,13 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 	eg := utils.ErrGroup[map[string]int](100)
 	for _, vuln := range vulns {
 		eg.Go(func() (map[string]int, error) {
+			matches, err := vexrules.EvalRules(requestCtx, vexRules, vuln)
+			if err != nil {
+				return nil, err
+			}
 			counts := make(map[string]int)
 			for _, rule := range vexRules {
-				match, err := vexrules.EvalRule(requestCtx, rule, vuln)
-				if err != nil {
-					return nil, err
-				}
-				if match {
+				if matches[rule.CELExpression] {
 					counts[rule.CELExpression]++
 				}
 			}
