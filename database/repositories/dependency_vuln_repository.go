@@ -435,7 +435,7 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 // subquery on (asset_id, state) instead of GORM's Preload building a literal IN(...) list of
 // every already-fetched vuln ID, which is expensive for Postgres to plan at thousands of IDs.
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	db := repository.Repository.GetDB(ctx, tx)
+	db := repository.GetDB(ctx, tx)
 
 	var vulns = []models.DependencyVuln{}
 	if err := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
