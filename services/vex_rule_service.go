@@ -27,6 +27,8 @@ import (
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vexrules"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type VEXRuleService struct {
@@ -111,37 +113,41 @@ func (s *VEXRuleService) FindByID(ctx context.Context, tx shared.DB, id string) 
 	return s.vexRuleRepository.FindByID(ctx, tx, id)
 }
 
-// CountMatchingVulns returns the number of dependency vulnerabilities that match a VEX rule
+// CountMatchingVulns returns the number of dependency vulnerabilities that a VEX rule has been applied to
 func (s *VEXRuleService) CountMatchingVulns(ctx context.Context, tx shared.DB, rule models.VEXRule) (int, error) {
-	vulns, err := s.dependencyVulnRepository.GetByAssetID(ctx, tx, rule.AssetID)
+	counts, err := s.vulnEventRepository.CountByVexRuleIDs(ctx, tx, []string{rule.ID})
 	if err != nil {
 		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
-	matching := s.matchRulesToVulns(ctx, []models.VEXRule{rule}, vulns)
-
-	return len(matching[rule.ID]), nil
+	return counts[rule.ID], nil
 }
 
-// CountMatchingVulnsForRules returns the number of matching vulnerabilities for each rule in a single batch query
-// Returns a map of rule ID to count
+// CountMatchingVulnsForRules returns, for each rule, the number of distinct
+// dependency vulns it has an applied event for - i.e. vuln_events grouped by
+// vex_rule_id. This avoids loading every vuln ever recorded for the asset
+// (with full event/CVE preloads) just to recompute CEL matches that were
+// already evaluated and recorded when the rule was applied.
 func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shared.DB, rules []models.VEXRule) (map[string]int, error) {
+	ctx, span := servicesTracer.Start(ctx, "VEXRuleService.CountMatchingVulnsForRules")
+	defer span.End()
+	span.SetAttributes(attribute.Int("rules.total", len(rules)))
+
 	if len(rules) == 0 {
 		return make(map[string]int), nil
 	}
 
-	result := make(map[string]int)
-	assetID := rules[0].AssetID
-
-	vulns, err := s.dependencyVulnRepository.GetByAssetID(ctx, tx, assetID)
-
+	ruleIDs := utils.Map(rules, func(r models.VEXRule) string { return r.ID })
+	counts, err := s.vulnEventRepository.CountByVexRuleIDs(ctx, tx, ruleIDs)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
 	}
-	vulnsByRule := s.matchRulesToVulns(ctx, rules, vulns)
 
+	result := make(map[string]int, len(rules))
 	for _, rule := range rules {
-		if vulns, ok := vulnsByRule[rule.ID]; ok {
-			result[rule.ID] = len(vulns)
+		if count, ok := counts[rule.ID]; ok {
+			result[rule.ID] = count
 		} else {
 			result[rule.ID] = 0
 		}
@@ -380,6 +386,9 @@ func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.D
 }
 
 func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
+	ctx, span := servicesTracer.Start(ctx, "VEXRuleService.matchRulesToVulns")
+	defer span.End()
+
 	result := make(map[string][]models.DependencyVuln)
 
 	// CEL-based rules are evaluated against every vulnerability, regardless of CVE ID.
@@ -393,6 +402,11 @@ func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.V
 			celRules = append(celRules, rule)
 		}
 	}
+	span.SetAttributes(
+		attribute.Int("rules.cel_total", len(celRules)),
+		attribute.Int("vulns.total", len(vulns)),
+		attribute.Int("evaluations.total", len(celRules)*len(vulns)),
+	)
 
 	for _, vuln := range vulns {
 		for _, rule := range celRules {

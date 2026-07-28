@@ -535,6 +535,7 @@ type VulnEventRepository interface {
 	ReadAssetEventsByVulnID(ctx context.Context, tx DB, vulnID uuid.UUID, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)
+	CountByVexRuleIDs(ctx context.Context, tx DB, ruleIDs []string) (map[string]int, error)
 	GetLastEventBeforeTimestamp(ctx context.Context, tx DB, vulnID uuid.UUID, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(ctx context.Context, tx DB, eventID string) error
 	HasAccessToEvent(ctx context.Context, tx DB, assetID uuid.UUID, eventID string) (bool, error)

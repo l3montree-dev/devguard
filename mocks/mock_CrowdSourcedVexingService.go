@@ -112,23 +112,23 @@ func (_c *CrowdSourcedVexingService_Recommend_Call) RunAndReturn(run func(ctx sh
 }
 
 // RecommendBatch provides a mock function for the type CrowdSourcedVexingService
-func (_mock *CrowdSourcedVexingService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[uuid.UUID]dtos.VexRuleRecommendation, error) {
+func (_mock *CrowdSourcedVexingService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error) {
 	ret := _mock.Called(ctx, tx, vulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RecommendBatch")
 	}
 
-	var r0 map[uuid.UUID]dtos.VexRuleRecommendation
+	var r0 map[string]dtos.VexRuleRecommendation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) (map[uuid.UUID]dtos.VexRuleRecommendation, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)); ok {
 		return returnFunc(ctx, tx, vulns)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) map[uuid.UUID]dtos.VexRuleRecommendation); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) map[string]dtos.VexRuleRecommendation); ok {
 		r0 = returnFunc(ctx, tx, vulns)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uuid.UUID]dtos.VexRuleRecommendation)
+			r0 = ret.Get(0).(map[string]dtos.VexRuleRecommendation)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.DB, []models.DependencyVuln) error); ok {
@@ -175,12 +175,12 @@ func (_c *CrowdSourcedVexingService_RecommendBatch_Call) Run(run func(ctx shared
 	return _c
 }
 
-func (_c *CrowdSourcedVexingService_RecommendBatch_Call) Return(uUIDToVexRuleRecommendation map[uuid.UUID]dtos.VexRuleRecommendation, err error) *CrowdSourcedVexingService_RecommendBatch_Call {
-	_c.Call.Return(uUIDToVexRuleRecommendation, err)
+func (_c *CrowdSourcedVexingService_RecommendBatch_Call) Return(stringToVexRuleRecommendation map[string]dtos.VexRuleRecommendation, err error) *CrowdSourcedVexingService_RecommendBatch_Call {
+	_c.Call.Return(stringToVexRuleRecommendation, err)
 	return _c
 }
 
-func (_c *CrowdSourcedVexingService_RecommendBatch_Call) RunAndReturn(run func(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[uuid.UUID]dtos.VexRuleRecommendation, error)) *CrowdSourcedVexingService_RecommendBatch_Call {
+func (_c *CrowdSourcedVexingService_RecommendBatch_Call) RunAndReturn(run func(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)) *CrowdSourcedVexingService_RecommendBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

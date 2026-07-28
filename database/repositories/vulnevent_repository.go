@@ -148,6 +148,32 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 	return shared.NewPaged(pageInfo, count, events), nil
 }
 
+func (r *eventRepository) CountByVexRuleIDs(ctx context.Context, tx *gorm.DB, ruleIDs []string) (map[string]int, error) {
+	result := make(map[string]int, len(ruleIDs))
+	if len(ruleIDs) == 0 {
+		return result, nil
+	}
+
+	type row struct {
+		VexRuleID string
+		Count     int
+	}
+	var rows []row
+	err := r.Repository.GetDB(ctx, tx).Table("vuln_events").
+		Select("vex_rule_id, COUNT(DISTINCT dependency_vuln_id) AS count").
+		Where("vex_rule_id IN (?)", ruleIDs).
+		Group("vex_rule_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, r := range rows {
+		result[r.VexRuleID] = r.Count
+	}
+	return result, nil
+}
+
 func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx *gorm.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
 	err := r.Repository.GetDB(ctx, tx).Raw("SELECT * FROM vuln_events WHERE (dependency_vuln_id IN (?) OR first_party_vuln_id IN (?) OR license_risk_id IN (?)) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs, vulnIDs, vulnIDs).Find(&events).Error

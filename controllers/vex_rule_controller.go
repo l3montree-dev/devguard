@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/uuid"
@@ -73,21 +75,30 @@ func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsServic
 // @Success 200 {object} object{pageSize=int,page=int,total=int64,data=[]dtos.VEXRuleDTO}
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
+	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "VEXRuleController.List")
+	defer span.End()
+	ctx.SetRequest(ctx.Request().WithContext(reqCtx))
+
 	asset := shared.GetAsset(ctx)
+	span.SetAttributes(attribute.String("asset.id", asset.ID.String()))
 
 	pageInfo := shared.GetPageInfo(ctx)
 	search := ctx.QueryParam("search")
 	filterQuery := shared.GetFilterQuery(ctx)
 	sortQuery := shared.GetSortQuery(ctx)
 
-	pagedRules, err := c.vexRuleService.FindByAssetIDPaged(ctx.Request().Context(), nil, asset.ID, pageInfo, search, filterQuery, sortQuery)
+	pagedRules, err := c.vexRuleService.FindByAssetIDPaged(reqCtx, nil, asset.ID, pageInfo, search, filterQuery, sortQuery)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
 	}
+	span.SetAttributes(attribute.Int("rules.page_size", len(pagedRules.Data)))
 
 	// Count matching vulnerabilities for all rules in batch
-	counts, err := c.vexRuleService.CountMatchingVulnsForRules(ctx.Request().Context(), nil, pagedRules.Data)
+	counts, err := c.vexRuleService.CountMatchingVulnsForRules(reqCtx, nil, pagedRules.Data)
 	if err != nil {
+		span.RecordError(err)
 		ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
 		counts = make(map[string]int)
 	}

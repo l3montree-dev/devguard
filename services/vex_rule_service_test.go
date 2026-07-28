@@ -233,95 +233,48 @@ func TestVEXRuleServiceFindByID(t *testing.T) {
 func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 	assetID := uuid.New()
 	rules := []models.VEXRule{
-		{
-			ID:            "rule-1",
-			AssetID:       assetID,
-			Enabled:       true,
-			CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
-		},
-		{
-			ID:            "rule-2",
-			AssetID:       assetID,
-			Enabled:       true,
-			CELExpression: celFor("CVE-2024-5678", []string{"pkg:golang/other@v1.0"}),
-		},
-	}
-
-	vulns := []models.DependencyVuln{
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-5678",
-			VulnerabilityPath: []string{"pkg:golang/other@v1.0"},
-			ComponentPurl:     "pkg:golang/other@v1.0",
-		},
+		{ID: "rule-1", AssetID: assetID, Enabled: true},
+		{ID: "rule-2", AssetID: assetID, Enabled: true},
+		{ID: "rule-3", AssetID: assetID, Enabled: true},
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).Return(vulns, nil)
+	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1", "rule-2", "rule-3"}).
+		Return(map[string]int{"rule-1": 2, "rule-2": 1}, nil)
 
 	service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 	counts, err := service.CountMatchingVulnsForRules(context.Background(), nil, rules)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, counts)
-	assert.Len(t, counts, 2)
+	assert.Len(t, counts, 3)
 	assert.Equal(t, 2, counts["rule-1"])
 	assert.Equal(t, 1, counts["rule-2"])
-	depVulnRepo.AssertExpectations(t)
+	assert.Equal(t, 0, counts["rule-3"])
+	vulnEventRepo.AssertExpectations(t)
 }
 
 // TestVEXRuleServiceCountMatchingVulns tests counting matches for single rule
 func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 	assetID := uuid.New()
-	rule := models.VEXRule{
-		ID:            "rule-1",
-		AssetID:       assetID,
-		Enabled:       true,
-		CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
-	}
-
-	vulns := []models.DependencyVuln{
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-9999",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-	}
+	rule := models.VEXRule{ID: "rule-1", AssetID: assetID, Enabled: true}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).Return(vulns, nil)
+	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1"}).
+		Return(map[string]int{"rule-1": 2}, nil)
 
 	service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 	count, err := service.CountMatchingVulns(context.Background(), nil, rule)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 2, count)
-	depVulnRepo.AssertExpectations(t)
+	vulnEventRepo.AssertExpectations(t)
 }
 
 // TestVEXRuleEnabledBasedOnParanoidMode tests that VEX rules are enabled/disabled based on asset ParanoidMode
