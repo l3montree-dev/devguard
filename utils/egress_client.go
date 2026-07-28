@@ -16,7 +16,9 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -35,10 +37,14 @@ var EgressTransport http.RoundTripper = otelhttp.NewTransport(EgressRoundTripper
 	R: http.DefaultTransport,
 })
 
-var EgressClient = http.Client{
-	Timeout:   30 * time.Second,
-	Transport: EgressTransport,
+func NewEgressClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: EgressTransport,
+	}
 }
+
+var EgressClient = *NewEgressClient(30 * time.Second)
 
 type EgressRoundTripper struct {
 	R http.RoundTripper
@@ -116,4 +122,29 @@ func (mrt EgressRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 	}
 
 	return mrt.R.RoundTrip(r)
+}
+
+// executes a GET request with an empty body to the specified url
+// if no client is passed, the function uses the default http client
+// returns the io.ReadCloser of the body of the response, callers are responsible for closing it
+func DoGetRequestWithContext(ctx context.Context, url string, client *http.Client) (io.ReadCloser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not build http request: %w", err)
+	}
+
+	if client == nil {
+		client = &EgressClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute http request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("request was unsuccessful, status code: %d", resp.StatusCode)
+	}
+
+	return resp.Body, nil
 }

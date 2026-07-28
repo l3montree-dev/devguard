@@ -2257,7 +2257,8 @@ func TestPathPatternVEXRules(t *testing.T) {
 
 			// Create a VEX rule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
-			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			celExpression := fmt.Sprintf(`vuln.cveId == "CVE-2025-46569" && matchesPattern(vuln, [%q])`, pathPattern[0])
+			ruleBody := fmt.Sprintf(`{"justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","celExpression":%q}`, celExpression)
 			recorder = httptest.NewRecorder()
 			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
 			req.Header.Set("Content-Type", "application/json")
@@ -2339,7 +2340,8 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 
 			// Create a VEX rule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
-			ruleBody := fmt.Sprintf(`{"cveId":"CVE-2025-46569","justification":"OPA is not exploitable in our context","mechanicalJustification":"componentNotPresent","pathPattern":["%s"]}`, pathPattern[0])
+			celExpression := fmt.Sprintf(`vuln.cveId == "CVE-2025-46569" && matchesPattern(vuln, [%q])`, pathPattern[0])
+			ruleBody := fmt.Sprintf(`{"justification":"OPA is not exploitable in our context","mechanicalJustification":"componentNotPresent","celExpression":%q}`, celExpression)
 			recorder = httptest.NewRecorder()
 			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
 			req.Header.Set("Content-Type", "application/json")

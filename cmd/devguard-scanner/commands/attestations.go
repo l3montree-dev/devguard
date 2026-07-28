@@ -175,6 +175,11 @@ The command exits with code 1 if any deny rule fires — making it suitable as a
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestationsCmd(cmd, args)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner attestations — Discover and evaluate image attestations",
+			"description":     "Discover all attestations attached to a container image and optionally evaluate them against a Rego policy with devguard-scanner attestations.",
+			"keyword_primary": "devguard-scanner attestations",
+		},
 	}
 
 	scanner.AddDefaultFlags(cmd)

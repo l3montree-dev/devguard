@@ -96,6 +96,11 @@ failure — easy to call directly from policy engines or shell scripts:
     --apiUrl https://api.devguard.org --assetName org/project/app`,
 		RunE: verify,
 		Args: cobra.NoArgs,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner intoto verify — Check supply chain verification status",
+			"description":     "Query the DevGuard supply chain verification endpoint to confirm all required pipeline steps ran correctly, intended for automated deployment gates rather than direct use.",
+			"keyword_primary": "devguard-scanner intoto verify",
+		},
 	}
 
 	cmd.Flags().String("supplyChainOutputDigest", "", "The image supplyChainOutputDigest to verify (e.g. sha256:abc123…)")

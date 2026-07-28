@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -81,6 +82,40 @@ func GitTagSigned(dir, tag string) error {
 
 func GitPushTags(dir string) {
 	_ = GitRun(dir, "push", "--tags")
+}
+
+// RunCommand runs an arbitrary command in dir, forwarding stdout/stderr to the terminal.
+func RunCommand(dir, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+// GitDirtyPaths returns the porcelain status lines for paths under the given
+// path prefix (relative to dir's repo root), or empty if none are dirty.
+func GitDirtyPaths(dir, pathPrefix string) (string, error) {
+	out, err := gitOutput(dir, "status", "--porcelain", "--", pathPrefix)
+	if err != nil {
+		return "", fmt.Errorf("git status in %s: %w", dir, err)
+	}
+	return out, nil
+}
+
+// CopyFile copies a single file from src to dst, creating parent directories as needed.
+func CopyFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", src, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
+	}
+	if err := os.WriteFile(dst, data, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", dst, err)
+	}
+	return nil
 }
 
 func Confirm(prompt string) bool {

@@ -37,6 +37,8 @@ func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEventDTO {
 		URI:                      e.URI,
 		CreatedByVexRule:         e.CreatedByVexRule,
 		UserAgent:                e.GetUserAgent(),
+		VexRuleID:                e.VexRuleID,
+		VexRule:                  convertVexRuleToDto(e.VexRule),
 	}
 }
 
@@ -62,5 +64,15 @@ func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEventDTO {
 		CreatedByVexRule:         event.CreatedByVexRule,
 		OriginalAssetVersionName: event.OriginalAssetVersionName,
 		UserAgent:                event.GetUserAgent(),
+		VexRuleID:                event.VexRuleID,
+		VexRule:                  convertVexRuleToDto(event.VexRule),
 	}
+}
+
+func convertVexRuleToDto(rule *models.VEXRule) *dtos.VEXRuleDTO {
+	if rule == nil {
+		return nil
+	}
+	dto := VEXRuleToDTOWithCount(*rule, 0)
+	return &dto
 }

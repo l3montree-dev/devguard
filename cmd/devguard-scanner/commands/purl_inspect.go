@@ -62,6 +62,11 @@ vulnerability, DevGuard keeps only the canonical one and tells you which were re
   devguard-scanner purl-inspect "pkg:deb/debian/libc6@2.31-1"`,
 		Args: cobra.ExactArgs(1),
 		RunE: purlInspectCmd,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner purl-inspect — inspect a PURL for CVEs and vulnerabilities",
+			"description":     "Look up a package version by PURL in the DevGuard vulnerability database and display matching CVEs, CVSS scores, EPSS probability, and available fixes.",
+			"keyword_primary": "devguard-scanner purl-inspect",
+		},
 	}
 
 	inspectCmd.Flags().Int("timeout", 300, "Set the timeout for scanner operations in seconds")

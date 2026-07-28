@@ -44,6 +44,7 @@ func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 		Risk:                  cve.Risk,
 		Exploits:              utils.Map(cve.Exploits, ExploitModelToDTO),
 		Relationships:         utils.Map(cve.Relationships, RelationshipToDTO),
+		EUVDExploitAdd:        cve.EUVDExploitAdd,
 	}
 }
 

@@ -2,6 +2,7 @@ package compliance
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/csv"
 	"fmt"
@@ -9,10 +10,15 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
+	"golang.org/x/sync/singleflight"
 )
+
+const csvFetchTimeout = 5 * time.Second
 
 //go:embed oscal/catalogs/Grundschutz++-catalog.json
 var grundschutzCatalogJSON []byte
@@ -71,22 +77,55 @@ type newProperty struct {
 	Definitions map[string]string `json:"definitions"`
 }
 
+type csvCacheEntry struct {
+	records [][]string
+	err     error
+}
+
 var (
 	csvCacheMu sync.Mutex
-	csvCache   = make(map[string][][]string)
+	csvCache   = make(map[string]csvCacheEntry)
+	csvGroup   singleflight.Group
 )
 
-// fetchCSVRecords fetches and parses the CSV at rawURL, caching the result so
-// the same URL is only fetched once per process.
+// fetchCSVRecords fetches and parses the CSV at rawURL, caching both the
+// result AND any error so the same URL is only ever fetched once per
+// process - a URL that 404s would otherwise be re-fetched over the network
+// on every single occurrence across the catalog (there can be thousands).
+// Concurrent callers for the same not-yet-cached URL are coalesced into a
+// single in-flight request via singleflight.
 func fetchCSVRecords(rawURL string) ([][]string, error) {
 	csvCacheMu.Lock()
-	if records, ok := csvCache[rawURL]; ok {
+	if entry, ok := csvCache[rawURL]; ok {
 		csvCacheMu.Unlock()
-		return records, nil
+		return entry.records, entry.err
 	}
 	csvCacheMu.Unlock()
 
-	resp, err := http.Get(rawURL)
+	result, _, _ := csvGroup.Do(rawURL, func() (any, error) {
+		records, err := doFetchCSVRecords(rawURL)
+		entry := csvCacheEntry{records: records, err: err}
+
+		csvCacheMu.Lock()
+		csvCache[rawURL] = entry
+		csvCacheMu.Unlock()
+
+		return entry, nil
+	})
+	entry := result.(csvCacheEntry)
+	return entry.records, entry.err
+}
+
+func doFetchCSVRecords(rawURL string) ([][]string, error) {
+	reqCtx, cancel := context.WithTimeout(context.Background(), csvFetchTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -102,16 +141,7 @@ func fetchCSVRecords(rawURL string) ([][]string, error) {
 	}
 
 	reader := csv.NewReader(bytes.NewReader(body))
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
-	csvCacheMu.Lock()
-	csvCache[rawURL] = records
-	csvCacheMu.Unlock()
-
-	return records, nil
+	return reader.ReadAll()
 }
 
 func enrichProp(prop oscalTypes.Property) any {

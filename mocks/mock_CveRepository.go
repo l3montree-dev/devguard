@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"gorm.io/gorm/clause"
@@ -1030,6 +1031,80 @@ func (_c *CveRepository_GetAllCVEsID_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// GetAllRelatedCVEsForCVE provides a mock function for the type CveRepository
+func (_mock *CveRepository) GetAllRelatedCVEsForCVE(ctx context.Context, tx shared.DB, cveID string) (map[dtos.RelationshipType][]models.CVE, error) {
+	ret := _mock.Called(ctx, tx, cveID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllRelatedCVEsForCVE")
+	}
+
+	var r0 map[dtos.RelationshipType][]models.CVE
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (map[dtos.RelationshipType][]models.CVE, error)); ok {
+		return returnFunc(ctx, tx, cveID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) map[dtos.RelationshipType][]models.CVE); ok {
+		r0 = returnFunc(ctx, tx, cveID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[dtos.RelationshipType][]models.CVE)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, cveID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CveRepository_GetAllRelatedCVEsForCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllRelatedCVEsForCVE'
+type CveRepository_GetAllRelatedCVEsForCVE_Call struct {
+	*mock.Call
+}
+
+// GetAllRelatedCVEsForCVE is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - cveID string
+func (_e *CveRepository_Expecter) GetAllRelatedCVEsForCVE(ctx interface{}, tx interface{}, cveID interface{}) *CveRepository_GetAllRelatedCVEsForCVE_Call {
+	return &CveRepository_GetAllRelatedCVEsForCVE_Call{Call: _e.mock.On("GetAllRelatedCVEsForCVE", ctx, tx, cveID)}
+}
+
+func (_c *CveRepository_GetAllRelatedCVEsForCVE_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string)) *CveRepository_GetAllRelatedCVEsForCVE_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CveRepository_GetAllRelatedCVEsForCVE_Call) Return(vToCVEs map[dtos.RelationshipType][]models.CVE, err error) *CveRepository_GetAllRelatedCVEsForCVE_Call {
+	_c.Call.Return(vToCVEs, err)
+	return _c
+}
+
+func (_c *CveRepository_GetAllRelatedCVEsForCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string) (map[dtos.RelationshipType][]models.CVE, error)) *CveRepository_GetAllRelatedCVEsForCVE_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type CveRepository
 func (_mock *CveRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
 	ret := _mock.Called(ctx, tx)
@@ -1612,69 +1687,6 @@ func (_c *CveRepository_Transaction_Call) Return(err error) *CveRepository_Trans
 }
 
 func (_c *CveRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *CveRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// UpdateCISAKEVBatch provides a mock function for the type CveRepository
-func (_mock *CveRepository) UpdateCISAKEVBatch(ctx context.Context, tx shared.DB, batch []models.CVE) error {
-	ret := _mock.Called(ctx, tx, batch)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateCISAKEVBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.CVE) error); ok {
-		r0 = returnFunc(ctx, tx, batch)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// CveRepository_UpdateCISAKEVBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateCISAKEVBatch'
-type CveRepository_UpdateCISAKEVBatch_Call struct {
-	*mock.Call
-}
-
-// UpdateCISAKEVBatch is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - batch []models.CVE
-func (_e *CveRepository_Expecter) UpdateCISAKEVBatch(ctx interface{}, tx interface{}, batch interface{}) *CveRepository_UpdateCISAKEVBatch_Call {
-	return &CveRepository_UpdateCISAKEVBatch_Call{Call: _e.mock.On("UpdateCISAKEVBatch", ctx, tx, batch)}
-}
-
-func (_c *CveRepository_UpdateCISAKEVBatch_Call) Run(run func(ctx context.Context, tx shared.DB, batch []models.CVE)) *CveRepository_UpdateCISAKEVBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.CVE
-		if args[2] != nil {
-			arg2 = args[2].([]models.CVE)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *CveRepository_UpdateCISAKEVBatch_Call) Return(err error) *CveRepository_UpdateCISAKEVBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *CveRepository_UpdateCISAKEVBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, batch []models.CVE) error) *CveRepository_UpdateCISAKEVBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

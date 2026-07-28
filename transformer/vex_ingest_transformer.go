@@ -31,6 +31,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 // CycloneDXVEXToRules converts the vulnerabilities of a CycloneDX VEX BOM into VEX rules.
@@ -39,7 +40,7 @@ import (
 // so unless the BOM carries an explicit devguard:pathPattern property (which DevGuard adds
 // for vulns it has already matched to a rule), the reconstructed path pattern is a
 // component-level wildcard that matches every path reaching that component.
-func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName string, source string) ([]models.VEXRule, error) {
+func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]models.VEXRule, error) {
 	// we are only interested in the vulnerabilities
 	// for creating vex rules we need to find the starting path to the components
 	// we ONLY USE METADATA COMPONENT FOR THAT
@@ -122,7 +123,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 		}
 
 		// now create the path pattern
-		var pathPattern []dtos.PathPattern
+		var pathPattern []vexrules.PathPattern
 		// first check if we have a concrete properties object with the path pattern (created by devguard itself, see DependencyVulnsToCycloneDXVEX)
 		if vuln.Properties != nil {
 			patterns := utils.Filter(*vuln.Properties, func(p cdx.Property) bool {
@@ -130,7 +131,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 			})
 			if len(patterns) > 0 {
 				for _, p := range patterns {
-					var pp dtos.PathPattern
+					var pp vexrules.PathPattern
 					err := json.Unmarshal([]byte(p.Value), &pp)
 					if err != nil {
 						slog.Info("failed to unmarshal path pattern from vuln properties, skipping this property", "value", p.Value, "error", err)
@@ -147,16 +148,15 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 			// but we still want to create a VEX rule for each path pattern found in the properties
 			for _, pp := range pathPattern {
 				rule := models.VEXRule{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					CVEID:            cveID,
-					VexSource:        source,
-					Justification:    justification,
-					EventType:        eventType,
-					PathPattern:      pp,
-					CreatedByID:      "system", // system user
+					Title:         vexrules.VexRuleTitle(vuln.ID, pp),
+					AssetID:       assetID,
+					VexSource:     source,
+					Justification: justification,
+					EventType:     eventType,
+					CELExpression: vexrules.ToCELExpression(vuln.ID, pp),
+					CreatedByID:   "system", // system user
 				}
-				rule.SetPathPattern(rule.PathPattern)
+				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 			continue
@@ -168,7 +168,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 			purlString = purl.String()
 		}
 
-		var pattern dtos.PathPattern
+		var pattern vexrules.PathPattern
 
 		if componentPurl.String() != "" {
 			componentPurlStr, err := normalize.PURLToString(componentPurl)
@@ -176,23 +176,22 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
 				componentPurlStr = componentPurl.String()
 			}
-			pattern = dtos.PathPattern{componentPurlStr, dtos.PathPatternWildcard, purlString}
+			pattern = vexrules.PathPattern{componentPurlStr, vexrules.PathPatternWildcard, purlString}
 		} else {
 			// If no metadata component PURL, use the affected package directly
-			pattern = dtos.PathPattern{purlString}
+			pattern = vexrules.PathPattern{purlString}
 		}
 
 		rule := models.VEXRule{
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
-			CVEID:            cveID,
-			VexSource:        source,
-			Justification:    justification,
-			EventType:        eventType,
-			PathPattern:      pattern,
-			CreatedByID:      "system", // system user
+			Title:         vexrules.VexRuleTitle(vuln.ID, pattern),
+			AssetID:       assetID,
+			VexSource:     source,
+			Justification: justification,
+			EventType:     eventType,
+			CELExpression: vexrules.ToCELExpression(vuln.ID, pattern),
+			CreatedByID:   "system", // system user
 		}
-		rule.SetPathPattern(rule.PathPattern) // compute the hash
+		rule.SetCELExpression(rule.CELExpression)
 		rules = append(rules, rule)
 	}
 
@@ -205,7 +204,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, assetVersionName strin
 // subcomponent PURL (or the product PURL when no subcomponent is given). The resulting
 // path pattern is therefore a component-level wildcard ["*", componentPurl] that matches
 // any path reaching that component - it does not distinguish individual dependency paths.
-func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, source string) ([]models.VEXRule, error) {
+func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, source string) ([]models.VEXRule, error) {
 	rules := make([]models.VEXRule, 0, len(doc.Statements))
 	for _, statement := range doc.Statements {
 		cveID := extractCVE(string(statement.Vulnerability.Name))
@@ -231,16 +230,15 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, assetVersionName string, so
 		purlStrings := openVexStatementPurls(statement)
 		for _, purlString := range purlStrings {
 			rule := models.VEXRule{
-				AssetID:          assetID,
-				AssetVersionName: assetVersionName,
-				CVEID:            cveID,
-				VexSource:        source,
-				Justification:    justification,
-				EventType:        eventType,
-				PathPattern:      dtos.PathPattern{dtos.PathPatternWildcard, purlString},
-				CreatedByID:      "system", // system user
+				Title:         vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				AssetID:       assetID,
+				VexSource:     source,
+				Justification: justification,
+				EventType:     eventType,
+				CELExpression: vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				CreatedByID:   "system", // system user
 			}
-			rule.SetPathPattern(rule.PathPattern)
+			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
 		}
 	}

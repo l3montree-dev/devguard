@@ -86,5 +86,10 @@ private keys in logs or shared screens.`,
   devguard-scanner inspect-devguard-token 4a6f... > keys.txt`,
 		Args: cobra.ExactArgs(1),
 		RunE: inspectCmd,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner inspect-devguard-token — Decode a DevGuard token",
+			"description":     "Decode a DevGuard hex token with devguard-scanner and print its corresponding private and public keys in PEM and hex formats for debugging.",
+			"keyword_primary": "devguard-scanner inspect-devguard-token",
+		},
 	}
 }

@@ -23,7 +23,8 @@ All release commands work with **sibling directories**. Before running any `rele
 ├── devguard/               ← main backend repo (also where you build this tool)
 ├── devguard-web/           ← frontend repo
 ├── devguard-helm-chart/    ← Helm chart repo
-└── devguard-ci-component/  ← CI component repo
+├── devguard-ci-component/  ← CI component repo
+└── devguard-documentation/ ← public documentation repo
 ```
 
 ```bash
@@ -39,12 +40,17 @@ The directory names must match exactly:
 | `devguard-web` | `github.com/l3montree-dev/devguard-web` |
 | `devguard-helm-chart` | `github.com/l3montree-dev/devguard-helm-chart` |
 | `devguard-ci-component` | `github.com/l3montree-dev/devguard-ci-component` |
+| `devguard-documentation` | `github.com/l3montree-dev/devguard-documentation` |
 
 ## Commands
 
 ### `release devguard <tag>`
 
 Tags and pushes the **devguard backend** only. Fails if `devguard/CHANGELOG.md` has no entry for `<tag>`.
+
+Before tagging, it also runs `make docs` inside `devguard`, failing if that command errors. If it produces changes under `devguard/docs`, those are automatically committed (`docs: regenerate for <tag>`) and pushed. It then copies the generated `devguard/docs/scanner/*.md` files into `devguard-documentation/src/pages/reference/scanner/`, and if that produces changes, commits (`docs: regenerate scanner reference for <tag>`) and pushes them in the `devguard-documentation` repo too.
+
+Requires a `devguard-documentation` sibling directory (see layout above).
 
 ```bash
 devguard-maint release devguard v1.8.0

@@ -80,12 +80,12 @@ func (_c *Vuln_AddScannerID_Call) RunAndReturn(run func(scannerID string)) *Vuln
 	return _c
 }
 
-// AssetVersionIndependentHash provides a mock function for the type Vuln
-func (_mock *Vuln) AssetVersionIndependentHash() string {
+// CalculateAssetVersionIndependentHash provides a mock function for the type Vuln
+func (_mock *Vuln) CalculateAssetVersionIndependentHash() string {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for AssetVersionIndependentHash")
+		panic("no return value specified for CalculateAssetVersionIndependentHash")
 	}
 
 	var r0 string
@@ -97,29 +97,29 @@ func (_mock *Vuln) AssetVersionIndependentHash() string {
 	return r0
 }
 
-// Vuln_AssetVersionIndependentHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AssetVersionIndependentHash'
-type Vuln_AssetVersionIndependentHash_Call struct {
+// Vuln_CalculateAssetVersionIndependentHash_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CalculateAssetVersionIndependentHash'
+type Vuln_CalculateAssetVersionIndependentHash_Call struct {
 	*mock.Call
 }
 
-// AssetVersionIndependentHash is a helper method to define mock.On call
-func (_e *Vuln_Expecter) AssetVersionIndependentHash() *Vuln_AssetVersionIndependentHash_Call {
-	return &Vuln_AssetVersionIndependentHash_Call{Call: _e.mock.On("AssetVersionIndependentHash")}
+// CalculateAssetVersionIndependentHash is a helper method to define mock.On call
+func (_e *Vuln_Expecter) CalculateAssetVersionIndependentHash() *Vuln_CalculateAssetVersionIndependentHash_Call {
+	return &Vuln_CalculateAssetVersionIndependentHash_Call{Call: _e.mock.On("CalculateAssetVersionIndependentHash")}
 }
 
-func (_c *Vuln_AssetVersionIndependentHash_Call) Run(run func()) *Vuln_AssetVersionIndependentHash_Call {
+func (_c *Vuln_CalculateAssetVersionIndependentHash_Call) Run(run func()) *Vuln_CalculateAssetVersionIndependentHash_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *Vuln_AssetVersionIndependentHash_Call) Return(s string) *Vuln_AssetVersionIndependentHash_Call {
+func (_c *Vuln_CalculateAssetVersionIndependentHash_Call) Return(s string) *Vuln_CalculateAssetVersionIndependentHash_Call {
 	_c.Call.Return(s)
 	return _c
 }
 
-func (_c *Vuln_AssetVersionIndependentHash_Call) RunAndReturn(run func() string) *Vuln_AssetVersionIndependentHash_Call {
+func (_c *Vuln_CalculateAssetVersionIndependentHash_Call) RunAndReturn(run func() string) *Vuln_CalculateAssetVersionIndependentHash_Call {
 	_c.Call.Return(run)
 	return _c
 }

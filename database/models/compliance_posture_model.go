@@ -103,7 +103,7 @@ func (m CompliancePosture) GetAssetID() uuid.UUID {
 	return uuid.Nil
 }
 
-func (m CompliancePosture) AssetVersionIndependentHash() string {
+func (m CompliancePosture) CalculateAssetVersionIndependentHash() string {
 	s := fmt.Sprintf("%s:%s", m.FrameworkControlID, m.OrgID.String())
 	if m.ProjectID != nil {
 		s = fmt.Sprintf("%s:%s", s, m.ProjectID.String())

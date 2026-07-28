@@ -92,6 +92,11 @@ for authentication.`,
 			return runCurl(cmd.Context(), &opts)
 		},
 		DisableFlagsInUseLine: true,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner curl — Signed HTTP requests",
+			"description":     "Make curl-compatible HTTP requests with devguard-scanner curl, automatically signing them with your DevGuard Personal Access Token for authentication.",
+			"keyword_primary": "devguard-scanner curl",
+		},
 	}
 
 	// HTTP method flags

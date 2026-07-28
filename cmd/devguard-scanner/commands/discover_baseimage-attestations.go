@@ -123,6 +123,11 @@ yourself. Each discovered attestation is saved as a separate JSON file in the ou
   devguard-scanner discover-baseimage-attestations ./Containerfile --output ./attestations/`,
 		Args: cobra.ExactArgs(1),
 		RunE: runDiscoverBaseImageAttestations,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner discover-baseimage-attestations — fetch base image attestations",
+			"description":     "Read a Dockerfile's FROM line and download attestations such as SBOM and VEX documents attached to the base image using devguard-scanner.",
+			"keyword_primary": "devguard-scanner discover-baseimage-attestations",
+		},
 	}
 
 	discoverBaseImageAttestationsCmd.Flags().String("predicateType", "", "Predicate type to filter attestations (e.g. 'https://cyclonedx.org/vex'). If empty, all predicate types are retrieved.")

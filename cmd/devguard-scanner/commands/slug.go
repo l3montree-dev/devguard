@@ -34,6 +34,11 @@ Useful for generating artifact names or identifiers. The slug is printed to stdo
 			fmt.Print(string(slugifiedText))
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner slug — Create a URL-friendly slug",
+			"description":     "Turn arbitrary text into a URL-friendly slug with devguard-scanner slug, handy for generating artifact names or identifiers in scripts.",
+			"keyword_primary": "devguard-scanner slug",
+		},
 	}
 
 	return slugCmd

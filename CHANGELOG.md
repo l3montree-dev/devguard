@@ -3,6 +3,27 @@
 All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+## [v1.11.0] - 2026-07-24
+
+### Added
+
+- **EUVD/KEV integration** — the devguard vulnerability database now fetches and imports EUVD (European Union Vulnerability Database) data, including known-exploited-vulnerability (KEV) information, which now feeds into risk score calculation alongside the existing CISA KEV catalog; EUVD aliases are resolved to their downstream CVE equivalents before being written to `cve_relationships`, and export/import now carries EUVD information end to end
+- **BSI and Netherlands CSAF sync** — the devguard vulnerability database now also syncs CSAF advisories published by Germany's BSI (CERT-Bund) and the Dutch NCSC
+- **Related CVE information on vulnerability endpoints** — the dependency vuln and vulnerability database fetching endpoints now also return related advisories alongside the vulnerability itself
+- **Project access tokens** — access tokens are now split into personal and project-scoped tokens, with permission checks enforced per org/project/asset token via casbin RBAC
+- **`iac` scan auto-detection** — the scanner now auto-detects whether the scan target is a file or a directory instead of always scanning as a directory
+- **Frontmatter in generated scanner docs** — `devguard-maint docs` now adds frontmatter to the generated markdown reference pages
+
+### Changed
+
+- **Scanner keyring prompts** — reduced the number of password prompts when requesting credentials from the OS keyring during `auth`
+
+### Fixed
+
+- **Owner role naming** — reverted an unintended rename of the owner role
+- **`devguard-maint release devguard`** — now runs `make docs` before tagging and fails the release if it errors; regenerated docs (backend `docs/` and the copied scanner reference in `devguard-documentation`) are automatically committed and pushed instead of blocking the release
+- Fixed a Swagger annotation bug where `ExternalReferenceDTO`/`CreateExternalReferenceRequest` were missing their `dtos.` package qualifier, breaking `make docs`
+
 ## [v1.10.3] - 2026-07-21
 
 ### Changed

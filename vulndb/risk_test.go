@@ -25,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/datatypes"
 )
 
 type tableTest struct {
@@ -35,6 +36,7 @@ type tableTest struct {
 	expectedVector     string
 	cvss               float32
 	affectedComponents []models.AffectedComponent
+	activelyExploited  bool
 }
 
 func TestCalculateRawRisk(t *testing.T) {
@@ -311,6 +313,32 @@ func TestCalculateRisk(t *testing.T) {
 			cvss:           6.1,
 			exploits:       []models.Exploit{{Verified: true}},
 		},
+		{
+			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
+			metrics: dtos.RiskMetrics{
+				BaseScore:                            2.6,
+				WithEnvironment:                      2.6,
+				WithThreatIntelligence:               2.6,
+				WithEnvironmentAndThreatIntelligence: 2.6,
+			},
+			env:               shared.Environmental{},
+			activelyExploited: true,
+			expectedVector:    "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:H/RC:C",
+			cvss:              2.6,
+		},
+		{
+			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
+			metrics: dtos.RiskMetrics{
+				BaseScore:                            5.9,
+				WithEnvironment:                      5.9,
+				WithThreatIntelligence:               5.9,
+				WithEnvironmentAndThreatIntelligence: 5.9,
+			},
+			env:               shared.Environmental{},
+			activelyExploited: true,
+			expectedVector:    "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:H/RL:ND/RC:C",
+			cvss:              5.9,
+		},
 	}
 
 	for _, tableTest := range table {
@@ -321,6 +349,10 @@ func TestCalculateRisk(t *testing.T) {
 				Vector:             vector,
 				Exploits:           tableTest.exploits,
 				AffectedComponents: tableTest.affectedComponents,
+			}
+			if tableTest.activelyExploited {
+				d := datatypes.Date{}
+				sut.CISAExploitAdd = &d
 			}
 			env := tableTest.env
 			expectedRiskMetrics := tableTest.metrics

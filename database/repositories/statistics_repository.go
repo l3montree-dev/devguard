@@ -303,7 +303,10 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Contex
 func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.AssetVulnDistribution, error) {
 	assets := []dtos.AssetVulnDistribution{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT sub.aslug, sub.aname,
+	SELECT
+		sub.project_slug,
+		sub.asset_slug,
+		sub.asset_name,
 		COUNT(*) as total,
 		COUNT(*) FILTER (WHERE sub.raw_risk_assessment < 4) AS low_risk,
 		COUNT(*) FILTER (WHERE sub.raw_risk_assessment >= 4 AND sub.raw_risk_assessment < 7) AS medium_risk,
@@ -315,7 +318,12 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
 	FROM (
 		SELECT DISTINCT ON (dv.component_purl, dv.cve_id, a.id)
-			dv.raw_risk_assessment, cves.cvss, a.id as aid, a.name as aname, a.slug as aslug
+			dv.raw_risk_assessment,
+		    cves.cvss,
+		    a.id as aid,
+		    a.name as asset_name,
+			p.slug AS project_slug,
+			a.slug AS asset_slug
 		FROM dependency_vulns dv
 		JOIN cves ON cves.cve = dv.cve_id
 		JOIN assets a ON dv.asset_id = a.id
@@ -324,7 +332,7 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context,
 		AND dv.state = 'open'
 		ORDER BY a.id, dv.component_purl, dv.cve_id, dv.raw_risk_assessment DESC
 	) sub
-	GROUP BY sub.aid, sub.aslug,sub.aname
+	GROUP BY sub.aid, sub.project_slug, sub.asset_slug, sub.asset_name
 	ORDER BY total DESC
 	LIMIT ?;`, orgID, limit).Find(&assets).Error
 	return assets, err

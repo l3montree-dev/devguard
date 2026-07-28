@@ -74,18 +74,22 @@ func NewSessionRouter(
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
 	They do ALL need to have an assetScopedRBAC middleware applied to them.
 	*/
-
-	fastAccessRoutes := sessionRouter.Group("",
+	middlewareStack := []echo.MiddlewareFunc{
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
 		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
 		middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead),
 		middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead),
-		middlewares.ScanMiddleware(assetVersionRepository),
+	}
+
+	fastAccessRoutes := sessionRouter.Group("",
+		append(middlewareStack, middlewares.ScanMiddleware(assetVersionRepository))...,
 	)
 
+	vexFastAccessRoutes := sessionRouter.Group("", middlewareStack...)
+
 	fastAccessRoutes.POST("/scan/", scanController.ScanDependencyVulnFromProject)
-	fastAccessRoutes.POST("/vex/", scanController.UploadVEX)
+	vexFastAccessRoutes.POST("/vex/", scanController.UploadVEX)
 	fastAccessRoutes.POST("/sarif-scan/", scanController.FirstPartyVulnScan)
 	fastAccessRoutes.POST("/attestations/", attestationController.Create)
 

@@ -184,6 +184,11 @@ multiple commands, use 'intoto start' + 'intoto stop' instead.`,
 			slog.Info("successfully uploaded in-toto link", "step", config.RuntimeInTotoConfig.Step, "filename", filename)
 			return nil
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner intoto run — Record a single-command step",
+			"description":     "Run a pipeline step as a single command, snapshot input and output file hashes around it, sign the resulting in-toto link and upload it to DevGuard.",
+			"keyword_primary": "devguard-scanner intoto run",
+		},
 	}
 
 	cmd.Flags().String("apiUrl", "", "The URL of the devguard API")

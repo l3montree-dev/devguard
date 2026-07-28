@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log/slog"
 	"math"
 	"os"
 	"slices"
@@ -197,15 +196,6 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 }
 
 func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cdx.BOM {
-	// get all vex rules for this asset version
-	// this way, we can again match them against the vulns and add more information about any false positive path
-	vexRules, err := s.vexRuleService.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
-	if err != nil {
-		slog.Error("could not fetch vex rules", "err", err)
-		return nil
-	}
-	// match the vulns with the rules and create a map for easy access when building the VEX
-	matches := matchVulnsToRules(dependencyVulns, vexRules)
 
 	vulnerabilities := make([]cdx.Vulnerability, 0)
 	for _, dependencyVuln := range dependencyVulns {
@@ -216,18 +206,6 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 		}
 		// check if we have a matching VEX rule for this vuln
 		var properties *[]cdx.Property = nil
-		if rules, ok := matches[dependencyVuln.ID]; ok {
-			// we have a matching rule, let's add the information to the vulnerability
-
-			properties = new(utils.Map(rules, func(r models.VEXRule) cdx.Property {
-				// stringify the path pattern for the property value
-				b, _ := json.Marshal(r.PathPattern)
-				return cdx.Property{
-					Name:  "devguard:pathPattern",
-					Value: string(b),
-				}
-			}))
-		}
 
 		firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 		vuln := cdx.Vulnerability{

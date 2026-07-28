@@ -38,6 +38,11 @@ configured token before upload.`,
   # Scan and ignore upstream attestations
   devguard-scanner container-scanning --image ghcr.io/org/image:tag --ignoreUpstreamAttestations`,
 		RunE: scaCommand,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner container-scanning — Container image SCA",
+			"description":     "Run software composition analysis on a container image with devguard-scanner container-scanning, generating or uploading an SBOM that DevGuard analyzes for vulnerabilities.",
+			"keyword_primary": "devguard-scanner container-scanning",
+		},
 	}
 
 	scanner.AddDependencyVulnsScanFlags(containerScanningCommand)
