@@ -197,13 +197,13 @@ func EvalRules(ctx context.Context, rules []models.VEXRule, vuln models.Dependen
 		if err != nil {
 			return nil, err
 		}
-		results[rule.ID] = match
+		results[rule.CELExpression] = match
 	}
 	return results, nil
 }
 
 func toStringList(val ref.Val) ([]string, error) {
-	native, err := val.ConvertToNative(reflect.TypeOf([]string{}))
+	native, err := val.ConvertToNative(reflect.TypeFor[[]string]())
 	if err != nil {
 		return nil, err
 	}

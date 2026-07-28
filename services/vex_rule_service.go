@@ -101,7 +101,7 @@ func (s *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx s
 	}
 	var matchingRules []models.VEXRule
 	for _, rule := range rules {
-		if matches[rule.ID] {
+		if matches[rule.CELExpression] {
 			matchingRules = append(matchingRules, rule)
 		}
 	}
@@ -415,8 +415,8 @@ func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.V
 			continue
 		}
 		for _, rule := range celRules {
-			if matches[rule.ID] {
-				result[rule.ID] = append(result[rule.ID], vuln)
+			if matches[rule.CELExpression] {
+				result[rule.CELExpression] = append(result[rule.CELExpression], vuln)
 			}
 		}
 	}

@@ -144,7 +144,7 @@ func (s *CrowdsourcedVexingService) recommend(ctx context.Context, vexCtx crowds
 
 	matchedRules := []models.VEXRule{}
 	for _, rule := range vexCtx.vexRules {
-		if matches[rule.ID] {
+		if matches[rule.CELExpression] {
 			matchedRules = append(matchedRules, rule)
 		}
 	}
