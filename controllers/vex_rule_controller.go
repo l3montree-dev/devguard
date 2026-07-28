@@ -42,14 +42,18 @@ type VEXRuleController struct {
 	vexRuleService           shared.VEXRuleService
 	statisticsService        shared.StatisticsService
 	dependencyVulnRepository shared.DependencyVulnRepository
+	dependencyVulnService    shared.DependencyVulnService
+	assetVersionRepository   shared.AssetVersionRepository
 	utils.FireAndForgetSynchronizer
 }
 
-func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsService shared.StatisticsService, dependencyVulnRepository shared.DependencyVulnRepository, synchronizer utils.FireAndForgetSynchronizer) *VEXRuleController {
+func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsService shared.StatisticsService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, assetVersionRepository shared.AssetVersionRepository, synchronizer utils.FireAndForgetSynchronizer) *VEXRuleController {
 	return &VEXRuleController{
 		vexRuleService:           vexRuleService,
 		statisticsService:        statisticsService,
 		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
+		assetVersionRepository:   assetVersionRepository,
 
 		FireAndForgetSynchronizer: synchronizer,
 	}
@@ -261,6 +265,8 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to commit VEX rule creation").WithInternal(err)
 	}
 
+	c.syncTicketsForVulns(ctx, asset, vulns)
+
 	// Count matching vulnerabilities for the response
 	count, err := c.vexRuleService.CountMatchingVulns(ctx.Request().Context(), nil, *rule)
 	if err != nil {
@@ -271,6 +277,31 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
 
 	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
+}
+
+// syncTicketsForVulns syncs the third-party ticket (e.g. GitLab issue) for
+// every vuln on the default branch that a just-applied VEX rule touched, so
+// an existing open ticket reflects the new state instead of staying stale.
+func (c *VEXRuleController) syncTicketsForVulns(ctx shared.Context, asset models.Asset, vulns []models.DependencyVuln) {
+	defaultAssetVersion, err := c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
+	if err != nil {
+		slog.Error("failed to get default asset version for ticket sync", "assetID", asset.ID, "error", err)
+		return
+	}
+
+	defaultBranchVulns := utils.Filter(vulns, func(v models.DependencyVuln) bool {
+		return v.AssetVersionName == defaultAssetVersion.Name
+	})
+	if len(defaultBranchVulns) == 0 {
+		return
+	}
+
+	userAgent := ctx.Request().UserAgent()
+	org := shared.GetOrg(ctx)
+	project := shared.GetProject(ctx)
+	if err := c.dependencyVulnService.SyncIssues(ctx.Request().Context(), org, project, asset, defaultAssetVersion, defaultBranchVulns, &userAgent); err != nil {
+		slog.Error("failed to sync tickets after applying VEX rule", "assetID", asset.ID, "error", err)
+	}
 }
 
 func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, asset models.Asset, vulns []models.DependencyVuln) {
