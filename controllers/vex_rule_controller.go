@@ -177,6 +177,7 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 	var vexRules []models.VEXRule
 	for _, expr := range req.CelExpression {
 		vexRules = append(vexRules, models.VEXRule{
+			ID:            expr,
 			CELExpression: expr,
 		})
 		response[expr] = 0
@@ -192,7 +193,7 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 			}
 			counts := make(map[string]int)
 			for _, rule := range vexRules {
-				if matches[rule.CELExpression] {
+				if matches[rule.ID] {
 					counts[rule.CELExpression]++
 				}
 			}

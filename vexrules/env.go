@@ -197,7 +197,7 @@ func EvalRules(ctx context.Context, rules []models.VEXRule, vuln models.Dependen
 		if err != nil {
 			return nil, err
 		}
-		results[rule.CELExpression] = match
+		results[rule.ID] = match
 	}
 	return results, nil
 }
