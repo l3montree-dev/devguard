@@ -71,29 +71,6 @@ func NewVEXRuleController(vexRuleService shared.VEXRuleService, statisticsServic
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
-	vulnID := ctx.QueryParam("dependencyVulnId")
-	if vulnID != "" {
-		vulnIDParsed, err := uuid.Parse(vulnID)
-		if err != nil {
-			return echo.NewHTTPError(400, "could not parse vuln ID to uuid").WithInternal(err)
-		}
-		rules, err := c.vexRuleService.FindByAssetIDWithMatchingVuln(ctx.Request().Context(), nil, asset.ID, vulnIDParsed)
-		if err != nil {
-			return echo.NewHTTPError(500, "failed to list VEX rules").WithInternal(err)
-		}
-
-		// Count matching vulnerabilities for all rules in batch
-		counts, err := c.vexRuleService.CountMatchingVulnsForRules(ctx.Request().Context(), nil, rules)
-		if err != nil {
-			ctx.Logger().Error("failed to count matching vulns for rules", "error", err)
-			counts = make(map[string]int)
-		}
-
-		return ctx.JSON(200, utils.Map(rules, func(rule models.VEXRule) any {
-			return transformer.VEXRuleToDTOWithCount(rule, counts[rule.ID]) // Count is not needed for this endpoint
-		}))
-	}
-
 	pageInfo := shared.GetPageInfo(ctx)
 	search := ctx.QueryParam("search")
 	filterQuery := shared.GetFilterQuery(ctx)
@@ -162,7 +139,7 @@ func (c *VEXRuleController) cachedVulns(ctx shared.Context) []models.DependencyV
 		return vulns
 	}
 
-	vulns, err := c.dependencyVulnRepository.GetByAssetID(ctx.Request().Context(), nil, assetID)
+	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx.Request().Context(), nil, assetID)
 	if err != nil {
 		ctx.Logger().Error("failed to retrieve vulnerabilities", "error", err)
 		return nil
@@ -190,15 +167,30 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 		response[expr] = 0
 	}
 
+	requestCtx := ctx.Request().Context()
+	eg := utils.ErrGroup[map[string]int](100)
 	for _, vuln := range vulns {
-		for _, rule := range vexRules {
-			match, err := vexrules.EvalRule(ctx.Request().Context(), rule, vuln)
-			if err != nil {
-				return echo.NewHTTPError(500, "failed to evaluate CEL expression").WithInternal(err)
+		eg.Go(func() (map[string]int, error) {
+			counts := make(map[string]int)
+			for _, rule := range vexRules {
+				match, err := vexrules.EvalRule(requestCtx, rule, vuln)
+				if err != nil {
+					return nil, err
+				}
+				if match {
+					counts[rule.CELExpression]++
+				}
 			}
-			if match {
-				response[rule.CELExpression]++
-			}
+			return counts, nil
+		})
+	}
+	results, err := eg.WaitAndCollect()
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to evaluate CEL expression").WithInternal(err)
+	}
+	for _, counts := range results {
+		for expr, n := range counts {
+			response[expr] += n
 		}
 	}
 
