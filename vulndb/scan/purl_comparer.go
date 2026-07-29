@@ -17,7 +17,9 @@ package scan
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -73,13 +75,162 @@ func (comparer *PurlComparer) GetAffectedComponents(ctx context.Context, purl pa
 	return affectedComponents, err
 }
 
-func (comparer *PurlComparer) GetVulns(ctx context.Context, purl packageurl.PackageURL) ([]models.VulnInPackage, error) {
-	// get the affected components
-	affectedComponents, err := comparer.GetAffectedComponents(ctx, purl)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get affected components")
+// candidate is a purl we are looking for, together with everything we learned
+// about it along the way. Carrying the results on the candidate itself keeps the
+// input order intact without any index bookkeeping.
+type candidate struct {
+	purl       packageurl.PackageURL
+	matchCtx   *normalize.PurlMatchContext
+	components []models.AffectedComponent
+}
+
+func (c *candidate) lookupKey() string {
+	return c.matchCtx.SearchPurl + "@" + c.matchCtx.NormalizedVersion
+}
+
+// queryShape identifies a set of candidates that can be matched by a single
+// query: everything except the package and version itself is constant.
+type queryShape struct {
+	interpretation    normalize.VersionInterpretationType
+	ecosystemPatterns string // joined patterns - a slice cannot be a map key
+}
+
+// GetVulns resolves the vulnerabilities for a set of purls. Callers looking at a
+// single purl pass a one element slice.
+//
+// Rather than querying per purl, the purls are grouped by "query shape" (how
+// their version string has to be interpreted plus the ecosystem patterns their
+// distro qualifier implies) and one lookup runs per shape. A container SBOM with
+// a thousand packages typically collapses to a handful of queries.
+func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.PackageURL) ([]models.VulnInPackage, error) {
+	candidates := make([]*candidate, 0, len(purls))
+	byShape := make(map[queryShape][]*candidate)
+
+	for _, purl := range purls {
+		matchCtx := normalize.ParsePurlForMatching(purl)
+		if matchCtx.HowToInterpretVersionString == normalize.EmptyVersion {
+			continue // No version = no results
+		}
+
+		c := &candidate{purl: purl, matchCtx: matchCtx}
+		candidates = append(candidates, c)
+
+		patterns := repositories.QualifierEcosystemPatterns(matchCtx.Qualifiers, matchCtx.Namespace)
+		shape := queryShape{
+			interpretation:    matchCtx.HowToInterpretVersionString,
+			ecosystemPatterns: strings.Join(patterns, "\x00"),
+		}
+		byShape[shape] = append(byShape[shape], c)
 	}
 
+	for shape, shapeCandidates := range byShape {
+		componentsByKey, err := comparer.matchAffectedComponents(ctx, shape, shapeCandidates)
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range shapeCandidates {
+			c.components = componentsByKey[c.lookupKey()]
+
+			if shape.interpretation == normalize.EcosystemSpecificVersion {
+				// Ecosystem specific rules can only be expressed in Go, so the
+				// query returned every row for the package and we narrow it here.
+				c.components = filterMatchingComponentsByVersion(c.components, c.matchCtx.NormalizedVersion)
+			}
+		}
+	}
+
+	// iterate the candidates rather than the map, so that the result order
+	// follows the requested purls instead of Go's map ordering
+	vulns := make([]models.VulnInPackage, 0, len(candidates))
+	for _, c := range candidates {
+		vulns = append(vulns, vulnsFromAffectedComponents(c.purl, c.components)...)
+	}
+	return vulns, nil
+}
+
+// matchAffectedComponents runs the lookup for one query shape and returns the
+// matching affected components per candidate lookup key, with the same preloads
+// GetAffectedComponents uses.
+func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape queryShape, candidates []*candidate) (map[string][]models.AffectedComponent, error) {
+	// The wanted packages and versions are passed as arrays and joined via
+	// unnest, so the statement text stays identical regardless of the batch
+	// size and postgres can reuse the plan.
+	searchPurls := make([]string, len(candidates))
+	versions := make([]string, len(candidates))
+	for i, c := range candidates {
+		searchPurls[i] = c.matchCtx.SearchPurl
+		versions[i] = c.matchCtx.NormalizedVersion
+	}
+
+	var conditions []string
+	args := []any{searchPurls, versions}
+
+	if predicate := repositories.BatchedVersionPredicate(shape.interpretation); predicate != "" {
+		conditions = append(conditions, predicate)
+	}
+	for pattern := range strings.SplitSeq(shape.ecosystemPatterns, "\x00") {
+		if pattern == "" {
+			continue
+		}
+		// numbered placeholders, so that GORM passes the arrays above through
+		// verbatim instead of expanding the slices into one placeholder per element
+		conditions = append(conditions, fmt.Sprintf("ac.ecosystem LIKE $%d", len(args)+1))
+		args = append(args, pattern)
+	}
+
+	// Selecting only the ids keeps the joined result small - the rows are
+	// hydrated by a second query, which is also what lets us preload.
+	query := `SELECT q.purl, q.version, ac.id FROM affected_components ac
+		JOIN (
+			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version
+		) q ON ac.purl = q.purl`
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var matches []struct {
+		Purl    string
+		Version string
+		ID      int64
+	}
+	if err := comparer.db.WithContext(ctx).Raw(query, args...).Scan(&matches).Error; err != nil {
+		slog.Error("error executing batched affected components query", "error", err, "interpretation", shape.interpretation)
+		return nil, errors.Wrap(err, "could not match affected components")
+	}
+	if len(matches) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]int64, 0, len(matches))
+	for _, match := range matches {
+		ids = append(ids, match.ID)
+	}
+
+	var components []models.AffectedComponent
+	if err := comparer.db.WithContext(ctx).Model(&models.AffectedComponent{}).
+		Where("id IN ?", ids).
+		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
+		Find(&components).Error; err != nil {
+		slog.Error("error loading affected components", "error", err)
+		return nil, errors.Wrap(err, "could not load affected components")
+	}
+
+	componentsByID := make(map[int64]models.AffectedComponent, len(components))
+	for _, component := range components {
+		componentsByID[component.ID] = component
+	}
+
+	componentsByKey := make(map[string][]models.AffectedComponent, len(candidates))
+	for _, match := range matches {
+		if component, ok := componentsByID[match.ID]; ok {
+			key := match.Purl + "@" + match.Version
+			componentsByKey[key] = append(componentsByKey[key], component)
+		}
+	}
+	return componentsByKey, nil
+}
+
+func vulnsFromAffectedComponents(purl packageurl.PackageURL, affectedComponents []models.AffectedComponent) []models.VulnInPackage {
 	// Pre-allocate with estimated capacity
 	vulnerabilities := make([]models.VulnInPackage, 0, len(affectedComponents))
 
@@ -101,7 +252,7 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purl packageurl.Pack
 		}
 	}
 
-	return deduplicateByAlias(vulnerabilities), nil
+	return deduplicateByAlias(vulnerabilities)
 }
 
 // deduplicateByAlias removes duplicate vulnerabilities caused by CVE aliasing.

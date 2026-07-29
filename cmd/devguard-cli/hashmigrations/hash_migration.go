@@ -172,7 +172,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 	jobs := make(chan models.DependencyVuln, numWorkers*4)
 	results := make(chan vulnResult, numWorkers*4)
 
-	// Cache for GetVulns results - same PURL will return same vulns
+	// Cache for the vuln lookups - same PURL will return same vulns
 	type cacheEntry struct {
 		vulns []models.VulnInPackage
 		err   error
@@ -206,7 +206,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 					continue
 				}
 
-				vulnsInPackage, err := pc.GetVulns(context.Background(), parsedPurl)
+				vulnsInPackage, err := pc.GetVulns(context.Background(), []packageurl.PackageURL{parsedPurl})
 
 				cacheMu.Lock()
 				purlCache[purl] = cacheEntry{vulns: vulnsInPackage, err: err}

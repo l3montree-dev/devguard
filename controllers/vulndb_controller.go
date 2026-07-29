@@ -174,7 +174,7 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to retrieve affected components for PURL").WithInternal(err)
 	}
 
-	vulns, err := purlComparer.GetVulns(ctx.Request().Context(), purl)
+	vulns, err := purlComparer.GetVulns(ctx.Request().Context(), []packageurl.PackageURL{purl})
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
 	}
