@@ -238,8 +238,14 @@ func NewGitLabOauth2Integrations(db shared.DB, gitlabOauth2TokenRepository share
 }
 
 func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
-	// get the user
-	userID := shared.GetSession(ctx).GetUserID()
+	// get the session owner id
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return ctx.JSON(400, map[string]any{
+			"message": "only users can complete the gitlab oauth2 flow",
+		})
+	}
 	code := ctx.QueryParam("code")
 	if code == "" {
 		return ctx.JSON(400, map[string]any{
@@ -248,7 +254,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx shared.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, ownerID, c.ProviderID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
@@ -332,15 +338,21 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	// use PKCE to protect against CSRF attacks
 	// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
 	verifier := oauth2.GenerateVerifier()
-	// get the user
-	userID := shared.GetSession(ctx).GetUserID()
+	// get the session owner id
+	session := shared.GetSession(ctx)
+	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
+	if ownerType != shared.SessionActorUser {
+		return ctx.JSON(400, map[string]any{
+			"message": "only users can start the gitlab oauth2 flow",
+		})
+	}
 
 	redirectTo := ctx.QueryParam("redirectTo")
 
 	url := c.Oauth2Conf.AuthCodeURL(redirectTo, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(ctx.Request().Context(), nil, ownerID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = new(verifier)
@@ -356,7 +368,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx shared.Context) error {
 	// save the verifier in the database
 	tokenModel = &models.GitLabOauth2Token{
 		Verifier:   new(verifier),
-		UserID:     userID,
+		UserID:     ownerID,
 		BaseURL:    c.GitlabBaseURL,
 		CreatedAt:  time.Now(),
 		ProviderID: c.ProviderID,

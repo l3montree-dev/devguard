@@ -12,7 +12,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -26,8 +25,7 @@ func setupExternalSubprojectContext(t *testing.T, f *TestFixture, ctx shared.Con
 	shared.SetProject(ctx, project)
 	shared.SetProviderID(ctx, testProviderID)
 	shared.SetRBAC(ctx, f.App.RBACProvider.GetDomainRBAC(org.ID.String()))
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return("test-user-id").Maybe()
+	session := NewUserSession(t, "test-user-id")
 	shared.SetSession(ctx, session)
 }
 
@@ -299,8 +297,7 @@ func TestListExternalSubprojects(t *testing.T) {
 			shared.SetOrg(ctx, org)
 			shared.SetProject(ctx, parentProject)
 			shared.SetProviderID(ctx, "unknown-provider")
-			session := mocks.NewAuthSession(t)
-			session.On("GetUserID").Return("test-user-id").Maybe()
+			session := NewUserSession(t, "test-user-id")
 			shared.SetSession(ctx, session)
 
 			err := f.App.ProjectController.ListExternalSubprojects(ctx)

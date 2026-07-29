@@ -5,10 +5,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+	"gopkg.in/yaml.v3"
 )
 
 var DocsCmd = &cobra.Command{
@@ -42,6 +44,10 @@ func runDocs(_ *cobra.Command, args []string) error {
 	rootFile.Close()
 	postProcessMarkdown(rootFilename)
 
+	if err := prependFrontmatter(rootFilename, commands.RootCmd); err != nil {
+		return err
+	}
+
 	for _, cmd := range commands.RootCmd.Commands() {
 		if cmd.Hidden {
 			continue
@@ -50,6 +56,77 @@ func runDocs(_ *cobra.Command, args []string) error {
 	}
 
 	slog.Info("docs generated", "dir", outDir)
+	return nil
+}
+
+func frontmatter(cmd *cobra.Command) string {
+	var output, title, description, keywordPrimary string
+	if v, ok := cmd.Annotations["title"]; ok {
+		title = v
+	} else {
+		title = cmd.Short
+	}
+	if v, ok := cmd.Annotations["description"]; ok {
+		description = v
+	} else {
+		description = cmd.Long
+	}
+	if v, ok := cmd.Annotations["keyword_primary"]; ok {
+		keywordPrimary = v
+	} else {
+		keywordPrimary = cmd.CommandPath()
+	}
+	data := struct {
+		Title       string `yaml:"title"`
+		Description string `yaml:"description"`
+		SEO         struct {
+			Robots string `yaml:"robots"`
+			OG     struct {
+				Image string `yaml:"image"`
+				Type  string `yaml:"type"`
+			} `yaml:"og"`
+			Schema struct {
+				Type string `yaml:"type"`
+			} `yaml:"schema"`
+			KeywordPrimary string `yaml:"keyword_primary"`
+		} `yaml:"seo"`
+		Lang         string `yaml:"lang"`
+		IgnoreChecks any    `yaml:"ignoreChecks"`
+	}{
+		Title:       strings.Join(strings.Fields(title), " "),
+		Description: strings.Join(strings.Fields(description), " "),
+		Lang:        "en-US",
+	}
+	data.SEO.Robots = "index,follow"
+	data.SEO.OG.Image = "/og-image.png"
+	data.SEO.OG.Type = "article"
+	data.SEO.Schema.Type = "TechArticle"
+	data.SEO.KeywordPrimary = strings.Join(strings.Fields(keywordPrimary), " ")
+
+	out, err := yaml.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	output = "---\n" + string(out) + "---"
+
+	return output
+}
+
+func prependFrontmatter(filename string, cmd *cobra.Command) error {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		slog.Error("could not read file", "err", err, "file", filename)
+		return err
+	}
+	contentString := string(content)
+	frontmatter := frontmatter(cmd)
+
+	finalText := frontmatter + "\n\n" + contentString
+
+	if err := os.WriteFile(filename, []byte(finalText), 0o644); err != nil {
+		slog.Error("could not write frontMatter file", "err", err, "file", filename)
+		return err
+	}
 	return nil
 }
 
@@ -70,6 +147,10 @@ func generateDocsForCommand(cmd *cobra.Command, outDir string) {
 	}
 	f.Close()
 	postProcessMarkdown(filename)
+
+	if err := prependFrontmatter(filename, cmd); err != nil {
+		return
+	}
 
 	for _, subCmd := range cmd.Commands() {
 		if subCmd.Hidden {

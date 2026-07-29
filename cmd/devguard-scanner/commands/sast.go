@@ -133,6 +133,11 @@ See the semgrep CLI reference for available flags: https://semgrep.dev/docs/cli-
 			args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 			return sarifCommandFactory("sast")(cmd, args)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner sast — run a static application security test",
+			"description":     "Run a static application security test with semgrep against your project and upload the SARIF results to DevGuard with devguard-scanner.",
+			"keyword_primary": "devguard-scanner sast",
+		},
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(sastCommand)

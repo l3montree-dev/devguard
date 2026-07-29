@@ -43,7 +43,7 @@ func TestPATCheckForValidTokenByFingerprintEnforcesExpiry(t *testing.T) {
 	createPAT := func(fingerprint string, expiry time.Time) {
 		pat := models.PAT{
 			ID:          uuid.New(),
-			UserID:      uuid.New(),
+			UserID:      new(uuid.New()),
 			PubKey:      new("deadbeef"),
 			Description: "expiry test token",
 			Fingerprint: new(fingerprint),

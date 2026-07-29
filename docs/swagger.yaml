@@ -1,70 +1,5 @@
 components:
   schemas:
-    controllers.CreateExternalReferenceRequest:
-      properties:
-        csafPackageScope:
-          description: only relevant for csaf references - NEEDS TO BE A VALID PURL
-          type: string
-        type:
-          enum:
-          - cyclonedxvex
-          - csaf
-          type: string
-        url:
-          type: string
-      required:
-      - type
-      - url
-      type: object
-    controllers.CreateVEXRuleRequest:
-      properties:
-        cveId:
-          type: string
-        justification:
-          type: string
-        mechanicalJustification:
-          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
-        pathPattern:
-          items:
-            type: string
-          minItems: 1
-          type: array
-          uniqueItems: false
-      required:
-      - cveId
-      - justification
-      - pathPattern
-      type: object
-    controllers.ExternalReferenceDTO:
-      properties:
-        assetId:
-          type: string
-        assetVersionName:
-          type: string
-        id:
-          type: string
-        type:
-          type: string
-        url:
-          type: string
-      type: object
-    controllers.UpdateVEXRuleRequest:
-      properties:
-        cveId:
-          type: string
-        enabled:
-          description: Pointer to distinguish between not provided and false
-          type: boolean
-        justification:
-          type: string
-        mechanicalJustification:
-          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
-        pathPattern:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
-      type: object
     cyclonedx.Advisory:
       properties:
         title:
@@ -3345,10 +3280,18 @@ components:
     dtos.AssetCreateRequest:
       properties:
         availabilityRequirement:
+          enum:
+          - low
+          - medium
+          - high
           type: string
         centralDependencyVulnManagement:
           type: boolean
         confidentialityRequirement:
+          enum:
+          - low
+          - medium
+          - high
           type: string
         cvssAutomaticTicketThreshold:
           type: number
@@ -3359,6 +3302,10 @@ components:
         importance:
           type: integer
         integrityRequirement:
+          enum:
+          - low
+          - medium
+          - high
           type: string
         name:
           type: string
@@ -3403,8 +3350,6 @@ components:
         integrityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         isPublic:
-          type: boolean
-        keepOriginalSbomRootComponent:
           type: boolean
         name:
           type: string
@@ -3467,8 +3412,6 @@ components:
         integrityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         isPublic:
-          type: boolean
-        keepOriginalSbomRootComponent:
           type: boolean
         members:
           items:
@@ -3543,8 +3486,6 @@ components:
         integrityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         isPublic:
-          type: boolean
-        keepOriginalSbomRootComponent:
           type: boolean
         name:
           type: string
@@ -3625,6 +3566,8 @@ components:
           type: integer
         name:
           type: string
+        projectSlug:
+          type: string
         slug:
           type: string
       type: object
@@ -3704,6 +3647,9 @@ components:
           type: string
         epss:
           type: number
+        euvdExploitAdd:
+          format: date
+          type: string
         exploits:
           items:
             $ref: '#/components/schemas/dtos.ExploitDTO'
@@ -3782,6 +3728,36 @@ components:
       - ComponentTypeMachineLearningModel
       - ComponentTypeOS
       - ComponentTypePlatform
+    dtos.CreateExternalReferenceRequest:
+      properties:
+        csafPackageScope:
+          description: only relevant for csaf references - NEEDS TO BE A VALID PURL
+          type: string
+        type:
+          $ref: '#/components/schemas/dtos.ExternalReferenceType'
+        url:
+          type: string
+      required:
+      - type
+      - url
+      type: object
+    dtos.CreateVEXRuleRequest:
+      properties:
+        celExpression:
+          type: string
+        eventType:
+          $ref: '#/components/schemas/dtos.VulnEventType'
+        justification:
+          type: string
+        mechanicalJustification:
+          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
+        title:
+          type: string
+        wasRecommended:
+          type: boolean
+      required:
+      - justification
+      type: object
     dtos.DependencyVulnDTO:
       properties:
         artifacts:
@@ -3999,6 +3975,33 @@ components:
         watchers:
           type: integer
       type: object
+    dtos.ExternalReferenceDTO:
+      properties:
+        assetId:
+          type: string
+        error:
+          description: optional error message if the reference could not be processed
+          type: string
+        type:
+          $ref: '#/components/schemas/dtos.ExternalReferenceType'
+        url:
+          type: string
+      type: object
+    dtos.ExternalReferenceType:
+      enum:
+      - cyclonedx
+      - csaf
+      - openvex
+      - unknown
+      - cyclonedx
+      - csaf
+      - openvex
+      type: string
+      x-enum-varnames:
+      - ExternalReferenceTypeCycloneDX
+      - ExternalReferenceTypeCSAF
+      - ExternalReferenceTypeOpenVEX
+      - ExternalReferenceTypeUnknown
     dtos.ExternalSubprojectRequestDTO:
       type: object
     dtos.FirstPartyScanResponse:
@@ -4092,12 +4095,31 @@ components:
         url:
           type: string
       type: object
+    dtos.InvitationStatus:
+      enum:
+      - pending
+      - expired
+      type: string
+      x-enum-varnames:
+      - InvitationStatusPending
+      - InvitationStatusExpired
     dtos.InviteRequest:
       properties:
         email:
           type: string
       required:
       - email
+      type: object
+    dtos.InvitedUserDTO:
+      properties:
+        email:
+          type: string
+        expiryDate:
+          type: string
+        id:
+          type: string
+        invitationStatus:
+          $ref: '#/components/schemas/dtos.InvitationStatus'
       type: object
     dtos.JiraIntegrationDTO:
       properties:
@@ -4220,6 +4242,11 @@ components:
           type: string
         industry:
           type: string
+        invitedMembers:
+          items:
+            $ref: '#/components/schemas/dtos.InvitedUserDTO'
+          type: array
+          uniqueItems: false
         isPublic:
           type: boolean
         iso27001:
@@ -4355,19 +4382,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
-        cvePurlFixableCriticalCVSS:
+        cvePurlFixableCriticalCvss:
           type: integer
         cvePurlFixableHigh:
           type: integer
-        cvePurlFixableHighCVSS:
+        cvePurlFixableHighCvss:
           type: integer
         cvePurlFixableLow:
           type: integer
-        cvePurlFixableLowCVSS:
+        cvePurlFixableLowCvss:
           type: integer
         cvePurlFixableMedium:
           type: integer
-        cvePurlFixableMediumCVSS:
+        cvePurlFixableMediumCvss:
           type: integer
         cvePurlHigh:
           type: integer
@@ -4445,6 +4472,11 @@ components:
           type: string
         industry:
           type: string
+        invitedMembers:
+          items:
+            $ref: '#/components/schemas/dtos.InvitedUserDTO'
+          type: array
+          uniqueItems: false
         isPublic:
           type: boolean
         iso27001:
@@ -4760,11 +4792,19 @@ components:
       - alias
       - upstream
       - related
+      - euvd
+      - advisory
       type: string
+      x-enum-comments:
+        RelationshipTypeAdvisory: flag relationships which stem from ingested security
+          advisories
+        RelationshipTypeEUVD: flag relationships only imported through euvd explicitly
       x-enum-varnames:
       - RelationshipTypeAlias
       - RelationshipTypeUpstream
       - RelationshipTypeRelated
+      - RelationshipTypeEUVD
+      - RelationshipTypeAdvisory
     dtos.ReleaseCreateRequest:
       properties:
         items:
@@ -4851,6 +4891,15 @@ components:
       - low
       - medium
       - high
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
       type: string
       x-enum-varnames:
       - RequirementLevelLow
@@ -4885,19 +4934,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
-        cvePurlFixableCriticalCVSS:
+        cvePurlFixableCriticalCvss:
           type: integer
         cvePurlFixableHigh:
           type: integer
-        cvePurlFixableHighCVSS:
+        cvePurlFixableHighCvss:
           type: integer
         cvePurlFixableLow:
           type: integer
-        cvePurlFixableLowCVSS:
+        cvePurlFixableLowCvss:
           type: integer
         cvePurlFixableMedium:
           type: integer
-        cvePurlFixableMediumCVSS:
+        cvePurlFixableMediumCvss:
           type: integer
         cvePurlHigh:
           type: integer
@@ -5028,6 +5077,8 @@ components:
         assetId:
           description: Composite key components
           type: string
+        celExpression:
+          type: string
         createdAt:
           type: string
         createdById:
@@ -5040,7 +5091,6 @@ components:
           description: Primary key
           type: string
         justification:
-          description: Rule data
           type: string
         mechanicalJustification:
           $ref: '#/components/schemas/dtos.MechanicalJustificationType'
@@ -5049,10 +5099,24 @@ components:
             type: string
           type: array
           uniqueItems: false
+        title:
+          description: Rule data
+          type: string
         updatedAt:
           type: string
         vexSource:
           type: string
+      type: object
+    dtos.VexRuleRecommendation:
+      properties:
+        celExpression:
+          type: string
+        eventType:
+          $ref: '#/components/schemas/dtos.VulnEventType'
+        justification:
+          type: string
+        mechanicalJustification:
+          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
       type: object
     dtos.VulnEventDTO:
       properties:
@@ -5081,6 +5145,10 @@ components:
           type: string
         userId:
           type: string
+        vexRule:
+          $ref: '#/components/schemas/dtos.VEXRuleDTO'
+        vexRuleId:
+          type: string
         vulnId:
           type: string
         vulnType:
@@ -5098,6 +5166,10 @@ components:
       - falsePositive
       - markedForTransfer
       - comment
+      - implemented
+      - notApplicable
+      - attachedComplianceComponent
+      - removedComplianceComponent
       - detected
       - rawRiskAssessmentUpdated
       type: string
@@ -5110,6 +5182,10 @@ components:
       - EventTypeFalsePositive
       - EventTypeMarkedForTransfer
       - EventTypeComment
+      - EventTypeImplemented
+      - EventTypeNotApplicable
+      - EventTypeAttachedComplianceComponent
+      - EventTypeRemovedComplianceComponent
       - EventTypeDetected
       - EventTypeRawRiskAssessmentUpdated
     dtos.VulnSeverityDistribution:
@@ -5138,6 +5214,8 @@ components:
       - accepted
       - falsePositive
       - markedForTransfer
+      - implemented
+      - notApplicable
       type: string
       x-enum-comments:
         VulnStateAccepted: like ignore
@@ -5145,22 +5223,28 @@ components:
           27 People marked this as false positive and they have the same dependency
           tree - propably you are not either
         VulnStateFixed: we did not find the dependencyVuln anymore in the last scan!
+        VulnStateImplemented: for compliance posture
+        VulnStateNotApplicable: for compliance posture
       x-enum-varnames:
       - VulnStateOpen
       - VulnStateFixed
       - VulnStateAccepted
       - VulnStateFalsePositive
       - VulnStateMarkedForTransfer
+      - VulnStateImplemented
+      - VulnStateNotApplicable
     dtos.VulnType:
       enum:
       - dependencyVuln
       - firstPartyVuln
       - licenseRisk
+      - compliancePosture
       type: string
       x-enum-varnames:
       - VulnTypeDependencyVuln
       - VulnTypeFirstPartyVuln
       - VulnTypeLicenseRisk
+      - VulnTypeCompliancePosture
     dtos.WebhookIntegrationDTO:
       properties:
         description:
@@ -5265,19 +5349,19 @@ components:
           type: integer
         cvePurlFixableCritical:
           type: integer
-        cvePurlFixableCriticalCVSS:
+        cvePurlFixableCriticalCvss:
           type: integer
         cvePurlFixableHigh:
           type: integer
-        cvePurlFixableHighCVSS:
+        cvePurlFixableHighCvss:
           type: integer
         cvePurlFixableLow:
           type: integer
-        cvePurlFixableLowCVSS:
+        cvePurlFixableLowCvss:
           type: integer
         cvePurlFixableMedium:
           type: integer
-        cvePurlFixableMediumCVSS:
+        cvePurlFixableMediumCvss:
           type: integer
         cvePurlHigh:
           type: integer
@@ -5340,6 +5424,7 @@ components:
           type: number
       type: object
     github_com_l3montree-dev_devguard_database_models.Asset:
+      description: Relationships
       properties:
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
@@ -5366,8 +5451,6 @@ components:
         integrityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         isPublic:
-          type: boolean
-        keepOriginalSbomRootComponent:
           type: boolean
         metadata:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
@@ -5540,6 +5623,8 @@ components:
           type: string
         epss:
           type: number
+        euvdExploitAdd:
+          type: string
         exploits:
           items:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Exploit'
@@ -5571,8 +5656,10 @@ components:
         relationship_type:
           $ref: '#/components/schemas/dtos.RelationshipType'
         source_cve:
+          description: an external CVE-ID (like DEBIAN-CVE-...)
           type: string
         target_cve:
+          description: the official CVE-XXXX-...  the external CVE-ID relates to
           type: string
         target_cve_data:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
@@ -6058,9 +6145,52 @@ components:
         verified:
           type: boolean
       type: object
+    github_com_l3montree-dev_devguard_database_models.VEXRule:
+      properties:
+        asset:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
+        assetId:
+          description: Composite key components (for indexing and queries)
+          type: string
+        celExpression:
+          type: string
+        createdAt:
+          description: Timestamps
+          type: string
+        createdById:
+          type: string
+        enabled:
+          description: |-
+            Enabled indicates whether this rule should be applied to matching vulnerabilities.
+            When false, the rule exists but does not create events or modify vulnerability state.
+            Rules are disabled when uploaded in ParanoidMode, requiring manual review/enabling.
+          type: boolean
+        eventType:
+          $ref: '#/components/schemas/dtos.VulnEventType'
+        id:
+          description: Single primary key - hash of composite components
+          type: string
+        justification:
+          type: string
+        mechanicalJustification:
+          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
+        recommendedRule:
+          description: this will be set, when the rule was recommended by the crowdsourced
+            vexing algorithm.
+          type: boolean
+        title:
+          description: Rule data
+          type: string
+        updatedAt:
+          type: string
+        vexSource:
+          type: string
+      type: object
     github_com_l3montree-dev_devguard_database_models.VulnEvent:
       properties:
         arbitraryJSONData:
+          type: string
+        compliancePostureId:
           type: string
         createdAt:
           type: string
@@ -6085,6 +6215,10 @@ components:
         userAgent:
           type: string
         userId:
+          type: string
+        vexRule:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.VEXRule'
+        vexRuleId:
           type: string
       type: object
     github_com_l3montree-dev_devguard_database_models.Weakness:
@@ -7320,6 +7454,86 @@ paths:
       summary: Update asset config file
       tags:
       - Assets
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/crowdsourced-vexing/recommendations:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  $ref: '#/components/schemas/dtos.VexRuleRecommendation'
+                type: object
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get crowdsourced VEX recommendations for all vulns of an asset
+      tags:
+      - CrowdsourcedVexing
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/crowdsourced-vexing/recommendations/{dependencyVulnID}:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Dependency vuln ID
+        in: path
+        name: dependencyVulnID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.VexRuleRecommendation'
+          description: OK
+        "204":
+          description: No recommendation available
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get a crowdsourced VEX recommendation for a dependency vuln
+      tags:
+      - CrowdsourcedVexing
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year}/{version}:
     get:
       parameters:
@@ -7433,6 +7647,154 @@ paths:
       summary: Get CSAF index file
       tags:
       - CSAF
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ExternalReferenceDTO'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List external references for an asset
+      tags:
+      - ExternalReferences
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.CreateExternalReferenceRequest'
+              description: Create request
+              summary: request
+        description: Create request
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.ExternalReferenceDTO'
+          description: Created
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Create an external reference
+      tags:
+      - ExternalReferences
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references/{url}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: URL-encoded external reference URL
+        in: path
+        name: url
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete an external reference by URL
+      tags:
+      - ExternalReferences
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references/sync:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Sync external sources for all artifacts of an asset version
+      tags:
+      - ExternalReferences
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/number-of-exploits/:
     get:
       parameters:
@@ -7779,6 +8141,18 @@ paths:
       summary: Update artifact
       tags:
       - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json/
+  : get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: CSAF advisory in JSON format
+      summary: Get an aggregated CSAF VEX for all of the artifact's vulnerabilities
+      tags:
+      - Artifacts
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/
   : get:
       parameters:
@@ -7967,7 +8341,7 @@ paths:
       summary: Get SBOM in XML format
       tags:
       - Artifacts
-  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources/
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sync-external-sources
   : post:
       parameters:
       - description: Organization slug
@@ -8342,172 +8716,6 @@ paths:
       summary: Create vulnerability event
       tags:
       - Vulnerabilities
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references:
-    get:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/controllers.ExternalReferenceDTO'
-                type: array
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: List external references for an asset version
-      tags:
-      - ExternalReferences
-    post:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/controllers.CreateExternalReferenceRequest'
-              description: Create request
-              summary: request
-        description: Create request
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/controllers.ExternalReferenceDTO'
-          description: Created
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Create an external reference
-      tags:
-      - ExternalReferences
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/{id}:
-    delete:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: No Content
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Delete all external references for an asset version
-      tags:
-      - ExternalReferences
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/external-references/sync:
-    post:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Sync external sources for all artifacts of an asset version
-      tags:
-      - ExternalReferences
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/metrics:
     get:
       parameters:
@@ -8706,313 +8914,6 @@ paths:
       summary: Get risk history for an asset version
       tags:
       - Statistics
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules:
-    get:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug (ref)
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      - description: 'Page number (default: 1)'
-        in: query
-        name: page
-        schema:
-          type: integer
-      - description: 'Page size (default: 10, max: 100)'
-        in: query
-        name: pageSize
-        schema:
-          type: integer
-      - description: Search term for CVE ID or justification
-        in: query
-        name: search
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                properties:
-                  data:
-                    items:
-                      $ref: '#/components/schemas/dtos.VEXRuleDTO'
-                    type: array
-                  page:
-                    type: integer
-                  pageSize:
-                    type: integer
-                  total:
-                    type: integer
-                type: object
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: List VEX rules for an asset
-      tags:
-      - VEXRules
-    post:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug (ref)
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/controllers.CreateVEXRuleRequest'
-              description: Rule data
-              summary: body
-        description: Rule data
-        required: true
-      responses:
-        "201":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.VEXRuleDTO'
-          description: Created
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Create a VEX rule
-      tags:
-      - VEXRules
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId}:
-    delete:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug (ref)
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      - description: Rule ID
-        in: path
-        name: ruleId
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: No Content
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Delete a VEX rule
-      tags:
-      - VEXRules
-    get:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug (ref)
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      - description: Rule ID
-        in: path
-        name: ruleId
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.VEXRuleDTO'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Get a VEX rule
-      tags:
-      - VEXRules
-    put:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug (ref)
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      - description: Rule ID
-        in: path
-        name: ruleId
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/controllers.UpdateVEXRuleRequest'
-              description: Updated rule data
-              summary: body
-        description: Updated rule data
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.VEXRuleDTO'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Update a VEX rule
-      tags:
-      - VEXRules
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/{ruleId}/reapply:
-    post:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug (ref)
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      - description: Rule ID
-        in: path
-        name: ruleId
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.VEXRuleDTO'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Reapply a VEX rule
-      tags:
-      - VEXRules
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns:
     get:
       parameters:
@@ -9130,6 +9031,187 @@ paths:
       summary: Scan SBOM file
       tags:
       - Scanning
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: 'Page size (default: 10, max: 100)'
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search term for CVE ID or justification
+        in: query
+        name: search
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/dtos.VEXRuleDTO'
+                    type: array
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+                type: object
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List VEX rules for an asset
+      tags:
+      - VEXRules
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.CreateVEXRuleRequest'
+              description: Rule data
+              summary: body
+        description: Rule data
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.VEXRuleDTO'
+          description: Created
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Create a VEX rule
+      tags:
+      - VEXRules
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId}:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete a VEX rule
+      tags:
+      - VEXRules
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.VEXRuleDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get a VEX rule
+      tags:
+      - VEXRules
   /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/:
     get:
       parameters:
@@ -9605,6 +9687,12 @@ paths:
       summary: Update release
       tags:
       - Releases
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/csaf.json:
+    get:
+      responses: null
+      summary: Get release VEX as CSAF
+      tags:
+      - Releases
   /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items:
     post:
       parameters:
@@ -9684,6 +9772,12 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Remove item from release
+      tags:
+      - Releases
+  /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/openvex.json:
+    get:
+      responses: null
+      summary: Get release VEX as OpenVEX
       tags:
       - Releases
   /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/sbom.json:
@@ -10498,7 +10592,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
-          description: Details of the specified CVE
+          description: Details of the specified CVE" and optional advisories
         "500":
           content:
             application/json:
@@ -10709,14 +10803,16 @@ paths:
             application/json:
               schema:
                 properties:
-                  userID:
+                  ownerID:
+                    type: string
+                  ownerType:
                     type: string
                 type: object
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
-      summary: Get current user info
+      summary: Get current session info
       tags:
       - Authentication
 servers:

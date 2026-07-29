@@ -124,6 +124,90 @@ func (_c *CSAFService_GenerateCSAFReport_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// GenerateCSAFReportForAdvisory provides a mock function for the type CSAFService
+func (_mock *CSAFService) GenerateCSAFReportForAdvisory(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error) {
+	ret := _mock.Called(ctx, advisory, orgName, assetID, assetName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GenerateCSAFReportForAdvisory")
+	}
+
+	var r0 csaf.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Advisory, string, uuid.UUID, string) (csaf.Advisory, error)); ok {
+		return returnFunc(ctx, advisory, orgName, assetID, assetName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *models.Advisory, string, uuid.UUID, string) csaf.Advisory); ok {
+		r0 = returnFunc(ctx, advisory, orgName, assetID, assetName)
+	} else {
+		r0 = ret.Get(0).(csaf.Advisory)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *models.Advisory, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, advisory, orgName, assetID, assetName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GenerateCSAFReportForAdvisory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GenerateCSAFReportForAdvisory'
+type CSAFService_GenerateCSAFReportForAdvisory_Call struct {
+	*mock.Call
+}
+
+// GenerateCSAFReportForAdvisory is a helper method to define mock.On call
+//   - ctx context.Context
+//   - advisory *models.Advisory
+//   - orgName string
+//   - assetID uuid.UUID
+//   - assetName string
+func (_e *CSAFService_Expecter) GenerateCSAFReportForAdvisory(ctx interface{}, advisory interface{}, orgName interface{}, assetID interface{}, assetName interface{}) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	return &CSAFService_GenerateCSAFReportForAdvisory_Call{Call: _e.mock.On("GenerateCSAFReportForAdvisory", ctx, advisory, orgName, assetID, assetName)}
+}
+
+func (_c *CSAFService_GenerateCSAFReportForAdvisory_Call) Run(run func(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string)) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *models.Advisory
+		if args[1] != nil {
+			arg1 = args[1].(*models.Advisory)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReportForAdvisory_Call) Return(advisory1 csaf.Advisory, err error) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	_c.Call.Return(advisory1, err)
+	return _c
+}
+
+func (_c *CSAFService_GenerateCSAFReportForAdvisory_Call) RunAndReturn(run func(ctx context.Context, advisory *models.Advisory, orgName string, assetID uuid.UUID, assetName string) (csaf.Advisory, error)) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GenerateCSAFReportForVulns provides a mock function for the type CSAFService
 func (_mock *CSAFService) GenerateCSAFReportForVulns(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error) {
 	ret := _mock.Called(ctx, orgName, title, vulns)
@@ -198,6 +282,74 @@ func (_c *CSAFService_GenerateCSAFReportForVulns_Call) Return(advisory csaf.Advi
 }
 
 func (_c *CSAFService_GenerateCSAFReportForVulns_Call) RunAndReturn(run func(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (csaf.Advisory, error)) *CSAFService_GenerateCSAFReportForVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllAdvisories provides a mock function for the type CSAFService
+func (_mock *CSAFService) GetAllAdvisories(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error) {
+	ret := _mock.Called(ctx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllAdvisories")
+	}
+
+	var r0 []models.Advisory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]models.Advisory, error)); ok {
+		return returnFunc(ctx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []models.Advisory); ok {
+		r0 = returnFunc(ctx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Advisory)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CSAFService_GetAllAdvisories_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllAdvisories'
+type CSAFService_GetAllAdvisories_Call struct {
+	*mock.Call
+}
+
+// GetAllAdvisories is a helper method to define mock.On call
+//   - ctx context.Context
+//   - assetID uuid.UUID
+func (_e *CSAFService_Expecter) GetAllAdvisories(ctx interface{}, assetID interface{}) *CSAFService_GetAllAdvisories_Call {
+	return &CSAFService_GetAllAdvisories_Call{Call: _e.mock.On("GetAllAdvisories", ctx, assetID)}
+}
+
+func (_c *CSAFService_GetAllAdvisories_Call) Run(run func(ctx context.Context, assetID uuid.UUID)) *CSAFService_GetAllAdvisories_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CSAFService_GetAllAdvisories_Call) Return(advisorys []models.Advisory, err error) *CSAFService_GetAllAdvisories_Call {
+	_c.Call.Return(advisorys, err)
+	return _c
+}
+
+func (_c *CSAFService_GetAllAdvisories_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID) ([]models.Advisory, error)) *CSAFService_GetAllAdvisories_Call {
 	_c.Call.Return(run)
 	return _c
 }

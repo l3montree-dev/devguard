@@ -45,6 +45,11 @@ See the gitleaks CLI reference for available flags: https://github.com/gitleaks/
 			args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 			return sarifCommandFactory("secret-scanning")(cmd, args)
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner secret-scanning — detect leaked secrets in source code",
+			"description":     "Scan a repository or directory for accidentally committed secrets using gitleaks and upload the SARIF results to DevGuard with devguard-scanner.",
+			"keyword_primary": "devguard-scanner secret-scanning",
+		},
 	}
 
 	scanner.AddFirstPartyVulnsScanFlags(secretScanningCommand)

@@ -25,7 +25,6 @@ import (
 var AccessControlModule = fx.Options(
 	fx.Provide(newCasbinPubSubWatcher),
 	fx.Provide(fx.Annotate(NewCasbinRBACProvider, fx.As(new(shared.RBACProvider)))),
-	fx.Provide(NewExternalEntityProviderRBAC),
 	fx.Provide(func() shared.PublicClient {
 		return shared.NewPublicClient(GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC")))
 	}),

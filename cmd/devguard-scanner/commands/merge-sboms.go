@@ -54,6 +54,11 @@ Config file format:
   # Redirect output to file
   devguard-scanner merge-sboms config.json > merged-sbom.json`,
 		RunE: runMergeSBOMs,
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner merge-sboms — combine multiple SBOMs into one",
+			"description":     "Merge multiple CycloneDX SBOMs from independently scanned components into a single combined SBOM ready to upload to DevGuard with devguard-scanner.",
+			"keyword_primary": "devguard-scanner merge-sboms",
+		},
 	}
 
 	return cmd

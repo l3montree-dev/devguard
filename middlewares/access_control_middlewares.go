@@ -16,13 +16,13 @@
 package middlewares
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -36,7 +36,7 @@ func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.Middlew
 			isAdmin, err := pat.VerifyAdminRequest(ctx.Request())
 			if err == nil {
 				if isAdmin {
-					ctx.Set("session", accesscontrol.NewSession("admin", dtos.AllowedScopes, true))
+					shared.SetSession(ctx, shared.NewSession("admin", shared.SessionActorUser, dtos.AllowedScopes, true))
 					return next(ctx)
 				}
 			}
@@ -48,7 +48,6 @@ func InstanceAdminMiddleware(pat shared.PersonalAccessTokenService) echo.Middlew
 func InstanceSettings(configService shared.ConfigService, disabled func(shared.InstanceSettings) bool) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-
 			settings, err := configService.GetInstanceSettings(ctx.Request().Context())
 			if err != nil {
 				slog.Error("could not get instance settings", "err", err)
@@ -71,8 +70,9 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 			org := shared.GetOrg(ctx)
 			// get the user
 			session := shared.GetSession(ctx)
+			actorScope := shared.GetActorScope(ctx)
 
-			allowed, err := rbac.IsAllowed(ctx.Request().Context(), session, obj, act)
+			allowed, err := rbac.IsAllowed(ctx.Request().Context(), session, obj, act, actorScope)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
@@ -83,7 +83,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 				if org.IsPublic && act == shared.ActionRead {
 					shared.SetIsPublicRequest(ctx)
 				} else {
-					slog.Error("access denied in accessControlMiddleware", "user", session.GetUserID(), "object", obj, "action", act)
+					slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
 					ctx.Response().WriteHeader(404)
 					return echo.NewHTTPError(404, "could not find organization")
 				}
@@ -121,157 +121,90 @@ func DisallowPublicRequests(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func AssetAccessControlFactory(assetRepository shared.AssetRepository) shared.RBACMiddleware {
-	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
-		return func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(ctx shared.Context) error {
-				// get the rbac
-				rbac := shared.GetRBAC(ctx)
-				// get the user
-				session := shared.GetSession(ctx)
-				// get the project
-				project := shared.GetProject(ctx)
-				// get the asset slug
-				assetSlug, err := shared.GetAssetSlug(ctx)
-				if err != nil {
-					return echo.NewHTTPError(400, "invalid asset slug")
-				}
-				var asset models.Asset
-				// check if asset is already set in the context
-				if a, ok := ctx.Get("asset").(models.Asset); ok {
-					asset = a
-				} else {
-					// get the asset by slug and project
-					asset, err = assetRepository.ReadBySlug(ctx.Request().Context(), nil, project.ID, assetSlug)
-					if err != nil {
-						return echo.NewHTTPError(404, "could not find asset")
-					}
-				}
+// AssetAccessControl assumes ResourceFetchMiddleware has already resolved the
+// asset (and org/project) into the context - it never fetches anything itself,
+// it only checks the pre-resolved entity against the session/actor scope. It
+// has no captured dependency, so it's a plain shared.RBACMiddleware value, not
+// a factory that needs constructing.
+func AssetAccessControl(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx shared.Context) error {
+			rbac := shared.GetRBAC(ctx)
+			session := shared.GetSession(ctx)
+			asset := shared.GetAsset(ctx)
 
-				allowed, err := rbac.IsAllowedInAsset(ctx.Request().Context(), &asset, session, obj, act)
-				if err != nil {
-					return echo.NewHTTPError(500, "could not determine if the user has access")
-				}
-				// check if the user has the required role
-				if !allowed {
-					if asset.IsPublic && act == shared.ActionRead {
-						// allow READ on all objects in the project - if access is public
-						shared.SetIsPublicRequest(ctx)
-					} else {
-						slog.Warn("access denied in AssetAccess", "user", session.GetUserID(), "object", obj, "action", act, "assetSlug", assetSlug)
-						return echo.NewHTTPError(404, "could not find asset")
-					}
-				}
-				shared.SetAsset(ctx, asset)
-				// Propagate tenant IDs into the plain context.Context so that
-				// GormRepository.Read can scope queries without echo.Context.
-				tenantIDs := shared.OwnershipScopeFromAsset(ctx, asset)
-				ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
-				return next(ctx)
+			allowed, err := rbac.IsAllowedInAsset(ctx.Request().Context(), &asset, session, obj, act)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not determine if the user has access")
 			}
+			// check if the user has the required role
+			if !allowed {
+				if asset.IsPublic && act == shared.ActionRead {
+					// allow READ on all objects in the project - if access is public
+					shared.SetIsPublicRequest(ctx)
+				} else {
+					slog.Warn("access denied in AssetAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "assetSlug", asset.Slug)
+					return echo.NewHTTPError(404, "could not find asset")
+				}
+			}
+			return next(ctx)
 		}
 	}
 }
 
-func ProjectAccessControlFactory(projectRepository shared.ProjectRepository) shared.RBACMiddleware {
-	return func(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
-		return func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(ctx shared.Context) error {
-				// get the rbac
-				rbac := shared.GetRBAC(ctx)
+// ProjectAccessControl assumes ResourceFetchMiddleware has already resolved the
+// project (and org) into the context - it never fetches anything itself, it
+// only checks the pre-resolved entity against the session/actor scope. It has
+// no captured dependency, so it's a plain shared.RBACMiddleware value, not a
+// factory that needs constructing.
+func ProjectAccessControl(obj shared.Object, act shared.Action) shared.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx shared.Context) error {
+			rbac := shared.GetRBAC(ctx)
+			session := shared.GetSession(ctx)
+			project := shared.GetProject(ctx)
+			actorScope := shared.GetActorScope(ctx)
 
-				// get the user
-				session := shared.GetSession(ctx)
+			allowed, err := rbac.IsAllowedInProject(ctx.Request().Context(), &project, session, obj, act, actorScope)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not determine if the user has access")
+			}
 
-				// get the project id
-				projectSlug, err := shared.GetProjectSlug(ctx)
-				if err != nil {
-					return echo.NewHTTPError(500, "could not get project id")
-				}
-
-				var project models.Project
-				// check if project is already set in the context
-				if p, ok := ctx.Get("project").(models.Project); ok {
-					project = p
+			// check if the user has the required role
+			if !allowed {
+				if project.IsPublic && act == shared.ActionRead {
+					// allow READ on all objects in the project - if access is public
+					shared.SetIsPublicRequest(ctx)
 				} else {
-					// get the project by slug and organization.
-					project, err = projectRepository.ReadBySlug(ctx.Request().Context(), nil, shared.GetOrg(ctx).GetID(), projectSlug)
-				}
-
-				if err != nil {
+					slog.Warn("access denied in ProjectAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "projectSlug", project.Slug)
 					return echo.NewHTTPError(404, "could not find project")
 				}
-
-				allowed, err := rbac.IsAllowedInProject(ctx.Request().Context(), &project, session, obj, act)
-
-				if err != nil {
-					return echo.NewHTTPError(500, "could not determine if the user has access")
-				}
-
-				// check if the user has the required role
-				if !allowed {
-					if project.IsPublic && act == shared.ActionRead {
-						// allow READ on all objects in the project - if access is public
-						shared.SetIsPublicRequest(ctx)
-					} else {
-						slog.Warn("access denied in ProjectAccess", "user", session.GetUserID(), "object", obj, "action", act, "projectSlug", projectSlug)
-						return echo.NewHTTPError(404, "could not find project")
-					}
-				}
-
-				ctx.Set("project", project)
-				tenantIDs := shared.OwnershipScopeFromProject(ctx, project)
-				ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
-
-				return next(ctx)
 			}
+
+			return next(ctx)
 		}
 	}
 }
 
-func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizationService shared.OrgService) shared.MiddlewareFunc {
+// MultiOrganizationMiddlewareRBAC assumes ResourceFetchMiddleware has already
+// resolved the org, the domain RBAC and the actor scope into the context - it
+// never fetches anything itself, it only checks organization membership.
+func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) (err error) {
-			// get the organization from the provided context
-			organization, err := shared.GetURLDecodedParam(ctx, "organization")
-			if err != nil {
-				slog.Error("could not get organization from url", "err", err)
-				return echo.NewHTTPError(400, "invalid organization")
-			}
-			if organization == "" {
-				// if no organization is provided, we can't continue
-				slog.Error("no organization provided")
-				return ctx.JSON(400, map[string]string{"error": "no organization"})
-			}
-
-			// get the organization
-			org, err := organizationService.ReadBySlug(ctx.Request().Context(), organization)
-			if err != nil {
-				return echo.NewHTTPError(404, "organization not found").WithInternal(err)
-			}
-
-			// check what kind of RBAC we need
-			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
-			if org.IsExternalEntity() {
-				// check if there is an admin token defined
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), shared.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID)
-			}
-
-			// check if the user is allowed to access the organization
+			org := shared.GetOrg(ctx)
+			domainRBAC := shared.GetRBAC(ctx)
 			session := shared.GetSession(ctx)
-			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session)
+			actorScope := shared.GetActorScope(ctx)
+
+			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session, actorScope)
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
-					slog.Info("oauth2 token not valid, asking user to reauthorize", "user", session.GetUserID(), "organization", organization)
+					slog.Info("oauth2 token not valid, asking user to reauthorize", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
 				if org.IsPublic {
 					shared.SetIsPublicRequest(ctx)
-					shared.SetOrg(ctx, *org)
-					shared.SetRBAC(ctx, domainRBAC)
-					shared.SetOrgSlug(ctx, organization)
-					tenantIDs := shared.OwnershipScopeFromOrg(ctx, *org)
-					ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 					return next(ctx)
 				}
 				return ctx.JSON(401, map[string]string{"error": err.Error()})
@@ -282,19 +215,133 @@ func MultiOrganizationMiddlewareRBAC(rbacProvider shared.RBACProvider, organizat
 					shared.SetIsPublicRequest(ctx)
 				} else {
 					// not allowed and not a public organization
-					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetUserID(), "organization", organization)
+					slog.Error("access denied in multiOrganizationMiddleware", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
 					return ctx.JSON(404, map[string]string{"error": "could not find organization"})
 				}
 			}
 
-			shared.SetOrg(ctx, *org)
-			shared.SetRBAC(ctx, domainRBAC)
-			shared.SetOrgSlug(ctx, organization)
-			tenantIDs := shared.OwnershipScopeFromOrg(ctx, *org)
-			ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), tenantIDs)))
 			// continue to the request
 			return next(ctx)
 		}
+	}
+}
+
+// ResourceFetchMiddleware is the single place that resolves every entity a
+// request needs, once each: the organization (always, by URL slug), the
+// project/asset (when the matched route carries :projectSlug/:assetSlug, by
+// URL slug - the authoritative resolution), and the session's own scoped
+// entity (by owner ID, when the session is a project- or asset-scoped access
+// token), reusing the path-resolved entity when it's the very same row. No
+// other middleware or AccessControl method fetches anything itself.
+func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationService shared.OrgService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx shared.Context) error {
+			organization, err := shared.GetURLDecodedParam(ctx, "organization")
+			if err != nil {
+				slog.Error("could not get organization from url", "err", err)
+				return echo.NewHTTPError(400, "invalid organization")
+			}
+			if organization == "" {
+				// no :organization URL path param on this route (e.g. the header-driven
+				// fast-access routes) - fall back to the org slug AssetNameMiddleware set.
+				organization, _ = shared.GetOrgSlug(ctx)
+			}
+			if organization == "" {
+				slog.Error("no organization provided")
+				return ctx.JSON(400, map[string]string{"error": "no organization"})
+			}
+
+			org, err := organizationService.ReadBySlug(ctx.Request().Context(), organization)
+			if err != nil {
+				return echo.NewHTTPError(404, "organization not found").WithInternal(err)
+			}
+
+			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
+			shared.SetOrg(ctx, *org)
+			shared.SetRBAC(ctx, domainRBAC)
+			shared.SetOrgSlug(ctx, organization)
+
+			ownershipScope := models.OwnershipScope{OrgID: org.ID}
+
+			var resolvedProject *models.Project
+			var resolvedAsset *models.Asset
+
+			if projectSlug, slugErr := shared.GetProjectSlug(ctx); slugErr == nil {
+				project, err := projectRepository.ReadBySlug(ctx.Request().Context(), nil, org.ID, projectSlug)
+				if err != nil {
+					return echo.NewHTTPError(404, "could not find project")
+				}
+				resolvedProject = &project
+				shared.SetProject(ctx, project)
+				ownershipScope.ProjectID = project.ID
+
+				if assetSlug, aErr := shared.GetAssetSlug(ctx); aErr == nil {
+					asset, err := assetRepository.ReadBySlug(ctx.Request().Context(), nil, project.ID, assetSlug)
+					if err != nil {
+						return echo.NewHTTPError(404, "could not find asset")
+					}
+					// the asset's project is exactly the one we just resolved -
+					// backfill it without an extra query.
+					asset.Project = project
+					resolvedAsset = &asset
+					shared.SetAsset(ctx, asset)
+					ownershipScope.AssetID = asset.ID
+				}
+			}
+
+			// Set the ownership scope once, fully resolved - avoids the extra
+			// context.WithValue allocations and read-merge-write round trips a
+			// per-level Set would otherwise cost on every request.
+			ctx.SetRequest(ctx.Request().WithContext(shared.WithOwnershipScope(ctx.Request().Context(), ownershipScope)))
+
+			actorScope, err := resolveActorScope(ctx.Request().Context(), shared.GetSession(ctx), resolvedProject, resolvedAsset, projectRepository, assetRepository)
+			if err != nil {
+				return echo.NewHTTPError(404, "could not resolve access token scope").WithInternal(err)
+			}
+			shared.SetActorScope(ctx, actorScope)
+
+			return next(ctx)
+		}
+	}
+}
+
+// resolveActorScope resolves the session's own scoped entity by owner ID -
+// the identity-driven fetch AccessControl needs to verify a project/asset
+// token belongs to the organization/project it's being used against. It
+// reuses the path-resolved project/asset when the owner ID matches, avoiding
+// a redundant fetch for the common case of a token used against its own
+// resource.
+func resolveActorScope(ctx context.Context, session shared.AuthSession, resolvedProject *models.Project, resolvedAsset *models.Asset, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) (shared.ActorScope, error) {
+	ownerID := session.GetActorID()
+	switch session.GetSessionActorType() {
+	case shared.SessionActorProject:
+		if resolvedProject != nil && resolvedProject.ID.String() == ownerID {
+			return shared.ActorScope{Project: resolvedProject}, nil
+		}
+		projectUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return shared.ActorScope{}, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		project, err := projectRepository.Read(ctx, nil, projectUUID)
+		if err != nil {
+			return shared.ActorScope{}, err
+		}
+		return shared.ActorScope{Project: &project}, nil
+	case shared.SessionActorAsset:
+		if resolvedAsset != nil && resolvedAsset.ID.String() == ownerID {
+			return shared.ActorScope{Asset: resolvedAsset}, nil
+		}
+		assetUUID, err := uuid.Parse(ownerID)
+		if err != nil {
+			return shared.ActorScope{}, fmt.Errorf("could not parse ownerID as UUID: %w", err)
+		}
+		asset, err := assetRepository.ReadWithProject(ctx, nil, assetUUID)
+		if err != nil {
+			return shared.ActorScope{}, err
+		}
+		return shared.ActorScope{Asset: &asset}, nil
+	default:
+		return shared.ActorScope{}, nil
 	}
 }
 

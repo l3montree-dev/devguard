@@ -91,7 +91,7 @@ func (vuln *DependencyVuln) GetArtifacts() []Artifact {
 	return vuln.Artifacts
 }
 
-func (vuln DependencyVuln) AssetVersionIndependentHash() string {
+func (vuln DependencyVuln) CalculateAssetVersionIndependentHash() string {
 	// Filter the path to only include actual package PURLs for hash calculation
 	return utils.HashString(fmt.Sprintf("%s/%s/%s", strings.Join(vuln.VulnerabilityPath, ","), vuln.CVEID, vuln.AssetID))
 }

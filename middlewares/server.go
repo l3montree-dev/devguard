@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -135,56 +134,8 @@ func GoroutineSafeContext(c shared.Context) shared.Context {
 	bgReq, _ := http.NewRequest("GET", "/", nil) // nosemgrep: http-new-request-without-context -- intentional background context: this synthetic request is only used to satisfy echo's Context interface in goroutines, it is never dispatched over the network
 	ctx := E.NewContext(bgReq, httptest.NewRecorder())
 
-	// copy all values from the original context that might be needed in goroutines
-	if thirdParty, ok := c.Get("thirdPartyIntegration").(shared.IntegrationAggregate); ok {
-		ctx.Set("thirdPartyIntegration", thirdParty)
-	}
-
-	if session, ok := c.Get("session").(shared.AuthSession); ok {
-		ctx.Set("session", session)
-	}
-
-	if org, ok := c.Get("organization").(models.Org); ok {
-		ctx.Set("organization", org)
-	}
-
-	if project, ok := c.Get("project").(models.Project); ok {
-		ctx.Set("project", project)
-	}
-
-	if asset, ok := c.Get("asset").(models.Asset); ok {
-		ctx.Set("asset", asset)
-	}
-
-	if assetVersion, ok := c.Get("assetVersion").(models.AssetVersion); ok {
-		ctx.Set("assetVersion", assetVersion)
-	}
-
-	if rbac, ok := c.Get("rbac").(shared.AccessControl); ok {
-		ctx.Set("rbac", rbac)
-	}
-
-	if authClient, ok := c.Get("authAdminClient").(shared.AdminClient); ok {
-		ctx.Set("authAdminClient", authClient)
-	}
-
-	// Copy string values that might be needed
-	if orgSlug, ok := c.Get("orgSlug").(string); ok {
-		ctx.Set("orgSlug", orgSlug)
-	}
-
-	if projectSlug, ok := c.Get("projectSlug").(string); ok {
-		ctx.Set("projectSlug", projectSlug)
-	}
-
-	if assetSlug, ok := c.Get("assetSlug").(string); ok {
-		ctx.Set("assetSlug", assetSlug)
-	}
-
-	// Copy public request flag
-	if c.Get("publicRequest") != nil {
-		ctx.Set("publicRequest", true)
-	}
+	// copy all request-scoped values that might be needed in goroutines
+	shared.CopyContextValues(c, ctx)
 
 	return ctx
 }

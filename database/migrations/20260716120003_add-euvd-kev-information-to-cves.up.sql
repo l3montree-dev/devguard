@@ -1,0 +1,1 @@
+ALTER TABLE public.cves ADD COLUMN euvd_exploit_add date;

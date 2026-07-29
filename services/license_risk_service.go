@@ -317,12 +317,12 @@ func diffLicenseRisksBetweenBranches(foundLicenseRisks []models.LicenseRisk, exi
 	// Create a map of existing license risks by hash for quick lookup
 	existingRisksMap := make(map[string][]models.LicenseRisk)
 	for _, risk := range existingRisks {
-		hash := risk.AssetVersionIndependentHash()
+		hash := risk.CalculateAssetVersionIndependentHash()
 		existingRisksMap[hash] = append(existingRisksMap[hash], risk)
 	}
 
 	for _, newDetectedRisk := range foundLicenseRisks {
-		hash := newDetectedRisk.AssetVersionIndependentHash()
+		hash := newDetectedRisk.CalculateAssetVersionIndependentHash()
 		if existingRisks, ok := existingRisksMap[hash]; ok {
 			// License risk exists on other branches - copy events
 			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedRisk)

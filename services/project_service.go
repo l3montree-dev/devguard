@@ -217,11 +217,11 @@ func (s *projectService) SearchProjectsWithSubProjectsAndAssetsPaged(c shared.Co
 		parentID = &tmp
 	}
 
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
-	allowedProjectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
+	allowedProjectIDs, err := rbac.GetAllProjectsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
 	}
@@ -237,11 +237,11 @@ func (s *projectService) SearchProjectsWithSubProjectsAndAssetsPaged(c shared.Co
 func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
 
 	rbac := shared.GetRBAC(c)
-	allowedAssetIDs, err := rbac.GetAllAssetsForUser(shared.GetSession(c).GetUserID())
+	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
-	allowedProjectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
+	allowedProjectIDs, err := rbac.GetAllProjectsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return shared.Paged[dtos.ProjectAssetDTO]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
 	}
@@ -267,7 +267,7 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 
 	// get all projects the user has at least read access to
 	rbac := shared.GetRBAC(c)
-	projectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
+	projectIDs, err := rbac.GetAllProjectsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return shared.Paged[models.Project]{}, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
 	}
@@ -290,7 +290,7 @@ func (s *projectService) ListAllowedProjectsPaged(c shared.Context) (shared.Page
 func (s *projectService) ListAllowedProjects(c shared.Context) ([]models.Project, error) {
 	// get all projects the user has at least read access to
 	rbac := shared.GetRBAC(c)
-	projectIDs, err := rbac.GetAllProjectsForUser(shared.GetSession(c).GetUserID())
+	projectIDs, err := rbac.GetAllProjectsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
 		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
 	}

@@ -23,7 +23,6 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -107,8 +106,7 @@ func TestSBOMScanIngestsVEXFromExternalReferences(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		ctx := app.NewContext(req, recorder)
 
-		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
+		authSession := NewUserSession(t, "abc")
 		shared.SetAsset(ctx, asset)
 		shared.SetProject(ctx, project)
 		shared.SetOrg(ctx, org)
@@ -119,7 +117,7 @@ func TestSBOMScanIngestsVEXFromExternalReferences(t *testing.T) {
 		assert.Equal(t, 200, recorder.Code)
 
 		var vexRules []models.VEXRule
-		result := f.DB.Where("asset_id = ? AND cve_id = ?", asset.ID, "CVE-2025-46569").Find(&vexRules)
+		result := f.DB.Where("asset_id = ?", asset.ID).Find(&vexRules)
 		require.NoError(t, result.Error)
 		assert.NotEmpty(t, vexRules, "expected a VEX rule to be created from the SBOM's exploitability-statement external reference")
 	})

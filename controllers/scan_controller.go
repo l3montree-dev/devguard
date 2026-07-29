@@ -78,8 +78,6 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body object true "CycloneDX VEX BOM"
-// @Param X-Asset-Ref header string false "Asset version name"
-// @Param X-Artifact-Name header string false "Artifact name"
 // @Param X-Tag header string false "Tag flag"
 // @Param X-Asset-Default-Branch header string false "Default branch"
 // @Param X-Origin header string false "Origin"
@@ -99,13 +97,9 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	}
 
 	asset := shared.GetAsset(ctx)
-	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
-	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
-	tag := ctx.Request().Header.Get("X-Tag")
 
-	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
 	origin := ctx.Request().Header.Get("X-Origin")
 	if origin == "" {
 		origin = "vex-upload"
@@ -115,15 +109,8 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		attribute.String("org.slug", org.Slug),
 		attribute.String("project.slug", project.Slug),
 		attribute.String("asset.slug", asset.Slug),
-		attribute.String("assetVersion.name", assetVersionName),
 	)
 
-	if assetVersionName == "" {
-		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
-		assetVersionName = "main"
-	}
-
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(reqCtx, nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		span.RecordError(err)
@@ -131,28 +118,10 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not find or create asset version").WithInternal(err)
 	}
 
-	if artifactName == "" {
-		artifactName = normalize.ArtifactPurl(ctx.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
-	}
-
-	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersionName,
-		AssetID:          asset.ID,
-	}
-
-	// save the artifact to the database
-	if err := s.artifactService.SaveArtifact(reqCtx, nil, &artifact); err != nil {
-		slog.Error("could not save artifact", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return echo.NewHTTPError(500, "could not save artifact").WithInternal(err)
-	}
-
 	tx := s.assetVersionRepository.GetDB(reqCtx, nil).Begin()
 	defer tx.Rollback()
 
-	rules, format, err := s.VexRulesFromDocument(body, asset.ID, assetVersionName, origin)
+	rules, format, err := s.VexRulesFromDocument(body, asset.ID, origin)
 
 	switch format {
 	case dtos.ExternalReferenceTypeCycloneDX:
@@ -164,7 +133,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
 		}
 
-		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
+		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, rules); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest uploaded vex", "err", err)
 			span.RecordError(err)
@@ -174,7 +143,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 
 		// also ingest any VEX documents referenced by the uploaded BOM
 
-		if err := s.ingestVexFromExternalReferences(reqCtx, tx, &bom, asset, assetVersion); err != nil {
+		if err := s.ingestVexFromExternalReferences(reqCtx, tx, &bom, asset); err != nil {
 			// swallow the error and log it, since the user has already uploaded a valid VEX document and we don't want to fail the request just because an external reference couldn't be fetched
 			slog.Error("could not ingest vex from external references", "err", err)
 		}
@@ -186,7 +155,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			span.SetStatus(codes.Error, err.Error())
 			return echo.NewHTTPError(400, fmt.Sprintf("could not parse vex document: %v", err.Error())).WithInternal(err)
 		}
-		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, assetVersion, rules); err != nil {
+		if err := s.vexRuleService.IngestVEXRules(reqCtx, tx, asset, rules); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest vex rules", "err", err, "format", format)
 			span.RecordError(err)
@@ -197,20 +166,12 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 
 	tx.Commit()
 
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
-	s.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
-
 	return ctx.JSON(200, nil)
 }
 
 // ingestVexFromExternalReferences looks for exploitability-statement (VEX) references in the
 // SBOM's ExternalReferences, fetches the referenced VEX documents and ingests them as VEX rules.
-func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cdx.BOM, asset models.Asset, assetVersion models.AssetVersion) error {
+func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cdx.BOM, asset models.Asset) error {
 	externalURLs := []string{}
 	if bom.ExternalReferences != nil {
 		for _, ref := range *bom.ExternalReferences {
@@ -224,7 +185,7 @@ func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx
 		return nil
 	}
 
-	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name, externalURLs)
+	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, externalURLs)
 
 	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
 		slog.Error("could not store vex external reference", "err", err)
@@ -234,7 +195,7 @@ func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx
 		return nil
 	}
 
-	return s.vexRuleService.IngestVEXRules(ctx, tx, asset, assetVersion, rules)
+	return s.vexRuleService.IngestVEXRules(ctx, tx, asset, rules)
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (opened, closed, newState []models.DependencyVuln, assetVersion models.AssetVersion, err error) {
@@ -248,7 +209,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	org := shared.GetOrg(c)
 	project := shared.GetProject(c)
 
-	userID := shared.GetSession(c).GetUserID()
+	ownerID := shared.GetSession(c).GetActorName()
 	userAgent := c.Request().UserAgent()
 
 	tag := c.Request().Header.Get("X-Tag")
@@ -337,7 +298,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		return nil, nil, nil, empty, err
 	}
 
-	opened, closed, newState, err = s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, userID, &userAgent)
+	opened, closed, newState, err = s.ScanNormalizedSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("could not scan normalized sbom", "err", err)
 		span.RecordError(err)
@@ -346,7 +307,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	}
 
 	if !noWrite {
-		if err := s.ingestVexFromExternalReferences(scanCtx, tx, bom, asset, assetVersion); err != nil {
+		if err := s.ingestVexFromExternalReferences(scanCtx, tx, bom, asset); err != nil {
 			slog.Error("could not ingest vex from external references", "err", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -457,7 +418,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	asset := shared.GetAsset(ctx)
-	userID := shared.GetSession(ctx).GetUserID()
+	ownerID := shared.GetSession(ctx).GetActorName()
 
 	tag := ctx.Request().Header.Get("X-Tag")
 
@@ -497,7 +458,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	userAgent := ctx.Request().UserAgent()
 
 	// handle the scan result
-	opened, closed, newState, err := s.HandleFirstPartyVulnResult(reqCtx, org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
+	opened, closed, newState, err := s.HandleFirstPartyVulnResult(reqCtx, org, project, asset, &assetVersion, sarifScan, scannerID, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		span.RecordError(err)
@@ -692,7 +653,11 @@ func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) er
 				components = append(components, comp)
 				compByPURL[v.ComponentPurl] = bomRef
 			}
-			vuln.Affects = &[]cdx.Affects{{Ref: bomRef}}
+			affects := cdx.Affects{Ref: bomRef}
+			if v.ComponentFixedVersion != nil {
+				affects.Range = &[]cdx.AffectedVersions{{Version: *v.ComponentFixedVersion, Status: cdx.VulnerabilityStatusNotAffected}}
+			}
+			vuln.Affects = &[]cdx.Affects{affects}
 		}
 		vulns = append(vulns, vuln)
 	}
@@ -873,7 +838,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 	org := shared.GetOrg(c)
 	project := shared.GetProject(c)
 	asset := shared.GetAsset(c)
-	userID := shared.GetSession(c).GetUserID()
+	ownerID := shared.GetSession(c).GetActorName()
 
 	tag := c.Request().Header.Get("X-Tag")
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -913,7 +878,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 		}
 		newState = utils.Map(scanResults.FirstPartyVulns, transformer.FirstPartyVulnDTOToModel)
 	} else {
-		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, userID, &userAgent)
+		_, _, newState, err = s.HandleFirstPartyVulnResult(c.Request().Context(), org, project, asset, &assetVersion, sarifScan, scannerID, ownerID, &userAgent)
 		if err != nil {
 			slog.Error("could not handle scan result", "err", err)
 			span.RecordError(err)

@@ -104,8 +104,8 @@ func (_c *AssetService_BootstrapAsset_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // CreateAsset provides a mock function for the type AssetService
-func (_mock *AssetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error) {
-	ret := _mock.Called(ctx, rbac, currentUserID, asset)
+func (_mock *AssetService) CreateAsset(ctx context.Context, rbac shared.AccessControl, session shared.AuthSession, asset models.Asset) (*models.Asset, error) {
+	ret := _mock.Called(ctx, rbac, session, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAsset")
@@ -113,18 +113,18 @@ func (_mock *AssetService) CreateAsset(ctx context.Context, rbac shared.AccessCo
 
 	var r0 *models.Asset
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, models.Asset) (*models.Asset, error)); ok {
-		return returnFunc(ctx, rbac, currentUserID, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, shared.AuthSession, models.Asset) (*models.Asset, error)); ok {
+		return returnFunc(ctx, rbac, session, asset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, string, models.Asset) *models.Asset); ok {
-		r0 = returnFunc(ctx, rbac, currentUserID, asset)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AccessControl, shared.AuthSession, models.Asset) *models.Asset); ok {
+		r0 = returnFunc(ctx, rbac, session, asset)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AccessControl, string, models.Asset) error); ok {
-		r1 = returnFunc(ctx, rbac, currentUserID, asset)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AccessControl, shared.AuthSession, models.Asset) error); ok {
+		r1 = returnFunc(ctx, rbac, session, asset)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -139,13 +139,13 @@ type AssetService_CreateAsset_Call struct {
 // CreateAsset is a helper method to define mock.On call
 //   - ctx context.Context
 //   - rbac shared.AccessControl
-//   - currentUserID string
+//   - session shared.AuthSession
 //   - asset models.Asset
-func (_e *AssetService_Expecter) CreateAsset(ctx interface{}, rbac interface{}, currentUserID interface{}, asset interface{}) *AssetService_CreateAsset_Call {
-	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", ctx, rbac, currentUserID, asset)}
+func (_e *AssetService_Expecter) CreateAsset(ctx interface{}, rbac interface{}, session interface{}, asset interface{}) *AssetService_CreateAsset_Call {
+	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", ctx, rbac, session, asset)}
 }
 
-func (_c *AssetService_CreateAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset)) *AssetService_CreateAsset_Call {
+func (_c *AssetService_CreateAsset_Call) Run(run func(ctx context.Context, rbac shared.AccessControl, session shared.AuthSession, asset models.Asset)) *AssetService_CreateAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -155,9 +155,9 @@ func (_c *AssetService_CreateAsset_Call) Run(run func(ctx context.Context, rbac 
 		if args[1] != nil {
 			arg1 = args[1].(shared.AccessControl)
 		}
-		var arg2 string
+		var arg2 shared.AuthSession
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(shared.AuthSession)
 		}
 		var arg3 models.Asset
 		if args[3] != nil {
@@ -178,7 +178,7 @@ func (_c *AssetService_CreateAsset_Call) Return(asset1 *models.Asset, err error)
 	return _c
 }
 
-func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, currentUserID string, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
+func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(ctx context.Context, rbac shared.AccessControl, session shared.AuthSession, asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -72,7 +72,7 @@ func (firstPartyVuln *FirstPartyVuln) CalculateHash() uuid.UUID {
 	return id
 }
 
-func (firstPartyVuln FirstPartyVuln) AssetVersionIndependentHash() string {
+func (firstPartyVuln FirstPartyVuln) CalculateAssetVersionIndependentHash() string {
 	stringToHash := firstPartyVuln.RuleID + "/" + firstPartyVuln.URI
 	hash := utils.HashString(stringToHash)
 	return hash

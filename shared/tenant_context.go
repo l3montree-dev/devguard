@@ -18,7 +18,6 @@ package shared
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
@@ -35,35 +34,4 @@ func WithOwnershipScope(ctx context.Context, scope models.OwnershipScope) contex
 func OwnershipScopeFromCtx(ctx context.Context) (models.OwnershipScope, bool) {
 	scope, ok := ctx.Value(ownershipScopeKey{}).(models.OwnershipScope)
 	return scope, ok
-}
-
-// OwnershipScopeFromAsset builds an OwnershipScope from a fully-resolved asset
-// on the echo.Context. ProjectID and OrgID are carried from any existing scope
-// already in the request context so that coarser-grained middleware that ran
-// earlier is not lost.
-func OwnershipScopeFromAsset(ctx Context, asset models.Asset) models.OwnershipScope {
-	existing, _ := OwnershipScopeFromCtx(ctx.Request().Context())
-	existing.AssetID = asset.ID
-	if asset.ProjectID != uuid.Nil {
-		existing.ProjectID = asset.ProjectID
-	}
-	return existing
-}
-
-// OwnershipScopeFromProject builds an OwnershipScope from a fully-resolved
-// project, preserving any OrgID already stored.
-func OwnershipScopeFromProject(ctx Context, project models.Project) models.OwnershipScope {
-	existing, _ := OwnershipScopeFromCtx(ctx.Request().Context())
-	existing.ProjectID = project.ID
-	if project.OrganizationID != uuid.Nil {
-		existing.OrgID = project.OrganizationID
-	}
-	return existing
-}
-
-// OwnershipScopeFromOrg builds an OwnershipScope from a fully-resolved org.
-func OwnershipScopeFromOrg(_ Context, org models.Org) models.OwnershipScope {
-	return models.OwnershipScope{
-		OrgID: org.ID,
-	}
 }

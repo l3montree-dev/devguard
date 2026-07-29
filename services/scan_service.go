@@ -151,21 +151,17 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		return nil, nil, nil, err
 	}
 
-	rules, err := s.vexRuleService.FindByAssetVersion(ctx, tx, asset.ID, assetVersion.Name)
-	if err != nil {
-		slog.Error("failed to fetch VEX rules for asset version", "error", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, nil, nil, fmt.Errorf("failed to fetch VEX rules for asset version: %w", err)
-	}
-
-	// apply the vex rules to the new state
-	newState, err = s.vexRuleService.ApplyRulesToExisting(ctx, tx, rules, newState)
-	if err != nil {
-		slog.Error("failed to apply VEX rules to new state", "error", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, nil, nil, fmt.Errorf("failed to apply VEX rules to new state: %w", err)
+	// newly opened vulns may already be covered by previously created, still-enabled VEX
+	// rules for this asset (e.g. a rule created before this vulnerability was ever detected).
+	if len(opened) > 0 {
+		existingRules, rulesErr := s.vexRuleService.FindByAssetID(ctx, tx, asset.ID)
+		if rulesErr != nil {
+			slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
+		} else if len(existingRules) > 0 {
+			if _, applyErr := s.vexRuleService.ApplyRulesToExisting(ctx, tx, existingRules, opened); applyErr != nil {
+				slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
+			}
+		}
 	}
 
 	span.SetAttributes(
@@ -693,7 +689,7 @@ func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, assetVersionName, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
+func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
 	format := s.sniffVexFormat(body)
 
 	switch format {
@@ -702,21 +698,21 @@ func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, asset
 		if err := json.Unmarshal(body, &advisory); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CSAF advisory: %w", err)
 		}
-		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, assetVersionName, source)
+		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeOpenVEX:
 		var doc vex.VEX
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as OpenVEX document: %w", err)
 		}
-		rules, err := transformer.OpenVEXToRules(&doc, assetID, assetVersionName, source)
+		rules, err := transformer.OpenVEXToRules(&doc, assetID, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeCycloneDX:
 		var doc cyclonedx.BOM
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CycloneDX BOM: %w", err)
 		}
-		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, assetVersionName, source)
+		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, source)
 		return rules, format, err
 	default:
 		return nil, format, fmt.Errorf("unsupported VEX document format")
@@ -726,7 +722,7 @@ func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, asset
 // FetchVexFromUpstream downloads VEX from the given external references and converts it into
 // VEX rules scoped to the given asset version. Both CSAF and CycloneDX are parsed to rules by
 // their respective transformers; the returned rules carry their VexSource (the reference URL).
-func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
+func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
 	rules := make([]models.VEXRule, 0)
 	valid := make([]models.ExternalReference, 0, len(upstreamURLs))
 	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
@@ -739,11 +735,10 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
-					Type:             dtos.ExternalReferenceTypeUnknown,
-					Error:            new(fmt.Sprintf("could not create request for url: %v", err)),
+					AssetID: assetID,
+					URL:     url,
+					Type:    dtos.ExternalReferenceTypeUnknown,
+					Error:   new(fmt.Sprintf("could not create request for url: %v", err)),
 				})
 				return
 			}
@@ -760,33 +755,30 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
-					Type:             dtos.ExternalReferenceTypeUnknown,
-					Error:            new(fmt.Sprintf("could not read response body: %v", err)),
+					AssetID: assetID,
+					URL:     url,
+					Type:    dtos.ExternalReferenceTypeUnknown,
+					Error:   new(fmt.Sprintf("could not read response body: %v", err)),
 				})
 				return
 			}
-			vexRules, format, err := s.VexRulesFromDocument(body, assetID, assetVersionName, url)
+			vexRules, format, err := s.VexRulesFromDocument(body, assetID, url)
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					Type:             format,
-					Error:            new(fmt.Sprintf("could not parse vex file from url: %v", err)),
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
+					Type:    format,
+					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
+					AssetID: assetID,
+					URL:     url,
 				})
 				return
 			}
 			mut.Lock()
 			rules = append(rules, vexRules...)
 			valid = append(valid, models.ExternalReference{
-				URL:              url,
-				AssetID:          assetID,
-				AssetVersionName: assetVersionName,
-				Type:             format,
+				URL:     url,
+				AssetID: assetID,
+				Type:    format,
 			})
 			mut.Unlock()
 		})
@@ -811,6 +803,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	assetVersion models.AssetVersion,
 	artifact models.Artifact,
 	userID string,
+	vexRefs []models.ExternalReference,
 	userAgent *string,
 ) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
 	// Fetch information sources (SBOM URLs) from the artifact
@@ -830,16 +823,9 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 		return el
 	})
 
-	// Fetch VEX URLs from external references
-	vexRefs, err := s.externalReferenceRepository.FindByAssetVersion(ctx, tx, asset.ID, assetVersion.Name)
-	if err != nil {
-		slog.Error("failed to fetch vex external references", "error", err, "artifactName", artifact.ArtifactName)
-		// Don't fail the entire operation if fetching external refs fails
-	}
-
 	// Fetch SBOMs and VEX reports from upstream
 	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
-	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID, assetVersion.Name,
+	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID,
 		utils.Map(vexRefs, func(ref models.ExternalReference) string { return ref.URL }))
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
@@ -871,7 +857,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	}
 
 	// Ingest VEX rules
-	if err := s.vexRuleService.IngestVEXRules(ctx, tx, asset, assetVersion, vexRules); err != nil {
+	if err := s.vexRuleService.IngestVEXRules(ctx, tx, asset, vexRules); err != nil {
 		slog.Error("failed to ingest vex rules in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
 		return nil, nil, nil, fmt.Errorf("failed to ingest vex rules: %w", err)
 	}

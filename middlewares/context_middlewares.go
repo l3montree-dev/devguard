@@ -49,9 +49,9 @@ func AssetNameMiddleware() shared.MiddlewareFunc {
 
 			assetParts := strings.Split(assetName, "/")
 			// set the project slug
-			ctx.Set("projectSlug", assetParts[1])
-			ctx.Set("organization", assetParts[0])
-			ctx.Set("assetSlug", assetParts[2])
+			shared.SetProjectSlug(ctx, assetParts[1])
+			shared.SetOrgSlug(ctx, assetParts[0])
+			shared.SetAssetSlug(ctx, assetParts[2])
 			return next(ctx)
 		}
 	}

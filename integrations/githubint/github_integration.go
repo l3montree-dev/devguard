@@ -151,10 +151,6 @@ func (githubIntegration *GithubIntegration) ListOrgs(ctx shared.Context) ([]mode
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
-	return false, nil
-}
-
 func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (shared.Role, error) {
 	// currently not supported.
 	return shared.RoleGuest, fmt.Errorf("not implemented")
@@ -720,7 +716,7 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 
 		session := shared.GetSession(event.Ctx)
 
-		return githubIntegration.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID(), userAgent)
+		return githubIntegration.CreateIssue(ctx, asset, assetVersionSlug, vuln, projectSlug, orgSlug, event.Justification, session.GetActorName(), userAgent)
 	case shared.VulnEvent:
 		span.SetAttributes(attribute.String("integration.event_type", "VulnEvent"))
 		ev := event.Event

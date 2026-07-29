@@ -145,6 +145,11 @@ attestation directly to the image in the OCI registry using cosign.`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			config.ParseAttestationConfig()
 		},
+		Annotations: map[string]string{
+			"title":           "DevGuard-Scanner attest — Create and upload an attestation",
+			"description":     "Attach a signed predicate to a container image or artifact and upload it to DevGuard with devguard-scanner attest for verifiable build provenance.",
+			"keyword_primary": "devguard-scanner attest",
+		},
 	}
 
 	scanner.AddDefaultFlags(cmd)

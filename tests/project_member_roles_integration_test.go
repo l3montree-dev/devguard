@@ -46,8 +46,7 @@ func (f *TestFixture) RemoveProjectMember(t testing.TB, e *echo.Echo, org models
 	ctx.SetParamNames("userID")
 	ctx.SetParamValues(targetUserID)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Maybe().Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetProject(ctx, project)
@@ -76,8 +75,7 @@ func (f *TestFixture) ChangeProjectRole(t testing.TB, e *echo.Echo, org models.O
 	ctx.SetParamNames("userID")
 	ctx.SetParamValues(targetUserID)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetProject(ctx, project)
@@ -105,8 +103,7 @@ func (f *TestFixture) CreateProjectViaController(t testing.TB, e *echo.Echo, org
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Maybe().Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetRBAC(ctx, f.App.RBACProvider.GetDomainRBAC(org.ID.String()))
@@ -132,8 +129,7 @@ func (f *TestFixture) InviteToProject(t testing.TB, e *echo.Echo, org models.Org
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Maybe().Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetProject(ctx, project)
@@ -201,8 +197,7 @@ func (f *TestFixture) CreateAssetViaController(t testing.TB, e *echo.Echo, org m
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetProject(ctx, project)
@@ -233,8 +228,7 @@ func (f *TestFixture) InviteToAsset(t testing.TB, e *echo.Echo, org models.Org, 
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 
-	session := mocks.NewAuthSession(t)
-	session.On("GetUserID").Return(callerUserID)
+	session := NewUserSession(t, callerUserID)
 	shared.SetSession(ctx, session)
 	shared.SetOrg(ctx, org)
 	shared.SetProject(ctx, project)

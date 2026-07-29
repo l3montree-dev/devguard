@@ -35,7 +35,6 @@ func NewArtifactRouter(
 	assetRepository shared.AssetRepository,
 ) ArtifactRouter {
 	artifactRouter := assetVersionGroup.Group.Group("/artifacts/:artifactName", middlewares.ArtifactMiddleware(artifactRepository))
-	assetScopedRBAC := middlewares.AssetAccessControlFactory(assetRepository)
 
 	artifactRouter.GET("/sbom.json/", artifactController.SBOMJSON)
 	artifactRouter.GET("/sbom.xml/", artifactController.SBOMXML)
@@ -47,9 +46,9 @@ func NewArtifactRouter(
 	artifactRouter.GET("/vulnerability-report.pdf/", artifactController.BuildVulnerabilityReportPDF)
 	artifactRouter.GET("/badges/:badge/", assetController.GetBadges)
 
-	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
-	artifactRouter.POST("/sync-external-sources/", externalReferenceController.SyncArtifact, middlewares.NeededScope([]string{"manage"}), assetScopedRBAC(shared.ObjectAsset, shared.ActionUpdate))
+	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	artifactRouter.POST("/sync-external-sources/", externalReferenceController.SyncArtifact, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	return ArtifactRouter{Group: artifactRouter}
 }

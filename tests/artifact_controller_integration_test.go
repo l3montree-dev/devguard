@@ -11,7 +11,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -236,8 +235,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			req.Header.Set("X-Asset-Ref", "main")
 			req.Header.Set("X-Origin", "trivy")
 			scanCtx := app.NewContext(req, recorder)
-			authSession := mocks.NewAuthSession(t)
-			authSession.On("GetUserID").Return("test-user")
+			authSession := NewUserSession(t, "test-user")
 			shared.SetAsset(scanCtx, asset)
 			shared.SetProject(scanCtx, project)
 			shared.SetOrg(scanCtx, org)

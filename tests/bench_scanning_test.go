@@ -28,7 +28,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/labstack/echo/v4"
@@ -203,8 +202,7 @@ func BenchmarkScanLargeSBOMDevDB(b *testing.B) {
 	controller := app.ScanController
 
 	setupContext := func(ctx shared.Context) {
-		authSession := &mocks.AuthSession{}
-		authSession.On("GetUserID").Return("bench-user")
+		authSession := NewUserSession(b, "bench-user")
 		shared.SetAsset(ctx, asset)
 		shared.SetProject(ctx, project)
 		shared.SetOrg(ctx, org)

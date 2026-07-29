@@ -591,6 +591,69 @@ func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) RunAndReturn(r
 	return _c
 }
 
+// DeleteUnscoped provides a mock function for the type PersonalAccessTokenRepository
+func (_mock *PersonalAccessTokenRepository) DeleteUnscoped(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteUnscoped")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// PersonalAccessTokenRepository_DeleteUnscoped_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteUnscoped'
+type PersonalAccessTokenRepository_DeleteUnscoped_Call struct {
+	*mock.Call
+}
+
+// DeleteUnscoped is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id uuid.UUID
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteUnscoped(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
+	return &PersonalAccessTokenRepository_DeleteUnscoped_Call{Call: _e.mock.On("DeleteUnscoped", ctx, tx, id)}
+}
+
+func (_c *PersonalAccessTokenRepository_DeleteUnscoped_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_DeleteUnscoped_Call) Return(err error) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_DeleteUnscoped_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByUserIDs provides a mock function for the type PersonalAccessTokenRepository
 func (_mock *PersonalAccessTokenRepository) FindByUserIDs(ctx context.Context, tx shared.DB, userID []uuid.UUID) ([]models.PAT, error) {
 	ret := _mock.Called(ctx, tx, userID)
@@ -942,6 +1005,228 @@ func (_c *PersonalAccessTokenRepository_List_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// ListByAssetID provides a mock function for the type PersonalAccessTokenRepository
+func (_mock *PersonalAccessTokenRepository) ListByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByAssetID")
+	}
+
+	var r0 []models.PAT
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PAT)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenRepository_ListByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByAssetID'
+type PersonalAccessTokenRepository_ListByAssetID_Call struct {
+	*mock.Call
+}
+
+// ListByAssetID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetID uuid.UUID
+func (_e *PersonalAccessTokenRepository_Expecter) ListByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *PersonalAccessTokenRepository_ListByAssetID_Call {
+	return &PersonalAccessTokenRepository_ListByAssetID_Call{Call: _e.mock.On("ListByAssetID", ctx, tx, assetID)}
+}
+
+func (_c *PersonalAccessTokenRepository_ListByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *PersonalAccessTokenRepository_ListByAssetID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ListByAssetID_Call) Return(pATs []models.PAT, err error) *PersonalAccessTokenRepository_ListByAssetID_Call {
+	_c.Call.Return(pATs, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ListByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_ListByAssetID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListByOrgID provides a mock function for the type PersonalAccessTokenRepository
+func (_mock *PersonalAccessTokenRepository) ListByOrgID(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx, orgID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByOrgID")
+	}
+
+	var r0 []models.PAT
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx, orgID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx, orgID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PAT)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenRepository_ListByOrgID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByOrgID'
+type PersonalAccessTokenRepository_ListByOrgID_Call struct {
+	*mock.Call
+}
+
+// ListByOrgID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - orgID uuid.UUID
+func (_e *PersonalAccessTokenRepository_Expecter) ListByOrgID(ctx interface{}, tx interface{}, orgID interface{}) *PersonalAccessTokenRepository_ListByOrgID_Call {
+	return &PersonalAccessTokenRepository_ListByOrgID_Call{Call: _e.mock.On("ListByOrgID", ctx, tx, orgID)}
+}
+
+func (_c *PersonalAccessTokenRepository_ListByOrgID_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID)) *PersonalAccessTokenRepository_ListByOrgID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ListByOrgID_Call) Return(pATs []models.PAT, err error) *PersonalAccessTokenRepository_ListByOrgID_Call {
+	_c.Call.Return(pATs, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ListByOrgID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_ListByOrgID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListByProjectID provides a mock function for the type PersonalAccessTokenRepository
+func (_mock *PersonalAccessTokenRepository) ListByProjectID(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.PAT, error) {
+	ret := _mock.Called(ctx, tx, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByProjectID")
+	}
+
+	var r0 []models.PAT
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.PAT, error)); ok {
+		return returnFunc(ctx, tx, projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.PAT); ok {
+		r0 = returnFunc(ctx, tx, projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PAT)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenRepository_ListByProjectID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByProjectID'
+type PersonalAccessTokenRepository_ListByProjectID_Call struct {
+	*mock.Call
+}
+
+// ListByProjectID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - projectID uuid.UUID
+func (_e *PersonalAccessTokenRepository_Expecter) ListByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *PersonalAccessTokenRepository_ListByProjectID_Call {
+	return &PersonalAccessTokenRepository_ListByProjectID_Call{Call: _e.mock.On("ListByProjectID", ctx, tx, projectID)}
+}
+
+func (_c *PersonalAccessTokenRepository_ListByProjectID_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID)) *PersonalAccessTokenRepository_ListByProjectID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ListByProjectID_Call) Return(pATs []models.PAT, err error) *PersonalAccessTokenRepository_ListByProjectID_Call {
+	_c.Call.Return(pATs, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ListByProjectID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.PAT, error)) *PersonalAccessTokenRepository_ListByProjectID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListByUserID provides a mock function for the type PersonalAccessTokenRepository
 func (_mock *PersonalAccessTokenRepository) ListByUserID(ctx context.Context, tx shared.DB, userID string) ([]models.PAT, error) {
 	ret := _mock.Called(ctx, tx, userID)
@@ -1147,6 +1432,78 @@ func (_c *PersonalAccessTokenRepository_Read_Call) Return(pAT models.PAT, err er
 }
 
 func (_c *PersonalAccessTokenRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.PAT, error)) *PersonalAccessTokenRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReadUnscoped provides a mock function for the type PersonalAccessTokenRepository
+func (_mock *PersonalAccessTokenRepository) ReadUnscoped(ctx context.Context, tx shared.DB, id uuid.UUID) (models.PAT, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadUnscoped")
+	}
+
+	var r0 models.PAT
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.PAT, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.PAT); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.PAT)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonalAccessTokenRepository_ReadUnscoped_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadUnscoped'
+type PersonalAccessTokenRepository_ReadUnscoped_Call struct {
+	*mock.Call
+}
+
+// ReadUnscoped is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id uuid.UUID
+func (_e *PersonalAccessTokenRepository_Expecter) ReadUnscoped(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_ReadUnscoped_Call {
+	return &PersonalAccessTokenRepository_ReadUnscoped_Call{Call: _e.mock.On("ReadUnscoped", ctx, tx, id)}
+}
+
+func (_c *PersonalAccessTokenRepository_ReadUnscoped_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *PersonalAccessTokenRepository_ReadUnscoped_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ReadUnscoped_Call) Return(pAT models.PAT, err error) *PersonalAccessTokenRepository_ReadUnscoped_Call {
+	_c.Call.Return(pAT, err)
+	return _c
+}
+
+func (_c *PersonalAccessTokenRepository_ReadUnscoped_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.PAT, error)) *PersonalAccessTokenRepository_ReadUnscoped_Call {
 	_c.Call.Return(run)
 	return _c
 }

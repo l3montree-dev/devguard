@@ -123,7 +123,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
+		authSession.On("GetActorName").Return("abc")
 
 		shared.SetSession(ctx, authSession)
 
@@ -196,7 +196,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
+		authSession.On("GetActorName").Return("abc")
 		shared.SetSession(ctx, authSession)
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{
@@ -279,7 +279,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamValues("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
 		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("1")
+		authSession.On("GetActorName").Return("1")
 		shared.SetSession(ctx, authSession)
 
 		err := githubIntegration.HandleEvent(context.Background(), shared.ManualMitigateEvent{

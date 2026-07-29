@@ -42,6 +42,80 @@ func (_m *VulnEventRepository) EXPECT() *VulnEventRepository_Expecter {
 	return &VulnEventRepository_Expecter{mock: &_m.Mock}
 }
 
+// CountByVexRuleIDs provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) CountByVexRuleIDs(ctx context.Context, tx shared.DB, ruleIDs []string) (map[string]int, error) {
+	ret := _mock.Called(ctx, tx, ruleIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByVexRuleIDs")
+	}
+
+	var r0 map[string]int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) (map[string]int, error)); ok {
+		return returnFunc(ctx, tx, ruleIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) map[string]int); ok {
+		r0 = returnFunc(ctx, tx, ruleIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]int)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, ruleIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnEventRepository_CountByVexRuleIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountByVexRuleIDs'
+type VulnEventRepository_CountByVexRuleIDs_Call struct {
+	*mock.Call
+}
+
+// CountByVexRuleIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ruleIDs []string
+func (_e *VulnEventRepository_Expecter) CountByVexRuleIDs(ctx interface{}, tx interface{}, ruleIDs interface{}) *VulnEventRepository_CountByVexRuleIDs_Call {
+	return &VulnEventRepository_CountByVexRuleIDs_Call{Call: _e.mock.On("CountByVexRuleIDs", ctx, tx, ruleIDs)}
+}
+
+func (_c *VulnEventRepository_CountByVexRuleIDs_Call) Run(run func(ctx context.Context, tx shared.DB, ruleIDs []string)) *VulnEventRepository_CountByVexRuleIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_CountByVexRuleIDs_Call) Return(stringToInt map[string]int, err error) *VulnEventRepository_CountByVexRuleIDs_Call {
+	_c.Call.Return(stringToInt, err)
+	return _c
+}
+
+func (_c *VulnEventRepository_CountByVexRuleIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ruleIDs []string) (map[string]int, error)) *VulnEventRepository_CountByVexRuleIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteEventByID provides a mock function for the type VulnEventRepository
 func (_mock *VulnEventRepository) DeleteEventByID(ctx context.Context, tx shared.DB, eventID string) error {
 	ret := _mock.Called(ctx, tx, eventID)
