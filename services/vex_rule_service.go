@@ -197,10 +197,7 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 }
 
 func (s *VEXRuleService) ApplyRulesToExisting(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-	return s.applyRulesToExistingInternal(ctx, tx, rules, vulns)
-}
 
-func (s *VEXRuleService) applyRulesToExistingInternal(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
 	vulnsByRule := s.matchRulesToVulns(ctx, rules, vulns)
 	ruleMap := make(map[string]*models.VEXRule)
 	for i := range rules {
@@ -273,7 +270,7 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 		return nil, nil
 	}
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetByAssetID(ctx, tx, rules[0].AssetID)
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(ctx, tx, rules[0].AssetID)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
@@ -282,7 +279,6 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 }
 
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
-
 	events := vuln.GetEvents()
 	if len(events) == 0 {
 		return false
