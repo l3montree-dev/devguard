@@ -383,27 +383,26 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		for j := len(vuln.Events) - 1; j >= 0; j-- {
 
 			if vuln.Events[j].Type == dtos.EventTypeReopened || vuln.Events[j].Type == dtos.EventTypeAccepted || vuln.Events[j].Type == dtos.EventTypeFalsePositive {
-				if vuln.Events[j].VexRule != nil {
-					if *vuln.Events[j].VexRuleID == ruleID {
-						continue // Skip events created by the rule being deleted
-					}
-
-					justification := "VEX rule deleted, reverting to last state"
-					ev.ID = uuid.New()
-					ev.Justification = &justification
-					ev.UserID = "system"
-					ev.CreatedByVexRule = false
-					ev.DependencyVulnID = &vuln.ID
-					ev.Type = vuln.Events[j].Type
-					deletedRuleID := ruleID
-					ev.VexRuleID = &deletedRuleID
-					found = true
-					break
+				if *vuln.Events[j].VexRuleID == ruleID {
+					continue // Skip events created by the rule being deleted
 				}
+
+				justification := "VEX rule deleted, reverting to last state"
+				ev.ID = uuid.New()
+				ev.Justification = &justification
+				ev.UserID = "system"
+				ev.CreatedByVexRule = false
+				ev.DependencyVulnID = &vuln.ID
+				ev.Type = vuln.Events[j].Type
+				deletedRuleID := ruleID
+				ev.VexRuleID = &deletedRuleID
+				found = true
+				break
 			}
 		}
 
 		if !found {
+			// this can only happen if the only ever event is detected and the rule is deleted, in which case we default to reopened
 			justification := "VEX rule deleted, no previous state found, defaulting to reopened"
 			ev.Justification = &justification
 			ev.UserID = "system"
