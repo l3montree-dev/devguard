@@ -163,7 +163,7 @@ func TestUserVoteTracker(t *testing.T) {
 // This test covers that even in a uniform vote, the correct rule is recommended and no errors are thrown
 func TestCrowdsourcedVexing_UniformVote(t *testing.T) {
 	rules, orgs, projects, assets := generateDistinctVoters(5, "rule-uniform", testAssessmentPrimary, 0.8, oldOrg())
-	result, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
+	result, _, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 	require.NoError(t, err)
 	assert.Equal(t, "rule-uniform", result.ID)
 	assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result.MechanicalJustification)
@@ -192,7 +192,7 @@ func TestCrowdsourcedVexing_HigherTrustscoreWins(t *testing.T) {
 			rekey("hi-", hiR, hiO, hiP, hiA)
 			allR, allO, allP, allA := merge(lowR, hiR, lowO, hiO, lowP, hiP, lowA, hiA)
 
-			result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+			result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 			require.NoError(t, err)
 			assert.Equal(t, "rule-high", result.ID, "higher trust score votes should win")
 		})
@@ -223,7 +223,7 @@ func TestCrowdsourcedVexing_UsesMaxOfOrgAndProjectTrustscore(t *testing.T) {
 		rules = append(rules, makeVexRule("rule-good", "asset-"+s, testAssessmentPrimary))
 	}
 
-	result, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
+	result, _, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 	require.NoError(t, err)
 	assert.Equal(t, "rule-good", result.ID, "the higher project trust score should be used over the organization trust score")
 }
@@ -257,7 +257,7 @@ func TestCrowdsourcedVexing_ProjectsOnly(t *testing.T) {
 
 	allR, allO, allP, allA := merge(rules, mRules, orgs, mOrgs, projects, mProjects, assets, mAssets)
 
-	result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+	result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 	require.NoError(t, err)
 	assert.Equal(t, "rule-good", result.ID)
 }
@@ -270,7 +270,7 @@ func TestCrowdsourcedVexing_QuantityVsQuality(t *testing.T) {
 		rekey("lo-", loR, loO, loP, loA)
 		allR, allO, allP, allA := merge(hiR, loR, hiO, loO, hiP, loP, hiA, loA)
 
-		result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-high", result.ID, "quality should beat quantity")
 	})
@@ -282,7 +282,7 @@ func TestCrowdsourcedVexing_QuantityVsQuality(t *testing.T) {
 		rekey("many-", manyR, manyO, manyP, manyA)
 		allR, allO, allP, allA := merge(fewR, manyR, fewO, manyO, fewP, manyP, fewA, manyA)
 
-		result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-many", result.ID, "enough moderate-trust quantity can outweigh fewer high-trust voters")
 	})
@@ -300,7 +300,7 @@ func TestSecurity_MinOrganizationAge(t *testing.T) {
 		rekey("yng-", yngR, yngO, yngP, yngA)
 		allR, allO, allP, allA := merge(oldR, yngR, oldO, yngO, oldP, yngP, oldA, yngA)
 
-		rule, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		rule, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-old", rule.ID)
 	})
@@ -312,7 +312,7 @@ func TestSecurity_MinOrganizationAge(t *testing.T) {
 		rekey("yng-", yngR, yngO, yngP, yngA)
 		allR, allO, allP, allA := merge(oldR, yngR, oldO, yngO, oldP, yngP, oldA, yngA)
 
-		rule, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		rule, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-young", rule.ID)
 	})
@@ -322,19 +322,19 @@ func TestSecurity_MinOrganizationAge(t *testing.T) {
 func TestSecurity_MinVoterThreshold(t *testing.T) {
 	t.Run("exactly threshold voters succeeds", func(t *testing.T) {
 		rules, orgs, projects, assets := generateDistinctVoters(minVoterThreshold, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		result, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
+		result, _, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-a", result.ID)
 	})
 
 	t.Run("threshold minus one returns error", func(t *testing.T) {
 		rules, orgs, projects, assets := generateDistinctVoters(minVoterThreshold-1, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
+		_, _, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 
 	t.Run("zero voters returns error", func(t *testing.T) {
-		_, _, err := CrowdsourcedVexing([]models.VEXRule{}, []Organization{}, []Project{}, []models.Asset{})
+		_, _, _, err := CrowdsourcedVexing([]models.VEXRule{}, []Organization{}, []Project{}, []models.Asset{})
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 }
@@ -351,7 +351,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 			rules = append(rules, makeVexRule("rule-a", "replay-asset", testAssessmentPrimary))
 		}
 
-		result, _, err := CrowdsourcedVexing(rules, []Organization{org}, []Project{project}, []models.Asset{asset})
+		result, _, _, err := CrowdsourcedVexing(rules, []Organization{org}, []Project{project}, []models.Asset{asset})
 		require.NoError(t, err, "1 deduplicated vote should still meet the current minVoterThreshold")
 		assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result.MechanicalJustification)
 
@@ -365,7 +365,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 		projectB := makeProject("replay-proj-2", "replay-org-2", 0.9)
 		assetB := makeAsset("replay-asset-2", "replay-proj-2")
 
-		result2, _, err := CrowdsourcedVexing(singleVoterRules, []Organization{org, orgB}, []Project{project, projectB}, []models.Asset{asset, assetB})
+		result2, _, _, err := CrowdsourcedVexing(singleVoterRules, []Organization{org, orgB}, []Project{project, projectB}, []models.Asset{asset, assetB})
 		require.NoError(t, err)
 		assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result2.MechanicalJustification,
 			"5 duplicate votes from same org+project should still only count as 1 vote, not outweigh a single distinct voter's conflicting vote")
@@ -386,7 +386,7 @@ func TestSecurity_ReplayProtection(t *testing.T) {
 			rules = append(rules, makeVexRule("rule-a", assetID, testAssessmentPrimary))
 		}
 
-		result, _, err := CrowdsourcedVexing(rules, []Organization{org}, projects, assets)
+		result, _, _, err := CrowdsourcedVexing(rules, []Organization{org}, projects, assets)
 		require.NoError(t, err)
 		assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentPrimary), result.MechanicalJustification)
 	})
@@ -407,7 +407,7 @@ func TestSecurity_AssessmentInputValidation(t *testing.T) {
 	for _, bad := range invalidAssessments {
 		t.Run("invalid assessment: "+bad, func(t *testing.T) {
 			rules, orgs, projects, assets := generateDistinctVoters(5, "rule-bad", bad, 0.8, oldOrg())
-			_, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
+			_, _, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 			assert.ErrorIs(t, err, ErrNoRecommendation, "assessment '%s' should not produce valid votes", bad)
 		})
 	}
@@ -417,7 +417,7 @@ func TestSecurity_AssessmentInputValidation(t *testing.T) {
 func TestSecurity_NegativeTrustscores(t *testing.T) {
 	t.Run("negative trust", func(t *testing.T) {
 		rules, orgs, projects, assets := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, -1.0, oldOrg())
-		_, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
+		_, _, _, err := CrowdsourcedVexing(rules, orgs, projects, assets)
 		assert.Error(t, err)
 	})
 }
@@ -430,7 +430,7 @@ func TestSecurity_TieBreaking(t *testing.T) {
 		rekey("fp-", fpR, fpO, fpP, fpA)
 		allR, allO, allP, allA := merge(affR, fpR, affO, fpO, affP, fpP, affA, fpA)
 
-		_, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		_, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		assert.ErrorIs(t, err, ErrNoRecommendation, "tie should return no models.VEXRule")
 	})
 }
@@ -456,7 +456,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 
 		allR, allO, allP, allA := merge(sameRules, distinctR, sameOrgs, distinctO, sameProjs, distinctP, sameAssets, distinctA)
 
-		result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-distinct", result.ID,
 			"distinct creators should outweigh a single creator with many orgs due to diminishing returns")
@@ -469,7 +469,7 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 
 		allR, allO, allP, allA := merge(distinct2R, distinct1R, distinct2O, distinct1O, distinct2P, distinct1P, distinct2A, distinct1A)
 
-		result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+		result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 		require.NoError(t, err)
 		assert.Equal(t, "rule-2", result.ID,
 			"20 same-creator votes (≈1.0) should not outweigh 4 distinct voters (2.0)")
@@ -483,25 +483,25 @@ func TestSecurity_DiminishingReturns(t *testing.T) {
 func TestEdgeCase_MissingEntities(t *testing.T) {
 	t.Run("missing assets", func(t *testing.T) {
 		rules, orgs, projects, _ := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, _, err := CrowdsourcedVexing(rules, orgs, projects, []models.Asset{})
+		_, _, _, err := CrowdsourcedVexing(rules, orgs, projects, []models.Asset{})
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 
 	t.Run("missing projects", func(t *testing.T) {
 		rules, orgs, _, assets := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, _, err := CrowdsourcedVexing(rules, orgs, []Project{}, assets)
+		_, _, _, err := CrowdsourcedVexing(rules, orgs, []Project{}, assets)
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 
 	t.Run("missing organizations", func(t *testing.T) {
 		rules, _, projects, assets := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, _, err := CrowdsourcedVexing(rules, []Organization{}, projects, assets)
+		_, _, _, err := CrowdsourcedVexing(rules, []Organization{}, projects, assets)
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 
 	t.Run("no rules returns error", func(t *testing.T) {
 		_, orgs, projects, assets := generateDistinctVoters(5, "rule-a", testAssessmentPrimary, 0.8, oldOrg())
-		_, _, err := CrowdsourcedVexing([]models.VEXRule{}, orgs, projects, assets)
+		_, _, _, err := CrowdsourcedVexing([]models.VEXRule{}, orgs, projects, assets)
 		assert.ErrorIs(t, err, ErrNoRecommendation)
 	})
 }
@@ -519,7 +519,7 @@ func TestEdgeCase_VerySmallTrustscores(t *testing.T) {
 
 	allR, allO, allP, allA := merge(rules, tRules, orgs, tOrgs, projects, tProjects, assets, tAssets)
 
-	result, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
+	result, _, _, err := CrowdsourcedVexing(allR, allO, allP, allA)
 	require.NoError(t, err)
 	assert.Equal(t, dtos.MechanicalJustificationType(testAssessmentSecondary), result.MechanicalJustification, "even very small positive trust should produce a result")
 }

@@ -44,7 +44,7 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 	}
 }
 
-func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64) dtos.VexRuleRecommendation {
+func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
 		Title:                   rule.Title,
 		CELExpression:           rule.CELExpression,
@@ -52,5 +52,20 @@ func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64) dtos.Ve
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
 		Confidence:              confidence,
+		VerifiedVotes:           verifiedVotes,
+		TotalVotes:              totalVotes,
+	}
+}
+
+func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, originAssetSlug string) dtos.VexRuleRecommendation {
+	return dtos.VexRuleRecommendation{
+		Title:                   rule.Title,
+		CELExpression:           rule.CELExpression,
+		Justification:           rule.Justification,
+		MechanicalJustification: rule.MechanicalJustification,
+		EventType:               rule.EventType,
+		Confidence:              1,
+		ProjectSlug:             &originProjectSlug,
+		AssetSlug:               &originAssetSlug,
 	}
 }

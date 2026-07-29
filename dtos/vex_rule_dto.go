@@ -51,6 +51,15 @@ type VexRuleRecommendation struct {
 	EventType                        VulnEventType               `json:"eventType"`
 	Confidence                       float64                     `json:"confidence"`
 	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns"`
+	VerifiedVotes                    int                         `json:"verifiedVotes"`
+	TotalVotes                       int                         `json:"totalVotes"`
+
+	// ProjectSlug/OriginAssetSlug are set when this recommendation was
+	// taken directly from a rule on an asset the requesting user already has
+	// access to, rather than from the crowd-voted recommendation across
+	// every matching rule. Lets the frontend link to that project/asset.
+	ProjectSlug *string `json:"projectSlug,omitempty"`
+	AssetSlug   *string `json:"assetSlug,omitempty"`
 }
 
 type TestVEXRulesRequest struct {
