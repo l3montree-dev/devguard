@@ -316,8 +316,8 @@ func TestVEXRuleEnabledBasedOnParanoidMode(t *testing.T) {
 				capturedRules = args.Get(2).([]models.VEXRule)
 			}).Return(nil)
 
-			// Mock GetByAssetID for ApplyRulesToExistingVulns
-			depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).Return([]models.DependencyVuln{}, nil)
+			// Mock GetAllOpenVulnsByAssetID for ApplyRulesToExistingVulns
+			depVulnRepo.On("GetAllOpenVulnsByAssetID", mock.Anything, mock.Anything, assetID).Return([]models.DependencyVuln{}, nil)
 
 			service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 
@@ -394,8 +394,8 @@ func TestApplyRulesToExistingVulnsOnlyAppliesEnabledRules(t *testing.T) {
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	// Mock GetByAssetID to return both vulns
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).
+	// Mock GetAllOpenVulnsByAssetID to return both vulns
+	depVulnRepo.On("GetAllOpenVulnsByAssetID", mock.Anything, mock.Anything, assetID).
 		Return([]models.DependencyVuln{vulnForEnabledRule, vulnForDisabledRule}, nil)
 
 	// Track which vulns get saved - only the vuln matching the enabled rule should be updated
@@ -463,7 +463,7 @@ func TestEnablingRuleAppliesItToVulns(t *testing.T) {
 	service := NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 
 	// First, try to apply the disabled rule - should not save any events
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).
+	depVulnRepo.On("GetAllOpenVulnsByAssetID", mock.Anything, mock.Anything, assetID).
 		Return([]models.DependencyVuln{matchingVuln}, nil).Once()
 
 	// No SaveBatchBestEffort calls expected for disabled rule
@@ -473,7 +473,7 @@ func TestEnablingRuleAppliesItToVulns(t *testing.T) {
 	// Now enable the rule and apply again - this time events should be saved
 	rule.Enabled = true
 
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).
+	depVulnRepo.On("GetAllOpenVulnsByAssetID", mock.Anything, mock.Anything, assetID).
 		Return([]models.DependencyVuln{matchingVuln}, nil).Once()
 
 	// Track saved events to verify rule was applied
