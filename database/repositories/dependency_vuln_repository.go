@@ -428,19 +428,37 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 
 }
 
-// GetAllOpenVulnsByAssetIDWithoutEvents omits CVE.Description/References - they're large
-// text/jsonb columns that dominate scan/materialization cost for thousands of rows, and
-// aren't needed by CEL VEX rule matching or the crowdsourced-vexing recommendation response.
-// Artifacts are loaded manually (not via Preload) so the dependency_vuln_id filter stays a
-// subquery on (asset_id, state) instead of GORM's Preload building a literal IN(...) list of
-// every already-fetched vuln ID, which is expensive for Postgres to plan at thousands of IDs.
+// GetAllOpenVulnsByAssetID preloads Events, needed by CEL VEX rule matching to
+// tell whether a rule's outcome was already applied to a vuln.
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	return repository.getAllOpenVulnsByAssetID(ctx, tx, assetID, true)
+}
+
+// GetAllOpenVulnsByAssetIDWithoutEvents skips the Events preload for callers
+// that don't need it, such as the crowdsourced-vexing recommendation response.
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	return repository.getAllOpenVulnsByAssetID(ctx, tx, assetID, false)
+}
+
+// getAllOpenVulnsByAssetID omits CVE.Description/References - they're large
+// text/jsonb columns that dominate scan/materialization cost for thousands of
+// rows, and aren't needed by any caller. Artifacts are loaded manually (not via
+// Preload) so the dependency_vuln_id filter stays a subquery on (asset_id, state)
+// instead of GORM's Preload building a literal IN(...) list of every
+// already-fetched vuln ID, which is expensive for Postgres to plan at thousands
+// of IDs.
+func (repository *dependencyVulnRepository) getAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, preloadEvents bool) ([]models.DependencyVuln, error) {
 	db := repository.GetDB(ctx, tx)
 
-	var vulns = []models.DependencyVuln{}
-	if err := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
+	query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
 		return db.Omit("Description", "References")
-	}).Distinct("ON (cve_id, vulnerability_path) *").Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).Order("cve_id, vulnerability_path, created_at ASC").Find(&vulns).Error; err != nil {
+	})
+	if preloadEvents {
+		query = query.Preload("Events")
+	}
+
+	var vulns = []models.DependencyVuln{}
+	if err := query.Distinct("ON (cve_id, vulnerability_path) *").Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).Order("cve_id, vulnerability_path, created_at ASC").Find(&vulns).Error; err != nil {
 		return nil, err
 	}
 

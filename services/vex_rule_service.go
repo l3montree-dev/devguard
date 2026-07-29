@@ -270,7 +270,8 @@ func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx share
 		return nil, nil
 	}
 	// Find all vulns matching all rules at once
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(ctx, tx, rules[0].AssetID)
+	// we need to fetch with events right here to make sure we can identify vex rules which were already applied.
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, rules[0].AssetID)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
