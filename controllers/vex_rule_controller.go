@@ -382,12 +382,21 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		found := false
 		for j := len(vuln.Events) - 1; j >= 0; j-- {
 
-			if vuln.Events[j].Type == dtos.EventTypeReopened || vuln.Events[j].Type == dtos.EventTypeAccepted || vuln.Events[j].Type == dtos.EventTypeFalsePositive {
-				if vuln.Events[j].VexRule != nil {
-					if *vuln.Events[j].VexRuleID == ruleID {
-						continue // Skip events created by the rule being deleted
-					}
+			if vuln.Events[j].Type == dtos.EventTypeReopened || vuln.Events[j].Type == dtos.EventTypeAccepted || vuln.Events[j].Type == dtos.EventTypeFalsePositive && (vuln.Events[j].VexRuleID == nil || *vuln.Events[j].VexRuleID != ruleID) {
+				if vuln.Events[j].VexRule != nil && vuln.Events[j].VexRule.ID == ruleID {
 
+					justification := "VEX rule deleted, reverting to last state"
+					ev.ID = uuid.New()
+					ev.Justification = &justification
+					ev.UserID = "system"
+					ev.CreatedByVexRule = false
+					ev.DependencyVulnID = &vuln.ID
+					ev.Type = vuln.Events[j].Type
+					deletedRuleID := ruleID
+					ev.VexRuleID = &deletedRuleID
+					found = true
+					break
+				} else {
 					justification := "VEX rule deleted, reverting to last state"
 					ev.ID = uuid.New()
 					ev.Justification = &justification
