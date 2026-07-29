@@ -27,20 +27,20 @@ import (
 
 // BuildQualifierQuery creates the database query for qualifier matching
 func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespace string) *gorm.DB {
-	query := db
-	for _, pattern := range QualifierEcosystemPatterns(qualifiers, namespace) {
-		query = query.Where("ecosystem LIKE ?", pattern)
+	if pattern := QualifierEcosystemPattern(qualifiers, namespace); pattern != "" {
+		return db.Where("ecosystem LIKE ?", pattern)
 	}
-	return query
+	return db
 }
 
-// QualifierEcosystemPatterns derives the `ecosystem LIKE ...` patterns implied
-// by a purl's distro qualifier. BuildQualifierQuery turns them into where
-// clauses; the batched lookup in vulndb/scan instead groups purls by their
-// pattern set, so that purls sharing a distro can be matched in one query.
-func QualifierEcosystemPatterns(qualifiers packageurl.Qualifiers, namespace string) []string {
-	var patterns []string
-
+// QualifierEcosystemPattern derives the `ecosystem LIKE ...` pattern implied by a
+// purl's distro qualifier, or "" if the purl carries no usable distro. Purl
+// qualifier keys are unique, so there is at most one distro to look at.
+//
+// BuildQualifierQuery turns the pattern into a where clause; the batched lookup
+// in vulndb/scan instead groups purls by it, so that purls sharing a distro can
+// be matched in one query.
+func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace string) string {
 	for _, qualifier := range qualifiers {
 		if qualifier.Key != "distro" {
 			continue
@@ -59,7 +59,7 @@ func QualifierEcosystemPatterns(qualifiers packageurl.Qualifiers, namespace stri
 				majorVersion, _, _ := strings.Cut(parts[1], ".")    // Get major version (13.2 -> 13)
 				ecosystemPattern := distroName + ":" + majorVersion // "Debian:13"
 
-				patterns = append(patterns, ecosystemPattern+"%")
+				return ecosystemPattern + "%"
 			}
 		case "apk", "alpine":
 			// Only major and minor versions are used from the distro qualifier.
@@ -79,13 +79,13 @@ func QualifierEcosystemPatterns(qualifiers packageurl.Qualifiers, namespace stri
 				ecosystemPattern += "." + minorVersion
 			}
 
-			patterns = append(patterns, ecosystemPattern+"%")
+			return ecosystemPattern + "%"
 		default:
-			return patterns
+			return ""
 		}
 	}
 
-	return patterns
+	return ""
 }
 
 // BuildVersionRangeQuery creates the database query for version range matching
@@ -105,17 +105,15 @@ func buildEmptyVersionQuery(db *gorm.DB) *gorm.DB {
 	)
 }
 
-// BatchedVersionPredicate is the batched counterpart of
-// BuildQueryBasedOnMatchContext: instead of binding a single version as a
-// parameter, it compares each affected_components row against a version coming
-// from a joined relation, so many purls can be matched in one round trip.
+// BatchedVersionPredicate expresses the same version matching rules as
+// BuildQueryBasedOnMatchContext, but against a version coming from a joined
+// relation instead of a bound parameter, so that many purls can be matched in one
+// round trip. Keep the two in sync.
 //
 // The returned SQL references the affected components as "ac" and the joined
 // candidates as "q" (with a text column "version"). An empty string means the
 // mode carries no SQL-expressible version predicate: EcosystemSpecificVersion
 // has to be narrowed in Go by the caller.
-//
-// Keep this in sync with BuildQueryBasedOnMatchContext.
 func BatchedVersionPredicate(interpretation normalize.VersionInterpretationType) string {
 	switch interpretation {
 	case normalize.ExactVersionString:

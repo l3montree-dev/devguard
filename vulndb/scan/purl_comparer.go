@@ -43,38 +43,6 @@ func NewPurlComparer(db shared.DB) *PurlComparer {
 
 var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer interface
 
-// GetAffectedComponents finds security vulnerabilities for a software package
-func (comparer *PurlComparer) GetAffectedComponents(ctx context.Context, purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
-	matchCtx := normalize.ParsePurlForMatching(purl)
-
-	if matchCtx.HowToInterpretVersionString == normalize.EmptyVersion {
-		return []models.AffectedComponent{}, nil // No version = no results
-	}
-
-	var affectedComponents []models.AffectedComponent
-
-	// Build the base query
-	query := comparer.db.WithContext(ctx).Model(&models.AffectedComponent{}).Where("purl = ?", matchCtx.SearchPurl)
-	query = repositories.BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
-
-	// build the query
-	query = repositories.BuildQueryBasedOnMatchContext(query, matchCtx)
-	err := query.
-		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
-		Find(&affectedComponents).Error
-	if err != nil {
-		slog.Error("error executing affected components query", "error", err)
-		return nil, err
-	}
-
-	if matchCtx.HowToInterpretVersionString == normalize.EcosystemSpecificVersion {
-		// Filter the results based on introduced/fixed versions or exact match
-		affectedComponents = filterMatchingComponentsByVersion(affectedComponents, matchCtx.NormalizedVersion)
-	}
-
-	return affectedComponents, err
-}
-
 // candidate is a purl we are looking for, together with everything we learned
 // about it along the way. Carrying the results on the candidate itself keeps the
 // input order intact without any index bookkeeping.
@@ -91,18 +59,46 @@ func (c *candidate) lookupKey() string {
 // queryShape identifies a set of candidates that can be matched by a single
 // query: everything except the package and version itself is constant.
 type queryShape struct {
-	interpretation    normalize.VersionInterpretationType
-	ecosystemPatterns string // joined patterns - a slice cannot be a map key
+	interpretation   normalize.VersionInterpretationType
+	ecosystemPattern string
+}
+
+// GetAffectedComponents finds the affected components for a single software
+// package.
+func (comparer *PurlComparer) GetAffectedComponents(ctx context.Context, purl packageurl.PackageURL) ([]models.AffectedComponent, error) {
+	candidates, err := comparer.resolveCandidates(ctx, []packageurl.PackageURL{purl})
+	if err != nil {
+		return nil, err
+	}
+	if len(candidates) == 0 {
+		return []models.AffectedComponent{}, nil // no version = no results
+	}
+	return candidates[0].components, nil
 }
 
 // GetVulns resolves the vulnerabilities for a set of purls. Callers looking at a
 // single purl pass a one element slice.
+func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.PackageURL) ([]models.VulnInPackage, error) {
+	candidates, err := comparer.resolveCandidates(ctx, purls)
+	if err != nil {
+		return nil, err
+	}
+
+	vulns := make([]models.VulnInPackage, 0, len(candidates))
+	for _, c := range candidates {
+		vulns = append(vulns, vulnsFromAffectedComponents(c.purl, c.components)...)
+	}
+	return vulns, nil
+}
+
+// resolveCandidates looks up the affected components for every purl that can
+// match anything at all, in the order the purls were requested.
 //
 // Rather than querying per purl, the purls are grouped by "query shape" (how
-// their version string has to be interpreted plus the ecosystem patterns their
+// their version string has to be interpreted plus the ecosystem pattern their
 // distro qualifier implies) and one lookup runs per shape. A container SBOM with
 // a thousand packages typically collapses to a handful of queries.
-func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.PackageURL) ([]models.VulnInPackage, error) {
+func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []packageurl.PackageURL) ([]*candidate, error) {
 	candidates := make([]*candidate, 0, len(purls))
 	byShape := make(map[queryShape][]*candidate)
 
@@ -115,10 +111,9 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.P
 		c := &candidate{purl: purl, matchCtx: matchCtx}
 		candidates = append(candidates, c)
 
-		patterns := repositories.QualifierEcosystemPatterns(matchCtx.Qualifiers, matchCtx.Namespace)
 		shape := queryShape{
-			interpretation:    matchCtx.HowToInterpretVersionString,
-			ecosystemPatterns: strings.Join(patterns, "\x00"),
+			interpretation:   matchCtx.HowToInterpretVersionString,
+			ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace),
 		}
 		byShape[shape] = append(byShape[shape], c)
 	}
@@ -139,13 +134,8 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.P
 		}
 	}
 
-	// iterate the candidates rather than the map, so that the result order
-	// follows the requested purls instead of Go's map ordering
-	vulns := make([]models.VulnInPackage, 0, len(candidates))
-	for _, c := range candidates {
-		vulns = append(vulns, vulnsFromAffectedComponents(c.purl, c.components)...)
-	}
-	return vulns, nil
+	// the candidates are in request order, whereas byShape is not
+	return candidates, nil
 }
 
 // matchAffectedComponents runs the lookup for one query shape and returns the
@@ -168,14 +158,11 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	if predicate := repositories.BatchedVersionPredicate(shape.interpretation); predicate != "" {
 		conditions = append(conditions, predicate)
 	}
-	for pattern := range strings.SplitSeq(shape.ecosystemPatterns, "\x00") {
-		if pattern == "" {
-			continue
-		}
-		// numbered placeholders, so that GORM passes the arrays above through
+	if shape.ecosystemPattern != "" {
+		// numbered placeholder, so that GORM passes the arrays above through
 		// verbatim instead of expanding the slices into one placeholder per element
 		conditions = append(conditions, fmt.Sprintf("ac.ecosystem LIKE $%d", len(args)+1))
-		args = append(args, pattern)
+		args = append(args, shape.ecosystemPattern)
 	}
 
 	// Selecting only the ids keeps the joined result small - the rows are
