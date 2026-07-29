@@ -141,29 +141,11 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 		},
 	}
 
-	vulns := []models.DependencyVuln{
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-5678",
-			VulnerabilityPath: []string{"pkg:golang/other@v1.0"},
-			ComponentPurl:     "pkg:golang/other@v1.0",
-		},
-	}
-
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).Return(vulns, nil)
+	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1", "rule-2"}).Return(map[string]int{"rule-1": 2, "rule-2": 1}, nil)
 
 	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 	counts, err := service.CountMatchingVulnsForRules(context.Background(), nil, rules)
@@ -187,29 +169,11 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 		CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
 	}
 
-	vulns := []models.DependencyVuln{
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-9999",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-	}
-
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
 	depVulnRepo := mocks.NewDependencyVulnRepository(t)
 	vulnEventRepo := mocks.NewVulnEventRepository(t)
 
-	depVulnRepo.On("GetByAssetID", mock.Anything, mock.Anything, assetID).Return(vulns, nil)
+	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1"}).Return(map[string]int{"rule-1": 2}, nil)
 
 	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
 	count, err := service.CountMatchingVulns(context.Background(), nil, rule)
