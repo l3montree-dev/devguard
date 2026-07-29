@@ -243,7 +243,7 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 		// Filter events: exclude risk assessment updates and already-copied events
 		relevantEvents := utils.Filter(vuln.GetEvents(), func(ev models.VulnEvent) bool {
 			return ev.OriginalAssetVersionName == nil &&
-				ev.Type != dtos.EventTypeRawRiskAssessmentUpdated
+				ev.Type != dtos.EventTypeRawRiskAssessmentUpdated && ev.VexRuleID == nil
 		})
 
 		// Tag events with their source branch
