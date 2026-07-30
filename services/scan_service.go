@@ -153,12 +153,31 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 
 	// newly opened vulns may already be covered by previously created, still-enabled VEX
 	// rules for this asset (e.g. a rule created before this vulnerability was ever detected).
+	var updatedVulns []models.DependencyVuln
 	existingRules, rulesErr := s.vexRuleService.FindByAssetID(ctx, tx, asset.ID)
 	if rulesErr != nil {
 		slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
 	} else if len(existingRules) > 0 {
-		if _, applyErr := s.vexRuleService.ApplyRulesToExisting(ctx, tx, existingRules, newState); applyErr != nil {
+		var applyErr error
+		if updatedVulns, applyErr = s.vexRuleService.ApplyRulesToExisting(ctx, tx, existingRules, newState); applyErr != nil {
 			slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
+		}
+	}
+	//update the state in newState to reflect the changes made by applying the VEX rules
+	newStateMap := make(map[uuid.UUID]models.DependencyVuln)
+	for _, vuln := range newState {
+		newStateMap[vuln.ID] = vuln
+	}
+	updatedVulnsMap := make(map[uuid.UUID]models.DependencyVuln)
+	for _, vuln := range updatedVulns {
+		updatedVulnsMap[vuln.ID] = vuln
+	}
+
+	for i, vuln := range newState {
+		if updatedVuln, ok := updatedVulnsMap[vuln.ID]; ok {
+			vuln.State = updatedVuln.State
+			newState[i] = vuln
+			newStateMap[vuln.ID] = vuln
 		}
 	}
 
