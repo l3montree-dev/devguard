@@ -339,6 +339,7 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			assetCtx, span := daemonTracer.Start(pipelineCtx, "pipeline.asset",
 				trace.WithAttributes(attribute.String("asset.id", assetID.String())),
 			)
+			slog.Info("running asset pipeline", "assetID", assetID, "traceID", span.SpanContext().TraceID().String())
 
 			asset, err := runner.assetRepository.Read(assetCtx, nil, assetID)
 			if err != nil {
