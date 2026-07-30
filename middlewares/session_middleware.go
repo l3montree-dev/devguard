@@ -82,7 +82,7 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.Co
 				}
 			}
 
-			shared.SetSession(ctx, shared.NoSession)
+			shared.SetSession(ctx, shared.AnonymousSession)
 			return next(ctx)
 		}
 	}

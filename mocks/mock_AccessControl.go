@@ -1174,8 +1174,8 @@ func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(ctx conte
 }
 
 // HasAccess provides a mock function for the type AccessControl
-func (_mock *AccessControl) HasAccess(ctx context.Context, session shared.AuthSession, actorScope shared.ActorScope) (bool, error) {
-	ret := _mock.Called(ctx, session, actorScope)
+func (_mock *AccessControl) HasAccess(ctx context.Context, session shared.AuthSession, org *models.Org, actorScope shared.ActorScope) (bool, error) {
+	ret := _mock.Called(ctx, session, org, actorScope)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HasAccess")
@@ -1183,16 +1183,16 @@ func (_mock *AccessControl) HasAccess(ctx context.Context, session shared.AuthSe
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.ActorScope) (bool, error)); ok {
-		return returnFunc(ctx, session, actorScope)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, *models.Org, shared.ActorScope) (bool, error)); ok {
+		return returnFunc(ctx, session, org, actorScope)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.ActorScope) bool); ok {
-		r0 = returnFunc(ctx, session, actorScope)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, *models.Org, shared.ActorScope) bool); ok {
+		r0 = returnFunc(ctx, session, org, actorScope)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AuthSession, shared.ActorScope) error); ok {
-		r1 = returnFunc(ctx, session, actorScope)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AuthSession, *models.Org, shared.ActorScope) error); ok {
+		r1 = returnFunc(ctx, session, org, actorScope)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1207,12 +1207,13 @@ type AccessControl_HasAccess_Call struct {
 // HasAccess is a helper method to define mock.On call
 //   - ctx context.Context
 //   - session shared.AuthSession
+//   - org *models.Org
 //   - actorScope shared.ActorScope
-func (_e *AccessControl_Expecter) HasAccess(ctx interface{}, session interface{}, actorScope interface{}) *AccessControl_HasAccess_Call {
-	return &AccessControl_HasAccess_Call{Call: _e.mock.On("HasAccess", ctx, session, actorScope)}
+func (_e *AccessControl_Expecter) HasAccess(ctx interface{}, session interface{}, org interface{}, actorScope interface{}) *AccessControl_HasAccess_Call {
+	return &AccessControl_HasAccess_Call{Call: _e.mock.On("HasAccess", ctx, session, org, actorScope)}
 }
 
-func (_c *AccessControl_HasAccess_Call) Run(run func(ctx context.Context, session shared.AuthSession, actorScope shared.ActorScope)) *AccessControl_HasAccess_Call {
+func (_c *AccessControl_HasAccess_Call) Run(run func(ctx context.Context, session shared.AuthSession, org *models.Org, actorScope shared.ActorScope)) *AccessControl_HasAccess_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1222,14 +1223,19 @@ func (_c *AccessControl_HasAccess_Call) Run(run func(ctx context.Context, sessio
 		if args[1] != nil {
 			arg1 = args[1].(shared.AuthSession)
 		}
-		var arg2 shared.ActorScope
+		var arg2 *models.Org
 		if args[2] != nil {
-			arg2 = args[2].(shared.ActorScope)
+			arg2 = args[2].(*models.Org)
+		}
+		var arg3 shared.ActorScope
+		if args[3] != nil {
+			arg3 = args[3].(shared.ActorScope)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -1240,7 +1246,7 @@ func (_c *AccessControl_HasAccess_Call) Return(b bool, err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, actorScope shared.ActorScope) (bool, error)) *AccessControl_HasAccess_Call {
+func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, org *models.Org, actorScope shared.ActorScope) (bool, error)) *AccessControl_HasAccess_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1510,8 +1516,8 @@ func (_c *AccessControl_InheritRole_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // IsAllowed provides a mock function for the type AccessControl
-func (_mock *AccessControl) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
-	ret := _mock.Called(ctx, session, object, action, actorScope)
+func (_mock *AccessControl) IsAllowed(ctx context.Context, session shared.AuthSession, org *models.Org, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
+	ret := _mock.Called(ctx, session, org, object, action, actorScope)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IsAllowed")
@@ -1519,16 +1525,16 @@ func (_mock *AccessControl) IsAllowed(ctx context.Context, session shared.AuthSe
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Object, shared.Action, shared.ActorScope) (bool, error)); ok {
-		return returnFunc(ctx, session, object, action, actorScope)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, *models.Org, shared.Object, shared.Action, shared.ActorScope) (bool, error)); ok {
+		return returnFunc(ctx, session, org, object, action, actorScope)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, shared.Object, shared.Action, shared.ActorScope) bool); ok {
-		r0 = returnFunc(ctx, session, object, action, actorScope)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.AuthSession, *models.Org, shared.Object, shared.Action, shared.ActorScope) bool); ok {
+		r0 = returnFunc(ctx, session, org, object, action, actorScope)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AuthSession, shared.Object, shared.Action, shared.ActorScope) error); ok {
-		r1 = returnFunc(ctx, session, object, action, actorScope)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.AuthSession, *models.Org, shared.Object, shared.Action, shared.ActorScope) error); ok {
+		r1 = returnFunc(ctx, session, org, object, action, actorScope)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1543,14 +1549,15 @@ type AccessControl_IsAllowed_Call struct {
 // IsAllowed is a helper method to define mock.On call
 //   - ctx context.Context
 //   - session shared.AuthSession
+//   - org *models.Org
 //   - object shared.Object
 //   - action shared.Action
 //   - actorScope shared.ActorScope
-func (_e *AccessControl_Expecter) IsAllowed(ctx interface{}, session interface{}, object interface{}, action interface{}, actorScope interface{}) *AccessControl_IsAllowed_Call {
-	return &AccessControl_IsAllowed_Call{Call: _e.mock.On("IsAllowed", ctx, session, object, action, actorScope)}
+func (_e *AccessControl_Expecter) IsAllowed(ctx interface{}, session interface{}, org interface{}, object interface{}, action interface{}, actorScope interface{}) *AccessControl_IsAllowed_Call {
+	return &AccessControl_IsAllowed_Call{Call: _e.mock.On("IsAllowed", ctx, session, org, object, action, actorScope)}
 }
 
-func (_c *AccessControl_IsAllowed_Call) Run(run func(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope)) *AccessControl_IsAllowed_Call {
+func (_c *AccessControl_IsAllowed_Call) Run(run func(ctx context.Context, session shared.AuthSession, org *models.Org, object shared.Object, action shared.Action, actorScope shared.ActorScope)) *AccessControl_IsAllowed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1560,17 +1567,21 @@ func (_c *AccessControl_IsAllowed_Call) Run(run func(ctx context.Context, sessio
 		if args[1] != nil {
 			arg1 = args[1].(shared.AuthSession)
 		}
-		var arg2 shared.Object
+		var arg2 *models.Org
 		if args[2] != nil {
-			arg2 = args[2].(shared.Object)
+			arg2 = args[2].(*models.Org)
 		}
-		var arg3 shared.Action
+		var arg3 shared.Object
 		if args[3] != nil {
-			arg3 = args[3].(shared.Action)
+			arg3 = args[3].(shared.Object)
 		}
-		var arg4 shared.ActorScope
+		var arg4 shared.Action
 		if args[4] != nil {
-			arg4 = args[4].(shared.ActorScope)
+			arg4 = args[4].(shared.Action)
+		}
+		var arg5 shared.ActorScope
+		if args[5] != nil {
+			arg5 = args[5].(shared.ActorScope)
 		}
 		run(
 			arg0,
@@ -1578,6 +1589,7 @@ func (_c *AccessControl_IsAllowed_Call) Run(run func(ctx context.Context, sessio
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -1588,7 +1600,7 @@ func (_c *AccessControl_IsAllowed_Call) Return(b bool, err error) *AccessControl
 	return _c
 }
 
-func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error)) *AccessControl_IsAllowed_Call {
+func (_c *AccessControl_IsAllowed_Call) RunAndReturn(run func(ctx context.Context, session shared.AuthSession, org *models.Org, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error)) *AccessControl_IsAllowed_Call {
 	_c.Call.Return(run)
 	return _c
 }

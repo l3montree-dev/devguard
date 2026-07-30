@@ -736,7 +736,7 @@ type ActorScope struct {
 }
 
 type AccessControl interface {
-	HasAccess(ctx context.Context, session AuthSession, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession, org *models.Org, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
@@ -766,8 +766,8 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 
+	IsAllowed(ctx context.Context, session AuthSession, org *models.Org, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 

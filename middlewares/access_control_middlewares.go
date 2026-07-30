@@ -72,7 +72,7 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 			session := shared.GetSession(ctx)
 			actorScope := shared.GetActorScope(ctx)
 
-			allowed, err := rbac.IsAllowed(ctx.Request().Context(), session, obj, act, actorScope)
+			allowed, err := rbac.IsAllowed(ctx.Request().Context(), session, &org, obj, act, actorScope)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
@@ -80,13 +80,9 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 
 			// check if the user has the required role
 			if !allowed {
-				if org.IsPublic && act == shared.ActionRead {
-					shared.SetIsPublicRequest(ctx)
-				} else {
-					slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
-					ctx.Response().WriteHeader(404)
-					return echo.NewHTTPError(404, "could not find organization")
-				}
+				slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
+				ctx.Response().WriteHeader(404)
+				return echo.NewHTTPError(404, "could not find organization")
 			}
 
 			return next(ctx)
@@ -113,7 +109,7 @@ func NeededScope(NeededScopes []string) shared.MiddlewareFunc {
 
 func DisallowPublicRequests(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx shared.Context) error {
-		if shared.IsPublicRequest(ctx) {
+		if shared.GetSession(ctx).IsAnonymousSession() {
 			slog.Warn("access denied for public request in DisallowPublicRequests middleware")
 			return echo.NewHTTPError(401, "this endpoint is not accessible for public requests")
 		}
@@ -139,13 +135,8 @@ func AssetAccessControl(obj shared.Object, act shared.Action) shared.MiddlewareF
 			}
 			// check if the user has the required role
 			if !allowed {
-				if asset.IsPublic && act == shared.ActionRead {
-					// allow READ on all objects in the project - if access is public
-					shared.SetIsPublicRequest(ctx)
-				} else {
-					slog.Warn("access denied in AssetAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "assetSlug", asset.Slug)
-					return echo.NewHTTPError(404, "could not find asset")
-				}
+				slog.Warn("access denied in AssetAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "assetSlug", asset.Slug)
+				return echo.NewHTTPError(404, "could not find asset")
 			}
 			return next(ctx)
 		}
@@ -172,13 +163,8 @@ func ProjectAccessControl(obj shared.Object, act shared.Action) shared.Middlewar
 
 			// check if the user has the required role
 			if !allowed {
-				if project.IsPublic && act == shared.ActionRead {
-					// allow READ on all objects in the project - if access is public
-					shared.SetIsPublicRequest(ctx)
-				} else {
-					slog.Warn("access denied in ProjectAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "projectSlug", project.Slug)
-					return echo.NewHTTPError(404, "could not find project")
-				}
+				slog.Warn("access denied in ProjectAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "projectSlug", project.Slug)
+				return echo.NewHTTPError(404, "could not find project")
 			}
 
 			return next(ctx)
@@ -197,27 +183,19 @@ func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 			session := shared.GetSession(ctx)
 			actorScope := shared.GetActorScope(ctx)
 
-			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session, actorScope)
+			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session, &org, actorScope)
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
 					slog.Info("oauth2 token not valid, asking user to reauthorize", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
-				if org.IsPublic {
-					shared.SetIsPublicRequest(ctx)
-					return next(ctx)
-				}
 				return ctx.JSON(401, map[string]string{"error": err.Error()})
 			}
 
 			if !allowed {
-				if org.IsPublic {
-					shared.SetIsPublicRequest(ctx)
-				} else {
-					// not allowed and not a public organization
-					slog.Error("access denied in multiOrganizationMiddleware", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
-					return ctx.JSON(404, map[string]string{"error": "could not find organization"})
-				}
+				// not allowed and not a public organization
+				slog.Error("access denied in multiOrganizationMiddleware", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
+				return ctx.JSON(404, map[string]string{"error": "could not find organization"})
 			}
 
 			// continue to the request
