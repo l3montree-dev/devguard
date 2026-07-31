@@ -172,7 +172,7 @@ func DiffVulnsBetweenBranches[T models.Vuln](
 
 	// Check each vulnerability on current branch
 	for _, currentVuln := range currentBranchVulns {
-		hash := currentVuln.AssetVersionIndependentHash()
+		hash := currentVuln.CalculateAssetVersionIndependentHash()
 
 		if matchingVulns, existsElsewhere := otherBranchIndex[hash]; existsElsewhere {
 			// This vuln exists on other branches - create a match
@@ -228,7 +228,7 @@ func indexByHash[T models.Vuln](vulns []T) map[string][]T {
 	index := make(map[string][]T)
 
 	for _, vuln := range vulns {
-		hash := vuln.AssetVersionIndependentHash()
+		hash := vuln.CalculateAssetVersionIndependentHash()
 		index[hash] = append(index[hash], vuln)
 	}
 
@@ -243,7 +243,7 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 		// Filter events: exclude risk assessment updates and already-copied events
 		relevantEvents := utils.Filter(vuln.GetEvents(), func(ev models.VulnEvent) bool {
 			return ev.OriginalAssetVersionName == nil &&
-				ev.Type != dtos.EventTypeRawRiskAssessmentUpdated
+				ev.Type != dtos.EventTypeRawRiskAssessmentUpdated && ev.VexRuleID == nil
 		})
 
 		// Tag events with their source branch

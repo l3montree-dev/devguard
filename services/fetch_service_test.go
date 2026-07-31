@@ -97,7 +97,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 	})
 }
 
-func TestFetchOpenVexFromGitHub(t *testing.T) {
+func TestFetchVexFromGitHub(t *testing.T) {
 	originalDownloadRawFileFn := downloadRawFileFn
 	t.Cleanup(func() {
 		downloadRawFileFn = originalDownloadRawFileFn
@@ -157,7 +157,7 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 			}), nil
 		}
 
-		reports, err := FetchOpenVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
+		reports, err := FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 1)
 		assert.Equal(t, "https://github.com/octo-org/openvex-repo", reports[0].Source)
@@ -197,7 +197,7 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 			}), nil
 		}
 
-		reports, err := FetchOpenVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
+		reports, err := FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 2)
 		assert.Equal(t, "https://github.com/octo-org/multi-vex-repo", reports[0].Source)
@@ -210,7 +210,7 @@ func TestFetchOpenVexFromGitHub(t *testing.T) {
 	})
 
 	t.Run("should reject non github urls", func(t *testing.T) {
-		reports, err := FetchOpenVexFromGitHub(context.Background(), "https://example.com/repo", "")
+		reports, err := FetchVexFromGitHub(context.Background(), "https://example.com/repo", "")
 		assert.Error(t, err)
 		assert.Nil(t, reports)
 		assert.Contains(t, err.Error(), "invalid github repository url")

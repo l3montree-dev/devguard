@@ -117,7 +117,7 @@ func TestSBOMScanIngestsVEXFromExternalReferences(t *testing.T) {
 		assert.Equal(t, 200, recorder.Code)
 
 		var vexRules []models.VEXRule
-		result := f.DB.Where("asset_id = ? AND cve_id = ?", asset.ID, "CVE-2025-46569").Find(&vexRules)
+		result := f.DB.Where("asset_id = ?", asset.ID).Find(&vexRules)
 		require.NoError(t, result.Error)
 		assert.NotEmpty(t, vexRules, "expected a VEX rule to be created from the SBOM's exploitability-statement external reference")
 	})

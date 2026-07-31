@@ -57,7 +57,7 @@ func (licenseRisk *LicenseRisk) GetArtifactNames() string {
 	return artifactNames
 }
 
-func (licenseRisk LicenseRisk) AssetVersionIndependentHash() string {
+func (licenseRisk LicenseRisk) CalculateAssetVersionIndependentHash() string {
 	return utils.HashString(licenseRisk.ComponentPurl)
 }
 

@@ -106,7 +106,7 @@ func AssetVersionMiddleware(repository shared.AssetVersionRepository) func(next 
 			shared.SetAssetVersion(ctx, assetVersion)
 
 			// Update LastAccessedAt in a goroutine to avoid blocking the request
-			if !shared.IsPublicRequest(ctx) && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
+			if !shared.GetSession(ctx).IsAnonymousSession() && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
 				go func() {
 					now := time.Now()
 					assetVersion.LastAccessedAt = now
@@ -138,7 +138,7 @@ func ScanMiddleware(assetVersionRepository shared.AssetVersionRepository) func(n
 			}
 
 			// Update LastAccessedAt in a goroutine to avoid blocking the request
-			if !shared.IsPublicRequest(ctx) && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
+			if !shared.GetSession(ctx).IsAnonymousSession() && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
 				go func() {
 					now := time.Now()
 					assetVersion.LastAccessedAt = now

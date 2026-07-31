@@ -48,7 +48,7 @@ func sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func VexRulesFromDocument(body []byte, assetID uuid.UUID, assetVersionName, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
+func VexRulesFromDocument(body []byte, assetID uuid.UUID, source string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error) {
 	format := sniffVexFormat(body)
 
 	switch format {
@@ -57,21 +57,21 @@ func VexRulesFromDocument(body []byte, assetID uuid.UUID, assetVersionName, sour
 		if err := json.Unmarshal(body, &advisory); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CSAF advisory: %w", err)
 		}
-		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, assetVersionName, source)
+		rules, err := transformer.CSAFVEXToRules(&advisory, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeOpenVEX:
 		var doc vex.VEX
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as OpenVEX document: %w", err)
 		}
-		rules, err := transformer.OpenVEXToRules(&doc, assetID, assetVersionName, source)
+		rules, err := transformer.OpenVEXToRules(&doc, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeCycloneDX:
 		var doc cyclonedx.BOM
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CycloneDX BOM: %w", err)
 		}
-		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, assetVersionName, source)
+		rules, err := transformer.CycloneDXVEXToRules(&doc, source)
 		return rules, format, err
 	default:
 		return nil, format, fmt.Errorf("unsupported VEX document format")
@@ -161,9 +161,9 @@ func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string
 }
 
 // FetchVexFromUpstream downloads VEX from the given external references and converts it into
-// VEX rules scoped to the given asset version. Both CSAF and CycloneDX are parsed to rules by
+// VEX rules scoped to the given asset version. CSAF, OpenVEX and CycloneDX are parsed to rules by
 // their respective transformers; the returned rules carry their VexSource (the reference URL).
-func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionName string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
+func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
 	rules := make([]models.VEXRule, 0)
 	valid := make([]models.ExternalReference, 0, len(upstreamURLs))
 	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
@@ -176,11 +176,10 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionNa
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
-					Type:             dtos.ExternalReferenceTypeUnknown,
-					Error:            new(fmt.Sprintf("could not create request for url: %v", err)),
+					AssetID: assetID,
+					URL:     url,
+					Type:    dtos.ExternalReferenceTypeUnknown,
+					Error:   new(fmt.Sprintf("could not create request for url: %v", err)),
 				})
 				return
 			}
@@ -197,33 +196,32 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionNa
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
-					Type:             dtos.ExternalReferenceTypeUnknown,
-					Error:            new(fmt.Sprintf("could not read response body: %v", err)),
+					AssetID: assetID,
+					URL:     url,
+					Type:    dtos.ExternalReferenceTypeUnknown,
+					Error:   new(fmt.Sprintf("could not read response body: %v", err)),
 				})
 				return
 			}
-			vexRules, format, err := VexRulesFromDocument(body, assetID, assetVersionName, url)
+			vexRules, format, err := VexRulesFromDocument(body, assetID, url)
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
-					Type:             format,
-					Error:            new(fmt.Sprintf("could not parse vex file from url: %v", err)),
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					URL:              url,
+					Type:    format,
+					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
+					AssetID: assetID,
+					URL:     url,
 				})
 				return
 			}
+			for i := range vexRules {
+				rules = append(rules, transformer.SystemVEXRuleToVEXRule(vexRules[i], "", assetID))
+			}
 			mut.Lock()
-			rules = append(rules, vexRules...)
 			valid = append(valid, models.ExternalReference{
-				URL:              url,
-				AssetID:          assetID,
-				AssetVersionName: assetVersionName,
-				Type:             format,
+				URL:     url,
+				AssetID: assetID,
+				Type:    format,
 			})
 			mut.Unlock()
 		})
@@ -232,7 +230,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, assetVersionNa
 	return rules, valid, invalid
 }
 
-func FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexReports []*transformer.VexReportOpenVEX, err error) {
+func FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error) {
 	owner, repo, err := ParseGitHubURL(targetURL)
 	if err != nil {
 		return nil, err
@@ -255,6 +253,7 @@ func FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch 
 	}
 	resp.Body.Close()
 
+	allRules := make([]models.SystemVEXRule, 0, len(repoZip.File)*10) // rough estimate
 	for _, fileEntry := range repoZip.File {
 		if fileEntry.FileInfo().IsDir() {
 			continue
@@ -266,23 +265,28 @@ func FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch 
 
 		fileRead, err := fileEntry.Open()
 		if err != nil {
-			slog.Info("openvex document could not be opened, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
+			slog.Info("document could not be opened, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
 			continue
 		}
-		var openVEX vex.VEX
-		err = json.NewDecoder(fileRead).Decode(&openVEX)
+
+		bytes, err := io.ReadAll(fileRead)
 		if err != nil {
-			slog.Info("could not decode OpenVEX file", "err", err, "filename", filename)
+			slog.Info("document could not be read, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
 			continue
 		}
-		newVexReport, err := transformer.NewVexReportOpenVEX(&openVEX, targetURL)
+
+		rules, _, err := VexRulesFromDocument(
+			bytes,
+			uuid.Nil,
+			fileEntry.Name,
+		)
 		if err != nil {
 			slog.Info("could not create openVEX report structure", "err", err, "filename", filename)
 			continue
 		}
-		vexReports = append(vexReports, newVexReport)
+		allRules = append(allRules, rules...)
 	}
-	return vexReports, nil
+	return allRules, nil
 }
 
 func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {

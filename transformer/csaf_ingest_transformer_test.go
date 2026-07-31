@@ -18,11 +18,10 @@ package transformer
 import (
 	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,9 +38,7 @@ func TestCSAFtoVexRules(t *testing.T) {
 		t.Fatalf("could not unmarshal testdata/csaf_vex.json: %v", err)
 	}
 
-	assetID := uuid.New()
-	assetVersionName := "1.0.0"
-	rules, err := CSAFVEXToRules(&advisory, assetID, assetVersionName, "test")
+	rules, err := CSAFVEXToRules(&advisory, "test")
 	if err != nil {
 		t.Fatalf("CSAFVEXToRules failed: %v", err)
 	}
@@ -51,21 +48,21 @@ func TestCSAFtoVexRules(t *testing.T) {
 		t.Fatalf("expected 2 rules, got %d", len(rules))
 	}
 
-	gotPaths := make([]string, 0, len(rules))
+	gotExpressions := make([]string, 0, len(rules))
 	for _, r := range rules {
-		gotPaths = append(gotPaths, strings.Join(r.PathPattern, ","))
+		gotExpressions = append(gotExpressions, r.CELExpression)
 	}
 
-	expectedPaths := []string{
-		strings.Join([]string{
+	expectedExpressions := []string{
+		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
-		}, ","),
-		strings.Join([]string{
+		}),
+		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/github.com/open-policy-agent/opa@v1.18.2",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
-		}, ","),
+		}),
 	}
-	assert.ElementsMatch(t, expectedPaths, gotPaths, "PathPatterns do not match expected")
+	assert.ElementsMatch(t, expectedExpressions, gotExpressions, "CEL expressions do not match expected")
 }

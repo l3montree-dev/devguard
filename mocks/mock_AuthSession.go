@@ -214,6 +214,50 @@ func (_c *AuthSession_GetSessionActorType_Call) RunAndReturn(run func() shared.S
 	return _c
 }
 
+// IsAnonymousSession provides a mock function for the type AuthSession
+func (_mock *AuthSession) IsAnonymousSession() bool {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAnonymousSession")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func() bool); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// AuthSession_IsAnonymousSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAnonymousSession'
+type AuthSession_IsAnonymousSession_Call struct {
+	*mock.Call
+}
+
+// IsAnonymousSession is a helper method to define mock.On call
+func (_e *AuthSession_Expecter) IsAnonymousSession() *AuthSession_IsAnonymousSession_Call {
+	return &AuthSession_IsAnonymousSession_Call{Call: _e.mock.On("IsAnonymousSession")}
+}
+
+func (_c *AuthSession_IsAnonymousSession_Call) Run(run func()) *AuthSession_IsAnonymousSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AuthSession_IsAnonymousSession_Call) Return(b bool) *AuthSession_IsAnonymousSession_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *AuthSession_IsAnonymousSession_Call) RunAndReturn(run func() bool) *AuthSession_IsAnonymousSession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsInstanceAdmin provides a mock function for the type AuthSession
 func (_mock *AuthSession) IsInstanceAdmin() bool {
 	ret := _mock.Called()

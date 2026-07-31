@@ -94,11 +94,9 @@ var memberOnlyPaths = map[string]bool{
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/":                        true,
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/mitigate/":               true,
 	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/license-risks/:licenseRiskID/final-license-decision/": true,
-	// VEX rules — any member may create/edit/delete VEX rules (membership = passed read RBAC).
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/":                 true,
-	"PUT /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/:ruleId/":          true,
-	"POST /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/:ruleId/reapply/": true,
-	"DELETE /api/v1/organizations/:organization/projects/:project/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/:ruleId/":       true,
+	// VEX rules — scoped directly to the asset (not the asset version). Testing rules against
+	// a vulnerability doesn't mutate anything, so any member who can read the asset may call it.
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/vex-rules/test/": true,
 }
 
 var echoParamRe = regexp.MustCompile(`:[^/]+`)
@@ -291,9 +289,9 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewDependencyVulnRouter(assetVersionRouter, new(controllers.DependencyVulnController), new(controllers.VulnEventController))
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
-	NewVEXRuleRouter(assetVersionRouter, new(controllers.VEXRuleController))
+	NewVEXRuleRouter(assetRouter, new(controllers.VEXRuleController))
 	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
-	NewExternalReferenceRouter(assetVersionRouter, new(controllers.ExternalReferenceController), assetRepo)
+	NewExternalReferenceRouter(assetRouter, new(controllers.ExternalReferenceController), assetRepo)
 
 	return e
 }
@@ -303,8 +301,8 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 // IsPublicRequest=true, so DisallowPublicRequests blocks the request.
 func publicVisitorAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	ac.On("IsAllowedInAsset", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	return ac
@@ -315,11 +313,11 @@ func publicVisitorAC() *mocks.AccessControl {
 // will pass (IsPublicRequest stays false), but write-level RBAC checks deny.
 func readOnlyMemberAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(true, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(true, nil)
 
 	// Org-level: allow read, deny everything else.
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 
 	// Project-level: allow read, deny write.
 	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything, mock.Anything).Maybe().Return(true, nil)

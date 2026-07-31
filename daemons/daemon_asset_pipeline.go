@@ -53,6 +53,7 @@ type pipelineError struct {
 func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
 	ch := runner.FetchAssetDetails(ctx, idsChan, errChan)
 	ch = runner.DeleteOldAssetVersions(ch, errChan)
+	// scan asset will apply all vex rules
 	ch = runner.ScanAsset(ch, errChan)
 	ch = runner.SyncUpstream(ch, errChan)
 	ch = runner.AutoReopenTickets(ch, errChan)
@@ -275,6 +276,7 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			assetCtx, span := daemonTracer.Start(pipelineCtx, "pipeline.asset",
 				trace.WithAttributes(attribute.String("asset.id", assetID.String())),
 			)
+			slog.Info("running asset pipeline", "assetID", assetID, "traceID", span.SpanContext().TraceID().String())
 
 			asset, err := runner.assetRepository.Read(assetCtx, nil, assetID)
 			if err != nil {
@@ -618,15 +620,44 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 			project := assetWithDetails.project
 			org := assetWithDetails.org
 
+			vexRefs, err := runner.externalReferenceRepository.FindByAssetID(assetWithDetails.ctx, runner.db, asset.ID)
+			if err != nil {
+				slog.Error("failed to fetch vex references for asset", "error", err, "assetID", asset.ID)
+				errChan <- pipelineError{
+					asset: asset,
+					err:   fmt.Errorf("could not fetch vex references: %w", err),
+				}
+				continue
+			}
+
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-upstream")
 			errs := make([]error, 0)
+
+			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+
+			rules, valid, invalid := runner.scanService.FetchVexFromUpstream(stageCtx, asset.ID, utils.Map(vexRefs, func(el models.ExternalReference) string {
+				return el.URL
+			}))
+
+			if err := runner.externalReferenceRepository.SaveBatch(stageCtx, tx, append(valid, invalid...)); err != nil {
+				slog.Error("could not store vex external reference", "err", err)
+			}
+
+			if err := runner.vexRuleService.IngestVEXRules(stageCtx, tx, asset, rules); err != nil {
+				slog.Error("could not ingest vex rules", "err", err)
+			}
+
+			if runner.debugOptions.DryRun {
+				tx.Rollback()
+			} else {
+				tx.Commit()
+			}
 
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-
-					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
+					if _, _, err := runner.scanService.SyncArtifactUpstreamSBOMSources(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()

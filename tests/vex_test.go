@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -49,15 +50,19 @@ func TestVEXRuleServiceUpdate(t *testing.T) {
 	vexRuleRepo.AssertExpectations(t)
 }
 
+// celFor builds a CEL expression that matches a specific CVE ID and path pattern,
+// mirroring how transformers build VEXRule.CELExpression.
+func celFor(cveID string, pattern []string) string {
+	return vexrules.ToCELExpression(cveID, vexrules.PathPattern(pattern))
+}
+
 // TestVEXRuleServiceDelete tests the Delete method
 func TestVEXRuleServiceDelete(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
-		ID:               "test-rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
+		ID:      "test-rule-1",
+		AssetID: assetID,
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -79,8 +84,8 @@ func TestVEXRuleServiceDelete(t *testing.T) {
 	vexRuleRepo.AssertExpectations(t)
 }
 
-// TestVEXRuleServiceDeleteByAssetVersion tests batch deletion
-func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
+// TestVEXRuleServiceDeleteByAssetID tests batch deletion
+func TestVEXRuleServiceDeleteByAssetID(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 
@@ -92,31 +97,27 @@ func TestVEXRuleServiceDeleteByAssetVersion(t *testing.T) {
 	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
 	cveRelationshipService := mocks.NewCVERelationshipService(t)
 
-	vexRuleRepo.On("DeleteByAssetVersion", mock.Anything, mock.Anything, assetID, "v1.0").Return(nil)
+	vexRuleRepo.On("DeleteByAssetID", mock.Anything, mock.Anything, assetID).Return(nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
-	err := service.DeleteByAssetVersion(context.Background(), nil, assetID, "v1.0")
+	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	err := service.DeleteByAssetID(context.Background(), nil, assetID)
 
 	assert.NoError(t, err)
 	vexRuleRepo.AssertExpectations(t)
 }
 
-// TestVEXRuleServiceFindByAssetVersion tests finding rules by asset version
-func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
+// TestVEXRuleServiceFindByAssetID tests finding rules by asset
+func TestVEXRuleServiceFindByAssetID(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rules := []models.VEXRule{
 		{
-			ID:               "rule-1",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-1234",
+			ID:      "rule-1",
+			AssetID: assetID,
 		},
 		{
-			ID:               "rule-2",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-5678",
+			ID:      "rule-2",
+			AssetID: assetID,
 		},
 	}
 
@@ -128,10 +129,10 @@ func TestVEXRuleServiceFindByAssetVersion(t *testing.T) {
 	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
 	cveRelationshipService := mocks.NewCVERelationshipService(t)
 
-	vexRuleRepo.On("FindByAssetVersion", mock.Anything, mock.Anything, assetID, "v1.0").Return(rules, nil)
+	vexRuleRepo.On("FindByAssetID", mock.Anything, mock.Anything, assetID).Return(rules, nil)
 
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
-	found, err := service.FindByAssetVersion(context.Background(), nil, assetID, "v1.0")
+	service := services.NewVEXRuleService(vexRuleRepo, depVulnRepo, vulnEventRepo)
+	found, err := service.FindByAssetID(context.Background(), nil, assetID)
 
 	assert.NoError(t, err)
 	assert.Len(t, found, 2)
@@ -145,10 +146,8 @@ func TestVEXRuleServiceFindByID(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
-		ID:               "test-rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
+		ID:      "test-rule-1",
+		AssetID: assetID,
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -175,36 +174,16 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 	assetID := uuid.New()
 	rules := []models.VEXRule{
 		{
-			ID:               "rule-1",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-1234",
-			PathPattern:      []string{"pkg:golang/lib@v1.0"},
+			ID:            "rule-1",
+			AssetID:       assetID,
+			Enabled:       true,
+			CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
 		},
 		{
-			ID:               "rule-2",
-			AssetID:          assetID,
-			AssetVersionName: "v1.0",
-			CVEID:            "CVE-2024-5678",
-			PathPattern:      []string{"pkg:golang/other@v1.0"},
-		},
-	}
-
-	vulns := []models.DependencyVuln{
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-5678",
-			VulnerabilityPath: []string{"pkg:golang/other@v1.0"},
-			ComponentPurl:     "pkg:golang/other@v1.0",
+			ID:            "rule-2",
+			AssetID:       assetID,
+			Enabled:       true,
+			CELExpression: celFor("CVE-2024-5678", []string{"pkg:golang/other@v1.0"}),
 		},
 	}
 
@@ -216,13 +195,7 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
 	cveRelationshipService := mocks.NewCVERelationshipService(t)
 
-	depVulnRepo.On("GetDependencyVulnsByAssetVersion",
-		mock.Anything,
-		mock.Anything,
-		"v1.0",
-		assetID,
-		mock.Anything,
-	).Return(vulns, nil)
+	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1", "rule-2"}).Return(map[string]int{"rule-1": 2, "rule-2": 1}, nil)
 
 	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234", "CVE-2024-5678"}).Return(models.CVEMap{}, nil)
 
@@ -232,6 +205,8 @@ func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, counts)
 	assert.Len(t, counts, 2)
+	assert.Equal(t, 2, counts["rule-1"])
+	assert.Equal(t, 1, counts["rule-2"])
 	depVulnRepo.AssertExpectations(t)
 }
 
@@ -240,29 +215,10 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := models.VEXRule{
-		ID:               "rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
-	}
-
-	vulns := []models.DependencyVuln{
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-1234",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
-		{
-			CVEID:             "CVE-2024-9999",
-			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
-			ComponentPurl:     "pkg:golang/lib@v1.0",
-		},
+		ID:            "rule-1",
+		AssetID:       assetID,
+		Enabled:       true,
+		CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -273,13 +229,7 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
 	cveRelationshipService := mocks.NewCVERelationshipService(t)
 
-	depVulnRepo.On("GetDependencyVulnsByAssetVersion",
-		mock.Anything,
-		mock.Anything,
-		"v1.0",
-		assetID,
-		mock.Anything,
-	).Return(vulns, nil)
+	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1"}).Return(map[string]int{"rule-1": 2}, nil)
 
 	cveRelationshipService.On("CreateAliasRelationshipMapBatch", mock.Anything, mock.Anything, []string{"CVE-2024-1234"}).Return(models.CVEMap{}, nil)
 
@@ -287,7 +237,7 @@ func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
 	count, err := service.CountMatchingVulns(context.Background(), nil, rule)
 
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, count, 0)
+	assert.Equal(t, 2, count)
 	depVulnRepo.AssertExpectations(t)
 }
 
@@ -296,12 +246,9 @@ func TestVEXRuleServiceCreate(t *testing.T) {
 	t.Parallel()
 	assetID := uuid.New()
 	rule := &models.VEXRule{
-		ID:               "ec6335130396f5af8a51ca5ba9f9400baa144cc290cd5c89c98d2800f1d41029",
-		AssetID:          assetID,
-		AssetVersionName: "",
-		CVEID:            "CVE-2024-1234",
-		Justification:    "Test justification",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
+		AssetID:       assetID,
+		Justification: "Test justification",
+		CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
 	}
 
 	vexRuleRepo := mocks.NewVEXRuleRepository(t)
@@ -329,22 +276,19 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 	justification := "not_affected"
 
 	rule := models.VEXRule{
-		ID:               "rule-1",
-		AssetID:          assetID,
-		AssetVersionName: "v1.0",
-		CVEID:            "CVE-2024-1234",
-		PathPattern:      []string{"pkg:golang/lib@v1.0"},
-		Enabled:          true,
-		EventType:        "falsePositive",
-		Justification:    justification,
-		CreatedByID:      "user-1",
+		ID:            "rule-1",
+		AssetID:       assetID,
+		CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
+		Enabled:       true,
+		EventType:     "falsePositive",
+		Justification: justification,
+		CreatedByID:   "user-1",
 	}
 
 	vuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			AssetVersionName: "v1.0",
-			AssetID:          assetID,
-			State:            "open",
+			AssetID: assetID,
+			State:   "open",
 		},
 		CVEID:             "CVE-2024-1234",
 		VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
@@ -405,7 +349,6 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 		app := echo.New()
 		req := httptest.NewRequest("POST", "/vex", bytes.NewReader(vexData))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Asset-Ref", assetVersion.Name)
 		req.Header.Set("X-Artifact-Name", "test-artifact")
 		req.Header.Set("X-Origin", "test-upload")
 
@@ -424,13 +367,6 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 200, recorder.Code)
 
-		// Verify artifact was created in the database
-		var artifact models.Artifact
-		result := f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
-			"test-artifact", assetVersion.Name, asset.ID).First(&artifact)
-		assert.NoError(t, result.Error)
-		assert.Equal(t, "test-artifact", artifact.ArtifactName)
-
 		// Verify the BOM was decoded correctly
 		var bom cdx.BOM
 		decoder := cdx.NewBOMDecoder(bytes.NewReader(vexData), cdx.BOMFileFormatJSON)
@@ -440,8 +376,7 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 
 		// Verify VEX rules were created from the VEX document
 		var vexRules []models.VEXRule
-		result = f.DB.Where("asset_id = ? AND asset_version_name = ?",
-			asset.ID, assetVersion.Name).Find(&vexRules)
+		result := f.DB.Where("asset_id = ?", asset.ID).Find(&vexRules)
 		assert.NoError(t, result.Error)
 	})
 }

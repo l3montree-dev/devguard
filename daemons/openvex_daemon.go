@@ -6,38 +6,31 @@ import (
 	"os"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/services"
-	"github.com/l3montree-dev/devguard/transformer"
 )
 
-func (runner *DaemonRunner) UpdateSystemVEXRulesFromOpenVEXSources(ctx context.Context) error {
-	enviromentSources := os.Getenv("OPENVEX_SOURCES")
+func (runner *DaemonRunner) UpdateSystemVEXRulesFromGitHubSources(ctx context.Context) error {
+	enviromentSources := os.Getenv("GITHUB_SOURCES")
 	if enviromentSources == "" {
 		slog.Info("no OpenVEX sources set in env variables, skipped fetching OpenVEX from static sources")
 		return nil
 	}
-	staticOpenVEXSources := strings.Split(os.Getenv("OPENVEX_SOURCES"), ",")
+	staticOpenVEXSources := strings.Split(os.Getenv("GITHUB_SOURCES"), ",")
 	if len(staticOpenVEXSources) == 0 {
 		slog.Info("no OpenVEX sources set in env variables, skipped fetching OpenVEX from static sources")
 		return nil
 	}
 
 	slog.Info("fetching OpenVEX from static sources")
-	var results []*transformer.VexReportOpenVEX
+	rules := make([]models.SystemVEXRule, 0, len(staticOpenVEXSources)*100)
 	for _, source := range staticOpenVEXSources {
-		reports, err := services.FetchOpenVexFromGitHub(ctx, source, "main")
+		r, err := services.FetchVexFromGitHub(ctx, source, "main")
 		if err != nil {
 			slog.Error("failed to fetch OpenVEX report from static source", "source", source, "error", err)
 			continue
 		}
-		results = append(results, reports...)
-	}
-
-	err := runner.vexRuleService.UpdateSystemVEXRulesFromStaticSources(ctx, results)
-
-	if err != nil {
-		slog.Error("failed to update VEX rules from static sources", "error", err)
-		return err
+		rules = append(rules, r...)
 	}
 
 	return nil

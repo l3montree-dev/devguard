@@ -1,8 +1,10 @@
 package services
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"log/slog"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
@@ -11,6 +13,9 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type CrowdsourcedVexingService struct {
@@ -22,12 +27,13 @@ type CrowdsourcedVexingService struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	trustedEntityRepository  shared.TrustedEntityRepository
 	rbacProvider             shared.RBACProvider
-	cveRelationshipService   shared.CVERelationshipService
+	vexRuleService           shared.VEXRuleService
+	assetRepository          shared.AssetRepository
 }
 
 func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationMemberIDs []string) crowdsourcevexing.Organization {
 	return crowdsourcevexing.Organization{
-		ID:         org.ID.String(),
+		ID:         org.ID,
 		Trustscore: orgTrustscore,
 		CreatedAt:  org.CreatedAt,
 		CreatedBy:  ownerID,
@@ -37,42 +43,13 @@ func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationM
 
 func mapProject(project models.Project, projectTrustscore float64) crowdsourcevexing.Project {
 	return crowdsourcevexing.Project{
-		ID:             project.ID.String(),
-		OrganizationID: project.OrganizationID.String(),
+		ID:             project.ID,
+		OrganizationID: project.OrganizationID,
 		Trustscore:     projectTrustscore,
 	}
 }
 
-func mapVexRule(vexrule models.VEXRule) crowdsourcevexing.VexRule {
-	return crowdsourcevexing.VexRule{
-		ID:               vexrule.ID,
-		PathPattern:      vexrule.PathPattern,
-		CVE:              crowdsourcevexing.CVE{CVE: vexrule.CVEID},
-		AssetID:          vexrule.AssetID.String(),
-		AssetVersionName: vexrule.AssetVersionName,
-		Reasoning:        vexrule.Justification,
-		Assessment:       string(vexrule.MechanicalJustification),
-		UpdatedAt:        vexrule.UpdatedAt,
-	}
-}
-
-func mapAsset(asset models.Asset) crowdsourcevexing.Asset {
-	return crowdsourcevexing.Asset{
-		ID:        asset.ID.String(),
-		ProjectID: asset.ProjectID.String(),
-	}
-}
-
-func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository,
-	systemVexRuleRepository shared.SystemVEXRuleRepository,
-	organisationRepository shared.OrganizationRepository,
-	projectRepository shared.ProjectRepository,
-	assetVersionRepository shared.AssetVersionRepository,
-	dependencyVulnRepository shared.DependencyVulnRepository,
-	trustedEntityRepository shared.TrustedEntityRepository,
-	rbacProvider shared.RBACProvider,
-	cveRelationshipService shared.CVERelationshipService,
-) *CrowdsourcedVexingService {
+func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, systemVexRuleRepository shared.SystemVEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider, vexRuleService shared.VEXRuleService, assetRepository shared.AssetRepository) *CrowdsourcedVexingService {
 	return &CrowdsourcedVexingService{
 		vexRuleRepository:        vexRuleRepository,
 		systemVexRuleRepository:  systemVexRuleRepository,
@@ -82,59 +59,45 @@ func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
 		trustedEntityRepository:  trustedEntityRepository,
 		rbacProvider:             rbacProvider,
-		cveRelationshipService:   cveRelationshipService,
+		vexRuleService:           vexRuleService,
+		assetRepository:          assetRepository,
 	}
 }
 
-func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (models.VEXRule, error) {
-	assetversion := shared.GetAssetVersion(ctx)
-	requestCtx := ctx.Request().Context()
+type crowdsourcedVexingContext struct {
+	vexRules              []models.VEXRule
+	crowdSourceVexingOrgs []crowdsourcevexing.Organization
+	crowdSourceVexingProj []crowdsourcevexing.Project
+	assets                []models.Asset
+}
 
-	vuln, err := s.dependencyVulnRepository.Read(requestCtx, tx, vulnID)
-	if err != nil {
-		return models.VEXRule{}, err
-	}
-	if vuln.AssetID != assetversion.AssetID || vuln.AssetVersionName != assetversion.Name {
-		return models.VEXRule{}, fmt.Errorf("vuln does not belong to this asset")
-	}
-
-	systemVexRule, err := s.RecommendSystemVEXRule(ctx, tx, vuln.CVEID, vuln.VulnerabilityPath)
-	if err == nil {
-		return transformer.SystemVEXRuleToVEXRule(systemVexRule), nil
-	}
-	slog.Info("no suitable system VEXRule for this vuln. continuing with crowdsourced vexing", "err", err)
-
-	vexRules, err := s.vexRuleRepository.FindByCVE(requestCtx, tx, vuln.CVEID)
-	if err != nil {
-		return models.VEXRule{}, err
-	}
-
+func (s *CrowdsourcedVexingService) buildCrowdsourcedVexingContext(ctx context.Context, tx shared.DB, vexRules []models.VEXRule) (crowdsourcedVexingContext, error) {
 	projectIDs := utils.Map(vexRules, func(r models.VEXRule) uuid.UUID { return r.Asset.ProjectID })
 
-	projects, err := s.projectRepository.GetByProjectIDs(requestCtx, tx, projectIDs)
+	projects, err := s.projectRepository.GetByProjectIDs(ctx, tx, projectIDs)
 	if err != nil {
-		return models.VEXRule{}, err
+		return crowdsourcedVexingContext{}, err
 	}
 
 	orgIDs := utils.Map(projects, func(p models.Project) uuid.UUID { return p.OrganizationID })
 
-	orgs, err := s.organisationRepository.GetOrgByIDs(requestCtx, tx, orgIDs)
+	orgs, err := s.organisationRepository.GetOrgByIDs(ctx, tx, orgIDs)
 	if err != nil {
-		return models.VEXRule{}, err
+		return crowdsourcedVexingContext{}, err
 	}
 
-	projectTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByProjectIDs(requestCtx, tx, projectIDs)
+	projectTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByProjectIDs(ctx, tx, projectIDs)
 	if err != nil {
-		return models.VEXRule{}, err
+		return crowdsourcedVexingContext{}, err
 	}
 	projectTrustScores := make(map[uuid.UUID]float64, len(projectTrustedEntities))
 	for _, te := range projectTrustedEntities {
 		projectTrustScores[*te.ProjectID] = te.TrustScore
 	}
 
-	orgTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByOrganizationIDs(requestCtx, tx, orgIDs)
+	orgTrustedEntities, err := s.trustedEntityRepository.GetTrustedEntitiesByOrganizationIDs(ctx, tx, orgIDs)
 	if err != nil {
-		return models.VEXRule{}, err
+		return crowdsourcedVexingContext{}, err
 	}
 	orgTrustScores := make(map[uuid.UUID]float64, len(orgTrustedEntities))
 	for _, te := range orgTrustedEntities {
@@ -146,68 +109,258 @@ func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, 
 		domainRBAC := s.rbacProvider.GetDomainRBAC(org.ID.String())
 		memberIDs, err := domainRBAC.GetAllMembersOfOrganization()
 		if err != nil {
-			return models.VEXRule{}, err
+			return crowdsourcedVexingContext{}, err
 		}
 		ownerID, err := domainRBAC.GetOwnerOfOrganization()
 		if err != nil {
-			return models.VEXRule{}, err
+			return crowdsourcedVexingContext{}, err
 		}
 		crowdSourceVexingOrgs[i] = mapOrg(org, orgTrustScores[org.ID], ownerID, memberIDs)
 	}
 
-	recommendedRule, err := crowdsourcevexing.CrowdsourcedVexing(
-		vuln.VulnerabilityPath,
-		crowdsourcevexing.CVE{CVE: vuln.CVEID},
-		utils.Map(vexRules, mapVexRule),
-		crowdSourceVexingOrgs,
-		utils.Map(projects, func(p models.Project) crowdsourcevexing.Project {
+	return crowdsourcedVexingContext{
+		vexRules:              vexRules,
+		crowdSourceVexingOrgs: crowdSourceVexingOrgs,
+		crowdSourceVexingProj: utils.Map(projects, func(p models.Project) crowdsourcevexing.Project {
 			return mapProject(p, projectTrustScores[p.ID])
 		}),
-		utils.Map(vexRules, func(r models.VEXRule) crowdsourcevexing.Asset { return mapAsset(r.Asset) }),
-	)
-	if err != nil {
-		return models.VEXRule{}, err
-	}
-
-	rule, ok := utils.Find(vexRules, func(r models.VEXRule) bool { return r.ID == recommendedRule.ID })
-	if !ok {
-		return models.VEXRule{}, fmt.Errorf("could not find vex rule - even though it HAS to exist")
-	}
-	return rule, nil
+		assets: utils.Map(vexRules, func(r models.VEXRule) models.Asset { return r.Asset }),
+	}, nil
 }
 
-func (s *CrowdsourcedVexingService) RecommendSystemVEXRule(ctx shared.Context, tx shared.DB, cveID string, dependencyPath []string) (models.SystemVEXRule, error) {
-	requestCtx := ctx.Request().Context()
-	cveAliasMap, err := s.cveRelationshipService.CreateAliasRelationshipMapBatch(requestCtx, tx, []string{cveID})
+func (s *CrowdsourcedVexingService) recommend(ctx context.Context, vexCtx crowdsourcedVexingContext, vuln models.DependencyVuln) (models.VEXRule, float64, crowdsourcevexing.Votes, error) {
+	matches, err := vexrules.EvalRules(ctx, utils.Map(vexCtx.vexRules, transformer.VEXRuleToSystemVEXRuleDTO), vuln)
 	if err != nil {
-		slog.Info("No aliases for CVE, continuing collection of systemvexrules without aliases")
+		return models.VEXRule{}, 0, crowdsourcevexing.Votes{}, err
 	}
-	cveAliasArray := []string{cveID}
-	for alias := range cveAliasMap[cveID] {
-		cveAliasArray = append(cveAliasArray, alias)
-	}
-	rules, err := s.systemVexRuleRepository.FindByCVEBatch(requestCtx, tx, cveAliasArray)
-	if err != nil {
-		return models.SystemVEXRule{}, err
-	}
-	validRules := utils.Filter(rules, func(rule models.SystemVEXRule) bool {
-		return dtos.PathPattern(rule.PathPattern).MatchesSuffix(dependencyPath)
-	})
-	if len(validRules) == 0 {
-		return models.SystemVEXRule{}, fmt.Errorf("no system VEX rules found for CVE: %s", cveID)
-	}
-	nonAliasDetected := false
-outer:
-	for i := range validRules {
-		for j := range validRules {
-			if !s.cveRelationshipService.IsAlias(requestCtx, validRules[i].CVEID, validRules[j].CVEID, cveAliasMap) {
-				nonAliasDetected = true
-				break outer
-			}
+
+	matchedRules := []models.VEXRule{}
+	for _, rule := range vexCtx.vexRules {
+		if matches[rule.ID] {
+			matchedRules = append(matchedRules, rule)
 		}
 	}
-	if len(validRules) > 1 && nonAliasDetected {
-		return models.SystemVEXRule{}, fmt.Errorf("multiple system VEX rules found for CVE: %s, cannot determine which one to recommend", cveID)
+
+	recommendedRule, confidence, votes, err := crowdsourcevexing.CrowdsourcedVexing(
+		matchedRules,
+		vexCtx.crowdSourceVexingOrgs,
+		vexCtx.crowdSourceVexingProj,
+		vexCtx.assets,
+	)
+	if err != nil {
+		return models.VEXRule{}, 0, crowdsourcevexing.Votes{}, err
 	}
-	return validRules[0], nil
+
+	return recommendedRule, confidence, votes, nil
+}
+
+func (s *CrowdsourcedVexingService) rulesInSessionOrg(ctx shared.Context, vexRules []models.VEXRule) (map[string]struct{}, error) {
+	rbac := shared.GetRBAC(ctx)
+	assetIDs, err := rbac.GetAllAssetsForSession(ctx.Request().Context(), shared.GetSession(ctx))
+	if err != nil {
+		return nil, err
+	}
+	assetIDSet := make(map[string]struct{}, len(assetIDs))
+	for _, id := range assetIDs {
+		assetIDSet[id] = struct{}{}
+	}
+
+	result := make(map[string]struct{})
+	for _, rule := range vexRules {
+		if _, ok := assetIDSet[rule.AssetID.String()]; ok {
+			result[rule.ID] = struct{}{}
+		}
+	}
+	return result, nil
+}
+
+func (s *CrowdsourcedVexingService) checkIfUserHasAccessToMatchingRule(ctx context.Context, vexRules []models.VEXRule, rulesInSessionOrg map[string]struct{}, vuln models.DependencyVuln) (models.VEXRule, bool, error) {
+	if len(rulesInSessionOrg) == 0 {
+		return models.VEXRule{}, false, nil
+	}
+
+	matches, err := vexrules.EvalRules(ctx, utils.Map(vexRules, transformer.VEXRuleToSystemVEXRuleDTO), vuln)
+	if err != nil {
+		return models.VEXRule{}, false, err
+	}
+
+	for _, rule := range vexRules {
+		if !matches[rule.ID] {
+			continue
+		}
+		if _, ok := rulesInSessionOrg[rule.ID]; ok {
+			return rule, true, nil
+		}
+	}
+	return models.VEXRule{}, false, nil
+}
+
+func checkIfSystemVexRuleMatchesVuln(ctx context.Context, vexRules []models.SystemVEXRule, vuln models.DependencyVuln) (models.SystemVEXRule, bool, error) {
+
+	matches, err := vexrules.EvalRules(ctx, vexRules, vuln)
+	if err != nil {
+		return models.SystemVEXRule{}, false, err
+	}
+
+	for _, rule := range vexRules {
+		if !matches[rule.ID] {
+			continue
+		}
+		// just use the first rule and return it.
+		return rule, true, nil
+	}
+	return models.SystemVEXRule{}, false, nil
+}
+
+func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error) {
+	requestCtx, span := servicesTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingService.Recommend")
+	defer span.End()
+	span.SetAttributes(attribute.String("dependencyVuln.id", vulnID.String()))
+
+	traceErr := func(err error) (dtos.VexRuleRecommendation, error) {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return dtos.VexRuleRecommendation{}, err
+	}
+
+	vuln, err := s.dependencyVulnRepository.Read(requestCtx, tx, vulnID)
+	if err != nil {
+		return traceErr(err)
+	}
+
+	vexRules, err := s.vexRuleRepository.All(requestCtx, tx)
+	if err != nil {
+		return traceErr(err)
+	}
+
+	rulesInSessionOrg, err := s.rulesInSessionOrg(ctx, vexRules)
+	if err != nil {
+		return traceErr(err)
+	}
+
+	if rule, ok, err := s.checkIfUserHasAccessToMatchingRule(requestCtx, vexRules, rulesInSessionOrg, vuln); err != nil {
+		return traceErr(err)
+	} else if ok {
+		project, err := s.assetRepository.ReadWithProject(requestCtx, tx, rule.AssetID)
+		if err != nil {
+			return traceErr(err)
+		}
+		return transformer.VEXRuleToOriginRecommendationDTO(rule, project.Slug, rule.Asset.Slug), nil
+	}
+
+	vexCtx, err := s.buildCrowdsourcedVexingContext(requestCtx, tx, vexRules)
+	if err != nil {
+		return traceErr(err)
+	}
+
+	rule, confidence, votes, err := s.recommend(requestCtx, vexCtx, vuln)
+	if err != nil {
+		return traceErr(err)
+	}
+	return transformer.VEXRuleToRecommendationDTO(rule, confidence, votes.Verified, votes.Total), nil
+}
+
+// return type is keyed by dependency vuln ID
+func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error) {
+	requestCtx, span := servicesTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingService.RecommendBatch")
+	defer span.End()
+	span.SetAttributes(attribute.Int("dependencyVulns.total", len(vulns)))
+
+	traceErr := func(err error) (map[string]dtos.VexRuleRecommendation, error) {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+
+	vexRules, err := s.vexRuleRepository.All(requestCtx, tx)
+	if err != nil {
+		return traceErr(err)
+	}
+
+	rulesInSessionOrg, err := s.rulesInSessionOrg(ctx, vexRules)
+	if err != nil {
+		return traceErr(err)
+	}
+
+	type vulnRecommendation struct {
+		id  string
+		dto dtos.VexRuleRecommendation
+	}
+
+	var vexCtx crowdsourcedVexingContext
+	var vexCtxErr error
+	var buildVexCtxOnce sync.Once
+	getVexCtx := func() (crowdsourcedVexingContext, error) {
+		buildVexCtxOnce.Do(func() {
+			vexCtx, vexCtxErr = s.buildCrowdsourcedVexingContext(requestCtx, tx, vexRules)
+		})
+		return vexCtx, vexCtxErr
+	}
+
+	eg := utils.ErrGroup[*vulnRecommendation](100)
+	for _, vuln := range vulns {
+		eg.Go(func() (*vulnRecommendation, error) {
+			if rule, ok, err := s.checkIfUserHasAccessToMatchingRule(requestCtx, vexRules, rulesInSessionOrg, vuln); err != nil {
+				return nil, err
+			} else if ok {
+				// we have the asset id, we need assetSlug and projectSlug to return the recommendation DTO
+				asset, err := s.assetRepository.ReadWithProject(ctx.Request().Context(), nil, rule.AssetID)
+				if err != nil {
+					return nil, err
+				}
+				id, err := vexrules.IdentityOfRule(models.SystemVEXRule{
+					CELExpression:           rule.CELExpression,
+					MechanicalJustification: rule.MechanicalJustification,
+					EventType:               rule.EventType,
+				})
+				if err != nil {
+					slog.Warn("could not calculate identity of rule", "err", err)
+					return nil, nil
+				}
+				return &vulnRecommendation{id: id, dto: transformer.VEXRuleToOriginRecommendationDTO(rule, asset.Slug, asset.Project.Slug)}, nil
+			}
+
+			vexCtx, err := getVexCtx()
+			if err != nil {
+				return nil, err
+			}
+
+			rule, confidence, votes, err := s.recommend(requestCtx, vexCtx, vuln)
+			if err != nil {
+				if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
+					return nil, nil
+				}
+				return nil, err
+			}
+			id, err := vexrules.IdentityOfRule(models.SystemVEXRule{
+				CELExpression:           rule.CELExpression,
+				MechanicalJustification: rule.MechanicalJustification,
+				EventType:               rule.EventType,
+			})
+			if err != nil {
+				slog.Warn("could not calculate identity of rule", "err", err)
+				return nil, nil
+			}
+			return &vulnRecommendation{id: id, dto: transformer.VEXRuleToRecommendationDTO(rule, confidence, votes.Verified, votes.Total)}, nil
+		})
+	}
+	results, err := eg.WaitAndCollect()
+	if err != nil {
+		return traceErr(err)
+	}
+
+	found := utils.Filter(results, func(res *vulnRecommendation) bool { return res != nil })
+	recommendations := utils.Reduce(found, func(acc map[string]dtos.VexRuleRecommendation, res *vulnRecommendation) map[string]dtos.VexRuleRecommendation {
+		if r, ok := acc[res.id]; ok {
+			r.AppliesToAmountOfDependencyVulns++
+			acc[res.id] = r
+		} else {
+			res.dto.AppliesToAmountOfDependencyVulns = 1
+			acc[res.id] = res.dto
+		}
+		return acc
+	}, make(map[string]dtos.VexRuleRecommendation, len(found)))
+	span.SetAttributes(attribute.Int("recommendations.total", len(recommendations)))
+
+	return recommendations, nil
 }

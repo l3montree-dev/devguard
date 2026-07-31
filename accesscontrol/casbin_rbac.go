@@ -151,7 +151,11 @@ func (c *casbinRBAC) GetAllMembersOfAsset(assetID string) ([]string, error) {
 	}), nil
 }
 
-func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession, actorScope shared.ActorScope) (bool, error) {
+func (c *casbinRBAC) HasAccess(ctx context.Context, session shared.AuthSession, org *models.Org, actorScope shared.ActorScope) (bool, error) {
+	if org.IsPublic {
+		return true, nil
+	}
+
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 	switch ownerType {
 	case shared.SessionActorUser:
@@ -561,7 +565,11 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 	return err
 }
 
-func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
+func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, org *models.Org, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
+	if org.IsPublic && action == shared.ActionRead {
+		return true, nil
+	}
+
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 
 	switch ownerType {
@@ -614,6 +622,10 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 }
 
 func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Project, session shared.AuthSession, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
+	if project.IsPublic && action == shared.ActionRead {
+		return true, nil
+	}
+
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 
 	switch ownerType {
@@ -657,6 +669,10 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 }
 
 func (c *casbinRBAC) IsAllowedInAsset(ctx context.Context, asset *models.Asset, session shared.AuthSession, object shared.Object, action shared.Action) (bool, error) {
+	if asset.IsPublic && action == shared.ActionRead {
+		return true, nil
+	}
+
 	ownerID, ownerType := session.GetActorID(), session.GetSessionActorType()
 	switch ownerType {
 	case shared.SessionActorUser:

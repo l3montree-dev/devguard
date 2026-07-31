@@ -127,7 +127,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead, mock.Anything).Return(true, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, shared.ObjectOrganization, shared.ActionRead, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -157,7 +157,7 @@ func TestOrganizationAccessControl(t *testing.T) {
 		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{"manage"}, false)
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionUpdate, mock.Anything).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, shared.ObjectOrganization, shared.ActionUpdate, mock.Anything).Return(false, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -184,10 +184,10 @@ func TestOrganizationAccessControl(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{"manage"}, false)
+		mockSession := shared.AnonymousSession
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, shared.ObjectOrganization, shared.ActionRead, mock.Anything).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, shared.ObjectOrganization, shared.ActionRead, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -290,7 +290,7 @@ func TestProjectAccessControl(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{"manage"}, false)
+		mockSession := shared.AnonymousSession
 		org := models.Org{Model: models.Model{ID: uuid.New()}}
 		project := models.Project{
 			Model:          models.Model{ID: uuid.New()},
@@ -299,7 +299,7 @@ func TestProjectAccessControl(t *testing.T) {
 			IsPublic:       true,
 		}
 
-		mockPAT.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead, mock.Anything).Return(false, nil)
+		mockPAT.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -406,7 +406,7 @@ func TestAssetAccessControl(t *testing.T) {
 
 		mockPAT := mocks.AccessControl{}
 		shared.SetRBAC(ctx, &mockPAT)
-		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{"manage"}, false)
+		mockSession := shared.AnonymousSession
 		project := models.Project{Model: models.Model{ID: uuid.New()}}
 		asset := models.Asset{
 			Model:     models.Model{ID: uuid.New()},
@@ -415,7 +415,7 @@ func TestAssetAccessControl(t *testing.T) {
 			IsPublic:  true,
 		}
 
-		mockPAT.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(false, nil)
+		mockPAT.On("IsAllowedInAsset", mock.Anything, &asset, mockSession, shared.ObjectAsset, shared.ActionRead).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetProject(ctx, project)
@@ -487,7 +487,7 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		mockAccessControl := mocks.AccessControl{}
 		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{}, false)
 
-		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything).Return(false, shared.ErrOauth2TokenNotValidRedirectionRequired)
+		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything, mock.Anything).Return(false, shared.ErrOauth2TokenNotValidRedirectionRequired)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -514,7 +514,7 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		mockAccessControl := mocks.AccessControl{}
 		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{}, false)
 
-		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything).Return(false, errors.New("some auth error"))
+		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything, mock.Anything).Return(false, errors.New("some auth error"))
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -531,7 +531,7 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		mockAccessControl.AssertExpectations(t)
 	})
 
-	t.Run("allows public org read when access is denied", func(t *testing.T) {
+	t.Run("allows anonymous access to a public org", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
@@ -539,9 +539,9 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, Slug: "test-org", IsPublic: true}
 		mockAccessControl := mocks.AccessControl{}
-		mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{}, false)
+		mockSession := shared.AnonymousSession
 
-		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything).Return(false, nil)
+		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, org)
@@ -555,7 +555,6 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.True(t, shared.IsPublicRequest(ctx))
 		mockAccessControl.AssertExpectations(t)
 	})
 }

@@ -20,10 +20,10 @@ import (
 	"strings"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 // CSAFVEXToRules converts a CSAF advisory into VEX rules.
@@ -33,7 +33,7 @@ import (
 // leaf product of each chain is what a ProductStatus bucket references. This function walks
 // that chain back to reconstruct the exact component-only path and turns it into a
 // (non-wildcard) VEX rule path pattern, so only the path-specific vuln is affected.
-func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, assetVersionName string, source string) ([]models.VEXRule, error) {
+func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.SystemVEXRule, error) {
 	if advisory == nil || advisory.ProductTree == nil {
 		return nil, fmt.Errorf("csaf advisory has no product tree")
 	}
@@ -68,7 +68,7 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, assetVersionNa
 		}
 	}
 
-	rules := make([]models.VEXRule, 0)
+	rules := make([]models.SystemVEXRule, 0)
 	for _, vuln := range advisory.Vulnerabilities {
 		cveID := csafVulnCVE(vuln)
 		if cveID == "" || vuln.ProductStatus == nil {
@@ -120,17 +120,14 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, assetVersionNa
 					continue
 				}
 
-				rule := models.VEXRule{
-					AssetID:          assetID,
-					AssetVersionName: assetVersionName,
-					CVEID:            cveID,
-					VexSource:        source,
-					Justification:    remediationDetail[productID],
-					EventType:        et,
-					PathPattern:      pattern,
-					CreatedByID:      "system",
+				rule := models.SystemVEXRule{
+					Title:         vexrules.VexRuleTitle(cveID, pattern),
+					VexSource:     source,
+					Justification: remediationDetail[productID],
+					EventType:     et,
+					CELExpression: vexrules.ToCELExpression(cveID, pattern),
 				}
-				rule.SetPathPattern(rule.PathPattern)
+				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 		}
@@ -148,7 +145,7 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, assetVersionNa
 // artifact product referenced by relates_to_product_reference at the root of the chain.
 // Falls back to a single-element pattern when the product id has no chain but is
 // itself a PURL.
-func csafProductToPathPattern(productID string, relByProductID map[string]*gocsaf.Relationship, productIDToPurl map[string]string) dtos.PathPattern {
+func csafProductToPathPattern(productID string, relByProductID map[string]*gocsaf.Relationship, productIDToPurl map[string]string) vexrules.PathPattern {
 	var reversed []string
 	cur := productID
 	seen := map[string]bool{}
@@ -176,13 +173,13 @@ func csafProductToPathPattern(productID string, relByProductID map[string]*gocsa
 	if len(reversed) == 0 {
 		// no chain: use the product's own purl if it is one
 		if purl := purlForProductID(productIDToPurl, productID); purl != "" {
-			return dtos.PathPattern{purl}
+			return vexrules.PathPattern{purl}
 		}
 		return nil
 	}
 
 	// reversed holds [pn, ..., p1]; flip to path order [p1, ..., pn]
-	path := make(dtos.PathPattern, len(reversed))
+	path := make(vexrules.PathPattern, len(reversed))
 	for i := range reversed {
 		path[len(reversed)-1-i] = reversed[i]
 	}

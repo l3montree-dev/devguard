@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -55,6 +54,28 @@ func (repository *dependencyVulnRepository) applyAndSave(ctx context.Context, tx
 	}
 	dependencyVuln.Events = append(dependencyVuln.Events, *ev)
 	return *ev, nil
+}
+
+func (repository *dependencyVulnRepository) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var dependencyVulns = []models.DependencyVuln{}
+	err := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ?", assetID).Find(&dependencyVulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
+}
+
+func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, tx *gorm.DB, vexRuleID string) ([]models.DependencyVuln, error) {
+	var dependencyVulns = []models.DependencyVuln{}
+	err := repository.Repository.GetDB(ctx, tx).Model(&models.VulnEvent{}).Select("DISTINCT dependency_vulns.*").Joins("JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id").Where("vuln_events.vex_rule_id = ?", vexRuleID).Preload("Events", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).Preload("Events.VexRule").Find(&dependencyVulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
 }
 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
@@ -242,7 +263,7 @@ func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB
 	db := withOwnershipScope(ctx, repository.GetDB(ctx, tx).Where("dependency_vulns.id = ?", id), t)
 	err := db.Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Joins("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t).Error
+	}).Preload("Events.VexRule").Joins("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t).Error
 
 	return t, err
 }
@@ -407,31 +428,71 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 
 }
 
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetIDBatch(
-	ctx context.Context,
-	tx *gorm.DB,
-	assetTuples []models.AssetTuple,
-) ([]models.DependencyVuln, error) {
-	var vulns = []models.DependencyVuln{}
+// GetAllOpenVulnsByAssetID preloads Events, needed by CEL VEX rule matching to
+// tell whether a rule's outcome was already applied to a vuln.
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	return repository.getAllOpenVulnsByAssetID(ctx, tx, assetID, true)
+}
 
-	var args []interface{}
-	var placeholders []string
+// GetAllOpenVulnsByAssetIDWithoutEvents skips the Events preload for callers
+// that don't need it, such as the crowdsourced-vexing recommendation response.
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	return repository.getAllOpenVulnsByAssetID(ctx, tx, assetID, false)
+}
 
-	for _, key := range assetTuples {
-		placeholders = append(placeholders, "(?, ?)")
-		args = append(args, key.AssetID, key.AssetVersionName)
+// getAllOpenVulnsByAssetID omits CVE.Description/References - they're large
+// text/jsonb columns that dominate scan/materialization cost for thousands of
+// rows, and aren't needed by any caller. Artifacts are loaded manually (not via
+// Preload) so the dependency_vuln_id filter stays a subquery on (asset_id, state)
+// instead of GORM's Preload building a literal IN(...) list of every
+// already-fetched vuln ID, which is expensive for Postgres to plan at thousands
+// of IDs.
+func (repository *dependencyVulnRepository) getAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, preloadEvents bool) ([]models.DependencyVuln, error) {
+	db := repository.GetDB(ctx, tx)
+
+	query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
+		return db.Omit("Description", "References")
+	})
+	if preloadEvents {
+		query = query.Preload("Events")
 	}
 
-	query := fmt.Sprintf(
-		"(asset_id, asset_version_name) IN (%s)",
-		strings.Join(placeholders, ","),
-	)
-
-	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE").Where(query, args...).Find(&vulns).Error; err != nil {
+	var vulns = []models.DependencyVuln{}
+	if err := query.Distinct("ON (cve_id, vulnerability_path) *").Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).Order("cve_id, vulnerability_path, created_at ASC").Find(&vulns).Error; err != nil {
 		return nil, err
 	}
-	return vulns, nil
 
+	if len(vulns) == 0 {
+		return vulns, nil
+	}
+
+	dedupedIDs := db.Table("dependency_vulns").
+		Select("DISTINCT ON (cve_id, vulnerability_path) id").
+		Where("asset_id = ? AND state = ?", assetID, dtos.VulnStateOpen).
+		Order("cve_id, vulnerability_path, created_at ASC")
+
+	type artifactRow struct {
+		models.Artifact
+		DependencyVulnID uuid.UUID
+	}
+	var rows []artifactRow
+	if err := db.Table("artifact_dependency_vulns AS adv").
+		Select("artifacts.*, adv.dependency_vuln_id").
+		Joins("JOIN artifacts ON adv.artifact_artifact_name = artifacts.artifact_name AND adv.artifact_asset_version_name = artifacts.asset_version_name AND adv.artifact_asset_id = artifacts.asset_id").
+		Where("adv.dependency_vuln_id IN (?)", dedupedIDs).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	artifactsByVulnID := make(map[uuid.UUID][]models.Artifact, len(vulns))
+	for _, r := range rows {
+		artifactsByVulnID[r.DependencyVulnID] = append(artifactsByVulnID[r.DependencyVulnID], r.Artifact)
+	}
+	for i := range vulns {
+		vulns[i].Artifacts = artifactsByVulnID[vulns[i].ID]
+	}
+
+	return vulns, nil
 }
 
 // Override the base GetAllVulnsByAssetID method to preload artifacts
@@ -514,61 +575,6 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(c
 		return db.Order("created_at ASC")
 	}).Preload("Artifacts").Preload("CVE").Where("LOWER(cve_id) = LOWER(?) AND asset_id = ?", cveID, assetID).Find(&vuln).Error
 	return vuln, err
-}
-
-// FindByVEXRule finds all dependency vulnerabilities matching a VEX rule's CVE and path pattern.
-// Supports wildcards in path patterns:
-//   - "*" matches any number of path elements (zero or more)
-//   - "**" matches any number of path elements (zero or more)
-//
-// The pattern is matched as a suffix against the vulnerability path.
-// Filtering is done in Go to maintain database compatibility (PostgreSQL, SQLite, etc.).
-func (repository *dependencyVulnRepository) FindByVEXRule(ctx context.Context, tx *gorm.DB, rule models.VEXRule) ([]models.DependencyVuln, error) {
-	result, err := repository.FindByVEXRules(ctx, tx, []models.VEXRule{rule})
-	if err != nil {
-		return nil, err
-	}
-	return result[&rule], nil
-}
-
-func (repository *dependencyVulnRepository) FindByVEXRules(ctx context.Context, tx *gorm.DB, rules []models.VEXRule) (map[*models.VEXRule][]models.DependencyVuln, error) {
-	result := make(map[*models.VEXRule][]models.DependencyVuln)
-
-	if len(rules) == 0 {
-		return result, nil
-	}
-
-	cveIDs := make(map[string]bool)
-	for _, rule := range rules {
-		cveIDs[rule.CVEID] = true
-	}
-
-	assetID := rules[0].AssetID
-	assetVersionName := rules[0].AssetVersionName
-
-	cveIDSlice := make([]string, 0, len(cveIDs))
-	for id := range cveIDs {
-		cveIDSlice = append(cveIDSlice, strings.ToLower(id))
-	}
-
-	// Single query for all vulns
-	var vulns []models.DependencyVuln
-	err := repository.Repository.GetDB(ctx, tx).
-		Where("asset_id = ?", assetID).
-		Where("asset_version_name = ?", assetVersionName).
-		Where("LOWER(cve_id) IN ?", cveIDSlice).
-		Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Order("created_at ASC")
-		}).
-		Preload("Artifacts").
-		Preload("CVE").
-		Find(&vulns).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx *gorm.DB, packageName string) (*string, error) {

@@ -42,12 +42,12 @@ func (_m *FetchService) EXPECT() *FetchService_Expecter {
 	return &FetchService_Expecter{mock: &_m.Mock}
 }
 
-// FetchOpenVexFromGitHub provides a mock function for the type FetchService
-func (_mock *FetchService) FetchOpenVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) ([]*transformer.VexReportOpenVEX, error) {
+// FetchVexFromGitHub provides a mock function for the type FetchService
+func (_mock *FetchService) FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) ([]*transformer.VexReportOpenVEX, error) {
 	ret := _mock.Called(ctx, targetURL, targetBranch)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FetchOpenVexFromGitHub")
+		panic("no return value specified for FetchVexFromGitHub")
 	}
 
 	var r0 []*transformer.VexReportOpenVEX
@@ -70,20 +70,20 @@ func (_mock *FetchService) FetchOpenVexFromGitHub(ctx context.Context, targetURL
 	return r0, r1
 }
 
-// FetchService_FetchOpenVexFromGitHub_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchOpenVexFromGitHub'
-type FetchService_FetchOpenVexFromGitHub_Call struct {
+// FetchService_FetchVexFromGitHub_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchVexFromGitHub'
+type FetchService_FetchVexFromGitHub_Call struct {
 	*mock.Call
 }
 
-// FetchOpenVexFromGitHub is a helper method to define mock.On call
+// FetchVexFromGitHub is a helper method to define mock.On call
 //   - ctx context.Context
 //   - targetURL string
 //   - targetBranch string
-func (_e *FetchService_Expecter) FetchOpenVexFromGitHub(ctx interface{}, targetURL interface{}, targetBranch interface{}) *FetchService_FetchOpenVexFromGitHub_Call {
-	return &FetchService_FetchOpenVexFromGitHub_Call{Call: _e.mock.On("FetchOpenVexFromGitHub", ctx, targetURL, targetBranch)}
+func (_e *FetchService_Expecter) FetchVexFromGitHub(ctx interface{}, targetURL interface{}, targetBranch interface{}) *FetchService_FetchVexFromGitHub_Call {
+	return &FetchService_FetchVexFromGitHub_Call{Call: _e.mock.On("FetchVexFromGitHub", ctx, targetURL, targetBranch)}
 }
 
-func (_c *FetchService_FetchOpenVexFromGitHub_Call) Run(run func(ctx context.Context, targetURL string, targetBranch string)) *FetchService_FetchOpenVexFromGitHub_Call {
+func (_c *FetchService_FetchVexFromGitHub_Call) Run(run func(ctx context.Context, targetURL string, targetBranch string)) *FetchService_FetchVexFromGitHub_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -106,12 +106,12 @@ func (_c *FetchService_FetchOpenVexFromGitHub_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *FetchService_FetchOpenVexFromGitHub_Call) Return(vexReports []*transformer.VexReportOpenVEX, err error) *FetchService_FetchOpenVexFromGitHub_Call {
+func (_c *FetchService_FetchVexFromGitHub_Call) Return(vexReports []*transformer.VexReportOpenVEX, err error) *FetchService_FetchVexFromGitHub_Call {
 	_c.Call.Return(vexReports, err)
 	return _c
 }
 
-func (_c *FetchService_FetchOpenVexFromGitHub_Call) RunAndReturn(run func(ctx context.Context, targetURL string, targetBranch string) ([]*transformer.VexReportOpenVEX, error)) *FetchService_FetchOpenVexFromGitHub_Call {
+func (_c *FetchService_FetchVexFromGitHub_Call) RunAndReturn(run func(ctx context.Context, targetURL string, targetBranch string) ([]*transformer.VexReportOpenVEX, error)) *FetchService_FetchVexFromGitHub_Call {
 	_c.Call.Return(run)
 	return _c
 }

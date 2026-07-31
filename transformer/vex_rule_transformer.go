@@ -16,6 +16,7 @@
 package transformer
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 )
@@ -27,14 +28,14 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 
 		// Composite key components
 		AssetID:   rule.AssetID,
-		CVEID:     rule.CVEID,
 		VexSource: rule.VexSource,
 
 		// Rule data
+		Title:                   rule.Title,
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
-		PathPattern:             dtos.PathPattern(rule.PathPattern),
+		CELExpression:           rule.CELExpression,
 		CreatedByID:             rule.CreatedByID,
 		CreatedAt:               rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:               rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -44,60 +45,48 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 	}
 }
 
-func VEXRuleToRecommendationDTO(rule models.VEXRule) dtos.VexRuleRecommendation {
+func VEXRuleToSystemVEXRuleDTO(rule models.VEXRule) models.SystemVEXRule {
+	return rule.SystemVEXRule
+}
+
+func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
-		CVEID:                   rule.CVEID,
-		PathPattern:             dtos.PathPattern(rule.PathPattern),
+		Title:                   rule.Title,
+		CELExpression:           rule.CELExpression,
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
+		Confidence:              confidence,
+		VerifiedVotes:           verifiedVotes,
+		TotalVotes:              totalVotes,
 	}
 }
 
-func VEXRuleToSystemVEXRule(rule models.VEXRule) models.SystemVEXRule {
-	transformedRule := models.SystemVEXRule{
-		ID: rule.ID,
-
-		// Composite key components
-		CVEID:     rule.CVEID,
-		VexSource: rule.VexSource,
-
-		// Rule data
+func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, originAssetSlug string) dtos.VexRuleRecommendation {
+	return dtos.VexRuleRecommendation{
+		Title:                   rule.Title,
+		CELExpression:           rule.CELExpression,
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
-		PathPattern:             dtos.PathPattern(rule.PathPattern),
-		CreatedByID:             rule.CreatedByID,
-		CreatedAt:               rule.CreatedAt,
-		UpdatedAt:               rule.UpdatedAt,
+		Confidence:              1,
+		ProjectSlug:             &originProjectSlug,
+		AssetSlug:               &originAssetSlug,
 	}
-	transformedRule.SetPathPattern(rule.PathPattern)
-	return transformedRule
 }
 
-func SystemVEXRuleToVEXRule(systemRule models.SystemVEXRule) models.VEXRule {
-	transformedRule := models.VEXRule{
-		ID: systemRule.ID,
-
-		// Composite key components
-		CVEID:     systemRule.CVEID,
-		VexSource: systemRule.VexSource,
-
-		CreatedAt: systemRule.CreatedAt,
-		UpdatedAt: systemRule.UpdatedAt,
-
-		CVE: systemRule.CVE,
-
-		// Rule data
-		Justification:           systemRule.Justification,
-		MechanicalJustification: systemRule.MechanicalJustification,
-		EventType:               systemRule.EventType,
-
-		PathPattern: dtos.PathPattern(systemRule.PathPattern),
-		CreatedByID: systemRule.CreatedByID,
-
-		Enabled: false,
+func SystemVEXRuleToVEXRule(rule models.SystemVEXRule, createdByID string, assetID uuid.UUID) models.VEXRule {
+	return models.VEXRule{
+		SystemVEXRule: rule,
+		AssetID:       assetID,
+		CreatedByID:   createdByID,
 	}
-	transformedRule.SetPathPattern(systemRule.PathPattern)
-	return transformedRule
+}
+
+func AllSystemVEXRulesToVEXRules(rules []models.SystemVEXRule, createdByID string, assetID uuid.UUID) []models.VEXRule {
+	vexRules := make([]models.VEXRule, 0, len(rules))
+	for _, rule := range rules {
+		vexRules = append(vexRules, SystemVEXRuleToVEXRule(rule, createdByID, assetID))
+	}
+	return vexRules
 }

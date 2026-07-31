@@ -48,11 +48,11 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", mock.Anything, shared.NoSession, mock.Anything).Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, shared.AnonymousSession, mock.Anything, mock.Anything).Return(true, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
-		shared.SetSession(ctx, shared.NoSession)
+		shared.SetSession(ctx, shared.AnonymousSession)
 
 		middleware := chainResourceFetchAndOrgAccess(&mockRBACProvider, &mockOrgService, &mockProjectRepo, &mockAssetRepo)
 
@@ -87,7 +87,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", mock.Anything, "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", mock.Anything, session, mock.Anything).Return(false, nil)
+		mockRBAC.On("HasAccess", mock.Anything, session, mock.Anything, mock.Anything).Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
@@ -177,7 +177,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(true, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, obj, act, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -210,7 +210,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, obj, act, mock.Anything).Return(false, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -245,7 +245,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(false, nil)
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, obj, act, mock.Anything).Return(true, nil)
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -278,7 +278,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := shared.Object("test-object")
 		act := shared.Action("read")
 
-		mockPAT.On("IsAllowed", mock.Anything, mockSession, obj, act, mock.Anything).Return(false, errors.New("error"))
+		mockPAT.On("IsAllowed", mock.Anything, mockSession, mock.Anything, obj, act, mock.Anything).Return(false, errors.New("error"))
 
 		shared.SetSession(ctx, mockSession)
 		shared.SetOrg(ctx, mockOrganization)
@@ -421,6 +421,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 
 		// Set up context with asset and parameters
 		shared.SetAsset(ctx, asset)
+		shared.SetSession(ctx, shared.NewSession("user-id", shared.SessionActorUser, []string{}, false))
 		ctx.SetParamNames("assetVersionSlug")
 		ctx.SetParamValues(assetVersionSlug)
 

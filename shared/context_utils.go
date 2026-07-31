@@ -241,14 +241,6 @@ func GetRBAC(ctx Context) AccessControl {
 	return ctx.Get(ctxKeyRBAC).(AccessControl)
 }
 
-func SetIsPublicRequest(ctx Context) {
-	ctx.Set(ctxKeyPublicRequest, true)
-}
-
-func IsPublicRequest(ctx Context) bool {
-	return ctx.Get(ctxKeyPublicRequest) != nil
-}
-
 func GetSession(ctx Context) AuthSession {
 	return ctx.Get(ctxKeySession).(AuthSession)
 }
@@ -855,8 +847,5 @@ func CopyContextValues(src, dst Context) {
 	}
 	if assetSlug, err := GetAssetSlug(src); err == nil {
 		SetAssetSlug(dst, assetSlug)
-	}
-	if IsPublicRequest(src) {
-		SetIsPublicRequest(dst)
 	}
 }

@@ -16,178 +16,8 @@
 package dtos
 
 import (
-	"slices"
-
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/normalize"
 )
-
-// PathPattern wildcard for VEX rules
-const (
-	// PathPatternWildcard matches any path element at that position
-	PathPatternWildcard = "*"
-)
-
-// PathPattern represents a path pattern with wildcards.
-// Patterns use suffix matching where "*" can match any number of path elements.
-// A wildcard "*" can appear at any position to match zero or more path elements.
-// Examples:
-//   - ["pkg:golang/lib@v1.0"] matches paths ending with exactly this element
-//   - ["*", "pkg:golang/lib@v1.0"] matches paths ending with any elements followed by this element
-//   - ["*"] matches any path suffix
-type PathPattern []string
-
-// IsWildcard returns true if the element is a wildcard (*).
-func IsWildcard(elem string) bool {
-	return elem == PathPatternWildcard
-}
-
-// matchesSuffix checks if the given path's suffix matches this pattern using suffix matching.
-// The pattern is matched against suffixes of the path.
-// A wildcard in the pattern matches zero or more path elements.
-//
-// Example:
-//   - Pattern ["pkg:golang/lib"] matches path ["pkg:golang/lib"] or ["a", "b", "pkg:golang/lib"]
-//   - Pattern ["*", "lib"] matches ["lib"] or ["a", "lib"] or ["a", "b", "lib"]
-//   - Pattern ["a", "*", "b"] matches ["a", "b"] or ["a", "x", "b"] or ["a", "x", "y", "z", "b"]
-//
-// Unexported: callers should use MatchesSuffixForArtifacts, which also
-// strips a leading artifact-identity path segment before delegating here.
-func (p PathPattern) MatchesSuffix(path []string) bool {
-
-	if len(p) == 0 {
-		return true
-	}
-
-	// ROOT is a stop marker meaning "direct dependency only". When the pattern
-	// contains ROOT, skip suffix scanning and match the full path from position 0.
-	if slices.Contains(p, normalize.GraphRootNodeID) {
-		return matchPatternExact(p, path)
-	}
-
-	// For suffix matching, we try increasingly longer suffixes
-	// Count non-wildcard elements to determine minimum suffix length
-	minLen := 0
-	for _, elem := range p {
-		if !IsWildcard(elem) {
-			minLen++
-		}
-	}
-
-	if len(path) < minLen {
-		return false
-	}
-
-	// Try matching against suffixes of increasing length
-	for suffixStart := len(path) - minLen; suffixStart >= 0; suffixStart-- {
-		suffix := path[suffixStart:]
-		if matchPatternExact(p, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
-// matchPatternExact checks if the pattern exactly matches the path.
-// Wildcards can match zero or more elements.
-func matchPatternExact(pattern, path []string) bool {
-	if len(pattern) == 0 {
-		return len(path) == 0
-	}
-
-	pIdx := 0
-	pathIdx := 0
-
-	for pIdx < len(pattern) {
-		if IsWildcard(pattern[pIdx]) {
-			// Wildcard: try to match zero or more elements
-			// If this is the last element in pattern, it matches everything remaining
-			if pIdx == len(pattern)-1 {
-				return true
-			}
-
-			// If the next pattern element is ROOT (stop marker), try a zero-length
-			// match for this wildcard. [*, ROOT, pkg:A] is equivalent to [ROOT, pkg:A]:
-			// ROOT anchors the remainder to the current path position.
-			if pattern[pIdx+1] == normalize.GraphRootNodeID {
-				if matchPatternExact(pattern[pIdx+1:], path[pathIdx:]) {
-					return true
-				}
-			}
-
-			// Try to find the next pattern element in the path
-			nextPattern := pattern[pIdx+1]
-
-			for i := pathIdx; i < len(path); i++ {
-				if nextPattern == path[i] {
-					// Found next pattern element, recursively match the rest
-					if matchPatternExact(pattern[pIdx+1:], path[i:]) {
-						return true
-					}
-				}
-			}
-
-			// Handle the case where we've exhausted the path (i == len(path) in the original loop)
-			// Check if remaining pattern is all wildcards or empty
-			allWildcards := true
-			for j := pIdx + 1; j < len(pattern); j++ {
-				if !IsWildcard(pattern[j]) {
-					allWildcards = false
-					break
-				}
-			}
-			if allWildcards {
-				return true
-			}
-			return pathIdx == len(path)
-		}
-
-		// ROOT is a stop marker — it is never stored in VulnerabilityPath,
-		// so skip it in the pattern without consuming a path element.
-		if pattern[pIdx] == normalize.GraphRootNodeID {
-			pIdx++
-			continue
-		}
-
-		// Literal match
-		if pathIdx >= len(path) || pattern[pIdx] != path[pathIdx] {
-			return false
-		}
-
-		pIdx++
-		pathIdx++
-	}
-
-	return pathIdx == len(path)
-}
-
-// ContainsWildcard returns true if the pattern contains a wildcard (*).
-func (p PathPattern) ContainsWildcard() bool {
-	return slices.ContainsFunc(p, IsWildcard)
-}
-
-// MatchesSuffixForArtifacts is like matchesSuffix, but first strips a leading
-// pattern element that identifies one of the vulnerability's own artifacts.
-//
-// VulnerabilityPath is always component-only and never includes the
-// artifact's own identity, but devguard's own exports (CSAF, CycloneDX VEX)
-// always include the artifact as the path's root. A pattern reconstructed
-// from such an export - e.g. a downloaded VEX document being re-uploaded -
-// would otherwise carry that artifact element as its first path segment and
-// never match any real vulnerability path.
-//
-// Once stripped, the remainder is matched exactly from the start of path
-// (like the ROOT stop-marker case in matchesSuffix), not as a generic
-// suffix: the artifact anchors the pattern to the absolute root of the
-// dependency graph, so a shorter pattern must not match as a mere suffix of
-// a longer, distinct path through a shared component - that per-path
-// distinction is exactly what CSAF's product tree encodes.
-func (p PathPattern) MatchesSuffixForArtifacts(path []string, artifactIdentities []string) bool {
-	if len(p) > 0 && slices.Contains(artifactIdentities, p[0]) {
-		return matchPatternExact(p[1:], path)
-	}
-	return p.MatchesSuffix(path)
-}
 
 type VEXRuleDTO struct {
 	// Primary key
@@ -199,10 +29,12 @@ type VEXRuleDTO struct {
 	VexSource string    `json:"vexSource"`
 
 	// Rule data
+	Title                   string                      `json:"title"`
 	Justification           string                      `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType               VulnEventType               `json:"eventType"`
-	PathPattern             PathPattern                 `json:"pathPattern"`
+	PathPattern             []string                    `json:"pathPattern"`
+	CELExpression           string                      `json:"celExpression"`
 	CreatedByID             string                      `json:"createdById"`
 	CreatedAt               string                      `json:"createdAt"`
 	UpdatedAt               string                      `json:"updatedAt"`
@@ -212,9 +44,33 @@ type VEXRuleDTO struct {
 }
 
 type VexRuleRecommendation struct {
-	CVEID                   string                      `json:"cveId"`
-	PathPattern             PathPattern                 `json:"pathPattern"`
-	Justification           string                      `json:"justification"`
+	Title                            string                      `json:"title"`
+	CELExpression                    string                      `json:"celExpression"`
+	Justification                    string                      `json:"justification"`
+	MechanicalJustification          MechanicalJustificationType `json:"mechanicalJustification"`
+	EventType                        VulnEventType               `json:"eventType"`
+	Confidence                       float64                     `json:"confidence"`
+	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns"`
+	VerifiedVotes                    int                         `json:"verifiedVotes"`
+	TotalVotes                       int                         `json:"totalVotes"`
+
+	// ProjectSlug/OriginAssetSlug are set when this recommendation was
+	// taken directly from a rule on an asset the requesting user already has
+	// access to, rather than from the crowd-voted recommendation across
+	// every matching rule. Lets the frontend link to that project/asset.
+	ProjectSlug *string `json:"projectSlug,omitempty"`
+	AssetSlug   *string `json:"assetSlug,omitempty"`
+}
+
+type TestVEXRulesRequest struct {
+	ID            string   `json:"id" validate:"required"`
+	CelExpression []string `json:"celExpression" validate:"required"`
+}
+type CreateVEXRuleRequest struct {
+	Title                   string                      `json:"title"`
+	Justification           string                      `json:"justification" validate:"required"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+	CELExpression           string                      `json:"celExpression"`
 	EventType               VulnEventType               `json:"eventType"`
+	WasRecommended          bool                        `json:"wasRecommended"`
 }

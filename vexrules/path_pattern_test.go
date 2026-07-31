@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package dtos
+package vexrules
 
 import (
 	"testing"
@@ -39,26 +39,7 @@ func TestIsWildcard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, IsWildcard(tt.elem))
-		})
-	}
-}
-
-func TestPathPatternContainsWildcard(t *testing.T) {
-	tests := []struct {
-		name     string
-		pattern  PathPattern
-		expected bool
-	}{
-		{"empty pattern", PathPattern{}, false},
-		{"no wildcards", PathPattern{"A", "B", "C"}, false},
-		{"single wildcard", PathPattern{"A", "*", "C"}, true},
-		{"only wildcard", PathPattern{"*"}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.ContainsWildcard())
+			assert.Equal(t, tt.expected, isWildcard(tt.elem))
 		})
 	}
 }
@@ -84,7 +65,7 @@ func TestPathPatternMatchesSuffix_ExactMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
@@ -109,12 +90,12 @@ func TestRootPathPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
 
-func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
+func TestPathPatternMatchesSuffixWildcard(t *testing.T) {
 	tests := []struct {
 		name     string
 		pattern  PathPattern
@@ -148,12 +129,58 @@ func TestPathPatternMatchesSuffix_Wildcard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
 
-func TestPathPatternMatchesSuffix_RealWorldExamples(t *testing.T) {
+func TestPathPatternMatchesSuffixSemverConstraint(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  PathPattern
+		path     []string
+		expected bool
+	}{
+		{
+			"constraint matches version in range",
+			PathPattern{"pkg:npm/vulnerable@>=1.0.0,<2.0.0"},
+			[]string{"pkg:npm/app@1.0.0", "pkg:npm/vulnerable@1.5.0"},
+			true,
+		},
+		{
+			"constraint does not match version out of range",
+			PathPattern{"pkg:npm/vulnerable@>=1.0.0,<2.0.0"},
+			[]string{"pkg:npm/vulnerable@2.5.0"},
+			false,
+		},
+		{
+			"constraint does not match a different package name",
+			PathPattern{"pkg:npm/vulnerable@>=1.0.0,<2.0.0"},
+			[]string{"pkg:npm/other@1.5.0"},
+			false,
+		},
+		{
+			"exact version still matches without a constraint",
+			PathPattern{"pkg:npm/vulnerable@1.0.0"},
+			[]string{"pkg:npm/vulnerable@1.0.0"},
+			true,
+		},
+		{
+			"constraint combined with wildcard prefix",
+			PathPattern{"*", "pkg:npm/vulnerable@^1.0.0"},
+			[]string{"pkg:npm/app@1.0.0", "pkg:npm/lodash@4.17.0", "pkg:npm/vulnerable@1.9.9"},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+		})
+	}
+}
+
+func TestPathPatternMatchesSuffixRealWorldExamples(t *testing.T) {
 	// Simulating real vulnerability paths like:
 	// ["pkg:npm/app@1.0.0", "pkg:npm/lodash@4.17.0", "pkg:npm/vulnerable@1.0.0"]
 	tests := []struct {
@@ -196,7 +223,7 @@ func TestPathPatternMatchesSuffix_RealWorldExamples(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.MatchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
@@ -209,21 +236,28 @@ func TestPathPatternMatchesSuffixForArtifacts(t *testing.T) {
 		pattern := PathPattern{"pkg:oci/my-app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 		path := []string{"pkg:npm/vulnerable@1.0.0"}
 
-		assert.False(t, pattern.MatchesSuffix(path), "sanity check: plain suffix matching should fail without the strip")
-		assert.True(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
+		assert.False(t, pattern.matchesSuffix(path), "sanity check: plain suffix matching should fail without the strip")
+		assert.True(t, pattern.Matches(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 
 	t.Run("does not strip when the leading element isn't one of the given artifacts", func(t *testing.T) {
 		pattern := PathPattern{"pkg:oci/some-other-app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 		path := []string{"pkg:npm/vulnerable@1.0.0"}
 
-		assert.False(t, pattern.MatchesSuffixForArtifacts(path, []string{"pkg:oci/my-app@1.0.0"}))
+		assert.False(t, pattern.Matches(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 
 	t.Run("behaves like plain suffix matching when no artifact identities are given", func(t *testing.T) {
 		pattern := PathPattern{"pkg:npm/vulnerable@1.0.0"}
 		path := []string{"pkg:npm/app@1.0.0", "pkg:npm/vulnerable@1.0.0"}
 
-		assert.True(t, pattern.MatchesSuffixForArtifacts(path, nil))
+		assert.True(t, pattern.Matches(path, nil))
+	})
+
+	t.Run("should work with constraints", func(t *testing.T) {
+		pattern := PathPattern{"pkg:oci/my-app@1.0.0", "pkg:npm/vulnerable@>=1.0.0,<2.0.0"}
+		path := []string{"pkg:npm/vulnerable@1.5.0"}
+
+		assert.True(t, pattern.Matches(path, []string{"pkg:oci/my-app@1.0.0"}))
 	})
 }

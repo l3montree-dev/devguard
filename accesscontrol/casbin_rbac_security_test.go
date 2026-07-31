@@ -123,12 +123,12 @@ func TestSecurityOrgTokenCannotDeleteOrUpdateItsOwnOrganization(t *testing.T) {
 	ctx := context.Background()
 	session := orgSession(f.orgA)
 
-	allowed, err := f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionRead, shared.ActorScope{})
+	allowed, err := f.rbacOrgA.IsAllowed(ctx, session, &models.Org{}, shared.ObjectOrganization, shared.ActionRead, shared.ActorScope{})
 	require.NoError(t, err)
 	assert.True(t, allowed)
 
 	for _, action := range []shared.Action{shared.ActionUpdate, shared.ActionDelete} {
-		allowed, err := f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, action, shared.ActorScope{})
+		allowed, err := f.rbacOrgA.IsAllowed(ctx, session, &models.Org{}, shared.ObjectOrganization, action, shared.ActorScope{})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on own organization", action)
 	}
@@ -249,10 +249,10 @@ func TestSecurityAssetTokenCannotActOnItsOwnProjectOrOrganization(t *testing.T) 
 		assert.Falsef(t, allowed, "action %q on own project", action)
 	}
 
-	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionRead, shared.ActorScope{Asset: &f.assetA1a})
+	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, &models.Org{}, shared.ObjectOrganization, shared.ActionRead, shared.ActorScope{Asset: &f.assetA1a})
 	require.NoError(t, err)
 	assert.True(t, allowed)
-	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectOrganization, shared.ActionDelete, shared.ActorScope{Asset: &f.assetA1a})
+	allowed, err = f.rbacOrgA.IsAllowed(ctx, session, &models.Org{}, shared.ObjectOrganization, shared.ActionDelete, shared.ActorScope{Asset: &f.assetA1a})
 	require.NoError(t, err)
 	assert.False(t, allowed)
 }
@@ -296,11 +296,11 @@ func TestSecurityMalformedActorIDDoesNotPanicOrGrantAccess(t *testing.T) {
 	for _, actorType := range []shared.SessionActor{shared.SessionActorProject, shared.SessionActorAsset} {
 		session := shared.NewSession("not-a-uuid", actorType, nil, false)
 
-		allowed, err := f.rbacOrgA.HasAccess(ctx, session, shared.ActorScope{})
+		allowed, err := f.rbacOrgA.HasAccess(ctx, session, &models.Org{}, shared.ActorScope{})
 		assert.Error(t, err)
 		assert.False(t, allowed)
 
-		allowed, err = f.rbacOrgA.IsAllowed(ctx, session, shared.ObjectAsset, shared.ActionRead, shared.ActorScope{})
+		allowed, err = f.rbacOrgA.IsAllowed(ctx, session, &models.Org{}, shared.ObjectAsset, shared.ActionRead, shared.ActorScope{})
 		assert.Error(t, err)
 		assert.False(t, allowed)
 	}

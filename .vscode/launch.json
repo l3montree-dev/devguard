@@ -28,9 +28,9 @@
             "args": [
                 "daemon",
                 "runPipeline",
-                "264d682d-a9ba-4680-a9bf-018f35e561f2",
-                "--stage",
-                "SyncTickets",
+                "169319b7-8170-469f-9e31-f87b6054e507",
+                "--assetVersionSlug",
+                "main",
                 "--dryRun=false"
             ],
         },
