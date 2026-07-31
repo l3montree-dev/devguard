@@ -288,7 +288,10 @@ func mapOpenVexStatusToEventType(status vex.Status) (dtos.VulnEventType, error) 
 	case vex.StatusNotAffected:
 		return dtos.EventTypeFalsePositive, nil
 	case vex.StatusAffected:
-		return dtos.EventTypeAccepted, nil
+		// OpenVEX requires an ActionStatement for "affected" (remediation is described,
+		// not accepted) - there is no "won't fix" signal like CDX's ImpactAnalysisResponse,
+		// so this always maps to a comment rather than an acceptance.
+		return dtos.EventTypeComment, nil
 	default:
 		// under_investigation / fixed do not close a vuln through a VEX rule
 		return "", fmt.Errorf("no event type mapping for OpenVEX status: %s", status)

@@ -152,15 +152,53 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
-	allOSVVulns, err := service.osv.fetchAndImportOSV(ctx, tx, start)
+	// OSV import and the CSAF network fetch can run in parallel — the CSAF fetch
+	// does no DB work, so it doesn't contend with the tx that fetchAndImportOSV
+	// writes through.
+	var allOSVVulns []OSVEntry
+	var csafAdvisories []models.CVE
+	osvGroup, osvGroupCtx := errgroup.WithContext(ctx)
+	osvGroup.Go(func() error {
+		var err error
+		allOSVVulns, err = service.osv.fetchAndImportOSV(osvGroupCtx, tx, start)
+		if err != nil {
+			return fmt.Errorf("OSV fetch failed: %w", err)
+		}
+		return nil
+	})
+	osvGroup.Go(func() error {
+		var err error
+		csafAdvisories, err = fetchAllCSAFSources(osvGroupCtx)
+		if err != nil {
+			return fmt.Errorf("could not fetch CSAF sources: %w", err)
+		}
+		return nil
+	})
+	if err := osvGroup.Wait(); err != nil {
+		return err
+	}
+
+	// CSAF and EUVD relationships must land in cve_relationships before
+	// cleanUpAndFilterSurvivors runs: the cleanup's advisory exemption only protects
+	// a CVE from deletion if its cve_relationships row already exists. Importing
+	// these afterwards (as a prior refactor did) lets cleanup delete a CVE that's
+	// only referenced as an advisory's source_cve, which then trips
+	// fk_cve_relationships_source once the FK constraint is re-added below.
+	if err := importCSAFAdvisories(ctx, tx, csafAdvisories); err != nil {
+		return fmt.Errorf("could not import CSAF advisories: %w", err)
+	}
+
+	euvdRelationships, err := service.euvdService.importEUVDAliases(ctx, tx)
 	if err != nil {
-		return fmt.Errorf("OSV fetch failed: %w", err)
+		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
 	}
 
 	osvEntries, survivingCVEs, err := cleanUpAndFilterSurvivors(ctx, tx, allOSVVulns)
 	if err != nil {
 		return fmt.Errorf("could not clean up and filter OSV entries: %w", err)
 	}
+
+	euvdRelationships = filterRelationshipsBySurvivingSource(euvdRelationships, survivingCVEs)
 
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 		return fmt.Errorf("could not re-add indexes and constraints: %w", err)
@@ -173,27 +211,12 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 
 	// Fetch the remaining sources in parallel (network only — no DB writes yet).
 	var (
-		epssData          map[string]dtos.EPSS
-		kevEntries        []KEVEntry
-		allExploits       []models.Exploit
-		systemVexRules    []models.SystemVEXRule
-		euvdRelationships []models.CVERelationship
-		csafAdvisories    []models.CVE
+		epssData       map[string]dtos.EPSS
+		kevEntries     []KEVEntry
+		allExploits    []models.Exploit
+		systemVexRules []models.SystemVEXRule
 	)
 	group, groupCtx := errgroup.WithContext(ctx)
-
-	group.Go(func() error {
-		euvdRelationships = filterRelationshipsBySurvivingSource(euvdRelationships, survivingCVEs)
-		return nil
-	})
-
-	group.Go(func() error {
-		csafAdvisories, err = fetchAllCSAFSources(ctx)
-		if err != nil {
-			return fmt.Errorf("could not fetch CSAF sources: %w", err)
-		}
-		return nil
-	})
 
 	group.Go(func() error {
 		slog.Info("start fetching system VEX rules from GitHub sources")
@@ -295,13 +318,6 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 	if err := insertExploitsBulk(ctx, tx, allExploits, "exploits_stage"); err != nil {
 		return fmt.Errorf("could not write exploit data: %w", err)
 	}
-	// then we can add the additional data sources
-	// load the EUVD aliases into the cve_relationship table
-	euvdRelationships, err = service.euvdService.importEUVDAliases(ctx, tx)
-	if err != nil {
-		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
-	}
-
 	if err := flushNonOSVStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not flush staging tables: %w", err)
 	}
@@ -310,10 +326,6 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 	}
 	if err := flushSystemVEXRulesStagingTable(ctx, tx); err != nil {
 		return fmt.Errorf("could not flush system VEX rules: %w", err)
-	}
-
-	if err := importCSAFAdvisories(ctx, tx, csafAdvisories); err != nil {
-		return fmt.Errorf("could not import CSAF advisories: %w", err)
 	}
 
 	// Compute the diff now — while the transaction still holds both the snapshot

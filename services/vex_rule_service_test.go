@@ -881,7 +881,8 @@ func TestParseVEXRulesFromOpenVEXReport_NormalAndMultipleStatements(t *testing.T
 		eventType               dtos.VulnEventType
 	}{
 		{cve: "CVE-2024-1111", path: []string{vexrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
-		{cve: "CVE-2024-2222", path: []string{vexrules.PathPatternWildcard, "pkg:golang/lib@2.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		// the vulnerable package is the subcomponent, not its containing product - see openVexStatementPurls
+		{cve: "CVE-2024-2222", path: []string{vexrules.PathPatternWildcard, "pkg:golang/lib/sub@2.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
 		{cve: "CVE-2024-2222", path: []string{vexrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
 		{cve: "CVE-2024-3333", path: []string{vexrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: "", eventType: dtos.EventTypeComment},
 	}

@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -98,7 +97,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 }
 
 func TestFetchVexFromGitHub(t *testing.T) {
-	newZipResponse := func(t *testing.T, files map[string]string) *http.Response {
+	newZipHandler := func(t *testing.T, wantPath string, files map[string]string) http.HandlerFunc {
 		t.Helper()
 
 		var buf bytes.Buffer
@@ -121,46 +120,47 @@ func TestFetchVexFromGitHub(t *testing.T) {
 		if err := zw.Close(); err != nil {
 			t.Fatalf("failed to close zip writer: %v", err)
 		}
+		zipBytes := buf.Bytes()
 
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Status:     "200 OK",
-			Header:     make(http.Header),
-			Body:       io.NopCloser(bytes.NewReader(buf.Bytes())),
+		return func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, wantPath, r.URL.Path)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(zipBytes)
 		}
+	}
+
+	fetcherWithServer := func(server *httptest.Server) gitHubVexFetcher {
+		return gitHubVexFetcher{baseURL: server.URL}
 	}
 
 	t.Run("should fetch openvex reports from json files in the repository", func(t *testing.T) {
 		calls := 0
-		downloadRawFileFn = func(ctx context.Context, owner, repo, branch string) (*http.Response, error) {
-			calls++
-			assert.Equal(t, "octo-org", owner)
-			assert.Equal(t, "openvex-repo", repo)
-			assert.Equal(t, "main", branch)
-
-			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
-			return newZipResponse(t, map[string]string{
-				"reports/openvex.json": mustMarshalJSON(t, map[string]any{
-					"@context":  "https://openvex.dev/ns/v0.2.0",
-					"@id":       "openvex-1",
-					"author":    "test-author",
-					"timestamp": ts,
-					"version":   1,
-					"statements": []any{
-						map[string]any{
-							"vulnerability": map[string]any{"name": "CVE-2024-1234"},
-							"products": []any{
-								map[string]any{"@id": "pkg:npm/test-component@1.0.0"},
-							},
-							"status": "not_affected",
+		handler := newZipHandler(t, "/octo-org/openvex-repo/archive/refs/heads/main.zip", map[string]string{
+			"reports/openvex.json": mustMarshalJSON(t, map[string]any{
+				"@context":  "https://openvex.dev/ns/v0.2.0",
+				"@id":       "openvex-1",
+				"author":    "test-author",
+				"timestamp": time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC),
+				"version":   1,
+				"statements": []any{
+					map[string]any{
+						"vulnerability": map[string]any{"name": "CVE-2024-1234"},
+						"products": []any{
+							map[string]any{"@id": "pkg:npm/test-component@1.0.0"},
 						},
+						"status": "not_affected",
 					},
-				}),
-				"README.md": "# ignore me",
-			}), nil
-		}
+				},
+			}),
+			"README.md": "# ignore me",
+		})
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls++
+			handler(w, r)
+		}))
+		defer server.Close()
 
-		reports, err := NewGitHubVexFetcher().FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
+		reports, err := fetcherWithServer(server).FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 1)
 		// the source of a rule fetched from a GitHub repo is the path of the file it was parsed from
@@ -171,51 +171,48 @@ func TestFetchVexFromGitHub(t *testing.T) {
 
 	t.Run("should fetch multiple openvex reports from multiple json files", func(t *testing.T) {
 		calls := 0
-		downloadRawFileFn = func(ctx context.Context, owner, repo, branch string) (*http.Response, error) {
+		handler := newZipHandler(t, "/octo-org/multi-vex-repo/archive/refs/heads/develop.zip", map[string]string{
+			"vex/vex1.json": mustMarshalJSON(t, map[string]any{
+				"@context":  "https://openvex.dev/ns/v0.2.0",
+				"@id":       "openvex-first",
+				"author":    "author-one",
+				"timestamp": time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC),
+				"version":   1,
+				"statements": []any{
+					map[string]any{
+						"vulnerability": map[string]any{"name": "CVE-2024-0001"},
+						"products": []any{
+							map[string]any{"@id": "pkg:npm/comp-one@1.0.0"},
+						},
+						"status": "not_affected",
+					},
+				},
+			}),
+			"vex/vex2.json": mustMarshalJSON(t, map[string]any{
+				"@context":  "https://openvex.dev/ns/v0.2.0",
+				"@id":       "openvex-second",
+				"author":    "author-two",
+				"timestamp": time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC),
+				"version":   1,
+				"statements": []any{
+					map[string]any{
+						"vulnerability": map[string]any{"name": "CVE-2024-0002"},
+						"products": []any{
+							map[string]any{"@id": "pkg:npm/comp-two@1.0.0"},
+						},
+						"status": "not_affected",
+					},
+				},
+			}),
+			"README.md": "# ignore me",
+		})
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls++
-			assert.Equal(t, "octo-org", owner)
-			assert.Equal(t, "multi-vex-repo", repo)
-			assert.Equal(t, "develop", branch)
+			handler(w, r)
+		}))
+		defer server.Close()
 
-			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
-			return newZipResponse(t, map[string]string{
-				"vex/vex1.json": mustMarshalJSON(t, map[string]any{
-					"@context":  "https://openvex.dev/ns/v0.2.0",
-					"@id":       "openvex-first",
-					"author":    "author-one",
-					"timestamp": ts,
-					"version":   1,
-					"statements": []any{
-						map[string]any{
-							"vulnerability": map[string]any{"name": "CVE-2024-0001"},
-							"products": []any{
-								map[string]any{"@id": "pkg:npm/comp-one@1.0.0"},
-							},
-							"status": "not_affected",
-						},
-					},
-				}),
-				"vex/vex2.json": mustMarshalJSON(t, map[string]any{
-					"@context":  "https://openvex.dev/ns/v0.2.0",
-					"@id":       "openvex-second",
-					"author":    "author-two",
-					"timestamp": ts,
-					"version":   1,
-					"statements": []any{
-						map[string]any{
-							"vulnerability": map[string]any{"name": "CVE-2024-0002"},
-							"products": []any{
-								map[string]any{"@id": "pkg:npm/comp-two@1.0.0"},
-							},
-							"status": "not_affected",
-						},
-					},
-				}),
-				"README.md": "# ignore me",
-			}), nil
-		}
-
-		reports, err := NewGitHubVexFetcher().FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
+		reports, err := fetcherWithServer(server).FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 2)
 		// the source of each rule is the path of the file it was parsed from, one rule per file here
@@ -225,6 +222,18 @@ func TestFetchVexFromGitHub(t *testing.T) {
 		assert.Contains(t, cels[0]+cels[1], "CVE-2024-0001")
 		assert.Contains(t, cels[0]+cels[1], "CVE-2024-0002")
 		assert.Equal(t, 1, calls)
+	})
+
+	t.Run("should handle HTTP errors from GitHub", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		reports, err := fetcherWithServer(server).FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/missing-repo", "")
+		assert.Error(t, err)
+		assert.Nil(t, reports)
+		assert.Contains(t, err.Error(), "404")
 	})
 
 	t.Run("should reject non github urls", func(t *testing.T) {

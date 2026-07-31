@@ -231,15 +231,15 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 	return rules, valid, invalid
 }
 
-func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*zip.Reader, error) {
+func downloadGithubRepoAsZip(ctx context.Context, baseURL, owner, repo, branch string) (*zip.Reader, error) {
 	url := fmt.Sprintf(
-		"https://github.com/%s/%s/archive/refs/heads/%s.zip",
+		"%s/%s/%s/archive/refs/heads/%s.zip",
+		baseURL,
 		owner,
 		repo,
 		branch,
 	)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -272,10 +272,12 @@ func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*
 
 // only needed to avoid import cycles
 type gitHubVexFetcher struct {
+	// baseURL defaults to https://github.com; overridable in tests to point at an httptest.Server.
+	baseURL string
 }
 
 func NewGitHubVexFetcher() gitHubVexFetcher {
-	return gitHubVexFetcher{}
+	return gitHubVexFetcher{baseURL: "https://github.com"}
 }
 
 func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error) {
@@ -290,7 +292,7 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 		branch = "main"
 	}
 
-	repoZip, err := DownloadGithubRepoAsZip(ctx, owner, repo, branch)
+	repoZip, err := downloadGithubRepoAsZip(ctx, gh.baseURL, owner, repo, branch)
 	if err != nil {
 		return nil, err
 	}
@@ -316,13 +318,9 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 			slog.Info("document could not be read, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
 			continue
 		}
-		src, err := url.JoinPath(targetURL, fileEntry.Name)
-		if err != nil {
-			src = targetURL // fallback to repo root if join fails
-		}
 		rules, _, err := VexRulesFromDocument(
 			bytes,
-			src,
+			fileEntry.Name,
 		)
 		if err != nil {
 			slog.Info("could not create openVEX report structure", "err", err, "filename", filename)
