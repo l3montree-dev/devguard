@@ -89,7 +89,7 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(ctx conte
 	return firstPartyVulns, nil
 }
 
-func (repository *firstPartyVulnerabilityRepository) GetOpenedByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+func (repository *firstPartyVulnerabilityRepository) GetOpenByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
 	var firstPartyVulns = []models.FirstPartyVuln{}
 	err := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).
 		Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).

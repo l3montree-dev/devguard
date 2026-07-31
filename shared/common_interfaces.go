@@ -298,7 +298,7 @@ type FirstPartyVulnRepository interface {
 	ListByScanner(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
 	GetByAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
-	GetOpenedByAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetOpenByAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
 	GetFirstPartyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ListUnfixedByAssetAndAssetVersionAndScanner(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 }

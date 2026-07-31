@@ -264,7 +264,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	vulns, err := c.firstPartyVulnRepository.GetOpenedByAssetVersion(
+	vulns, err := c.firstPartyVulnRepository.GetOpenByAssetVersion(
 		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
