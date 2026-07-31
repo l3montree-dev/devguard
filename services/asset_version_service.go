@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+
 	"gorm.io/gorm"
 
 	"github.com/openvex/go-vex/pkg/vex"

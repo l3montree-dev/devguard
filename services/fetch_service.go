@@ -1,6 +1,7 @@
 package services
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -48,7 +49,7 @@ func sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func VexRulesFromDocument(body []byte, assetID uuid.UUID, source string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error) {
+func VexRulesFromDocument(body []byte, source string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error) {
 	format := sniffVexFormat(body)
 
 	switch format {
@@ -203,7 +204,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 				})
 				return
 			}
-			vexRules, format, err := VexRulesFromDocument(body, assetID, url)
+			vexRules, format, err := VexRulesFromDocument(body, url)
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
@@ -215,7 +216,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 				return
 			}
 			for i := range vexRules {
-				rules = append(rules, transformer.SystemVEXRuleToVEXRule(vexRules[i], "", assetID))
+				rules = append(rules, transformer.SystemVEXRuleToVEXRule(vexRules[i], "system", assetID))
 			}
 			mut.Lock()
 			valid = append(valid, models.ExternalReference{
@@ -230,7 +231,54 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 	return rules, valid, invalid
 }
 
-func FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error) {
+func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*zip.Reader, error) {
+	url := fmt.Sprintf(
+		"https://github.com/%s/%s/archive/refs/heads/%s.zip",
+		owner,
+		repo,
+		branch,
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Timeout:   10 * time.Minute,
+		Transport: utils.EgressTransport,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return utils.ZipReaderFromResponse(resp)
+	case http.StatusNotFound:
+		return nil, fmt.Errorf("404 Source not found")
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("401 Unauthorized")
+	case http.StatusInternalServerError:
+		return nil, fmt.Errorf("500 Internal Server error")
+	default:
+		return nil, fmt.Errorf("Unexpected status: %d\n", resp.StatusCode)
+	}
+}
+
+// only needed to avoid import cycles
+type gitHubVexFetcher struct {
+}
+
+func NewGitHubVexFetcher() gitHubVexFetcher {
+	return gitHubVexFetcher{}
+}
+
+func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error) {
 	owner, repo, err := ParseGitHubURL(targetURL)
 	if err != nil {
 		return nil, err
@@ -242,16 +290,10 @@ func FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch stri
 		branch = "main"
 	}
 
-	resp, err := downloadRawFileFn(ctx, owner, repo, branch)
+	repoZip, err := DownloadGithubRepoAsZip(ctx, owner, repo, branch)
 	if err != nil {
 		return nil, err
 	}
-
-	repoZip, err := utils.ZipReaderFromResponse(resp)
-	if err != nil {
-		return nil, fmt.Errorf("could not read obtained zip: %w", err)
-	}
-	resp.Body.Close()
 
 	allRules := make([]models.SystemVEXRule, 0, len(repoZip.File)*10) // rough estimate
 	for _, fileEntry := range repoZip.File {
@@ -274,11 +316,13 @@ func FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch stri
 			slog.Info("document could not be read, skipping this file for parsing", "filename", fileEntry.Name, "err", err)
 			continue
 		}
-
+		src, err := url.JoinPath(targetURL, fileEntry.Name)
+		if err != nil {
+			src = targetURL // fallback to repo root if join fails
+		}
 		rules, _, err := VexRulesFromDocument(
 			bytes,
-			uuid.Nil,
-			fileEntry.Name,
+			src,
 		)
 		if err != nil {
 			slog.Info("could not create openVEX report structure", "err", err, "filename", filename)
@@ -286,7 +330,10 @@ func FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch stri
 		}
 		allRules = append(allRules, rules...)
 	}
-	return allRules, nil
+
+	return utils.DeduplicateSlice(allRules, func(el models.SystemVEXRule) string {
+		return el.ID
+	}), nil
 }
 
 func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {
@@ -310,42 +357,4 @@ func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {
 		return "", "", fmt.Errorf("invalid github repository url path: expected non-empty owner and repo, got %q", u.Path)
 	}
 	return owner, repo, nil
-}
-
-func DownloadGithubRepoAsZip(ctx context.Context, owner, repo, branch string) (*http.Response, error) {
-	url := fmt.Sprintf(
-		"https://github.com/%s/%s/archive/refs/heads/%s.zip",
-		owner,
-		repo,
-		branch,
-	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Timeout:   10 * time.Minute,
-		Transport: utils.EgressTransport,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return resp, nil
-	case http.StatusNotFound:
-		return nil, fmt.Errorf("404 Source not found")
-	case http.StatusUnauthorized:
-		return nil, fmt.Errorf("401 Unauthorized")
-	case http.StatusInternalServerError:
-		return nil, fmt.Errorf("500 Internal Server error")
-	default:
-		return nil, fmt.Errorf("Unexpected status: %d\n", resp.StatusCode)
-	}
 }

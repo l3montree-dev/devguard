@@ -98,11 +98,6 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 }
 
 func TestFetchVexFromGitHub(t *testing.T) {
-	originalDownloadRawFileFn := downloadRawFileFn
-	t.Cleanup(func() {
-		downloadRawFileFn = originalDownloadRawFileFn
-	})
-
 	newZipResponse := func(t *testing.T, files map[string]string) *http.Response {
 		t.Helper()
 
@@ -146,24 +141,31 @@ func TestFetchVexFromGitHub(t *testing.T) {
 			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
 			return newZipResponse(t, map[string]string{
 				"reports/openvex.json": mustMarshalJSON(t, map[string]any{
-					"@context":   "https://openvex.dev/ns/v0.2.0",
-					"@id":        "openvex-1",
-					"author":     "test-author",
-					"timestamp":  ts,
-					"version":    1,
-					"statements": []any{},
+					"@context":  "https://openvex.dev/ns/v0.2.0",
+					"@id":       "openvex-1",
+					"author":    "test-author",
+					"timestamp": ts,
+					"version":   1,
+					"statements": []any{
+						map[string]any{
+							"vulnerability": map[string]any{"name": "CVE-2024-1234"},
+							"products": []any{
+								map[string]any{"@id": "pkg:npm/test-component@1.0.0"},
+							},
+							"status": "not_affected",
+						},
+					},
 				}),
 				"README.md": "# ignore me",
 			}), nil
 		}
 
-		reports, err := FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
+		reports, err := NewGitHubVexFetcher().FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 1)
-		assert.Equal(t, "https://github.com/octo-org/openvex-repo", reports[0].Source)
-		assert.Equal(t, "openvex-1", reports[0].Report.ID)
-		assert.Equal(t, "test-author", reports[0].Report.Author)
-		assert.Equal(t, 1, reports[0].Report.Version)
+		// the source of a rule fetched from a GitHub repo is the path of the file it was parsed from
+		assert.Equal(t, "reports/openvex.json", reports[0].VexSource)
+		assert.Contains(t, reports[0].CELExpression, "CVE-2024-1234")
 		assert.Equal(t, 1, calls)
 	})
 
@@ -178,39 +180,55 @@ func TestFetchVexFromGitHub(t *testing.T) {
 			ts := time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC)
 			return newZipResponse(t, map[string]string{
 				"vex/vex1.json": mustMarshalJSON(t, map[string]any{
-					"@context":   "https://openvex.dev/ns/v0.2.0",
-					"@id":        "openvex-first",
-					"author":     "author-one",
-					"timestamp":  ts,
-					"version":    1,
-					"statements": []any{},
+					"@context":  "https://openvex.dev/ns/v0.2.0",
+					"@id":       "openvex-first",
+					"author":    "author-one",
+					"timestamp": ts,
+					"version":   1,
+					"statements": []any{
+						map[string]any{
+							"vulnerability": map[string]any{"name": "CVE-2024-0001"},
+							"products": []any{
+								map[string]any{"@id": "pkg:npm/comp-one@1.0.0"},
+							},
+							"status": "not_affected",
+						},
+					},
 				}),
 				"vex/vex2.json": mustMarshalJSON(t, map[string]any{
-					"@context":   "https://openvex.dev/ns/v0.2.0",
-					"@id":        "openvex-second",
-					"author":     "author-two",
-					"timestamp":  ts,
-					"version":    1,
-					"statements": []any{},
+					"@context":  "https://openvex.dev/ns/v0.2.0",
+					"@id":       "openvex-second",
+					"author":    "author-two",
+					"timestamp": ts,
+					"version":   1,
+					"statements": []any{
+						map[string]any{
+							"vulnerability": map[string]any{"name": "CVE-2024-0002"},
+							"products": []any{
+								map[string]any{"@id": "pkg:npm/comp-two@1.0.0"},
+							},
+							"status": "not_affected",
+						},
+					},
 				}),
 				"README.md": "# ignore me",
 			}), nil
 		}
 
-		reports, err := FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
+		reports, err := NewGitHubVexFetcher().FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 2)
-		assert.Equal(t, "https://github.com/octo-org/multi-vex-repo", reports[0].Source)
-		assert.Equal(t, "https://github.com/octo-org/multi-vex-repo", reports[1].Source)
-		assert.Equal(t, "openvex-first", reports[0].Report.ID)
-		assert.Equal(t, "openvex-second", reports[1].Report.ID)
-		assert.Equal(t, "author-one", reports[0].Report.Author)
-		assert.Equal(t, "author-two", reports[1].Report.Author)
+		// the source of each rule is the path of the file it was parsed from, one rule per file here
+		sources := []string{reports[0].VexSource, reports[1].VexSource}
+		assert.ElementsMatch(t, []string{"vex/vex1.json", "vex/vex2.json"}, sources)
+		cels := []string{reports[0].CELExpression, reports[1].CELExpression}
+		assert.Contains(t, cels[0]+cels[1], "CVE-2024-0001")
+		assert.Contains(t, cels[0]+cels[1], "CVE-2024-0002")
 		assert.Equal(t, 1, calls)
 	})
 
 	t.Run("should reject non github urls", func(t *testing.T) {
-		reports, err := FetchVexFromGitHub(context.Background(), "https://example.com/repo", "")
+		reports, err := NewGitHubVexFetcher().FetchVexFromGitHub(context.Background(), "https://example.com/repo", "")
 		assert.Error(t, err)
 		assert.Nil(t, reports)
 		assert.Contains(t, err.Error(), "invalid github repository url")

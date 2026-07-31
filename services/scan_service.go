@@ -65,8 +65,6 @@ type scanService struct {
 	utils.FireAndForgetSynchronizer
 }
 
-var downloadRawFileFn = DownloadGithubRepoAsZip
-
 var _ shared.ScanService = (*scanService)(nil)
 
 func NewScanService(

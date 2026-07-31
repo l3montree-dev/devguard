@@ -517,6 +517,10 @@ type ConfigRepository interface {
 	GetDB(ctx context.Context, tx DB) DB
 }
 
+type GitHubVexFetcher interface {
+	FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error)
+}
+
 type VEXRuleService interface {
 	Begin(ctx context.Context) DB
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error

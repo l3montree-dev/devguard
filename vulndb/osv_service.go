@@ -73,6 +73,7 @@ var liveTableSpecs = func() []syncSpec {
 	malPkgAllCols := []string{"id", "content_hash", "summary", "details", "published", "modified"}
 	malCompInsertCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
+	systemVEXRuleAllCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
 	return []syncSpec{
 		{
 			live: "cves", stage: "cves_stage", keyCols: []string{"id"},
@@ -111,6 +112,13 @@ var liveTableSpecs = func() []syncSpec {
 			live: "malicious_affected_components", stage: "mal_comps_stage",
 			keyCols:    []string{"id"},
 			insertCols: malCompInsertCols, insertSelectExprs: malCompInsertExprs,
+		},
+		{
+			// No contentHashCol: the id is already a hash of vex_source+cel_expression,
+			// so a content change always produces a new id (insert/delete only).
+			live: "system_vex_rules", stage: "system_vex_rules_stage",
+			keyCols:    []string{"id"},
+			insertCols: systemVEXRuleAllCols, insertSelectExprs: systemVEXRuleAllCols,
 		},
 	}
 }()
@@ -872,6 +880,16 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			semver_fixed         text,
 			version_introduced   text,
 			version_fixed        text
+		) ON COMMIT DROP;
+
+		CREATE TEMP TABLE IF NOT EXISTS system_vex_rules_stage (
+			id                       text,
+			vex_source               text,
+			title                    text,
+			justification            text,
+			mechanical_justification text,
+			event_type               text,
+			cel_expression           text
 		) ON COMMIT DROP;`)
 	if err != nil {
 		return fmt.Errorf("could not create staging tables: %w", err)
@@ -890,6 +908,7 @@ func clearStagingTables(ctx context.Context, tx pgx.Tx) error {
 		TRUNCATE TABLE mal_comps_stage;
 		TRUNCATE TABLE epss_stage;
 		TRUNCATE TABLE kev_stage;
+		TRUNCATE TABLE system_vex_rules_stage;
 		`)
 	if err != nil {
 		return fmt.Errorf("could not clear staging tables: %w", err)
@@ -914,7 +933,6 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	ALTER TABLE public.exploits DROP CONSTRAINT IF EXISTS fk_cves_exploits;
 	ALTER TABLE public.weaknesses DROP CONSTRAINT IF EXISTS fk_cves_weaknesses;
 	ALTER TABLE public.vex_rules DROP CONSTRAINT IF EXISTS fk_vex_rules_cve;
-	ALTER TABLE public.system_vex_rules DROP CONSTRAINT IF EXISTS fk_system_vex_rules_cve;
 
 	-- then drop all primary key (and unique) constraints
 	-- do not drop cves_pkey since we still need that index to detect and resolve duplicates
@@ -976,7 +994,6 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_affected_component FOREIGN KEY (affected_component_id) REFERENCES public.affected_components (id) ON DELETE CASCADE;
 	ALTER TABLE public.cve_affected_component ADD CONSTRAINT fk_cve_affected_component_cve FOREIGN KEY (cve_id) REFERENCES public.cves (id) ON DELETE CASCADE;
-	ALTER TABLE public.system_vex_rules ADD CONSTRAINT fk_system_vex_rules_cve FOREIGN KEY (cve_id) REFERENCES public.cves(cve) ON DELETE CASCADE;
 
 	ALTER TABLE public.exploits ADD CONSTRAINT fk_cves_exploits FOREIGN KEY (cve_id) REFERENCES public.cves (cve) ON DELETE CASCADE;`)
 	if err != nil {

@@ -217,20 +217,16 @@ func OpenVEXToRules(doc *vex.VEX, source string) ([]models.SystemVEXRule, error)
 			continue
 		}
 
-		justification := statement.ImpactStatement
-		if justification == "" {
-			justification = statement.StatusNotes
-		}
-
 		// collect the component-level PURLs the statement scopes to
 		purlStrings := openVexStatementPurls(statement)
 		for _, purlString := range purlStrings {
 			rule := models.SystemVEXRule{
-				Title:         vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
-				VexSource:     source,
-				Justification: justification,
-				EventType:     eventType,
-				CELExpression: vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				Title:                   vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				VexSource:               source,
+				MechanicalJustification: dtos.MechanicalJustificationType(statement.Justification),
+				Justification:           statement.ImpactStatement,
+				EventType:               eventType,
+				CELExpression:           vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
 			}
 			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)

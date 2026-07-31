@@ -66,11 +66,13 @@ func makeAsset(id, projectID string) models.Asset {
 // same ID are treated as votes for the same recommendation).
 func makeVexRule(id, assetID, assessment string) models.VEXRule {
 	return models.VEXRule{
-		ID:                      id,
-		CELExpression:           fmt.Sprintf("vuln.cveId == %q", id),
-		AssetID:                 uid(assetID),
-		MechanicalJustification: dtos.MechanicalJustificationType(assessment),
-		Justification:           "test reasoning",
+		SystemVEXRule: models.SystemVEXRule{
+			ID:                      id,
+			CELExpression:           fmt.Sprintf("vuln.cveId == %q", id),
+			MechanicalJustification: dtos.MechanicalJustificationType(assessment),
+			Justification:           "test reasoning",
+		},
+		AssetID: uid(assetID),
 	}
 }
 

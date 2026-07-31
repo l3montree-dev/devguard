@@ -81,7 +81,7 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, advisory.Vulnerabilities, 2, "one CSAF vulnerability object per CVE")
 
-	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "aggregated")
+	rules, err := transformer.CSAFVEXToRules(&advisory, "aggregated")
 	require.NoError(t, err)
 
 	// exactly the two false-positive paths become rules, each with its exact (non-wildcard) path,
@@ -174,7 +174,7 @@ func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, advisory.Vulnerabilities, 1, "one CSAF vulnerability object for the single CVE")
 
-	rules, err := transformer.CSAFVEXToRules(&advisory, assetID, "test")
+	rules, err := transformer.CSAFVEXToRules(&advisory, "test")
 	require.NoError(t, err)
 
 	// each of the 4 distinct paths must round-trip into its own exact-path rule, each prefixed

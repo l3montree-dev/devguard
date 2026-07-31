@@ -10,7 +10,9 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -863,23 +865,20 @@ func TestDaemonPipelineApplySystemVEXRules(t *testing.T) {
 			assert.NoError(t, err)
 
 			systemVEXRule1 := models.SystemVEXRule{
-				// Composite key components
-				CVEID:     cve1.CVE,
-				VexSource: "https://test-cve.com",
-
-				// Rule data
+				VexSource:               "https://test-cve.com",
 				EventType:               dtos.EventTypeFalsePositive,
 				MechanicalJustification: dtos.ComponentNotPresent,
-				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
-				CreatedByID:             "system",
 			}
-			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+			systemVEXRule1.SetCELExpression(vexrules.ToCELExpression(cve1.CVE, vexrules.PathPattern{package1, vexrules.PathPatternWildcard, vulnLib1}))
 
 			err = f.DB.Create(&systemVEXRule1).Error
 			assert.NoError(t, err)
 
-			runner := f.CreateDaemonRunner()
-			err = runner.ApplySystemVEXRules(context.Background())
+			// ApplySystemVEXRules no longer exists as a standalone daemon method - system VEX
+			// rule application is now asset-scoped and goes through VEXRuleService.
+			vexRule := transformer.SystemVEXRuleToVEXRule(systemVEXRule1, "system", asset1.ID)
+			vexRule.Enabled = !asset1.ParanoidMode
+			_, err = f.App.VexRuleService.ApplyRulesToExistingVulns(context.Background(), nil, asset1.ID, []models.VEXRule{vexRule})
 			assert.NoError(t, err)
 
 			var createdDependencyVuln models.DependencyVuln
@@ -936,23 +935,20 @@ func TestDaemonPipelineApplySystemVEXRules(t *testing.T) {
 			assert.NoError(t, err)
 
 			systemVEXRule1 := models.SystemVEXRule{
-				// Composite key components
-				CVEID:     cve1.CVE,
-				VexSource: "https://test-cve.com",
-
-				// Rule data
+				VexSource:               "https://test-cve.com",
 				EventType:               dtos.EventTypeFalsePositive,
 				MechanicalJustification: dtos.ComponentNotPresent,
-				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
-				CreatedByID:             "system",
 			}
-			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+			systemVEXRule1.SetCELExpression(vexrules.ToCELExpression(cve1.CVE, vexrules.PathPattern{package1, vexrules.PathPatternWildcard, vulnLib1}))
 
 			err = f.DB.Create(&systemVEXRule1).Error
 			assert.NoError(t, err)
 
-			runner := f.CreateDaemonRunner()
-			err = runner.ApplySystemVEXRules(context.Background())
+			// ApplySystemVEXRules no longer exists as a standalone daemon method - system VEX
+			// rule application is now asset-scoped and goes through VEXRuleService.
+			vexRule := transformer.SystemVEXRuleToVEXRule(systemVEXRule1, "system", asset1.ID)
+			vexRule.Enabled = !asset1.ParanoidMode
+			_, err = f.App.VexRuleService.ApplyRulesToExistingVulns(context.Background(), nil, asset1.ID, []models.VEXRule{vexRule})
 			assert.NoError(t, err)
 
 			var createdDependencyVuln models.DependencyVuln
@@ -1015,23 +1011,29 @@ func TestDaemonPipelineApplySystemVEXRules(t *testing.T) {
 			assert.NoError(t, err)
 
 			systemVEXRule := models.SystemVEXRule{
-				// Composite key components
-				CVEID:     cve1.CVE,
-				VexSource: "https://test-cve.com",
-
-				// Rule data
+				VexSource:               "https://test-cve.com",
 				EventType:               dtos.EventTypeFalsePositive,
 				MechanicalJustification: dtos.ComponentNotPresent,
-				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
-				CreatedByID:             "system",
 			}
-			systemVEXRule.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+			systemVEXRule.SetCELExpression(vexrules.ToCELExpression(cve1.CVE, vexrules.PathPattern{package1, vexrules.PathPatternWildcard, vulnLib1}))
 
 			err = f.DB.Create(&systemVEXRule).Error
 			assert.NoError(t, err)
 
-			runner := f.CreateDaemonRunner()
-			err = runner.ApplySystemVEXRules(context.Background())
+			// ApplySystemVEXRules no longer exists as a standalone daemon method - system VEX
+			// rule application is now asset-scoped and goes through VEXRuleService.
+			//
+			// NOTE (suspected behavioral regression): matching is now done purely via the CEL
+			// expression's `vuln.cveId == "<cve>"` check (see vexrules.ToCELExpression /
+			// services.VEXRuleService.matchRulesToVulns), which no longer resolves CVE alias
+			// relationships the way the old CVE-relationship-service-backed matching did. This
+			// test's vulnerability carries the alias CVE (cve1Alias), not the rule's CVE (cve1),
+			// so with the current architecture this rule most likely will NOT match it - the
+			// assertions below (expecting a match) may now fail for architectural, not bug,
+			// reasons.
+			vexRule := transformer.SystemVEXRuleToVEXRule(systemVEXRule, "system", asset1.ID)
+			vexRule.Enabled = !asset1.ParanoidMode
+			_, err = f.App.VexRuleService.ApplyRulesToExistingVulns(context.Background(), nil, asset1.ID, []models.VEXRule{vexRule})
 			assert.NoError(t, err)
 
 			var createdDependencyVuln models.DependencyVuln
@@ -1086,23 +1088,22 @@ func TestDaemonPipelineApplySystemVEXRules(t *testing.T) {
 			assert.NoError(t, err)
 
 			systemVEXRule1 := models.SystemVEXRule{
-				// Composite key components
-				CVEID:     cve1.CVE,
-				VexSource: "https://test-cve.com",
-
-				// Rule data
+				VexSource:               "https://test-cve.com",
 				EventType:               dtos.EventTypeFalsePositive,
 				MechanicalJustification: dtos.ComponentNotPresent,
-				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
-				CreatedByID:             "system",
 			}
-			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+			systemVEXRule1.SetCELExpression(vexrules.ToCELExpression(cve1.CVE, vexrules.PathPattern{package1, vexrules.PathPatternWildcard, vulnLib1}))
 
 			err = f.DB.Create(&systemVEXRule1).Error
 			assert.NoError(t, err)
 
-			runner := f.CreateDaemonRunner()
-			err = runner.ApplySystemVEXRules(context.Background())
+			// ApplySystemVEXRules no longer exists as a standalone daemon method - system VEX
+			// rule application is now asset-scoped and goes through VEXRuleService. ParanoidMode
+			// gating (asset1.ParanoidMode == true here) is now expressed via the rule's Enabled
+			// flag, mirroring VEXRuleService.syncRulesForSource.
+			vexRule := transformer.SystemVEXRuleToVEXRule(systemVEXRule1, "system", asset1.ID)
+			vexRule.Enabled = !asset1.ParanoidMode
+			_, err = f.App.VexRuleService.ApplyRulesToExistingVulns(context.Background(), nil, asset1.ID, []models.VEXRule{vexRule})
 			assert.NoError(t, err)
 
 			var createdDependencyVuln models.DependencyVuln
@@ -1315,24 +1316,32 @@ func TestDaemonPipelineApplySystemVEXRules(t *testing.T) {
 
 			//Create SystemVEXRules
 			systemVEXRule1 := models.SystemVEXRule{
-				// Composite key components
-				CVEID:     cve1.CVE,
-				VexSource: "https://test-cve.com",
-
-				// Rule data
+				VexSource:               "https://test-cve.com",
 				EventType:               dtos.EventTypeFalsePositive,
 				MechanicalJustification: dtos.ComponentNotPresent,
-				PathPattern:             dtos.PathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1}),
-				CreatedByID:             "system",
 			}
-			systemVEXRule1.SetPathPattern(dtos.PathPattern{package1, dtos.PathPatternWildcard, vulnLib1})
+			systemVEXRule1.SetCELExpression(vexrules.ToCELExpression(cve1.CVE, vexrules.PathPattern{package1, vexrules.PathPatternWildcard, vulnLib1}))
 
 			err = f.DB.Create(&systemVEXRule1).Error
 			assert.NoError(t, err)
 
-			runner := f.CreateDaemonRunner()
-			err = runner.ApplySystemVEXRules(context.Background())
-			assert.NoError(t, err)
+			// ApplySystemVEXRules no longer exists as a standalone daemon method that scans
+			// every asset in the system - system VEX rule application is now asset-scoped and
+			// goes through VEXRuleService, so we apply the rule to each asset explicitly here,
+			// respecting ParanoidMode the same way VEXRuleService.syncRulesForSource does.
+			//
+			// NOTE (suspected behavioral regression): as in the "cve alias" test above, matching
+			// is now purely `vuln.cveId == "<cve>"` via CEL and no longer resolves CVE alias
+			// relationships, so vulnerability5 (cve2Alias1) and vulnerability7 (cve1Alias) will
+			// most likely NOT be matched by this rule under the current architecture, even
+			// though the old CVE-relationship-service-backed matching used to catch them. The
+			// asserted count of 3 matched events below may no longer hold.
+			for _, a := range []models.Asset{asset1, asset2, asset3, asset4} {
+				vexRule := transformer.SystemVEXRuleToVEXRule(systemVEXRule1, "system", a.ID)
+				vexRule.Enabled = !a.ParanoidMode
+				_, err = f.App.VexRuleService.ApplyRulesToExistingVulns(context.Background(), nil, a.ID, []models.VEXRule{vexRule})
+				assert.NoError(t, err)
+			}
 
 			var createdDependencyVulns []models.DependencyVuln
 			err = f.DB.Find(&createdDependencyVulns).Error

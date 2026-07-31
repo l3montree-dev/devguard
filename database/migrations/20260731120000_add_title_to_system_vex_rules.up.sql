@@ -13,14 +13,4 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
--- Create system_vex_rules table
-CREATE TABLE IF NOT EXISTS public.system_vex_rules (
-    id TEXT PRIMARY KEY,
-    justification TEXT NOT NULL,
-    mechanical_justification TEXT,
-    cel_expression TEXT NOT NULL,
-    vex_source TEXT NOT NULL DEFAULT '',
-    event_type TEXT NOT NULL DEFAULT 'falsePositive',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+ALTER TABLE public.system_vex_rules ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
