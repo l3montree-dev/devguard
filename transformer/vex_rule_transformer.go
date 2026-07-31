@@ -45,8 +45,8 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 	}
 }
 
-func VEXRuleToSystemVEXRuleDTO(rule models.VEXRule) models.SystemVEXRule {
-	return rule.SystemVEXRule
+func VEXRuleToUpstreamVEXRuleDTO(rule models.VEXRule) models.UpstreamVEXRule {
+	return rule.UpstreamVEXRule
 }
 
 func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
@@ -75,18 +75,18 @@ func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, or
 	}
 }
 
-func SystemVEXRuleToVEXRule(rule models.SystemVEXRule, createdByID string, assetID uuid.UUID) models.VEXRule {
+func UpstreamVEXRuleToVEXRule(rule models.UpstreamVEXRule, createdByID string, assetID uuid.UUID) models.VEXRule {
 	return models.VEXRule{
-		SystemVEXRule: rule,
-		AssetID:       assetID,
-		CreatedByID:   createdByID,
+		UpstreamVEXRule: rule,
+		AssetID:         assetID,
+		CreatedByID:     createdByID,
 	}
 }
 
-func AllSystemVEXRulesToVEXRules(rules []models.SystemVEXRule, createdByID string, assetID uuid.UUID) []models.VEXRule {
+func AllUpstreamVEXRulesToVEXRules(rules []models.UpstreamVEXRule, createdByID string, assetID uuid.UUID) []models.VEXRule {
 	vexRules := make([]models.VEXRule, 0, len(rules))
 	for _, rule := range rules {
-		vexRules = append(vexRules, SystemVEXRuleToVEXRule(rule, createdByID, assetID))
+		vexRules = append(vexRules, UpstreamVEXRuleToVEXRule(rule, createdByID, assetID))
 	}
 	return vexRules
 }

@@ -174,9 +174,9 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
-	var vexRules []models.SystemVEXRule
+	var vexRules []models.UpstreamVEXRule
 	for _, expr := range req.CelExpression {
-		vexRules = append(vexRules, models.SystemVEXRule{
+		vexRules = append(vexRules, models.UpstreamVEXRule{
 			ID:            expr,
 			CELExpression: expr,
 		})
@@ -250,7 +250,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		CreatedByID:    session.GetActorName(),
 		Enabled:        true, // Manual rules are always enabled
 		WasRecommended: req.WasRecommended,
-		SystemVEXRule: models.SystemVEXRule{
+		UpstreamVEXRule: models.UpstreamVEXRule{
 			Title:                   req.Title,
 			VexSource:               "manual",
 			Justification:           req.Justification,

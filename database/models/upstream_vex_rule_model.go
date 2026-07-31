@@ -9,7 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-type SystemVEXRule struct {
+type UpstreamVEXRule struct {
 	// Single primary key - hash of composite components
 	ID string `json:"id" gorm:"primaryKey;not null;"`
 
@@ -28,8 +28,8 @@ type SystemVEXRule struct {
 	CELExpression string `json:"celExpression" gorm:"type:text;"`
 }
 
-func (SystemVEXRule) TableName() string {
-	return "system_vex_rules"
+func (UpstreamVEXRule) TableName() string {
+	return "upstream_vex_rules"
 }
 
 // CalculateID computes a SHA256 hash of AssetID, CVEID, PathPattern, CELExpression, and VexSource
@@ -40,13 +40,13 @@ func CalculateVEXRuleID(assetID uuid.UUID, celExpression string, vexSource strin
 }
 
 // SetCELExpression sets the CELExpression and recalculates the ID.
-func (r *SystemVEXRule) SetCELExpression(expression string) {
+func (r *UpstreamVEXRule) SetCELExpression(expression string) {
 	r.CELExpression = expression
 	r.ID = CalculateVEXRuleID(uuid.Nil, r.CELExpression, r.VexSource)
 }
 
 // EnsureID calculates the ID if it hasn't been set yet.
-func (r *SystemVEXRule) EnsureID() {
+func (r *UpstreamVEXRule) EnsureID() {
 	if r.ID == "" {
 		r.ID = CalculateVEXRuleID(uuid.Nil, r.CELExpression, r.VexSource)
 	}

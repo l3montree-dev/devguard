@@ -871,24 +871,24 @@ func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) RunAndReturn(run fun
 }
 
 // VexRulesFromDocument provides a mock function for the type ScanService
-func (_mock *ScanService) VexRulesFromDocument(bytes []byte, s string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error) {
+func (_mock *ScanService) VexRulesFromDocument(bytes []byte, s string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error) {
 	ret := _mock.Called(bytes, s)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VexRulesFromDocument")
 	}
 
-	var r0 []models.SystemVEXRule
+	var r0 []models.UpstreamVEXRule
 	var r1 dtos.ExternalReferenceType
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func([]byte, string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)); ok {
 		return returnFunc(bytes, s)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]byte, string) []models.SystemVEXRule); ok {
+	if returnFunc, ok := ret.Get(0).(func([]byte, string) []models.UpstreamVEXRule); ok {
 		r0 = returnFunc(bytes, s)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.SystemVEXRule)
+			r0 = ret.Get(0).([]models.UpstreamVEXRule)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func([]byte, string) dtos.ExternalReferenceType); ok {
@@ -934,12 +934,12 @@ func (_c *ScanService_VexRulesFromDocument_Call) Run(run func(bytes []byte, s st
 	return _c
 }
 
-func (_c *ScanService_VexRulesFromDocument_Call) Return(systemVEXRules []models.SystemVEXRule, externalReferenceType dtos.ExternalReferenceType, err error) *ScanService_VexRulesFromDocument_Call {
-	_c.Call.Return(systemVEXRules, externalReferenceType, err)
+func (_c *ScanService_VexRulesFromDocument_Call) Return(upstreamVEXRules []models.UpstreamVEXRule, externalReferenceType dtos.ExternalReferenceType, err error) *ScanService_VexRulesFromDocument_Call {
+	_c.Call.Return(upstreamVEXRules, externalReferenceType, err)
 	return _c
 }
 
-func (_c *ScanService_VexRulesFromDocument_Call) RunAndReturn(run func(bytes []byte, s string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error)) *ScanService_VexRulesFromDocument_Call {
+func (_c *ScanService_VexRulesFromDocument_Call) RunAndReturn(run func(bytes []byte, s string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)) *ScanService_VexRulesFromDocument_Call {
 	_c.Call.Return(run)
 	return _c
 }

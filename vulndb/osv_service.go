@@ -73,7 +73,7 @@ var liveTableSpecs = func() []syncSpec {
 	malPkgAllCols := []string{"id", "content_hash", "summary", "details", "published", "modified"}
 	malCompInsertCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
-	systemVEXRuleAllCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
+	upstreamVEXRuleAllCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
 	return []syncSpec{
 		{
 			live: "cves", stage: "cves_stage", keyCols: []string{"id"},
@@ -116,9 +116,9 @@ var liveTableSpecs = func() []syncSpec {
 		{
 			// No contentHashCol: the id is already a hash of vex_source+cel_expression,
 			// so a content change always produces a new id (insert/delete only).
-			live: "system_vex_rules", stage: "system_vex_rules_stage",
+			live: "upstream_vex_rules", stage: "upstream_vex_rules_stage",
 			keyCols:    []string{"id"},
-			insertCols: systemVEXRuleAllCols, insertSelectExprs: systemVEXRuleAllCols,
+			insertCols: upstreamVEXRuleAllCols, insertSelectExprs: upstreamVEXRuleAllCols,
 		},
 	}
 }()
@@ -882,7 +882,7 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			version_fixed        text
 		) ON COMMIT DROP;
 
-		CREATE TEMP TABLE IF NOT EXISTS system_vex_rules_stage (
+		CREATE TEMP TABLE IF NOT EXISTS upstream_vex_rules_stage (
 			id                       text,
 			vex_source               text,
 			title                    text,
@@ -908,7 +908,7 @@ func clearStagingTables(ctx context.Context, tx pgx.Tx) error {
 		TRUNCATE TABLE mal_comps_stage;
 		TRUNCATE TABLE epss_stage;
 		TRUNCATE TABLE kev_stage;
-		TRUNCATE TABLE system_vex_rules_stage;
+		TRUNCATE TABLE upstream_vex_rules_stage;
 		`)
 	if err != nil {
 		return fmt.Errorf("could not clear staging tables: %w", err)

@@ -387,7 +387,7 @@ func (repository *assetVersionRepository) GetAmountOfAssetVersionsInOrg(ctx cont
 	return totalAmount, err
 }
 
-func (repository *assetVersionRepository) FindSystemVEXRuleApplicableAssetVersions(ctx context.Context, tx *gorm.DB) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx *gorm.DB) ([]models.AssetVersion, error) {
 	var assetVersions []models.AssetVersion
 
 	err := repository.GetDB(ctx, tx).

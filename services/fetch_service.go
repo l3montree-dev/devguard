@@ -49,7 +49,7 @@ func sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func VexRulesFromDocument(body []byte, source string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error) {
+func VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error) {
 	format := sniffVexFormat(body)
 
 	switch format {
@@ -216,7 +216,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 				return
 			}
 			for i := range vexRules {
-				rules = append(rules, transformer.SystemVEXRuleToVEXRule(vexRules[i], "system", assetID))
+				rules = append(rules, transformer.UpstreamVEXRuleToVEXRule(vexRules[i], "system", assetID))
 			}
 			mut.Lock()
 			valid = append(valid, models.ExternalReference{
@@ -280,7 +280,7 @@ func NewGitHubVexFetcher() gitHubVexFetcher {
 	return gitHubVexFetcher{baseURL: "https://github.com"}
 }
 
-func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error) {
+func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.UpstreamVEXRule, err error) {
 	owner, repo, err := ParseGitHubURL(targetURL)
 	if err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 		return nil, err
 	}
 
-	allRules := make([]models.SystemVEXRule, 0, len(repoZip.File)*10) // rough estimate
+	allRules := make([]models.UpstreamVEXRule, 0, len(repoZip.File)*10) // rough estimate
 	for _, fileEntry := range repoZip.File {
 		if fileEntry.FileInfo().IsDir() {
 			continue
@@ -329,7 +329,7 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 		allRules = append(allRules, rules...)
 	}
 
-	return utils.DeduplicateSlice(allRules, func(el models.SystemVEXRule) string {
+	return utils.DeduplicateSlice(allRules, func(el models.UpstreamVEXRule) string {
 		return el.ID
 	}), nil
 }

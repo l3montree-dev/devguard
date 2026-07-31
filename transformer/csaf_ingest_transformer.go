@@ -33,7 +33,7 @@ import (
 // leaf product of each chain is what a ProductStatus bucket references. This function walks
 // that chain back to reconstruct the exact component-only path and turns it into a
 // (non-wildcard) VEX rule path pattern, so only the path-specific vuln is affected.
-func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.SystemVEXRule, error) {
+func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.UpstreamVEXRule, error) {
 	if advisory == nil || advisory.ProductTree == nil {
 		return nil, fmt.Errorf("csaf advisory has no product tree")
 	}
@@ -68,7 +68,7 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.SystemVE
 		}
 	}
 
-	rules := make([]models.SystemVEXRule, 0)
+	rules := make([]models.UpstreamVEXRule, 0)
 	for _, vuln := range advisory.Vulnerabilities {
 		cveID := csafVulnCVE(vuln)
 		if cveID == "" || vuln.ProductStatus == nil {
@@ -120,7 +120,7 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.SystemVE
 					continue
 				}
 
-				rule := models.SystemVEXRule{
+				rule := models.UpstreamVEXRule{
 					Title:         vexrules.VexRuleTitle(cveID, pattern),
 					VexSource:     source,
 					Justification: remediationDetail[productID],

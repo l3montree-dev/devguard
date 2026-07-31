@@ -24,7 +24,7 @@ import (
 // Path patterns support wildcards: "*" matches any single path element, "**" matches any number of elements.
 // Primary key: Hash(AssetID, CVEID, PathPattern, VexSource)
 type VEXRule struct {
-	SystemVEXRule
+	UpstreamVEXRule
 	// Composite key components (for indexing and queries)
 	AssetID uuid.UUID `json:"assetId" gorm:"type:uuid;not null;index:,composite:vex_composite_key"`
 	// Relationships

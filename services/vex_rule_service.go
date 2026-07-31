@@ -34,7 +34,7 @@ import (
 
 type VEXRuleService struct {
 	vexRuleRepository         shared.VEXRuleRepository
-	systemVEXRuleRepository   shared.SystemVEXRuleRepository
+	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository
 	dependencyVulnRepository  shared.DependencyVulnRepository
 	vulnEventRepository       shared.VulnEventRepository
 	cveRepository             shared.CveRepository
@@ -46,7 +46,7 @@ var _ shared.VEXRuleService = (*VEXRuleService)(nil)
 
 func NewVEXRuleService(
 	vexRuleRepository shared.VEXRuleRepository,
-	systemVEXRuleRepository shared.SystemVEXRuleRepository,
+	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	vulnEventRepository shared.VulnEventRepository,
 	cveRepository shared.CveRepository,
@@ -55,7 +55,7 @@ func NewVEXRuleService(
 ) *VEXRuleService {
 	return &VEXRuleService{
 		vexRuleRepository:         vexRuleRepository,
-		systemVEXRuleRepository:   systemVEXRuleRepository,
+		upstreamVEXRuleRepository: upstreamVEXRuleRepository,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		vulnEventRepository:       vulnEventRepository,
 		cveRepository:             cveRepository,
@@ -108,7 +108,7 @@ func (s *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx s
 	}
 
 	// Filter rules to only those matching the vulnerability path pattern
-	matches, err := vexrules.EvalRules(ctx, utils.Map(rules, transformer.VEXRuleToSystemVEXRuleDTO), vuln)
+	matches, err := vexrules.EvalRules(ctx, utils.Map(rules, transformer.VEXRuleToUpstreamVEXRuleDTO), vuln)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate CEL expressions: %w", err)
 	}
@@ -418,7 +418,7 @@ func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.V
 		attribute.Int("evaluations.total", len(celRules)*len(vulns)),
 	)
 
-	systemCelRules := utils.Map(celRules, transformer.VEXRuleToSystemVEXRuleDTO)
+	systemCelRules := utils.Map(celRules, transformer.VEXRuleToUpstreamVEXRuleDTO)
 	for _, vuln := range vulns {
 		matches, err := vexrules.EvalRules(ctx, systemCelRules, vuln)
 		if err != nil {
@@ -435,21 +435,21 @@ func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.V
 }
 
 /*
-func (s *VEXRuleService) UpdateSystemVEXRulesFromStaticSources(ctx context.Context) error {
+func (s *VEXRuleService) UpdateUpstreamVEXRulesFromStaticSources(ctx context.Context) error {
 
 	parsedVEXRules, err := transformer.OpenVEXToRules(report.Report, uuid.Nil, report.Source)
 	if err != nil {
 		slog.Info("Error while parsing OpenVEX report", "error", err, "report", report.Report.ID)
 		continue
 	}
-	systemVEXRules = append(systemVEXRules, parsedVEXRules...)
+	upstreamVEXRules = append(upstreamVEXRules, parsedVEXRules...)
 
 	//Bulk Upload of valid VEXRules
-	err := s.systemVEXRuleRepository.UpsertBatch(ctx, nil, filteredRules)
+	err := s.upstreamVEXRuleRepository.UpsertBatch(ctx, nil, filteredRules)
 	if err != nil {
 		return fmt.Errorf("Error while inserting extracted VEXRules into database: %s", err)
 	}
-	slog.Info("updated system VEXRules", "fetched", len(systemVEXRules), "filtered", len(filteredRules))
+	slog.Info("updated system VEXRules", "fetched", len(upstreamVEXRules), "filtered", len(filteredRules))
 
 	return nil
 }*/

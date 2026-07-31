@@ -25,18 +25,18 @@ import (
 )
 
 func TestIdentityOfRule(t *testing.T) {
-	base := models.SystemVEXRule{CELExpression: `vuln.cve == "a" && vuln.severity == "high"`, EventType: dtos.EventTypeAccepted}
+	base := models.UpstreamVEXRule{CELExpression: `vuln.cve == "a" && vuln.severity == "high"`, EventType: dtos.EventTypeAccepted}
 
 	tests := []struct {
 		name      string
-		other     models.SystemVEXRule
+		other     models.UpstreamVEXRule
 		wantEqual bool
 	}{
-		{"&& operand order swapped", models.SystemVEXRule{CELExpression: `vuln.severity == "high" && vuln.cve == "a"`, EventType: dtos.EventTypeAccepted}, true},
+		{"&& operand order swapped", models.UpstreamVEXRule{CELExpression: `vuln.severity == "high" && vuln.cve == "a"`, EventType: dtos.EventTypeAccepted}, true},
 		{"identical rule", base, true},
-		{"|| instead of &&", models.SystemVEXRule{CELExpression: `vuln.cve == "a" || vuln.severity == "high"`, EventType: dtos.EventTypeAccepted}, false},
-		{"different literal", models.SystemVEXRule{CELExpression: `vuln.cve == "b" && vuln.severity == "high"`, EventType: dtos.EventTypeAccepted}, false},
-		{"different event type", models.SystemVEXRule{CELExpression: base.CELExpression, EventType: dtos.EventTypeFalsePositive}, false},
+		{"|| instead of &&", models.UpstreamVEXRule{CELExpression: `vuln.cve == "a" || vuln.severity == "high"`, EventType: dtos.EventTypeAccepted}, false},
+		{"different literal", models.UpstreamVEXRule{CELExpression: `vuln.cve == "b" && vuln.severity == "high"`, EventType: dtos.EventTypeAccepted}, false},
+		{"different event type", models.UpstreamVEXRule{CELExpression: base.CELExpression, EventType: dtos.EventTypeFalsePositive}, false},
 	}
 
 	baseID, err := IdentityOfRule(base)
@@ -56,7 +56,7 @@ func TestIdentityOfRule(t *testing.T) {
 }
 
 func TestIdentityOfRuleInvalidExpression(t *testing.T) {
-	_, err := IdentityOfRule(models.SystemVEXRule{CELExpression: `this is not cel`})
+	_, err := IdentityOfRule(models.UpstreamVEXRule{CELExpression: `this is not cel`})
 	assert.Error(t, err)
 }
 
@@ -65,7 +65,7 @@ func TestEvalCELExpression(t *testing.T) {
 
 		res, err := EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
 			},
 			models.DependencyVuln{
@@ -94,7 +94,7 @@ func TestEvalCELExpression(t *testing.T) {
 			t.Run(tt.pattern, func(t *testing.T) {
 				res, err := EvalRule(
 					t.Context(),
-					models.SystemVEXRule{
+					models.UpstreamVEXRule{
 						CELExpression: `matchesPurl(vuln.componentPurl, "` + tt.pattern + `")`,
 					},
 					vuln,
@@ -108,7 +108,7 @@ func TestEvalCELExpression(t *testing.T) {
 	t.Run("vuln should be provided as variable", func(t *testing.T) {
 		res, err := EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
 			},
 			models.DependencyVuln{
@@ -120,7 +120,7 @@ func TestEvalCELExpression(t *testing.T) {
 
 		res, err = EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"])`,
 			},
 			models.DependencyVuln{
@@ -134,7 +134,7 @@ func TestEvalCELExpression(t *testing.T) {
 	t.Run("should be filterable by cve id, or other properties", func(t *testing.T) {
 		res, err := EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `vuln.cveId == "CVE-2024-1234"`,
 			},
 			models.DependencyVuln{
@@ -148,7 +148,7 @@ func TestEvalCELExpression(t *testing.T) {
 	t.Run("matchesPattern should respect semver constraints", func(t *testing.T) {
 		res, err := EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@>=1.0.0,<2.0.0"])`,
 			},
 			models.DependencyVuln{
@@ -162,7 +162,7 @@ func TestEvalCELExpression(t *testing.T) {
 	t.Run("how should the path pattern work for artifacts", func(t *testing.T) {
 		res, err := EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `matchesPattern(vuln, ["pkg:golang/github.com/l3montree-dev/devguard@<3.0.0", "pkg:golang/vulnlib@1.0.0"])`,
 			},
 
@@ -184,7 +184,7 @@ func TestEvalCELExpression(t *testing.T) {
 	t.Run("how should the path pattern work for artifacts", func(t *testing.T) {
 		res, err := EvalRule(
 			t.Context(),
-			models.SystemVEXRule{
+			models.UpstreamVEXRule{
 				CELExpression: `matchesPattern(vuln, ["pkg:golang/github.com/l3montree-dev/devguard@<3.0.0", "pkg:golang/vulnlib@1.0.0"])`,
 			},
 
@@ -206,7 +206,7 @@ func TestEvalCELExpression(t *testing.T) {
 }
 
 func BenchmarkEvalCELExpression(b *testing.B) {
-	rule := models.SystemVEXRule{
+	rule := models.UpstreamVEXRule{
 		CELExpression: `matchesPattern(vuln, ["pkg:golang/lib@v1.0"]) && vuln.cveId == "CVE-2024-1234"`,
 	}
 	vuln := models.DependencyVuln{

@@ -26,8 +26,8 @@ import (
 
 var upstreamSources = []string{"https://github.com/rancher/vexhub"}
 
-func FetchVexRulesFromGitHubSources(ctx context.Context, ghVexFetcher shared.GitHubVexFetcher) ([]models.SystemVEXRule, error) {
-	rules := make([]models.SystemVEXRule, 0, len(upstreamSources)*100)
+func FetchVexRulesFromGitHubSources(ctx context.Context, ghVexFetcher shared.GitHubVexFetcher) ([]models.UpstreamVEXRule, error) {
+	rules := make([]models.UpstreamVEXRule, 0, len(upstreamSources)*100)
 	for _, source := range upstreamSources {
 		slog.Info("fetching system VEX rules from GitHub source", "source", source)
 		r, err := ghVexFetcher.FetchVexFromGitHub(ctx, source, "main")
@@ -41,11 +41,11 @@ func FetchVexRulesFromGitHubSources(ctx context.Context, ghVexFetcher shared.Git
 }
 
 // insertSystemVexRulesBulk streams system VEX rules into the given staging table
-// (created up front by CreateStagingTables). Call flushSystemVEXRulesStagingTable
+// (created up front by CreateStagingTables). Call flushUpstreamVEXRulesStagingTable
 // (export path, where the live table is already truncated) or SyncAllTables
 // (import path, EXCEPT-based sync against a possibly non-empty live table) once
 // afterwards.
-func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.SystemVEXRule, table string) error {
+func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.UpstreamVEXRule, table string) error {
 	if len(rules) == 0 {
 		return nil
 	}
@@ -54,7 +54,7 @@ func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.Sys
 	// single INSERT ... ON CONFLICT DO UPDATE statement (SQLSTATE 21000), and
 	// duplicate ids across GitHub sources would otherwise violate the primary key.
 	seen := make(map[string]struct{}, len(rules))
-	deduped := make([]models.SystemVEXRule, 0, len(rules))
+	deduped := make([]models.UpstreamVEXRule, 0, len(rules))
 	for i := range rules {
 		rules[i].EnsureID()
 		if _, ok := seen[rules[i].ID]; ok {
@@ -76,14 +76,14 @@ func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.Sys
 	return nil
 }
 
-// flushSystemVEXRulesStagingTable performs a plain insert from system_vex_rules_stage
-// into the live table. Only valid on the export path, where system_vex_rules was
-// already truncated by truncateSystemVEXRules.
-func flushSystemVEXRulesStagingTable(ctx context.Context, tx pgx.Tx) error {
+// flushUpstreamVEXRulesStagingTable performs a plain insert from upstream_vex_rules_stage
+// into the live table. Only valid on the export path, where upstream_vex_rules was
+// already truncated by truncateUpstreamVEXRules.
+func flushUpstreamVEXRulesStagingTable(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO system_vex_rules (id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, created_at, updated_at)
+		INSERT INTO upstream_vex_rules (id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, created_at, updated_at)
 		SELECT id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, now(), now()
-		FROM system_vex_rules_stage`); err != nil {
+		FROM upstream_vex_rules_stage`); err != nil {
 		return fmt.Errorf("could not flush system vex rules: %w", err)
 	}
 	return nil

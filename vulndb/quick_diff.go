@@ -56,8 +56,8 @@ type QuickDiff struct {
 	MalCompsDeleted  []string
 	MalCompsInserted []GobMaliciousComponent
 
-	SystemVEXRulesDeleted  []string
-	SystemVEXRulesInserted []quickDiffSystemVEXRule
+	UpstreamVEXRulesDeleted  []string
+	UpstreamVEXRulesInserted []quickDiffUpstreamVEXRule
 }
 
 type quickDiffCVE struct {
@@ -101,7 +101,7 @@ type quickDiffPivot struct {
 	AffectedComponentID int64
 }
 
-type quickDiffSystemVEXRule struct {
+type quickDiffUpstreamVEXRule struct {
 	ID                      string
 	VexSource               string
 	Title                   string
@@ -124,7 +124,7 @@ func SnapshotPrevState(ctx context.Context, tx pgx.Tx) error {
 		`CREATE TEMP TABLE _snap_exploits  ON COMMIT DROP AS SELECT id, content_hash FROM exploits`,
 		`CREATE TEMP TABLE _snap_mal_pkgs  ON COMMIT DROP AS SELECT id, content_hash FROM malicious_packages`,
 		`CREATE TEMP TABLE _snap_mal_comps ON COMMIT DROP AS SELECT id FROM malicious_affected_components`,
-		`CREATE TEMP TABLE _snap_system_vex_rules ON COMMIT DROP AS SELECT id FROM system_vex_rules`,
+		`CREATE TEMP TABLE _snap_upstream_vex_rules ON COMMIT DROP AS SELECT id FROM upstream_vex_rules`,
 	}
 	for _, q := range queries {
 		if _, err := tx.Exec(ctx, q); err != nil {
@@ -364,24 +364,24 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	// --- System VEX rules ---
-	rows, err = tx.Query(ctx, `SELECT id FROM _snap_system_vex_rules EXCEPT SELECT id FROM system_vex_rules`)
+	rows, err = tx.Query(ctx, `SELECT id FROM _snap_upstream_vex_rules EXCEPT SELECT id FROM upstream_vex_rules`)
 	if err != nil {
-		return nil, fmt.Errorf("quick-diff system_vex_rules deleted: %w", err)
+		return nil, fmt.Errorf("quick-diff upstream_vex_rules deleted: %w", err)
 	}
-	diff.SystemVEXRulesDeleted, err = collectScalars[string](rows)
+	diff.UpstreamVEXRulesDeleted, err = collectScalars[string](rows)
 	if err != nil {
 		return nil, err
 	}
 
 	rows, err = tx.Query(ctx, `
 		SELECT v.id, v.vex_source, v.title, v.justification, v.mechanical_justification, v.event_type, v.cel_expression
-		FROM system_vex_rules v
-		WHERE NOT EXISTS (SELECT 1 FROM _snap_system_vex_rules s WHERE s.id = v.id)
+		FROM upstream_vex_rules v
+		WHERE NOT EXISTS (SELECT 1 FROM _snap_upstream_vex_rules s WHERE s.id = v.id)
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("quick-diff system_vex_rules inserted: %w", err)
+		return nil, fmt.Errorf("quick-diff upstream_vex_rules inserted: %w", err)
 	}
-	diff.SystemVEXRulesInserted, err = collectSystemVEXRuleRows(rows)
+	diff.UpstreamVEXRulesInserted, err = collectUpstreamVEXRuleRows(rows)
 	if err != nil {
 		return nil, err
 	}
@@ -404,8 +404,8 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 		"mal_pkgs_updated", len(diff.MalPkgsUpdated),
 		"mal_comps_deleted", len(diff.MalCompsDeleted),
 		"mal_comps_inserted", len(diff.MalCompsInserted),
-		"system_vex_rules_deleted", len(diff.SystemVEXRulesDeleted),
-		"system_vex_rules_inserted", len(diff.SystemVEXRulesInserted),
+		"upstream_vex_rules_deleted", len(diff.UpstreamVEXRulesDeleted),
+		"upstream_vex_rules_inserted", len(diff.UpstreamVEXRulesInserted),
 		"took", time.Since(t),
 	)
 	return diff, nil
@@ -611,23 +611,23 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		}
 	}
 
-	// --- system_vex_rules ---
-	systemVEXRuleCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
-	if err := createLike("_diff_del_system_vex_rules", "system_vex_rules", "id"); err != nil {
-		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_system_vex_rules: %w", err)
+	// --- upstream_vex_rules ---
+	upstreamVEXRuleCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
+	if err := createLike("_diff_del_upstream_vex_rules", "upstream_vex_rules", "id"); err != nil {
+		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_upstream_vex_rules: %w", err)
 	}
-	if err := copyIDs(ctx, tx, "_diff_del_system_vex_rules", "id", diff.SystemVEXRulesDeleted); err != nil {
-		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_system_vex_rules: %w", err)
+	if err := copyIDs(ctx, tx, "_diff_del_upstream_vex_rules", "id", diff.UpstreamVEXRulesDeleted); err != nil {
+		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_upstream_vex_rules: %w", err)
 	}
-	if err := createLike("_diff_ins_system_vex_rules", "system_vex_rules", strings.Join(systemVEXRuleCols, ", ")); err != nil {
-		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_system_vex_rules: %w", err)
+	if err := createLike("_diff_ins_upstream_vex_rules", "upstream_vex_rules", strings.Join(upstreamVEXRuleCols, ", ")); err != nil {
+		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_upstream_vex_rules: %w", err)
 	}
-	if len(diff.SystemVEXRulesInserted) > 0 {
-		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_system_vex_rules"}, systemVEXRuleCols, pgx.CopyFromSlice(len(diff.SystemVEXRulesInserted), func(i int) ([]any, error) {
-			v := diff.SystemVEXRulesInserted[i]
+	if len(diff.UpstreamVEXRulesInserted) > 0 {
+		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_upstream_vex_rules"}, upstreamVEXRuleCols, pgx.CopyFromSlice(len(diff.UpstreamVEXRulesInserted), func(i int) ([]any, error) {
+			v := diff.UpstreamVEXRulesInserted[i]
 			return []any{v.ID, v.VexSource, v.Title, v.Justification, v.MechanicalJustification, v.EventType, v.CELExpression}, nil
 		})); err != nil {
-			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_system_vex_rules: %w", err)
+			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_upstream_vex_rules: %w", err)
 		}
 	}
 
@@ -773,11 +773,11 @@ func collectMalPkgRows(rows pgx.Rows) ([]models.MaliciousPackage, error) {
 	return out, rows.Err()
 }
 
-func collectSystemVEXRuleRows(rows pgx.Rows) ([]quickDiffSystemVEXRule, error) {
+func collectUpstreamVEXRuleRows(rows pgx.Rows) ([]quickDiffUpstreamVEXRule, error) {
 	defer rows.Close()
-	var out []quickDiffSystemVEXRule
+	var out []quickDiffUpstreamVEXRule
 	for rows.Next() {
-		var v quickDiffSystemVEXRule
+		var v quickDiffUpstreamVEXRule
 		if err := rows.Scan(
 			&v.ID, &v.VexSource, &v.Title, &v.Justification,
 			&v.MechanicalJustification, &v.EventType, &v.CELExpression,

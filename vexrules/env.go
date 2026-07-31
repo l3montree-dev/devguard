@@ -143,7 +143,7 @@ func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	return vulnMap, nil
 }
 
-func evalCompiledRule(rule models.SystemVEXRule, vulnMap map[string]any) (bool, error) {
+func evalCompiledRule(rule models.UpstreamVEXRule, vulnMap map[string]any) (bool, error) {
 	if rule.CELExpression == "" {
 		return false, nil
 	}
@@ -172,7 +172,7 @@ func evalCompiledRule(rule models.SystemVEXRule, vulnMap map[string]any) (bool, 
 	return result, nil
 }
 
-func EvalRule(ctx context.Context, rule models.SystemVEXRule, vuln models.DependencyVuln) (bool, error) {
+func EvalRule(ctx context.Context, rule models.UpstreamVEXRule, vuln models.DependencyVuln) (bool, error) {
 	if rule.CELExpression == "" {
 		return false, nil
 	}
@@ -185,7 +185,7 @@ func EvalRule(ctx context.Context, rule models.SystemVEXRule, vuln models.Depend
 	return evalCompiledRule(rule, vulnMap)
 }
 
-func EvalRules(ctx context.Context, rules []models.SystemVEXRule, vuln models.DependencyVuln) (map[string]bool, error) {
+func EvalRules(ctx context.Context, rules []models.UpstreamVEXRule, vuln models.DependencyVuln) (map[string]bool, error) {
 	vulnMap, err := vulnToCELMap(vuln)
 	if err != nil {
 		return nil, err
@@ -225,7 +225,7 @@ func stringListField(mapVal ref.Val, key string) ([]string, error) {
 	return toStringList(fieldVal)
 }
 
-func IdentityOfRule(rule models.SystemVEXRule) (string, error) {
+func IdentityOfRule(rule models.UpstreamVEXRule) (string, error) {
 	// the identity of a vex rule is inside the cel expression AND the assessment.
 	identity := string(rule.EventType) + "||" + string(rule.MechanicalJustification) + "||"
 

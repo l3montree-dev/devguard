@@ -72,7 +72,7 @@ type DaemonRunner struct {
 	maliciousPackageChecker      shared.MaliciousPackageChecker
 	vulnDBImportService          shared.VulnDBService
 	vexRuleService               shared.VEXRuleService
-	systemVEXRuleRepository      shared.SystemVEXRuleRepository
+	upstreamVEXRuleRepository    shared.UpstreamVEXRuleRepository
 	externalReferenceRepository  shared.ExternalReferenceRepository
 
 	debugOptions         DebugOptions
@@ -128,7 +128,7 @@ func NewDaemonRunner(
 	vexRuleService shared.VEXRuleService,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	fixedVersionResolver shared.FixedVersionResolver,
-	systemVEXRuleRepository shared.SystemVEXRuleRepository,
+	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                           db,
@@ -161,7 +161,7 @@ func NewDaemonRunner(
 		vexRuleService:               vexRuleService,
 		externalReferenceRepository:  externalReferenceRepository,
 		fixedVersionResolver:         fixedVersionResolver,
-		systemVEXRuleRepository:      systemVEXRuleRepository,
+		upstreamVEXRuleRepository:    upstreamVEXRuleRepository,
 	}
 }
 

@@ -194,7 +194,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.VexRuleService,
 		f.App.ExternalReferenceRepository,
 		f.App.FixedVersionResolver,
-		f.App.SystemVEXRuleRepository,
+		f.App.UpstreamVEXRuleRepository,
 	)
 }
 

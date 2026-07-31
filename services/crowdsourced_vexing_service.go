@@ -20,7 +20,7 @@ import (
 
 type CrowdsourcedVexingService struct {
 	vexRuleRepository        shared.VEXRuleRepository
-	systemVexRuleRepository  shared.SystemVEXRuleRepository
+	systemVexRuleRepository  shared.UpstreamVEXRuleRepository
 	organisationRepository   shared.OrganizationRepository
 	projectRepository        shared.ProjectRepository
 	assetVersionRepository   shared.AssetVersionRepository
@@ -49,7 +49,7 @@ func mapProject(project models.Project, projectTrustscore float64) crowdsourceve
 	}
 }
 
-func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, systemVexRuleRepository shared.SystemVEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider, vexRuleService shared.VEXRuleService, assetRepository shared.AssetRepository) *CrowdsourcedVexingService {
+func NewCrowdsourcedVexingService(vexRuleRepository shared.VEXRuleRepository, systemVexRuleRepository shared.UpstreamVEXRuleRepository, organisationRepository shared.OrganizationRepository, projectRepository shared.ProjectRepository, assetVersionRepository shared.AssetVersionRepository, dependencyVulnRepository shared.DependencyVulnRepository, trustedEntityRepository shared.TrustedEntityRepository, rbacProvider shared.RBACProvider, vexRuleService shared.VEXRuleService, assetRepository shared.AssetRepository) *CrowdsourcedVexingService {
 	return &CrowdsourcedVexingService{
 		vexRuleRepository:        vexRuleRepository,
 		systemVexRuleRepository:  systemVexRuleRepository,
@@ -129,7 +129,7 @@ func (s *CrowdsourcedVexingService) buildCrowdsourcedVexingContext(ctx context.C
 }
 
 func (s *CrowdsourcedVexingService) recommend(ctx context.Context, vexCtx crowdsourcedVexingContext, vuln models.DependencyVuln) (models.VEXRule, float64, crowdsourcevexing.Votes, error) {
-	matches, err := vexrules.EvalRules(ctx, utils.Map(vexCtx.vexRules, transformer.VEXRuleToSystemVEXRuleDTO), vuln)
+	matches, err := vexrules.EvalRules(ctx, utils.Map(vexCtx.vexRules, transformer.VEXRuleToUpstreamVEXRuleDTO), vuln)
 	if err != nil {
 		return models.VEXRule{}, 0, crowdsourcevexing.Votes{}, err
 	}
@@ -179,7 +179,7 @@ func (s *CrowdsourcedVexingService) checkIfUserHasAccessToMatchingRule(ctx conte
 		return models.VEXRule{}, false, nil
 	}
 
-	matches, err := vexrules.EvalRules(ctx, utils.Map(vexRules, transformer.VEXRuleToSystemVEXRuleDTO), vuln)
+	matches, err := vexrules.EvalRules(ctx, utils.Map(vexRules, transformer.VEXRuleToUpstreamVEXRuleDTO), vuln)
 	if err != nil {
 		return models.VEXRule{}, false, err
 	}
@@ -195,11 +195,10 @@ func (s *CrowdsourcedVexingService) checkIfUserHasAccessToMatchingRule(ctx conte
 	return models.VEXRule{}, false, nil
 }
 
-func checkIfSystemVexRuleMatchesVuln(ctx context.Context, vexRules []models.SystemVEXRule, vuln models.DependencyVuln) (models.SystemVEXRule, bool, error) {
-
+func checkIfSystemVexRuleMatchesVuln(ctx context.Context, vexRules []models.UpstreamVEXRule, vuln models.DependencyVuln) (models.UpstreamVEXRule, bool, error) {
 	matches, err := vexrules.EvalRules(ctx, vexRules, vuln)
 	if err != nil {
-		return models.SystemVEXRule{}, false, err
+		return models.UpstreamVEXRule{}, false, err
 	}
 
 	for _, rule := range vexRules {
@@ -209,7 +208,7 @@ func checkIfSystemVexRuleMatchesVuln(ctx context.Context, vexRules []models.Syst
 		// just use the first rule and return it.
 		return rule, true, nil
 	}
-	return models.SystemVEXRule{}, false, nil
+	return models.UpstreamVEXRule{}, false, nil
 }
 
 func (s *CrowdsourcedVexingService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error) {
@@ -308,7 +307,7 @@ func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared
 				if err != nil {
 					return nil, err
 				}
-				id, err := vexrules.IdentityOfRule(models.SystemVEXRule{
+				id, err := vexrules.IdentityOfRule(models.UpstreamVEXRule{
 					CELExpression:           rule.CELExpression,
 					MechanicalJustification: rule.MechanicalJustification,
 					EventType:               rule.EventType,
@@ -332,7 +331,7 @@ func (s *CrowdsourcedVexingService) RecommendBatch(ctx shared.Context, tx shared
 				}
 				return nil, err
 			}
-			id, err := vexrules.IdentityOfRule(models.SystemVEXRule{
+			id, err := vexrules.IdentityOfRule(models.UpstreamVEXRule{
 				CELExpression:           rule.CELExpression,
 				MechanicalJustification: rule.MechanicalJustification,
 				EventType:               rule.EventType,

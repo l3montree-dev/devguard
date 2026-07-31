@@ -464,12 +464,12 @@ func (_c *AssetVersionRepository_FindOrCreate_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
-// FindSystemVEXRuleApplicableAssetVersions provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) FindSystemVEXRuleApplicableAssetVersions(ctx context.Context, tx shared.DB) ([]models.AssetVersion, error) {
+// FindUpstreamVEXRuleApplicableAssetVersions provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx shared.DB) ([]models.AssetVersion, error) {
 	ret := _mock.Called(ctx, tx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindSystemVEXRuleApplicableAssetVersions")
+		panic("no return value specified for FindUpstreamVEXRuleApplicableAssetVersions")
 	}
 
 	var r0 []models.AssetVersion
@@ -492,19 +492,19 @@ func (_mock *AssetVersionRepository) FindSystemVEXRuleApplicableAssetVersions(ct
 	return r0, r1
 }
 
-// AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindSystemVEXRuleApplicableAssetVersions'
-type AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call struct {
+// AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindUpstreamVEXRuleApplicableAssetVersions'
+type AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call struct {
 	*mock.Call
 }
 
-// FindSystemVEXRuleApplicableAssetVersions is a helper method to define mock.On call
+// FindUpstreamVEXRuleApplicableAssetVersions is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetVersionRepository_Expecter) FindSystemVEXRuleApplicableAssetVersions(ctx interface{}, tx interface{}) *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call {
-	return &AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call{Call: _e.mock.On("FindSystemVEXRuleApplicableAssetVersions", ctx, tx)}
+func (_e *AssetVersionRepository_Expecter) FindUpstreamVEXRuleApplicableAssetVersions(ctx interface{}, tx interface{}) *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call {
+	return &AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call{Call: _e.mock.On("FindUpstreamVEXRuleApplicableAssetVersions", ctx, tx)}
 }
 
-func (_c *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call) Run(run func(ctx context.Context, tx shared.DB)) *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call {
+func (_c *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call) Run(run func(ctx context.Context, tx shared.DB)) *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -522,12 +522,12 @@ func (_c *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call) 
 	return _c
 }
 
-func (_c *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call) Return(assetVersions []models.AssetVersion, err error) *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call {
+func (_c *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call) Return(assetVersions []models.AssetVersion, err error) *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call {
 	_c.Call.Return(assetVersions, err)
 	return _c
 }
 
-func (_c *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.AssetVersion, error)) *AssetVersionRepository_FindSystemVEXRuleApplicableAssetVersions_Call {
+func (_c *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]models.AssetVersion, error)) *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }

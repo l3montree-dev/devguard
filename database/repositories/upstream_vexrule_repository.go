@@ -9,38 +9,38 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type systemVEXRuleRepository struct {
+type upstreamVEXRuleRepository struct {
 	db *gorm.DB
 }
 
-func NewSystemVEXRuleRepository(db *gorm.DB) *systemVEXRuleRepository {
-	return &systemVEXRuleRepository{
+func NewUpstreamVEXRuleRepository(db *gorm.DB) *upstreamVEXRuleRepository {
+	return &upstreamVEXRuleRepository{
 		db: db,
 	}
 }
 
-func (r *systemVEXRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.SystemVEXRule, error) {
-	var result []models.SystemVEXRule
+func (r *upstreamVEXRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.UpstreamVEXRule, error) {
+	var result []models.UpstreamVEXRule
 
 	err := r.GetDB(ctx, tx).Preload("CVE.Relationships").Find(&result).Error
 	return result, err
 }
 
-func (r *systemVEXRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
+func (r *upstreamVEXRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
 		return tx
 	}
 	return r.db.WithContext(ctx)
 }
 
-func (r *systemVEXRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.SystemVEXRule, error) {
-	var rules []models.SystemVEXRule
+func (r *upstreamVEXRuleRepository) FindByCVE(ctx context.Context, tx *gorm.DB, cveID string) ([]models.UpstreamVEXRule, error) {
+	var rules []models.UpstreamVEXRule
 	err := r.GetDB(ctx, tx).Preload("CVE").Where("LOWER(cve_id) = LOWER(?)", cveID).Find(&rules).Error
 	return rules, err
 }
 
-func (r *systemVEXRuleRepository) FindByCVEBatch(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.SystemVEXRule, error) {
-	var rules []models.SystemVEXRule
+func (r *upstreamVEXRuleRepository) FindByCVEBatch(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.UpstreamVEXRule, error) {
+	var rules []models.UpstreamVEXRule
 	var lowercaseCVEs []string
 	for _, cve := range cveIDs {
 		lowercaseCVEs = append(lowercaseCVEs, strings.ToLower(cve))
@@ -49,7 +49,7 @@ func (r *systemVEXRuleRepository) FindByCVEBatch(ctx context.Context, tx *gorm.D
 	return rules, err
 }
 
-func (r *systemVEXRuleRepository) UpsertBatch(ctx context.Context, tx *gorm.DB, rules []models.SystemVEXRule) error {
+func (r *upstreamVEXRuleRepository) UpsertBatch(ctx context.Context, tx *gorm.DB, rules []models.UpstreamVEXRule) error {
 	if len(rules) == 0 {
 		return nil
 	}

@@ -360,12 +360,12 @@ type VEXRuleRepository interface {
 	Begin(ctx context.Context) DB
 }
 
-type SystemVEXRuleRepository interface {
-	All(ctx context.Context, tx DB) ([]models.SystemVEXRule, error)
+type UpstreamVEXRuleRepository interface {
+	All(ctx context.Context, tx DB) ([]models.UpstreamVEXRule, error)
 	GetDB(ctx context.Context, db DB) DB
-	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.SystemVEXRule, error)
-	FindByCVEBatch(ctx context.Context, tx DB, cveIDs []string) ([]models.SystemVEXRule, error)
-	UpsertBatch(ctx context.Context, tx DB, rules []models.SystemVEXRule) error
+	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.UpstreamVEXRule, error)
+	FindByCVEBatch(ctx context.Context, tx DB, cveIDs []string) ([]models.UpstreamVEXRule, error)
+	UpsertBatch(ctx context.Context, tx DB, rules []models.UpstreamVEXRule) error
 }
 
 type OrganizationRepository interface {
@@ -488,7 +488,7 @@ type AssetVersionRepository interface {
 	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
 	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
-	FindSystemVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
+	FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }
 
 type FirstPartyVulnService interface {
@@ -505,7 +505,7 @@ type ScanService interface {
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.DependencyVuln, error)
-	VexRulesFromDocument([]byte, string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error)
+	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)
 	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
@@ -518,7 +518,7 @@ type ConfigRepository interface {
 }
 
 type GitHubVexFetcher interface {
-	FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.SystemVEXRule, err error)
+	FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.UpstreamVEXRule, err error)
 }
 
 type VEXRuleService interface {

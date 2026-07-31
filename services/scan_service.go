@@ -687,7 +687,7 @@ func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func (s *scanService) VexRulesFromDocument(body []byte, source string) ([]models.SystemVEXRule, dtos.ExternalReferenceType, error) {
+func (s *scanService) VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error) {
 	format := s.sniffVexFormat(body)
 
 	switch format {
@@ -772,7 +772,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 				return
 			}
 			mut.Lock()
-			rules = append(rules, transformer.AllSystemVEXRulesToVEXRules(vexRules, "system", assetID)...)
+			rules = append(rules, transformer.AllUpstreamVEXRulesToVEXRules(vexRules, "system", assetID)...)
 			valid = append(valid, models.ExternalReference{
 				URL:     url,
 				AssetID: assetID,

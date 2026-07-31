@@ -39,7 +39,7 @@ import (
 // so unless the BOM carries an explicit devguard:pathPattern property (which DevGuard adds
 // for vulns it has already matched to a rule), the reconstructed path pattern is a
 // component-level wildcard that matches every path reaching that component.
-func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.SystemVEXRule, error) {
+func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule, error) {
 	// we are only interested in the vulnerabilities
 	// for creating vex rules we need to find the starting path to the components
 	// we ONLY USE METADATA COMPONENT FOR THAT
@@ -82,7 +82,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.SystemVEXRule, e
 		return nil, fmt.Errorf("no vulns inside sbom")
 	}
 
-	rules := make([]models.SystemVEXRule, 0, len(*bom.Vulnerabilities))
+	rules := make([]models.UpstreamVEXRule, 0, len(*bom.Vulnerabilities))
 	for _, vuln := range *bom.Vulnerabilities {
 		cveID := extractCVE(vuln.ID)
 		if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
@@ -146,7 +146,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.SystemVEXRule, e
 			// we already have a path pattern, so we can skip creating it from the purl
 			// but we still want to create a VEX rule for each path pattern found in the properties
 			for _, pp := range pathPattern {
-				rule := models.SystemVEXRule{
+				rule := models.UpstreamVEXRule{
 					Title:         vexrules.VexRuleTitle(vuln.ID, pp),
 					VexSource:     source,
 					Justification: justification,
@@ -179,7 +179,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.SystemVEXRule, e
 			pattern = vexrules.PathPattern{purlString}
 		}
 
-		rule := models.SystemVEXRule{
+		rule := models.UpstreamVEXRule{
 			Title:         vexrules.VexRuleTitle(vuln.ID, pattern),
 			VexSource:     source,
 			Justification: justification,
@@ -200,8 +200,8 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.SystemVEXRule, e
 // subcomponent PURL (or the product PURL when no subcomponent is given). The resulting
 // path pattern is therefore a component-level wildcard ["*", componentPurl] that matches
 // any path reaching that component - it does not distinguish individual dependency paths.
-func OpenVEXToRules(doc *vex.VEX, source string) ([]models.SystemVEXRule, error) {
-	rules := make([]models.SystemVEXRule, 0, len(doc.Statements))
+func OpenVEXToRules(doc *vex.VEX, source string) ([]models.UpstreamVEXRule, error) {
+	rules := make([]models.UpstreamVEXRule, 0, len(doc.Statements))
 	for _, statement := range doc.Statements {
 		cveID := extractCVE(string(statement.Vulnerability.Name))
 		if cveID == "" {
@@ -220,7 +220,7 @@ func OpenVEXToRules(doc *vex.VEX, source string) ([]models.SystemVEXRule, error)
 		// collect the component-level PURLs the statement scopes to
 		purlStrings := openVexStatementPurls(statement)
 		for _, purlString := range purlStrings {
-			rule := models.SystemVEXRule{
+			rule := models.UpstreamVEXRule{
 				Title:                   vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
 				VexSource:               source,
 				MechanicalJustification: dtos.MechanicalJustificationType(statement.Justification),

@@ -197,8 +197,8 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
 			FROM malicious_affected_components WHERE malicious_package_id NOT LIKE 'MAL-FAKE-TEST-%'
 		),
-		system_vex_rules_integrity AS (
-			SELECT 'system_vex_rules' AS table_name, count(*) AS row_count,
+		upstream_vex_rules_integrity AS (
+			SELECT 'upstream_vex_rules' AS table_name, count(*) AS row_count,
 			       md5(coalesce(string_agg(row_hash, '' ORDER BY id), '')) AS checksum
 			FROM (
 				SELECT id, md5(
@@ -207,7 +207,7 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 					coalesce(justification, '\0') || '|' ||
 					coalesce(mechanical_justification, '\0') || '|' ||
 					coalesce(event_type, '\0')
-				) AS row_hash FROM system_vex_rules
+				) AS row_hash FROM upstream_vex_rules
 			) sub
 		)
 		SELECT table_name, row_count, checksum FROM cves_integrity
@@ -217,7 +217,7 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 		UNION ALL SELECT table_name, row_count, checksum FROM exploits_integrity
 		UNION ALL SELECT table_name, row_count, checksum FROM malicious_packages_integrity
 		UNION ALL SELECT table_name, row_count, checksum FROM malicious_affected_components_integrity
-		UNION ALL SELECT table_name, row_count, checksum FROM system_vex_rules_integrity
+		UNION ALL SELECT table_name, row_count, checksum FROM upstream_vex_rules_integrity
 	`
 
 	slog.Info("start calculating integrity information")
