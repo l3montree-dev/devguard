@@ -24,7 +24,7 @@
   craneFromSource = import ./crane.nix (args // { trivy = trivyFromSource.package; });
   gitleaksFromSource = import ./gitleaks.nix (args // { trivy = trivyFromSource.package; });
 
-  common = import ./common.nix { inherit self; };
+  common = import ./common.nix { inherit self; lib = pkgs.lib; };
   # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
   dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {

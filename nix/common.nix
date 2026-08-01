@@ -1,4 +1,4 @@
-{ self }:
+{ self, lib }:
 let
   # Nix has no way to know a checkout's branch/tag from source content alone
   # (self excludes .git, and rev/shortRev are commit-only) - only CI knows
@@ -17,4 +17,19 @@ rec {
   version = if refName != "" then refName else self.shortRev or self.dirtyShortRev or "dev";
   commit = self.rev or self.dirtyRev or "unknown";
   buildDate = "1970-01-01T00:00:00+0000"; # fixed → reproducible layers
+
+  # Mirrors the URL-safe slug produced by `devguard-scanner slug` (github.com/gosimple/slug):
+  # lowercase, non-alphanumeric runs collapsed to a single "-", leading/trailing "-" trimmed.
+  # Needed here (not shelled out to the actual binary) because `version` is used while
+  # building that very binary - calling it here would be circular.
+  slugify =
+    str:
+    let
+      lower = lib.toLower str;
+      dashed = lib.stringAsChars (c: if builtins.match "[a-z0-9]" c != null then c else "-") lower;
+      parts = builtins.filter (s: s != "") (lib.splitString "-" dashed);
+    in
+    lib.concatStringsSep "-" parts;
+
+  versionSlug = slugify version;
 }
