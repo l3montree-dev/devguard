@@ -33,7 +33,6 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/parser"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/l3montree-dev/devguard/database/models"
 
 	"github.com/package-url/packageurl-go"
@@ -97,35 +96,6 @@ var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
 	)
 })
 
-const programCacheSize = 2048
-
-var programCache = must(lru.New[string, cel.Program](programCacheSize))
-
-func must[T any](v T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
-func getOrCompileProgram(celEnv *cel.Env, expr string) (cel.Program, error) {
-	if prg, ok := programCache.Get(expr); ok {
-		return prg, nil
-	}
-
-	ast, iss := celEnv.Compile(expr)
-	if iss != nil && iss.Err() != nil {
-		return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
-	}
-	prg, err := celEnv.Program(ast)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build CEL program: %w", err)
-	}
-
-	programCache.Add(expr, prg)
-	return prg, nil
-}
-
 func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	m, err := json.Marshal(vuln)
 	if err != nil {
@@ -141,35 +111,6 @@ func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	// matchesPattern(vuln, pattern) to see it.
 	vulnMap["artifactPurls"] = vuln.ArtifactPurls()
 	return vulnMap, nil
-}
-
-func evalCompiledRule(rule models.UpstreamVEXRule, vulnMap map[string]any) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
-	}
-
-	celEnv, err := CelEnv()
-	if err != nil {
-		return false, fmt.Errorf("failed to create CEL environment: %w", err)
-	}
-
-	prg, err := getOrCompileProgram(celEnv, rule.CELExpression)
-	if err != nil {
-		return false, err
-	}
-
-	out, _, err := prg.Eval(map[string]any{
-		"vuln": vulnMap,
-	})
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
-	}
-
-	result, ok := out.Value().(bool)
-	if !ok {
-		return false, fmt.Errorf("CEL expression did not evaluate to a bool, got %T", out.Value())
-	}
-	return result, nil
 }
 
 func PrepareVulnsForEval(ctx context.Context, vulns []models.DependencyVuln) ([]map[string]any, error) {
