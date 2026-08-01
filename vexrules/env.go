@@ -172,19 +172,74 @@ func evalCompiledRule(rule models.UpstreamVEXRule, vulnMap map[string]any) (bool
 	return result, nil
 }
 
-func EvalRule(ctx context.Context, rule models.UpstreamVEXRule, vuln models.DependencyVuln) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
+func PrepareVulnsForEval(ctx context.Context, vulns []models.DependencyVuln) ([]map[string]any, error) {
+	prepared := make([]map[string]any, len(vulns))
+	for i, vuln := range vulns {
+		vulnMap, err := vulnToCELMap(vuln)
+		if err != nil {
+			return nil, err
+		}
+		prepared[i] = vulnMap
 	}
-
-	vulnMap, err := vulnToCELMap(vuln)
-	if err != nil {
-		return false, err
-	}
-
-	return evalCompiledRule(rule, vulnMap)
+	return prepared, nil
 }
 
+func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]cel.Program, error) {
+	celEnv, err := CelEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
+	}
+
+	compiled := make(map[string]cel.Program, len(rules))
+	for _, rule := range rules {
+		if rule.CELExpression == "" {
+			continue
+		}
+		ast, iss := celEnv.Compile(rule.CELExpression)
+		if iss != nil && iss.Err() != nil {
+			return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
+		}
+		prg, err := celEnv.Program(ast)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build CEL program: %w", err)
+		}
+
+		compiled[rule.ID] = prg
+	}
+	return compiled, nil
+}
+
+// returns map keyed by vulnID and value is a list of ruleIDs that match that vuln
+func EvalCompiledRules(ctx context.Context, compiled map[string]cel.Program, vulnMaps []map[string]any) (map[string][]string, error) {
+	results := make(map[string][]string, len(compiled))
+	for ruleID, prg := range compiled {
+		for _, vulnMap := range vulnMaps {
+			vulnID := vulnMap["id"].(string)
+			out, _, err := prg.Eval(map[string]any{
+				"vuln": vulnMap,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to evaluate CEL expression for rule %s: %w", ruleID, err)
+			}
+
+			result, ok := out.Value().(bool)
+			if !ok {
+				return nil, fmt.Errorf("CEL expression for rule %s did not evaluate to a bool, got %T", ruleID, out.Value())
+			}
+			if result {
+				if _, exists := results[vulnID]; !exists {
+					results[vulnID] = []string{}
+				}
+				results[vulnID] = append(results[vulnID], ruleID)
+			}
+		}
+	}
+	return results, nil
+}
+
+// this is used when we inspect a specific vulnerability.
+// this happens in the fast path, when checking if there is a rule
+// the user already owns.
 func EvalRules(ctx context.Context, rules []models.UpstreamVEXRule, vuln models.DependencyVuln) (map[string]bool, error) {
 	vulnMap, err := vulnToCELMap(vuln)
 	if err != nil {

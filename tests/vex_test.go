@@ -54,28 +54,6 @@ func TestVEXRuleServiceDelete(t *testing.T) {
 	vexRuleRepo.AssertExpectations(t)
 }
 
-// TestVEXRuleServiceDeleteByAssetID tests batch deletion
-func TestVEXRuleServiceDeleteByAssetID(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-
-	vexRuleRepo.On("DeleteByAssetID", mock.Anything, mock.Anything, assetID).Return(nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService)
-	err := service.DeleteByAssetID(context.Background(), nil, assetID)
-
-	assert.NoError(t, err)
-	vexRuleRepo.AssertExpectations(t)
-}
-
 // TestVEXRuleServiceFindByAssetID tests finding rules by asset
 func TestVEXRuleServiceFindByAssetID(t *testing.T) {
 	t.Parallel()
@@ -336,6 +314,8 @@ func TestUploadVEXExampleIntegration(t *testing.T) {
 		shared.SetAsset(ctx, asset)
 		shared.SetProject(ctx, project)
 		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, NewUserSession(t, "test"))
+
 		shared.SetAssetVersion(ctx, assetVersion)
 
 		// Call the UploadVEX endpoint

@@ -55,3 +55,20 @@ func (r *VEXRule) EnsureID() {
 		r.ID = CalculateVEXRuleID(r.AssetID, r.CELExpression, r.VexSource)
 	}
 }
+
+type VEXRuleRecommendation struct {
+	DependencyVulnID uuid.UUID `json:"dependencyVulnerabilityId" gorm:"type:uuid;not null;index:,composite:vex_recommendation_composite_key"`
+	VEXRuleID        string    `json:"vexRuleId" gorm:"type:text;not null;index:,composite:vex_recommendation_composite_key"`
+	VEXRule          VEXRule   `json:"vexRule" gorm:"foreignKey:VEXRuleID;references:ID;constraint:OnDelete:CASCADE;"`
+
+	UpstreamVEXRuleID string          `json:"upstreamVexRuleId" gorm:"type:text;not null;index:,composite:vex_recommendation_composite_key"`
+	UpstreamVEXRule   UpstreamVEXRule `json:"upstreamVexRule" gorm:"foreignKey:UpstreamVEXRuleID;references:ID;constraint:OnDelete:CASCADE;"`
+
+	VerifiedVotes int     `json:"verifiedVotes" gorm:"default:0;not null;"`
+	TotalVotes    int     `json:"totalVotes" gorm:"default:0;not null;"`
+	Confidence    float64 `json:"confidence" gorm:"default:0;not null;"`
+}
+
+func (VEXRuleRecommendation) TableName() string {
+	return "vex_rule_recommendations"
+}

@@ -56,7 +56,6 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewJiraIntegrationRepository, fx.As(new(shared.JiraIntegrationRepository)))),
 	fx.Provide(fx.Annotate(NewCveRelationshipRepository, fx.As(new(shared.CVERelationshipRepository)))),
 	fx.Provide(fx.Annotate(NewVEXRuleRepository, fx.As(new(shared.VEXRuleRepository)))),
-	fx.Provide(fx.Annotate(NewUpstreamVEXRuleRepository, fx.As(new(shared.UpstreamVEXRuleRepository)))),
 	fx.Provide(fx.Annotate(NewExternalReferenceRepository, fx.As(new(shared.ExternalReferenceRepository)))),
 	fx.Provide(fx.Annotate(NewTrustedEntityRepository, fx.As(new(shared.TrustedEntityRepository)))),
 	fx.Provide(fx.Annotate(NewDependencyProxyRepository, fx.As(new(shared.DependencyProxySecretRepository)))),
@@ -64,4 +63,6 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewAdvisoryRepository, fx.As(new(shared.AdvisoryRepository)))),
 	fx.Provide(fx.Annotate(NewCompliancePostureRepository, fx.As(new(shared.CompliancePostureRepository)))),
 	fx.Provide(fx.Annotate(NewComplianceComponentRepository, fx.As(new(shared.ComplianceComponentRepository)))),
+	fx.Provide(fx.Annotate(NewUpstreamVEXRuleRepository, fx.As(new(shared.UpstreamVEXRuleRepository)))),
+	fx.Provide(fx.Annotate(NewVEXRuleRecommendationRepository, fx.As(new(shared.VEXRuleRecommendationRepository)))),
 )

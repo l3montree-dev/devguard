@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewUpstreamVEXRuleRepository creates a new instance of UpstreamVEXRuleRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -37,6 +38,69 @@ type UpstreamVEXRuleRepository_Expecter struct {
 
 func (_m *UpstreamVEXRuleRepository) EXPECT() *UpstreamVEXRuleRepository_Expecter {
 	return &UpstreamVEXRuleRepository_Expecter{mock: &_m.Mock}
+}
+
+// Activate provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Activate")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_Activate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Activate'
+type UpstreamVEXRuleRepository_Activate_Call struct {
+	*mock.Call
+}
+
+// Activate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *UpstreamVEXRuleRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *UpstreamVEXRuleRepository_Activate_Call {
+	return &UpstreamVEXRuleRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *UpstreamVEXRuleRepository_Activate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Activate_Call) Return(err error) *UpstreamVEXRuleRepository_Activate_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *UpstreamVEXRuleRepository_Activate_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // All provides a mock function for the type UpstreamVEXRuleRepository
@@ -107,165 +171,17 @@ func (_c *UpstreamVEXRuleRepository_All_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
-// FindByCVE provides a mock function for the type UpstreamVEXRuleRepository
-func (_mock *UpstreamVEXRuleRepository) FindByCVE(ctx context.Context, tx shared.DB, cveID string) ([]models.UpstreamVEXRule, error) {
-	ret := _mock.Called(ctx, tx, cveID)
+// Begin provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Begin(ctx context.Context) shared.DB {
+	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByCVE")
-	}
-
-	var r0 []models.UpstreamVEXRule
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) ([]models.UpstreamVEXRule, error)); ok {
-		return returnFunc(ctx, tx, cveID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) []models.UpstreamVEXRule); ok {
-		r0 = returnFunc(ctx, tx, cveID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.UpstreamVEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
-		r1 = returnFunc(ctx, tx, cveID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// UpstreamVEXRuleRepository_FindByCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCVE'
-type UpstreamVEXRuleRepository_FindByCVE_Call struct {
-	*mock.Call
-}
-
-// FindByCVE is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - cveID string
-func (_e *UpstreamVEXRuleRepository_Expecter) FindByCVE(ctx interface{}, tx interface{}, cveID interface{}) *UpstreamVEXRuleRepository_FindByCVE_Call {
-	return &UpstreamVEXRuleRepository_FindByCVE_Call{Call: _e.mock.On("FindByCVE", ctx, tx, cveID)}
-}
-
-func (_c *UpstreamVEXRuleRepository_FindByCVE_Call) Run(run func(ctx context.Context, tx shared.DB, cveID string)) *UpstreamVEXRuleRepository_FindByCVE_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *UpstreamVEXRuleRepository_FindByCVE_Call) Return(upstreamVEXRules []models.UpstreamVEXRule, err error) *UpstreamVEXRuleRepository_FindByCVE_Call {
-	_c.Call.Return(upstreamVEXRules, err)
-	return _c
-}
-
-func (_c *UpstreamVEXRuleRepository_FindByCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveID string) ([]models.UpstreamVEXRule, error)) *UpstreamVEXRuleRepository_FindByCVE_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FindByCVEBatch provides a mock function for the type UpstreamVEXRuleRepository
-func (_mock *UpstreamVEXRuleRepository) FindByCVEBatch(ctx context.Context, tx shared.DB, cveIDs []string) ([]models.UpstreamVEXRule, error) {
-	ret := _mock.Called(ctx, tx, cveIDs)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByCVEBatch")
-	}
-
-	var r0 []models.UpstreamVEXRule
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.UpstreamVEXRule, error)); ok {
-		return returnFunc(ctx, tx, cveIDs)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.UpstreamVEXRule); ok {
-		r0 = returnFunc(ctx, tx, cveIDs)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.UpstreamVEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
-		r1 = returnFunc(ctx, tx, cveIDs)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// UpstreamVEXRuleRepository_FindByCVEBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCVEBatch'
-type UpstreamVEXRuleRepository_FindByCVEBatch_Call struct {
-	*mock.Call
-}
-
-// FindByCVEBatch is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - cveIDs []string
-func (_e *UpstreamVEXRuleRepository_Expecter) FindByCVEBatch(ctx interface{}, tx interface{}, cveIDs interface{}) *UpstreamVEXRuleRepository_FindByCVEBatch_Call {
-	return &UpstreamVEXRuleRepository_FindByCVEBatch_Call{Call: _e.mock.On("FindByCVEBatch", ctx, tx, cveIDs)}
-}
-
-func (_c *UpstreamVEXRuleRepository_FindByCVEBatch_Call) Run(run func(ctx context.Context, tx shared.DB, cveIDs []string)) *UpstreamVEXRuleRepository_FindByCVEBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *UpstreamVEXRuleRepository_FindByCVEBatch_Call) Return(upstreamVEXRules []models.UpstreamVEXRule, err error) *UpstreamVEXRuleRepository_FindByCVEBatch_Call {
-	_c.Call.Return(upstreamVEXRules, err)
-	return _c
-}
-
-func (_c *UpstreamVEXRuleRepository_FindByCVEBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveIDs []string) ([]models.UpstreamVEXRule, error)) *UpstreamVEXRuleRepository_FindByCVEBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetDB provides a mock function for the type UpstreamVEXRuleRepository
-func (_mock *UpstreamVEXRuleRepository) GetDB(ctx context.Context, db shared.DB) shared.DB {
-	ret := _mock.Called(ctx, db)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDB")
+		panic("no return value specified for Begin")
 	}
 
 	var r0 shared.DB
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
-		r0 = returnFunc(ctx, db)
+	if returnFunc, ok := ret.Get(0).(func(context.Context) shared.DB); ok {
+		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(shared.DB)
@@ -274,19 +190,122 @@ func (_mock *UpstreamVEXRuleRepository) GetDB(ctx context.Context, db shared.DB)
 	return r0
 }
 
-// UpstreamVEXRuleRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
-type UpstreamVEXRuleRepository_GetDB_Call struct {
+// UpstreamVEXRuleRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type UpstreamVEXRuleRepository_Begin_Call struct {
 	*mock.Call
 }
 
-// GetDB is a helper method to define mock.On call
+// Begin is a helper method to define mock.On call
 //   - ctx context.Context
-//   - db shared.DB
-func (_e *UpstreamVEXRuleRepository_Expecter) GetDB(ctx interface{}, db interface{}) *UpstreamVEXRuleRepository_GetDB_Call {
-	return &UpstreamVEXRuleRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, db)}
+func (_e *UpstreamVEXRuleRepository_Expecter) Begin(ctx interface{}) *UpstreamVEXRuleRepository_Begin_Call {
+	return &UpstreamVEXRuleRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
-func (_c *UpstreamVEXRuleRepository_GetDB_Call) Run(run func(ctx context.Context, db shared.DB)) *UpstreamVEXRuleRepository_GetDB_Call {
+func (_c *UpstreamVEXRuleRepository_Begin_Call) Run(run func(ctx context.Context)) *UpstreamVEXRuleRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Begin_Call) Return(v shared.DB) *UpstreamVEXRuleRepository_Begin_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *UpstreamVEXRuleRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CleanupOrphanedRecords provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) CleanupOrphanedRecords(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CleanupOrphanedRecords")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanupOrphanedRecords'
+type UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call struct {
+	*mock.Call
+}
+
+// CleanupOrphanedRecords is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *UpstreamVEXRuleRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call {
+	return &UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
+}
+
+func (_c *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call) Run(run func(ctx context.Context)) *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call) Return(err error) *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call) RunAndReturn(run func(ctx context.Context) error) *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Create provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Create(ctx context.Context, tx shared.DB, t *models.UpstreamVEXRule) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.UpstreamVEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type UpstreamVEXRuleRepository_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.UpstreamVEXRule
+func (_e *UpstreamVEXRuleRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *UpstreamVEXRuleRepository_Create_Call {
+	return &UpstreamVEXRuleRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Create_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -296,55 +315,60 @@ func (_c *UpstreamVEXRuleRepository_GetDB_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
+		var arg2 *models.UpstreamVEXRule
+		if args[2] != nil {
+			arg2 = args[2].(*models.UpstreamVEXRule)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *UpstreamVEXRuleRepository_GetDB_Call) Return(v shared.DB) *UpstreamVEXRuleRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *UpstreamVEXRuleRepository_Create_Call) Return(err error) *UpstreamVEXRuleRepository_Create_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *UpstreamVEXRuleRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, db shared.DB) shared.DB) *UpstreamVEXRuleRepository_GetDB_Call {
+func (_c *UpstreamVEXRuleRepository_Create_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UpsertBatch provides a mock function for the type UpstreamVEXRuleRepository
-func (_mock *UpstreamVEXRuleRepository) UpsertBatch(ctx context.Context, tx shared.DB, rules []models.UpstreamVEXRule) error {
-	ret := _mock.Called(ctx, tx, rules)
+// CreateBatch provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule) error {
+	ret := _mock.Called(ctx, tx, ts)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpsertBatch")
+		panic("no return value specified for CreateBatch")
 	}
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.UpstreamVEXRule) error); ok {
-		r0 = returnFunc(ctx, tx, rules)
+		r0 = returnFunc(ctx, tx, ts)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// UpstreamVEXRuleRepository_UpsertBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertBatch'
-type UpstreamVEXRuleRepository_UpsertBatch_Call struct {
+// UpstreamVEXRuleRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
+type UpstreamVEXRuleRepository_CreateBatch_Call struct {
 	*mock.Call
 }
 
-// UpsertBatch is a helper method to define mock.On call
+// CreateBatch is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - rules []models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) UpsertBatch(ctx interface{}, tx interface{}, rules interface{}) *UpstreamVEXRuleRepository_UpsertBatch_Call {
-	return &UpstreamVEXRuleRepository_UpsertBatch_Call{Call: _e.mock.On("UpsertBatch", ctx, tx, rules)}
+//   - ts []models.UpstreamVEXRule
+func (_e *UpstreamVEXRuleRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *UpstreamVEXRuleRepository_CreateBatch_Call {
+	return &UpstreamVEXRuleRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
-func (_c *UpstreamVEXRuleRepository_UpsertBatch_Call) Run(run func(ctx context.Context, tx shared.DB, rules []models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_UpsertBatch_Call {
+func (_c *UpstreamVEXRuleRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -367,12 +391,664 @@ func (_c *UpstreamVEXRuleRepository_UpsertBatch_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *UpstreamVEXRuleRepository_UpsertBatch_Call) Return(err error) *UpstreamVEXRuleRepository_UpsertBatch_Call {
+func (_c *UpstreamVEXRuleRepository_CreateBatch_Call) Return(err error) *UpstreamVEXRuleRepository_CreateBatch_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *UpstreamVEXRuleRepository_UpsertBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rules []models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_UpsertBatch_Call {
+func (_c *UpstreamVEXRuleRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_CreateBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type UpstreamVEXRuleRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *UpstreamVEXRuleRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *UpstreamVEXRuleRepository_Delete_Call {
+	return &UpstreamVEXRuleRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *UpstreamVEXRuleRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Delete_Call) Return(err error) *UpstreamVEXRuleRepository_Delete_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *UpstreamVEXRuleRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteBatch provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) DeleteBatch(ctx context.Context, tx shared.DB, ids []models.UpstreamVEXRule) error {
+	ret := _mock.Called(ctx, tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.UpstreamVEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type UpstreamVEXRuleRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []models.UpstreamVEXRule
+func (_e *UpstreamVEXRuleRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *UpstreamVEXRuleRepository_DeleteBatch_Call {
+	return &UpstreamVEXRuleRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
+}
+
+func (_c *UpstreamVEXRuleRepository_DeleteBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ids []models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.UpstreamVEXRule
+		if args[2] != nil {
+			arg2 = args[2].([]models.UpstreamVEXRule)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_DeleteBatch_Call) Return(err error) *UpstreamVEXRuleRepository_DeleteBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDB provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.DB)
+		}
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type UpstreamVEXRuleRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *UpstreamVEXRuleRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *UpstreamVEXRuleRepository_GetDB_Call {
+	return &UpstreamVEXRuleRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
+}
+
+func (_c *UpstreamVEXRuleRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.DB)) *UpstreamVEXRuleRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_GetDB_Call) Return(v shared.DB) *UpstreamVEXRuleRepository_GetDB_Call {
+	_c.Call.Return(v)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *UpstreamVEXRuleRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// List provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.UpstreamVEXRule, error) {
+	ret := _mock.Called(ctx, tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []models.UpstreamVEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.UpstreamVEXRule, error)); ok {
+		return returnFunc(ctx, tx, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.UpstreamVEXRule); ok {
+		r0 = returnFunc(ctx, tx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.UpstreamVEXRule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// UpstreamVEXRuleRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type UpstreamVEXRuleRepository_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []string
+func (_e *UpstreamVEXRuleRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *UpstreamVEXRuleRepository_List_Call {
+	return &UpstreamVEXRuleRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
+}
+
+func (_c *UpstreamVEXRuleRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *UpstreamVEXRuleRepository_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_List_Call) Return(upstreamVEXRules []models.UpstreamVEXRule, err error) *UpstreamVEXRuleRepository_List_Call {
+	_c.Call.Return(upstreamVEXRules, err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.UpstreamVEXRule, error)) *UpstreamVEXRuleRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Read(ctx context.Context, tx shared.DB, id string) (models.UpstreamVEXRule, error) {
+	ret := _mock.Called(ctx, tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.UpstreamVEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.UpstreamVEXRule, error)); ok {
+		return returnFunc(ctx, tx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.UpstreamVEXRule); ok {
+		r0 = returnFunc(ctx, tx, id)
+	} else {
+		r0 = ret.Get(0).(models.UpstreamVEXRule)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+		r1 = returnFunc(ctx, tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// UpstreamVEXRuleRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type UpstreamVEXRuleRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - id string
+func (_e *UpstreamVEXRuleRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *UpstreamVEXRuleRepository_Read_Call {
+	return &UpstreamVEXRuleRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *UpstreamVEXRuleRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Read_Call) Return(upstreamVEXRule models.UpstreamVEXRule, err error) *UpstreamVEXRuleRepository_Read_Call {
+	_c.Call.Return(upstreamVEXRule, err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.UpstreamVEXRule, error)) *UpstreamVEXRuleRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Save(ctx context.Context, tx shared.DB, t *models.UpstreamVEXRule) error {
+	ret := _mock.Called(ctx, tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.UpstreamVEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type UpstreamVEXRuleRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *models.UpstreamVEXRule
+func (_e *UpstreamVEXRuleRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *UpstreamVEXRuleRepository_Save_Call {
+	return &UpstreamVEXRuleRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, t *models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_Save_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.UpstreamVEXRule
+		if args[2] != nil {
+			arg2 = args[2].(*models.UpstreamVEXRule)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Save_Call) Return(err error) *UpstreamVEXRuleRepository_Save_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Save_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatch provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) SaveBatch(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.UpstreamVEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
+type UpstreamVEXRuleRepository_SaveBatch_Call struct {
+	*mock.Call
+}
+
+// SaveBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.UpstreamVEXRule
+func (_e *UpstreamVEXRuleRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *UpstreamVEXRuleRepository_SaveBatch_Call {
+	return &UpstreamVEXRuleRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
+}
+
+func (_c *UpstreamVEXRuleRepository_SaveBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_SaveBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.UpstreamVEXRule
+		if args[2] != nil {
+			arg2 = args[2].([]models.UpstreamVEXRule)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_SaveBatch_Call) Return(err error) *UpstreamVEXRuleRepository_SaveBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatchBestEffort provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule) error {
+	ret := _mock.Called(ctx, tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatchBestEffort")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.UpstreamVEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
+type UpstreamVEXRuleRepository_SaveBatchBestEffort_Call struct {
+	*mock.Call
+}
+
+// SaveBatchBestEffort is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ts []models.UpstreamVEXRule
+func (_e *UpstreamVEXRuleRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call {
+	return &UpstreamVEXRuleRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
+}
+
+func (_c *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule)) *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.UpstreamVEXRule
+		if args[2] != nil {
+			arg2 = args[2].([]models.UpstreamVEXRule)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call) Return(err error) *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.UpstreamVEXRule) error) *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(tx shared.DB) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type UpstreamVEXRuleRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(tx shared.DB) error
+func (_e *UpstreamVEXRuleRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *UpstreamVEXRuleRepository_Transaction_Call {
+	return &UpstreamVEXRuleRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Transaction_Call) Run(run func(ctx context.Context, fn func(tx shared.DB) error)) *UpstreamVEXRuleRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(tx shared.DB) error
+		if args[1] != nil {
+			arg1 = args[1].(func(tx shared.DB) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Transaction_Call) Return(err error) *UpstreamVEXRuleRepository_Transaction_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *UpstreamVEXRuleRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) Upsert(ctx context.Context, tx shared.DB, t *[]*models.UpstreamVEXRule, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(ctx, tx, t, conflictingColumns, updateOnly)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *[]*models.UpstreamVEXRule, []clause.Column, []string) error); ok {
+		r0 = returnFunc(ctx, tx, t, conflictingColumns, updateOnly)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type UpstreamVEXRuleRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - t *[]*models.UpstreamVEXRule
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
+func (_e *UpstreamVEXRuleRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *UpstreamVEXRuleRepository_Upsert_Call {
+	return &UpstreamVEXRuleRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
+}
+
+func (_c *UpstreamVEXRuleRepository_Upsert_Call) Run(run func(ctx context.Context, tx shared.DB, t *[]*models.UpstreamVEXRule, conflictingColumns []clause.Column, updateOnly []string)) *UpstreamVEXRuleRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *[]*models.UpstreamVEXRule
+		if args[2] != nil {
+			arg2 = args[2].(*[]*models.UpstreamVEXRule)
+		}
+		var arg3 []clause.Column
+		if args[3] != nil {
+			arg3 = args[3].([]clause.Column)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Upsert_Call) Return(err error) *UpstreamVEXRuleRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_Upsert_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, t *[]*models.UpstreamVEXRule, conflictingColumns []clause.Column, updateOnly []string) error) *UpstreamVEXRuleRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

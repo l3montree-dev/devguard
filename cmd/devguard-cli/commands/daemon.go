@@ -100,7 +100,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "recommendations", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -261,6 +261,18 @@ func triggerDaemon(selectedDaemons []string) error {
 				start = time.Now()
 				runner.RunAssetPipeline(context.Background(), true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
+			}
+
+			if emptyOrContains(selectedDaemons, "recommendations") {
+				start = time.Now()
+				if err := runner.RunVEXRuleRecommendationDaemon(context.Background()); err != nil {
+					slog.Error("could not build and save recommendations for all", "err", err)
+					return
+				}
+				if err := markMirrored(configService, "vexrules.recommendations"); err != nil {
+					slog.Error("could not mark vexrules.recommendations as mirrored", "err", err)
+				}
+				slog.Info("recommendations built and saved for all", "duration", time.Since(start))
 			}
 		}),
 	)

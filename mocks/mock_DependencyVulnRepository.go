@@ -1006,6 +1006,74 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_C
 	return _c
 }
 
+// GetAllOpenVulnsWithoutEvents provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetAllOpenVulnsWithoutEvents(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllOpenVulnsWithoutEvents")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsWithoutEvents'
+type DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call struct {
+	*mock.Call
+}
+
+// GetAllOpenVulnsWithoutEvents is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsWithoutEvents(ctx interface{}, tx interface{}) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
+	return &DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call{Call: _e.mock.On("GetAllOpenVulnsWithoutEvents", ctx, tx)}
+}
+
+func (_c *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB)) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllVulnsByArtifact provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetAllVulnsByArtifact(ctx context.Context, tx shared.DB, artifact models.Artifact) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, artifact)

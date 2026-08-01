@@ -11,15 +11,15 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-type CrowdsourcedVexingController struct {
-	crowdsourcedVexingService shared.CrowdSourcedVexingService
-	dependencyVulnRepository  shared.DependencyVulnRepository
+type VexRuleRecommendationController struct {
+	vexRuleService           shared.VEXRuleService
+	dependencyVulnRepository shared.DependencyVulnRepository
 }
 
-func NewCrowdsourcedVexingController(crowdsourcedVexingService shared.CrowdSourcedVexingService, dependencyVulnRepository shared.DependencyVulnRepository) *CrowdsourcedVexingController {
-	return &CrowdsourcedVexingController{
-		crowdsourcedVexingService: crowdsourcedVexingService,
-		dependencyVulnRepository:  dependencyVulnRepository,
+func NewVexRuleRecommendationController(service shared.VEXRuleService, dependencyVulnRepository shared.DependencyVulnRepository) *VexRuleRecommendationController {
+	return &VexRuleRecommendationController{
+		vexRuleService:           service,
+		dependencyVulnRepository: dependencyVulnRepository,
 	}
 }
 
@@ -34,8 +34,8 @@ func NewCrowdsourcedVexingController(crowdsourcedVexingService shared.CrowdSourc
 // @Param dependencyVulnID path string true "Dependency vuln ID"
 // @Success 200 {object} dtos.VexRuleRecommendation
 // @Success 204 "No recommendation available"
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/crowdsourced-vexing/recommendations/{dependencyVulnID} [get]
-func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/recommendations/{dependencyVulnID} [get]
+func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingController.Recommend")
 	defer span.End()
 	ctx.SetRequest(ctx.Request().WithContext(reqCtx))
@@ -54,7 +54,7 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not parse vuln ID to uuid").WithInternal(err)
 	}
 
-	rule, err := c.crowdsourcedVexingService.Recommend(ctx, nil, dependencyVulnIDParsed)
+	rule, err := c.vexRuleService.Recommend(ctx, nil, dependencyVulnIDParsed)
 
 	if err != nil {
 		if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
@@ -76,8 +76,8 @@ func (c *CrowdsourcedVexingController) Recommend(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Success 200 {object} map[string]dtos.VexRuleRecommendation
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/crowdsourced-vexing/recommendations [get]
-func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/recommendations [get]
+func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingController.RecommendForAsset")
 	defer span.End()
 	ctx.SetRequest(ctx.Request().WithContext(reqCtx))
@@ -93,7 +93,7 @@ func (c *CrowdsourcedVexingController) RecommendForAsset(ctx shared.Context) err
 	}
 	span.SetAttributes(attribute.Int("dependencyVulns.total", len(vulns)))
 
-	rules, err := c.crowdsourcedVexingService.RecommendBatch(ctx, nil, vulns)
+	rules, err := c.vexRuleService.RecommendBatch(ctx, nil, vulns)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -249,6 +250,63 @@ func (_c *VEXRuleService_Begin_Call) Return(v shared.DB) *VEXRuleService_Begin_C
 }
 
 func (_c *VEXRuleService_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *VEXRuleService_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// BuildAndSaveRecommendationsForAll provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) BuildAndSaveRecommendationsForAll(ctx context.Context, tx shared.DB) error {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuildAndSaveRecommendationsForAll")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) error); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VEXRuleService_BuildAndSaveRecommendationsForAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuildAndSaveRecommendationsForAll'
+type VEXRuleService_BuildAndSaveRecommendationsForAll_Call struct {
+	*mock.Call
+}
+
+// BuildAndSaveRecommendationsForAll is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *VEXRuleService_Expecter) BuildAndSaveRecommendationsForAll(ctx interface{}, tx interface{}) *VEXRuleService_BuildAndSaveRecommendationsForAll_Call {
+	return &VEXRuleService_BuildAndSaveRecommendationsForAll_Call{Call: _e.mock.On("BuildAndSaveRecommendationsForAll", ctx, tx)}
+}
+
+func (_c *VEXRuleService_BuildAndSaveRecommendationsForAll_Call) Run(run func(ctx context.Context, tx shared.DB)) *VEXRuleService_BuildAndSaveRecommendationsForAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_BuildAndSaveRecommendationsForAll_Call) Return(err error) *VEXRuleService_BuildAndSaveRecommendationsForAll_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VEXRuleService_BuildAndSaveRecommendationsForAll_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) error) *VEXRuleService_BuildAndSaveRecommendationsForAll_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -525,69 +583,6 @@ func (_c *VEXRuleService_Delete_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
-// DeleteByAssetID provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) DeleteByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) error {
-	ret := _mock.Called(ctx, tx, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteByAssetID")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(ctx, tx, assetID)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// VEXRuleService_DeleteByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByAssetID'
-type VEXRuleService_DeleteByAssetID_Call struct {
-	*mock.Call
-}
-
-// DeleteByAssetID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-func (_e *VEXRuleService_Expecter) DeleteByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *VEXRuleService_DeleteByAssetID_Call {
-	return &VEXRuleService_DeleteByAssetID_Call{Call: _e.mock.On("DeleteByAssetID", ctx, tx, assetID)}
-}
-
-func (_c *VEXRuleService_DeleteByAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *VEXRuleService_DeleteByAssetID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleService_DeleteByAssetID_Call) Return(err error) *VEXRuleService_DeleteByAssetID_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *VEXRuleService_DeleteByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) error) *VEXRuleService_DeleteByAssetID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // FindByAssetID provides a mock function for the type VEXRuleService
 func (_mock *VEXRuleService) FindByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
 	ret := _mock.Called(ctx, tx, assetID)
@@ -758,86 +753,6 @@ func (_c *VEXRuleService_FindByAssetIDPaged_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// FindByAssetIDWithMatchingVuln provides a mock function for the type VEXRuleService
-func (_mock *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error) {
-	ret := _mock.Called(ctx, tx, assetID, vulnID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetIDWithMatchingVuln")
-	}
-
-	var r0 []models.VEXRule
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) ([]models.VEXRule, error)); ok {
-		return returnFunc(ctx, tx, assetID, vulnID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) []models.VEXRule); ok {
-		r0 = returnFunc(ctx, tx, assetID, vulnID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRule)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, vulnID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// VEXRuleService_FindByAssetIDWithMatchingVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetIDWithMatchingVuln'
-type VEXRuleService_FindByAssetIDWithMatchingVuln_Call struct {
-	*mock.Call
-}
-
-// FindByAssetIDWithMatchingVuln is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - vulnID uuid.UUID
-func (_e *VEXRuleService_Expecter) FindByAssetIDWithMatchingVuln(ctx interface{}, tx interface{}, assetID interface{}, vulnID interface{}) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
-	return &VEXRuleService_FindByAssetIDWithMatchingVuln_Call{Call: _e.mock.On("FindByAssetIDWithMatchingVuln", ctx, tx, assetID, vulnID)}
-}
-
-func (_c *VEXRuleService_FindByAssetIDWithMatchingVuln_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID)) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleService_FindByAssetIDWithMatchingVuln_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
-	_c.Call.Return(vEXRules, err)
-	return _c
-}
-
-func (_c *VEXRuleService_FindByAssetIDWithMatchingVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error)) *VEXRuleService_FindByAssetIDWithMatchingVuln_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // FindByID provides a mock function for the type VEXRuleService
 func (_mock *VEXRuleService) FindByID(ctx context.Context, tx shared.DB, id string) (models.VEXRule, error) {
 	ret := _mock.Called(ctx, tx, id)
@@ -975,6 +890,152 @@ func (_c *VEXRuleService_IngestVEXRules_Call) Return(err error) *VEXRuleService_
 }
 
 func (_c *VEXRuleService_IngestVEXRules_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error) *VEXRuleService_IngestVEXRules_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Recommend provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) Recommend(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error) {
+	ret := _mock.Called(ctx, tx, vulnID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Recommend")
+	}
+
+	var r0 dtos.VexRuleRecommendation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, uuid.UUID) (dtos.VexRuleRecommendation, error)); ok {
+		return returnFunc(ctx, tx, vulnID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, uuid.UUID) dtos.VexRuleRecommendation); ok {
+		r0 = returnFunc(ctx, tx, vulnID)
+	} else {
+		r0 = ret.Get(0).(dtos.VexRuleRecommendation)
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, vulnID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleService_Recommend_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Recommend'
+type VEXRuleService_Recommend_Call struct {
+	*mock.Call
+}
+
+// Recommend is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - tx shared.DB
+//   - vulnID uuid.UUID
+func (_e *VEXRuleService_Expecter) Recommend(ctx interface{}, tx interface{}, vulnID interface{}) *VEXRuleService_Recommend_Call {
+	return &VEXRuleService_Recommend_Call{Call: _e.mock.On("Recommend", ctx, tx, vulnID)}
+}
+
+func (_c *VEXRuleService_Recommend_Call) Run(run func(ctx shared.Context, tx shared.DB, vulnID uuid.UUID)) *VEXRuleService_Recommend_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_Recommend_Call) Return(vexRuleRecommendation dtos.VexRuleRecommendation, err error) *VEXRuleService_Recommend_Call {
+	_c.Call.Return(vexRuleRecommendation, err)
+	return _c
+}
+
+func (_c *VEXRuleService_Recommend_Call) RunAndReturn(run func(ctx shared.Context, tx shared.DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error)) *VEXRuleService_Recommend_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RecommendBatch provides a mock function for the type VEXRuleService
+func (_mock *VEXRuleService) RecommendBatch(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error) {
+	ret := _mock.Called(ctx, tx, vulns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecommendBatch")
+	}
+
+	var r0 map[string]dtos.VexRuleRecommendation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)); ok {
+		return returnFunc(ctx, tx, vulns)
+	}
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, shared.DB, []models.DependencyVuln) map[string]dtos.VexRuleRecommendation); ok {
+		r0 = returnFunc(ctx, tx, vulns)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]dtos.VexRuleRecommendation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(shared.Context, shared.DB, []models.DependencyVuln) error); ok {
+		r1 = returnFunc(ctx, tx, vulns)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleService_RecommendBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecommendBatch'
+type VEXRuleService_RecommendBatch_Call struct {
+	*mock.Call
+}
+
+// RecommendBatch is a helper method to define mock.On call
+//   - ctx shared.Context
+//   - tx shared.DB
+//   - vulns []models.DependencyVuln
+func (_e *VEXRuleService_Expecter) RecommendBatch(ctx interface{}, tx interface{}, vulns interface{}) *VEXRuleService_RecommendBatch_Call {
+	return &VEXRuleService_RecommendBatch_Call{Call: _e.mock.On("RecommendBatch", ctx, tx, vulns)}
+}
+
+func (_c *VEXRuleService_RecommendBatch_Call) Run(run func(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln)) *VEXRuleService_RecommendBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 shared.Context
+		if args[0] != nil {
+			arg0 = args[0].(shared.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.DependencyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleService_RecommendBatch_Call) Return(stringToVexRuleRecommendation map[string]dtos.VexRuleRecommendation, err error) *VEXRuleService_RecommendBatch_Call {
+	_c.Call.Return(stringToVexRuleRecommendation, err)
+	return _c
+}
+
+func (_c *VEXRuleService_RecommendBatch_Call) RunAndReturn(run func(ctx shared.Context, tx shared.DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)) *VEXRuleService_RecommendBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

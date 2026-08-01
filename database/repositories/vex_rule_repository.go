@@ -21,9 +21,48 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+type upstreamVEXRuleRepository struct {
+	utils.Repository[string, models.UpstreamVEXRule, shared.DB]
+}
+
+var _ shared.UpstreamVEXRuleRepository = (*upstreamVEXRuleRepository)(nil)
+
+func NewUpstreamVEXRuleRepository(db *gorm.DB) *upstreamVEXRuleRepository {
+	return &upstreamVEXRuleRepository{
+		Repository: newGormRepository[string, models.UpstreamVEXRule](db),
+	}
+}
+
+type vexRuleRecommendationRepository struct {
+	utils.Repository[string, models.VEXRuleRecommendation, shared.DB]
+}
+
+var _ shared.VEXRuleRecommendationRepository = (*vexRuleRecommendationRepository)(nil)
+
+func NewVEXRuleRecommendationRepository(db *gorm.DB) *vexRuleRecommendationRepository {
+	return &vexRuleRecommendationRepository{
+		Repository: newGormRepository[string, models.VEXRuleRecommendation](db),
+	}
+}
+
+func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) ([]models.VEXRuleRecommendation, error) {
+	if len(dependencyVulnIDs) == 0 {
+		return nil, nil
+	}
+
+	var recommendations []models.VEXRuleRecommendation
+	err := r.GetDB(ctx, tx).
+		Preload("VEXRule").
+		Preload("UpstreamVEXRule").
+		Where("dependency_vuln_id IN ?", dependencyVulnIDs).
+		Find(&recommendations).Error
+	return recommendations, err
+}
 
 type vexRuleRepository struct {
 	db *gorm.DB

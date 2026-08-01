@@ -45,6 +45,7 @@ type DaemonRunner interface {
 	UpdateFixedVersions(ctx context.Context) error
 	UpdateVulnDB(ctx context.Context) error
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
+	RunVEXRuleRecommendationDaemon(ctx context.Context) error
 
 	Start(ctx context.Context)
 }
@@ -287,6 +288,7 @@ type DependencyVulnRepository interface {
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 	GetByVexRuleID(ctx context.Context, tx DB, vexRuleID string) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsWithoutEvents(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -361,11 +363,12 @@ type VEXRuleRepository interface {
 }
 
 type UpstreamVEXRuleRepository interface {
-	All(ctx context.Context, tx DB) ([]models.UpstreamVEXRule, error)
-	GetDB(ctx context.Context, db DB) DB
-	FindByCVE(ctx context.Context, tx DB, cveID string) ([]models.UpstreamVEXRule, error)
-	FindByCVEBatch(ctx context.Context, tx DB, cveIDs []string) ([]models.UpstreamVEXRule, error)
-	UpsertBatch(ctx context.Context, tx DB, rules []models.UpstreamVEXRule) error
+	utils.Repository[string, models.UpstreamVEXRule, DB]
+}
+
+type VEXRuleRecommendationRepository interface {
+	utils.Repository[string, models.VEXRuleRecommendation, DB]
+	FindByDependencyVulnIDs(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID) ([]models.VEXRuleRecommendation, error)
 }
 
 type OrganizationRepository interface {
@@ -525,7 +528,6 @@ type VEXRuleService interface {
 	Begin(ctx context.Context) DB
 	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
 	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
-	DeleteByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) error
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
 	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	ApplyRulesToExistingVulns(ctx context.Context, tx DB, assetID uuid.UUID, rules []models.VEXRule) ([]models.DependencyVuln, error)
@@ -534,12 +536,9 @@ type VEXRuleService interface {
 	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
 	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
-	FindByAssetIDWithMatchingVuln(ctx context.Context, tx DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error)
-}
-
-type CrowdSourcedVexingService interface {
 	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error)
 	RecommendBatch(ctx Context, tx DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)
+	BuildAndSaveRecommendationsForAll(ctx context.Context, tx DB) error
 }
 
 type CVERelationshipService interface {

@@ -289,7 +289,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewDependencyVulnRouter(assetVersionRouter, new(controllers.DependencyVulnController), new(controllers.VulnEventController))
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
-	NewVEXRuleRouter(assetRouter, new(controllers.VEXRuleController))
+	NewVEXRuleRouter(assetRouter, new(controllers.VEXRuleController), new(controllers.VexRuleRecommendationController))
 	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
 	NewExternalReferenceRouter(assetRouter, new(controllers.ExternalReferenceController), assetRepo)
 

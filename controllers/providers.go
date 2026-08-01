@@ -123,7 +123,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(dependencyfirewall.NewOCIDependencyProxyController),
 
 	//Crowdsourced Vexing
-	fx.Provide(NewCrowdsourcedVexingController),
+	fx.Provide(NewVexRuleRecommendationController),
 
 	fx.Provide(NewAdvisoryController),
 )

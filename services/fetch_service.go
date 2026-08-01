@@ -281,7 +281,7 @@ func NewGitHubVexFetcher() gitHubVexFetcher {
 }
 
 func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.UpstreamVEXRule, err error) {
-	owner, repo, err := ParseGitHubURL(targetURL)
+	owner, repo, err := parseGitHubURL(targetURL)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 		}
 		rules, _, err := VexRulesFromDocument(
 			bytes,
-			fileEntry.Name,
+			targetURL,
 		)
 		if err != nil {
 			slog.Info("could not create openVEX report structure", "err", err, "filename", filename)
@@ -334,7 +334,7 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 	}), nil
 }
 
-func ParseGitHubURL(rawURL string) (owner string, repo string, err error) {
+func parseGitHubURL(rawURL string) (owner string, repo string, err error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return "", "", err

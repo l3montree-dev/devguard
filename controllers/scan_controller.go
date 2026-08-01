@@ -111,13 +111,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 		attribute.String("asset.slug", asset.Slug),
 	)
 
-	if err != nil {
-		slog.Error("could not find or create asset version", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return echo.NewHTTPError(500, "could not find or create asset version").WithInternal(err)
-	}
-
 	tx := s.assetVersionRepository.GetDB(reqCtx, nil).Begin()
 	defer tx.Rollback()
 

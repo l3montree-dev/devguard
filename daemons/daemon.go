@@ -72,6 +72,11 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 }
 
 func (runner *DaemonRunner) runDaemons(ctx context.Context) {
+	if err := runner.maybeRunAndMark(ctx, "vexrules.recommendations", func() error {
+		return runner.RunVEXRuleRecommendationDaemon(ctx)
+	}); err != nil {
+		slog.Error("could not build and save recommendations for all", "err", err)
+	}
 	if err := runner.maybeRunAndMark(ctx, "maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {

@@ -45,10 +45,12 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 	}
 }
 
-func VEXRuleToUpstreamVEXRuleDTO(rule models.VEXRule) models.UpstreamVEXRule {
+func VEXRuleToUpstreamVEXRule(rule models.VEXRule) models.UpstreamVEXRule {
 	return rule.UpstreamVEXRule
 }
 
+// VEXRuleToRecommendationDTO builds a crowdsourced recommendation DTO from an
+// asset-owned VEX rule that won the cross-asset vote.
 func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
 		Title:                   rule.Title,
@@ -56,10 +58,37 @@ func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64, verifie
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
+		Source:                  dtos.VexRuleRecommendationSourceCrowdsourced,
 		Confidence:              confidence,
 		VerifiedVotes:           verifiedVotes,
 		TotalVotes:              totalVotes,
 	}
+}
+
+// UpstreamVEXRuleToRecommendationDTO builds a recommendation DTO for a trusted
+// upstream VEX rule. Upstream rules are trusted outright rather than voted on,
+// so there is no meaningful confidence/vote count beyond "fully confident".
+func UpstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule) dtos.VexRuleRecommendation {
+	return dtos.VexRuleRecommendation{
+		Title:                   rule.Title,
+		CELExpression:           rule.CELExpression,
+		Justification:           rule.Justification,
+		MechanicalJustification: rule.MechanicalJustification,
+		EventType:               rule.EventType,
+		Source:                  dtos.VexRuleRecommendationSourceUpstream,
+		Confidence:              1,
+	}
+}
+
+// VEXRuleRecommendationToDTO converts a stored recommendation to its DTO. A
+// recommendation either matched an asset-owned VEX rule (VEXRuleID set) via
+// the crowdsourced vote, or, failing that, a trusted upstream VEX rule
+// (UpstreamVEXRuleID set).
+func VEXRuleRecommendationToDTO(rec models.VEXRuleRecommendation) dtos.VexRuleRecommendation {
+	if rec.VEXRuleID != "" {
+		return VEXRuleToRecommendationDTO(rec.VEXRule, rec.Confidence, rec.VerifiedVotes, rec.TotalVotes)
+	}
+	return UpstreamVEXRuleToRecommendationDTO(rec.UpstreamVEXRule)
 }
 
 func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, originAssetSlug string) dtos.VexRuleRecommendation {
@@ -69,6 +98,7 @@ func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, or
 		Justification:           rule.Justification,
 		MechanicalJustification: rule.MechanicalJustification,
 		EventType:               rule.EventType,
+		Source:                  dtos.VexRuleRecommendationSourceOrigin,
 		Confidence:              1,
 		ProjectSlug:             &originProjectSlug,
 		AssetSlug:               &originAssetSlug,
@@ -89,4 +119,12 @@ func AllUpstreamVEXRulesToVEXRules(rules []models.UpstreamVEXRule, createdByID s
 		vexRules = append(vexRules, UpstreamVEXRuleToVEXRule(rule, createdByID, assetID))
 	}
 	return vexRules
+}
+
+func VEXRulesToUpstreamVEXRules(rules []models.VEXRule) []models.UpstreamVEXRule {
+	upstreamRules := make([]models.UpstreamVEXRule, 0, len(rules))
+	for _, rule := range rules {
+		upstreamRules = append(upstreamRules, VEXRuleToUpstreamVEXRule(rule))
+	}
+	return upstreamRules
 }

@@ -43,16 +43,33 @@ type VEXRuleDTO struct {
 	AppliesToAmountOfDependencyVulns int `json:"appliesToAmountOfDependencyVulns"`
 }
 
+// VexRuleRecommendationSource identifies how a recommendation was derived,
+// since that determines which of its fields (Confidence/votes) are meaningful.
+type VexRuleRecommendationSource string
+
+const (
+	// VexRuleRecommendationSourceOrigin: taken directly from a matching rule on
+	// an asset the requesting user already has access to.
+	VexRuleRecommendationSourceOrigin VexRuleRecommendationSource = "origin"
+	// VexRuleRecommendationSourceCrowdsourced: derived from voting across every
+	// matching asset-owned VEX rule.
+	VexRuleRecommendationSourceCrowdsourced VexRuleRecommendationSource = "crowdsourced"
+	// VexRuleRecommendationSourceUpstream: matched a trusted upstream VEX rule;
+	// always fully confident and has no votes.
+	VexRuleRecommendationSourceUpstream VexRuleRecommendationSource = "upstream"
+)
+
 type VexRuleRecommendation struct {
-	Title                            string                      `json:"title"`
-	CELExpression                    string                      `json:"celExpression"`
-	Justification                    string                      `json:"justification"`
-	MechanicalJustification          MechanicalJustificationType `json:"mechanicalJustification"`
-	EventType                        VulnEventType               `json:"eventType"`
-	Confidence                       float64                     `json:"confidence"`
-	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns"`
-	VerifiedVotes                    int                         `json:"verifiedVotes"`
-	TotalVotes                       int                         `json:"totalVotes"`
+	Title                            string                       `json:"title"`
+	CELExpression                    string                       `json:"celExpression"`
+	Justification                    string                       `json:"justification"`
+	MechanicalJustification          MechanicalJustificationType  `json:"mechanicalJustification"`
+	EventType                        VulnEventType                `json:"eventType"`
+	Source                           VexRuleRecommendationSource  `json:"source"`
+	Confidence                       float64                      `json:"confidence"`
+	AppliesToAmountOfDependencyVulns int                          `json:"appliesToAmountOfDependencyVulns"`
+	VerifiedVotes                    int                          `json:"verifiedVotes"`
+	TotalVotes                       int                          `json:"totalVotes"`
 
 	// ProjectSlug/OriginAssetSlug are set when this recommendation was
 	// taken directly from a rule on an asset the requesting user already has
