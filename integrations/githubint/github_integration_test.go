@@ -289,6 +289,76 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 }
+
+func TestGithubIntegrationUpdateIssueUnlinksDeletedGithubIssue(t *testing.T) {
+	assetID := uuid.New()
+	orgID := uuid.New()
+	ticketID := "github:123456789/42"
+	ticketURL := "https://github.com/owner/repo/issues/42"
+	vuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			ID:               uuid.New(),
+			AssetID:          assetID,
+			AssetVersionName: "main",
+			TicketID:         &ticketID,
+			TicketURL:        &ticketURL,
+		},
+		CVE: &models.CVE{
+			CVSS:   9.8,
+			Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+		},
+		CVEID:             "CVE-2024-1234",
+		ComponentPurl:     "pkg:golang/example.com/repo@1.0.0",
+		RawRiskAssessment: new(9.8),
+	}
+
+	githubClient := mocks.NewGithubClientFacade(t)
+	githubClient.On("EditIssue", mock.Anything, "owner", "repo", 42, mock.Anything).
+		Return(nil, nil, fmt.Errorf("404 Not Found")).Once()
+
+	projectRepository := mocks.NewProjectRepository(t)
+	projectRepository.On("GetProjectByAssetID", mock.Anything, mock.Anything, assetID).
+		Return(models.Project{OrganizationID: orgID, Slug: "project"}, nil).Once()
+
+	orgRepository := mocks.NewOrganizationRepository(t)
+	orgRepository.On("Read", mock.Anything, mock.Anything, orgID).
+		Return(models.Org{Slug: "org"}, nil).Once()
+
+	vulnRepository := mocks.NewVulnRepository(t)
+	vulnRepository.On(
+		"ApplyAndSave",
+		mock.Anything,
+		mock.Anything,
+		mock.MatchedBy(func(savedVuln models.Vuln) bool {
+			return savedVuln.GetTicketID() == nil && savedVuln.GetTicketURL() == nil
+		}),
+		mock.MatchedBy(func(event *models.VulnEvent) bool {
+			return event.Type == dtos.EventTypeFalsePositive
+		}),
+	).Return(nil).Once()
+
+	integration := GithubIntegration{
+		githubClientFactory: func(repoID string) (shared.GithubClientFacade, error) {
+			return githubClient, nil
+		},
+		projectRepository:        projectRepository,
+		orgRepository:            orgRepository,
+		aggregatedVulnRepository: vulnRepository,
+		frontendURL:              "http://localhost:3000",
+	}
+
+	err := integration.UpdateIssue(context.Background(), models.Asset{
+		Model: models.Model{
+			ID: assetID,
+		},
+		Slug:         "asset",
+		RepositoryID: new("github:123:owner/repo"),
+	}, "main", &vuln, nil)
+
+	assert.NoError(t, err)
+	assert.Nil(t, vuln.GetTicketID())
+	assert.Nil(t, vuln.GetTicketURL())
+}
 func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 	t.Run("it should return the correct ticket ID and number for a valid input", func(t *testing.T) {
 		id := "github:123456789/123"
