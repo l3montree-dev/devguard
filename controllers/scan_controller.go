@@ -120,7 +120,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	defer tx.Rollback()
 
 	systemVexRules, format, err := s.VexRulesFromDocument(body, origin)
-	rules := transformer.AllUpstreamVEXRulesToVEXRules(systemVexRules, shared.GetSession(ctx).GetActorID(), asset.ID)
+	rules := transformer.AllUpstreamVEXRulesToVEXRules(systemVexRules, shared.GetSession(ctx).GetActorName(), asset.ID)
 
 	switch format {
 	case dtos.ExternalReferenceTypeCycloneDX:

@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/l3montree-dev/devguard/normalize"
@@ -29,7 +30,7 @@ import (
 func traceErr(span oteltrace.Span, statusCode int, msg string, err error) error {
 	span.RecordError(err)
 	span.SetStatus(codes.Error, err.Error())
-	return echo.NewHTTPError(statusCode, msg).WithInternal(err)
+	return echo.NewHTTPError(statusCode, fmt.Sprintf("%s: %s", msg, err.Error())).WithInternal(err)
 }
 
 // sessionAvailableAssetIDs resolves the asset IDs the current session's RBAC grants access to.

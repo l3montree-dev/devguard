@@ -50,7 +50,7 @@ func NewVEXRuleRecommendationRepository(db *gorm.DB) *vexRuleRecommendationRepos
 	}
 }
 
-func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error) {
+func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx *gorm.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error) {
 	if len(dependencyVulnIDs) == 0 {
 		return nil, nil
 	}
@@ -72,11 +72,11 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Co
 	return result, nil
 }
 
-func (r *vexRuleRecommendationRepository) DeleteAll(ctx context.Context, tx shared.DB) error {
+func (r *vexRuleRecommendationRepository) DeleteAll(ctx context.Context, tx *gorm.DB) error {
 	return r.GetDB(ctx, tx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.VEXRuleRecommendation{}).Error
 }
 
-func (r *vexRuleRecommendationRepository) CreateBatch(ctx context.Context, tx shared.DB, recommendations []models.VEXRuleRecommendation) error {
+func (r *vexRuleRecommendationRepository) CreateBatch(ctx context.Context, tx *gorm.DB, recommendations []models.VEXRuleRecommendation) error {
 	if len(recommendations) == 0 {
 		return nil
 	}
