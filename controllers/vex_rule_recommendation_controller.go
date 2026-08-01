@@ -114,6 +114,9 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 
 	matches, err := services.MatchRulesToVulns(ctx.Request().Context(), []models.UpstreamVEXRule{selectedRecommendationEvalStruct}, allOpenVulns)
 
+	if err != nil {
+		return traceErr(span, 500, "Could not calculate recommendation.", err)
+	}
 	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendations[dependencyVulnIDParsed], len(matches[selectedRecommendation.VEXRuleID])))
 }
 

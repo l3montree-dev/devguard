@@ -2,6 +2,7 @@ package daemons
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -34,9 +35,12 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 		}
 
 		ruleRecommendations, err := services.ComputeVEXRuleRecommendations(ctx, allVulns, allRules, upstreamRules, crowdsourcedCtx)
+
 		if err != nil {
 			return errors.Wrap(err, "failed to compute VEX rule recommendations")
 		}
+
+		slog.Info("finished rule recommendation calculation", "amount", len(ruleRecommendations))
 
 		if err := runner.vexRuleRecommendationRepository.DeleteAll(ctx, tx); err != nil {
 			return errors.Wrap(err, "failed to delete all VEX rule recommendations")
