@@ -163,8 +163,8 @@ func TestFetchVexFromGitHub(t *testing.T) {
 		reports, err := fetcherWithServer(server).FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/openvex-repo", "")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 1)
-		// the source of a rule fetched from a GitHub repo is the path of the file it was parsed from
-		assert.Equal(t, "reports/openvex.json", reports[0].VexSource)
+		// the source of a rule fetched from a GitHub repo is the reference URL of the repo itself
+		assert.Equal(t, "https://github.com/octo-org/openvex-repo", reports[0].VexSource)
 		assert.Contains(t, reports[0].CELExpression, "CVE-2024-1234")
 		assert.Equal(t, 1, calls)
 	})
@@ -215,9 +215,9 @@ func TestFetchVexFromGitHub(t *testing.T) {
 		reports, err := fetcherWithServer(server).FetchVexFromGitHub(context.Background(), "https://github.com/octo-org/multi-vex-repo", "develop")
 		assert.NoError(t, err)
 		assert.Len(t, reports, 2)
-		// the source of each rule is the path of the file it was parsed from, one rule per file here
+		// the source of each rule is the reference URL of the repo, regardless of which file it was parsed from
 		sources := []string{reports[0].VexSource, reports[1].VexSource}
-		assert.ElementsMatch(t, []string{"vex/vex1.json", "vex/vex2.json"}, sources)
+		assert.ElementsMatch(t, []string{"https://github.com/octo-org/multi-vex-repo", "https://github.com/octo-org/multi-vex-repo"}, sources)
 		cels := []string{reports[0].CELExpression, reports[1].CELExpression}
 		assert.Contains(t, cels[0]+cels[1], "CVE-2024-0001")
 		assert.Contains(t, cels[0]+cels[1], "CVE-2024-0002")
