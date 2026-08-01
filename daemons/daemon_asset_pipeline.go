@@ -643,7 +643,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				slog.Error("could not store vex external reference", "err", err)
 			}
 
-			if err := runner.vexRuleService.IngestVEXRules(stageCtx, tx, asset, rules); err != nil {
+			if err := runner.ingestVEXRules(stageCtx, tx, map[uuid.UUID]models.Asset{asset.ID: asset}, map[uuid.UUID][]models.VEXRule{asset.ID: rules}); err != nil {
 				slog.Error("could not ingest vex rules", "err", err)
 			}
 

@@ -51,32 +51,34 @@ func VEXRuleToUpstreamVEXRule(rule models.VEXRule) models.UpstreamVEXRule {
 
 // VEXRuleToRecommendationDTO builds a crowdsourced recommendation DTO from an
 // asset-owned VEX rule that won the cross-asset vote.
-func VEXRuleToRecommendationDTO(rule models.VEXRule, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
+func VEXRuleToRecommendationDTO(rule models.VEXRule, appliesToAmountOfDependencyVulns int, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
-		Title:                   rule.Title,
-		CELExpression:           rule.CELExpression,
-		Justification:           rule.Justification,
-		MechanicalJustification: rule.MechanicalJustification,
-		EventType:               rule.EventType,
-		Source:                  dtos.VexRuleRecommendationSourceCrowdsourced,
-		Confidence:              confidence,
-		VerifiedVotes:           verifiedVotes,
-		TotalVotes:              totalVotes,
+		Title:                            rule.Title,
+		CELExpression:                    rule.CELExpression,
+		Justification:                    rule.Justification,
+		MechanicalJustification:          rule.MechanicalJustification,
+		EventType:                        rule.EventType,
+		Source:                           dtos.VexRuleRecommendationSourceCrowdsourced,
+		Confidence:                       confidence,
+		VerifiedVotes:                    verifiedVotes,
+		TotalVotes:                       totalVotes,
+		AppliesToAmountOfDependencyVulns: appliesToAmountOfDependencyVulns,
 	}
 }
 
 // UpstreamVEXRuleToRecommendationDTO builds a recommendation DTO for a trusted
 // upstream VEX rule. Upstream rules are trusted outright rather than voted on,
 // so there is no meaningful confidence/vote count beyond "fully confident".
-func UpstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule) dtos.VexRuleRecommendation {
+func UpstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule, appliesToAmountOfDependencyVulns int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
-		Title:                   rule.Title,
-		CELExpression:           rule.CELExpression,
-		Justification:           rule.Justification,
-		MechanicalJustification: rule.MechanicalJustification,
-		EventType:               rule.EventType,
-		Source:                  dtos.VexRuleRecommendationSourceUpstream,
-		Confidence:              1,
+		Title:                            rule.Title,
+		CELExpression:                    rule.CELExpression,
+		Justification:                    rule.Justification,
+		MechanicalJustification:          rule.MechanicalJustification,
+		EventType:                        rule.EventType,
+		Source:                           dtos.VexRuleRecommendationSourceUpstream,
+		Confidence:                       1,
+		AppliesToAmountOfDependencyVulns: appliesToAmountOfDependencyVulns,
 	}
 }
 
@@ -84,24 +86,25 @@ func UpstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule) dtos.VexRul
 // recommendation either matched an asset-owned VEX rule (VEXRuleID set) via
 // the crowdsourced vote, or, failing that, a trusted upstream VEX rule
 // (UpstreamVEXRuleID set).
-func VEXRuleRecommendationToDTO(rec models.VEXRuleRecommendation) dtos.VexRuleRecommendation {
+func VEXRuleRecommendationToDTO(rec models.VEXRuleRecommendation, appliesToAmountOfDependencyVulns int) dtos.VexRuleRecommendation {
 	if rec.VEXRuleID != "" {
-		return VEXRuleToRecommendationDTO(rec.VEXRule, rec.Confidence, rec.VerifiedVotes, rec.TotalVotes)
+		return VEXRuleToRecommendationDTO(rec.VEXRule, appliesToAmountOfDependencyVulns, rec.Confidence, rec.VerifiedVotes, rec.TotalVotes)
 	}
-	return UpstreamVEXRuleToRecommendationDTO(rec.UpstreamVEXRule)
+	return UpstreamVEXRuleToRecommendationDTO(rec.UpstreamVEXRule, appliesToAmountOfDependencyVulns)
 }
 
-func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, originAssetSlug string) dtos.VexRuleRecommendation {
+func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, appliesToAmountOfDependencyVulns int, originProjectSlug, originAssetSlug string) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
-		Title:                   rule.Title,
-		CELExpression:           rule.CELExpression,
-		Justification:           rule.Justification,
-		MechanicalJustification: rule.MechanicalJustification,
-		EventType:               rule.EventType,
-		Source:                  dtos.VexRuleRecommendationSourceOrigin,
-		Confidence:              1,
-		ProjectSlug:             &originProjectSlug,
-		AssetSlug:               &originAssetSlug,
+		Title:                            rule.Title,
+		CELExpression:                    rule.CELExpression,
+		Justification:                    rule.Justification,
+		MechanicalJustification:          rule.MechanicalJustification,
+		EventType:                        rule.EventType,
+		Source:                           dtos.VexRuleRecommendationSourceOrigin,
+		Confidence:                       1,
+		ProjectSlug:                      &originProjectSlug,
+		AssetSlug:                        &originAssetSlug,
+		AppliesToAmountOfDependencyVulns: appliesToAmountOfDependencyVulns,
 	}
 }
 

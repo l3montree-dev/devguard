@@ -177,6 +177,7 @@ type AssetRepository interface {
 	Upsert(ctx context.Context, tx DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
 	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
+	ReadWithProjects(ctx context.Context, tx *gorm.DB, id []uuid.UUID) ([]models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -266,6 +267,7 @@ type DependencyVulnRepository interface {
 	GetAllVulnsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(ctx context.Context, tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -349,6 +351,7 @@ type VEXRuleRepository interface {
 	GetDB(ctx context.Context, db DB) DB
 	All(ctx context.Context, tx DB) ([]models.VEXRule, error)
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.VEXRule, error)
 	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(ctx context.Context, tx DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
@@ -368,7 +371,9 @@ type UpstreamVEXRuleRepository interface {
 
 type VEXRuleRecommendationRepository interface {
 	utils.Repository[string, models.VEXRuleRecommendation, DB]
-	FindByDependencyVulnIDs(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID) ([]models.VEXRuleRecommendation, error)
+	FindByDependencyVulnIDs(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)
+	DeleteAll(ctx context.Context, tx DB) error
+	CreateBatch(ctx context.Context, tx DB, recommendations []models.VEXRuleRecommendation) error
 }
 
 type OrganizationRepository interface {
@@ -522,23 +527,6 @@ type ConfigRepository interface {
 
 type GitHubVexFetcher interface {
 	FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.UpstreamVEXRule, err error)
-}
-
-type VEXRuleService interface {
-	Begin(ctx context.Context) DB
-	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
-	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
-	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
-	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
-	ApplyRulesToExistingVulns(ctx context.Context, tx DB, assetID uuid.UUID, rules []models.VEXRule) ([]models.DependencyVuln, error)
-	ApplyRulesToExisting(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, rules []models.VEXRule) error
-	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
-	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
-	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
-	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error)
-	RecommendBatch(ctx Context, tx DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)
-	BuildAndSaveRecommendationsForAll(ctx context.Context, tx DB) error
 }
 
 type CVERelationshipService interface {

@@ -237,26 +237,6 @@ func EvalCompiledRules(ctx context.Context, compiled map[string]cel.Program, vul
 	return results, nil
 }
 
-// this is used when we inspect a specific vulnerability.
-// this happens in the fast path, when checking if there is a rule
-// the user already owns.
-func EvalRules(ctx context.Context, rules []models.UpstreamVEXRule, vuln models.DependencyVuln) (map[string]bool, error) {
-	vulnMap, err := vulnToCELMap(vuln)
-	if err != nil {
-		return nil, err
-	}
-
-	results := make(map[string]bool, len(rules))
-	for _, rule := range rules {
-		match, err := evalCompiledRule(rule, vulnMap)
-		if err != nil {
-			return nil, err
-		}
-		results[rule.ID] = match
-	}
-	return results, nil
-}
-
 func toStringList(val ref.Val) ([]string, error) {
 	native, err := val.ConvertToNative(reflect.TypeFor[[]string]())
 	if err != nil {

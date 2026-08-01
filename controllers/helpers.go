@@ -20,7 +20,23 @@ import (
 
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
+
+// traceErr records err on span and turns it into an HTTP error with statusCode and msg.
+func traceErr(span oteltrace.Span, statusCode int, msg string, err error) error {
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
+	return echo.NewHTTPError(statusCode, msg).WithInternal(err)
+}
+
+// sessionAvailableAssetIDs resolves the asset IDs the current session's RBAC grants access to.
+func sessionAvailableAssetIDs(ctx shared.Context) ([]string, error) {
+	rbac := shared.GetRBAC(ctx)
+	return rbac.GetAllAssetsForSession(ctx.Request().Context(), shared.GetSession(ctx))
+}
 
 func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
 	frontendURL := os.Getenv("FRONTEND_URL")

@@ -191,7 +191,9 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		&testLeaderElector{}, // Use simple test leader elector
 		f.App.MaliciousPackageChecker,
 		f.App.VulnDBService,
-		f.App.VexRuleService,
+		f.App.VexRuleRepository,
+		f.App.VexRuleRecommendationRepository,
+		f.App.TrustedEntityRepository,
 		f.App.ExternalReferenceRepository,
 		f.App.FixedVersionResolver,
 		f.App.UpstreamVEXRuleRepository,

@@ -64,6 +64,17 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Co
 	return recommendations, err
 }
 
+func (r *vexRuleRecommendationRepository) DeleteAll(ctx context.Context, tx shared.DB) error {
+	return r.GetDB(ctx, tx).Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.VEXRuleRecommendation{}).Error
+}
+
+func (r *vexRuleRecommendationRepository) CreateBatch(ctx context.Context, tx shared.DB, recommendations []models.VEXRuleRecommendation) error {
+	if len(recommendations) == 0 {
+		return nil
+	}
+	return r.GetDB(ctx, tx).CreateInBatches(recommendations, 500).Error
+}
+
 type vexRuleRepository struct {
 	db *gorm.DB
 }
@@ -97,6 +108,15 @@ func (r *vexRuleRepository) All(ctx context.Context, tx *gorm.DB) ([]models.VEXR
 func (r *vexRuleRepository) FindByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
 	var rules []models.VEXRule
 	err := r.GetDB(ctx, tx).Where("asset_id = ?", assetID).Order("created_at DESC").Find(&rules).Error
+	return rules, err
+}
+
+func (r *vexRuleRepository) FindByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.VEXRule, error) {
+	if len(assetIDs) == 0 {
+		return nil, nil
+	}
+	var rules []models.VEXRule
+	err := r.GetDB(ctx, tx).Where("asset_id IN (?)", assetIDs).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 

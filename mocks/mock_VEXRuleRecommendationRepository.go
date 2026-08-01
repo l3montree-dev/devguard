@@ -340,8 +340,8 @@ func (_c *VEXRuleRecommendationRepository_Create_Call) RunAndReturn(run func(ctx
 }
 
 // CreateBatch provides a mock function for the type VEXRuleRecommendationRepository
-func (_mock *VEXRuleRecommendationRepository) CreateBatch(ctx context.Context, tx shared.DB, ts []models.VEXRuleRecommendation) error {
-	ret := _mock.Called(ctx, tx, ts)
+func (_mock *VEXRuleRecommendationRepository) CreateBatch(ctx context.Context, tx shared.DB, recommendations []models.VEXRuleRecommendation) error {
+	ret := _mock.Called(ctx, tx, recommendations)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateBatch")
@@ -349,7 +349,7 @@ func (_mock *VEXRuleRecommendationRepository) CreateBatch(ctx context.Context, t
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.VEXRuleRecommendation) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
+		r0 = returnFunc(ctx, tx, recommendations)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -364,12 +364,12 @@ type VEXRuleRecommendationRepository_CreateBatch_Call struct {
 // CreateBatch is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - ts []models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *VEXRuleRecommendationRepository_CreateBatch_Call {
-	return &VEXRuleRecommendationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
+//   - recommendations []models.VEXRuleRecommendation
+func (_e *VEXRuleRecommendationRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, recommendations interface{}) *VEXRuleRecommendationRepository_CreateBatch_Call {
+	return &VEXRuleRecommendationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, recommendations)}
 }
 
-func (_c *VEXRuleRecommendationRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.VEXRuleRecommendation)) *VEXRuleRecommendationRepository_CreateBatch_Call {
+func (_c *VEXRuleRecommendationRepository_CreateBatch_Call) Run(run func(ctx context.Context, tx shared.DB, recommendations []models.VEXRuleRecommendation)) *VEXRuleRecommendationRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -397,7 +397,7 @@ func (_c *VEXRuleRecommendationRepository_CreateBatch_Call) Return(err error) *V
 	return _c
 }
 
-func (_c *VEXRuleRecommendationRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.VEXRuleRecommendation) error) *VEXRuleRecommendationRepository_CreateBatch_Call {
+func (_c *VEXRuleRecommendationRepository_CreateBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, recommendations []models.VEXRuleRecommendation) error) *VEXRuleRecommendationRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -461,6 +461,63 @@ func (_c *VEXRuleRecommendationRepository_Delete_Call) Return(err error) *VEXRul
 }
 
 func (_c *VEXRuleRecommendationRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *VEXRuleRecommendationRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteAll provides a mock function for the type VEXRuleRecommendationRepository
+func (_mock *VEXRuleRecommendationRepository) DeleteAll(ctx context.Context, tx shared.DB) error {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAll")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) error); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// VEXRuleRecommendationRepository_DeleteAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAll'
+type VEXRuleRecommendationRepository_DeleteAll_Call struct {
+	*mock.Call
+}
+
+// DeleteAll is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *VEXRuleRecommendationRepository_Expecter) DeleteAll(ctx interface{}, tx interface{}) *VEXRuleRecommendationRepository_DeleteAll_Call {
+	return &VEXRuleRecommendationRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", ctx, tx)}
+}
+
+func (_c *VEXRuleRecommendationRepository_DeleteAll_Call) Run(run func(ctx context.Context, tx shared.DB)) *VEXRuleRecommendationRepository_DeleteAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleRecommendationRepository_DeleteAll_Call) Return(err error) *VEXRuleRecommendationRepository_DeleteAll_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *VEXRuleRecommendationRepository_DeleteAll_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) error) *VEXRuleRecommendationRepository_DeleteAll_Call {
 	_c.Call.Return(run)
 	return _c
 }

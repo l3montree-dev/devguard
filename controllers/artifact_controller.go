@@ -41,7 +41,6 @@ type ArtifactController struct {
 	statisticsService        shared.StatisticsService
 	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
-	vexRuleService           shared.VEXRuleService
 	csafService              shared.CSAFService
 	thirdPartyIntegration    shared.IntegrationAggregate
 	// mark public to let it be overridden in tests
@@ -49,7 +48,7 @@ type ArtifactController struct {
 	shared.ScanService
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, vexRuleService shared.VEXRuleService, csafService shared.CSAFService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, csafService shared.CSAFService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -61,7 +60,6 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		assetVersionService:       assetVersionService,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
-		vexRuleService:            vexRuleService,
 		csafService:               csafService,
 		thirdPartyIntegration:     thirdPartyIntegration,
 	}

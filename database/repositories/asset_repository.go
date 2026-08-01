@@ -78,6 +78,16 @@ func (repository *assetRepository) ReadWithProject(ctx context.Context, tx *gorm
 	return asset, err
 }
 
+func (repository *assetRepository) ReadWithProjects(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.Asset, error) {
+	var assets []models.Asset
+	db := repository.GetDB(ctx, tx).Preload("Project").Where("id IN ?", ids)
+	if ownershipIDs, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(models.Asset{}, ownershipIDs))
+	}
+	err := db.Find(&assets).Error
+	return assets, err
+}
+
 func (repository *assetRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
 	if len(*t) == 0 {
 		return nil

@@ -437,13 +437,17 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsWithoutEvents(ctx con
 // GetAllOpenVulnsByAssetID preloads Events, needed by CEL VEX rule matching to
 // tell whether a rule's outcome was already applied to a vuln.
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	return repository.getAllOpenVulns(ctx, tx, &assetID, true)
+	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, true)
 }
 
 // GetAllOpenVulnsByAssetIDWithoutEvents skips the Events preload for callers
 // that don't need it, such as the crowdsourced-vexing recommendation response.
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	return repository.getAllOpenVulns(ctx, tx, &assetID, false)
+	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, false)
+}
+
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.DependencyVuln, error) {
+	return repository.getAllOpenVulns(ctx, tx, assetIDs, true)
 }
 
 // getAllOpenVulnsByAssetID omits CVE.Description/References - they're large
@@ -453,7 +457,7 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvent
 // instead of GORM's Preload building a literal IN(...) list of every
 // already-fetched vuln ID, which is expensive for Postgres to plan at thousands
 // of IDs.
-func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context, tx *gorm.DB, assetID *uuid.UUID, preloadEvents bool) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, preloadEvents bool) ([]models.DependencyVuln, error) {
 	db := repository.GetDB(ctx, tx)
 
 	query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
@@ -464,8 +468,8 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 	}
 
 	query = query.Distinct("ON (cve_id, vulnerability_path) *").Where("state = ?", dtos.VulnStateOpen)
-	if assetID != nil {
-		query = query.Where("asset_id = ?", assetID)
+	if len(assetIDs) > 0 {
+		query = query.Where("asset_id IN (?)", assetIDs)
 	}
 
 	var vulns = []models.DependencyVuln{}
@@ -480,8 +484,8 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 	dedupedIDs := db.Table("dependency_vulns").
 		Select("DISTINCT ON (cve_id, vulnerability_path) id").
 		Where("state = ?", dtos.VulnStateOpen)
-	if assetID != nil {
-		dedupedIDs = dedupedIDs.Where("asset_id = ?", assetID)
+	if len(assetIDs) > 0 {
+		dedupedIDs = dedupedIDs.Where("asset_id IN (?)", assetIDs)
 	}
 	dedupedIDs = dedupedIDs.Order("cve_id, vulnerability_path, created_at ASC")
 

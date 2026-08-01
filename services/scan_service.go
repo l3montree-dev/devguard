@@ -58,7 +58,8 @@ type scanService struct {
 	cveRepository               shared.CveRepository
 	csafService                 shared.CSAFService
 	assetVersionService         shared.AssetVersionService
-	vexRuleService              shared.VEXRuleService
+	vexRuleRepository           shared.VEXRuleRepository
+	vulnEventRepository         shared.VulnEventRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	componentService            shared.ComponentService
 	// mark public to let it be overridden in tests
@@ -78,7 +79,8 @@ func NewScanService(
 	thirdPartyIntegration shared.IntegrationAggregate,
 	csafService shared.CSAFService,
 	assetVersionService shared.AssetVersionService,
-	vexRuleService shared.VEXRuleService,
+	vexRuleRepository shared.VEXRuleRepository,
+	vulnEventRepository shared.VulnEventRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	componentService shared.ComponentService,
 ) *scanService {
@@ -95,7 +97,8 @@ func NewScanService(
 		cveRepository:               cveRepository,
 		csafService:                 csafService,
 		assetVersionService:         assetVersionService,
-		vexRuleService:              vexRuleService,
+		vexRuleRepository:           vexRuleRepository,
+		vulnEventRepository:         vulnEventRepository,
 		externalReferenceRepository: externalReferenceRepository,
 		componentService:            componentService,
 	}
@@ -153,12 +156,18 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 
 	// newly opened vulns may already be covered by previously created, still-enabled VEX
 	// rules for this asset (e.g. a rule created before this vulnerability was ever detected).
-	existingRules, rulesErr := s.vexRuleService.FindByAssetID(ctx, tx, asset.ID)
+	existingRules, rulesErr := s.vexRuleRepository.FindByAssetID(ctx, tx, asset.ID)
 	if rulesErr != nil {
 		slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
 	} else if len(existingRules) > 0 {
-		if _, applyErr := s.vexRuleService.ApplyRulesToExisting(ctx, tx, existingRules, newState); applyErr != nil {
-			slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
+		updatedVulns, events := ApplyVEXRulesToVulns(ctx, existingRules, newState)
+		if len(updatedVulns) > 0 {
+			if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
+				slog.Error("could not save vulns updated by existing VEX rules", "err", err)
+			}
+			if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
+				slog.Error("could not save events from existing VEX rules", "err", err)
+			}
 		}
 	}
 
