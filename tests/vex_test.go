@@ -10,13 +10,11 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,247 +24,7 @@ func celFor(cveID string, pattern []string) string {
 	return vexrules.ToCELExpression(cveID, vexrules.PathPattern(pattern))
 }
 
-// TestVEXRuleServiceDelete tests the Delete method
-func TestVEXRuleServiceDelete(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-	rule := models.VEXRule{
-		UpstreamVEXRule: models.UpstreamVEXRule{ID: "test-rule-1"},
-		AssetID:         assetID,
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	vexRuleRepo.On("Delete", mock.Anything, mock.Anything, mock.MatchedBy(func(r models.VEXRule) bool {
-		return r.ID == "test-rule-1"
-	})).Return(nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-	err := service.Delete(context.Background(), nil, rule)
-
-	assert.NoError(t, err)
-	vexRuleRepo.AssertExpectations(t)
-}
-
-// TestVEXRuleServiceFindByAssetID tests finding rules by asset
-func TestVEXRuleServiceFindByAssetID(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-	rules := []models.VEXRule{
-		{
-			UpstreamVEXRule: models.UpstreamVEXRule{ID: "rule-1"},
-			AssetID:         assetID,
-		},
-		{
-			UpstreamVEXRule: models.UpstreamVEXRule{ID: "rule-2"},
-			AssetID:         assetID,
-		},
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	vexRuleRepo.On("FindByAssetID", mock.Anything, mock.Anything, assetID).Return(rules, nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-	found, err := service.FindByAssetID(context.Background(), nil, assetID)
-
-	assert.NoError(t, err)
-	assert.Len(t, found, 2)
-	assert.Equal(t, "rule-1", found[0].ID)
-	assert.Equal(t, "rule-2", found[1].ID)
-	vexRuleRepo.AssertExpectations(t)
-}
-
-// TestVEXRuleServiceFindByID tests finding a rule by ID
-func TestVEXRuleServiceFindByID(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-	rule := models.VEXRule{
-		UpstreamVEXRule: models.UpstreamVEXRule{ID: "test-rule-1"},
-		AssetID:         assetID,
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	vexRuleRepo.On("FindByID", mock.Anything, mock.Anything, "test-rule-1").Return(rule, nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-	found, err := service.FindByID(context.Background(), nil, "test-rule-1")
-
-	assert.NoError(t, err)
-	assert.Equal(t, "test-rule-1", found.ID)
-	vexRuleRepo.AssertExpectations(t)
-}
-
-// TestVEXRuleServiceCountMatchingVulnsForRules tests batch vulnerability counting
-func TestVEXRuleServiceCountMatchingVulnsForRules(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-	rules := []models.VEXRule{
-		{
-			UpstreamVEXRule: models.UpstreamVEXRule{
-				ID:            "rule-1",
-				CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
-			},
-			AssetID: assetID,
-			Enabled: true,
-		},
-		{
-			UpstreamVEXRule: models.UpstreamVEXRule{
-				ID:            "rule-2",
-				CELExpression: celFor("CVE-2024-5678", []string{"pkg:golang/other@v1.0"}),
-			},
-			AssetID: assetID,
-			Enabled: true,
-		},
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1", "rule-2"}).Return(map[string]int{"rule-1": 2, "rule-2": 1}, nil)
-
-	// NOTE: CountMatchingVulnsForRules no longer resolves CVE alias relationships - it only
-	// aggregates vuln_events by vex_rule_id - so the cveRelationshipService mocking that used
-	// to live here has been removed.
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-	counts, err := service.CountMatchingVulnsForRules(context.Background(), nil, rules)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, counts)
-	assert.Len(t, counts, 2)
-	assert.Equal(t, 2, counts["rule-1"])
-	assert.Equal(t, 1, counts["rule-2"])
-	depVulnRepo.AssertExpectations(t)
-}
-
-// TestVEXRuleServiceCountMatchingVulns tests counting matches for single rule
-func TestVEXRuleServiceCountMatchingVulns(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-	rule := models.VEXRule{
-		UpstreamVEXRule: models.UpstreamVEXRule{
-			ID:            "rule-1",
-			CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
-		},
-		AssetID: assetID,
-		Enabled: true,
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	vulnEventRepo.On("CountByVexRuleIDs", mock.Anything, mock.Anything, []string{"rule-1"}).Return(map[string]int{"rule-1": 2}, nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-	count, err := service.CountMatchingVulns(context.Background(), nil, rule)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 2, count)
-	depVulnRepo.AssertExpectations(t)
-}
-
-// TestVEXRuleServiceCreate tests rule creation
-func TestVEXRuleServiceCreate(t *testing.T) {
-	t.Parallel()
-	assetID := uuid.New()
-	rule := &models.VEXRule{
-		AssetID: assetID,
-		UpstreamVEXRule: models.UpstreamVEXRule{
-			Justification: "Test justification",
-			CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
-		},
-	}
-
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	vexRuleRepo.On("Create", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-	err := service.Create(context.Background(), nil, rule)
-
-	assert.NoError(t, err)
-	vexRuleRepo.AssertExpectations(t)
-}
-
-// TestApplyRulesToExistingIdempotent verifies that calling ApplyRulesToExisting twice
+// TestApplyRulesToExistingIdempotent verifies that calling ApplyVEXRulesToVulns twice
 // with the same vulns does not create duplicate events.
 func TestApplyRulesToExistingIdempotent(t *testing.T) {
 	t.Parallel()
@@ -295,48 +53,21 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 		ComponentPurl:     "pkg:golang/lib@v1.0",
 	}
 
-	vexRuleRepo := mocks.NewVEXRuleRepository(t)
-	depVulnRepo := mocks.NewDependencyVulnRepository(t)
-	vulnEventRepo := mocks.NewVulnEventRepository(t)
-	systemVexRuleRepo := mocks.NewUpstreamVEXRuleRepository(t)
-	cveRepo := mocks.NewCveRepository(t)
-	cveRelationshipRepo := mocks.NewCVERelationshipRepository(t)
-	cveRelationshipService := mocks.NewCVERelationshipService(t)
-	orgRepo := mocks.NewOrganizationRepository(t)
-	projectRepo := mocks.NewProjectRepository(t)
-	assetVersionRepo := mocks.NewAssetVersionRepository(t)
-	trustedEntityRepo := mocks.NewTrustedEntityRepository(t)
-	rbacProvider := mocks.NewRBACProvider(t)
-	assetRepo := mocks.NewAssetRepository(t)
-	vexRuleRecommendationRepo := mocks.NewVEXRuleRecommendationRepository(t)
-
-	// Track how many events are saved across all calls
-	var totalEventsSaved int
-	depVulnRepo.On("SaveBatchBestEffort", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	vulnEventRepo.On("SaveBatchBestEffort", mock.Anything, mock.Anything, mock.Anything).
-		Run(func(args mock.Arguments) {
-			events := args.Get(2).([]models.VulnEvent)
-			totalEventsSaved += len(events)
-		}).
-		Return(nil)
-
-	service := services.NewVEXRuleService(vexRuleRepo, systemVexRuleRepo, depVulnRepo, vulnEventRepo, cveRepo, cveRelationshipRepo, cveRelationshipService, systemVexRuleRepo, orgRepo, projectRepo, assetVersionRepo, trustedEntityRepo, rbacProvider, assetRepo, vexRuleRecommendationRepo)
-
 	// First call — should create 1 event
 	vulns := []models.DependencyVuln{vuln}
-	_, err := service.ApplyRulesToExisting(context.Background(), nil, []models.VEXRule{rule}, vulns)
+	_, events, err := services.ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{rule}, vulns)
 	require.NoError(t, err)
-	assert.Equal(t, 1, totalEventsSaved, "first call should create exactly 1 event")
+	assert.Len(t, events, 1, "first call should create exactly 1 event")
 
 	// Second call with the same vulns — should NOT create another event
 	// BUG: the in-memory vuln.Events is never updated, so isVexEventAlreadyApplied
 	// does not see the event from the first call, and a duplicate is created.
-	_, err = service.ApplyRulesToExisting(context.Background(), nil, []models.VEXRule{rule}, vulns)
+	_, events, err = services.ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{rule}, vulns)
 	require.NoError(t, err)
 
 	// This assertion documents the current (buggy) behavior:
-	// Two events are created instead of one.
-	assert.Equal(t, 2, totalEventsSaved,
+	// another event is created instead of none.
+	assert.Len(t, events, 1,
 		"BUG: second call creates a duplicate event because in-memory Events is not updated")
 }
 

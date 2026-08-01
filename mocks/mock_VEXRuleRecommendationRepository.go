@@ -586,23 +586,23 @@ func (_c *VEXRuleRecommendationRepository_DeleteBatch_Call) RunAndReturn(run fun
 }
 
 // FindByDependencyVulnIDs provides a mock function for the type VEXRuleRecommendationRepository
-func (_mock *VEXRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) ([]models.VEXRuleRecommendation, error) {
+func (_mock *VEXRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error) {
 	ret := _mock.Called(ctx, tx, dependencyVulnIDs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByDependencyVulnIDs")
 	}
 
-	var r0 []models.VEXRuleRecommendation
+	var r0 map[uuid.UUID]models.VEXRuleRecommendation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.VEXRuleRecommendation, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)); ok {
 		return returnFunc(ctx, tx, dependencyVulnIDs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.VEXRuleRecommendation); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) map[uuid.UUID]models.VEXRuleRecommendation); ok {
 		r0 = returnFunc(ctx, tx, dependencyVulnIDs)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.VEXRuleRecommendation)
+			r0 = ret.Get(0).(map[uuid.UUID]models.VEXRuleRecommendation)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
@@ -649,12 +649,12 @@ func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) Run(run 
 	return _c
 }
 
-func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) Return(vEXRuleRecommendations []models.VEXRuleRecommendation, err error) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
-	_c.Call.Return(vEXRuleRecommendations, err)
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) Return(uUIDToVEXRuleRecommendation map[uuid.UUID]models.VEXRuleRecommendation, err error) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
+	_c.Call.Return(uUIDToVEXRuleRecommendation, err)
 	return _c
 }
 
-func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) ([]models.VEXRuleRecommendation, error)) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

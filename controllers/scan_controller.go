@@ -203,7 +203,10 @@ func (s *ScanController) ingestVEXRules(ctx context.Context, tx shared.DB, asset
 		return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 	}
 
-	updatedVulns, events := services.ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)
+	updatedVulns, events, err := services.ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)
+	if err != nil {
+		return fmt.Errorf("failed to apply VEX rules to vulns: %w", err)
+	}
 	if len(updatedVulns) == 0 {
 		return nil
 	}

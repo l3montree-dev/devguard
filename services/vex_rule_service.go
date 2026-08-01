@@ -147,7 +147,7 @@ func MatchRulesToVulns(ctx context.Context, rules []models.UpstreamVEXRule, vuln
 			continue
 		}
 		for _, ruleID := range matchingRuleIDs {
-			result[ruleID] = append(result[vulnID], vuln)
+			result[ruleID] = append(result[ruleID], vuln)
 		}
 	}
 	return result, nil
@@ -238,31 +238,6 @@ func DiffVEXRulesForSource(newRules []models.VEXRule, existingRules []models.VEX
 		return a.ID
 	})
 	return result.OnlyInA, result.OnlyInB
-}
-
-func bestRecommendation(recommendations []models.VEXRuleRecommendation) (models.VEXRuleRecommendation, bool) {
-	if len(recommendations) == 0 {
-		return models.VEXRuleRecommendation{}, false
-	}
-	best := recommendations[0]
-	for _, rec := range recommendations[1:] {
-		if rec.Confidence > best.Confidence {
-			best = rec
-		}
-	}
-	return best, true
-}
-
-func BestRecommendation(recommendations []models.VEXRuleRecommendation) (rec models.VEXRuleRecommendation, id string, ok bool) {
-	best, ok := bestRecommendation(recommendations)
-	if !ok {
-		return models.VEXRuleRecommendation{}, "", false
-	}
-	id = best.VEXRuleID
-	if id == "" {
-		id = best.UpstreamVEXRuleID
-	}
-	return best, id, true
 }
 
 func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.DependencyVuln, vexRules []models.VEXRule, assetIDsForSession []string) (map[uuid.UUID]models.VEXRule, error) {
@@ -391,23 +366,30 @@ func ComputeVEXRuleRecommendations(
 		return nil, fmt.Errorf("failed to evaluate upstream VEX rules: %w", err)
 	}
 
-	ruleRecommendations := make([]models.VEXRuleRecommendation, 0, len(upstreamRuleResults))
+	// at most one recommendation per dependency vuln - an upstream rule match takes
+	// priority over a crowdsourced recommendation for the same vuln.
+	recommendationsByVulnID := make(map[uuid.UUID]models.VEXRuleRecommendation, len(upstreamRuleResults))
 	for vulnID, matchingRules := range upstreamRuleResults {
+		if len(matchingRules) == 0 {
+			continue
+		}
 		parsedID, err := uuid.Parse(vulnID)
 		if err != nil {
 			continue
 		}
-		for _, ruleID := range matchingRules {
-			ruleRecommendations = append(ruleRecommendations, models.VEXRuleRecommendation{
-				UpstreamVEXRuleID: ruleID,
-				DependencyVulnID:  parsedID,
-			})
+		recommendationsByVulnID[parsedID] = models.VEXRuleRecommendation{
+			UpstreamVEXRuleID: matchingRules[0],
+			DependencyVulnID:  parsedID,
 		}
 	}
 
 	for vulnID, matchingRules := range vexRuleResults {
 		parsedID, err := uuid.Parse(vulnID)
 		if err != nil {
+			continue
+		}
+		if _, ok := recommendationsByVulnID[parsedID]; ok {
+			// a
 			continue
 		}
 
@@ -424,13 +406,18 @@ func ComputeVEXRuleRecommendations(
 			continue
 		}
 
-		ruleRecommendations = append(ruleRecommendations, models.VEXRuleRecommendation{
+		recommendationsByVulnID[parsedID] = models.VEXRuleRecommendation{
 			UpstreamVEXRuleID: recommendedRule.ID,
 			DependencyVulnID:  parsedID,
 			Confidence:        confidence,
 			VerifiedVotes:     votes.Verified,
 			TotalVotes:        votes.Total,
-		})
+		}
+	}
+
+	ruleRecommendations := make([]models.VEXRuleRecommendation, 0, len(recommendationsByVulnID))
+	for _, recommendation := range recommendationsByVulnID {
+		ruleRecommendations = append(ruleRecommendations, recommendation)
 	}
 
 	return ruleRecommendations, nil

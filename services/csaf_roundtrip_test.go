@@ -29,6 +29,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// evalRule reports whether rule matches vuln, mirroring the removed vexrules.EvalRules helper.
+func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyVuln) bool {
+	t.Helper()
+	compiled, err := vexrules.CompileRules(context.Background(), []models.UpstreamVEXRule{rule})
+	require.NoError(t, err)
+	vulnMaps, err := vexrules.PrepareVulnsForEval(context.Background(), []models.DependencyVuln{vuln})
+	require.NoError(t, err)
+	matches, err := vexrules.EvalCompiledRules(context.Background(), compiled, vulnMaps)
+	require.NoError(t, err)
+	for _, matchingRuleIDs := range matches {
+		for _, matchingRuleID := range matchingRuleIDs {
+			if matchingRuleID == rule.ID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // TestAggregatedCSAFRoundTrip verifies that an aggregated CSAF advisory covering multiple
 // CVEs (as served by the artifact/release csaf.json endpoints) round-trips back into exact,
 // per-path VEX rules - one rule per false-positive path, none for the open paths - and that
@@ -97,9 +116,7 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	for cveID, vuln := range map[string]models.DependencyVuln{"CVE-2024-0001": vulnA1, "CVE-2024-0002": vulnB1} {
 		var matched bool
 		for _, r := range rules {
-			matches, err := vexrules.EvalRules(context.Background(), []models.UpstreamVEXRule{r}, vuln)
-			require.NoError(t, err)
-			if matches[r.ID] {
+			if evalRule(t, r, vuln) {
 				matched = true
 			}
 		}
@@ -110,9 +127,7 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	// otherwise re-uploading the CSAF report would incorrectly resolve an open vuln too.
 	openA := mk("CVE-2024-0001", compA, pathA2, dtos.VulnStateOpen, false)
 	for _, r := range rules {
-		matches, err := vexrules.EvalRules(context.Background(), []models.UpstreamVEXRule{r}, openA)
-		require.NoError(t, err)
-		assert.False(t, matches[r.ID], "the open path must not match the false-positive path's rule")
+		assert.False(t, evalRule(t, r, openA), "the open path must not match the false-positive path's rule")
 	}
 }
 
@@ -191,9 +206,7 @@ func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 	for i, vuln := range vulns {
 		matchCount := 0
 		for _, r := range rules {
-			matches, err := vexrules.EvalRules(context.Background(), []models.UpstreamVEXRule{r}, vuln)
-			require.NoError(t, err)
-			if matches[r.ID] {
+			if evalRule(t, r, vuln) {
 				matchCount++
 			}
 		}

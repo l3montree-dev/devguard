@@ -50,7 +50,7 @@ func NewVEXRuleRecommendationRepository(db *gorm.DB) *vexRuleRecommendationRepos
 	}
 }
 
-func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) ([]models.VEXRuleRecommendation, error) {
+func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error) {
 	if len(dependencyVulnIDs) == 0 {
 		return nil, nil
 	}
@@ -61,7 +61,15 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Co
 		Preload("UpstreamVEXRule").
 		Where("dependency_vuln_id IN ?", dependencyVulnIDs).
 		Find(&recommendations).Error
-	return recommendations, err
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[uuid.UUID]models.VEXRuleRecommendation, len(recommendations))
+	for _, recommendation := range recommendations {
+		result[recommendation.DependencyVulnID] = recommendation
+	}
+	return result, nil
 }
 
 func (r *vexRuleRecommendationRepository) DeleteAll(ctx context.Context, tx shared.DB) error {

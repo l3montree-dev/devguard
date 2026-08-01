@@ -39,7 +39,7 @@ import (
 const vulnCacheTTL = 2 * time.Minute
 const vulnCacheSize = 32
 
-var vulnCache = expirable.NewLRU[uuid.UUID, []models.DependencyVuln](vulnCacheSize, nil, vulnCacheTTL)
+var vulnMapCache = expirable.NewLRU[uuid.UUID, []map[string]any](vulnCacheSize, nil, vulnCacheTTL)
 
 type VEXRuleController struct {
 	vexRuleRepository        shared.VEXRuleRepository
@@ -163,26 +163,34 @@ func (c *VEXRuleController) Get(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.VEXRuleToDTOWithCount(rule, count))
 }
 
-func (c *VEXRuleController) cachedVulns(ctx shared.Context) []models.DependencyVuln {
+func (c *VEXRuleController) cachedVulns(ctx shared.Context) ([]map[string]any, error) {
 	assetID := shared.GetAsset(ctx).ID
 
-	if vulns, ok := vulnCache.Get(assetID); ok {
-		return vulns
+	if vulns, ok := vulnMapCache.Get(assetID); ok {
+		return vulns, nil
 	}
 
 	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(ctx.Request().Context(), nil, assetID)
 	if err != nil {
-		ctx.Logger().Error("failed to retrieve vulnerabilities", "error", err)
-		return nil
+		return nil, err
 	}
 
-	vulnCache.Add(assetID, vulns)
-	return vulns
+	// prepare the slice already for eval
+	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx.Request().Context(), vulns)
+	if err != nil {
+		return nil, err
+	}
+
+	vulnMapCache.Add(assetID, vulnMaps)
+	return vulnMaps, nil
 }
 
 func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 
-	vulns := c.cachedVulns(ctx)
+	vulns, err := c.cachedVulns(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to fetch vulns for asset").WithInternal(err)
+	}
 	response := make(map[string]int)
 
 	var req dtos.TestVEXRulesRequest
@@ -200,29 +208,24 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 	}
 
 	requestCtx := ctx.Request().Context()
-	eg := utils.ErrGroup[map[string]int](100)
-	for _, vuln := range vulns {
-		eg.Go(func() (map[string]int, error) {
-			matches, err := vexrules.EvalRules(requestCtx, vexRules, vuln)
-			if err != nil {
-				return nil, err
-			}
-			counts := make(map[string]int)
-			for _, rule := range vexRules {
-				if matches[rule.ID] {
-					counts[rule.CELExpression]++
-				}
-			}
-			return counts, nil
-		})
+
+	compiledRules, err := vexrules.CompileRules(requestCtx, vexRules)
+	if err != nil {
+		return echo.NewHTTPError(500, "failed to compile CEL expression").WithInternal(err)
 	}
-	results, err := eg.WaitAndCollect()
+
+	matches, err := vexrules.EvalCompiledRules(requestCtx, compiledRules, vulns)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to evaluate CEL expression").WithInternal(err)
 	}
-	for _, counts := range results {
-		for expr, n := range counts {
-			response[expr] += n
+
+	for _, rule := range vexRules {
+		for _, matchingRuleIDs := range matches {
+			for _, matchingRuleID := range matchingRuleIDs {
+				if matchingRuleID == rule.ID {
+					response[rule.CELExpression]++
+				}
+			}
 		}
 	}
 
@@ -292,8 +295,11 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		tx.Rollback()
 	} else {
 		var events []models.VulnEvent
-		vulns, events = services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, existingVulns)
-		if len(vulns) > 0 {
+		vulns, events, err = services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, existingVulns)
+		if err != nil {
+			slog.Error("failed to apply VEX rules to vulns", "error", err)
+			tx.Rollback()
+		} else if len(vulns) > 0 {
 			if err := c.dependencyVulnRepository.SaveBatchBestEffort(reqCtx, tx, vulns); err != nil {
 				slog.Error("failed to save updated vulns", "error", err)
 				tx.Rollback()

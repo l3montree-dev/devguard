@@ -49,9 +49,9 @@ func VEXRuleToUpstreamVEXRule(rule models.VEXRule) models.UpstreamVEXRule {
 	return rule.UpstreamVEXRule
 }
 
-// VEXRuleToRecommendationDTO builds a crowdsourced recommendation DTO from an
+// vexRuleToRecommendationDTO builds a crowdsourced recommendation DTO from an
 // asset-owned VEX rule that won the cross-asset vote.
-func VEXRuleToRecommendationDTO(rule models.VEXRule, appliesToAmountOfDependencyVulns int, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
+func vexRuleToRecommendationDTO(rule models.VEXRule, appliesToAmountOfDependencyVulns int, confidence float64, verifiedVotes, totalVotes int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
 		Title:                            rule.Title,
 		CELExpression:                    rule.CELExpression,
@@ -66,10 +66,10 @@ func VEXRuleToRecommendationDTO(rule models.VEXRule, appliesToAmountOfDependency
 	}
 }
 
-// UpstreamVEXRuleToRecommendationDTO builds a recommendation DTO for a trusted
+// upstreamVEXRuleToRecommendationDTO builds a recommendation DTO for a trusted
 // upstream VEX rule. Upstream rules are trusted outright rather than voted on,
 // so there is no meaningful confidence/vote count beyond "fully confident".
-func UpstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule, appliesToAmountOfDependencyVulns int) dtos.VexRuleRecommendation {
+func upstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule, appliesToAmountOfDependencyVulns int) dtos.VexRuleRecommendation {
 	return dtos.VexRuleRecommendation{
 		Title:                            rule.Title,
 		CELExpression:                    rule.CELExpression,
@@ -88,9 +88,9 @@ func UpstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule, appliesToAm
 // (UpstreamVEXRuleID set).
 func VEXRuleRecommendationToDTO(rec models.VEXRuleRecommendation, appliesToAmountOfDependencyVulns int) dtos.VexRuleRecommendation {
 	if rec.VEXRuleID != "" {
-		return VEXRuleToRecommendationDTO(rec.VEXRule, appliesToAmountOfDependencyVulns, rec.Confidence, rec.VerifiedVotes, rec.TotalVotes)
+		return vexRuleToRecommendationDTO(rec.VEXRule, appliesToAmountOfDependencyVulns, rec.Confidence, rec.VerifiedVotes, rec.TotalVotes)
 	}
-	return UpstreamVEXRuleToRecommendationDTO(rec.UpstreamVEXRule, appliesToAmountOfDependencyVulns)
+	return upstreamVEXRuleToRecommendationDTO(rec.UpstreamVEXRule, appliesToAmountOfDependencyVulns)
 }
 
 func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, appliesToAmountOfDependencyVulns int, originProjectSlug, originAssetSlug string) dtos.VexRuleRecommendation {
