@@ -58,7 +58,8 @@ type scanService struct {
 	cveRepository               shared.CveRepository
 	csafService                 shared.CSAFService
 	assetVersionService         shared.AssetVersionService
-	vexRuleService              shared.VEXRuleService
+	vexRuleRepository           shared.VEXRuleRepository
+	vulnEventRepository         shared.VulnEventRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	componentService            shared.ComponentService
 	// mark public to let it be overridden in tests
@@ -78,7 +79,8 @@ func NewScanService(
 	thirdPartyIntegration shared.IntegrationAggregate,
 	csafService shared.CSAFService,
 	assetVersionService shared.AssetVersionService,
-	vexRuleService shared.VEXRuleService,
+	vexRuleRepository shared.VEXRuleRepository,
+	vulnEventRepository shared.VulnEventRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	componentService shared.ComponentService,
 ) *scanService {
@@ -95,7 +97,8 @@ func NewScanService(
 		cveRepository:               cveRepository,
 		csafService:                 csafService,
 		assetVersionService:         assetVersionService,
-		vexRuleService:              vexRuleService,
+		vexRuleRepository:           vexRuleRepository,
+		vulnEventRepository:         vulnEventRepository,
 		externalReferenceRepository: externalReferenceRepository,
 		componentService:            componentService,
 	}
@@ -154,13 +157,21 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 	// newly opened vulns may already be covered by previously created, still-enabled VEX
 	// rules for this asset (e.g. a rule created before this vulnerability was ever detected).
 	var updatedVulns []models.DependencyVuln
-	existingRules, rulesErr := s.vexRuleService.FindByAssetID(ctx, tx, asset.ID)
+	var events []models.VulnEvent
+	existingRules, rulesErr := s.vexRuleRepository.FindByAssetID(ctx, tx, asset.ID)
 	if rulesErr != nil {
 		slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
 	} else if len(existingRules) > 0 {
 		var applyErr error
-		if updatedVulns, applyErr = s.vexRuleService.ApplyRulesToExisting(ctx, tx, existingRules, newState); applyErr != nil {
+		if updatedVulns, events, applyErr = ApplyVEXRulesToVulns(ctx, existingRules, newState); applyErr != nil {
 			slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
+		} else if len(updatedVulns) > 0 {
+			if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
+				slog.Error("could not save vulns updated by existing VEX rules", "err", err)
+			}
+			if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
+				slog.Error("could not save events from existing VEX rules", "err", err)
+			}
 		}
 	}
 	//update the state in newState to reflect the changes made by applying the VEX rules
@@ -706,7 +717,7 @@ func (s *scanService) sniffVexFormat(body []byte) dtos.ExternalReferenceType {
 
 // vexRulesFromDocument decodes a CSAF or OpenVEX document and converts it into VEX rules.
 // nosemgrep: service-method-missing-ctx
-func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, source string) ([]models.VEXRule, dtos.ExternalReferenceType, error) {
+func (s *scanService) VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error) {
 	format := s.sniffVexFormat(body)
 
 	switch format {
@@ -715,21 +726,21 @@ func (s *scanService) VexRulesFromDocument(body []byte, assetID uuid.UUID, sourc
 		if err := json.Unmarshal(body, &advisory); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CSAF advisory: %w", err)
 		}
-		rules, err := transformer.CSAFVEXToRules(&advisory, assetID, source)
+		rules, err := transformer.CSAFVEXToRules(&advisory, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeOpenVEX:
 		var doc vex.VEX
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as OpenVEX document: %w", err)
 		}
-		rules, err := transformer.OpenVEXToRules(&doc, assetID, source)
+		rules, err := transformer.OpenVEXToRules(&doc, source)
 		return rules, format, err
 	case dtos.ExternalReferenceTypeCycloneDX:
 		var doc cyclonedx.BOM
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, format, fmt.Errorf("could not decode vex file as CycloneDX BOM: %w", err)
 		}
-		rules, err := transformer.CycloneDXVEXToRules(&doc, assetID, source)
+		rules, err := transformer.CycloneDXVEXToRules(&doc, source)
 		return rules, format, err
 	default:
 		return nil, format, fmt.Errorf("unsupported VEX document format")
@@ -779,7 +790,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 				})
 				return
 			}
-			vexRules, format, err := s.VexRulesFromDocument(body, assetID, url)
+			vexRules, format, err := s.VexRulesFromDocument(body, url)
 			if err != nil {
 				mut.Lock()
 				invalid = append(invalid, models.ExternalReference{
@@ -791,7 +802,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 				return
 			}
 			mut.Lock()
-			rules = append(rules, vexRules...)
+			rules = append(rules, transformer.AllUpstreamVEXRulesToVEXRules(vexRules, "system", assetID)...)
 			valid = append(valid, models.ExternalReference{
 				URL:     url,
 				AssetID: assetID,
@@ -804,7 +815,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 	return rules, valid, invalid
 }
 
-// RunArtifactSecurityLifecycle orchestrates the complete security lifecycle for an artifact:
+// SyncArtifactUpstreamSBOMSources orchestrates the complete security lifecycle for an artifact:
 // 1. Fetches information sources (SBOM URLs) from the artifact
 // 2. Fetches VEX URLs from external references
 // 3. Fetches SBOMs and VEX reports from upstream
@@ -812,7 +823,7 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 // 5. Scans the normalized SBOM for vulnerabilities
 // 6. Ingests VEX rules
 // It returns the normalized BOM and VEX reports for further processing if needed
-func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
+func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	tx shared.DB,
 	org models.Org,
 	project models.Project,
@@ -820,14 +831,13 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	assetVersion models.AssetVersion,
 	artifact models.Artifact,
 	userID string,
-	vexRefs []models.ExternalReference,
 	userAgent *string,
-) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error) {
+) (*normalize.SBOMGraph, []models.DependencyVuln, error) {
 	// Fetch information sources (SBOM URLs) from the artifact
 	rootNodes, err := s.componentService.FetchInformationSources(ctx, nil, &artifact)
 	if err != nil {
 		slog.Error("failed to fetch information sources", "error", err, "artifactName", artifact.ArtifactName)
-		return nil, nil, nil, fmt.Errorf("failed to fetch information sources: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch information sources: %w", err)
 	}
 
 	// Extract unique HTTP URLs from information sources
@@ -842,8 +852,7 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 
 	// Fetch SBOMs and VEX reports from upstream
 	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
-	vexRules, _, _ := s.FetchVexFromUpstream(ctx, asset.ID,
-		utils.Map(vexRefs, func(ref models.ExternalReference) string { return ref.URL }))
+
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
 	for _, bom := range boms {
@@ -863,23 +872,17 @@ func (s *scanService) RunArtifactSecurityLifecycle(ctx context.Context,
 	)
 	if err != nil {
 		slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
-		return nil, nil, nil, fmt.Errorf("failed to update sbom: %w", err)
+		return nil, nil, fmt.Errorf("failed to update sbom: %w", err)
 	}
 
 	// Scan the normalized SBOM for vulnerabilities
 	_, _, dependencyVulns, err := s.ScanNormalizedSBOM(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
 	if err != nil {
 		slog.Error("failed to scan normalized sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
-		return nil, nil, nil, fmt.Errorf("failed to scan normalized sbom: %w", err)
+		return nil, nil, fmt.Errorf("failed to scan normalized sbom: %w", err)
 	}
 
-	// Ingest VEX rules
-	if err := s.vexRuleService.IngestVEXRules(ctx, tx, asset, vexRules); err != nil {
-		slog.Error("failed to ingest vex rules in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
-		return nil, nil, nil, fmt.Errorf("failed to ingest vex rules: %w", err)
-	}
-
-	return normalizedBom, vexRules, dependencyVulns, nil
+	return normalizedBom, dependencyVulns, nil
 }
 
 func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error) {

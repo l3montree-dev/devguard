@@ -81,29 +81,31 @@ type TestApp struct {
 	VulnDBController            *controllers.VulnDBController
 
 	// Repositories
-	AssetRepository             shared.AssetRepository
-	AssetVersionRepository      shared.AssetVersionRepository
-	ComponentRepository         shared.ComponentRepository
-	DependencyVulnRepository    shared.DependencyVulnRepository
-	FirstPartyVulnRepository    shared.FirstPartyVulnRepository
-	CveRepository               shared.CveRepository
-	CweRepository               shared.CweRepository
-	ExploitRepository           shared.ExploitRepository
-	AffectedComponentRepository shared.AffectedComponentRepository
-	ProjectRepository           shared.ProjectRepository
-	OrgRepository               shared.OrganizationRepository
-	ArtifactRepository          shared.ArtifactRepository
-	VulnEventRepository         shared.VulnEventRepository
-	ComponentProjectRepository  shared.ComponentProjectRepository
-	StatisticsRepository        shared.StatisticsRepository
-	LicenseRiskRepository       shared.LicenseRiskRepository
-	GitLabOauth2TokenRepository shared.GitLabOauth2TokenRepository
-	GitlabIntegrationRepository shared.GitlabIntegrationRepository
-	ExternalUserRepository      shared.ExternalUserRepository
-	AggregatedVulnRepository    shared.VulnRepository
-	VexRuleRepository           shared.VEXRuleRepository
-	ExternalReferenceRepository shared.ExternalReferenceRepository
-	VexRuleService              shared.VEXRuleService
+	AssetRepository                 shared.AssetRepository
+	AssetVersionRepository          shared.AssetVersionRepository
+	ComponentRepository             shared.ComponentRepository
+	DependencyVulnRepository        shared.DependencyVulnRepository
+	FirstPartyVulnRepository        shared.FirstPartyVulnRepository
+	CveRepository                   shared.CveRepository
+	CweRepository                   shared.CweRepository
+	ExploitRepository               shared.ExploitRepository
+	AffectedComponentRepository     shared.AffectedComponentRepository
+	ProjectRepository               shared.ProjectRepository
+	OrgRepository                   shared.OrganizationRepository
+	ArtifactRepository              shared.ArtifactRepository
+	VulnEventRepository             shared.VulnEventRepository
+	ComponentProjectRepository      shared.ComponentProjectRepository
+	StatisticsRepository            shared.StatisticsRepository
+	LicenseRiskRepository           shared.LicenseRiskRepository
+	GitLabOauth2TokenRepository     shared.GitLabOauth2TokenRepository
+	GitlabIntegrationRepository     shared.GitlabIntegrationRepository
+	ExternalUserRepository          shared.ExternalUserRepository
+	AggregatedVulnRepository        shared.VulnRepository
+	VexRuleRepository               shared.VEXRuleRepository
+	VexRuleRecommendationRepository shared.VEXRuleRecommendationRepository
+	TrustedEntityRepository         shared.TrustedEntityRepository
+	ExternalReferenceRepository     shared.ExternalReferenceRepository
+	UpstreamVEXRuleRepository       shared.UpstreamVEXRuleRepository
 
 	// Access Control
 	RBACProvider shared.RBACProvider

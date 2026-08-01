@@ -20,6 +20,7 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/dtos"
+
 	"github.com/stretchr/testify/assert"
 )
 

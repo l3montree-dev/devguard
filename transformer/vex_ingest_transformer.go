@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/uuid"
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 
@@ -40,7 +39,7 @@ import (
 // so unless the BOM carries an explicit devguard:pathPattern property (which DevGuard adds
 // for vulns it has already matched to a rule), the reconstructed path pattern is a
 // component-level wildcard that matches every path reaching that component.
-func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]models.VEXRule, error) {
+func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule, error) {
 	// we are only interested in the vulnerabilities
 	// for creating vex rules we need to find the starting path to the components
 	// we ONLY USE METADATA COMPONENT FOR THAT
@@ -83,7 +82,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]mode
 		return nil, fmt.Errorf("no vulns inside sbom")
 	}
 
-	rules := make([]models.VEXRule, 0, len(*bom.Vulnerabilities))
+	rules := make([]models.UpstreamVEXRule, 0, len(*bom.Vulnerabilities))
 	for _, vuln := range *bom.Vulnerabilities {
 		cveID := extractCVE(vuln.ID)
 		if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
@@ -147,14 +146,12 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]mode
 			// we already have a path pattern, so we can skip creating it from the purl
 			// but we still want to create a VEX rule for each path pattern found in the properties
 			for _, pp := range pathPattern {
-				rule := models.VEXRule{
+				rule := models.UpstreamVEXRule{
 					Title:         vexrules.VexRuleTitle(vuln.ID, pp),
-					AssetID:       assetID,
 					VexSource:     source,
 					Justification: justification,
 					EventType:     eventType,
 					CELExpression: vexrules.ToCELExpression(vuln.ID, pp),
-					CreatedByID:   "system", // system user
 				}
 				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
@@ -182,15 +179,14 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]mode
 			pattern = vexrules.PathPattern{purlString}
 		}
 
-		rule := models.VEXRule{
+		rule := models.UpstreamVEXRule{
 			Title:         vexrules.VexRuleTitle(vuln.ID, pattern),
-			AssetID:       assetID,
 			VexSource:     source,
 			Justification: justification,
 			EventType:     eventType,
 			CELExpression: vexrules.ToCELExpression(vuln.ID, pattern),
-			CreatedByID:   "system", // system user
 		}
+
 		rule.SetCELExpression(rule.CELExpression)
 		rules = append(rules, rule)
 	}
@@ -204,8 +200,8 @@ func CycloneDXVEXToRules(bom *cdx.BOM, assetID uuid.UUID, source string) ([]mode
 // subcomponent PURL (or the product PURL when no subcomponent is given). The resulting
 // path pattern is therefore a component-level wildcard ["*", componentPurl] that matches
 // any path reaching that component - it does not distinguish individual dependency paths.
-func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, source string) ([]models.VEXRule, error) {
-	rules := make([]models.VEXRule, 0, len(doc.Statements))
+func OpenVEXToRules(doc *vex.VEX, source string) ([]models.UpstreamVEXRule, error) {
+	rules := make([]models.UpstreamVEXRule, 0, len(doc.Statements))
 	for _, statement := range doc.Statements {
 		cveID := extractCVE(string(statement.Vulnerability.Name))
 		if cveID == "" {
@@ -221,71 +217,22 @@ func OpenVEXToRules(doc *vex.VEX, assetID uuid.UUID, source string) ([]models.VE
 			continue
 		}
 
-		justification := statement.ImpactStatement
-		if justification == "" {
-			justification = statement.StatusNotes
-		}
-
 		// collect the component-level PURLs the statement scopes to
 		purlStrings := openVexStatementPurls(statement)
 		for _, purlString := range purlStrings {
-			rule := models.VEXRule{
-				Title:         vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
-				AssetID:       assetID,
-				VexSource:     source,
-				Justification: justification,
-				EventType:     eventType,
-				CELExpression: vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
-				CreatedByID:   "system", // system user
+			rule := models.UpstreamVEXRule{
+				Title:                   vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				VexSource:               source,
+				MechanicalJustification: dtos.MechanicalJustificationType(statement.Justification),
+				Justification:           statement.ImpactStatement,
+				EventType:               eventType,
+				CELExpression:           vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
 			}
 			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
 		}
 	}
-
 	return rules, nil
-}
-
-// openVexStatementPurls returns the vulnerable-component PURLs a statement scopes to:
-// the subcomponent PURLs, or the product PURLs when no subcomponent is listed.
-func openVexStatementPurls(statement vex.Statement) []string {
-	var purls []string
-	for _, product := range statement.Products {
-		if len(product.Subcomponents) > 0 {
-			for _, sub := range product.Subcomponents {
-				if p := componentPurl(sub.Component); p != "" {
-					purls = append(purls, p)
-				}
-			}
-			continue
-		}
-		if p := componentPurl(product.Component); p != "" {
-			purls = append(purls, p)
-		}
-	}
-	return purls
-}
-
-func componentPurl(c vex.Component) string {
-	if p, ok := c.Identifiers[vex.PURL]; ok && p != "" {
-		return p
-	}
-	if strings.HasPrefix(c.ID, "pkg:") {
-		return c.ID
-	}
-	return ""
-}
-
-func mapOpenVexStatusToEventType(status vex.Status) (dtos.VulnEventType, error) {
-	switch status {
-	case vex.StatusNotAffected:
-		return dtos.EventTypeFalsePositive, nil
-	case vex.StatusAffected:
-		return dtos.EventTypeAccepted, nil
-	default:
-		// under_investigation / fixed do not close a vuln through a VEX rule
-		return "", fmt.Errorf("no event type mapping for OpenVEX status: %s", status)
-	}
 }
 
 func mapCDXToEventType(a *cdx.VulnerabilityAnalysis) (dtos.VulnEventType, error) {
@@ -334,4 +281,49 @@ func extractCVE(s string) string {
 		return parts[len(parts)-1]
 	}
 	return s
+}
+
+func mapOpenVexStatusToEventType(status vex.Status) (dtos.VulnEventType, error) {
+	switch status {
+	case vex.StatusNotAffected:
+		return dtos.EventTypeFalsePositive, nil
+	case vex.StatusAffected:
+		// OpenVEX requires an ActionStatement for "affected" (remediation is described,
+		// not accepted) - there is no "won't fix" signal like CDX's ImpactAnalysisResponse,
+		// so this always maps to a comment rather than an acceptance.
+		return dtos.EventTypeComment, nil
+	default:
+		// under_investigation / fixed do not close a vuln through a VEX rule
+		return "", fmt.Errorf("no event type mapping for OpenVEX status: %s", status)
+	}
+}
+
+// openVexStatementPurls returns the vulnerable-component PURLs a statement scopes to:
+// the subcomponent PURLs, or the product PURLs when no subcomponent is listed.
+func openVexStatementPurls(statement vex.Statement) []string {
+	var purls []string
+	for _, product := range statement.Products {
+		if len(product.Subcomponents) > 0 {
+			for _, sub := range product.Subcomponents {
+				if p := componentPurl(sub.Component); p != "" {
+					purls = append(purls, p)
+				}
+			}
+			continue
+		}
+		if p := componentPurl(product.Component); p != "" {
+			purls = append(purls, p)
+		}
+	}
+	return purls
+}
+
+func componentPurl(c vex.Component) string {
+	if p, ok := c.Identifiers[vex.PURL]; ok && p != "" {
+		return p
+	}
+	if strings.HasPrefix(c.ID, "pkg:") {
+		return c.ID
+	}
+	return ""
 }

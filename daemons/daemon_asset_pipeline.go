@@ -53,9 +53,9 @@ type pipelineError struct {
 func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
 	ch := runner.FetchAssetDetails(ctx, idsChan, errChan)
 	ch = runner.DeleteOldAssetVersions(ch, errChan)
+	// scan asset will apply all vex rules
 	ch = runner.ScanAsset(ch, errChan)
 	ch = runner.SyncUpstream(ch, errChan)
-	ch = runner.ApplyVEXRules(ch, errChan)
 	ch = runner.AutoReopenTickets(ch, errChan)
 	ch = runner.RecalculateRiskForVulnerabilities(ch, errChan)
 	ch = runner.ResolveFixedVersions(ch, errChan)
@@ -181,69 +181,6 @@ func (runner *DaemonRunner) FetchAssetIDs(ctx context.Context) <-chan uuid.UUID 
 		}
 		for _, asset := range assets {
 			out <- asset.ID
-		}
-	}()
-	return out
-}
-
-// ApplyVEXRules reapplies every VEX rule for the asset to its current vulns,
-// so vulns that started matching a rule since the last run (e.g. newly
-// discovered by ScanAsset/SyncUpstream) get judged before risk is
-// recalculated and tickets are synced.
-func (runner *DaemonRunner) ApplyVEXRules(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
-	out := make(chan assetWithProjectAndOrg)
-
-	go func() {
-		defer func() {
-			close(out)
-			monitoring.RecoverPanic("apply vex rules panic")
-		}()
-
-		for assetWithDetails := range input {
-			if !runner.stageEnabled("ApplyVEXRules") {
-				out <- assetWithDetails
-				continue
-			}
-			asset := assetWithDetails.asset
-			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.apply-vex-rules")
-
-			rules, err := runner.vexRuleService.FindByAssetID(stageCtx, nil, asset.ID)
-			if err != nil {
-				slog.Error("could not fetch vex rules for asset", "assetID", asset.ID, "err", err)
-				failStage(assetWithDetails.ctx, span, err)
-				errChan <- pipelineError{
-					asset: asset,
-					err:   fmt.Errorf("could not fetch vex rules: %w", err),
-				}
-				continue
-			}
-
-			if len(rules) == 0 {
-				span.End()
-				out <- assetWithDetails
-				continue
-			}
-
-			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-			_, err = runner.vexRuleService.ApplyRulesToExistingVulns(stageCtx, tx, rules)
-			if err != nil {
-				tx.Rollback()
-				slog.Error("could not apply vex rules to existing vulns", "assetID", asset.ID, "err", err)
-				failStage(assetWithDetails.ctx, span, err)
-				errChan <- pipelineError{
-					asset: asset,
-					err:   fmt.Errorf("could not apply vex rules: %w", err),
-				}
-				continue
-			}
-			if runner.debugOptions.DryRun {
-				tx.Rollback()
-			} else {
-				tx.Commit()
-			}
-
-			span.End()
-			out <- assetWithDetails
 		}
 	}()
 	return out
@@ -696,12 +633,31 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.sync-upstream")
 			errs := make([]error, 0)
 
+			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+
+			rules, valid, invalid := runner.scanService.FetchVexFromUpstream(stageCtx, asset.ID, utils.Map(vexRefs, func(el models.ExternalReference) string {
+				return el.URL
+			}))
+
+			if err := runner.externalReferenceRepository.SaveBatch(stageCtx, tx, append(valid, invalid...)); err != nil {
+				slog.Error("could not store vex external reference", "err", err)
+			}
+
+			if err := runner.ingestVEXRules(stageCtx, tx, map[uuid.UUID]models.Asset{asset.ID: asset}, map[uuid.UUID][]models.VEXRule{asset.ID: rules}); err != nil {
+				slog.Error("could not ingest vex rules", "err", err)
+			}
+
+			if runner.debugOptions.DryRun {
+				tx.Rollback()
+			} else {
+				tx.Commit()
+			}
+
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-
-					if _, _, _, err := runner.scanService.RunArtifactSecurityLifecycle(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", vexRefs, nil); err != nil {
+					if _, _, err := runner.scanService.SyncArtifactUpstreamSBOMSources(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()

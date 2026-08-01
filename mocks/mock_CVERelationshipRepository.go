@@ -527,6 +527,80 @@ func (_c *CVERelationshipRepository_DeleteBatch_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// FindCrossRelationshipsBatch provides a mock function for the type CVERelationshipRepository
+func (_mock *CVERelationshipRepository) FindCrossRelationshipsBatch(ctx context.Context, tx shared.DB, assiciatedCVEIDs []string) ([]models.CVERelationship, error) {
+	ret := _mock.Called(ctx, tx, assiciatedCVEIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindCrossRelationshipsBatch")
+	}
+
+	var r0 []models.CVERelationship
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.CVERelationship, error)); ok {
+		return returnFunc(ctx, tx, assiciatedCVEIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.CVERelationship); ok {
+		r0 = returnFunc(ctx, tx, assiciatedCVEIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVERelationship)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
+		r1 = returnFunc(ctx, tx, assiciatedCVEIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CVERelationshipRepository_FindCrossRelationshipsBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindCrossRelationshipsBatch'
+type CVERelationshipRepository_FindCrossRelationshipsBatch_Call struct {
+	*mock.Call
+}
+
+// FindCrossRelationshipsBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assiciatedCVEIDs []string
+func (_e *CVERelationshipRepository_Expecter) FindCrossRelationshipsBatch(ctx interface{}, tx interface{}, assiciatedCVEIDs interface{}) *CVERelationshipRepository_FindCrossRelationshipsBatch_Call {
+	return &CVERelationshipRepository_FindCrossRelationshipsBatch_Call{Call: _e.mock.On("FindCrossRelationshipsBatch", ctx, tx, assiciatedCVEIDs)}
+}
+
+func (_c *CVERelationshipRepository_FindCrossRelationshipsBatch_Call) Run(run func(ctx context.Context, tx shared.DB, assiciatedCVEIDs []string)) *CVERelationshipRepository_FindCrossRelationshipsBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *CVERelationshipRepository_FindCrossRelationshipsBatch_Call) Return(cVERelationships []models.CVERelationship, err error) *CVERelationshipRepository_FindCrossRelationshipsBatch_Call {
+	_c.Call.Return(cVERelationships, err)
+	return _c
+}
+
+func (_c *CVERelationshipRepository_FindCrossRelationshipsBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assiciatedCVEIDs []string) ([]models.CVERelationship, error)) *CVERelationshipRepository_FindCrossRelationshipsBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type CVERelationshipRepository
 func (_mock *CVERelationshipRepository) GetDB(ctx context.Context, tx shared.DB) shared.DB {
 	ret := _mock.Called(ctx, tx)

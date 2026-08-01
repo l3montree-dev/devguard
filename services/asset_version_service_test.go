@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
-	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,11 +127,8 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 	})
 }
 
-// buildVeXTestService creates an assetVersionService with a mocked VEXRuleService.
-// BuildVeX does not currently consult VEX rules directly, so no expectations are set.
 func buildVeXTestService(t *testing.T) *assetVersionService {
-	vexRuleService := mocks.NewVEXRuleService(t)
-	return &assetVersionService{vexRuleService: vexRuleService}
+	return &assetVersionService{}
 }
 
 func TestBuildVeX(t *testing.T) {

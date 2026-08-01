@@ -33,7 +33,6 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/parser"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/l3montree-dev/devguard/database/models"
 
 	"github.com/package-url/packageurl-go"
@@ -97,35 +96,6 @@ var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
 	)
 })
 
-const programCacheSize = 2048
-
-var programCache = must(lru.New[string, cel.Program](programCacheSize))
-
-func must[T any](v T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
-func getOrCompileProgram(celEnv *cel.Env, expr string) (cel.Program, error) {
-	if prg, ok := programCache.Get(expr); ok {
-		return prg, nil
-	}
-
-	ast, iss := celEnv.Compile(expr)
-	if iss != nil && iss.Err() != nil {
-		return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
-	}
-	prg, err := celEnv.Program(ast)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build CEL program: %w", err)
-	}
-
-	programCache.Add(expr, prg)
-	return prg, nil
-}
-
 func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	m, err := json.Marshal(vuln)
 	if err != nil {
@@ -143,61 +113,67 @@ func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	return vulnMap, nil
 }
 
-func evalCompiledRule(rule models.VEXRule, vulnMap map[string]any) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
-	}
-
-	celEnv, err := CelEnv()
-	if err != nil {
-		return false, fmt.Errorf("failed to create CEL environment: %w", err)
-	}
-
-	prg, err := getOrCompileProgram(celEnv, rule.CELExpression)
-	if err != nil {
-		return false, err
-	}
-
-	out, _, err := prg.Eval(map[string]any{
-		"vuln": vulnMap,
-	})
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
-	}
-
-	result, ok := out.Value().(bool)
-	if !ok {
-		return false, fmt.Errorf("CEL expression did not evaluate to a bool, got %T", out.Value())
-	}
-	return result, nil
-}
-
-func EvalRule(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
-	}
-
-	vulnMap, err := vulnToCELMap(vuln)
-	if err != nil {
-		return false, err
-	}
-
-	return evalCompiledRule(rule, vulnMap)
-}
-
-func EvalRules(ctx context.Context, rules []models.VEXRule, vuln models.DependencyVuln) (map[string]bool, error) {
-	vulnMap, err := vulnToCELMap(vuln)
-	if err != nil {
-		return nil, err
-	}
-
-	results := make(map[string]bool, len(rules))
-	for _, rule := range rules {
-		match, err := evalCompiledRule(rule, vulnMap)
+func PrepareVulnsForEval(ctx context.Context, vulns []models.DependencyVuln) ([]map[string]any, error) {
+	prepared := make([]map[string]any, len(vulns))
+	for i, vuln := range vulns {
+		vulnMap, err := vulnToCELMap(vuln)
 		if err != nil {
 			return nil, err
 		}
-		results[rule.ID] = match
+		prepared[i] = vulnMap
+	}
+	return prepared, nil
+}
+
+func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]cel.Program, error) {
+	celEnv, err := CelEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
+	}
+
+	compiled := make(map[string]cel.Program, len(rules))
+	for _, rule := range rules {
+		if rule.CELExpression == "" {
+			continue
+		}
+		ast, iss := celEnv.Compile(rule.CELExpression)
+		if iss != nil && iss.Err() != nil {
+			return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
+		}
+		prg, err := celEnv.Program(ast)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build CEL program: %w", err)
+		}
+
+		compiled[rule.ID] = prg
+	}
+	return compiled, nil
+}
+
+// returns map keyed by vulnID and value is a list of ruleIDs that match that vuln
+func EvalCompiledRules(ctx context.Context, compiled map[string]cel.Program, vulnMaps []map[string]any) (map[string][]string, error) {
+	results := make(map[string][]string, len(compiled))
+	for ruleID, prg := range compiled {
+		for _, vulnMap := range vulnMaps {
+			vulnID := vulnMap["id"].(string)
+			out, _, err := prg.Eval(map[string]any{
+				"vuln": vulnMap,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to evaluate CEL expression for rule %s: %w", ruleID, err)
+			}
+
+			result, ok := out.Value().(bool)
+			if !ok {
+				return nil, fmt.Errorf("CEL expression for rule %s did not evaluate to a bool, got %T", ruleID, out.Value())
+			}
+			if result {
+				if _, exists := results[vulnID]; !exists {
+					results[vulnID] = []string{}
+				}
+				results[vulnID] = append(results[vulnID], ruleID)
+			}
+		}
 	}
 	return results, nil
 }
@@ -225,7 +201,7 @@ func stringListField(mapVal ref.Val, key string) ([]string, error) {
 	return toStringList(fieldVal)
 }
 
-func IdentityOfRule(rule models.VEXRule) (string, error) {
+func IdentityOfRule(rule models.UpstreamVEXRule) (string, error) {
 	// the identity of a vex rule is inside the cel expression AND the assessment.
 	identity := string(rule.EventType) + "||" + string(rule.MechanicalJustification) + "||"
 

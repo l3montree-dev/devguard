@@ -65,7 +65,7 @@ func TestPathPatternMatchesSuffix_ExactMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
@@ -90,7 +90,7 @@ func TestRootPathPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
@@ -129,7 +129,7 @@ func TestPathPatternMatchesSuffixWildcard(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }
@@ -223,7 +223,7 @@ func TestPathPatternMatchesSuffixRealWorldExamples(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.pattern.matchesSuffix(tt.path))
+			assert.Equal(t, tt.expected, tt.pattern.Matches(tt.path, nil))
 		})
 	}
 }

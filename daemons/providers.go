@@ -44,35 +44,38 @@ type DebugOptions struct {
 
 // DaemonRunner encapsulates daemon dependencies and lifecycle
 type DaemonRunner struct {
-	db                           shared.DB
-	broker                       shared.PubSubBroker
-	configService                shared.ConfigService
-	rbacProvider                 shared.RBACProvider
-	integrationAggregate         shared.IntegrationAggregate
-	assetVersionService          shared.AssetVersionService
-	assetVersionRepository       shared.AssetVersionRepository
-	assetRepository              shared.AssetRepository
-	projectRepository            shared.ProjectRepository
-	orgRepository                shared.OrganizationRepository
-	artifactService              shared.ArtifactService
-	componentRepository          shared.ComponentRepository
-	componentService             shared.ComponentService
-	dependencyVulnService        shared.DependencyVulnService
-	dependencyVulnRepository     shared.DependencyVulnRepository
-	componentProjectRepository   shared.ComponentProjectRepository
-	vulnEventRepository          shared.VulnEventRepository
-	statisticsService            shared.StatisticsService
-	artifactRepository           shared.ArtifactRepository
-	cveRepository                shared.CveRepository
-	cweRepository                shared.CweRepository
-	exploitsRepository           shared.ExploitRepository
-	affectedComponentsRepository shared.AffectedComponentRepository
-	scanService                  shared.ScanService
-	leaderElector                shared.LeaderElector
-	maliciousPackageChecker      shared.MaliciousPackageChecker
-	vulnDBImportService          shared.VulnDBService
-	vexRuleService               shared.VEXRuleService
-	externalReferenceRepository  shared.ExternalReferenceRepository
+	db                              shared.DB
+	broker                          shared.PubSubBroker
+	configService                   shared.ConfigService
+	rbacProvider                    shared.RBACProvider
+	integrationAggregate            shared.IntegrationAggregate
+	assetVersionService             shared.AssetVersionService
+	assetVersionRepository          shared.AssetVersionRepository
+	assetRepository                 shared.AssetRepository
+	projectRepository               shared.ProjectRepository
+	orgRepository                   shared.OrganizationRepository
+	artifactService                 shared.ArtifactService
+	componentRepository             shared.ComponentRepository
+	componentService                shared.ComponentService
+	dependencyVulnService           shared.DependencyVulnService
+	dependencyVulnRepository        shared.DependencyVulnRepository
+	componentProjectRepository      shared.ComponentProjectRepository
+	vulnEventRepository             shared.VulnEventRepository
+	statisticsService               shared.StatisticsService
+	artifactRepository              shared.ArtifactRepository
+	cveRepository                   shared.CveRepository
+	cweRepository                   shared.CweRepository
+	exploitsRepository              shared.ExploitRepository
+	affectedComponentsRepository    shared.AffectedComponentRepository
+	scanService                     shared.ScanService
+	leaderElector                   shared.LeaderElector
+	maliciousPackageChecker         shared.MaliciousPackageChecker
+	vulnDBImportService             shared.VulnDBService
+	vexRuleRepository               shared.VEXRuleRepository
+	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository
+	trustedEntityRepository         shared.TrustedEntityRepository
+	upstreamVEXRuleRepository       shared.UpstreamVEXRuleRepository
+	externalReferenceRepository     shared.ExternalReferenceRepository
 
 	debugOptions         DebugOptions
 	fixedVersionResolver shared.FixedVersionResolver
@@ -124,41 +127,47 @@ func NewDaemonRunner(
 	leaderElector shared.LeaderElector,
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBService,
-	vexRuleService shared.VEXRuleService,
+	vexRuleRepository shared.VEXRuleRepository,
+	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository,
+	trustedEntityRepository shared.TrustedEntityRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	fixedVersionResolver shared.FixedVersionResolver,
+	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 ) *DaemonRunner {
 	return &DaemonRunner{
-		db:                           db,
-		broker:                       broker,
-		configService:                configService,
-		rbacProvider:                 rbacProvider,
-		integrationAggregate:         integrationAggregate,
-		assetVersionService:          assetVersionService,
-		assetVersionRepository:       assetVersionRepository,
-		assetRepository:              assetRepository,
-		projectRepository:            projectRepository,
-		orgRepository:                orgRepository,
-		artifactService:              artifactService,
-		componentRepository:          componentRepository,
-		componentService:             componentService,
-		dependencyVulnService:        dependencyVulnService,
-		dependencyVulnRepository:     dependencyVulnRepository,
-		componentProjectRepository:   componentProjectRepository,
-		vulnEventRepository:          vulnEventRepository,
-		statisticsService:            statisticsService,
-		artifactRepository:           artifactRepository,
-		cveRepository:                cveRepository,
-		cweRepository:                cweRepository,
-		exploitsRepository:           exploitsRepository,
-		affectedComponentsRepository: affectedComponentsRepository,
-		scanService:                  scanService,
-		leaderElector:                leaderElector,
-		maliciousPackageChecker:      maliciousPackageChecker,
-		vulnDBImportService:          vulnDBImportService,
-		vexRuleService:               vexRuleService,
-		externalReferenceRepository:  externalReferenceRepository,
-		fixedVersionResolver:         fixedVersionResolver,
+		db:                              db,
+		broker:                          broker,
+		configService:                   configService,
+		rbacProvider:                    rbacProvider,
+		integrationAggregate:            integrationAggregate,
+		assetVersionService:             assetVersionService,
+		assetVersionRepository:          assetVersionRepository,
+		assetRepository:                 assetRepository,
+		projectRepository:               projectRepository,
+		orgRepository:                   orgRepository,
+		artifactService:                 artifactService,
+		componentRepository:             componentRepository,
+		componentService:                componentService,
+		dependencyVulnService:           dependencyVulnService,
+		dependencyVulnRepository:        dependencyVulnRepository,
+		componentProjectRepository:      componentProjectRepository,
+		vulnEventRepository:             vulnEventRepository,
+		statisticsService:               statisticsService,
+		artifactRepository:              artifactRepository,
+		cveRepository:                   cveRepository,
+		cweRepository:                   cweRepository,
+		exploitsRepository:              exploitsRepository,
+		affectedComponentsRepository:    affectedComponentsRepository,
+		scanService:                     scanService,
+		leaderElector:                   leaderElector,
+		maliciousPackageChecker:         maliciousPackageChecker,
+		vulnDBImportService:             vulnDBImportService,
+		vexRuleRepository:               vexRuleRepository,
+		vexRuleRecommendationRepository: vexRuleRecommendationRepository,
+		trustedEntityRepository:         trustedEntityRepository,
+		externalReferenceRepository:     externalReferenceRepository,
+		fixedVersionResolver:            fixedVersionResolver,
+		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
 	}
 }
 

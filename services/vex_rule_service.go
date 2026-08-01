@@ -21,143 +21,16 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/crowdsourcevexing"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vexrules"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 )
 
-type VEXRuleService struct {
-	vexRuleRepository        shared.VEXRuleRepository
-	dependencyVulnRepository shared.DependencyVulnRepository
-	vulnEventRepository      shared.VulnEventRepository
-}
-
-var _ shared.VEXRuleService = (*VEXRuleService)(nil)
-
-func NewVEXRuleService(
-	vexRuleRepository shared.VEXRuleRepository,
-	dependencyVulnRepository shared.DependencyVulnRepository,
-	vulnEventRepository shared.VulnEventRepository,
-) *VEXRuleService {
-	return &VEXRuleService{
-		vexRuleRepository:        vexRuleRepository,
-		dependencyVulnRepository: dependencyVulnRepository,
-		vulnEventRepository:      vulnEventRepository,
-	}
-}
-
-func (s *VEXRuleService) Create(ctx context.Context, tx shared.DB, rule *models.VEXRule) error {
-	// Ensure the ID is calculated from composite key components
-	rule.EnsureID()
-	if err := s.vexRuleRepository.Create(ctx, tx, rule); err != nil {
-		return fmt.Errorf("failed to create VEX rule: %w", err)
-	}
-
-	return nil
-}
-
-func (s *VEXRuleService) Begin(ctx context.Context) shared.DB {
-	return s.vexRuleRepository.Begin(ctx)
-}
-
-func (s *VEXRuleService) Delete(ctx context.Context, tx shared.DB, rule models.VEXRule) error {
-	return s.vexRuleRepository.Delete(ctx, tx, rule)
-}
-
-func (s *VEXRuleService) DeleteByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) error {
-	return s.vexRuleRepository.DeleteByAssetID(ctx, tx, assetID)
-}
-
-func (s *VEXRuleService) FindByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.VEXRule, error) {
-	return s.vexRuleRepository.FindByAssetID(ctx, tx, assetID)
-}
-
-func (s *VEXRuleService) FindByAssetIDPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRule], error) {
-	return s.vexRuleRepository.FindByAssetIDPaged(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
-}
-
-func (s *VEXRuleService) FindByAssetIDWithMatchingVuln(ctx context.Context, tx shared.DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error) {
-	// Fetch the vulnerability to get its CVEID and path
-	vuln, err := s.dependencyVulnRepository.Read(ctx, tx, vulnID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find vulnerability: %w", err)
-	}
-
-	// Find rules for this CVE
-	rules, err := s.vexRuleRepository.FindByAssetID(ctx, tx, assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Filter rules to only those matching the vulnerability path pattern
-	matches, err := vexrules.EvalRules(ctx, rules, vuln)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate CEL expressions: %w", err)
-	}
-	var matchingRules []models.VEXRule
-	for _, rule := range rules {
-		if matches[rule.ID] {
-			matchingRules = append(matchingRules, rule)
-		}
-	}
-
-	return matchingRules, nil
-}
-
-func (s *VEXRuleService) FindByID(ctx context.Context, tx shared.DB, id string) (models.VEXRule, error) {
-	return s.vexRuleRepository.FindByID(ctx, tx, id)
-}
-
-// CountMatchingVulns returns the number of dependency vulnerabilities that a VEX rule has been applied to
-func (s *VEXRuleService) CountMatchingVulns(ctx context.Context, tx shared.DB, rule models.VEXRule) (int, error) {
-	counts, err := s.vulnEventRepository.CountByVexRuleIDs(ctx, tx, []string{rule.ID})
-	if err != nil {
-		return 0, fmt.Errorf("failed to count matching vulns: %w", err)
-	}
-	return counts[rule.ID], nil
-}
-
-// CountMatchingVulnsForRules returns, for each rule, the number of distinct
-// dependency vulns it has an applied event for - i.e. vuln_events grouped by
-// vex_rule_id. This avoids loading every vuln ever recorded for the asset
-// (with full event/CVE preloads) just to recompute CEL matches that were
-// already evaluated and recorded when the rule was applied.
-func (s *VEXRuleService) CountMatchingVulnsForRules(ctx context.Context, tx shared.DB, rules []models.VEXRule) (map[string]int, error) {
-	ctx, span := servicesTracer.Start(ctx, "VEXRuleService.CountMatchingVulnsForRules")
-	defer span.End()
-	span.SetAttributes(attribute.Int("rules.total", len(rules)))
-
-	if len(rules) == 0 {
-		return make(map[string]int), nil
-	}
-
-	ruleIDs := utils.Map(rules, func(r models.VEXRule) string { return r.ID })
-	counts, err := s.vulnEventRepository.CountByVexRuleIDs(ctx, tx, ruleIDs)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("failed to count matching vulns: %w", err)
-	}
-
-	result := make(map[string]int, len(rules))
-	for _, rule := range rules {
-		if count, ok := counts[rule.ID]; ok {
-			result[rule.ID] = count
-		} else {
-			result[rule.ID] = 0
-		}
-	}
-
-	return result, nil
-}
-
-// CreateVulnEventFromVEXRule creates a VulnEvent based on a VEX rule and vulnerability.
-// The event type is determined by the rule's EventType field.
 func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	var err error
@@ -196,89 +69,6 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	return ev, nil
 }
 
-func (s *VEXRuleService) ApplyRulesToExisting(ctx context.Context, tx shared.DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error) {
-
-	vulnsByRule := s.matchRulesToVulns(ctx, rules, vulns)
-	ruleMap := make(map[string]*models.VEXRule)
-	for i := range rules {
-		ruleMap[rules[i].ID] = &rules[i]
-	}
-
-	// Collect all vulns to update (deduplicated by ID)
-	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
-	eventsByVuln := make(map[uuid.UUID][]models.VulnEvent)
-
-	for ruleID, matchingVulns := range vulnsByRule {
-		rule := ruleMap[ruleID]
-		for _, vuln := range matchingVulns {
-			ev, err := createVulnEventFromVEXRule(vuln, rule)
-			if err != nil {
-				slog.Error("failed to create event from VEX rule", "error", err)
-				continue
-			}
-
-			// Skip duplicate events unless force reapply is enabled
-			if isVexEventAlreadyApplied(vuln, ev) {
-				continue
-			}
-
-			vulnID := vuln.ID
-			vulnMap[vulnID] = vuln
-			eventsByVuln[vulnID] = append(eventsByVuln[vulnID], ev)
-		}
-	}
-
-	if len(vulnMap) == 0 {
-		return vulns, nil
-	}
-
-	// Apply all events to vulns and collect updated vulns and events
-	updatedVulns := make([]models.DependencyVuln, 0, len(vulnMap))
-	allEvents := make([]models.VulnEvent, 0)
-
-	for vulnID, vuln := range vulnMap {
-		updatedVuln := vuln
-		for _, ev := range eventsByVuln[vulnID] {
-			statemachine.Apply(&updatedVuln, ev)
-			allEvents = append(allEvents, ev)
-		}
-		updatedVulns = append(updatedVulns, updatedVuln)
-	}
-
-	// Save all updated vulns and events in one batch
-	if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
-		return nil, fmt.Errorf("failed to save updated vulns: %w", err)
-	}
-
-	if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, allEvents); err != nil {
-		return nil, fmt.Errorf("failed to save events: %w", err)
-	}
-
-	logAction := "applied"
-	slog.Info(logAction+" VEX rules to existing vulnerabilities",
-		"rulesApplied", len(rules),
-		"vulnsUpdated", len(updatedVulns),
-		"eventsCreated", len(allEvents))
-	return updatedVulns, nil
-}
-
-// ApplyRulesToExistingVulns applies multiple VEX rules to all existing vulnerabilities
-// that match each rule's path pattern and CVE. This is more efficient than applying
-// rules one by one as it batches database queries and saves.
-func (s *VEXRuleService) ApplyRulesToExistingVulns(ctx context.Context, tx shared.DB, rules []models.VEXRule) ([]models.DependencyVuln, error) {
-	if len(rules) == 0 {
-		return nil, nil
-	}
-	// Find all vulns matching all rules at once
-	// we need to fetch with events right here to make sure we can identify vex rules which were already applied.
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, rules[0].AssetID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
-	}
-	return s.ApplyRulesToExisting(ctx, tx, rules, vulns)
-}
-
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
 	events := vuln.GetEvents()
 	if len(events) == 0 {
@@ -311,111 +101,342 @@ func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent
 	return *ev.Justification == *event.Justification
 }
 
-// IngestVEXRules syncs the given rules for a single source and applies them to existing
-// vulns. This is the format-agnostic ingestion entry point: callers run the appropriate
-// transformer (CycloneDX/CSAF/OpenVEX) to produce the rules, then hand them here.
-func (s *VEXRuleService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
-	addedRules, err := s.syncRulesForSource(ctx, tx, asset, rules)
-	if err != nil {
-		return fmt.Errorf("failed to sync VEX rules: %w", err)
-	}
-	_, err = s.ApplyRulesToExistingVulns(ctx, tx, addedRules)
-	return err
-}
-
-// syncRulesForSource sets the Enabled flag based on ParanoidMode and syncs the rules for the
-// given source, returning the rules that were newly added.
-func (s *VEXRuleService) syncRulesForSource(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) ([]models.VEXRule, error) {
-	// Rules are enabled if ParanoidMode is disabled
-	enabled := !asset.ParanoidMode
-	for i := range rules {
-		rules[i].Enabled = enabled
-	}
-	addedRules, _, err := s.syncVEXRulesFromSource(ctx, tx, asset.ID, rules)
-	return addedRules, err
-}
-
-// SyncVEXRulesFromSource syncs VEX rules from a specific source.
-// It fetches existing rules for the given asset and vexSource, compares them with
-// the new rules, adds new ones and removes ones that no longer exist.
-func (s *VEXRuleService) syncVEXRulesFromSource(ctx context.Context, tx shared.DB, assetID uuid.UUID, newRules []models.VEXRule) ([]models.VEXRule, []models.VEXRule, error) {
-	// read the source from the first rule to ensure consistency
-	if len(newRules) == 0 {
-		return nil, nil, nil
-	}
-	vexSource := newRules[0].VexSource
-	// Fetch existing rules for this asset and vexSource
-	existingRules, err := s.vexRuleRepository.FindByAssetAndVexSource(ctx, tx, assetID, vexSource)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch existing VEX rules: %w", err)
-	}
-
-	result := utils.CompareSlices(newRules, existingRules, func(a models.VEXRule) string {
-		return a.ID
-	})
-
-	rulesToAdd := result.OnlyInA
-	rulesToRemove := result.OnlyInB
-
-	// Add new rules
-	if len(rulesToAdd) > 0 {
-		if err := s.vexRuleRepository.UpsertBatch(ctx, tx, rulesToAdd); err != nil {
-			return nil, nil, fmt.Errorf("failed to add new VEX rules: %w", err)
-		}
-		slog.Info("added new VEX rules from source",
-			"assetID", assetID,
-			"vexSource", vexSource,
-			"count", len(rulesToAdd))
-	}
-
-	// Remove old rules
-	if len(rulesToRemove) > 0 {
-		if err := s.vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {
-			return nil, nil, fmt.Errorf("failed to remove old VEX rules: %w", err)
-		}
-		slog.Info("removed old VEX rules from source",
-			"assetID", assetID,
-			"vexSource", vexSource,
-			"count", len(rulesToRemove))
-	}
-
-	return rulesToAdd, rulesToRemove, nil
-}
-
-func (s *VEXRuleService) matchRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []models.DependencyVuln) map[string][]models.DependencyVuln {
-	ctx, span := servicesTracer.Start(ctx, "VEXRuleService.matchRulesToVulns")
+func MatchRulesToVulns(ctx context.Context, rules []models.UpstreamVEXRule, vulns []models.DependencyVuln) (map[string][]models.DependencyVuln, error) {
+	ctx, span := servicesTracer.Start(ctx, "services.MatchRulesToVulns")
 	defer span.End()
+
+	lookupMap := make(map[uuid.UUID]models.DependencyVuln, len(vulns))
+	for _, vuln := range vulns {
+		lookupMap[vuln.ID] = vuln
+	}
+
+	// prepare the vulns for evaluation by converting them to CEL-compatible maps
+	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx, vulns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare vulns for evaluation: %w", err)
+	}
+
+	compiledRules, err := vexrules.CompileRules(ctx, rules)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile VEX rules: %w", err)
+	}
+
+	// matches is keyed by vulnID and value is a list of ruleIDs that match that vuln
+	// we need to convert it to a map keyed by ruleID and value is a list of matching vulns
+	matches, err := vexrules.EvalCompiledRules(ctx, compiledRules, vulnMaps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate CEL expressions for VEX rules: %w", err)
+	}
 
 	result := make(map[string][]models.DependencyVuln)
 
-	// CEL-based rules are evaluated against every vulnerability, regardless of CVE ID.
-	var celRules []models.VEXRule
-
-	for _, rule := range rules {
-		if !rule.Enabled {
-			continue
-		}
-		if rule.CELExpression != "" {
-			celRules = append(celRules, rule)
-		}
-	}
 	span.SetAttributes(
-		attribute.Int("rules.cel_total", len(celRules)),
+		attribute.Int("rules.cel_total", len(rules)),
 		attribute.Int("vulns.total", len(vulns)),
-		attribute.Int("evaluations.total", len(celRules)*len(vulns)),
+		attribute.Int("evaluations.total", len(rules)*len(vulns)),
 	)
 
-	for _, vuln := range vulns {
-		matches, err := vexrules.EvalRules(ctx, celRules, vuln)
+	for vulnID, matchingRuleIDs := range matches {
+		parsedID, err := uuid.Parse(vulnID)
 		if err != nil {
-			slog.Error("failed to evaluate CEL expressions for VEX rules", "error", err)
 			continue
 		}
-		for _, rule := range celRules {
-			if matches[rule.ID] {
-				result[rule.ID] = append(result[rule.ID], vuln)
+
+		vuln, ok := lookupMap[parsedID]
+		if !ok {
+			continue
+		}
+		for _, ruleID := range matchingRuleIDs {
+			result[ruleID] = append(result[ruleID], vuln)
+		}
+	}
+	return result, nil
+}
+
+func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []models.DependencyVuln) (updatedVulns []models.DependencyVuln, events []models.VulnEvent, err error) {
+	vulnsByRule, err := MatchRulesToVulns(ctx, transformer.VEXRulesToUpstreamVEXRules(utils.Filter(rules, func(r models.VEXRule) bool { return r.Enabled })), vulns)
+	if err != nil {
+		slog.Error("failed to match VEX rules to existing vulnerabilities", "error", err)
+		return nil, nil, err
+	}
+	ruleMap := make(map[string]*models.VEXRule)
+	for i := range rules {
+		ruleMap[rules[i].ID] = &rules[i]
+	}
+
+	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
+	eventsByVuln := make(map[uuid.UUID][]models.VulnEvent)
+
+	for ruleID, matchingVulns := range vulnsByRule {
+		rule := ruleMap[ruleID]
+		for _, vuln := range matchingVulns {
+			ev, err := createVulnEventFromVEXRule(vuln, rule)
+			if err != nil {
+				slog.Error("failed to create event from VEX rule", "error", err)
+				continue
+			}
+
+			if isVexEventAlreadyApplied(vuln, ev) {
+				continue
+			}
+
+			vulnID := vuln.ID
+			vulnMap[vulnID] = vuln
+			eventsByVuln[vulnID] = append(eventsByVuln[vulnID], ev)
+		}
+	}
+
+	if len(vulnMap) == 0 {
+		return nil, nil, nil
+	}
+
+	updatedVulns = make([]models.DependencyVuln, 0, len(vulnMap))
+	events = make([]models.VulnEvent, 0)
+
+	for vulnID, vuln := range vulnMap {
+		updatedVuln := vuln
+		for _, ev := range eventsByVuln[vulnID] {
+			statemachine.Apply(&updatedVuln, ev)
+			events = append(events, ev)
+		}
+		updatedVulns = append(updatedVulns, updatedVuln)
+	}
+
+	slog.Info("applied VEX rules to existing vulnerabilities",
+		"rulesApplied", len(rules),
+		"vulnsUpdated", len(updatedVulns),
+		"eventsCreated", len(events))
+	return updatedVulns, events, nil
+}
+
+func SetVEXRulesEnabledFromParanoidMode(rules []models.VEXRule, paranoidMode bool) {
+	enabled := !paranoidMode
+	for i := range rules {
+		rules[i].Enabled = enabled
+	}
+}
+
+type assetAndSource struct {
+	AssetID   uuid.UUID
+	VexSource string
+}
+
+func GroupRulesByAssetAndSource(rules []models.VEXRule) map[assetAndSource][]models.VEXRule {
+	grouped := make(map[assetAndSource][]models.VEXRule)
+	for _, r := range rules {
+		key := assetAndSource{AssetID: r.AssetID, VexSource: r.VexSource}
+		grouped[key] = append(grouped[key], r)
+	}
+	return grouped
+}
+
+func DiffVEXRulesForSource(newRules []models.VEXRule, existingRules []models.VEXRule) (rulesToAdd []models.VEXRule, rulesToRemove []models.VEXRule) {
+	if len(newRules) == 0 {
+		return nil, nil
+	}
+	result := utils.CompareSlices(newRules, existingRules, func(a models.VEXRule) string {
+		return a.ID
+	})
+	return result.OnlyInA, result.OnlyInB
+}
+
+func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.DependencyVuln, vexRules []models.VEXRule, assetIDsForSession []string) (map[uuid.UUID]models.VEXRule, error) {
+	assetIDSet := make(map[string]struct{}, len(assetIDsForSession))
+	for _, id := range assetIDsForSession {
+		assetIDSet[id] = struct{}{}
+	}
+
+	sessionRuleMap := make(map[string]models.VEXRule, len(vexRules))
+	sessionRules := make([]models.VEXRule, 0, len(vexRules))
+	for _, rule := range vexRules {
+		if _, ok := assetIDSet[rule.AssetID.String()]; ok {
+			sessionRuleMap[rule.ID] = rule
+			sessionRules = append(sessionRules, rule)
+		}
+	}
+	compiledRules, err := vexrules.CompileRules(ctx, utils.Map(sessionRules, transformer.VEXRuleToUpstreamVEXRule))
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile VEX rules: %w", err)
+	}
+	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx, vulns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare vulns for evaluation: %w", err)
+	}
+
+	matches, err := vexrules.EvalCompiledRules(ctx, compiledRules, vulnMaps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate CEL expressions for VEX rules: %w", err)
+	}
+
+	// we decide right here, what a good recommendation is.
+	// maybe more than a single vex rule matches a single vuln, but we only want to return the best one.
+	result := make(map[uuid.UUID]models.VEXRule)
+	for vulnID, matchingRuleIDs := range matches {
+		for _, ruleID := range matchingRuleIDs {
+			// parse the vulnid back to uuid.UUID
+			parsedVulnID, err := uuid.Parse(vulnID)
+			if err != nil {
+				// this should never happen
+				return nil, fmt.Errorf("failed to parse vulnID %s: %w", vulnID, err)
+			}
+			// the algorithm to pick the best rule is simple: we just pick the first one we find. this is not ideal, but it is a start.
+			if _, ok := result[parsedVulnID]; !ok {
+				result[parsedVulnID] = sessionRuleMap[ruleID]
 			}
 		}
 	}
-	return result
+
+	return result, nil
+}
+
+type CrowdsourcedVexingContext struct {
+	VexRules              []models.VEXRule
+	CrowdSourceVexingOrgs []crowdsourcevexing.Organization
+	CrowdSourceVexingProj []crowdsourcevexing.Project
+	Assets                []models.Asset
+}
+
+type OrgRBACData struct {
+	OrgID     uuid.UUID
+	OwnerID   string
+	MemberIDs []string
+}
+
+func BuildCrowdsourcedVexingContext(
+	vexRules []models.VEXRule,
+	projects []models.Project,
+	orgs []models.Org,
+	projectTrustScores map[uuid.UUID]float64,
+	orgTrustScores map[uuid.UUID]float64,
+	orgRBACData []OrgRBACData,
+) CrowdsourcedVexingContext {
+	rbacByOrg := make(map[uuid.UUID]OrgRBACData, len(orgRBACData))
+	for _, d := range orgRBACData {
+		rbacByOrg[d.OrgID] = d
+	}
+
+	crowdSourceVexingOrgs := make([]crowdsourcevexing.Organization, len(orgs))
+	for i, org := range orgs {
+		rbacData := rbacByOrg[org.ID]
+		crowdSourceVexingOrgs[i] = mapOrg(org, orgTrustScores[org.ID], rbacData.OwnerID, rbacData.MemberIDs)
+	}
+
+	return CrowdsourcedVexingContext{
+		VexRules:              vexRules,
+		CrowdSourceVexingOrgs: crowdSourceVexingOrgs,
+		CrowdSourceVexingProj: utils.Map(projects, func(p models.Project) crowdsourcevexing.Project {
+			return mapProject(p, projectTrustScores[p.ID])
+		}),
+		Assets: utils.Map(vexRules, func(r models.VEXRule) models.Asset { return r.Asset }),
+	}
+}
+
+func ComputeVEXRuleRecommendations(
+	ctx context.Context,
+	allVulns []models.DependencyVuln,
+	allRules []models.VEXRule,
+	upstreamRules []models.UpstreamVEXRule,
+	crowdsourcedCtx CrowdsourcedVexingContext,
+) ([]models.VEXRuleRecommendation, error) {
+	mapOfRules := make(map[string]models.VEXRule, len(allRules))
+	for _, rule := range allRules {
+		mapOfRules[rule.ID] = rule
+	}
+
+	compiledVexRules, err := vexrules.CompileRules(ctx, transformer.VEXRulesToUpstreamVEXRules(allRules))
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile all VEX rules: %w", err)
+	}
+	compiledUpstreamRules, err := vexrules.CompileRules(ctx, upstreamRules)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile all upstream VEX rules: %w", err)
+	}
+
+	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx, allVulns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare vulns for evaluation: %w", err)
+	}
+
+	vexRuleResults, err := vexrules.EvalCompiledRules(ctx, compiledVexRules, vulnMaps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate VEX rules: %w", err)
+	}
+	upstreamRuleResults, err := vexrules.EvalCompiledRules(ctx, compiledUpstreamRules, vulnMaps)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate upstream VEX rules: %w", err)
+	}
+
+	// at most one recommendation per dependency vuln - an upstream rule match takes
+	// priority over a crowdsourced recommendation for the same vuln.
+	recommendationsByVulnID := make(map[uuid.UUID]models.VEXRuleRecommendation, len(upstreamRuleResults))
+	for vulnID, matchingRules := range upstreamRuleResults {
+		if len(matchingRules) == 0 {
+			continue
+		}
+		parsedID, err := uuid.Parse(vulnID)
+		if err != nil {
+			continue
+		}
+		recommendationsByVulnID[parsedID] = models.VEXRuleRecommendation{
+			UpstreamVEXRuleID: matchingRules[0],
+			DependencyVulnID:  parsedID,
+		}
+	}
+
+	for vulnID, matchingRules := range vexRuleResults {
+		parsedID, err := uuid.Parse(vulnID)
+		if err != nil {
+			continue
+		}
+		if _, ok := recommendationsByVulnID[parsedID]; ok {
+			// a
+			continue
+		}
+
+		recommendedRule, confidence, votes, err := crowdsourcevexing.CrowdsourcedVexing(
+			utils.Map(matchingRules, func(el string) models.VEXRule {
+				return mapOfRules[el]
+			}),
+			crowdsourcedCtx.CrowdSourceVexingOrgs,
+			crowdsourcedCtx.CrowdSourceVexingProj,
+			crowdsourcedCtx.Assets,
+		)
+		if err != nil {
+			slog.Error("failed to execute crowdsourced vexing", "err", err)
+			continue
+		}
+
+		recommendationsByVulnID[parsedID] = models.VEXRuleRecommendation{
+			UpstreamVEXRuleID: recommendedRule.ID,
+			DependencyVulnID:  parsedID,
+			Confidence:        confidence,
+			VerifiedVotes:     votes.Verified,
+			TotalVotes:        votes.Total,
+		}
+	}
+
+	ruleRecommendations := make([]models.VEXRuleRecommendation, 0, len(recommendationsByVulnID))
+	for _, recommendation := range recommendationsByVulnID {
+		ruleRecommendations = append(ruleRecommendations, recommendation)
+	}
+
+	return ruleRecommendations, nil
+}
+
+func mapOrg(org models.Org, orgTrustscore float64, ownerID string, organizationMemberIDs []string) crowdsourcevexing.Organization {
+	return crowdsourcevexing.Organization{
+		ID:         org.ID,
+		Trustscore: orgTrustscore,
+		CreatedAt:  org.CreatedAt,
+		CreatedBy:  ownerID,
+		UserIDs:    organizationMemberIDs,
+	}
+}
+
+func mapProject(project models.Project, projectTrustscore float64) crowdsourcevexing.Project {
+	return crowdsourcevexing.Project{
+		ID:             project.ID,
+		OrganizationID: project.OrganizationID,
+		Trustscore:     projectTrustscore,
+	}
 }

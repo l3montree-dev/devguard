@@ -141,6 +141,57 @@ func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// RunVEXRuleRecommendationDaemon provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RunVEXRuleRecommendationDaemon")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_RunVEXRuleRecommendationDaemon_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunVEXRuleRecommendationDaemon'
+type DaemonRunner_RunVEXRuleRecommendationDaemon_Call struct {
+	*mock.Call
+}
+
+// RunVEXRuleRecommendationDaemon is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) RunVEXRuleRecommendationDaemon(ctx interface{}) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+	return &DaemonRunner_RunVEXRuleRecommendationDaemon_Call{Call: _e.mock.On("RunVEXRuleRecommendationDaemon", ctx)}
+}
+
+func (_c *DaemonRunner_RunVEXRuleRecommendationDaemon_Call) Run(run func(ctx context.Context)) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_RunVEXRuleRecommendationDaemon_Call) Return(err error) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_RunVEXRuleRecommendationDaemon_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Start provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) Start(ctx context.Context) {
 	_mock.Called(ctx)

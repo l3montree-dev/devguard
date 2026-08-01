@@ -138,14 +138,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	vexRefs, err := c.externalReferenceRepository.FindByAssetID(reqCtx, tx, asset.ID)
-	if err != nil {
-		tx.Rollback()
-		slog.Error("could not fetch vex references for artifact", "err", err, "artifact", artifact.ArtifactName)
-		return echo.NewHTTPError(500, "could not fetch vex references for artifact").WithInternal(err)
-	}
-
-	_, _, vulns, err := c.RunArtifactSecurityLifecycle(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, vexRefs, &userAgent)
+	_, vulns, err := c.SyncArtifactUpstreamSBOMSources(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)

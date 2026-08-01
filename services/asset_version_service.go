@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+
 	"gorm.io/gorm"
 
 	"github.com/openvex/go-vex/pkg/vex"
@@ -36,13 +37,12 @@ type assetVersionService struct {
 	componentService       shared.ComponentService
 	thirdPartyIntegration  shared.IntegrationAggregate
 	licenseRiskRepository  shared.LicenseRiskRepository
-	vexRuleService         shared.VEXRuleService
 	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.AssetVersionService = &assetVersionService{}
 
-func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer, vexRuleService shared.VEXRuleService) *assetVersionService {
+func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
@@ -50,7 +50,6 @@ func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository
 		thirdPartyIntegration:     thirdPartyIntegration,
 		licenseRiskRepository:     licenseRiskRepository,
 		FireAndForgetSynchronizer: synchronizer,
-		vexRuleService:            vexRuleService,
 	}
 }
 
