@@ -40,10 +40,14 @@
         builtins.foldl' (
           a: s: a // builtins.mapAttrs (k: v: (a.${k} or { }) // { ${s} = v; }) (f s)
         ) { } systems;
+
+      inherit (nixpkgs) lib;
     in
     eachSystem systems (
       system:
       let
+        inherit (lib.systems.elaborate system) isLinux;
+
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           buildGoModule = unstablePkgs.buildGoModule;
@@ -92,15 +96,19 @@
           ociImagesArm64.trivyFromSource.package
         ];
 
-        commonBuildOutputs = {
+        # Built for the evaluating system, so these are the only outputs that
+        # mean anything on a non-Linux host.
+        hostBinaries = {
           devguardScanner = binaries.devguardScanner;
           devguard = binaries.devguard;
           devguardCLI = binaries.devguardCLI;
+        };
 
-          # supplementary SBOMs, exposed directly so they can be inspected
-          # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
-          # without rebuilding and untarring a whole OCI image just to check
-          # one file.
+        # supplementary SBOMs, exposed directly so they can be inspected
+        # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
+        # without rebuilding and untarring a whole OCI image just to check
+        # one file.
+        sbomOutputs = {
           devguard-scanner-sbom = ociImagesArm64.devguardBinaries.devguardScannerSBOM;
           devguard-sbom = ociImagesArm64.devguardBinaries.devguardSBOM;
           devguard-cli-sbom = ociImagesArm64.devguardBinaries.devguardCLISBOM;
@@ -138,12 +146,18 @@
 
       in
       {
+        # The OCI images, their SBOMs and the deps bundles are all pinned to a
+        # Linux target arch regardless of the evaluating system - the exact same
+        # derivations on every system. Exposing them under a darwin `packages`
+        # set would just be 18 attributes that need a remote builder to realise.
+        # Both Linux arches keep both target arches: `make nix-cache-push`
+        # builds deps-amd64 and deps-arm64 from a single machine, and CI splits
+        # the image builds across an amd64 and an arm64 runner.
         packages = {
-          default = commonBuildOutputs.devguard;
+          default = hostBinaries.devguard;
         }
-        // arm64Packages
-        // amd64Packages
-        // commonBuildOutputs;
+        // hostBinaries
+        // lib.optionalAttrs isLinux (sbomOutputs // arm64Packages // amd64Packages);
         devShells.default = hostPkgs.mkShell {
           buildInputs = [
             unstablePkgs.go
