@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 
 This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+## [v1.12.0] - 2026-08-02
+
+Thanks to @eliashaeussler for their first contribution to DevGuard! 🎉
+
+### Added
+
+- **Crowdsourced VEX rule recommendations** — VEX rules are now expressed as CEL expressions and matched via a new `vexrules` engine; a daemon periodically computes, for every open vulnerability, either a matching upstream VEX rule or a crowdsourced recommendation voted on across other organizations' rules for the same package, exposed through new asset/asset-version recommendation endpoints
+- **Upstream VEX source ingestion** — DevGuard now ingests VEX/CSAF documents from external upstream sources (OpenVEX and CSAF formats) into a dedicated `upstream_vex_rules` table, feeding the recommendation engine above
+- **Priority recommendations within your own organization** — when a matching VEX rule already exists on another asset within the same organization, it's now surfaced ahead of cross-organization crowdsourced recommendations
+- Alerting is now sent (via `monitoring.Alert`) whenever a request to Kratos fails with a 5xx or is unreachable, instead of the failure being silently swallowed
+
+### Changed
+
+- **Organization member list caching** — fetching an organization's members (RBAC + Kratos identities + third-party integrations) is now served from a stale-while-revalidate cache instead of re-fetching on every request; the cache is explicitly invalidated whenever membership changes (invite accepted, member removed, role changed)
+- VEX rule matching was migrated from raw path-pattern comparison to compiled CEL expressions, with compiled expressions cached to avoid recompiling on every evaluation
+- Batching was added across VEX rule application and crowdsourced recommendation calculation to significantly reduce the number of database round-trips for large scans
+- Added `vex_rule_id`, `lower(cve_id)`, and asset/state composite indexes to speed up recommendation calculation and vuln-event/CVE lookups
+
+### Fixed
+
+- **SARIF export** — now only includes open first-party vulnerabilities, instead of also exporting closed or third-party ones
+- **VulnEvent spam** — fixed an issue causing duplicate/excessive vuln events to be created
+- **VEX rule state sync** — `newState` is now kept in sync with vulnerability states updated by VEX rule application; VEX rules are matched correctly across branches and correctly reverted when deleted, even under replay
+- **Organization overview "no data" bug** (#2665) and a project-slug bug affecting the top-assets view (thanks @eliashaeussler!)
+- **`vex_rule_recommendations` foreign key violation** — a recommendation is either an upstream-rule match or a crowdsourced match against an existing local rule, never both; the schema now allows either FK column to be null instead of requiring both, and the crowdsourced code path was assigning its rule ID to the wrong column
+- **SBOM external-reference URLs** — the version segment is now slugified (matching `devguard-scanner slug`) before being embedded in the SBOM's external-reference URL, so branch/tag names containing `/` or other unsafe characters no longer produce a broken URL
+- Fixed several SAST findings and linting issues
+
 ## [v1.11.0] - 2026-07-24
 
 ### Added
