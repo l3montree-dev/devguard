@@ -264,7 +264,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	vulns, err := c.firstPartyVulnRepository.GetByAssetVersion(
+	vulns, err := c.firstPartyVulnRepository.GetOpenByAssetVersion(
 		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
@@ -323,7 +323,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 				addedRuleIDs[vuln.RuleID] = true
 			}
 			result := sarif.Result{
-				Kind:   "issue",
+				Kind:   sarif.ResultKindFail,
 				RuleID: &vuln.RuleID,
 				Message: sarif.Message{
 					Text: vuln.RuleDescription,
