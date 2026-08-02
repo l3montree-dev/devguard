@@ -2,7 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-This changelog covers both the DevGuard API (`devguard`) and the web frontend (`devguard-web`).
+## [v1.12.1] - 2026-08-02
+
+### Fixed
+
+- Fixed issue in migration file if duplicate rows exist in `external_references` table, which would cause the migration to fail when dropping the `asset_version_name` column and enforcing the new composite primary key on `(asset_id, url)`. The migration now deduplicates rows before adding the primary key constraint.
+
 ## [v1.12.0] - 2026-08-02
 
 Thanks to @eliashaeussler for their first contribution to DevGuard! 🎉
