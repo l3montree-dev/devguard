@@ -7225,8 +7225,17 @@
             },
             "dtos.VexRuleRecommendation": {
                 "properties": {
+                    "appliesToAmountOfDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "assetSlug": {
+                        "type": "string"
+                    },
                     "celExpression": {
                         "type": "string"
+                    },
+                    "confidence": {
+                        "type": "number"
                     },
                     "eventType": {
                         "$ref": "#/components/schemas/dtos.VulnEventType"
@@ -7236,9 +7245,41 @@
                     },
                     "mechanicalJustification": {
                         "$ref": "#/components/schemas/dtos.MechanicalJustificationType"
+                    },
+                    "projectSlug": {
+                        "description": "ProjectSlug/OriginAssetSlug are set when this recommendation was\ntaken directly from a rule on an asset the requesting user already has\naccess to, rather than from the crowd-voted recommendation across\nevery matching rule. Lets the frontend link to that project/asset.",
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "totalVotes": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/dtos.VexRuleRecommendationType"
+                    },
+                    "verifiedVotes": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
+            },
+            "dtos.VexRuleRecommendationType": {
+                "enum": [
+                    "session",
+                    "crowdsourced",
+                    "upstream"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "VexRuleRecommendationTypeSession",
+                    "VexRuleRecommendationTypeCrowdsourced",
+                    "VexRuleRecommendationTypeUpstream"
+                ]
             },
             "dtos.VulnEventDTO": {
                 "properties": {
@@ -10945,141 +10986,6 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/crowdsourced-vexing/recommendations": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {
-                                        "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get crowdsourced VEX recommendations for all vulns of an asset",
-                "tags": [
-                    "CrowdsourcedVexing"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/crowdsourced-vexing/recommendations/{dependencyVulnID}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Dependency vuln ID",
-                        "in": "path",
-                        "name": "dependencyVulnID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    },
-                    "204": {
-                        "description": "No recommendation available"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get a crowdsourced VEX recommendation for a dependency vuln",
-                "tags": [
-                    "CrowdsourcedVexing"
-                ]
-            }
-        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/changes.csv": {
             "get": {
                 "parameters": [
@@ -13749,6 +13655,141 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/recommendations": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get crowdsourced VEX recommendations for all vulns of an asset",
+                "tags": [
+                    "CrowdsourcedVexing"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/recommendations/{dependencyVulnID}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Dependency vuln ID",
+                        "in": "path",
+                        "name": "dependencyVulnID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "204": {
+                        "description": "No recommendation available"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get a crowdsourced VEX recommendation for a dependency vuln",
+                "tags": [
+                    "CrowdsourcedVexing"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId}": {
             "delete": {
                 "parameters": [
@@ -15881,22 +15922,6 @@
         "/vex": {
             "post": {
                 "parameters": [
-                    {
-                        "description": "Asset version name",
-                        "in": "header",
-                        "name": "X-Asset-Ref",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Artifact name",
-                        "in": "header",
-                        "name": "X-Artifact-Name",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
                     {
                         "description": "Tag flag",
                         "in": "header",
