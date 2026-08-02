@@ -98,7 +98,21 @@ func ToCELExpression(cveID string, pattern PathPattern) string {
 }
 
 func VexRuleTitle(cveID string, pattern PathPattern) string {
-	return fmt.Sprintf("%s not exploitable in %s", cveID, pattern[len(pattern)-1])
+	elems := make([]string, 0, len(pattern))
+	for _, elem := range pattern {
+		if !isWildcard(elem) {
+			elems = append(elems, elem)
+		}
+	}
+
+	switch len(elems) {
+	case 0:
+		return fmt.Sprintf("%s not exploitable", cveID)
+	case 1:
+		return fmt.Sprintf("%s not exploitable in %s", cveID, elems[0])
+	default:
+		return fmt.Sprintf("%s not exploitable in %s (inherited from %s)", cveID, elems[0], elems[len(elems)-1])
+	}
 }
 
 // elementMatches checks whether a single pattern element matches a single
