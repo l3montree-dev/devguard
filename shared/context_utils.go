@@ -27,6 +27,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/l3montree-dev/devguard/utils"
@@ -104,8 +105,18 @@ func NewAdminClient(client *client.APIClient) AdminClientImplementation {
 }
 
 func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
-	session, _, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+	session, httpResp, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
 	if err != nil {
+		// a 401 just means "no valid session" - the common, expected case. Anything
+		// else (5xx, connection refused, timeout - reported as a nil httpResp) means
+		// Kratos itself is unreachable or failing, which is worth alerting on.
+		statusCode := 0
+		if httpResp != nil {
+			statusCode = httpResp.StatusCode
+		}
+		if statusCode == 0 || statusCode >= 500 {
+			monitoring.Alert("kratos: could not get identity from cookie", err)
+		}
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
 	}
 	if session.Identity == nil {

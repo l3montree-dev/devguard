@@ -17,6 +17,7 @@ package middlewares
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -68,6 +69,8 @@ func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.Co
 					scopesArray := strings.Fields(scopes)
 					shared.SetSession(ctx, shared.NewSession(userID, shared.SessionActorUser, scopesArray, false))
 					return next(ctx)
+				} else {
+					slog.Warn("could not get session from cookie", "error", err)
 				}
 			}
 			if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok && !instanceSettings.BearerTokenAuthDisabled {

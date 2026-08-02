@@ -16,13 +16,33 @@ package shared
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import (
+	"context"
 	"maps"
+	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/monitoring"
 
+	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
+	"golang.org/x/sync/singleflight"
 )
+
+const (
+	membersFreshFor = 5 * time.Minute
+	membersStaleFor = 30 * time.Minute
+)
+
+type membersCacheEntry struct {
+	users     []dtos.UserDTO
+	fetchedAt time.Time
+}
+
+var membersCache = expirable.NewLRU[uuid.UUID, membersCacheEntry](256, nil, membersStaleFor)
+var membersFetchGroup singleflight.Group
 
 // IdentityName safely extracts a display name from Kratos identity traits.
 // The "name" field may be a plain string (v1 schema) or a map with "first"
@@ -67,12 +87,55 @@ func IdentityEmail(traits any) string {
 }
 
 // FetchMembersOfOrganization retrieves all members of an organization including their roles
-// from both the RBAC system and third-party integrations
+// from both the RBAC system and third-party integrations.
 func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
-	// get all members from the organization
 	organization := GetOrg(ctx)
 	accessControl := GetRBAC(ctx)
+	authAdminClient := GetAuthAdminClient(ctx)
+	thirdPartyIntegrations := GetThirdPartyIntegration(ctx)
 
+	orgID := organization.ID
+
+	if entry, ok := membersCache.Get(orgID); ok {
+		age := time.Since(entry.fetchedAt)
+		if age < membersFreshFor {
+			return entry.users, nil
+		}
+		if age < membersStaleFor {
+			// serve stale, refresh in the background - callers never wait on this.
+			go func() {
+				if _, err, _ := membersFetchGroup.Do(orgID.String(), func() (any, error) {
+					users, err := fetchMembersOfOrganization(ctx.Request().Context(), organization, accessControl, authAdminClient, thirdPartyIntegrations)
+					if err != nil {
+						return nil, err
+					}
+					membersCache.Add(orgID, membersCacheEntry{users: users, fetchedAt: time.Now()})
+					return users, nil
+				}); err != nil {
+					monitoring.Alert("could not revalidate organization members in background", err)
+				}
+			}()
+			return entry.users, nil
+		}
+	}
+
+	// cache miss or fully expired - fetch synchronously, deduping concurrent callers.
+	v, err, _ := membersFetchGroup.Do(orgID.String(), func() (any, error) {
+		users, err := fetchMembersOfOrganization(ctx.Request().Context(), organization, accessControl, authAdminClient, thirdPartyIntegrations)
+		if err != nil {
+			monitoring.Alert("could not fetch organization members", err)
+			return nil, err
+		}
+		membersCache.Add(orgID, membersCacheEntry{users: users, fetchedAt: time.Now()})
+		return users, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return v.([]dtos.UserDTO), nil
+}
+
+func fetchMembersOfOrganization(ctx context.Context, organization models.Org, accessControl AccessControl, authAdminClient AdminClient, thirdPartyIntegrations IntegrationAggregate) ([]dtos.UserDTO, error) {
 	members, err := accessControl.GetAllMembersOfOrganization()
 
 	if err != nil {
@@ -81,8 +144,6 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 
 	users := make([]dtos.UserDTO, 0, len(members))
 	if len(members) > 0 {
-		// get the auth admin client from the context
-		authAdminClient := GetAuthAdminClient(ctx)
 		// fetch the users from the auth service
 		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 		if err != nil {
@@ -121,7 +182,6 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 	}
 
 	// fetch all members from third party integrations
-	thirdPartyIntegrations := GetThirdPartyIntegration(ctx)
 	users = append(users, thirdPartyIntegrations.GetUsers(organization)...)
 	return users, nil
 }

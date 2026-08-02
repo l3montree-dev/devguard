@@ -131,7 +131,7 @@ func AssetAccessControl(obj shared.Object, act shared.Action) shared.MiddlewareF
 
 			allowed, err := rbac.IsAllowedInAsset(ctx.Request().Context(), &asset, session, obj, act)
 			if err != nil {
-				return echo.NewHTTPError(500, "could not determine if the user has access")
+				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
 			}
 			// check if the user has the required role
 			if !allowed {
@@ -158,7 +158,7 @@ func ProjectAccessControl(obj shared.Object, act shared.Action) shared.Middlewar
 
 			allowed, err := rbac.IsAllowedInProject(ctx.Request().Context(), &project, session, obj, act, actorScope)
 			if err != nil {
-				return echo.NewHTTPError(500, "could not determine if the user has access")
+				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
 			}
 
 			// check if the user has the required role
