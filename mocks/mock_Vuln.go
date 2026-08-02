@@ -170,6 +170,72 @@ func (_c *Vuln_CalculateHash_Call) RunAndReturn(run func() uuid.UUID) *Vuln_Calc
 	return _c
 }
 
+// ClearTicketID provides a mock function for the type Vuln
+func (_mock *Vuln) ClearTicketID() {
+	_mock.Called()
+	return
+}
+
+// Vuln_ClearTicketID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearTicketID'
+type Vuln_ClearTicketID_Call struct {
+	*mock.Call
+}
+
+// ClearTicketID is a helper method to define mock.On call
+func (_e *Vuln_Expecter) ClearTicketID() *Vuln_ClearTicketID_Call {
+	return &Vuln_ClearTicketID_Call{Call: _e.mock.On("ClearTicketID")}
+}
+
+func (_c *Vuln_ClearTicketID_Call) Run(run func()) *Vuln_ClearTicketID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Vuln_ClearTicketID_Call) Return() *Vuln_ClearTicketID_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *Vuln_ClearTicketID_Call) RunAndReturn(run func()) *Vuln_ClearTicketID_Call {
+	_c.Run(run)
+	return _c
+}
+
+// ClearTicketURL provides a mock function for the type Vuln
+func (_mock *Vuln) ClearTicketURL() {
+	_mock.Called()
+	return
+}
+
+// Vuln_ClearTicketURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearTicketURL'
+type Vuln_ClearTicketURL_Call struct {
+	*mock.Call
+}
+
+// ClearTicketURL is a helper method to define mock.On call
+func (_e *Vuln_Expecter) ClearTicketURL() *Vuln_ClearTicketURL_Call {
+	return &Vuln_ClearTicketURL_Call{Call: _e.mock.On("ClearTicketURL")}
+}
+
+func (_c *Vuln_ClearTicketURL_Call) Run(run func()) *Vuln_ClearTicketURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Vuln_ClearTicketURL_Call) Return() *Vuln_ClearTicketURL_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *Vuln_ClearTicketURL_Call) RunAndReturn(run func()) *Vuln_ClearTicketURL_Call {
+	_c.Run(run)
+	return _c
+}
+
 // GetArtifacts provides a mock function for the type Vuln
 func (_mock *Vuln) GetArtifacts() []models.Artifact {
 	ret := _mock.Called()

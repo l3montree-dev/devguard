@@ -86,6 +86,10 @@ func IdentityEmail(traits any) string {
 	return email
 }
 
+func InvalidateMembersCache(orgID uuid.UUID) {
+	membersCache.Remove(orgID)
+}
+
 // FetchMembersOfOrganization retrieves all members of an organization including their roles
 // from both the RBAC system and third-party integrations.
 func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
@@ -93,8 +97,8 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 	accessControl := GetRBAC(ctx)
 	authAdminClient := GetAuthAdminClient(ctx)
 	thirdPartyIntegrations := GetThirdPartyIntegration(ctx)
-
 	orgID := organization.ID
+	reqCtx := ctx.Request().Context()
 
 	if entry, ok := membersCache.Get(orgID); ok {
 		age := time.Since(entry.fetchedAt)
@@ -105,7 +109,7 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 			// serve stale, refresh in the background - callers never wait on this.
 			go func() {
 				if _, err, _ := membersFetchGroup.Do(orgID.String(), func() (any, error) {
-					users, err := fetchMembersOfOrganization(ctx.Request().Context(), organization, accessControl, authAdminClient, thirdPartyIntegrations)
+					users, err := fetchMembersOfOrganization(reqCtx, organization, accessControl, authAdminClient, thirdPartyIntegrations)
 					if err != nil {
 						return nil, err
 					}
@@ -121,7 +125,7 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 
 	// cache miss or fully expired - fetch synchronously, deduping concurrent callers.
 	v, err, _ := membersFetchGroup.Do(orgID.String(), func() (any, error) {
-		users, err := fetchMembersOfOrganization(ctx.Request().Context(), organization, accessControl, authAdminClient, thirdPartyIntegrations)
+		users, err := fetchMembersOfOrganization(reqCtx, organization, accessControl, authAdminClient, thirdPartyIntegrations)
 		if err != nil {
 			monitoring.Alert("could not fetch organization members", err)
 			return nil, err

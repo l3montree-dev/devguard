@@ -46,7 +46,7 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 			return errors.Wrap(err, "failed to delete all VEX rule recommendations")
 		}
 
-		return errors.Wrap(runner.vexRuleRecommendationRepository.CreateBatch(ctx, tx, ruleRecommendations), "failed to save VEX rule recommendations")
+		return errors.Wrap(runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, ruleRecommendations), "failed to save VEX rule recommendations")
 	})
 }
 

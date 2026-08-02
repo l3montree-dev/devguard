@@ -250,6 +250,7 @@ func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
+	shared.InvalidateMembersCache(invitation.OrganizationID)
 
 	// delete the invitation
 	err = controller.invitationRepository.Delete(reqCtx, nil, invitation.ID)
@@ -352,6 +353,7 @@ func (controller *OrgController) ChangeRole(ctx shared.Context) error {
 	if err := rbac.GrantRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), shared.Role(req.Role)); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
+	shared.InvalidateMembersCache(shared.GetOrg(ctx).ID)
 
 	return ctx.NoContent(200)
 }
@@ -376,6 +378,7 @@ func (controller *OrgController) RemoveMember(ctx shared.Context) error {
 	//
 	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "member") // nolint:errcheck// we do not care if the user is not a member
 	rbac.RevokeRole(reqCtx, shared.NewSession(userID, shared.SessionActorUser, nil, false), "admin")  // nolint:errcheck// we do not care if the user is not an admin
+	shared.InvalidateMembersCache(shared.GetOrg(ctx).ID)
 
 	// remove member from all projects
 	projects, err := controller.projectService.ListProjectsByOrganizationID(reqCtx, shared.GetOrg(ctx).GetID())

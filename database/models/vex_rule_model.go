@@ -56,12 +56,14 @@ func (r *VEXRule) EnsureID() {
 	}
 }
 
+// VEXRuleRecommendation is either an upstream-rule match (UpstreamVEXRuleID set) or a
+// crowdsourced match against an existing local rule (VEXRuleID set) - never both.
 type VEXRuleRecommendation struct {
-	DependencyVulnID uuid.UUID `json:"dependencyVulnerabilityId" gorm:"type:uuid;not null;index:,composite:vex_recommendation_composite_key"`
-	VEXRuleID        string    `json:"vexRuleId" gorm:"type:text;not null;index:,composite:vex_recommendation_composite_key"`
+	DependencyVulnID uuid.UUID `json:"dependencyVulnerabilityId" gorm:"type:uuid;primaryKey;not null;"`
+	VEXRuleID        *string   `json:"vexRuleId" gorm:"type:text;"`
 	VEXRule          VEXRule   `json:"vexRule" gorm:"foreignKey:VEXRuleID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	UpstreamVEXRuleID string          `json:"upstreamVexRuleId" gorm:"type:text;not null;index:,composite:vex_recommendation_composite_key"`
+	UpstreamVEXRuleID *string         `json:"upstreamVexRuleId" gorm:"type:text;"`
 	UpstreamVEXRule   UpstreamVEXRule `json:"upstreamVexRule" gorm:"foreignKey:UpstreamVEXRuleID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	VerifiedVotes int     `json:"verifiedVotes" gorm:"default:0;not null;"`

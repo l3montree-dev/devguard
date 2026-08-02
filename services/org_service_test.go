@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -346,8 +347,10 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		shared.SetOrg(ctx, models.Org{})
+		shared.SetOrg(ctx, models.Org{Model: models.Model{ID: uuid.New()}})
 		shared.SetRBAC(ctx, accesscontrol)
+		shared.SetAuthAdminClient(ctx, mocks.NewAdminClient(t))
+		shared.SetThirdPartyIntegration(ctx, mocks.NewIntegrationAggregate(t))
 
 		_, err := shared.FetchMembersOfOrganization(ctx)
 		if err == nil {
@@ -370,9 +373,10 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		shared.SetOrg(ctx, models.Org{})
+		shared.SetOrg(ctx, models.Org{Model: models.Model{ID: uuid.New()}})
 		shared.SetRBAC(ctx, accesscontrol)
 		shared.SetAuthAdminClient(ctx, adminClient)
+		shared.SetThirdPartyIntegration(ctx, mocks.NewIntegrationAggregate(t))
 
 		_, err := shared.FetchMembersOfOrganization(ctx)
 		if err == nil {
@@ -398,7 +402,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		shared.SetOrg(ctx, models.Org{})
+		shared.SetOrg(ctx, models.Org{Model: models.Model{ID: uuid.New()}})
 		shared.SetRBAC(ctx, accesscontrol)
 		shared.SetAuthAdminClient(ctx, adminClient)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
@@ -426,7 +430,7 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		shared.SetOrg(ctx, models.Org{})
+		shared.SetOrg(ctx, models.Org{Model: models.Model{ID: uuid.New()}})
 		shared.SetRBAC(ctx, accesscontrol)
 		shared.SetAuthAdminClient(ctx, adminClient)
 		shared.SetThirdPartyIntegration(ctx, thirdPartyIntegration)

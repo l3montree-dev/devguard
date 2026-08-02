@@ -87,7 +87,7 @@ func upstreamVEXRuleToRecommendationDTO(rule models.UpstreamVEXRule, appliesToAm
 // the crowdsourced vote, or, failing that, a trusted upstream VEX rule
 // (UpstreamVEXRuleID set).
 func VEXRuleRecommendationToDTO(rec models.VEXRuleRecommendation, appliesToAmountOfDependencyVulns int) dtos.VexRuleRecommendation {
-	if rec.VEXRuleID != "" {
+	if rec.VEXRuleID != nil {
 		return vexRuleToRecommendationDTO(rec.VEXRule, appliesToAmountOfDependencyVulns, rec.Confidence, rec.VerifiedVotes, rec.TotalVotes)
 	}
 	return upstreamVEXRuleToRecommendationDTO(rec.UpstreamVEXRule, appliesToAmountOfDependencyVulns)

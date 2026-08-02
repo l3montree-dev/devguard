@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -175,8 +176,9 @@ func TestOrgControllerAdminSettings(t *testing.T) {
 	webhookName := "Alerts"
 	webhookDescription := "Security alerts"
 	org := models.Org{
-		Name: "DevGuard",
-		Slug: "devguard",
+		Model: models.Model{ID: uuid.New()},
+		Name:  "DevGuard",
+		Slug:  "devguard",
 		Webhooks: []models.WebhookIntegration{{
 			Name:        &webhookName,
 			Description: &webhookDescription,
@@ -194,6 +196,8 @@ func TestOrgControllerAdminSettings(t *testing.T) {
 	mockIntegrations := mocks.NewIntegrationAggregate(t)
 	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
 	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
+
+	shared.SetAuthAdminClient(ctx, mocks.NewAdminClient(t))
 
 	controller := &OrgController{}
 	err := controller.AdminSettings(ctx)
@@ -219,8 +223,9 @@ func TestOrgControllerReadDoesNotExposeWebhooks(t *testing.T) {
 	webhookName := "Alerts"
 	webhookDescription := "Security alerts"
 	org := models.Org{
-		Name: "DevGuard",
-		Slug: "devguard",
+		Model: models.Model{ID: uuid.New()},
+		Name:  "DevGuard",
+		Slug:  "devguard",
 		Webhooks: []models.WebhookIntegration{{
 			Name:        &webhookName,
 			Description: &webhookDescription,
@@ -236,6 +241,8 @@ func TestOrgControllerReadDoesNotExposeWebhooks(t *testing.T) {
 	mockIntegrations := mocks.NewIntegrationAggregate(t)
 	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
 	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
+
+	shared.SetAuthAdminClient(ctx, mocks.NewAdminClient(t))
 
 	mockInvitationRepository := mocks.NewInvitationRepository(t)
 	mockInvitationRepository.On("FindByOrgID", mock.Anything, mock.Anything, mock.Anything).Return([]models.Invitation{}, nil)

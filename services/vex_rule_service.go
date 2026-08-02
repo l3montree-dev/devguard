@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vexrules"
+	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -377,8 +378,9 @@ func ComputeVEXRuleRecommendations(
 		if err != nil {
 			continue
 		}
+		upstreamRuleID := matchingRules[0]
 		recommendationsByVulnID[parsedID] = models.VEXRuleRecommendation{
-			UpstreamVEXRuleID: matchingRules[0],
+			UpstreamVEXRuleID: &upstreamRuleID,
 			DependencyVulnID:  parsedID,
 		}
 	}
@@ -402,16 +404,19 @@ func ComputeVEXRuleRecommendations(
 			crowdsourcedCtx.Assets,
 		)
 		if err != nil {
-			slog.Error("failed to execute crowdsourced vexing", "err", err)
+			if !errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
+				slog.Error("failed to execute crowdsourced vexing", "err", err)
+			}
 			continue
 		}
 
+		vexRuleID := recommendedRule.ID
 		recommendationsByVulnID[parsedID] = models.VEXRuleRecommendation{
-			UpstreamVEXRuleID: recommendedRule.ID,
-			DependencyVulnID:  parsedID,
-			Confidence:        confidence,
-			VerifiedVotes:     votes.Verified,
-			TotalVotes:        votes.Total,
+			VEXRuleID:        &vexRuleID,
+			DependencyVulnID: parsedID,
+			Confidence:       confidence,
+			VerifiedVotes:    votes.Verified,
+			TotalVotes:       votes.Total,
 		}
 	}
 

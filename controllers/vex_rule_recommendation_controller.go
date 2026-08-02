@@ -106,10 +106,13 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 
 	selectedRecommendation := recommendations[dependencyVulnIDParsed]
 	var selectedRecommendationEvalStruct models.UpstreamVEXRule
-	if selectedRecommendation.VEXRuleID != "" {
+	var matchesKey string
+	if selectedRecommendation.VEXRuleID != nil {
 		selectedRecommendationEvalStruct = transformer.VEXRuleToUpstreamVEXRule(selectedRecommendation.VEXRule)
-	} else if selectedRecommendation.UpstreamVEXRuleID != "" {
+		matchesKey = *selectedRecommendation.VEXRuleID
+	} else if selectedRecommendation.UpstreamVEXRuleID != nil {
 		selectedRecommendationEvalStruct = selectedRecommendation.UpstreamVEXRule
+		matchesKey = *selectedRecommendation.UpstreamVEXRuleID
 	}
 
 	matches, err := services.MatchRulesToVulns(ctx.Request().Context(), []models.UpstreamVEXRule{selectedRecommendationEvalStruct}, allOpenVulns)
@@ -117,7 +120,7 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
-	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendations[dependencyVulnIDParsed], len(matches[selectedRecommendation.VEXRuleID])))
+	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendations[dependencyVulnIDParsed], len(matches[matchesKey])))
 }
 
 // @Summary Get crowdsourced VEX recommendations for all vulns of an asset
@@ -195,11 +198,11 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		appliesToAmountOfDependencyVulns[rule.ID]++
 	}
 	for _, recommendation := range storedRecommendations {
-		if recommendation.VEXRuleID != "" {
-			appliesToAmountOfDependencyVulns[recommendation.VEXRuleID]++
+		if recommendation.VEXRuleID != nil {
+			appliesToAmountOfDependencyVulns[*recommendation.VEXRuleID]++
 		}
-		if recommendation.UpstreamVEXRuleID != "" {
-			appliesToAmountOfDependencyVulns[recommendation.UpstreamVEXRuleID]++
+		if recommendation.UpstreamVEXRuleID != nil {
+			appliesToAmountOfDependencyVulns[*recommendation.UpstreamVEXRuleID]++
 		}
 	}
 
@@ -210,7 +213,13 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 
 	// inject all stored recommendations into the recommendations map - and convert them
 	for vulnID, recommendation := range storedRecommendations {
-		recommendations[vulnID] = transformer.VEXRuleRecommendationToDTO(recommendation, appliesToAmountOfDependencyVulns[recommendation.VEXRuleID])
+		var appliesTo int
+		if recommendation.VEXRuleID != nil {
+			appliesTo = appliesToAmountOfDependencyVulns[*recommendation.VEXRuleID]
+		} else if recommendation.UpstreamVEXRuleID != nil {
+			appliesTo = appliesToAmountOfDependencyVulns[*recommendation.UpstreamVEXRuleID]
+		}
+		recommendations[vulnID] = transformer.VEXRuleRecommendationToDTO(recommendation, appliesTo)
 	}
 
 	return ctx.JSON(200, recommendations)
