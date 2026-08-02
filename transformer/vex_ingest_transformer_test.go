@@ -16,10 +16,12 @@
 package transformer
 
 import (
+	"os"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/openvex/go-vex/pkg/vex"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -89,4 +91,28 @@ func TestMapCDXToEventType(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIngestOpenVex(t *testing.T) {
+	// read the testfile
+	file, err := os.ReadFile("testdata/test-openvex.json")
+	if err != nil {
+		t.Fatalf("failed to read test file: %v", err)
+	}
+
+	// parse as openvex
+	doc, err := vex.Parse(file)
+	if err != nil {
+		t.Fatalf("failed to parse openvex: %v", err)
+	}
+	// ingest the file
+	rules, err := OpenVEXToRules(doc, "test-openvex.json")
+	assert.NoError(t, err)
+
+	// we expect a single rule to be created
+	// with path [*, pkg:golang/github.com/traefik/traefik/v3, *, "pkg:golang/github.com/aws/aws-sdk-go@v1.44.327"]
+	assert.Len(t, rules, 1)
+
+	celExpr := rules[0].CELExpression
+	assert.Equal(t, `vuln.cveId == "CVE-2020-8911" && matchesPattern(vuln, ["*", "pkg:golang/github.com/traefik/traefik/v3", "*", "pkg:golang/github.com/aws/aws-sdk-go@v1.44.327"])`, celExpr)
 }

@@ -1,0 +1,31 @@
+{
+    "@context": "https://openvex.dev/ns/v0.2.0",
+    "@id": "https://openvex.dev/docs/public/vex-9f407af9fa210cd4c46401e35fb12c746eb03158b092f8c4218007f0aeaaf3d3",
+    "author": "Rancher Security team",
+    "version": 1,
+    "statements": [
+        {
+            "vulnerability": {
+                "name": "CVE-2020-8911",
+                "aliases": [
+                    "GO-2022-0646",
+                    "GHSA-f5pg-7wfw-84q9"
+                ]
+            },
+            "products": [
+                {
+                    "@id": "pkg:golang/github.com/traefik/traefik/v3",
+                    "subcomponents": [
+                        {
+                            "@id": "pkg:golang/github.com/aws/aws-sdk-go@v1.44.327"
+                        }
+                    ]
+                }
+            ],
+            "status": "not_affected",
+            "justification": "vulnerable_code_not_present",
+            "impact_statement": "Govulncheck determined that the vulnerable code isn't called",
+            "timestamp": "2026-06-19T00:00:00Z"
+        }
+    ]
+}

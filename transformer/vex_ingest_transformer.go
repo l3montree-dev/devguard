@@ -196,10 +196,9 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 
 // OpenVEXToRules converts an OpenVEX document into VEX rules.
 //
-// OpenVEX is component-level: it identifies the vulnerable package by the statement's
-// subcomponent PURL (or the product PURL when no subcomponent is given). The resulting
-// path pattern is therefore a component-level wildcard ["*", componentPurl] that matches
-// any path reaching that component - it does not distinguish individual dependency paths.
+// When a statement's product lists subcomponents, the resulting path pattern narrows
+// to that product/subcomponent pair: ["*", productPurl, "*", subcomponentPurl]. When no
+// subcomponent is given, it falls back to the product-level wildcard ["*", productPurl].
 func OpenVEXToRules(doc *vex.VEX, source string) ([]models.UpstreamVEXRule, error) {
 	rules := make([]models.UpstreamVEXRule, 0, len(doc.Statements))
 	for _, statement := range doc.Statements {
@@ -217,16 +216,15 @@ func OpenVEXToRules(doc *vex.VEX, source string) ([]models.UpstreamVEXRule, erro
 			continue
 		}
 
-		// collect the component-level PURLs the statement scopes to
-		purlStrings := openVexStatementPurls(statement)
-		for _, purlString := range purlStrings {
+		// collect the path patterns the statement scopes to
+		for _, pattern := range openVexStatementPatterns(statement) {
 			rule := models.UpstreamVEXRule{
-				Title:                   vexrules.VexRuleTitle(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				Title:                   vexrules.VexRuleTitle(cveID, pattern),
 				VexSource:               source,
 				MechanicalJustification: dtos.MechanicalJustificationType(statement.Justification),
 				Justification:           statement.ImpactStatement,
 				EventType:               eventType,
-				CELExpression:           vexrules.ToCELExpression(cveID, vexrules.PathPattern{vexrules.PathPatternWildcard, purlString}),
+				CELExpression:           vexrules.ToCELExpression(cveID, pattern),
 			}
 			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
@@ -298,24 +296,30 @@ func mapOpenVexStatusToEventType(status vex.Status) (dtos.VulnEventType, error) 
 	}
 }
 
-// openVexStatementPurls returns the vulnerable-component PURLs a statement scopes to:
-// the subcomponent PURLs, or the product PURLs when no subcomponent is listed.
-func openVexStatementPurls(statement vex.Statement) []string {
-	var purls []string
+// openVexStatementPatterns returns the path patterns a statement scopes to. When a
+// product lists subcomponents, the pattern narrows to that product/subcomponent pair:
+// ["*", productPurl, "*", subcomponentPurl]. Otherwise it falls back to the
+// component-level wildcard ["*", productPurl].
+func openVexStatementPatterns(statement vex.Statement) []vexrules.PathPattern {
+	var patterns []vexrules.PathPattern
 	for _, product := range statement.Products {
+		productPurl := componentPurl(product.Component)
 		if len(product.Subcomponents) > 0 {
+			if productPurl == "" {
+				continue
+			}
 			for _, sub := range product.Subcomponents {
 				if p := componentPurl(sub.Component); p != "" {
-					purls = append(purls, p)
+					patterns = append(patterns, vexrules.PathPattern{vexrules.PathPatternWildcard, productPurl, vexrules.PathPatternWildcard, p})
 				}
 			}
 			continue
 		}
-		if p := componentPurl(product.Component); p != "" {
-			purls = append(purls, p)
+		if productPurl != "" {
+			patterns = append(patterns, vexrules.PathPattern{vexrules.PathPatternWildcard, productPurl})
 		}
 	}
-	return purls
+	return patterns
 }
 
 func componentPurl(c vex.Component) string {
