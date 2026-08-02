@@ -4,7 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
 
     # uv2nix + pyproject-nix: build the scanner Python env from uv.lock,
     # replacing manual overridePythonAttrs for semgrep + checkov.
@@ -19,14 +18,37 @@
     pyproject-build-systems.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils, uv2nix, pyproject-nix, pyproject-build-systems }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      nixpkgs-unstable,
+      uv2nix,
+      pyproject-nix,
+      pyproject-build-systems,
+    }:
+
+    let
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
+
+      eachSystem =
+        systems: f:
+        builtins.foldl' (
+          a: s: a // builtins.mapAttrs (k: v: (a.${k} or { }) // { ${s} = v; }) (f s)
+        ) { } systems;
+    in
+    eachSystem systems (
+      system:
       let
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           buildGoModule = unstablePkgs.buildGoModule;
         };
-     
+
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
           buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGoModule;
         };
@@ -34,9 +56,29 @@
           buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGoModule;
         };
         # this is only done to satisfy the expected structure in the container hardening work
-        binaries = import ./nix/devguard.nix { buildGoModule = hostPkgs.buildGoModule; lib = hostPkgs.lib; inherit self system; };
-        ociImagesAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
-        ociImagesArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self pyproject-nix uv2nix pyproject-build-systems; };
+        binaries = import ./nix/devguard.nix {
+          buildGoModule = hostPkgs.buildGoModule;
+          lib = hostPkgs.lib;
+          inherit self system;
+        };
+        ociImagesAmd64 = import ./nix/oci.nix {
+          pkgs = targetPkgsAmd64;
+          inherit
+            self
+            pyproject-nix
+            uv2nix
+            pyproject-build-systems
+            ;
+        };
+        ociImagesArm64 = import ./nix/oci.nix {
+          pkgs = targetPkgsArm64;
+          inherit
+            self
+            pyproject-nix
+            uv2nix
+            pyproject-build-systems
+            ;
+        };
 
         amd64Dependencies = [
           ociImagesAmd64.craneFromSource.package
@@ -80,14 +122,13 @@
           };
         };
 
-        amd64Packages =  {
-          # those are binaries compiled for the host platform         
+        amd64Packages = {
+          # those are binaries compiled for the host platform
           devguard-amd64 = ociImagesAmd64.devguardOCI { debug = false; };
           devguard-scanner-amd64 = ociImagesAmd64.devguardScannerOCI;
           postgresql-amd64 = ociImagesAmd64.postgresqlOCI { debug = false; };
           devguard-debug-amd64 = ociImagesAmd64.devguardOCI { debug = true; };
           postgresql-debug-amd64 = ociImagesAmd64.postgresqlOCI { debug = true; };
-
 
           deps-amd64 = hostPkgs.symlinkJoin {
             name = "devguard-deps-amd64";
@@ -95,9 +136,22 @@
           };
         };
 
-      in {
-        packages = { default = commonBuildOutputs.devguard; } // arm64Packages // amd64Packages // commonBuildOutputs;
-        devShells.default =
-          hostPkgs.mkShell { buildInputs = [ unstablePkgs.go unstablePkgs.gotools unstablePkgs.gopls unstablePkgs.golangci-lint ]; };
-      });
+      in
+      {
+        packages = {
+          default = commonBuildOutputs.devguard;
+        }
+        // arm64Packages
+        // amd64Packages
+        // commonBuildOutputs;
+        devShells.default = hostPkgs.mkShell {
+          buildInputs = [
+            unstablePkgs.go
+            unstablePkgs.gotools
+            unstablePkgs.gopls
+            unstablePkgs.golangci-lint
+          ];
+        };
+      }
+    );
 }
