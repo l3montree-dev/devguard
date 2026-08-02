@@ -242,6 +242,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.DependencyVulnController),
 		new(controllers.CompliancePostureController),
 		new(controllers.ComplianceComponentController),
+		new(controllers.ComplianceController),
 		new(controllers.PolicyController),
 		new(controllers.ReleaseController),
 		new(controllers.StatisticsController),

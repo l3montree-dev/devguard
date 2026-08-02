@@ -114,6 +114,19 @@ func (npmEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 
 // ProxyNPMTarball handles explicit-version npm requests (.tgz downloads).
 // Routes: GET /npm/:package/-/* and GET /npm/:scope/:name/-/*
+// @Summary Proxy npm tarball download
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param package path string false "npm package name"
+// @Param scope path string false "npm scope"
+// @Param name path string false "npm package name (scoped)"
+// @Success 200 {file} binary
+// @Router /dependency-proxy/npm/{package}/-/{path} [get]
+// @Router /dependency-proxy/npm/{scope}/{name}/-/{path} [get]
+// @Router /dependency-proxy/{secret}/npm/{package}/-/{path} [get]
+// @Router /dependency-proxy/{secret}/npm/{scope}/{name}/-/{path} [get]
 func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -229,6 +242,19 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 
 // ProxyNPMMetadata handles metadata / version-resolution npm requests (no explicit version in path).
 // Routes: GET /npm/:package and GET /npm/:scope/:name
+// @Summary Proxy npm package metadata
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param package path string false "npm package name"
+// @Param scope path string false "npm scope"
+// @Param name path string false "npm package name (scoped)"
+// @Success 200 {object} map[string]interface{}
+// @Router /dependency-proxy/npm/{package} [get]
+// @Router /dependency-proxy/npm/{scope}/{name} [get]
+// @Router /dependency-proxy/{secret}/npm/{package} [get]
+// @Router /dependency-proxy/{secret}/npm/{scope}/{name} [get]
 func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -328,6 +354,14 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	return npm.writeResponse(c, data, requestPath, false)
 }
 
+// @Summary Proxy npm audit request
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Success 200 {object} map[string]interface{}
+// @Router /dependency-proxy/npm/{path} [post]
+// @Router /dependency-proxy/{secret}/npm/{path} [post]
 func (d *NPMDependencyProxyController) ProxyNPMAudit(c shared.Context) error {
 	requestPath := npm.trimPrefix(c.Request().URL.Path)
 

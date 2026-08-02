@@ -221,6 +221,12 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 // returns a list of cve ids sorted by the creation date as well as the total amount of entries
 // query parameter offset: offset the fetched data by the provided amount
 // query parameter limit: limit the amount of entries in the data
+// @Summary List CVE IDs sorted by creation date
+// @Tags VulnDB
+// @Param offset query int false "Offset to start fetching data from"
+// @Param limit query int false "Maximum number of entries to return"
+// @Success 200 {object} object{total=int,data=[]object{cve=string,createdAt=string,datePublished=string}}
+// @Router /vulndb/list-ids-by-creation-date [get]
 func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 	type listIDsRow struct {
 		CVEID         string    `gorm:"column:cve"`
@@ -309,6 +315,10 @@ func (c *ecosystemDistributionCache) set(value map[string]int) {
 }
 
 // return the number of vulnerabilities in affected packages per ecosystem
+// @Summary Get the CVE distribution across ecosystems
+// @Tags VulnDB
+// @Success 200 {object} map[string]int
+// @Router /vulndb/cve-ecosystem-distribution [get]
 func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
 	if distribution, found := c.ecosystemDistributionCache.get(); found {
 		return ctx.JSONPretty(200, distribution, config.PrettyJSONIndent)

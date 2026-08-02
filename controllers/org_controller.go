@@ -528,6 +528,14 @@ func (controller *OrgController) Read(ctx shared.Context) error {
 	return controller.readDetails(ctx)
 }
 
+// @Summary Get organization details
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} dtos.OrgDetailsDTO
+// @Router /organizations/{organization} [get]
 func (controller *OrgController) readDetails(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
@@ -600,6 +608,15 @@ func (controller *OrgController) List(ctx shared.Context) error {
 	return ctx.JSON(200, organizations)
 }
 
+// @Summary Revoke an organization invitation
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param ID path string true "Invitation ID"
+// @Success 200
+// @Router /organizations/{organization}/invitation/{ID} [delete]
 func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 

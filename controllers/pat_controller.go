@@ -81,6 +81,15 @@ func (p *PatController) Create(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
+// @Summary Create organization access token
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param body body dtos.PatCreateRequest true "Request body"
+// @Success 200 {object} dtos.PATCreateResponseDTO
+// @Router /organizations/{organization}/pats [post]
 func (p *PatController) CreateForOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
 	owner := dtos.TokenOwner{Type: string(shared.SessionActorOrg), ID: org.ID}
@@ -112,6 +121,16 @@ func (p *PatController) CreateForOrg(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
+// @Summary Create project access token
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param body body dtos.PatCreateRequest true "Request body"
+// @Success 200 {object} dtos.PATCreateResponseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/pats [post]
 func (p *PatController) CreateForProject(c shared.Context) error {
 	project := shared.GetProject(c)
 	owner := dtos.TokenOwner{Type: string(shared.SessionActorProject), ID: project.ID}
@@ -143,6 +162,17 @@ func (p *PatController) CreateForProject(c shared.Context) error {
 	return c.JSON(200, resp)
 }
 
+// @Summary Create asset access token
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body dtos.PatCreateRequest true "Request body"
+// @Success 200 {object} dtos.PATCreateResponseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/pats [post]
 func (p *PatController) CreateForAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)
 	owner := dtos.TokenOwner{Type: string(shared.SessionActorAsset), ID: asset.ID}
@@ -233,6 +263,15 @@ func (p *PatController) Delete(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Delete organization access token
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param tokenID path string true "Token ID"
+// @Success 200
+// @Router /organizations/{organization}/pats/{tokenID} [delete]
 func (p *PatController) DeleteByOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
@@ -254,6 +293,16 @@ func (p *PatController) DeleteByOrg(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Delete project access token
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param tokenID path string true "Token ID"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/pats/{tokenID} [delete]
 func (p *PatController) DeleteByProject(c shared.Context) error {
 	project := shared.GetProject(c)
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
@@ -275,6 +324,17 @@ func (p *PatController) DeleteByProject(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Delete asset access token
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param tokenID path string true "Token ID"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/pats/{tokenID} [delete]
 func (p *PatController) DeleteByAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)
 	tokenID := shared.SanitizeParam(c.Param("tokenID"))
@@ -319,6 +379,14 @@ func (p *PatController) List(c shared.Context) error {
 	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
 }
 
+// @Summary List organization access tokens
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {array} dtos.PATDTO
+// @Router /organizations/{organization}/pats [get]
 func (p *PatController) ListByOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
 
@@ -330,6 +398,15 @@ func (p *PatController) ListByOrg(c shared.Context) error {
 	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
 }
 
+// @Summary List project access tokens
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Success 200 {array} dtos.PATDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/pats [get]
 func (p *PatController) ListByProject(c shared.Context) error {
 	project := shared.GetProject(c)
 
@@ -341,6 +418,16 @@ func (p *PatController) ListByProject(c shared.Context) error {
 	return c.JSON(200, utils.Map(pats, transformer.PATModelToDTO))
 }
 
+// @Summary List asset access tokens
+// @Tags Authentication
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {array} dtos.PATDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/pats [get]
 func (p *PatController) ListByAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)
 

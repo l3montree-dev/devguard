@@ -657,7 +657,7 @@ func (s *ScanController) FirstPartyVulnScanUnauthenticated(c echo.Context) error
 // @Tags Scanning
 // @Param body body object true "CycloneDX SBOM"
 // @Produce application/json
-// @Success 200 {object} cyclonedx.BOM "CycloneDX VEX JSON"
+// @Success 200 {object} cdx.BOM "CycloneDX VEX JSON"
 // @Router /api/v2/scan-unauthenticated [post]
 func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) error {
 	reqCtx, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanDependencyVulnUnauthenticatedVex")
@@ -826,9 +826,9 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param body body cyclonedx.BOM true "CycloneDX SBOM"
+// @Param body body cdx.BOM true "CycloneDX SBOM"
 // @Produce application/json
-// @Success 200 {object} cyclonedx.BOM "CycloneDX VEX JSON"
+// @Success 200 {object} cdx.BOM "CycloneDX VEX JSON"
 // @Router /api/v2/scan [post]
 func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 	_, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanSbomFileVex")

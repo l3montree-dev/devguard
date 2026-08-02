@@ -373,6 +373,12 @@ func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context,
 
 // ProxyOCIVersionCheck handles the OCI Distribution Spec v2 version check.
 // Route: GET|HEAD /oci/v2/
+// @Summary OCI Distribution Spec v2 version check
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /v2/ [get]
 func (d *OCIDependencyProxyController) ProxyOCIVersionCheck(c shared.Context) error {
 	c.Response().Header().Set("Content-Type", "application/json")
 	return c.JSON(http.StatusOK, map[string]string{})
@@ -387,6 +393,20 @@ func (d *OCIDependencyProxyController) ProxyOCIVersionCheck(c shared.Context) er
 // Routes:
 //   - GET|HEAD /oci/v2/:registry/:image/manifests/:reference
 //   - GET|HEAD /oci/v2/:registry/:namespace/:image/manifests/:reference
+//
+// @Summary Proxy OCI image manifest fetch
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param registry path string true "registry hostname"
+// @Param namespace path string false "image namespace"
+// @Param image path string true "image name"
+// @Param reference path string true "tag or digest"
+// @Success 200 {object} map[string]interface{}
+// @Router /v2/{registry}/{image}/manifests/{reference} [get]
+// @Router /v2/{registry}/{namespace}/{image}/manifests/{reference} [get]
+// @Router /v2/{secret}/{registry}/{namespace}/{image}/manifests/{reference} [get]
 func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -503,6 +523,20 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 // Routes:
 //   - GET|HEAD /oci/v2/:registry/:image/blobs/:digest
 //   - GET|HEAD /oci/v2/:registry/:namespace/:image/blobs/:digest
+//
+// @Summary Proxy OCI image blob download
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param registry path string true "registry hostname"
+// @Param namespace path string false "image namespace"
+// @Param image path string true "image name"
+// @Param digest path string true "blob digest"
+// @Success 200 {file} binary
+// @Router /v2/{registry}/{image}/blobs/{digest} [get]
+// @Router /v2/{registry}/{namespace}/{image}/blobs/{digest} [get]
+// @Router /v2/{secret}/{registry}/{namespace}/{image}/blobs/{digest} [get]
 func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -611,6 +645,20 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 // Routes:
 //   - GET /v2/:registry/:image/referrers/:digest
 //   - GET /v2/:registry/:namespace/:image/referrers/:digest
+//
+// @Summary Proxy OCI image referrers list
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param registry path string true "registry hostname"
+// @Param namespace path string false "image namespace"
+// @Param image path string true "image name"
+// @Param digest path string true "subject digest"
+// @Success 200 {object} map[string]interface{}
+// @Router /v2/{registry}/{image}/referrers/{digest} [get]
+// @Router /v2/{registry}/{namespace}/{image}/referrers/{digest} [get]
+// @Router /v2/{secret}/{registry}/{namespace}/{image}/referrers/{digest} [get]
 func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -664,6 +712,19 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 // Routes:
 //   - GET /oci/v2/:registry/:image/tags/list
 //   - GET /oci/v2/:registry/:namespace/:image/tags/list
+//
+// @Summary Proxy OCI image tags list
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param registry path string true "registry hostname"
+// @Param namespace path string false "image namespace"
+// @Param image path string true "image name"
+// @Success 200 {object} map[string]interface{}
+// @Router /v2/{registry}/{image}/tags/list [get]
+// @Router /v2/{registry}/{namespace}/{image}/tags/list [get]
+// @Router /v2/{secret}/{registry}/{namespace}/{image}/tags/list [get]
 func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {

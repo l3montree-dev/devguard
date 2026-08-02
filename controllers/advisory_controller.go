@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -37,6 +38,14 @@ func NewAdvisoryController(advisoryService shared.AdvisoryService) *AdvisoryCont
 	}
 }
 
+// @Summary Create advisory
+// @Tags Advisories
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param body body dtos.AdvisoryCreate true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/ [post]
 func (controller *AdvisoryController) Create(ctx shared.Context) error {
 	var req dtos.AdvisoryCreate
 	if err := ctx.Bind(&req); err != nil {
@@ -59,8 +68,16 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary List advisories
+// @Tags Advisories
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} shared.Paged[models.Advisory]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/ [get]
 func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
+	var advisories shared.Paged[models.Advisory]
 	advisories, err := controller.advisoryService.ReadAll(ctx.Request().Context(), nil, asset.ID, shared.GetFilterQuery(ctx), shared.GetPageInfo(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
@@ -68,6 +85,14 @@ func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 	return ctx.JSON(200, advisories)
 }
 
+// @Summary Get advisory details
+// @Tags Advisories
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param id path string true "Advisory ID"
+// @Success 200 {object} models.Advisory
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [get]
 func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
 	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)
@@ -75,7 +100,8 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid id provided")
 	}
 
-	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
+	var advisory models.Advisory
+	advisory, err = controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -91,6 +117,15 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 	return ctx.JSON(200, advisory)
 }
 
+// @Summary Update advisory
+// @Tags Advisories
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param id path string true "Advisory ID"
+// @Param body body dtos.AdvisoryUpdate true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [patch]
 func (controller *AdvisoryController) Update(ctx shared.Context) error {
 	var req dtos.AdvisoryUpdate
 	if err := ctx.Bind(&req); err != nil {
@@ -129,6 +164,14 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Delete advisory
+// @Tags Advisories
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param id path string true "Advisory ID"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [delete]
 func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
 	parsedID, err := strconv.ParseInt(advisoryID, 10, 64)

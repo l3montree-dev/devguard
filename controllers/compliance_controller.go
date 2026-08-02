@@ -57,6 +57,13 @@ foundMatch:
 	return results, nil
 }
 
+// @Summary Get policy compliance details
+// @Tags Compliance
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} compliance.PolicyEvaluation
+// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy}/ [get]
 func (c *ComplianceController) Details(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -89,6 +96,13 @@ func (c *ComplianceController) Details(ctx shared.Context) error {
 	return ctx.JSON(200, compliance.Eval(policy, nil))
 }
 
+// @Summary Get asset compliance
+// @Tags Compliance
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} compliance.PolicyEvaluation
+// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/compliance/ [get]
 func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -110,6 +124,13 @@ func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 	return ctx.JSON(200, results)
 }
 
+// @Summary Get project compliance
+// @Tags Compliance
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} array{compliance.PolicyEvaluation}
+// @Router /organizations/{orgSlug}/projects/{projectSlug}/compliance/ [get]
 func (c *ComplianceController) ProjectCompliance(ctx shared.Context) error {
 	// get all default asset version from the project
 	project := shared.GetProject(ctx)

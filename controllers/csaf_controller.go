@@ -137,6 +137,16 @@ func (controller *CSAFController) GetChangesCSVFile(ctx shared.Context) error {
 }
 
 // returns the html to display each subdirectory present under the csaf url
+// @Summary Get CSAF directory index HTML
+// @Tags CSAF
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf [get]
 func (controller *CSAFController) GetCSAFIndexHTML(ctx shared.Context) error {
 	html := `<html>
 	<head><title>Index of /csaf/</title></head>
@@ -152,6 +162,14 @@ func (controller *CSAFController) GetCSAFIndexHTML(ctx shared.Context) error {
 }
 
 // return the html used to display all openpgp related keys and hashes
+// @Summary Get CSAF OpenPGP keys HTML
+// @Tags CSAF
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/csaf/openpgp [get]
 func (controller *CSAFController) GetOpenPGPHTML(ctx shared.Context) error {
 	fingerprint := getPublicKeyFingerprint()
 	if fingerprint == "" {
@@ -221,6 +239,16 @@ func getAllYears(ctx context.Context, asset models.Asset, dependencyVulnReposito
 }
 
 // builds and returns the html used to display every directory in the tlp white folder
+// @Summary Get CSAF TLP white directory HTML
+// @Tags CSAF
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white [get]
 func (controller *CSAFController) GetTLPWhiteEntriesHTML(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -266,6 +294,17 @@ func (controller *CSAFController) GetTLPWhiteEntriesHTML(ctx shared.Context) err
 }
 
 // builds and returns the html to display every csaf version of a given year as well as the signature and hash
+// @Summary Get CSAF reports by year HTML
+// @Tags CSAF
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param year path string true "Year"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/csaf/white/{year} [get]
 func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	// extract the requested year and build the revision history first
@@ -360,6 +399,15 @@ func (controller *CSAFController) GetReportsByYearHTML(ctx shared.Context) error
 }
 
 // handles request to files placed in the openpgp directory (currently public key and the respective sha512 hash)
+// @Summary Get CSAF OpenPGP key or hash file
+// @Tags CSAF
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param file path string true "File name"
+// @Success 200 {string} string
+// @Router /organizations/{organization}/csaf/openpgp/{file} [get]
 func (controller *CSAFController) GetOpenPGPFile(ctx shared.Context) error {
 	// determine which type of file is requested
 	file := ctx.Param("file")

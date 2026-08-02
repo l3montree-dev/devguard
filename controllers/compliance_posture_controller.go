@@ -41,6 +41,13 @@ func NewCompliancePostureController(compliancePostureRepository shared.Complianc
 	}
 }
 
+// @Summary Get compliance posture for a framework control
+// @Tags Compliance Postures
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} dtos.CompliancePostureDTO
+// @Router /organizations/{orgSlug}/compliance-postures/{frameworkControlID}/ [get]
 func (c *CompliancePostureController) Read(ctx shared.Context) error {
 	frameworkControlID := ctx.Param("frameworkControlID")
 	if frameworkControlID == "" {
@@ -58,6 +65,13 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.CompliancePostureToDTO(*posture))
 }
 
+// @Summary List compliance postures paged
+// @Tags Compliance Postures
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControlDTO]
+// @Router /organizations/{orgSlug}/compliance-postures/ [get]
 func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
@@ -86,6 +100,13 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 	})
 }
 
+// @Summary Get compliance posture stats
+// @Tags Compliance Postures
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} interface{}
+// @Router /organizations/{orgSlug}/compliance-postures/stats/ [get]
 func (c *CompliancePostureController) Stats(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 	filter := shared.GetFilterQuery(ctx)
@@ -114,6 +135,14 @@ func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uui
 	return projectID, assetID, assetVersionName
 }
 
+// @Summary Create a compliance posture event
+// @Tags Compliance Postures
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param frameworkControlID path string true "Framework Control ID"
+// @Success 200 {object} dtos.CompliancePostureDTO
+// @Router /organizations/{orgSlug}/compliance-postures/{frameworkControlID}/ [post]
 func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 
 	frameworkControlID := ctx.Param("frameworkControlID")
@@ -172,6 +201,13 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.CompliancePostureToDTO(*compliancePostureNew))
 }
 
+// @Summary Get OSCAL system security plan
+// @Tags Compliance Postures
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} interface{}
+// @Router /organizations/{orgSlug}/compliance-postures/oscal/ [get]
 func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 	var assetVersionName *string
 	var assetID *uuid.UUID

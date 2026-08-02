@@ -28,6 +28,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
@@ -72,6 +73,11 @@ func NewAdminController(
 	}
 }
 
+// @Summary Get admins for all external organizations
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {array} dtos.AdminsInOrg
+// @Router /admin/external-orgs/ [get]
 func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) error {
 	orgs, err := controller.adminRepository.GetAllExternalEntityOrganizations(ctx.Request().Context(), nil)
 	if err != nil {
@@ -99,6 +105,13 @@ func (controller *AdminController) GetAdminsForExternalOrgs(ctx shared.Context) 
 	return ctx.JSON(200, orgsWithAdmins)
 }
 
+// @Summary Add an admin to an organization
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param orgID path string true "Organization ID"
+// @Param userMail path string true "User email"
+// @Success 201
+// @Router /admin/external-orgs/{orgID}/admins/{userMail}/ [put]
 func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
@@ -132,6 +145,13 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 	return ctx.NoContent(201)
 }
 
+// @Summary Revoke admin role from a user in an organization
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param orgID path string true "Organization ID"
+// @Param userID path string true "User ID"
+// @Success 204
+// @Router /admin/external-orgs/{orgID}/admins/{userID}/ [delete]
 func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	parsedOrgID, err := uuid.Parse(orgID)
@@ -152,6 +172,12 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 	return ctx.NoContent(204)
 }
 
+// @Summary Get information about an organization
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param orgID path string true "Organization ID"
+// @Success 200 {object} dtos.OrgInformation
+// @Router /admin/organizations/{orgID}/ [get]
 func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 	orgID := ctx.Param("orgID")
 	orgIDParsed, err := uuid.Parse(orgID)
@@ -182,6 +208,12 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 	return ctx.JSON(200, dtos.OrgInformation{OwnerEmail: email})
 }
 
+// @Summary Get organizations where the user is owner
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param userID path string true "User ID"
+// @Success 200 {array} models.Org
+// @Router /admin/users/{userID}/ [get]
 func (controller *AdminController) GetUserInformation(ctx shared.Context) error {
 	userID := ctx.Param("userID")
 	parsedUserID, err := uuid.Parse(userID)
@@ -189,13 +221,21 @@ func (controller *AdminController) GetUserInformation(ctx shared.Context) error 
 		return echo.NewHTTPError(400, "invalid or missing user id in path parameters")
 	}
 
-	orgs, err := controller.adminService.GetOrgsWhereUserIsOwner(context.Background(), parsedUserID)
+	var orgs []models.Org
+	orgs, err = controller.adminService.GetOrgsWhereUserIsOwner(context.Background(), parsedUserID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get organizations for user").WithInternal(err)
 	}
 	return ctx.JSON(200, orgs)
 }
 
+// @Summary Update an asset's slug
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param assetID path string true "Asset ID"
+// @Param body body dtos.UpdateAssetRequest true "Request body"
+// @Success 200
+// @Router /admin/assets/{assetID}/ [patch]
 func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 	assetID := ctx.Param("assetID")
 	parsedAssetID, err := uuid.Parse(assetID)
@@ -223,6 +263,11 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Get instance usage statistics
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} dtos.InstanceUsageStatistics
+// @Router /admin/statistics/usage/ [get]
 func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context) error {
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 
@@ -233,6 +278,14 @@ func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context
 	return ctx.JSON(200, usageStatistics)
 }
 
+// @Summary Get instance vulnerability statistics
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param topCVEsLimit query int false "Limit of top CVEs to return"
+// @Param topComponentsLimit query int false "Limit of top components to return"
+// @Param topProjectsLimit query int false "Limit of top projects to return"
+// @Success 200 {object} dtos.InstanceOverview
+// @Router /admin/statistics/vulnerabilities/ [get]
 func (controller *AdminController) GetInstanceVulnStatistics(ctx shared.Context) error {
 	topCVEsLimit, topComponentsLimit, topProjectsLimit := evaluateInstanceStatisticsParams(ctx)
 
@@ -263,6 +316,12 @@ func evaluateInstanceStatisticsParams(ctx shared.Context) (topCVEsLimit, topComp
 	return queryValues[0], queryValues[1], queryValues[2]
 }
 
+// @Summary Update instance settings
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param body body dtos.UpdateInstanceSettingsRequest true "Request body"
+// @Success 200
+// @Router /admin/settings/ [patch]
 func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) error {
 	var updateRequest dtos.UpdateInstanceSettingsRequest
 	err := ctx.Bind(&updateRequest)
@@ -286,6 +345,11 @@ func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) err
 	return ctx.NoContent(200)
 }
 
+// @Summary Get instance settings
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} shared.InstanceSettings
+// @Router /admin/settings/ [get]
 func (controller AdminController) GetInstanceSettings(ctx shared.Context) error {
 	instanceSettings, err := controller.configService.GetInstanceSettings(context.Background())
 	if err != nil {

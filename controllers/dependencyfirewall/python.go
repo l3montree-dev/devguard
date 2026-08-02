@@ -123,6 +123,14 @@ func (pypiEcosystem) writeResponse(c shared.Context, data []byte, path string, c
 
 // ProxyPyPIPackage handles explicit-version PyPI package downloads (from /packages/).
 // Route: GET /pypi/packages/*
+// @Summary Proxy PyPI package download
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Success 200 {file} binary
+// @Router /dependency-proxy/pypi/packages/{path} [get]
+// @Router /dependency-proxy/{secret}/pypi/packages/{path} [get]
 func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -227,6 +235,15 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 
 // ProxyPyPISimple handles PyPI /simple/ metadata requests, resolving the latest version before checking rules.
 // Route: GET /pypi/simple/:package
+// @Summary Proxy PyPI simple index metadata
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Param package path string true "PyPI package name"
+// @Success 200 {string} string "HTML simple index"
+// @Router /dependency-proxy/pypi/simple/{package} [get]
+// @Router /dependency-proxy/{secret}/pypi/simple/{package} [get]
 func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {

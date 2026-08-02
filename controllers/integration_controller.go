@@ -35,6 +35,13 @@ func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabint.Gitl
 
 }
 
+// @Summary Auto-setup the GitLab integration for an asset
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/integrations/gitlab/autosetup/ [post]
 func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.GitLabIntegrationID)
@@ -63,6 +70,13 @@ func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
 	return ctx.JSON(200, repos)
 }
 
+// @Summary Finish a third-party integration installation
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {string} string
+// @Router /organizations/{organization}/integrations/finish-installation/ [get]
 func (c *IntegrationController) FinishInstallation(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gh := thirdPartyIntegration.GetIntegration(shared.GitHubIntegrationID)
@@ -76,6 +90,10 @@ func (c *IntegrationController) FinishInstallation(ctx shared.Context) error {
 	return ctx.JSON(200, "Installation finished")
 }
 
+// @Summary Handle incoming third-party integration webhook
+// @Tags Integrations
+// @Success 200 {string} string
+// @Router /webhook/ [post]
 func (c *IntegrationController) HandleWebhook(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	if err := thirdPartyIntegration.HandleWebhook(ctx); err != nil {
@@ -86,6 +104,13 @@ func (c *IntegrationController) HandleWebhook(ctx shared.Context) error {
 	return ctx.JSON(200, "Webhook handled")
 }
 
+// @Summary Test and save GitLab integration credentials
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200
+// @Router /organizations/{organization}/integrations/gitlab/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.GitLabIntegrationID)
@@ -101,6 +126,13 @@ func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context)
 	return nil
 }
 
+// @Summary Test and save Jira integration credentials
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200
+// @Router /organizations/{organization}/integrations/jira/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.JiraIntegrationID)
@@ -164,6 +196,14 @@ func (c *IntegrationController) GitLabOauth2Login(ctx shared.Context) error {
 	return nil
 }
 
+// @Summary Delete a GitLab integration access token
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param gitlab_integration_id path string true "GitLab integration ID"
+// @Success 200
+// @Router /organizations/{organization}/integrations/gitlab/{gitlab_integration_id}/ [delete]
 func (c *IntegrationController) DeleteGitLabAccessToken(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(shared.GitLabIntegrationID)
@@ -179,6 +219,14 @@ func (c *IntegrationController) DeleteGitLabAccessToken(ctx shared.Context) erro
 	return nil
 }
 
+// @Summary Delete a Jira integration access token
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param jira_integration_id path string true "Jira integration ID"
+// @Success 200
+// @Router /organizations/{organization}/integrations/jira/{jira_integration_id}/ [delete]
 func (c *IntegrationController) DeleteJiraAccessToken(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	jira := thirdPartyIntegration.GetIntegration(shared.JiraIntegrationID)

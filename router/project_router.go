@@ -36,6 +36,7 @@ func NewProjectRouter(
 	dependencyVulnController *controllers.DependencyVulnController,
 	compliancePostureController *controllers.CompliancePostureController,
 	complianceComponentController *controllers.ComplianceComponentController,
+	complianceController *controllers.ComplianceController,
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
@@ -55,6 +56,7 @@ func NewProjectRouter(
 	projectRouter.GET("/resources/", projectController.ListSubProjectsAndAssets)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	projectRouter.GET("/compliance-postures/", compliancePostureController.ListPaged)
 	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.GetOSCAL)
 	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.Stats)

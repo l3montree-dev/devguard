@@ -407,7 +407,6 @@ func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 // @Param search query string false "Search query for filtering sub-projects and assets"
 // @Success 200 {array} dtos.ProjectAssetDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
-
 func (projectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
 
 	results, err := projectController.projectService.ListAllowedSubProjectsAndAssetsPaged(c)
