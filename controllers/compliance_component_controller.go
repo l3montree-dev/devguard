@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
+	_ "github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"gorm.io/gorm"
@@ -161,8 +161,7 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 		return err
 	}
 
-	var createdDTO dtos.ComplianceComponentImplementsControlStatementDTO = transformer.ComplianceComponentImplementsControlStatementToDTO(*created)
-	return ctx.JSON(201, createdDTO)
+	return ctx.JSON(201, transformer.ComplianceComponentImplementsControlStatementToDTO(*created))
 }
 
 // @Summary Update a compliance statement

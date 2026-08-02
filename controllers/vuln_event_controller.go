@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
+	_ "github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
@@ -47,7 +47,7 @@ func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 
-	var eventDTOs []dtos.VulnEventDTO = transformer.ConvertVulnEventsToDtos(events)
+	var eventDTOs = transformer.ConvertVulnEventsToDtos(events)
 	return ctx.JSON(200, eventDTOs)
 }
 
@@ -82,7 +82,7 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 	return ctx.JSON(200, events.Map(func(ved models.VulnEventDetail) any {
-		var dto dtos.VulnEventDTO = transformer.ConvertVulnEventDetailToDto(ved)
+		var dto = transformer.ConvertVulnEventDetailToDto(ved)
 		return dto
 	}))
 }
