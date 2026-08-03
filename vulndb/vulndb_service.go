@@ -224,6 +224,7 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 		if err != nil {
 			return fmt.Errorf("could not fetch system VEX rules from GitHub sources: %w", err)
 		}
+		slog.Info("successfully fetched system VEX rules from GitHub sources", "entries", len(systemVexRules))
 		return nil
 	})
 
@@ -583,14 +584,10 @@ func (service *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx p
 		return fmt.Errorf("could not read csaf advisories gob: %w", err)
 	}
 
-	systemVexRules, err := readAllGobItems[models.UpstreamVEXRule](workingDir + "/upstream_vex_rules.gob")
-	if err != nil {
-		return fmt.Errorf("could not read system vex rules gob: %w", err)
-	}
-
 	vulndbChan := make(chan vulndbRows, 4)
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
+	systemVexRulesChan := make(chan []models.UpstreamVEXRule, 4)
 
 	group.Go(func() error {
 		defer close(vulndbChan)
@@ -641,7 +638,24 @@ func (service *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx p
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, euvdRelationships, csafAdvisories, systemVexRules)
+		defer close(systemVexRulesChan)
+		t := time.Now()
+		if err := readGobFileStream(groupCtx, workingDir+"/upstream_vex_rules.gob", func(batch []models.UpstreamVEXRule) error {
+			select {
+			case systemVexRulesChan <- batch:
+			case <-groupCtx.Done():
+				return groupCtx.Err()
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("could not read system vex rules gob: %w", err)
+		}
+		slog.Info("decoded upstream_vex_rules.gob", "took", time.Since(t))
+		return nil
+	})
+
+	group.Go(func() error {
+		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, systemVexRulesChan, euvdRelationships, csafAdvisories)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -1086,10 +1100,9 @@ func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 	return outpath, digest, nil
 }
 
-// streamToDatabase drains all three input channels in a single goroutine, writes all rows
-// into staging tables, then syncs to live tables. When direct=true (empty DB) it uses
-// flushStagingTables (simple INSERT) instead of SyncAllTables (expensive EXCEPT diff).
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, euvdRelationships []models.CVERelationship, advisories []models.CVE, systemVexRules []models.UpstreamVEXRule) error {
+// streamToDatabase drains all four input channels in a single goroutine, writes all rows
+// into staging tables, then syncs to live tables.
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, systemVexRulesIn <-chan []models.UpstreamVEXRule, euvdRelationships []models.CVERelationship, advisories []models.CVE) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -1101,8 +1114,8 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
-	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
-	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime time.Duration
+	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount, systemVexRuleCount int
+	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime, systemVexRulesTime time.Duration
 	ticker := time.NewTicker(4 * time.Second)
 	defer ticker.Stop()
 
@@ -1114,6 +1127,9 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		openChans++
 	}
 	if malPkgIn != nil {
+		openChans++
+	}
+	if systemVexRulesIn != nil {
 		openChans++
 	}
 
@@ -1129,6 +1145,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				"cve_affected_component", cveAffectedComponentCount, "cve_affected_component_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
 				"exploits", exploitCount, "exploits_insert_time", exploitsTime.Round(time.Millisecond),
 				"malicious_packages", malPkgCount, "malicious_packages_insert_time", malPkgTime.Round(time.Millisecond),
+				"upstream_vex_rules", systemVexRuleCount, "upstream_vex_rules_insert_time", systemVexRulesTime.Round(time.Millisecond),
 				"heap_alloc_mb", heapMB(),
 				"took", time.Since(start),
 			)
@@ -1192,6 +1209,18 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			malPkgTime += time.Since(t)
 			malPkgCount += len(malPkg.pkgs)
 			malAffectedComponentCount += len(malPkg.comps)
+		case rules, ok := <-systemVexRulesIn:
+			if !ok {
+				systemVexRulesIn = nil
+				openChans--
+				continue
+			}
+			t := time.Now()
+			if err := insertSystemVexRulesBulk(ctx, tx, rules, "upstream_vex_rules_stage"); err != nil {
+				return fmt.Errorf("could not insert system vex rules: %w", err)
+			}
+			systemVexRulesTime += time.Since(t)
+			systemVexRuleCount += len(rules)
 		}
 	}
 
@@ -1210,10 +1239,6 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 	}
 	relationshipCount += len(euvdRelationships)
 
-	if err := insertSystemVexRulesBulk(ctx, tx, systemVexRules, "upstream_vex_rules_stage"); err != nil {
-		return fmt.Errorf("could not insert system vex rules: %w", err)
-	}
-
 	if err := SyncAllTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not sync staging tables to live: %w", err)
 	}
@@ -1226,6 +1251,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		"exploits", exploitCount,
 		"malicious_packages", malPkgCount,
 		"malicious_affected_components", malAffectedComponentCount,
+		"upstream_vex_rules", systemVexRuleCount,
 		"took", time.Since(start),
 	)
 	return nil
