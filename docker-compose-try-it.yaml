@@ -204,6 +204,7 @@ services:
       # [PRODUCTION] put a TLS-terminating reverse proxy in front
     environment:
       - DEVGUARD_API_URL=http://devguard-api:8080
+      # - DEVGUARD_API_URL_PUBLIC_INTERNET=<publicly accessible URL of your DevGuard instance>
       - ORY_SDK_URL=http://kratos:4433
       - ORY_SDK_PUBLIC_URL=http://localhost:3000  # [PRODUCTION] set to your public frontend URL (https)
     networks:
