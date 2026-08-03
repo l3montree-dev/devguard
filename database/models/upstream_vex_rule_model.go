@@ -39,15 +39,24 @@ func CalculateVEXRuleID(assetID uuid.UUID, celExpression string, vexSource strin
 	return utils.HashString(data)
 }
 
+// CalculateUpstreamVEXRuleID hashes the CEL expression, vex source, and rule content
+// (title/justification/mechanical_justification/event_type) together, so a content change
+// upstream always produces a new id - insert/delete sync then replaces the row naturally,
+// without needing a separate content-hash column to detect the change.
+func CalculateUpstreamVEXRuleID(celExpression, vexSource, title, justification string, mechanicalJustification dtos.MechanicalJustificationType, eventType dtos.VulnEventType) string {
+	data := fmt.Sprintf("%s/%s/%s/%s/%s/%s", celExpression, vexSource, title, justification, mechanicalJustification, eventType)
+	return utils.HashString(data)
+}
+
 // SetCELExpression sets the CELExpression and recalculates the ID.
 func (r *UpstreamVEXRule) SetCELExpression(expression string) {
 	r.CELExpression = expression
-	r.ID = CalculateVEXRuleID(uuid.Nil, r.CELExpression, r.VexSource)
+	r.ID = CalculateUpstreamVEXRuleID(r.CELExpression, r.VexSource, r.Title, r.Justification, r.MechanicalJustification, r.EventType)
 }
 
 // EnsureID calculates the ID if it hasn't been set yet.
 func (r *UpstreamVEXRule) EnsureID() {
 	if r.ID == "" {
-		r.ID = CalculateVEXRuleID(uuid.Nil, r.CELExpression, r.VexSource)
+		r.ID = CalculateUpstreamVEXRuleID(r.CELExpression, r.VexSource, r.Title, r.Justification, r.MechanicalJustification, r.EventType)
 	}
 }
