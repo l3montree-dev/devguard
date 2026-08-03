@@ -137,6 +137,10 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 		slog.Info("applied migration", "version", v, "name", identifier)
 	}
 
+	if _, err := tx.Exec("SET search_path TO public"); err != nil {
+		return fmt.Errorf("failed to restore search_path: %w", err)
+	}
+
 	lastVersion := versions[len(versions)-1]
 	if _, err := tx.Exec("TRUNCATE public.schema_migrations"); err != nil {
 		return fmt.Errorf("failed to update migration version: %w", err)
