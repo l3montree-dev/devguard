@@ -106,14 +106,14 @@ func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifact
 
 func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
 	// set begin to last second of date
-	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
+	begin = time.Date(begin.UTC().Year(), begin.UTC().Month(), begin.UTC().Day(), 23, 59, 59, 0, time.UTC)
 	// as max, do 1 year from the past
 	if begin.Before(time.Now().AddDate(-1, 0, 0)) {
 		begin = time.Now().AddDate(-1, 0, 0)
 	}
 
 	// set end to last second of date
-	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
+	end = time.Date(end.UTC().Year(), end.UTC().Month(), end.UTC().Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
 		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
