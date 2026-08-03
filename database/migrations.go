@@ -110,16 +110,12 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 		return nil
 	}
 
-	tx, err := sqlDB.Begin()
+	tx, err := sqlDB.Begin() // nosemgrep: tx-begin-without-defer-rollback,tx-begin-without-commit
 	if err != nil {
 		return fmt.Errorf("failed to start migration transaction: %w", err)
 	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback()
-		}
-	}()
+
+	defer func() { _ = tx.Rollback() }()
 
 	for _, v := range versions {
 		r, identifier, err := src.ReadUp(v)
@@ -152,7 +148,6 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit migrations: %w", err)
 	}
-	committed = true
 
 	migrationVersion, migrationDirty, migratorErr = uint(lastVersion), false, nil
 	slog.Info("migrations completed successfully")
