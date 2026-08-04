@@ -56,7 +56,5 @@ func (r *UpstreamVEXRule) SetCELExpression(expression string) {
 
 // EnsureID calculates the ID if it hasn't been set yet.
 func (r *UpstreamVEXRule) EnsureID() {
-	if r.ID == "" {
-		r.ID = CalculateUpstreamVEXRuleID(r.CELExpression, r.VexSource, r.Title, r.Justification, r.MechanicalJustification, r.EventType)
-	}
+	r.ID = CalculateUpstreamVEXRuleID(r.CELExpression, r.VexSource, r.Title, r.Justification, r.MechanicalJustification, r.EventType)
 }
