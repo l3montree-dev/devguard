@@ -340,6 +340,7 @@ func ComputeVEXRuleRecommendations(
 	crowdsourcedCtx CrowdsourcedVexingContext,
 ) ([]models.VEXRuleRecommendation, error) {
 	mapOfRules := make(map[string]models.VEXRule, len(allRules))
+
 	for _, rule := range allRules {
 		mapOfRules[rule.ID] = rule
 	}

@@ -199,6 +199,9 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 }
 
 func triggerDaemon(selectedDaemons []string) error {
+	shutdownTracing := initCLITracing()
+	defer shutdownTracing()
+
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
 		fx.Supply(database.GetPoolConfigFromEnv()),

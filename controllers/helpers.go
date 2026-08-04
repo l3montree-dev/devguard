@@ -21,15 +21,14 @@ import (
 
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
-	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // traceErr records err on span and turns it into an HTTP error with statusCode and msg.
 func traceErr(span oteltrace.Span, statusCode int, msg string, err error) error {
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
+	utils.RecordSpanError(span, err)
 	return echo.NewHTTPError(statusCode, fmt.Sprintf("%s: %s", msg, err.Error())).WithInternal(err)
 }
 
