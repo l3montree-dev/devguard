@@ -452,7 +452,7 @@ type ArtifactService interface {
 	SaveArtifact(ctx context.Context, tx DB, artifact *models.Artifact) error
 	DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
+	GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {

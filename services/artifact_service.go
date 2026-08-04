@@ -2,14 +2,12 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 )
@@ -111,16 +109,16 @@ func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name s
 	return s.artifactRepository.ReadArtifact(ctx, tx, name, assetVersionName, assetID)
 }
 
-func (s *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
-	// get all associated dependencyVulns
+// GatherVexInformation returns the unfixed dependency vulns for an asset
+// version, trimming each vuln's Artifacts down to the requested artifact (if
+// any). Each asset version's own state is authoritative for VEX export - it
+// is never overridden based on another branch's state.
+func (s *ArtifactService) GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	dependencyVulns, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
-
 	if err != nil {
 		return nil, err
 	}
 
-	// if an artifact name is given, filter the dependency vulns to only include those for that artifact,
-	// regardless of whether this is the default branch or not
 	if artifactName != nil {
 		for i := range dependencyVulns {
 			dependencyVulns[i].Artifacts = utils.Filter(dependencyVulns[i].Artifacts, func(a models.Artifact) bool {
@@ -129,29 +127,5 @@ func (s *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx conte
 		}
 	}
 
-	if assetVersion.DefaultBranch {
-		return dependencyVulns, nil
-	}
-
-	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(ctx, nil, assetVersion.AssetID, artifactName)
-	if err != nil {
-		return nil, err
-	}
-
-	// create a map to mark all defaultFixed vulns as fixed in the dependency vulns slice - this will lead to the vex containing a resolved key
-	m := make(map[string]bool)
-	for _, v := range defaultVulns {
-		if v.State == dtos.VulnStateFixed {
-			m[fmt.Sprintf("%s/%s", v.CVEID, v.ComponentPurl)] = true
-		}
-	}
-
-	// mark all vulns as fixed if they are in the map
-	for i := range dependencyVulns {
-		if m[fmt.Sprintf("%s/%s", dependencyVulns[i].CVEID, dependencyVulns[i].ComponentPurl)] {
-			dependencyVulns[i].State = dtos.VulnStateFixed
-		}
-	}
 	return dependencyVulns, nil
 }

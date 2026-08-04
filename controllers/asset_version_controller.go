@@ -200,7 +200,7 @@ func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 	}
 
 	// get the dependency vulns for this asset version, including resolved marking based on default branch
-	dependencyVulns, err := a.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, nil)
+	dependencyVulns, err := a.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, nil)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
 	}

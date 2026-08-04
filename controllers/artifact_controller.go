@@ -578,7 +578,7 @@ func (c *ArtifactController) buildOpenVex(ctx shared.Context) (vex.VEX, error) {
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -596,7 +596,7 @@ func (c *ArtifactController) CSAFJSON(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return err
 	}
@@ -618,7 +618,7 @@ func (c *ArtifactController) buildCycloneDXVex(ctx shared.Context) (*cdx.BOM, er
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -669,7 +669,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	result := utils.Concurrently(
 		func() (any, error) {
 			// get the vex from the asset version
-			dependencyVulns, err := c.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifact))
+			dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifact))
 			if err != nil {
 				return nil, err
 			}

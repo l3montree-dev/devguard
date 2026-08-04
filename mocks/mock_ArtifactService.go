@@ -109,12 +109,12 @@ func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
-// GatherVexInformationIncludingResolvedMarking provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
+// GatherVexInformation provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, assetVersion, artifactName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GatherVexInformationIncludingResolvedMarking")
+		panic("no return value specified for GatherVexInformation")
 	}
 
 	var r0 []models.DependencyVuln
@@ -137,20 +137,20 @@ func (_mock *ArtifactService) GatherVexInformationIncludingResolvedMarking(ctx c
 	return r0, r1
 }
 
-// ArtifactService_GatherVexInformationIncludingResolvedMarking_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GatherVexInformationIncludingResolvedMarking'
-type ArtifactService_GatherVexInformationIncludingResolvedMarking_Call struct {
+// ArtifactService_GatherVexInformation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GatherVexInformation'
+type ArtifactService_GatherVexInformation_Call struct {
 	*mock.Call
 }
 
-// GatherVexInformationIncludingResolvedMarking is a helper method to define mock.On call
+// GatherVexInformation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
-func (_e *ArtifactService_Expecter) GatherVexInformationIncludingResolvedMarking(ctx interface{}, assetVersion interface{}, artifactName interface{}) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
-	return &ArtifactService_GatherVexInformationIncludingResolvedMarking_Call{Call: _e.mock.On("GatherVexInformationIncludingResolvedMarking", ctx, assetVersion, artifactName)}
+func (_e *ArtifactService_Expecter) GatherVexInformation(ctx interface{}, assetVersion interface{}, artifactName interface{}) *ArtifactService_GatherVexInformation_Call {
+	return &ArtifactService_GatherVexInformation_Call{Call: _e.mock.On("GatherVexInformation", ctx, assetVersion, artifactName)}
 }
 
-func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) Run(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string)) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+func (_c *ArtifactService_GatherVexInformation_Call) Run(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string)) *ArtifactService_GatherVexInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -173,12 +173,12 @@ func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) Run
 	return _c
 }
 
-func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) Return(dependencyVulns []models.DependencyVuln, err error) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+func (_c *ArtifactService_GatherVexInformation_Call) Return(dependencyVulns []models.DependencyVuln, err error) *ArtifactService_GatherVexInformation_Call {
 	_c.Call.Return(dependencyVulns, err)
 	return _c
 }
 
-func (_c *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call) RunAndReturn(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)) *ArtifactService_GatherVexInformationIncludingResolvedMarking_Call {
+func (_c *ArtifactService_GatherVexInformation_Call) RunAndReturn(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)) *ArtifactService_GatherVexInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }
