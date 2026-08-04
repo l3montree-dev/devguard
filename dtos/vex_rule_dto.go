@@ -68,7 +68,7 @@ type VexRuleRecommendation struct {
 	Type                             VexRuleRecommendationType   `json:"type"`
 	Source                           string                      `json:"source,omitempty"`
 	Confidence                       float64                     `json:"confidence"`
-	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns"`
+	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns,omitempty"`
 	VerifiedVotes                    int                         `json:"verifiedVotes"`
 	TotalVotes                       int                         `json:"totalVotes"`
 

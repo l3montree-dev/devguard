@@ -70,7 +70,7 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	matchingSessionRule, err := services.MatchingSessionAccessibleRules(reqCtx, []models.DependencyVuln{vuln}, vexRules, assetIDs)
+	matchingSessionRules, err := services.MatchingSessionAccessibleRules(reqCtx, []models.DependencyVuln{vuln}, vexRules, assetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
@@ -81,7 +81,8 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	if rule, ok := matchingSessionRule[vuln.ID]; ok {
+	if rules := matchingSessionRules[vuln.ID]; len(rules) > 0 {
+		rule := rules[0]
 		matches, err := services.MatchRulesToVulns(ctx.Request().Context(), []models.UpstreamVEXRule{rule.UpstreamVEXRule}, allOpenVulns)
 		if err != nil {
 			return traceErr(span, 500, "Could not calculate recommendation.", err)
@@ -162,8 +163,10 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 	}
 	// fetch all assets for the matched rules in one query to avoid N+1 queries
 	assetIDs := make([]uuid.UUID, 0, len(matchingSessionRules))
-	for _, rule := range matchingSessionRules {
-		assetIDs = append(assetIDs, rule.AssetID)
+	for _, rules := range matchingSessionRules {
+		for _, rule := range rules {
+			assetIDs = append(assetIDs, rule.AssetID)
+		}
 	}
 
 	assets, err := c.assetRepository.ReadWithProjects(reqCtx, nil, assetIDs)
@@ -177,13 +180,10 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		assetsByID[asset.ID] = asset
 	}
 
-	// build those recommendations already
-	recommendations := make(map[uuid.UUID]dtos.VexRuleRecommendation, len(matchingSessionRules))
-
 	// look for unmatched vulns that don't have any matching rules for the session
 	unmatchedVulnIDs := make([]uuid.UUID, 0, len(vulns))
 	for _, vuln := range vulns {
-		if _, ok := matchingSessionRules[vuln.ID]; !ok {
+		if len(matchingSessionRules[vuln.ID]) == 0 {
 			unmatchedVulnIDs = append(unmatchedVulnIDs, vuln.ID)
 		}
 	}
@@ -193,34 +193,48 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	appliesToAmountOfDependencyVulns := make(map[string]int, len(matchingSessionRules)+len(storedRecommendations))
-	for _, rule := range matchingSessionRules {
-		appliesToAmountOfDependencyVulns[rule.ID]++
-	}
-	for _, recommendation := range storedRecommendations {
-		if recommendation.VEXRuleID != nil {
-			appliesToAmountOfDependencyVulns[*recommendation.VEXRuleID]++
-		}
-		if recommendation.UpstreamVEXRuleID != nil {
-			appliesToAmountOfDependencyVulns[*recommendation.UpstreamVEXRuleID]++
-		}
-	}
-
-	for vulnID, rule := range matchingSessionRules {
-		assetWithProject := assetsByID[rule.AssetID]
-		recommendations[vulnID] = transformer.VEXRuleToOriginRecommendationDTO(rule, appliesToAmountOfDependencyVulns[rule.ID], assetWithProject.Project.Slug, assetWithProject.Slug)
-	}
-
-	// inject all stored recommendations into the recommendations map - and convert them
-	for vulnID, recommendation := range storedRecommendations {
-		var appliesTo int
-		if recommendation.VEXRuleID != nil {
-			appliesTo = appliesToAmountOfDependencyVulns[*recommendation.VEXRuleID]
-		} else if recommendation.UpstreamVEXRuleID != nil {
-			appliesTo = appliesToAmountOfDependencyVulns[*recommendation.UpstreamVEXRuleID]
-		}
-		recommendations[vulnID] = transformer.VEXRuleRecommendationToDTO(recommendation, appliesTo)
-	}
+	recommendations := buildDedupedVexRuleRecommendations(matchingSessionRules, storedRecommendations, assetsByID)
 
 	return ctx.JSON(200, recommendations)
+}
+
+
+func buildDedupedVexRuleRecommendations(matchingSessionRules map[uuid.UUID][]models.VEXRule, storedRecommendations map[uuid.UUID]models.VEXRuleRecommendation, assetsByID map[uuid.UUID]models.Asset) []dtos.VexRuleRecommendation {
+	recommendationsByKey := make(map[string]dtos.VexRuleRecommendation, len(matchingSessionRules)+len(storedRecommendations))
+
+	for _, recommendation := range storedRecommendations {
+		key, ok := vexRuleRecommendationDedupKey(recommendation)
+		if !ok {
+			continue
+		}
+		if _, ok := recommendationsByKey[key]; !ok {
+			recommendationsByKey[key] = transformer.VEXRuleRecommendationToDTO(recommendation, 0)
+		}
+	}
+
+	for _, rules := range matchingSessionRules {
+		for _, rule := range rules {
+			if _, ok := recommendationsByKey[rule.ID]; !ok {
+				assetWithProject := assetsByID[rule.AssetID]
+				recommendationsByKey[rule.ID] = transformer.VEXRuleToOriginRecommendationDTO(rule, 0, assetWithProject.Project.Slug, assetWithProject.Slug)
+			}
+		}
+	}
+
+	recommendations := make([]dtos.VexRuleRecommendation, 0, len(recommendationsByKey))
+	for _, recommendation := range recommendationsByKey {
+		recommendations = append(recommendations, recommendation)
+	}
+
+	return recommendations
+}
+
+func vexRuleRecommendationDedupKey(recommendation models.VEXRuleRecommendation) (string, bool) {
+	if recommendation.VEXRuleID != nil {
+		return *recommendation.VEXRuleID, true
+	}
+	if recommendation.UpstreamVEXRuleID != nil {
+		return *recommendation.UpstreamVEXRuleID, true
+	}
+	return "", false
 }

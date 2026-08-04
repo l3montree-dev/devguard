@@ -241,7 +241,7 @@ func DiffVEXRulesForSource(newRules []models.VEXRule, existingRules []models.VEX
 	return result.OnlyInA, result.OnlyInB
 }
 
-func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.DependencyVuln, vexRules []models.VEXRule, assetIDsForSession []string) (map[uuid.UUID]models.VEXRule, error) {
+func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.DependencyVuln, vexRules []models.VEXRule, assetIDsForSession []string) (map[uuid.UUID][]models.VEXRule, error) {
 	assetIDSet := make(map[string]struct{}, len(assetIDsForSession))
 	for _, id := range assetIDsForSession {
 		assetIDSet[id] = struct{}{}
@@ -269,21 +269,18 @@ func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.Dependen
 		return nil, fmt.Errorf("failed to evaluate CEL expressions for VEX rules: %w", err)
 	}
 
-	// we decide right here, what a good recommendation is.
-	// maybe more than a single vex rule matches a single vuln, but we only want to return the best one.
-	result := make(map[uuid.UUID]models.VEXRule)
+	// a single vuln can match more than one vex rule - keep all of them, instead of
+	// arbitrarily picking one as "the" recommendation.
+	result := make(map[uuid.UUID][]models.VEXRule)
 	for vulnID, matchingRuleIDs := range matches {
+		// parse the vulnid back to uuid.UUID
+		parsedVulnID, err := uuid.Parse(vulnID)
+		if err != nil {
+			// this should never happen
+			return nil, fmt.Errorf("failed to parse vulnID %s: %w", vulnID, err)
+		}
 		for _, ruleID := range matchingRuleIDs {
-			// parse the vulnid back to uuid.UUID
-			parsedVulnID, err := uuid.Parse(vulnID)
-			if err != nil {
-				// this should never happen
-				return nil, fmt.Errorf("failed to parse vulnID %s: %w", vulnID, err)
-			}
-			// the algorithm to pick the best rule is simple: we just pick the first one we find. this is not ideal, but it is a start.
-			if _, ok := result[parsedVulnID]; !ok {
-				result[parsedVulnID] = sessionRuleMap[ruleID]
-			}
+			result[parsedVulnID] = append(result[parsedVulnID], sessionRuleMap[ruleID])
 		}
 	}
 
