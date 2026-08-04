@@ -16,10 +16,45 @@
 package utils
 
 import (
+	"runtime"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
 )
+
+func ParallelBatches[T any, R any](items []T, fn func(batch []T) (R, error)) ([]R, error) {
+	numBatches := max(min(runtime.GOMAXPROCS(0), len(items)), 1)
+	batchSize := (len(items) + numBatches - 1) / numBatches
+
+	results := make([]R, numBatches)
+	errs := make([]error, numBatches)
+
+	var wg sync.WaitGroup
+	for b := range numBatches {
+		start := b * batchSize
+		end := min(start+batchSize, len(items))
+		if start >= end {
+			continue
+		}
+		i, batch := b, items[start:end]
+		wg.Go(func() {
+			r, err := fn(batch)
+			if err != nil {
+				errs[i] = err
+				return
+			}
+			results[i] = r
+		})
+	}
+	wg.Wait()
+
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return results, nil
+}
 
 type concurrentResult struct {
 	index int
