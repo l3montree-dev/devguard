@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.12.2] - 2026-08-04
+
+### Changed
+
+- **Custom golang-migrate implementation** — migrations now run through a custom runner able to roll back multiple migrations at once, with the schema search path correctly reset to `public` afterward
+- Upstream VEX rule identity now also hashes mechanical justification, justification, title, and VEX source, so content-identical rules from different sources dedupe correctly; deduplication now happens once at fetch time in the GitHub VEX daemon instead of on every staging insert
+
+### Fixed
+
+- **Cross-branch VEX export no longer overrides a branch's own vulnerability state** — a vulnerability marked false positive (or otherwise explicitly assessed) on one branch was silently reported as fixed in that branch's exported VEX whenever the same CVE/component happened to be fixed on the default branch; each branch's own state is now authoritative
+- **`vulndb import` duplicate-key failure on `upstream_vex_rules`** — fixed a data race in the gob-streaming importer where a reused buffer was handed to a concurrent consumer goroutine while still being overwritten by the next batch, corrupting rows into duplicates and aborting the import with a `upstream_vex_rules_pkey` violation
+- **Dependency statistics overview** — risk aggregation's day-boundary calculation now normalizes to UTC before truncating to day, fixing incorrect statistics near timezone edges
+- `docker-compose-try-it.yaml` now documents the required `DEVGUARD_API_URL_PUBLIC_INTERNET` environment variable
+
 ## [v1.12.1] - 2026-08-02
 
 ### Fixed
