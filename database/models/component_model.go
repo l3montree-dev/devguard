@@ -79,6 +79,13 @@ type ComponentDependency struct {
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 }
 
+type SBOMMerkleEdge struct {
+	SubtreeHash                 string    `json:"subtreeHash" gorm:"column:subtree_hash;primaryKey"`
+	Component                   Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
+	ComponentID                 string    `json:"componentPurl" gorm:"column:component_id;index:component_idx;primaryKey"` // will be ROOT for root nodes - basically SBOM root nodes, which are not really components, but just the root of the dependency tree representing the artifact itself. Edges of ROOT -> Di are direct dependencies of the original artifact.
+	DirectDependencySubtreeHash string    `json:"directDependencySubtreeHash" gorm:"column:direct_dependency_subtree_hash;primaryKey"`
+}
+
 const Root string = "root"
 
 type ComponentDependencyNode struct {
