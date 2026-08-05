@@ -79,6 +79,7 @@ type TestApp struct {
 	ExternalReferenceController *controllers.ExternalReferenceController
 	StatisticsController        *controllers.StatisticsController
 	VulnDBController            *controllers.VulnDBController
+	AdvisoryController          *controllers.AdvisoryController
 
 	// Repositories
 	AssetRepository                 shared.AssetRepository

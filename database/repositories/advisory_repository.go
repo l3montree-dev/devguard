@@ -62,7 +62,24 @@ func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, 
 
 func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *gorm.DB, id int64, advisory *models.Advisory) error {
 	advisory.ID = id
-	return advisoryRepository.GetDB(ctx, tx).Session(&gorm.Session{FullSaveAssociations: true}).Save(advisory).Error
+	db := advisoryRepository.GetDB(ctx, tx)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := withOwnershipScope(ctx, tx.Model(advisory), advisory).Association("AffectedPackages").Replace(advisory.AffectedPackages); err != nil {
+			return err
+		}
+		if err := tx.Omit("AffectedPackages").Save(advisory).Error; err != nil {
+			return err
+		}
+
+		// delete orphans
+		return tx.Exec(`
+			DELETE FROM affected_packages
+			WHERE id NOT IN (
+				SELECT affected_package_id FROM advisories_affected_packages
+			)
+		`).Error
+	})
 }
 
 func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *gorm.DB, id int64) error {
