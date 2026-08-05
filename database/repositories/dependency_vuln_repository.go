@@ -467,7 +467,7 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 		query = query.Preload("Events")
 	}
 
-	query = query.Distinct("ON (cve_id, vulnerability_path) *").Where("state = ?", dtos.VulnStateOpen)
+	query = query.Where("state = ?", dtos.VulnStateOpen)
 	if len(assetIDs) > 0 {
 		query = query.Where("asset_id IN (?)", assetIDs)
 	}
@@ -481,13 +481,12 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 		return vulns, nil
 	}
 
-	dedupedIDs := db.Table("dependency_vulns").
-		Select("DISTINCT ON (cve_id, vulnerability_path) id").
+	openIDs := db.Table("dependency_vulns").
+		Select("id").
 		Where("state = ?", dtos.VulnStateOpen)
 	if len(assetIDs) > 0 {
-		dedupedIDs = dedupedIDs.Where("asset_id IN (?)", assetIDs)
+		openIDs = openIDs.Where("asset_id IN (?)", assetIDs)
 	}
-	dedupedIDs = dedupedIDs.Order("cve_id, vulnerability_path, created_at ASC")
 
 	type artifactRow struct {
 		models.Artifact
@@ -497,7 +496,7 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 	if err := db.Table("artifact_dependency_vulns AS adv").
 		Select("artifacts.*, adv.dependency_vuln_id").
 		Joins("JOIN artifacts ON adv.artifact_artifact_name = artifacts.artifact_name AND adv.artifact_asset_version_name = artifacts.asset_version_name AND adv.artifact_asset_id = artifacts.asset_id").
-		Where("adv.dependency_vuln_id IN (?)", dedupedIDs).
+		Where("adv.dependency_vuln_id IN (?)", openIDs).
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
