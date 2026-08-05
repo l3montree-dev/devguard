@@ -54,6 +54,17 @@ func runReleaseWeb(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("working directory devguard-web is not clean")
 	}
 
+	cl := &i.Changelog{}
+
+	if i.Confirm("Run e2e tests now? They regenerate the docs screenshots in e2e/docs-screenshots.") {
+		if err := runWebE2ETests(); err != nil {
+			return fmt.Errorf("e2e tests failed: %w", err)
+		}
+		cl.Change("Ran e2e tests and regenerated docs screenshots")
+	} else {
+		fmt.Println("Skipping e2e tests — docs screenshots will not be refreshed")
+	}
+
 	pkgJSON := filepath.Join("devguard-web", "package.json")
 	versionRe := regexp.MustCompile(`"version":\s*"[^"]*"`)
 	data, err := os.ReadFile(pkgJSON)
@@ -70,20 +81,9 @@ func runReleaseWeb(_ *cobra.Command, args []string) error {
 
 	if !i.Confirm("Continue with tagging?") {
 		_ = i.GitRun("devguard-web", "checkout", "--", "package.json")
+		_ = i.GitRun("devguard-web", "checkout", "--", "e2e/docs-screenshots")
 		fmt.Println("Operation cancelled.")
 		return nil
-	}
-
-	cl := &i.Changelog{}
-
-	if i.Confirm("Run e2e tests now? They regenerate the docs screenshots in e2e/docs-screenshots.") {
-		if err := runWebE2ETests(); err != nil {
-			_ = i.GitRun("devguard-web", "checkout", "--", "package.json")
-			return fmt.Errorf("e2e tests failed: %w", err)
-		}
-		cl.Change("Ran e2e tests and regenerated docs screenshots")
-	} else {
-		fmt.Println("Skipping e2e tests — docs screenshots will not be refreshed")
 	}
 
 	if err := i.GitAdd("devguard-web", "package.json", "e2e/docs-screenshots"); err != nil {
