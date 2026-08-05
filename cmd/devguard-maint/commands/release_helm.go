@@ -72,10 +72,6 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	fmt.Printf("✓ devguard-web latest tag for minor %s: %s\n", minor, webTag)
 	fmt.Printf("✓ devguard-ci-components latest tag for minor %s: %s\n", minor, ciComponentsTag)
 
-	if err := i.EnsureHelmChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag, apiTag, webTag, ciComponentsTag); err != nil {
-		return err
-	}
-
 	for _, d := range []string{"devguard", "devguard-helm-chart"} {
 		if err := i.GitCheckoutMain(d); err != nil {
 			return fmt.Errorf("checkout main in %s: %w", d, err)
@@ -87,6 +83,10 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 		if !clean {
 			return fmt.Errorf("working directory %s is not clean", d)
 		}
+	}
+
+	if err := i.EnsureHelmChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag, apiTag, webTag, ciComponentsTag); err != nil {
+		return err
 	}
 
 	cl := &i.Changelog{}
