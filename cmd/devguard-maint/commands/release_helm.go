@@ -42,10 +42,6 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := i.CheckChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag); err != nil {
-		return err
-	}
-
 	// Require at least one devguard, devguard-web, and devguard-ci-components
 	// release with the same minor.
 	apiTag, err := i.GitLatestTagWithMinor("devguard", minor)
@@ -75,6 +71,10 @@ func runReleaseHelm(_ *cobra.Command, args []string) error {
 	fmt.Printf("✓ devguard latest tag for minor %s: %s\n", minor, apiTag)
 	fmt.Printf("✓ devguard-web latest tag for minor %s: %s\n", minor, webTag)
 	fmt.Printf("✓ devguard-ci-components latest tag for minor %s: %s\n", minor, ciComponentsTag)
+
+	if err := i.EnsureHelmChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag, apiTag, webTag, ciComponentsTag); err != nil {
+		return err
+	}
 
 	for _, d := range []string{"devguard", "devguard-helm-chart"} {
 		if err := i.GitCheckoutMain(d); err != nil {
@@ -205,7 +205,7 @@ func updateDockerCompose(apiTag, webTag string, cl *i.Changelog) (bool, error) {
 // updateHelmChart regenerates values.yaml, Chart.yaml, and questions.yaml from
 // devguard-helm-chart/schema (see schema/schema.ts) by running `bun run
 // generate` with the four version knobs it requires — one per independently
-// released component, all confirmed present via CheckChangelogEntry /
+// released component, all confirmed present via EnsureHelmChangelogEntry /
 // GitLatestTagWithMinor before this runs.
 func updateHelmChart(chartSemver, apiTag, webTag, ciComponentsTag string, cl *i.Changelog) error {
 	cmd := exec.Command("bun", "run", "generate")
