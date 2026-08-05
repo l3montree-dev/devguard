@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.12.3] - 2026-08-05
+
+### Fixed
+
+- **Duplicated affected packages on advisory drafts** (#2779) — saving an advisory draft repeatedly no longer duplicates its affected packages; updates now go through `Association.Replace` plus an orphan cleanup instead of a plain association save, so packages removed from the draft are actually deleted rather than left behind
+- **VEX rule application no longer skips open vulnerabilities** — a `DISTINCT ON (cve_id, vulnerability_path)` clause used when loading open vulnerabilities for VEX rule matching silently dropped vulns that shared a CVE/path pair, so applying a VEX rule didn't close all of the vulnerabilities it should have; the query now returns every open vuln
+- **Duplicate VEX rule recommendations** — recommendations for the same rule (upstream or crowdsourced) returned more than once when multiple matches existed for a vulnerability; results are now deduplicated by rule identity before being returned
+- **Artifact upload producing an incomplete dependency graph** — the root component's dependency edges were wired to the artifact node instead of the SBOM's info-source node, and an `@artifact` suffix appended to some SBOM origins wasn't stripped when resolving the information source, both of which could corrupt the normalized SBOM graph for an uploaded artifact
+- Dependency vulnerabilities are now sorted by the correct table column when ordering by `max_risk` or `max_cvss` (the field name collided with a joined table), and child dependency vulns are sorted by the same field as their parent package instead of always falling back to risk
+- Mechanical justification is now included in generated OpenVEX statements, and only the first matching VEX statement is used when resolving a vulnerability's justification instead of the last one found
+
 ## [v1.12.2] - 2026-08-04
 
 ### Changed
