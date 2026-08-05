@@ -186,6 +186,17 @@ func (repository *dependencyVulnRepository) FindByCVEAndComponentPurl(ctx contex
 		Find(&vulns).Error
 	return vulns, err
 }
+func dependencyVulnSortSQL(s shared.SortQuery) string {
+	switch s.Field {
+	case "max_risk":
+		s.Field = "dependency_vulns.raw_risk_assessment"
+	case "max_cvss":
+		s.Field = "CVE.cvss"
+	default:
+		s.Field = "dependency_vulns.raw_risk_assessment"
+	}
+	return s.SQL()
+}
 
 func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], map[string]int, error) {
 	var count int64
@@ -242,7 +253,16 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 		return repository.PackageName
 	})
 
-	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Find(&dependencyVulns).Error
+	q = q.Where("dependency_vulns.component_purl IN (?)", packageNames)
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(dependencyVulnSortSQL(s))
+		}
+	} else {
+		q = q.Order("raw_risk_assessment DESC")
+	}
+
+	err = q.Preload("CVE").Find(&dependencyVulns).Error
 
 	if err != nil {
 		return shared.Paged[models.DependencyVuln]{}, map[string]int{}, err
