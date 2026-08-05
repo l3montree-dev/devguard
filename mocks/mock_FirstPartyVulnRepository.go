@@ -1198,6 +1198,86 @@ func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) 
 	return _c
 }
 
+// GetOpenByAssetVersion provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) GetOpenByAssetVersion(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOpenByAssetVersion")
+	}
+
+	var r0 []models.FirstPartyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetVersionName, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// FirstPartyVulnRepository_GetOpenByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOpenByAssetVersion'
+type FirstPartyVulnRepository_GetOpenByAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetOpenByAssetVersion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *FirstPartyVulnRepository_Expecter) GetOpenByAssetVersion(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+	return &FirstPartyVulnRepository_GetOpenByAssetVersion_Call{Call: _e.mock.On("GetOpenByAssetVersion", ctx, tx, assetVersionName, assetID)}
+}
+
+func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID)) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) Return(firstPartyVulns []models.FirstPartyVuln, err error) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+	_c.Call.Return(firstPartyVulns, err)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type FirstPartyVulnRepository
 func (_mock *FirstPartyVulnRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.FirstPartyVuln, error) {
 	ret := _mock.Called(ctx, tx, ids)

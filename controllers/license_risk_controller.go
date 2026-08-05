@@ -38,6 +38,18 @@ func NewLicenseRiskController(licenseOverwriteRepository shared.LicenseRiskRepos
 	}
 }
 
+// @Summary Create license risk
+// @Tags License Risk
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param body body object{componentPurl=string,finalLicenseDecision=string} true "Request body"
+// @Success 200 {object} models.LicenseRisk
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks [post]
 func (controller LicenseRiskController) Create(ctx shared.Context) error {
 	var newLicenseRisk struct {
 		ComponentPurl        string `json:"componentPurl" validate:"required"`
@@ -89,6 +101,17 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, licenseRisk)
 }
 
+// @Summary List license risks
+// @Tags License Risk
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks [get]
 func (controller LicenseRiskController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -147,6 +170,18 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 	}
 }
 
+// @Summary Get license risk details
+// @Tags License Risk
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param licenseRiskID path string true "License risk ID"
+// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID} [get]
 func (controller LicenseRiskController) Read(ctx shared.Context) error {
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -159,6 +194,19 @@ func (controller LicenseRiskController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, convertLicenseRiskToDetailedDTO(licenseRisk))
 }
 
+// @Summary Mitigate a license risk
+// @Tags License Risk
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param licenseRiskID path string true "License risk ID"
+// @Param body body object{comment=string} true "Request body"
+// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/mitigate [post]
 func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 	var justification struct {
 		Comment string `json:"comment"`
@@ -192,6 +240,19 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 	return ctx.JSON(200, convertLicenseRiskToDetailedDTO(licenseRisk))
 }
 
+// @Summary Create a license risk event
+// @Tags License Risk
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param licenseRiskID path string true "License risk ID"
+// @Param body body LicenseRiskStatus true "Request body"
+// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID} [post]
 func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
@@ -241,6 +302,19 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	return ctx.JSON(200, convertLicenseRiskToDetailedDTO(licenseRisk))
 }
 
+// @Summary Make final license decision
+// @Tags License Risk
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param licenseRiskID path string true "License risk ID"
+// @Param body body dtos.MakeFinalLicenseDecisionRequest true "Request body"
+// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/final-license-decision [post]
 func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Context) error {
 	var licenseDecision dtos.MakeFinalLicenseDecisionRequest
 

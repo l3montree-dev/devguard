@@ -45,6 +45,7 @@ type DaemonRunner interface {
 	UpdateFixedVersions(ctx context.Context) error
 	UpdateVulnDB(ctx context.Context) error
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
+	RunVEXRuleRecommendationDaemon(ctx context.Context) error
 
 	Start(ctx context.Context)
 }
@@ -176,6 +177,7 @@ type AssetRepository interface {
 	Upsert(ctx context.Context, tx DB, assets *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
 	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
+	ReadWithProjects(ctx context.Context, tx *gorm.DB, id []uuid.UUID) ([]models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -264,6 +266,8 @@ type DependencyVulnRepository interface {
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(ctx context.Context, tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -286,6 +290,7 @@ type DependencyVulnRepository interface {
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 	GetByVexRuleID(ctx context.Context, tx DB, vexRuleID string) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsWithoutEvents(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -297,6 +302,7 @@ type FirstPartyVulnRepository interface {
 	ListByScanner(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
 	GetByAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetOpenByAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
 	GetFirstPartyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ListUnfixedByAssetAndAssetVersionAndScanner(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 }
@@ -346,6 +352,7 @@ type VEXRuleRepository interface {
 	GetDB(ctx context.Context, db DB) DB
 	All(ctx context.Context, tx DB) ([]models.VEXRule, error)
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
+	FindByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.VEXRule, error)
 	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(ctx context.Context, tx DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)
@@ -357,6 +364,17 @@ type VEXRuleRepository interface {
 	DeleteBatch(ctx context.Context, tx DB, rules []models.VEXRule) error
 	DeleteByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) error
 	Begin(ctx context.Context) DB
+}
+
+type UpstreamVEXRuleRepository interface {
+	utils.Repository[string, models.UpstreamVEXRule, DB]
+}
+
+type VEXRuleRecommendationRepository interface {
+	utils.Repository[string, models.VEXRuleRecommendation, DB]
+	FindByDependencyVulnIDs(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)
+	DeleteAll(ctx context.Context, tx DB) error
+	CreateBatch(ctx context.Context, tx DB, recommendations []models.VEXRuleRecommendation) error
 }
 
 type OrganizationRepository interface {
@@ -434,7 +452,7 @@ type ArtifactService interface {
 	SaveArtifact(ctx context.Context, tx DB, artifact *models.Artifact) error
 	DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error
 	ReadArtifact(ctx context.Context, tx DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)
-	GatherVexInformationIncludingResolvedMarking(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
+	GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)
 }
 
 type DependencyVulnService interface {
@@ -479,6 +497,7 @@ type AssetVersionRepository interface {
 	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
 	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
+	FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }
 
 type FirstPartyVulnService interface {
@@ -491,13 +510,13 @@ type FirstPartyVulnService interface {
 }
 
 type ScanService interface {
-	VexRulesFromDocument([]byte, uuid.UUID, string) ([]models.VEXRule, dtos.ExternalReferenceType, error)
 	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
+	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.DependencyVuln, error)
+	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)
 	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
-	RunArtifactSecurityLifecycle(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, vexRefs []models.ExternalReference, userAgent *string) (*normalize.SBOMGraph, []models.VEXRule, []models.DependencyVuln, error)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
 }
@@ -507,25 +526,13 @@ type ConfigRepository interface {
 	GetDB(ctx context.Context, tx DB) DB
 }
 
-type VEXRuleService interface {
-	Begin(ctx context.Context) DB
-	Create(ctx context.Context, tx DB, rule *models.VEXRule) error
-	Delete(ctx context.Context, tx DB, rule models.VEXRule) error
-	DeleteByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) error
-	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
-	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
-	ApplyRulesToExistingVulns(ctx context.Context, tx DB, rules []models.VEXRule) ([]models.DependencyVuln, error)
-	ApplyRulesToExisting(ctx context.Context, tx DB, rules []models.VEXRule, vulns []models.DependencyVuln) ([]models.DependencyVuln, error)
-	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, rules []models.VEXRule) error
-	CountMatchingVulns(ctx context.Context, tx DB, rule models.VEXRule) (int, error)
-	CountMatchingVulnsForRules(ctx context.Context, tx DB, rules []models.VEXRule) (map[string]int, error)
-	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
-	FindByAssetIDWithMatchingVuln(ctx context.Context, tx DB, assetID uuid.UUID, vulnID uuid.UUID) ([]models.VEXRule, error)
+type GitHubVexFetcher interface {
+	FetchVexFromGitHub(ctx context.Context, targetURL string, targetBranch string) (vexRules []models.UpstreamVEXRule, err error)
 }
 
-type CrowdSourcedVexingService interface {
-	Recommend(ctx Context, tx DB, vulnID uuid.UUID) (dtos.VexRuleRecommendation, error)
-	RecommendBatch(ctx Context, tx DB, vulns []models.DependencyVuln) (map[string]dtos.VexRuleRecommendation, error)
+type CVERelationshipService interface {
+	CreateAliasRelationshipMapBatch(ctx context.Context, tx DB, cveIDs []string) (models.CVEMap, error)
+	IsAlias(ctx context.Context, cveSource, cveTarget string, cveMap models.CVEMap) bool
 }
 
 type VulnEventRepository interface {
@@ -681,6 +688,7 @@ type ComponentService interface {
 type CVERelationshipRepository interface {
 	utils.Repository[string, models.CVERelationship, DB]
 	GetRelationshipsByTargetCVEBatch(ctx context.Context, tx DB, targetCVEIDs []string) ([]models.CVERelationship, error)
+	FindCrossRelationshipsBatch(ctx context.Context, tx DB, assiciatedCVEIDs []string) ([]models.CVERelationship, error)
 }
 
 type LicenseRiskService interface {
@@ -735,7 +743,7 @@ type ActorScope struct {
 }
 
 type AccessControl interface {
-	HasAccess(ctx context.Context, session AuthSession, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+	HasAccess(ctx context.Context, session AuthSession, org *models.Org, actorScope ActorScope) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(ctx context.Context, roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
@@ -765,8 +773,8 @@ type AccessControl interface {
 	LinkProjectAndAssetRole(ctx context.Context, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions Role, project, asset string) error
 
 	AllowRole(ctx context.Context, role Role, object Object, action []Action) error
-	IsAllowed(ctx context.Context, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 
+	IsAllowed(ctx context.Context, session AuthSession, org *models.Org, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInProject(ctx context.Context, project *models.Project, session AuthSession, object Object, action Action, actorScope ActorScope) (bool, error)
 	IsAllowedInAsset(ctx context.Context, asset *models.Asset, session AuthSession, object Object, action Action) (bool, error)
 

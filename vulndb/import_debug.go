@@ -88,6 +88,7 @@ func diffCVEsByIntegrityHash(ctx context.Context, tx pgx.Tx) error {
 func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingTables []string) {
 	needsOSV := false
 	needsExploits := false
+	needsUpstreamVexRules := false
 	for _, t := range failingTables {
 		switch t {
 		case "cves", "cve_relationships", "affected_components", "cve_affected_component",
@@ -95,6 +96,8 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 			needsOSV = true
 		case "exploits":
 			needsExploits = true
+		case "upstream_vex_rules":
+			needsUpstreamVexRules = true
 		}
 	}
 
@@ -209,6 +212,46 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 		slog.Info("show-diff: exploits staging ready", "exploits", len(exploits), "took", time.Since(t))
 	}
 
+	if needsUpstreamVexRules {
+		slog.Info("show-diff: loading upstream_vex_rules.gob into staging table")
+		t := time.Now()
+		rules, err := readAllGobItems[models.UpstreamVEXRule](workingDir + "/upstream_vex_rules.gob")
+		if err != nil {
+			slog.Error("show-diff: could not read upstream_vex_rules.gob", "err", err)
+			return
+		}
+		if err := insertSystemVexRulesBulk(ctx, tx, rules, "upstream_vex_rules_stage"); err != nil {
+			slog.Error("show-diff: could not insert upstream_vex_rules into staging", "err", err)
+			return
+		}
+		slog.Info("show-diff: upstream_vex_rules staging ready", "rules", len(rules), "took", time.Since(t))
+
+		// duplicate ids within the freshly (re-)populated staging table itself -
+		// this is what would make the live INSERT violate its primary key,
+		// independent of any diff against the live table.
+		dupRows, err := tx.Query(ctx, `
+			SELECT id, count(*) FROM upstream_vex_rules_stage GROUP BY id HAVING count(*) > 1 LIMIT 20
+		`)
+		if err != nil {
+			slog.Error("show-diff: could not query duplicate ids in upstream_vex_rules_stage", "err", err)
+		} else {
+			dupFound := false
+			for dupRows.Next() {
+				var id string
+				var count int
+				if err := dupRows.Scan(&id, &count); err != nil {
+					break
+				}
+				dupFound = true
+				slog.Warn("show-diff: duplicate id within upstream_vex_rules_stage", "id", id, "count", count)
+			}
+			dupRows.Close()
+			if !dupFound {
+				slog.Info("show-diff: no duplicate ids found within upstream_vex_rules_stage")
+			}
+		}
+	}
+
 	for _, table := range failingTables {
 		slog.Info("show-diff: analysing failing table", "table", table)
 		var err error
@@ -277,6 +320,14 @@ func showImportDebug(ctx context.Context, tx pgx.Tx, workingDir string, failingT
 				stageID:    "id",
 				joinCond:   "db.id = gob.id",
 				liveFilter: "malicious_package_id NOT LIKE 'MAL-FAKE-TEST-%'",
+			})
+		case "upstream_vex_rules":
+			err = diffTable(ctx, tx, diffSpec{
+				live:     "upstream_vex_rules",
+				stage:    "upstream_vex_rules_stage",
+				liveID:   "id",
+				stageID:  "id",
+				joinCond: "db.id = gob.id",
 			})
 		default:
 			slog.Info("show-diff: no diff handler for table", "table", table)

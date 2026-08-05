@@ -5,7 +5,7 @@
   # references that attribute, so it's fine for these to stay null there.
   runCommand ? null, jq ? null, trivy ? null,
 }: rec {
-  common = import ./common.nix { inherit self; };
+  common = import ./common.nix { inherit self lib; };
   ldflags = [
     "-s"
     "-w"
@@ -45,7 +45,7 @@
     # a `go mod download`-style module cache has each dependency's own
     # go.mod, which is what's actually needed.
     proxyVendor = true;
-    vendorHash = "sha256-k8ljvvYrBRO2l8o9OO6PLkl9ZG9F2+L8ILh86Xwwuww=";
+    vendorHash = "sha256-DtMJvXVlkxm+8os9uNzcivpY3h9ysazg/mKk7ZBAHp8=";
     inherit ldflags;
     buildFlags =
       [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
@@ -97,7 +97,7 @@
     externalReferences = [
       {
         type = "exploitability-statement";
-        url = "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.version}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/csaf.json/";
+        url = "https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/${common.versionSlug}/artifacts/pkg%3Agolang%2Fgithub.com%2Fl3montree-dev%2Fdevguard/csaf.json/";
       }
     ];
   };

@@ -62,7 +62,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, shared.NoSession, sess)
+			assert.Equal(t, shared.AnonymousSession, sess)
 			return nil
 		})
 
@@ -113,7 +113,7 @@ func TestSessionMiddleware(t *testing.T) {
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, shared.NoSession, sess)
+			assert.Equal(t, shared.AnonymousSession, sess)
 			return nil
 		})
 

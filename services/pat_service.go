@@ -353,7 +353,6 @@ func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fin
 // nosemgrep: service-method-missing-ctx -- req.Context() carries the context; adding a separate ctx param would be redundant
 func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 	if !p.adminKeyLoaded {
-		slog.Error("no admin public key could be found")
 		return false, fmt.Errorf("cannot verify admin request: no public key was loaded on startup")
 	}
 

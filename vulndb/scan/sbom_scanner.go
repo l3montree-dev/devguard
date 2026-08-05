@@ -17,7 +17,6 @@ package scan
 
 import (
 	"context"
-	"sync"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -33,8 +32,9 @@ type sbomScanner struct {
 // it includes more than just the CVE ID to allow for more detailed information
 // like the affected package version and fixed version
 
+// comparer resolves the vulnerabilities for a whole set of purls at once.
 type comparer interface {
-	GetVulns(ctx context.Context, purl packageurl.PackageURL) ([]models.VulnInPackage, error)
+	GetVulns(ctx context.Context, purls []packageurl.PackageURL) ([]models.VulnInPackage, error)
 }
 
 func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *sbomScanner {
@@ -61,47 +61,5 @@ func (s *sbomScanner) Scan(ctx context.Context, bom *normalize.SBOMGraph) ([]mod
 		return []models.VulnInPackage{}, nil
 	}
 
-	// Query vulnerabilities in parallel (10 concurrent workers)
-	results := make([][]models.VulnInPackage, len(purls))
-	sem := make(chan struct{}, 10) // Limit concurrency
-	errChan := make(chan error, 1)
-	done := make(chan struct{})
-
-	go func() {
-		var wg sync.WaitGroup
-		for i, purl := range purls {
-			wg.Add(1)
-			go func(idx int, p packageurl.PackageURL) {
-				defer wg.Done()
-				sem <- struct{}{}        // Acquire
-				defer func() { <-sem }() // Release
-
-				vulns, err := s.purlComparer.GetVulns(ctx, p)
-				if err != nil {
-					select {
-					case errChan <- err:
-					default:
-					}
-					return
-				}
-				results[idx] = vulns
-			}(i, purl)
-		}
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case err := <-errChan:
-		return nil, err
-	case <-done:
-	}
-
-	// Collect all vulnerabilities
-	allVulns := make([]models.VulnInPackage, 0, len(purls))
-	for _, vulns := range results {
-		allVulns = append(allVulns, vulns...)
-	}
-
-	return allVulns, nil
+	return s.purlComparer.GetVulns(ctx, purls)
 }

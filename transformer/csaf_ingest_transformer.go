@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -34,7 +33,7 @@ import (
 // leaf product of each chain is what a ProductStatus bucket references. This function walks
 // that chain back to reconstruct the exact component-only path and turns it into a
 // (non-wildcard) VEX rule path pattern, so only the path-specific vuln is affected.
-func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, source string) ([]models.VEXRule, error) {
+func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.UpstreamVEXRule, error) {
 	if advisory == nil || advisory.ProductTree == nil {
 		return nil, fmt.Errorf("csaf advisory has no product tree")
 	}
@@ -69,7 +68,7 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, source string)
 		}
 	}
 
-	rules := make([]models.VEXRule, 0)
+	rules := make([]models.UpstreamVEXRule, 0)
 	for _, vuln := range advisory.Vulnerabilities {
 		cveID := csafVulnCVE(vuln)
 		if cveID == "" || vuln.ProductStatus == nil {
@@ -121,14 +120,12 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, assetID uuid.UUID, source string)
 					continue
 				}
 
-				rule := models.VEXRule{
+				rule := models.UpstreamVEXRule{
 					Title:         vexrules.VexRuleTitle(cveID, pattern),
-					AssetID:       assetID,
 					VexSource:     source,
 					Justification: remediationDetail[productID],
 					EventType:     et,
 					CELExpression: vexrules.ToCELExpression(cveID, pattern),
-					CreatedByID:   "system",
 				}
 				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)

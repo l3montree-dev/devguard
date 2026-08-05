@@ -225,7 +225,7 @@ func readGobFileStream[T any](ctx context.Context, path string, handleItems func
 					return fmt.Errorf("could not handle batch of items from gob file %s: %w", path, err)
 				}
 			}
-			batch = batch[:0]
+			batch = make([]T, 0, batchSize)
 		}
 	}
 	if len(batch) > 0 {

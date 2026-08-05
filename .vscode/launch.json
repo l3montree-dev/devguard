@@ -4,6 +4,20 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+                {
+            "name": "Launch Recommendations Daemon job",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-cli/main.go",
+            "args": [
+                "daemon",
+                "trigger",
+                "--daemons",
+                "recommendations"
+            ],
+        },
         {
             "name": "Launch Daemon Pipeline",
             "type": "go",
@@ -28,9 +42,9 @@
             "args": [
                 "daemon",
                 "runPipeline",
-                "264d682d-a9ba-4680-a9bf-018f35e561f2",
-                "--stage",
-                "SyncTickets",
+                "169319b7-8170-469f-9e31-f87b6054e507",
+                "--assetVersionSlug",
+                "main",
                 "--dryRun=false"
             ],
         },

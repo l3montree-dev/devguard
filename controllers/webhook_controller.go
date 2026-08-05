@@ -379,6 +379,10 @@ func (w *WebhookController) WantsToHandleWebhook(ctx shared.Context) bool {
 	return true
 }
 
+// @Summary Handle an incoming third-party webhook
+// @Tags Webhooks
+// @Success 200
+// @Router /webhook [post]
 func (w *WebhookController) HandleWebhook(ctx shared.Context) error {
 	// Logic to handle the webhook
 	return nil

@@ -150,6 +150,17 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) e
 	return ctx.JSON(200, formattedAssetVersions)
 }
 
+// @Summary Get SBOM as CycloneDX JSON
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json/ [get]
 func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -169,6 +180,17 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
 }
 
+// @Summary Get VEX as CycloneDX JSON
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json/ [get]
 func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -178,7 +200,7 @@ func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 	}
 
 	// get the dependency vulns for this asset version, including resolved marking based on default branch
-	dependencyVulns, err := a.artifactService.GatherVexInformationIncludingResolvedMarking(ctx.Request().Context(), assetVersion, nil)
+	dependencyVulns, err := a.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, nil)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get vulns for default asset version").WithInternal(err)
 	}
@@ -192,6 +214,18 @@ func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 
 }
 
+// @Summary Get affected components and dependency vulnerabilities
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Artifact name"
+// @Success 200 {array} dtos.DependencyVulnDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/affected-components/ [get]
 func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	artifactName := ctx.QueryParam("artifactName")
 
@@ -219,6 +253,19 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(ctx context.Con
 	return components, dependencyVulns, nil
 }
 
+// @Summary Get minimal dependency graph tree
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Artifact name"
+// @Param origin query string false "Info source origin"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-graph/ [get]
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
 
@@ -251,6 +298,19 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 }
 
 // function to return a graph of all dependencies which lead to the requested pURL
+// @Summary Get dependency paths leading to a component pURL
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param purl query string false "Component pURL"
+// @Param artifactName query string false "Artifact name"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/path-to-component/ [get]
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) error {
 
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -327,6 +387,18 @@ func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 }
 
 // RefetchLicenses forces re-fetching license information for all components of the current asset version
+// @Summary Refetch license information for all components
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName query string false "Artifact name"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses/refresh/ [post]
 func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	artifactName := ctx.Param("artifactName")
@@ -359,6 +431,17 @@ func escapeLatex(input string) string {
 	return latexReplacer.Replace(input)
 }
 
+// @Summary List artifacts of an asset version
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {array} models.Artifact
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [get]
 func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 
 	assetID := shared.GetAsset(ctx).ID
@@ -373,6 +456,17 @@ func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 	return ctx.JSON(200, artifacts)
 }
 
+// @Summary Mark asset version as the default branch
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} models.AssetVersion
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/make-default/ [post]
 func (a *AssetVersionController) MakeDefault(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -408,6 +502,17 @@ func extractInformationSourceFromPurl(purl string) dtos.InformationSourceDTO {
 	return InformationSourcesDTO
 }
 
+// @Summary Get information sources of the root nodes for each artifact
+// @Tags Asset Versions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifact-root-nodes/ [get]
 func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)

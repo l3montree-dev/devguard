@@ -49,7 +49,7 @@ type CompliancePostureWithControlDTO struct {
 	Description              string         `json:"description"`
 	Importance               string         `json:"importance"`
 	Class                    string         `json:"class"`
-	Additional               datatypes.JSON `json:"additional"`
+	Additional               datatypes.JSON `json:"additional" swaggertype:"object"`
 	ParentFrameworkControlID *string        `json:"parentFrameworkControlId"`
 	CompliancePostureID      string         `json:"compliancePostureId"`
 	State                    VulnState      `json:"state"`

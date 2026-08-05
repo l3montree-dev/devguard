@@ -47,6 +47,7 @@ type VoterID struct {
 	OrganizationID uuid.UUID
 	ProjectID      uuid.UUID
 	AssetID        uuid.UUID
+	Verified       bool
 }
 
 type Vote struct {
@@ -151,7 +152,12 @@ func getVexRuleFromMatchingRules(vexRuleIdentity string, ruleIDtoIdentityMap map
 
 var ErrNoRecommendation = fmt.Errorf("no recommendation")
 
-func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organization, projects []Project, assets []models.Asset) (models.VEXRule, float64, error) {
+type Votes struct {
+	Verified int `json:"verified"`
+	Total    int `json:"total"`
+}
+
+func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organization, projects []Project, assets []models.Asset) (models.VEXRule, float64, Votes, error) {
 	var adjustedDiminishmentFactor = baseDiminishmentFactor
 	// If there is only one organization, we don't need a diminishmentfactor and therefore it should be set to 1 (no diminishment, value is worth fully)
 	if len(organizations) < 2 {
@@ -195,9 +201,9 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 
 	ruleIDtoIdentity := make(map[string]string)
 	for _, rule := range matchingRules {
-		identity, err := vexrules.IdentityOfRule(rule)
+		identity, err := vexrules.IdentityOfRule(rule.UpstreamVEXRule)
 		if err != nil {
-			return models.VEXRule{}, 0, fmt.Errorf("failed to get identity of rule: %w", err)
+			return models.VEXRule{}, 0, Votes{}, fmt.Errorf("failed to get identity of rule: %w", err)
 		}
 		ruleIDtoIdentity[rule.ID] = identity
 	}
@@ -225,7 +231,7 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 
 		if organization.Trustscore < 0.0 || organization.Trustscore > 1.0 || project.Trustscore < 0.0 || project.Trustscore > 1.0 {
 			slog.Error("trust score malformed", "organizationID", organization.ID, "projectID", project.ID)
-			return models.VEXRule{}, 0, fmt.Errorf("trust score malformed for organizationID: %s or projectID: %s", organization.ID, project.ID)
+			return models.VEXRule{}, 0, Votes{}, fmt.Errorf("trust score malformed for organizationID: %s or projectID: %s", organization.ID, project.ID)
 		}
 
 		// [Mitigation 10,11] Minimum organization age check
@@ -261,6 +267,7 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 						OrganizationID: organization.ID,
 						ProjectID:      project.ID,
 						AssetID:        asset.ID,
+						Verified:       math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) >= 1,
 					})
 
 					votes[identity].Value += ruleConfidence
@@ -278,7 +285,7 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 				// This is the case if a vote was cast for a models.VEXRule that hasn't been seen before
 				votes[identity] = &Vote{
 					Voters: []VoterID{
-						{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID},
+						{OrganizationID: organization.ID, ProjectID: project.ID, AssetID: asset.ID, Verified: math.Max(math.Max(project.Trustscore, organization.Trustscore), minTrustscore) >= 1},
 					},
 					Value: 0.0,
 				}
@@ -290,7 +297,7 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 	}
 	// [Mitigation 15] Require a minimum number of voters for a decision; disabling the recommendation when too few voters remain
 	if validVotesCount < minVoterThreshold {
-		return models.VEXRule{}, 0, ErrNoRecommendation
+		return models.VEXRule{}, 0, Votes{}, ErrNoRecommendation
 	}
 
 	var crowdsourcedVexRule models.VEXRule
@@ -306,14 +313,14 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 	// [Mitigation 31] Use standardized cutoff; test with extreme values; define deterministictie-breaking rules
 	// After the sorting, the models.VEXRule with the highest confidence will be at the end of the sortableVotes slice, so we can compare it with the second to last to check for a tie
 	if len(sortableVotes) == 0 {
-		return models.VEXRule{}, 0, ErrNoRecommendation
+		return models.VEXRule{}, 0, Votes{}, ErrNoRecommendation
 	}
 	if len(sortableVotes) > 1 {
 		if votes[sortableVotes[len(sortableVotes)-1]].Value == votes[sortableVotes[len(sortableVotes)-2]].Value {
 			// Inconclusive result, no clear winner
 			// In this case we don't recommend any models.VEXRule to the user, to encourage manual assessment by the user
 			// to generate more data for a better recommendation in the future
-			return models.VEXRule{}, 0, ErrNoRecommendation
+			return models.VEXRule{}, 0, Votes{}, ErrNoRecommendation
 		} else {
 			// At this point we have a recommendation for a models.VEXRule and want to return the datastructure of the models.VEXRule to the user
 			// For that take any fitting models.VEXRule from the database, since they should all be the same
@@ -321,12 +328,18 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 			// 2. Is it privacy wise correct to return any models.VEXRule, considering that the assetID will link the models.VEXRule to an organization?
 			// 2. We can strip out the assetID or only return the relevant data to create a new models.VEXRule with the AssetID of the user who needed the recommendation
 			crowdsourcedVexRuleID = sortableVotes[len(sortableVotes)-1]
+
 			crowdsourcedVexRule, found = getVexRuleFromMatchingRules(crowdsourcedVexRuleID, ruleIDtoIdentity, matchingRules)
 			if !found {
 				slog.Error("failed to find crowdsourced VEX rule", "id", crowdsourcedVexRuleID)
-				return models.VEXRule{}, 0, fmt.Errorf("failed to find crowdsourced VEX rule for id: %s", crowdsourcedVexRuleID)
+				return models.VEXRule{}, 0, Votes{}, fmt.Errorf("failed to find crowdsourced VEX rule for id: %s", crowdsourcedVexRuleID)
 			}
-			return crowdsourcedVexRule, votes[sortableVotes[len(sortableVotes)-1]].Value, nil
+			return crowdsourcedVexRule, votes[sortableVotes[len(sortableVotes)-1]].Value, Votes{
+				Verified: len(utils.Filter(votes[crowdsourcedVexRuleID].Voters, func(voter VoterID) bool {
+					return voter.Verified
+				})),
+				Total: len(votes[crowdsourcedVexRuleID].Voters),
+			}, nil
 		}
 	} else {
 		// Only one models.VEXRule, so we can return it without worrying about ties
@@ -334,8 +347,13 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 		crowdsourcedVexRule, found = getVexRuleFromMatchingRules(crowdsourcedVexRuleID, ruleIDtoIdentity, matchingRules)
 		if !found {
 			slog.Error("failed to find crowdsourced VEX rule", "id", crowdsourcedVexRuleID)
-			return models.VEXRule{}, 0, fmt.Errorf("failed to find crowdsourced VEX rule for id: %s", crowdsourcedVexRuleID)
+			return models.VEXRule{}, 0, Votes{}, fmt.Errorf("failed to find crowdsourced VEX rule for id: %s", crowdsourcedVexRuleID)
 		}
-		return crowdsourcedVexRule, votes[sortableVotes[len(sortableVotes)-1]].Value, nil
+		return crowdsourcedVexRule, votes[sortableVotes[len(sortableVotes)-1]].Value, Votes{
+			Verified: len(utils.Filter(votes[crowdsourcedVexRuleID].Voters, func(voter VoterID) bool {
+				return voter.Verified
+			})),
+			Total: len(votes[crowdsourcedVexRuleID].Voters),
+		}, nil
 	}
 }

@@ -28,14 +28,17 @@ type VEXRuleRouter struct {
 func NewVEXRuleRouter(
 	assetRouter AssetRouter,
 	vexRuleController *controllers.VEXRuleController,
+	vexRecommendationController *controllers.VexRuleRecommendationController,
 ) VEXRuleRouter {
 	// VEX rules are scoped to asset versions
 	// Read access - anyone who can read the asset version can list and get rules
 	ruleGroup := assetRouter.Group.Group("/vex-rules")
-	ruleGroup.GET("/", vexRuleController.List)               // List all rules for asset version
-	ruleGroup.GET("/:ruleId/", vexRuleController.Get)        // Get single rule by ID
+	ruleGroup.GET("/", vexRuleController.List)                                                   // List all rules for asset version
+	ruleGroup.GET("/:ruleId/", vexRuleController.Get)                                            // Get single rule by ID
 	ruleGroup.POST("/test/", vexRuleController.TestVexRules, middlewares.DisallowPublicRequests) // Test VEX rules against a given vulnerability
 
+	ruleGroup.GET("/recommendations/:dependencyVulnID/", vexRecommendationController.Recommend)
+	ruleGroup.GET("/recommendations/", vexRecommendationController.RecommendForAsset)
 	// Write access - requires asset update permission
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
 	ruleWriteGroup.POST("/", vexRuleController.Create, middlewares.DisallowPublicRequests)           // Create rule

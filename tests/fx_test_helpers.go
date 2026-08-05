@@ -106,8 +106,8 @@ func (f *TestFixture) CreateOrg(name string) models.Org {
 
 	org := models.Org{
 		Name:        name,
-		Slug:        name,
 		Description: "Test Organization",
+		Slug:        name,
 	}
 	err := f.DB.Create(&org).Error
 	require.NoError(f.T, err)
@@ -191,9 +191,12 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		&testLeaderElector{}, // Use simple test leader elector
 		f.App.MaliciousPackageChecker,
 		f.App.VulnDBService,
-		f.App.VexRuleService,
+		f.App.VexRuleRepository,
+		f.App.VexRuleRecommendationRepository,
+		f.App.TrustedEntityRepository,
 		f.App.ExternalReferenceRepository,
 		f.App.FixedVersionResolver,
+		f.App.UpstreamVEXRuleRepository,
 	)
 }
 

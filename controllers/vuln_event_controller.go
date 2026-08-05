@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	_ "github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
@@ -23,6 +24,18 @@ func NewVulnEventController(vulnEventRepository shared.VulnEventRepository, asse
 	}
 }
 
+// @Summary List events for a vulnerability
+// @Tags Vulnerability Events
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param dependencyVulnID path string true "Dependency vulnerability ID"
+// @Success 200 {array} dtos.VulnEventDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/events [get]
 func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 	vulnID, vulnType, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -34,9 +47,21 @@ func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 
-	return ctx.JSON(200, transformer.ConvertVulnEventsToDtos(events))
+	var eventDTOs = transformer.ConvertVulnEventsToDtos(events)
+	return ctx.JSON(200, eventDTOs)
 }
 
+// @Summary List events for an asset version
+// @Tags Vulnerability Events
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {array} dtos.VulnEventDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events [get]
 func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
@@ -57,10 +82,23 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 	return ctx.JSON(200, events.Map(func(ved models.VulnEventDetail) any {
-		return transformer.ConvertVulnEventDetailToDto(ved)
+		var dto = transformer.ConvertVulnEventDetailToDto(ved)
+		return dto
 	}))
 }
 
+// @Summary Delete an event
+// @Tags Vulnerability Events
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param eventID path string true "Event ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events/{eventID} [delete]
 func (c VulnEventController) DeleteEventByID(ctx shared.Context) error {
 	eventID, err := shared.GetEventID(ctx)
 	if err != nil {

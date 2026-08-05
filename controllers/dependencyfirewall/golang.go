@@ -119,6 +119,16 @@ func (goEcosystem) writeResponse(c shared.Context, data []byte, path string, cac
 	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), data)
 }
 
+// @Summary Proxy Go module requests
+// @Tags Dependency Firewall
+// @Security PATAuth
+// @Security BearerAuth
+// @Param secret path string false "dependency proxy secret"
+// @Success 200 {file} binary
+// @Router /dependency-proxy/go [get]
+// @Router /dependency-proxy/go/{path} [get]
+// @Router /dependency-proxy/{secret}/go [get]
+// @Router /dependency-proxy/{secret}/go/{path} [get]
 func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 	requestPath := golang.trimPrefix(c.Request().URL.Path)
 

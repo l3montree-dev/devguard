@@ -24,6 +24,11 @@ const (
 	AssetStateDeleted  AssetState = "deleted"
 )
 
+type AssetTuple = struct {
+	AssetID          string
+	AssetVersionName string
+}
+
 type Asset struct {
 	Model
 	Name                         string                `json:"name" gorm:"type:text"`

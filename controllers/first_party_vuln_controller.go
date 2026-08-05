@@ -96,6 +96,14 @@ func (c FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	}))
 }
 
+// @Summary Mitigate a first-party vulnerability
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param vulnID path string true "Vulnerability ID"
+// @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
+// @Router /vulns/{vulnID}/mitigate [post]
 func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -264,7 +272,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	vulns, err := c.firstPartyVulnRepository.GetByAssetVersion(
+	vulns, err := c.firstPartyVulnRepository.GetOpenByAssetVersion(
 		ctx.Request().Context(), nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
@@ -323,7 +331,7 @@ func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
 				addedRuleIDs[vuln.RuleID] = true
 			}
 			result := sarif.Result{
-				Kind:   "issue",
+				Kind:   sarif.ResultKindFail,
 				RuleID: &vuln.RuleID,
 				Message: sarif.Message{
 					Text: vuln.RuleDescription,
@@ -383,6 +391,14 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 	}
 }
 
+// @Summary Batch update first-party vulnerability states
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param body body dtos.BatchFirstPartyVulnStatus true "Request body"
+// @Success 200 {array} dtos.DetailedFirstPartyVulnDTO
+// @Router /vulns/batch [post]
 func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	ownerID := shared.GetSession(ctx).GetActorName()

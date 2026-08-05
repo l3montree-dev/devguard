@@ -12,25 +12,22 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-package router
+package utils
 
 import (
-	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
-type CrowdsourcedVexingRouter struct {
-	*echo.Group
+
+func RecordSpanError(span trace.Span, err error) {
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
 }
 
-func NewCrowdsourcedVexingRouter(
-	assetRouter AssetRouter,
-	crowdsourcedVexingController *controllers.CrowdsourcedVexingController,
-) CrowdsourcedVexingRouter {
-	group := assetRouter.Group.Group("/crowdsourced-vexing")
 
-	group.GET("/recommendations/:dependencyVulnID/", crowdsourcedVexingController.Recommend)
-	group.GET("/recommendations/", crowdsourcedVexingController.RecommendForAsset)
-	return CrowdsourcedVexingRouter{Group: group}
+func EndSpanWithError(span trace.Span, err error) error {
+	RecordSpanError(span, err)
+	span.End()
+	return err
 }

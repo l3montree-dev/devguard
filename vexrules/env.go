@@ -19,7 +19,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
+	"regexp"
 	"sync"
 
 	"crypto/sha256"
@@ -33,8 +35,8 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/parser"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/package-url/packageurl-go"
 )
@@ -97,35 +99,6 @@ var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
 	)
 })
 
-const programCacheSize = 2048
-
-var programCache = must(lru.New[string, cel.Program](programCacheSize))
-
-func must[T any](v T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
-func getOrCompileProgram(celEnv *cel.Env, expr string) (cel.Program, error) {
-	if prg, ok := programCache.Get(expr); ok {
-		return prg, nil
-	}
-
-	ast, iss := celEnv.Compile(expr)
-	if iss != nil && iss.Err() != nil {
-		return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
-	}
-	prg, err := celEnv.Program(ast)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build CEL program: %w", err)
-	}
-
-	programCache.Add(expr, prg)
-	return prg, nil
-}
-
 func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	m, err := json.Marshal(vuln)
 	if err != nil {
@@ -143,62 +116,180 @@ func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
 	return vulnMap, nil
 }
 
-func evalCompiledRule(rule models.VEXRule, vulnMap map[string]any) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
+func PrepareVulnsForEval(ctx context.Context, vulns []models.DependencyVuln) ([]map[string]any, error) {
+	prepared := make([]map[string]any, len(vulns))
+	for i, vuln := range vulns {
+		vulnMap, err := vulnToCELMap(vuln)
+		if err != nil {
+			return nil, err
+		}
+		prepared[i] = vulnMap
 	}
+	return prepared, nil
+}
 
+type CompiledRule struct {
+	cel.Program
+	// a lot of rules are defined for a specific scope, that does not necessarily hold for all but at least ALL upstream vex rules we are synchronizing.
+	// this makes it much faster to filter out rules that are not relevant for a specific vuln if we know the scope of the rule.
+	CVEScope *string
+}
+
+/*
+
+Thats a typical example of a rule that exists in a cveId scope.
+
+vuln.cveId == "CVE-2025-61725" && matchesPattern(vuln, ["*", "pkg:golang/k8s.io/component-helpers@v1.35.7-k3s1", "*", "pkg:golang/stdlib@v1.25.0"])
+
+We just need to extract the CVE-2025-61725 part and store it in the CompiledRule.CVEScope field.
+
+*/
+
+var scopeRegex = regexp.MustCompile(`vuln\.cveId\s*==\s*"([^"]+)" &&`)
+
+func extractCVEScopeFromCELExpression(expr string) *string {
+	if !strings.Contains(expr, "vuln.cveId") {
+		return nil
+	}
+	matches := scopeRegex.FindStringSubmatch(expr)
+	if len(matches) < 2 {
+		return nil
+	}
+	cveID := matches[1]
+	return &cveID
+}
+
+// CompileRules compiles every rule's CEL expression. cel.Env is safe for
+// concurrent Compile/Program calls, so rules are compiled in parallel batches.
+func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
 	celEnv, err := CelEnv()
 	if err != nil {
-		return false, fmt.Errorf("failed to create CEL environment: %w", err)
+		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
 	}
 
-	prg, err := getOrCompileProgram(celEnv, rule.CELExpression)
-	if err != nil {
-		return false, err
-	}
+	partials, err := utils.ParallelBatches(rules, func(batch []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
+		local := make(map[string]CompiledRule, len(batch))
+		for _, rule := range batch {
+			if rule.CELExpression == "" {
+				continue
+			}
+			ast, iss := celEnv.Compile(rule.CELExpression)
+			if iss != nil && iss.Err() != nil {
+				return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
+			}
+			prg, err := celEnv.Program(ast)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build CEL program: %w", err)
+			}
 
-	out, _, err := prg.Eval(map[string]any{
-		"vuln": vulnMap,
+			scope := extractCVEScopeFromCELExpression(rule.CELExpression)
+
+			local[rule.ID] = CompiledRule{
+				Program:  prg,
+				CVEScope: scope,
+			}
+		}
+		return local, nil
 	})
-	if err != nil {
-		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
-	}
-
-	result, ok := out.Value().(bool)
-	if !ok {
-		return false, fmt.Errorf("CEL expression did not evaluate to a bool, got %T", out.Value())
-	}
-	return result, nil
-}
-
-func EvalRule(ctx context.Context, rule models.VEXRule, vuln models.DependencyVuln) (bool, error) {
-	if rule.CELExpression == "" {
-		return false, nil
-	}
-
-	vulnMap, err := vulnToCELMap(vuln)
-	if err != nil {
-		return false, err
-	}
-
-	return evalCompiledRule(rule, vulnMap)
-}
-
-func EvalRules(ctx context.Context, rules []models.VEXRule, vuln models.DependencyVuln) (map[string]bool, error) {
-	vulnMap, err := vulnToCELMap(vuln)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make(map[string]bool, len(rules))
-	for _, rule := range rules {
-		match, err := evalCompiledRule(rule, vulnMap)
-		if err != nil {
-			return nil, err
+	compiled := make(map[string]CompiledRule, len(rules))
+	for _, local := range partials {
+		for id, cr := range local {
+			compiled[id] = cr
 		}
-		results[rule.ID] = match
 	}
+	return compiled, nil
+}
+
+// returns map keyed by vulnID and value is a list of ruleIDs that match that vuln
+func EvalCompiledRules(ctx context.Context, compiled map[string]CompiledRule, vulnMaps []map[string]any) (map[string][]string, error) {
+	// try to reduce the cartesian product by filtering out rules that have a CVE scope that does not match the vuln's CVE ID
+	unscopedRules := make(map[string]CompiledRule, len(compiled))
+	scopedRules := make(map[string]map[string]CompiledRule, len(compiled)) // map[cveID]map[ruleID]CompiledRule
+	for ruleID, rule := range compiled {
+		if rule.CVEScope == nil {
+			unscopedRules[ruleID] = rule
+			continue
+		}
+		cveID := *rule.CVEScope
+		if _, exists := scopedRules[cveID]; !exists {
+			scopedRules[cveID] = make(map[string]CompiledRule)
+		}
+		scopedRules[cveID][ruleID] = rule
+	}
+
+	cveToVulnMap := make(map[string][]map[string]any, len(vulnMaps))
+	for _, vulnMap := range vulnMaps {
+		vulnCVEID, _ := vulnMap["cveId"].(string)
+		if vulnCVEID == "" {
+			continue
+		}
+		cveToVulnMap[vulnCVEID] = append(cveToVulnMap[vulnCVEID], vulnMap)
+	}
+
+	slog.Info("evaluating cel rules", "cveScoped (different cve buckets)", len(scopedRules), "unscoped", len(unscopedRules))
+
+	type ruleJob struct {
+		id      string
+		prg     CompiledRule
+		relVuln []map[string]any
+	}
+
+	jobs := make([]ruleJob, 0, len(compiled))
+	for ruleID, prg := range unscopedRules {
+		jobs = append(jobs, ruleJob{id: ruleID, prg: prg, relVuln: vulnMaps})
+	}
+	for cveID, rules := range scopedRules {
+		vulnsForCVE, exists := cveToVulnMap[cveID]
+		if !exists {
+			continue
+		}
+		for ruleID, prg := range rules {
+			jobs = append(jobs, ruleJob{id: ruleID, prg: prg, relVuln: vulnsForCVE})
+		}
+	}
+
+	partials, err := utils.ParallelBatches(jobs, func(batch []ruleJob) (map[string][]string, error) {
+		local := make(map[string][]string)
+		// each batch runs on a single goroutine, so this activation map can be
+		// reused across every Eval call in the batch instead of allocating a
+		// fresh one-entry map per evaluation - CEL only reads it during the
+		// call, it doesn't retain it afterward.
+		activation := map[string]any{"vuln": nil}
+		for _, job := range batch {
+			for _, vulnMap := range job.relVuln {
+				vulnID := vulnMap["id"].(string)
+				activation["vuln"] = vulnMap
+				out, _, err := job.prg.Eval(activation)
+				if err != nil {
+					return nil, fmt.Errorf("failed to evaluate CEL expression for rule %s: %w", job.id, err)
+				}
+
+				result, ok := out.Value().(bool)
+				if !ok {
+					return nil, fmt.Errorf("CEL expression for rule %s did not evaluate to a bool, got %T", job.id, out.Value())
+				}
+				if result {
+					local[vulnID] = append(local[vulnID], job.id)
+				}
+			}
+		}
+		return local, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	results := make(map[string][]string, len(compiled))
+	for _, local := range partials {
+		for vulnID, ruleIDs := range local {
+			results[vulnID] = append(results[vulnID], ruleIDs...)
+		}
+	}
+
 	return results, nil
 }
 
@@ -225,7 +316,7 @@ func stringListField(mapVal ref.Val, key string) ([]string, error) {
 	return toStringList(fieldVal)
 }
 
-func IdentityOfRule(rule models.VEXRule) (string, error) {
+func IdentityOfRule(rule models.UpstreamVEXRule) (string, error) {
 	// the identity of a vex rule is inside the cel expression AND the assessment.
 	identity := string(rule.EventType) + "||" + string(rule.MechanicalJustification) + "||"
 

@@ -103,6 +103,13 @@ func (c *PolicyController) migratePolicies() error {
 	return nil
 }
 
+// @Summary List organization policies
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} models.Policy
+// @Router /organizations/{organization}/policies [get]
 func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 
 	org := shared.GetOrg(ctx)
@@ -121,6 +128,13 @@ func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 	return ctx.JSON(200, append(policies, communityPolicies...))
 }
 
+// @Summary List project policies
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} models.Policy
+// @Router /organizations/{organization}/projects/{projectSlug}/policies [get]
 func (c *PolicyController) GetProjectPolicies(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	policies, err := c.policyRepository.FindByProjectID(ctx.Request().Context(), nil, project.ID)
@@ -132,6 +146,14 @@ func (c *PolicyController) GetProjectPolicies(ctx shared.Context) error {
 	return ctx.JSON(200, policies)
 }
 
+// @Summary Get a policy
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param policyID path string true "Policy ID"
+// @Success 200 {object} models.Policy
+// @Router /organizations/{organization}/policies/{policyID} [get]
 func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
@@ -150,6 +172,14 @@ func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 	return ctx.JSON(200, policy)
 }
 
+// @Summary Create a policy
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param body body dtos.PolicyDTO true "Request body"
+// @Success 201 {object} dtos.PolicyDTO
+// @Router /organizations/{organization}/policies [post]
 func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 	policy := dtos.PolicyDTO{}
 	if err := ctx.Bind(&policy); err != nil {
@@ -176,6 +206,15 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 	return ctx.JSON(201, policy)
 }
 
+// @Summary Update a policy
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param policyID path string true "Policy ID"
+// @Param body body dtos.PolicyDTO true "Request body"
+// @Success 200 {object} models.Policy
+// @Router /organizations/{organization}/policies/{policyID} [put]
 func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
@@ -209,6 +248,14 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 	return ctx.JSON(200, policyModel)
 }
 
+// @Summary Delete a policy
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param policyID path string true "Policy ID"
+// @Success 204
+// @Router /organizations/{organization}/policies/{policyID} [delete]
 func (c *PolicyController) DeletePolicy(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
@@ -226,6 +273,14 @@ func (c *PolicyController) DeletePolicy(ctx shared.Context) error {
 	return ctx.NoContent(204)
 }
 
+// @Summary Enable a policy for a project
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param policyID path string true "Policy ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/policies/{policyID} [put]
 func (c *PolicyController) EnablePolicyForProject(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 
@@ -245,6 +300,14 @@ func (c *PolicyController) EnablePolicyForProject(ctx shared.Context) error {
 	return ctx.NoContent(204)
 }
 
+// @Summary Disable a policy for a project
+// @Tags Policies
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param policyID path string true "Policy ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/policies/{policyID} [delete]
 func (c *PolicyController) DisablePolicyForProject(ctx shared.Context) error {
 	policyID := ctx.Param("policyID")
 

@@ -38,6 +38,13 @@ type licenseResponse struct {
 	Count   int              `json:"count"`
 }
 
+// @Summary Get license distribution for an asset version
+// @Tags Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} licenseResponse
+// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/components/licenses/ [get]
 func (componentController ComponentController) LicenseDistribution(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -94,6 +101,13 @@ func (componentController ComponentController) LicenseDistribution(ctx shared.Co
 	return ctx.JSON(200, res)
 }
 
+// @Summary List components paged
+// @Tags Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} shared.Paged[dtos.ComponentDependencyDTO]
+// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/ [get]
 func (componentController ComponentController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -185,6 +199,13 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 	return ctx.JSON(200, shared.NewPaged(pageInfo, components.Total, componentsDTO))
 }
 
+// @Summary Search component occurrences within a project
+// @Tags Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
+// @Router /organizations/{orgSlug}/projects/{projectSlug}/components/ [get]
 func (componentController ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 

@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"log/slog"
+	"net/url"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,8 +19,55 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.uber.org/fx"
 )
+
+func initCLITracing() func() {
+	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "grpc://localhost:4317"
+	}
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		slog.Warn("failed to parse OTEL_EXPORTER_OTLP_ENDPOINT, tracing disabled", "err", err, "endpoint", endpoint)
+		return func() {}
+	}
+
+	exp, err := otlptracegrpc.New(context.Background(),
+		otlptracegrpc.WithEndpoint(u.Host),
+		otlptracegrpc.WithInsecure(),
+	)
+	if err != nil {
+		slog.Warn("failed to create OTLP trace exporter, tracing disabled", "err", err, "endpoint", endpoint)
+		return func() {}
+	}
+
+	res, resErr := resource.New(context.Background(),
+		resource.WithAttributes(semconv.ServiceNameKey.String("devguard-cli")),
+	)
+	if resErr != nil {
+		slog.Warn("failed to create OTel resource", "err", resErr)
+		res = resource.Default()
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(exp)),
+	)
+	otel.SetTracerProvider(tp)
+
+	return func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			slog.Warn("failed to shut down tracer provider", "err", err)
+		}
+	}
+}
 
 func markMirrored(configService shared.ConfigService, key string) error {
 	return configService.SetJSONConfig(context.Background(), key, struct {
@@ -51,7 +100,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "recommendations", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -130,6 +179,9 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 	}
 	runner := daemonRunner.(*daemons.DaemonRunner)
 
+	shutdownTracing := initCLITracing()
+	defer shutdownTracing()
+
 	slog.Info("running asset pipeline", "assetID", assetID, "dryRun", dryRun, "stages", stages, "assetVersionSlug", assetVersionSlug)
 	runner.SetDebugOptions(daemons.DebugOptions{
 		LimitToAssetVersionSlug: assetVersionSlug,
@@ -147,6 +199,9 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 }
 
 func triggerDaemon(selectedDaemons []string) error {
+	shutdownTracing := initCLITracing()
+	defer shutdownTracing()
+
 	// Create a minimal FX app to resolve all dependencies
 	app := fx.New(
 		fx.Supply(database.GetPoolConfigFromEnv()),
@@ -209,6 +264,18 @@ func triggerDaemon(selectedDaemons []string) error {
 				start = time.Now()
 				runner.RunAssetPipeline(context.Background(), true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
+			}
+
+			if emptyOrContains(selectedDaemons, "recommendations") {
+				start = time.Now()
+				if err := runner.RunVEXRuleRecommendationDaemon(context.Background()); err != nil {
+					slog.Error("could not build and save recommendations for all", "err", err)
+					return
+				}
+				if err := markMirrored(configService, "vexrules.recommendations"); err != nil {
+					slog.Error("could not mark vexrules.recommendations as mirrored", "err", err)
+				}
+				slog.Info("recommendations built and saved for all", "duration", time.Since(start))
 			}
 		}),
 	)

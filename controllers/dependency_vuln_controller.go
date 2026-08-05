@@ -58,6 +58,15 @@ func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnR
 	}
 }
 
+// @Summary List dependency vulnerabilities by organization
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/dependency-vulns [get]
 func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) error {
 
 	userAllowedProjectIds, err := controller.projectService.ListAllowedProjects(ctx)
@@ -85,6 +94,16 @@ func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 	}))
 }
 
+// @Summary List dependency vulnerabilities by project
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param search query string false "Search term"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/dependency-vulns [get]
 func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
@@ -206,6 +225,19 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 	return ctx.JSON(200, shared.NewPaged(shared.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
+// @Summary Mitigate a dependency vulnerability
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param dependencyVulnID path string true "Vulnerability ID"
+// @Param body body object true "Request body"
+// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/mitigate [post]
 func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	type justification struct {
 		Comment string `json:"comment"`
@@ -289,6 +321,18 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 	})
 }
 
+// @Summary Get hints for a dependency vulnerability
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param dependencyVulnID path string true "Vulnerability ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/hints [get]
 func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 	//if enabled in org settings we also want to send hints
 	org := shared.GetOrg(ctx)
@@ -310,6 +354,18 @@ func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 	return ctx.JSON(200, hints)
 }
 
+// @Summary Sync dependency vulnerabilities with third party integrations
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param body body object true "Request body"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/sync [post]
 func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -463,6 +519,18 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 	return ctx.JSON(200, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
 }
 
+// @Summary Batch create vulnerability events
+// @Tags Vulnerabilities
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param body body dtos.BatchDependencyVulnStatus true "Request body"
+// @Success 200 {array} dtos.DetailedDependencyVulnDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/batch [post]
 func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -526,6 +594,12 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 	return ctx.JSON(200, updatedVulns)
 }
 
+// @Summary Get recommended fixed version for a package
+// @Tags Vulnerabilities
+// @Param packageName query string true "Package name"
+// @Param currentValue query string true "Current version value"
+// @Success 200 {object} dtos.Recommendation
+// @Router /renovate/recommendation [get]
 func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) error {
 	packageName := ctx.QueryParam("packageName")
 

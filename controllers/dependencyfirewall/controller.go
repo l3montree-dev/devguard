@@ -213,6 +213,18 @@ func (d *DependencyProxyController) CacheDataWithIntegrity(cachePath string, dat
 	return nil
 }
 
+// @Summary Get dependency proxy URLs
+// @Tags Dependency Firewall
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string false "organization slug"
+// @Param projectSlug path string false "project slug"
+// @Param assetSlug path string false "asset slug"
+// @Success 200 {object} map[string]string
+// @Router /organizations/{organization}/dependency-proxy-urls/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/dependency-proxy-urls/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/dependency-proxy-urls/ [get]
 func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) error {
 	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
 	if registryURL == "" {

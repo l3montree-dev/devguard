@@ -40,8 +40,8 @@ func (_m *Comparer) EXPECT() *Comparer_Expecter {
 }
 
 // GetVulns provides a mock function for the type Comparer
-func (_mock *Comparer) GetVulns(ctx context.Context, purl packageurl.PackageURL) ([]models.VulnInPackage, error) {
-	ret := _mock.Called(ctx, purl)
+func (_mock *Comparer) GetVulns(ctx context.Context, purls []packageurl.PackageURL) ([]models.VulnInPackage, error) {
+	ret := _mock.Called(ctx, purls)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVulns")
@@ -49,18 +49,18 @@ func (_mock *Comparer) GetVulns(ctx context.Context, purl packageurl.PackageURL)
 
 	var r0 []models.VulnInPackage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, packageurl.PackageURL) ([]models.VulnInPackage, error)); ok {
-		return returnFunc(ctx, purl)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []packageurl.PackageURL) ([]models.VulnInPackage, error)); ok {
+		return returnFunc(ctx, purls)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, packageurl.PackageURL) []models.VulnInPackage); ok {
-		r0 = returnFunc(ctx, purl)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []packageurl.PackageURL) []models.VulnInPackage); ok {
+		r0 = returnFunc(ctx, purls)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnInPackage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, packageurl.PackageURL) error); ok {
-		r1 = returnFunc(ctx, purl)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []packageurl.PackageURL) error); ok {
+		r1 = returnFunc(ctx, purls)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,20 +74,20 @@ type Comparer_GetVulns_Call struct {
 
 // GetVulns is a helper method to define mock.On call
 //   - ctx context.Context
-//   - purl packageurl.PackageURL
-func (_e *Comparer_Expecter) GetVulns(ctx interface{}, purl interface{}) *Comparer_GetVulns_Call {
-	return &Comparer_GetVulns_Call{Call: _e.mock.On("GetVulns", ctx, purl)}
+//   - purls []packageurl.PackageURL
+func (_e *Comparer_Expecter) GetVulns(ctx interface{}, purls interface{}) *Comparer_GetVulns_Call {
+	return &Comparer_GetVulns_Call{Call: _e.mock.On("GetVulns", ctx, purls)}
 }
 
-func (_c *Comparer_GetVulns_Call) Run(run func(ctx context.Context, purl packageurl.PackageURL)) *Comparer_GetVulns_Call {
+func (_c *Comparer_GetVulns_Call) Run(run func(ctx context.Context, purls []packageurl.PackageURL)) *Comparer_GetVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 packageurl.PackageURL
+		var arg1 []packageurl.PackageURL
 		if args[1] != nil {
-			arg1 = args[1].(packageurl.PackageURL)
+			arg1 = args[1].([]packageurl.PackageURL)
 		}
 		run(
 			arg0,
@@ -102,7 +102,7 @@ func (_c *Comparer_GetVulns_Call) Return(vulnInPackages []models.VulnInPackage, 
 	return _c
 }
 
-func (_c *Comparer_GetVulns_Call) RunAndReturn(run func(ctx context.Context, purl packageurl.PackageURL) ([]models.VulnInPackage, error)) *Comparer_GetVulns_Call {
+func (_c *Comparer_GetVulns_Call) RunAndReturn(run func(ctx context.Context, purls []packageurl.PackageURL) ([]models.VulnInPackage, error)) *Comparer_GetVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -49,6 +49,7 @@ type VulnDBService struct {
 	maliciousPackages *MaliciousPackageChecker
 	configService     shared.ConfigService
 	pool              *pgxpool.Pool
+	ghVexFetcher      shared.GitHubVexFetcher
 }
 
 func NewVulnDBService(
@@ -58,6 +59,7 @@ func NewVulnDBService(
 	exploitRepository shared.ExploitRepository,
 	maliciousPackageChecker *MaliciousPackageChecker,
 	configService shared.ConfigService,
+	ghVexFetcher shared.GitHubVexFetcher,
 	pool *pgxpool.Pool,
 ) *VulnDBService {
 	return &VulnDBService{
@@ -71,6 +73,7 @@ func NewVulnDBService(
 		maliciousPackages: maliciousPackageChecker,
 		configService:     configService,
 		pool:              pool,
+		ghVexFetcher:      ghVexFetcher,
 	}
 }
 
@@ -138,6 +141,10 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 		return fmt.Errorf("could not truncate malicious package tables: %w", err)
 	}
 
+	if err := truncateUpstreamVEXRules(ctx, tx); err != nil {
+		return fmt.Errorf("could not truncate system vex rules: %w", err)
+	}
+
 	// prepare the tables for bulk insert before any loading begins
 	if err := PrepareBulkInsert(ctx, tx); err != nil {
 		return fmt.Errorf("could not prepare bulk insert: %w", err)
@@ -145,31 +152,53 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 
 	// OSV must run first: it populates the DB (including cleanup) so we know
 	// which CVE IDs exist before fetching the other sources.
-	allOSVVulns, err := service.osv.fetchAndImportOSV(ctx, tx, start)
-	if err != nil {
-		return fmt.Errorf("OSV fetch failed: %w", err)
+	// OSV import and the CSAF network fetch can run in parallel — the CSAF fetch
+	// does no DB work, so it doesn't contend with the tx that fetchAndImportOSV
+	// writes through.
+	var allOSVVulns []OSVEntry
+	var csafAdvisories []models.CVE
+	osvGroup, osvGroupCtx := errgroup.WithContext(ctx)
+	osvGroup.Go(func() error {
+		var err error
+		allOSVVulns, err = service.osv.fetchAndImportOSV(osvGroupCtx, tx, start)
+		if err != nil {
+			return fmt.Errorf("OSV fetch failed: %w", err)
+		}
+		return nil
+	})
+	osvGroup.Go(func() error {
+		var err error
+		csafAdvisories, err = fetchAllCSAFSources(osvGroupCtx)
+		if err != nil {
+			return fmt.Errorf("could not fetch CSAF sources: %w", err)
+		}
+		return nil
+	})
+	if err := osvGroup.Wait(); err != nil {
+		return err
 	}
 
-	csafAdvisories, err := fetchAllCSAFSources(ctx)
-	if err != nil {
-		return fmt.Errorf("could not fetch CSAF sources: %w", err)
+	// CSAF and EUVD relationships must land in cve_relationships before
+	// cleanUpAndFilterSurvivors runs: the cleanup's advisory exemption only protects
+	// a CVE from deletion if its cve_relationships row already exists. Importing
+	// these afterwards (as a prior refactor did) lets cleanup delete a CVE that's
+	// only referenced as an advisory's source_cve, which then trips
+	// fk_cve_relationships_source once the FK constraint is re-added below.
+	if err := importCSAFAdvisories(ctx, tx, csafAdvisories); err != nil {
+		return fmt.Errorf("could not import CSAF advisories: %w", err)
 	}
 
-	// then we can add the additional data sources
-	// load the EUVD aliases into the cve_relationship table
 	euvdRelationships, err := service.euvdService.importEUVDAliases(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("could not import CVE-ID aliases from EUVD: %w", err)
-	}
-
-	if err := importCSAFAdvisories(ctx, tx, csafAdvisories); err != nil {
-		return fmt.Errorf("could not import CSAF advisories: %w", err)
 	}
 
 	osvEntries, survivingCVEs, err := cleanUpAndFilterSurvivors(ctx, tx, allOSVVulns)
 	if err != nil {
 		return fmt.Errorf("could not clean up and filter OSV entries: %w", err)
 	}
+
+	euvdRelationships = filterRelationshipsBySurvivingSource(euvdRelationships, survivingCVEs)
 
 	if err := AddIndexesAndConstraints(ctx, tx); err != nil {
 		return fmt.Errorf("could not re-add indexes and constraints: %w", err)
@@ -180,25 +209,24 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 	}
 	slog.Info("wrote osv.gob", "entries", len(osvEntries))
 
-	euvdRelationships = filterRelationshipsBySurvivingSource(euvdRelationships, survivingCVEs)
-	if err := writeGobFileItems(euvdRelationships, "euvd_relationships.gob"); err != nil {
-		return fmt.Errorf("could not write EUVD gob: %w", err)
-	}
-	slog.Info("wrote euvd relationships data", "entries", len(euvdRelationships))
-
-	survivingAdvisories := filterSurvivingAdvisories(csafAdvisories, survivingCVEs)
-	if err := writeGobFileItems(survivingAdvisories, "csaf_advisories.gob"); err != nil {
-		return fmt.Errorf("could not write csaf advisories gob: %w", err)
-	}
-	slog.Info("wrote csaf advisories data", "entries", len(survivingAdvisories))
-
 	// Fetch the remaining sources in parallel (network only — no DB writes yet).
 	var (
-		epssData    map[string]dtos.EPSS
-		kevEntries  []KEVEntry
-		allExploits []models.Exploit
+		epssData       map[string]dtos.EPSS
+		kevEntries     []KEVEntry
+		allExploits    []models.Exploit
+		systemVexRules []models.UpstreamVEXRule
 	)
 	group, groupCtx := errgroup.WithContext(ctx)
+
+	group.Go(func() error {
+		slog.Info("start fetching system VEX rules from GitHub sources")
+		systemVexRules, err = FetchVexRulesFromGitHubSources(groupCtx, service.ghVexFetcher)
+		if err != nil {
+			return fmt.Errorf("could not fetch system VEX rules from GitHub sources: %w", err)
+		}
+		slog.Info("successfully fetched system VEX rules from GitHub sources", "entries", len(systemVexRules))
+		return nil
+	})
 
 	group.Go(func() error {
 		slog.Info("start fetching EPSS data")
@@ -294,6 +322,12 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 	if err := flushNonOSVStagingTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not flush staging tables: %w", err)
 	}
+	if err := insertSystemVexRulesBulk(ctx, tx, systemVexRules, "upstream_vex_rules_stage"); err != nil {
+		return fmt.Errorf("could not write system VEX rules: %w", err)
+	}
+	if err := flushUpstreamVEXRulesStagingTable(ctx, tx); err != nil {
+		return fmt.Errorf("could not flush system VEX rules: %w", err)
+	}
 
 	// Compute the diff now — while the transaction still holds both the snapshot
 	// (prev state) and the freshly loaded live tables (new state).
@@ -315,8 +349,12 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 	})
 
 	for _, ti := range tableIntegrity {
-		if ti.TotalCount == 0 || len(ti.Checksum) == 0 {
-			return fmt.Errorf("refusing to export: table %q has zero rows or empty checksum — database is likely incomplete", ti.TableName)
+		if len(ti.Checksum) == 0 {
+			return fmt.Errorf("refusing to export: table %q has empty checksum — database is likely incomplete", ti.TableName)
+		}
+		// upstream_vex_rules is legitimately empty when GITHUB_SOURCES is unset (e.g. local/test environments).
+		if ti.TotalCount == 0 && ti.TableName != "upstream_vex_rules" {
+			return fmt.Errorf("refusing to export: table %q has zero rows — database is likely incomplete", ti.TableName)
 		}
 		slog.Info("table integrity", "table", ti.TableName, "count", ti.TotalCount, "checksum", string(ti.Checksum))
 	}
@@ -349,6 +387,20 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 	if err := writeGobFileItems(exploitToGobTransformer(allExploits), "exploits.gob"); err != nil {
 		return fmt.Errorf("could not write exploits gob: %w", err)
 	}
+	if err := writeGobFileItems(systemVexRules, "upstream_vex_rules.gob"); err != nil {
+		return fmt.Errorf("could not write system vex rules gob: %w", err)
+	}
+
+	if err := writeGobFileItems(euvdRelationships, "euvd_relationships.gob"); err != nil {
+		return fmt.Errorf("could not write EUVD gob: %w", err)
+	}
+	slog.Info("wrote euvd relationships data", "entries", len(euvdRelationships))
+
+	survivingAdvisories := filterSurvivingAdvisories(csafAdvisories, survivingCVEs)
+	if err := writeGobFileItems(survivingAdvisories, "csaf_advisories.gob"); err != nil {
+		return fmt.Errorf("could not write csaf advisories gob: %w", err)
+	}
+	slog.Info("wrote csaf advisories data", "entries", len(survivingAdvisories))
 
 	archiveFiles := []string{
 		"osv.gob",
@@ -357,6 +409,7 @@ func (service *VulnDBService) exportRC(ctx context.Context, computeDiff bool) er
 		"epss.gob",
 		"cisakev.gob",
 		"exploits.gob",
+		"upstream_vex_rules.gob",
 		"integrity_checks.json",
 	}
 	if quickDiff != nil {
@@ -534,6 +587,7 @@ func (service *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx p
 	vulndbChan := make(chan vulndbRows, 4)
 	exploitChan := make(chan []models.Exploit, 4)
 	malPkgChan := make(chan malRows, 4)
+	systemVexRulesChan := make(chan []models.UpstreamVEXRule, 4)
 
 	group.Go(func() error {
 		defer close(vulndbChan)
@@ -584,7 +638,24 @@ func (service *VulnDBService) populateDBFromGobsStream(ctx context.Context, tx p
 	})
 
 	group.Go(func() error {
-		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, euvdRelationships, csafAdvisories)
+		defer close(systemVexRulesChan)
+		t := time.Now()
+		if err := readGobFileStream(groupCtx, workingDir+"/upstream_vex_rules.gob", func(batch []models.UpstreamVEXRule) error {
+			select {
+			case systemVexRulesChan <- batch:
+			case <-groupCtx.Done():
+				return groupCtx.Err()
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("could not read system vex rules gob: %w", err)
+		}
+		slog.Info("decoded upstream_vex_rules.gob", "took", time.Since(t))
+		return nil
+	})
+
+	group.Go(func() error {
+		return streamToDatabase(groupCtx, tx, vulndbChan, exploitChan, malPkgChan, systemVexRulesChan, euvdRelationships, csafAdvisories)
 	})
 
 	if err := group.Wait(); err != nil {
@@ -619,6 +690,7 @@ func (service *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx
 		epssData          map[string]dtos.EPSS
 		kevEntries        []KEVEntry
 		gobExploit        []GobExploit
+		systemVexRules    []models.UpstreamVEXRule
 	)
 
 	group.Go(func() error {
@@ -677,6 +749,16 @@ func (service *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx
 		slog.Info("decoded exploits.gob", "entries", len(gobExploit), "took", time.Since(t))
 		return nil
 	})
+	group.Go(func() error {
+		t := time.Now()
+		var err error
+		systemVexRules, err = readAllGobItems[models.UpstreamVEXRule](workingDir + "/upstream_vex_rules.gob")
+		if err != nil {
+			return fmt.Errorf("could not read system vex rules gob: %w", err)
+		}
+		slog.Info("decoded upstream_vex_rules.gob", "entries", len(systemVexRules), "took", time.Since(t))
+		return nil
+	})
 
 	if err := group.Wait(); err != nil {
 		return err
@@ -686,7 +768,7 @@ func (service *VulnDBService) populateDBFromGobsBulk(ctx context.Context, tx pgx
 	malRows := gobOSVToMalTransformer(osvEntries)
 	exploits := gobExploitFilterTransformer(gobExploit)
 
-	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, euvdRelationships, csafAdvisories); err != nil {
+	if err := writeToDatabase(ctx, tx, vulnRows, exploits, malRows, epssData, kevEntries, euvdRelationships, csafAdvisories, systemVexRules); err != nil {
 		return err
 	}
 	return nil
@@ -701,7 +783,7 @@ func heapMB() uint64 {
 	return m.HeapAlloc / 1024 / 1024
 }
 
-func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry, euvdRelationships []models.CVERelationship, csafAdvisories []models.CVE) error {
+func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits []models.Exploit, mal malRows, epssData map[string]dtos.EPSS, kevEntries []KEVEntry, euvdRelationships []models.CVERelationship, csafAdvisories []models.CVE, systemVexRules []models.UpstreamVEXRule) error {
 	advisoryRelationships := make([]models.CVERelationship, 0, len(csafAdvisories)*8)
 	for i := range csafAdvisories {
 		advisoryRelationships = append(advisoryRelationships, csafAdvisories[i].Relationships...)
@@ -766,6 +848,12 @@ func writeToDatabase(ctx context.Context, tx pgx.Tx, rows vulndbRows, exploits [
 	slog.Info("copied malicious_packages to staging", "count", len(mal.pkgs), "took", time.Since(t), "heap_alloc_mb", heapMB())
 
 	t = time.Now()
+	if err := insertSystemVexRulesBulk(ctx, tx, systemVexRules, "upstream_vex_rules_stage"); err != nil {
+		return fmt.Errorf("could not copy system vex rules to staging: %w", err)
+	}
+	slog.Info("copied upstream_vex_rules to staging", "count", len(systemVexRules), "took", time.Since(t), "heap_alloc_mb", heapMB())
+
+	t = time.Now()
 	if err := SyncAllTables(ctx, tx); err != nil {
 		return fmt.Errorf("could not sync staging tables to live: %w", err)
 	}
@@ -804,6 +892,13 @@ func TruncateCVERelatedTables(ctx context.Context, tx pgx.Tx) error {
 func truncateMaliciousPackageRelatedTables(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `TRUNCATE malicious_packages, malicious_affected_components CASCADE`); err != nil {
 		return fmt.Errorf("could not truncate malicious package-related tables: %w", err)
+	}
+	return nil
+}
+
+func truncateUpstreamVEXRules(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `TRUNCATE upstream_vex_rules CASCADE`); err != nil {
+		return fmt.Errorf("could not truncate system vex rules: %w", err)
 	}
 	return nil
 }
@@ -1005,10 +1100,9 @@ func pullVulnDBFromOCI(ctx context.Context) (string, string, error) {
 	return outpath, digest, nil
 }
 
-// streamToDatabase drains all three input channels in a single goroutine, writes all rows
-// into staging tables, then syncs to live tables. When direct=true (empty DB) it uses
-// flushStagingTables (simple INSERT) instead of SyncAllTables (expensive EXCEPT diff).
-func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, euvdRelationships []models.CVERelationship, advisories []models.CVE) error {
+// streamToDatabase drains all four input channels in a single goroutine, writes all rows
+// into staging tables, then syncs to live tables.
+func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRows, exploitsIn <-chan []models.Exploit, malPkgIn <-chan malRows, systemVexRulesIn <-chan []models.UpstreamVEXRule, euvdRelationships []models.CVERelationship, advisories []models.CVE) error {
 	slog.Info("start writing rows to database")
 	start := time.Now()
 
@@ -1020,8 +1114,8 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		return fmt.Errorf("could not create staging tables: %w", err)
 	}
 
-	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount int
-	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime time.Duration
+	var cveCount, relationshipCount, affectedComponentCount, cveAffectedComponentCount, exploitCount, malPkgCount, malAffectedComponentCount, systemVexRuleCount int
+	var cvesTime, relationshipsTime, affectedComponentsTime, cveAffectedComponentsTime, exploitsTime, malPkgTime, systemVexRulesTime time.Duration
 	ticker := time.NewTicker(4 * time.Second)
 	defer ticker.Stop()
 
@@ -1033,6 +1127,9 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		openChans++
 	}
 	if malPkgIn != nil {
+		openChans++
+	}
+	if systemVexRulesIn != nil {
 		openChans++
 	}
 
@@ -1048,6 +1145,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 				"cve_affected_component", cveAffectedComponentCount, "cve_affected_component_insert_time", cveAffectedComponentsTime.Round(time.Millisecond),
 				"exploits", exploitCount, "exploits_insert_time", exploitsTime.Round(time.Millisecond),
 				"malicious_packages", malPkgCount, "malicious_packages_insert_time", malPkgTime.Round(time.Millisecond),
+				"upstream_vex_rules", systemVexRuleCount, "upstream_vex_rules_insert_time", systemVexRulesTime.Round(time.Millisecond),
 				"heap_alloc_mb", heapMB(),
 				"took", time.Since(start),
 			)
@@ -1111,6 +1209,18 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 			malPkgTime += time.Since(t)
 			malPkgCount += len(malPkg.pkgs)
 			malAffectedComponentCount += len(malPkg.comps)
+		case rules, ok := <-systemVexRulesIn:
+			if !ok {
+				systemVexRulesIn = nil
+				openChans--
+				continue
+			}
+			t := time.Now()
+			if err := insertSystemVexRulesBulk(ctx, tx, rules, "upstream_vex_rules_stage"); err != nil {
+				return fmt.Errorf("could not insert system vex rules: %w", err)
+			}
+			systemVexRulesTime += time.Since(t)
+			systemVexRuleCount += len(rules)
 		}
 	}
 
@@ -1141,6 +1251,7 @@ func streamToDatabase(ctx context.Context, tx pgx.Tx, vulnRowsIn <-chan vulndbRo
 		"exploits", exploitCount,
 		"malicious_packages", malPkgCount,
 		"malicious_affected_components", malAffectedComponentCount,
+		"upstream_vex_rules", systemVexRuleCount,
 		"took", time.Since(start),
 	)
 	return nil

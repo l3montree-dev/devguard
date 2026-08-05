@@ -43,14 +43,41 @@ type VEXRuleDTO struct {
 	AppliesToAmountOfDependencyVulns int `json:"appliesToAmountOfDependencyVulns"`
 }
 
+// VexRuleRecommendationType identifies how a recommendation was derived,
+// since that determines which of its fields (Confidence/votes) are meaningful.
+type VexRuleRecommendationType string
+
+const (
+	// VexRuleRecommendationTypeSession: taken directly from a matching rule on
+	// an asset the requesting user already has access to.
+	VexRuleRecommendationTypeSession VexRuleRecommendationType = "session"
+	// VexRuleRecommendationTypeCrowdsourced: derived from voting across every
+	// matching asset-owned VEX rule.
+	VexRuleRecommendationTypeCrowdsourced VexRuleRecommendationType = "crowdsourced"
+	// VexRuleRecommendationTypeUpstream: matched a trusted upstream VEX rule;
+	// always fully confident and has no votes.
+	VexRuleRecommendationTypeUpstream VexRuleRecommendationType = "upstream"
+)
+
 type VexRuleRecommendation struct {
 	Title                            string                      `json:"title"`
 	CELExpression                    string                      `json:"celExpression"`
 	Justification                    string                      `json:"justification"`
 	MechanicalJustification          MechanicalJustificationType `json:"mechanicalJustification"`
 	EventType                        VulnEventType               `json:"eventType"`
+	Type                             VexRuleRecommendationType   `json:"type"`
+	Source                           string                      `json:"source,omitempty"`
 	Confidence                       float64                     `json:"confidence"`
-	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns"`
+	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns,omitempty"`
+	VerifiedVotes                    int                         `json:"verifiedVotes"`
+	TotalVotes                       int                         `json:"totalVotes"`
+
+	// ProjectSlug/OriginAssetSlug are set when this recommendation was
+	// taken directly from a rule on an asset the requesting user already has
+	// access to, rather than from the crowd-voted recommendation across
+	// every matching rule. Lets the frontend link to that project/asset.
+	ProjectSlug *string `json:"projectSlug,omitempty"`
+	AssetSlug   *string `json:"assetSlug,omitempty"`
 }
 
 type TestVEXRulesRequest struct {

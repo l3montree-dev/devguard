@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,8 +38,7 @@ func TestCSAFtoVexRules(t *testing.T) {
 		t.Fatalf("could not unmarshal testdata/csaf_vex.json: %v", err)
 	}
 
-	assetID := uuid.New()
-	rules, err := CSAFVEXToRules(&advisory, assetID, "test")
+	rules, err := CSAFVEXToRules(&advisory, "test")
 	if err != nil {
 		t.Fatalf("CSAFVEXToRules failed: %v", err)
 	}

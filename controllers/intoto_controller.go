@@ -56,6 +56,10 @@ func NewInToToController(repository shared.InTotoLinkRepository, supplyChainRepo
 	}
 }
 
+// @Summary Verify a supply chain attestation
+// @Tags In-toto
+// @Success 200
+// @Router /verify-supply-chain/ [get]
 func (a *InToToController) VerifySupplyChain(ctx shared.Context) error {
 	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
@@ -89,6 +93,14 @@ func (a *InToToController) VerifySupplyChain(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Create an in-toto link
+// @Tags In-toto
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param body body dtos.CreateInTotoLinkRequest true "Request body"
+// @Success 200 {object} models.InTotoLink
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/in-toto/ [post]
 func (a *InToToController) Create(ctx shared.Context) error {
 	var req dtos.CreateInTotoLinkRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -198,6 +210,13 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, link)
 }
 
+// @Summary Get the in-toto root layout
+// @Tags In-toto
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {file} file
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/in-toto/root.layout.json/ [get]
 func (a *InToToController) RootLayout(ctx shared.Context) error {
 	// get all pats which are part of the asset
 	project := shared.GetProject(ctx)
@@ -328,6 +347,14 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 	return ctx.File(tmpfile.Name())
 }
 
+// @Summary Download in-toto links for a supply chain
+// @Tags In-toto
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param supplyChainID path string true "Supply chain ID"
+// @Success 200 {file} file
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/in-toto/{supplyChainID}/ [get]
 func (a *InToToController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
 	// find a link with the corresponding opaque id

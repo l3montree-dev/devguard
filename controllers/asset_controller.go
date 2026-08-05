@@ -45,6 +45,16 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 	}
 }
 
+// @Summary Trigger asset daemon pipeline
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/pipeline-trigger/ [post]
 func (a *AssetController) RunDaemonPipeline(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -126,6 +136,17 @@ func (a *AssetController) List(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelsToDTOs(apps))
 }
 
+// @Summary Attach signing key to asset
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body object true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/signing-key/ [post]
 func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -173,6 +194,16 @@ func (a *AssetController) Delete(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Get asset secrets
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {object} map[string]string
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets/ [get]
 func (a *AssetController) GetSecrets(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
@@ -480,6 +511,15 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	return ctx.String(200, configContent)
 }
 
+// @Summary Get asset badge
+// @Tags Assets
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param badge path string true "Badge type"
+// @Produce image/svg+xml
+// @Success 200 {string} string "SVG badge"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/badges/{badge}/ [get]
 func (a *AssetController) GetBadges(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 
@@ -527,6 +567,17 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 
 	return ctx.String(200, svg)
 }
+
+// @Summary List asset members
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/members/ [get]
 func (a *AssetController) Members(c shared.Context) error {
 	members, err := services.FetchMembersOfAsset(c)
 	if err != nil {
@@ -536,6 +587,17 @@ func (a *AssetController) Members(c shared.Context) error {
 	return c.JSON(200, members)
 }
 
+// @Summary Invite members to asset
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body dtos.AssetInviteToAssetRequest true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/members/ [post]
 func (a *AssetController) InviteMembers(c shared.Context) error {
 	asset := shared.GetAsset(c)
 
@@ -576,6 +638,17 @@ func (a *AssetController) InviteMembers(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Remove member from asset
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param userID path string true "User ID"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/members/{userID}/ [delete]
 func (a *AssetController) RemoveMember(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	asset := shared.GetAsset(c)
@@ -602,6 +675,18 @@ func (a *AssetController) RemoveMember(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Change role of asset member
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param userID path string true "User ID"
+// @Param body body dtos.AssetChangeRoleRequest true "Request body"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/members/{userID}/ [put]
 func (a *AssetController) ChangeRole(c shared.Context) error {
 	reqCtx := c.Request().Context()
 	asset := shared.GetAsset(c)

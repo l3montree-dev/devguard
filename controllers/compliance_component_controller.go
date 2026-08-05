@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	_ "github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"gorm.io/gorm"
@@ -40,6 +41,13 @@ func NewComplianceComponentController(complianceComponentRepository shared.Compl
 	}
 }
 
+// @Summary List all compliance components
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} object
+// @Router /compliance-components/ [get]
 func (c *ComplianceComponentController) List(ctx shared.Context) error {
 	filter := shared.GetFilterQuery(ctx)
 
@@ -56,6 +64,14 @@ func (c *ComplianceComponentController) List(ctx shared.Context) error {
 	return ctx.JSON(200, result)
 }
 
+// @Summary Get compliance component details
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param complianceComponentID path string true "Compliance component ID"
+// @Success 200 {object} object
+// @Router /compliance-components/{complianceComponentID}/ [get]
 func (c *ComplianceComponentController) Details(ctx shared.Context) error {
 	id, err := uuid.Parse(ctx.Param("complianceComponentID"))
 	if err != nil {
@@ -75,6 +91,16 @@ type statementPayload struct {
 	Description          string `json:"description"`
 }
 
+// @Summary Create a compliance statement for a component
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param frameworkControlID path string true "Framework control ID"
+// @Param complianceComponentID path string true "Compliance component ID"
+// @Param body body statementPayload true "Request body"
+// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Router /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/ [post]
 func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) error {
 	frameworkControlID := ctx.Param("frameworkControlID")
 	if frameworkControlID == "" {
@@ -138,6 +164,15 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 	return ctx.JSON(201, transformer.ComplianceComponentImplementsControlStatementToDTO(*created))
 }
 
+// @Summary Update a compliance statement
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param statementID path string true "Statement ID"
+// @Param body body statementPayload true "Request body"
+// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [put]
 func (c *ComplianceComponentController) UpdateStatement(ctx shared.Context) error {
 	statementID, err := uuid.Parse(ctx.Param("statementID"))
 	if err != nil {
@@ -157,6 +192,14 @@ func (c *ComplianceComponentController) UpdateStatement(ctx shared.Context) erro
 	return ctx.JSON(200, transformer.ComplianceComponentImplementsControlStatementToDTO(*updated))
 }
 
+// @Summary Delete a compliance statement
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param statementID path string true "Statement ID"
+// @Success 200 {object} object
+// @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [delete]
 func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) error {
 	statementID, err := uuid.Parse(ctx.Param("statementID"))
 	if err != nil {

@@ -89,6 +89,19 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersion(ctx conte
 	return firstPartyVulns, nil
 }
 
+func (repository *firstPartyVulnerabilityRepository) GetOpenByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+	var firstPartyVulns = []models.FirstPartyVuln{}
+	err := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).
+		Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).
+		Where("first_party_vulnerabilities.asset_id = ?", assetID).
+		Where("first_party_vulnerabilities.state = ?", dtos.VulnStateOpen).
+		Find(&firstPartyVulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return firstPartyVulns, nil
+}
+
 func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
 
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)

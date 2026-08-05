@@ -242,6 +242,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 		new(controllers.DependencyVulnController),
 		new(controllers.CompliancePostureController),
 		new(controllers.ComplianceComponentController),
+		new(controllers.ComplianceController),
 		new(controllers.PolicyController),
 		new(controllers.ReleaseController),
 		new(controllers.StatisticsController),
@@ -289,7 +290,7 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 	NewDependencyVulnRouter(assetVersionRouter, new(controllers.DependencyVulnController), new(controllers.VulnEventController))
 	NewFirstPartyVulnRouter(assetVersionRouter, new(controllers.FirstPartyVulnController), new(controllers.VulnEventController))
 	NewLicenseRiskRouter(assetVersionRouter, new(controllers.LicenseRiskController))
-	NewVEXRuleRouter(assetRouter, new(controllers.VEXRuleController))
+	NewVEXRuleRouter(assetRouter, new(controllers.VEXRuleController), new(controllers.VexRuleRecommendationController))
 	NewArtifactRouter(assetVersionRouter, new(controllers.ArtifactController), new(controllers.AssetController), new(controllers.ExternalReferenceController), artifactRepo, assetRepo)
 	NewExternalReferenceRouter(assetRouter, new(controllers.ExternalReferenceController), assetRepo)
 
@@ -301,8 +302,8 @@ func buildSecurityTestServer(t *testing.T, ac *mocks.AccessControl) *echo.Echo {
 // IsPublicRequest=true, so DisallowPublicRequests blocks the request.
 func publicVisitorAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	ac.On("IsAllowedInAsset", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 	return ac
@@ -313,11 +314,11 @@ func publicVisitorAC() *mocks.AccessControl {
 // will pass (IsPublicRequest stays false), but write-level RBAC checks deny.
 func readOnlyMemberAC() *mocks.AccessControl {
 	ac := &mocks.AccessControl{}
-	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything).Maybe().Return(true, nil)
+	ac.On("HasAccess", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(true, nil)
 
 	// Org-level: allow read, deny everything else.
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
-	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything).Maybe().Return(true, nil)
+	ac.On("IsAllowed", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(false, nil)
 
 	// Project-level: allow read, deny write.
 	ac.On("IsAllowedInProject", mock.Anything, mock.Anything, mock.Anything, shared.ActionRead, mock.Anything, mock.Anything).Maybe().Return(true, nil)

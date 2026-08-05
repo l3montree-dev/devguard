@@ -32,6 +32,7 @@ type AuthSession interface {
 	// GetActorName returns a human-readable, type-disambiguated identifier for
 	// audit trails / actor stamps
 	GetActorName() string
+	IsAnonymousSession() bool
 }
 
 type session struct {
@@ -72,6 +73,10 @@ func (a session) GetActorName() string {
 	}
 }
 
+func (a session) IsAnonymousSession() bool {
+	return a.ownerID == NoSessionID
+}
+
 func NewSession(ownerID string, ownerType SessionActor, scopes []string, isInstanceAdmin bool) session {
 	return session{
 		ownerID:         ownerID,
@@ -81,6 +86,10 @@ func NewSession(ownerID string, ownerType SessionActor, scopes []string, isInsta
 	}
 }
 
-var NoSession session = session{
-	ownerID: "NO_SESSION",
+const NoSessionID = "NO_SESSION"
+
+var AnonymousSession session = session{
+	ownerID:   NoSessionID,
+	ownerType: SessionActorUser,
+	scopes:    []string{},
 }
