@@ -17,6 +17,7 @@ cryptography = "2026-08-05T00:00:00Z"
 constraints = [
     { name = "cryptography", specifier = "==50.0.0" },
     { name = "gitpython", specifier = "==3.1.57" },
+    { name = "h11", specifier = "==0.16.0" },
     { name = "requests", specifier = "==2.34.2" },
 ]
 
