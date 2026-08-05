@@ -358,6 +358,7 @@ func getJustificationAndMechanicalJustification(dependencyVuln models.Dependency
 				if v.MechanicalJustification != "" {
 					mechanicalJustification = v.MechanicalJustification
 				}
+				break
 			}
 		}
 	}
