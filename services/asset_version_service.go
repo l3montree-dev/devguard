@@ -165,18 +165,20 @@ func (s *assetVersionService) BuildOpenVeX(ctx context.Context, tx *gorm.DB, ass
 
 	appPurl := fmt.Sprintf("pkg:oci/%s/%s@%s", organizationSlug, asset.Slug, assetVersion.Slug)
 	for _, dependencyVuln := range dependencyVulns {
+		justification, mechanicalJustification := getJustificationAndMechanicalJustification(dependencyVuln)
 		if dependencyVuln.CVE == nil {
 			continue
 		}
 		statement := vex.Statement{
 			ID:              dependencyVuln.GetCVE().CVE,
 			Status:          dependencyVulnToOpenVexStatus(dependencyVuln),
-			ImpactStatement: utils.OrDefault(getJustification(dependencyVuln), ""),
+			ImpactStatement: utils.OrDefault(justification, ""),
 			Vulnerability: vex.Vulnerability{
 				ID:          fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.GetCVE().CVE),
 				Name:        vex.VulnerabilityID(dependencyVuln.GetCVE().CVE),
 				Description: dependencyVuln.GetCVE().Description,
 			},
+			Justification: vex.Justification(mechanicalJustification),
 			Products: []vex.Product{{
 				Component: vex.Component{
 					ID: appPurl,
@@ -268,7 +270,7 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 			vuln.Analysis.Response = &[]cdx.ImpactAnalysisResponse{response}
 		}
 
-		justification := getJustification(dependencyVuln)
+		justification, _ := getJustificationAndMechanicalJustification(dependencyVuln)
 		if justification != nil {
 			vuln.Analysis.Detail = *justification
 		} else if response == cdx.IARUpdate {
@@ -341,17 +343,26 @@ func dependencyVulnStateToImpactAnalysisState(state dtos.VulnState) cdx.ImpactAn
 	}
 }
 
-func getJustification(dependencyVuln models.DependencyVuln) *string {
+func getJustificationAndMechanicalJustification(dependencyVuln models.DependencyVuln) (*string, dtos.MechanicalJustificationType) {
+	var justification *string
+	var mechanicalJustification dtos.MechanicalJustificationType
 	// check if we have any event
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
 		for _, v := range slices.Backward(dependencyVuln.Events) {
-			if v.Type != dtos.EventTypeRawRiskAssessmentUpdated && v.Type != dtos.EventTypeComment && v.Justification != nil {
-				return v.Justification
+			if v.Type != dtos.EventTypeRawRiskAssessmentUpdated && v.Type != dtos.EventTypeComment {
+				if v.Justification != nil {
+					justification = v.Justification
+				}
+				if v.MechanicalJustification != "" {
+					mechanicalJustification = v.MechanicalJustification
+				}
+				break
 			}
 		}
 	}
-	return nil
+
+	return justification, mechanicalJustification
 }
 
 func dependencyVulnStateToResponseStatus(state dtos.VulnState) cdx.ImpactAnalysisResponse {
