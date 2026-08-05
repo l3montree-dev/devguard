@@ -1428,7 +1428,8 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 func RemoveInformationSourcePrefixIfExists(origin string) (InfoSourceType, string) {
 	if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceSBOM)); ok {
-		return InfoSourceSBOM, after
+		// cut any @ artifact suffix
+		return InfoSourceSBOM, strings.Split(after, "@")[0]
 	}
 
 	return "", origin
