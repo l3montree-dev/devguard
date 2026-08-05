@@ -189,9 +189,11 @@ func (repository *dependencyVulnRepository) FindByCVEAndComponentPurl(ctx contex
 func dependencyVulnSortSQL(s shared.SortQuery) string {
 	switch s.Field {
 	case "max_risk":
-		s.Field = "raw_risk_assessment"
+		s.Field = "dependency_vulns.raw_risk_assessment"
 	case "max_cvss":
 		s.Field = "CVE.cvss"
+	default:
+		s.Field = "dependency_vulns.raw_risk_assessment"
 	}
 	return s.SQL()
 }
