@@ -1659,7 +1659,7 @@ func InvalidSBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID stri
 	if rootRef != "" {
 		if isArtifactRootComponent(rootComponent, artifactName) {
 			for _, child := range depMap[rootRef] {
-				g.AddEdge(artifactID, child)
+				g.AddEdge(infoID, child)
 			}
 		} else {
 			g.AddEdge(infoID, rootRef)
