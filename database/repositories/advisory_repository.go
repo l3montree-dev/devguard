@@ -65,6 +65,14 @@ func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *go
 	db := advisoryRepository.GetDB(ctx, tx)
 
 	return db.Transaction(func(tx *gorm.DB) error {
+		// Enforce tenant/ownership scope (mirrors ReadAdvisory) before mutating by ID.
+		if err := withOwnershipScope(ctx, tx.Model(&models.Advisory{}), models.Advisory{}).
+			Where("id = ?", id).
+			Select("id").
+			First(&models.Advisory{}).Error; err != nil {
+			return err
+		}
+
 		if err := tx.Model(advisory).Association("AffectedPackages").Replace(advisory.AffectedPackages); err != nil {
 			return err
 		}
