@@ -21,25 +21,25 @@ import (
 )
 
 const (
-	VisibilityDraft     = "draft"
-	VisibilityPublic    = "public"
-	VisibilityWithdrawn = "withdrawn"
+	StateDraft     = "draft"
+	StatePublic    = "public"
+	StateWithdrawn = "withdrawn"
 )
 
 var validTransitions = map[string][]string{
-	VisibilityPublic:    {VisibilityDraft},
-	VisibilityWithdrawn: {VisibilityPublic},
+	StatePublic:    {StateDraft},
+	StateWithdrawn: {StatePublic},
 }
 
-func CheckStateTransition(currentVisibility string, newVisibility string) error {
-	if states, ok := validTransitions[newVisibility]; ok && slices.Contains(states, currentVisibility) {
+func CheckStateTransition(currentState string, newState string) error {
+	if states, ok := validTransitions[newState]; ok && slices.Contains(states, currentState) {
 		return nil
 	}
 	return fmt.Errorf("invalid state transfer")
 }
 
-func CanDelete(currentVisibility string) error {
-	if currentVisibility == VisibilityDraft {
+func CanDelete(currentState string) error {
+	if currentState == StateDraft {
 		return nil
 	}
 	return fmt.Errorf("advisory can not be deleted")

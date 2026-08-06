@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 )
@@ -30,26 +31,48 @@ func (s *AdvisoryService) ReadAll(ctx context.Context, tx shared.DB, assetID uui
 	return s.advisoryRepository.ReadAll(ctx, tx, assetID, filter, pagnation)
 }
 
-func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id int64) (models.Advisory, error) {
+func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Advisory, error) {
 	return s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 }
 
-func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory, currentVisibility string) error {
-	if currentVisibility != advisory.Visibility {
-		if err := statemachine.CheckStateTransition(currentVisibility, advisory.Visibility); err != nil {
-			return fmt.Errorf("invalid state change from %q to %q: %w", currentVisibility, advisory.Visibility, err)
+func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory, currentState string) error {
+	if currentState != advisory.State {
+		if err := statemachine.CheckStateTransition(currentState, advisory.State); err != nil {
+			return fmt.Errorf("invalid state change from %q to %q: %w", currentState, advisory.State, err)
 		}
 	}
 	return s.advisoryRepository.Update(ctx, tx, id, advisory)
 }
 
-func (s *AdvisoryService) Delete(ctx context.Context, tx shared.DB, id int64) error {
+func (s *AdvisoryService) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	advisory, err := s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 	if err != nil {
 		return err
 	}
-	if err := statemachine.CanDelete(advisory.Visibility); err != nil {
+	if err := statemachine.CanDelete(advisory.State); err != nil {
 		return err
 	}
 	return s.advisoryRepository.Delete(ctx, tx, id)
+}
+
+func (s *AdvisoryService) CreateVulnEventAndApply(ctx context.Context, tx shared.DB, userID string, advisory *models.Advisory, vulnEventType dtos.VulnEventType, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
+	var ev models.VulnEvent
+	switch vulnEventType {
+	case dtos.EventTypeCreated:
+		ev = models.NewCreatedSecurityAdvisoryEvent(advisory.ID, dtos.VulnTypeSecurityAdvisory, userID, false, userAgent)
+	case dtos.EventTypeComment:
+		ev = models.NewCommentEvent(advisory.ID, dtos.VulnTypeSecurityAdvisory, userID, justification, false, userAgent)
+	case dtos.EventTypePublish:
+		ev = models.NewPublishedSecurityAdvisoryEvent(advisory.ID, dtos.VulnTypeSecurityAdvisory, userID, false, userAgent)
+	case dtos.EventTypeWithdraw:
+		ev = models.NewWithdrawnSecurityAdvisoryEvent(advisory.ID, dtos.VulnTypeSecurityAdvisory, userID, false, userAgent)
+	}
+
+	// Apply the event to the original vuln
+	err := s.advisoryRepository.ApplyAndSave(ctx, tx, advisory, &ev)
+	if err != nil {
+		return ev, err
+	}
+
+	return ev, nil
 }

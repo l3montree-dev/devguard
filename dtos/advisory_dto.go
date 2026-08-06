@@ -32,24 +32,24 @@ type AdvisoryUpdate struct {
 	Severity         *string           `json:"severity"`
 	VectorString     *string           `json:"vectorString"`
 	AssetID          *uuid.UUID        `json:"assetID"`
-	Visibility       *string           `json:"visibility"`
+	State            *string           `json:"state"`
 }
 
 type AdvisoryDTO struct {
-	ID               int64             `json:"id"`
+	ID               uuid.UUID         `json:"id"`
 	Title            string            `json:"title" validate:"required"`
 	Description      string            `json:"description" validate:"required"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
 	Severity         string            `json:"severity"`
 	VectorString     string            `json:"vectorString"`
 	AssetID          uuid.UUID         `json:"assetID"`
-	Visibility       string            `json:"visibility"`
+	State            string            `json:"state"`
 }
 
 type AffectedPackage struct {
-	ID               uuid.UUID `json:"id,omitempty"`
-	Ecosystem        string    `json:"ecosystem"`
-	PackageName      string    `json:"packageName"`
-	SemverIntroduced *string   `json:"semverStart"`
-	SemverFixed      *string   `json:"semverEnd"`
+	ID                uuid.UUID `json:"id,omitempty"`
+	Ecosystem         string    `json:"ecosystem"`
+	PackageName       string    `json:"packageName"`
+	VersionIntroduced *string   `json:"versionStart"`
+	VersionFixed      *string   `json:"versionEnd"`
 }
