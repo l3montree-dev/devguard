@@ -756,63 +756,160 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
 	mut := sync.Mutex{}
 	wg := sync.WaitGroup{}
+	recordInvalid := func(url string, format dtos.ExternalReferenceType, reason string) {
+		slog.Warn("could not fetch vex from upstream", "url", url, "reason", reason, "assetID", assetID)
+		mut.Lock()
+		defer mut.Unlock()
+		invalid = append(invalid, models.ExternalReference{
+			AssetID: assetID,
+			URL:     url,
+			Type:    format,
+			Error:   new(reason),
+		})
+	}
+	recordValid := func(url string, format dtos.ExternalReferenceType, vexRules []models.UpstreamVEXRule) {
+		mut.Lock()
+		defer mut.Unlock()
+		rules = append(rules, transformer.AllUpstreamVEXRulesToVEXRules(vexRules, "system", assetID)...)
+		valid = append(valid, models.ExternalReference{
+			URL:     url,
+			AssetID: assetID,
+			Type:    format,
+		})
+	}
+
 	for _, url := range upstreamURLs {
 		// fetch the url and sniff the type
 		wg.Go(func() {
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{
-					AssetID: assetID,
-					URL:     url,
-					Type:    dtos.ExternalReferenceTypeUnknown,
-					Error:   new(fmt.Sprintf("could not create request for url: %v", err)),
-				})
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not create request for url: %v", err))
 				return
 			}
 
 			resp, err := utils.EgressClient.Do(req)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{})
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not fetch url: %v", err))
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not fetch url, status code: %d", resp.StatusCode))
 				return
 			}
 
-			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{
-					AssetID: assetID,
-					URL:     url,
-					Type:    dtos.ExternalReferenceTypeUnknown,
-					Error:   new(fmt.Sprintf("could not read response body: %v", err)),
-				})
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not read response body: %v", err))
 				return
 			}
 			vexRules, format, err := s.VexRulesFromDocument(body, url)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{
-					Type:    format,
-					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
-					AssetID: assetID,
-					URL:     url,
-				})
+				recordInvalid(url, format, fmt.Sprintf("could not parse vex file from url: %v", err))
 				return
 			}
-			mut.Lock()
-			rules = append(rules, transformer.AllUpstreamVEXRulesToVEXRules(vexRules, "system", assetID)...)
-			valid = append(valid, models.ExternalReference{
-				URL:     url,
-				AssetID: assetID,
-				Type:    format,
-			})
-			mut.Unlock()
+			recordValid(url, format, vexRules)
 		})
 	}
 	wg.Wait()
 	return rules, valid, invalid
+}
+
+// SyncAssetUpstreamVEXSources fetches every VEX external reference registered for the asset,
+// converts the documents into VEX rules and ingests them. The fetch outcome (detected format or
+// error) is persisted per reference so the UI can show why a source did not yield any rules.
+func (s *scanService) SyncAssetUpstreamVEXSources(ctx context.Context, tx shared.DB, asset models.Asset) error {
+	ctx, span := servicesTracer.Start(ctx, "scanService.SyncAssetUpstreamVEXSources")
+	defer span.End()
+
+	refs, err := s.externalReferenceRepository.FindByAssetID(ctx, tx, asset.ID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("could not fetch external references for asset: %w", err)
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+
+	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, utils.Map(refs, func(el models.ExternalReference) string {
+		return el.URL
+	}))
+
+	span.SetAttributes(
+		attribute.Int("externalReferences.valid", len(valid)),
+		attribute.Int("externalReferences.invalid", len(invalid)),
+		attribute.Int("vexRules.fetched", len(rules)),
+	)
+
+	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
+		slog.Error("could not store vex external reference", "err", err, "assetID", asset.ID)
+	}
+
+	return s.IngestVEXRules(ctx, tx, asset, rules)
+}
+
+// IngestVEXRules diffs the given rules against the rules already stored for the asset - per VEX
+// source, so a rule that vanished from one source does not get removed just because another
+// source never contained it - and applies the newly added rules to the open vulnerabilities of
+// the asset.
+func (s *scanService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
+	if len(rules) == 0 {
+		return nil
+	}
+
+	SetVEXRulesEnabledFromParanoidMode(rules, asset.ParanoidMode)
+
+	existingRules, err := s.vexRuleRepository.FindByAssetID(ctx, tx, asset.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch existing VEX rules: %w", err)
+	}
+
+	existingByGroup := GroupRulesByAssetAndSource(existingRules)
+
+	var rulesToAdd, rulesToRemove []models.VEXRule
+	for key, group := range GroupRulesByAssetAndSource(rules) {
+		add, remove := DiffVEXRulesForSource(group, existingByGroup[key])
+		rulesToAdd = append(rulesToAdd, add...)
+		rulesToRemove = append(rulesToRemove, remove...)
+	}
+
+	if len(rulesToRemove) > 0 {
+		if err := s.vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {
+			return fmt.Errorf("failed to remove old VEX rules: %w", err)
+		}
+	}
+
+	if len(rulesToAdd) == 0 {
+		return nil
+	}
+
+	if err := s.vexRuleRepository.UpsertBatch(ctx, tx, rulesToAdd); err != nil {
+		return fmt.Errorf("failed to add new VEX rules: %w", err)
+	}
+
+	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
+	}
+
+	updatedVulns, events, err := ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)
+	if err != nil {
+		return fmt.Errorf("failed to apply VEX rules to vulns: %w", err)
+	}
+	if len(updatedVulns) == 0 {
+		return nil
+	}
+
+	if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
+		return fmt.Errorf("failed to save updated vulns: %w", err)
+	}
+	if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
+		return fmt.Errorf("failed to save events: %w", err)
+	}
+
+	return nil
 }
 
 // SyncArtifactUpstreamSBOMSources orchestrates the complete security lifecycle for an artifact:
