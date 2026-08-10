@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -76,7 +77,7 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 	}
 
 	// we need to get the amount of dependency vulns, this rule applies to, so we can set the AppliesToAmountOfDependencyVulns field in the recommendation DTO
-	allOpenVulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, vuln.AssetID)
+	allOpenVulns, err := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, vuln.AssetID, -1))
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
@@ -142,7 +143,7 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 	asset := shared.GetAsset(ctx)
 	span.SetAttributes(attribute.String("asset.id", asset.ID.String()))
 
-	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, asset.ID)
+	vulns, err := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, asset.ID, -1))
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
