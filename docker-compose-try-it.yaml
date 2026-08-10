@@ -188,7 +188,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:v1.12.2
+    image: ghcr.io/l3montree-dev/devguard-web:v1.12.3
     read_only: true
     tmpfs:
       - /tmp:size=100M
