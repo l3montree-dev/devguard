@@ -473,6 +473,30 @@ func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, e
 	return false, ""
 }
 
+func (d *DependencyProxyController) checkMaliciousPackageWithoutVersion(ctx context.Context, eco ecosystem, path string) (bool, string) {
+	packageName, _ := eco.parsePackage(path)
+	if packageName == "" {
+		return false, ""
+	}
+
+	slog.Debug("Checking package against malicious database", "ecosystem", eco.name(), "package", packageName)
+	isMalicious, entry, err := d.maliciousChecker.IsPackageMalicious(ctx, eco.name(), packageName)
+	if err != nil {
+		slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
+		return false, ""
+	}
+
+	if isMalicious {
+		reason := fmt.Sprintf("Package %s is flagged as malicious (ID: %s)", packageName, entry.ID)
+		if entry.Summary != "" {
+			reason += ": " + entry.Summary
+		}
+		return true, reason
+	}
+
+	return false, ""
+}
+
 func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco ecosystem, path, reason string) error {
 	span := trace.SpanFromContext(c.Request().Context())
 	span.SetAttributes(

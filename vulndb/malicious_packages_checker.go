@@ -98,6 +98,16 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 	return packages, affectedComponents, osvEntries
 }
 
+func (c *MaliciousPackageChecker) IsPackageMalicious(ctx context.Context, ecosystem, packageName string) (bool, *dtos.OSV, error) {
+	if packageName == "" {
+		return false, nil, fmt.Errorf("packageName is required to check if a package is malicious")
+	}
+
+	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+
+	return c.lookup(ctx, purl)
+}
+
 func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {
 
 	if version == "" {
@@ -107,6 +117,10 @@ func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, pa
 	// construct purl for querying, the database uses purl matching to filter by version ranges, so we need to construct a valid purl here
 	purl := fmt.Sprintf("pkg:%s/%s@%s", strings.ToLower(ecosystem), strings.ToLower(packageName), version)
 
+	return c.lookup(ctx, purl)
+}
+
+func (c *MaliciousPackageChecker) lookup(ctx context.Context, purl string) (bool, *dtos.OSV, error) {
 	// Parse to normalize
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {

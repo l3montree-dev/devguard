@@ -293,6 +293,14 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
+	if blocked, reason := d.checkMaliciousPackageWithoutVersion(ctx, npm, requestPath); blocked {
+		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
+		if err := os.Remove(cachePath); err == nil {
+			slog.Info("Removed malicious package from cache", "path", cachePath)
+		}
+		return d.blockMaliciousPackage(c, npm, requestPath, reason)
+	}
+
 	// Fetch from upstream — we need the metadata to resolve the version before we can check rules.
 	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, npmRegistry, requestPath, c.Request().Header, nil)
 	if err != nil {

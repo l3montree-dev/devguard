@@ -247,6 +247,7 @@ type AffectedComponentRepository interface {
 
 type MaliciousPackageChecker interface {
 	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
+	IsPackageMalicious(ctx context.Context, ecosystem, packageName string) (bool, *dtos.OSV, error)
 }
 
 type ComponentRepository interface {
