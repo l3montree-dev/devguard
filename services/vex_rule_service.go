@@ -231,6 +231,18 @@ func GroupRulesByAssetAndSource(rules []models.VEXRule) map[assetAndSource][]mod
 	return grouped
 }
 
+func DiffVEXRules(newRules []models.VEXRule, existingRules []models.VEXRule) (rulesToAdd []models.VEXRule, rulesToRemove []models.VEXRule) {
+	existingByGroup := GroupRulesByAssetAndSource(existingRules)
+
+	for key, group := range GroupRulesByAssetAndSource(newRules) {
+		add, remove := DiffVEXRulesForSource(group, existingByGroup[key])
+		rulesToAdd = append(rulesToAdd, add...)
+		rulesToRemove = append(rulesToRemove, remove...)
+	}
+
+	return rulesToAdd, rulesToRemove
+}
+
 func DiffVEXRulesForSource(newRules []models.VEXRule, existingRules []models.VEXRule) (rulesToAdd []models.VEXRule, rulesToRemove []models.VEXRule) {
 	if len(newRules) == 0 {
 		return nil, nil

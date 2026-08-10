@@ -69,7 +69,7 @@ func TestIngestVexFromExternalReferences(t *testing.T) {
 			return len(urls) == 1 && urls[0] == vexURL
 		})).Return(fetchedRules, validRefs, nil)
 
-		vexRuleRepositoryMock.EXPECT().FindByAssetAndVexSource(mock.Anything, mock.Anything, asset.ID, "example-source").Return(nil, nil)
+		vexRuleRepositoryMock.EXPECT().FindByAssetID(mock.Anything, mock.Anything, asset.ID).Return(nil, nil)
 		vexRuleRepositoryMock.EXPECT().UpsertBatch(mock.Anything, mock.Anything, fetchedRules).Return(nil)
 		dependencyVulnRepositoryMock.EXPECT().GetAllOpenVulnsByAssetID(mock.Anything, mock.Anything, asset.ID).Return(nil, nil)
 

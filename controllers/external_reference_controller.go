@@ -35,6 +35,9 @@ type ExternalReferenceController struct {
 	assetVersionRepository      shared.AssetVersionRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	artifactRepository          shared.ArtifactRepository
+	vexRuleRepository           shared.VEXRuleRepository
+	dependencyVulnRepository    shared.DependencyVulnRepository
+	vulnEventRepository         shared.VulnEventRepository
 	dependencyVulnService       shared.DependencyVulnService
 	statisticsService           shared.StatisticsService
 	utils.FireAndForgetSynchronizer
@@ -45,6 +48,9 @@ func NewExternalReferenceController(
 	assetVersionRepository shared.AssetVersionRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	artifactRepository shared.ArtifactRepository,
+	vexRuleRepository shared.VEXRuleRepository,
+	dependencyVulnRepository shared.DependencyVulnRepository,
+	vulnEventRepository shared.VulnEventRepository,
 	dependencyVulnService shared.DependencyVulnService,
 	statisticsService shared.StatisticsService,
 	synchronizer utils.FireAndForgetSynchronizer,
@@ -54,6 +60,9 @@ func NewExternalReferenceController(
 		assetVersionRepository:      assetVersionRepository,
 		externalReferenceRepository: externalReferenceRepository,
 		artifactRepository:          artifactRepository,
+		vexRuleRepository:           vexRuleRepository,
+		dependencyVulnRepository:    dependencyVulnRepository,
+		vulnEventRepository:         vulnEventRepository,
 		dependencyVulnService:       dependencyVulnService,
 		statisticsService:           statisticsService,
 		FireAndForgetSynchronizer:   synchronizer,
@@ -169,10 +178,27 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 // syncVEXSources fetches all VEX external references of the asset and ingests the resulting rules
 // in its own transaction.
 func (c *ExternalReferenceController) syncVEXSources(reqCtx context.Context, asset models.Asset) error {
+	refs, err := c.externalReferenceRepository.FindByAssetID(reqCtx, nil, asset.ID)
+	if err != nil {
+		slog.Error("could not fetch external references for asset", "err", err, "assetID", asset.ID)
+		return echo.NewHTTPError(500, "could not fetch external references for asset").WithInternal(err)
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+
+	rules, valid, invalid := c.FetchVexFromUpstream(reqCtx, asset.ID, utils.Map(refs, func(el models.ExternalReference) string {
+		return el.URL
+	}))
+
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	if err := c.SyncAssetUpstreamVEXSources(reqCtx, tx, asset); err != nil {
+	if err := c.externalReferenceRepository.SaveBatch(reqCtx, tx, append(valid, invalid...)); err != nil {
+		slog.Error("could not store vex external reference", "err", err, "assetID", asset.ID)
+	}
+
+	if err := ingestVEXRules(reqCtx, tx, c.vexRuleRepository, c.dependencyVulnRepository, c.vulnEventRepository, asset, rules); err != nil {
 		tx.Rollback()
 		slog.Error("could not sync vex external references", "err", err, "assetID", asset.ID)
 		return echo.NewHTTPError(500, "could not sync vex external references").WithInternal(err)

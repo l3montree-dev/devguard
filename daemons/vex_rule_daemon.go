@@ -30,15 +30,7 @@ func (runner *DaemonRunner) ingestVEXRules(ctx context.Context, tx shared.DB, as
 		return errors.Wrap(err, "failed to fetch existing VEX rules")
 	}
 
-	newByGroup := services.GroupRulesByAssetAndSource(newRules)
-	existingByGroup := services.GroupRulesByAssetAndSource(existingRules)
-
-	var rulesToAdd, rulesToRemove []models.VEXRule
-	for key, group := range newByGroup {
-		add, remove := services.DiffVEXRulesForSource(group, existingByGroup[key])
-		rulesToAdd = append(rulesToAdd, add...)
-		rulesToRemove = append(rulesToRemove, remove...)
-	}
+	rulesToAdd, rulesToRemove := services.DiffVEXRules(newRules, existingRules)
 
 	if len(rulesToRemove) > 0 {
 		if err := runner.vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {

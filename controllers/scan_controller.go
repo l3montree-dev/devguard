@@ -30,7 +30,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
@@ -132,7 +131,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
 		}
 
-		if err := s.ingestVEXRules(reqCtx, tx, asset, rules); err != nil {
+		if err := ingestVEXRules(reqCtx, tx, s.vexRuleRepository, s.dependencyVulnRepository, s.vulnEventRepository, asset, rules); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest uploaded vex", "err", err)
 			span.RecordError(err)
@@ -154,7 +153,7 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 			span.SetStatus(codes.Error, err.Error())
 			return echo.NewHTTPError(400, fmt.Sprintf("could not parse vex document: %v", err.Error())).WithInternal(err)
 		}
-		if err := s.ingestVEXRules(reqCtx, tx, asset, rules); err != nil {
+		if err := ingestVEXRules(reqCtx, tx, s.vexRuleRepository, s.dependencyVulnRepository, s.vulnEventRepository, asset, rules); err != nil {
 			tx.Rollback()
 			slog.Error("could not ingest vex rules", "err", err, "format", format)
 			span.RecordError(err)
@@ -166,59 +165,6 @@ func (s ScanController) UploadVEX(ctx shared.Context) error {
 	tx.Commit()
 
 	return ctx.JSON(200, nil)
-}
-
-func (s *ScanController) ingestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
-	if len(rules) == 0 {
-		return nil
-	}
-
-	services.SetVEXRulesEnabledFromParanoidMode(rules, asset.ParanoidMode)
-
-	vexSource := rules[0].VexSource
-	existingRules, err := s.vexRuleRepository.FindByAssetAndVexSource(ctx, tx, asset.ID, vexSource)
-	if err != nil {
-		return fmt.Errorf("failed to fetch existing VEX rules: %w", err)
-	}
-
-	rulesToAdd, rulesToRemove := services.DiffVEXRulesForSource(rules, existingRules)
-
-	if len(rulesToAdd) > 0 {
-		if err := s.vexRuleRepository.UpsertBatch(ctx, tx, rulesToAdd); err != nil {
-			return fmt.Errorf("failed to add new VEX rules: %w", err)
-		}
-	}
-	if len(rulesToRemove) > 0 {
-		if err := s.vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {
-			return fmt.Errorf("failed to remove old VEX rules: %w", err)
-		}
-	}
-
-	if len(rulesToAdd) == 0 {
-		return nil
-	}
-
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID)
-	if err != nil {
-		return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
-	}
-
-	updatedVulns, events, err := services.ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)
-	if err != nil {
-		return fmt.Errorf("failed to apply VEX rules to vulns: %w", err)
-	}
-	if len(updatedVulns) == 0 {
-		return nil
-	}
-
-	if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
-		return fmt.Errorf("failed to save updated vulns: %w", err)
-	}
-	if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
-		return fmt.Errorf("failed to save events: %w", err)
-	}
-
-	return nil
 }
 
 func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cdx.BOM, asset models.Asset) error {
@@ -245,7 +191,7 @@ func (s *ScanController) ingestVexFromExternalReferences(ctx context.Context, tx
 		return nil
 	}
 
-	return s.ingestVEXRules(ctx, tx, asset, rules)
+	return ingestVEXRules(ctx, tx, s.vexRuleRepository, s.dependencyVulnRepository, s.vulnEventRepository, asset, rules)
 }
 
 func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (opened, closed, newState []models.DependencyVuln, assetVersion models.AssetVersion, err error) {
