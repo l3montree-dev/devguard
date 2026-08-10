@@ -54,6 +54,19 @@ type candidate struct {
 	components []models.AffectedComponent
 }
 
+// helper function to unify candidate construction on all occurrences
+func newCandidate(purl packageurl.PackageURL) *candidate {
+	matchCtx := normalize.ParsePurlForMatching(purl)
+	return &candidate{
+		purl:     purl,
+		matchCtx: matchCtx,
+		shape: queryShape{
+			interpretation:   matchCtx.HowToInterpretVersionString,
+			ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace),
+		},
+	}
+}
+
 func (c *candidate) lookupKey() string {
 	return c.matchCtx.SearchPurl + "@" + c.matchCtx.NormalizedVersion
 }
@@ -103,8 +116,9 @@ var cache = AffectedComponentsCache{}
 const initialCacheSize = 10_000
 
 type AffectedComponentsCache struct {
-	mutex sync.RWMutex
-	cache map[string][]models.AffectedComponent
+	mutex      sync.RWMutex
+	generation int
+	cache      map[string][]models.AffectedComponent
 }
 
 // wrapper for flushing the cache externally
@@ -115,7 +129,14 @@ func FlushCache() {
 func (acc *AffectedComponentsCache) Flush() {
 	acc.mutex.Lock()
 	defer acc.mutex.Unlock()
+	acc.generation++
 	acc.cache = nil
+}
+
+func (acc *AffectedComponentsCache) GetCurrentGeneration() int {
+	acc.mutex.RLock()
+	defer acc.mutex.RUnlock()
+	return acc.generation
 }
 
 func (acc *AffectedComponentsCache) GetByCandidate(candidate *candidate) ([]models.AffectedComponent, bool) {
@@ -129,9 +150,15 @@ func (acc *AffectedComponentsCache) GetByCandidate(candidate *candidate) ([]mode
 }
 
 // fills the cache with
-func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate) {
+func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate, candidatesGeneration int) {
 	acc.mutex.Lock()
 	defer acc.mutex.Unlock()
+
+	// avoid cache poisoning with outdated values
+	if candidatesGeneration != acc.generation {
+		return
+	}
+
 	if acc.cache == nil {
 		acc.cache = make(map[string][]models.AffectedComponent, initialCacheSize)
 	}
@@ -152,30 +179,24 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	byShape := make(map[queryShape][]*candidate)
 	cacheUsage := 0
 
+	// get the current generation of the cache to ensure consistency
+	generationOfValues := cache.GetCurrentGeneration()
+
 	for _, purl := range purls {
-		matchCtx := normalize.ParsePurlForMatching(purl)
-		if matchCtx.HowToInterpretVersionString == normalize.EmptyVersion {
+		c := newCandidate(purl)
+		if c.matchCtx.HowToInterpretVersionString == normalize.EmptyVersion {
 			continue // No version = no results
 		}
 
-		c := candidate{
-			purl:     purl,
-			matchCtx: matchCtx,
-			shape: queryShape{
-				interpretation:   matchCtx.HowToInterpretVersionString,
-				ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace),
-			},
-		}
-
-		ac, ok := cache.GetByCandidate(&c) // read from cache if possible
+		ac, ok := cache.GetByCandidate(c) // read from cache if possible
 		if ok {
 			cacheUsage++
 			c.components = ac
 		}
 
-		candidates = append(candidates, &c)
+		candidates = append(candidates, c)
 		if !ok {
-			byShape[c.shape] = append(byShape[c.shape], &c)
+			byShape[c.shape] = append(byShape[c.shape], c)
 		}
 	}
 
@@ -196,7 +217,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	}
 
 	// only cache after every shape is finished
-	cache.SetForCandidates(candidates)
+	cache.SetForCandidates(candidates, generationOfValues)
 
 	slog.Info("finished purl matching", "cache usage", float32(cacheUsage)/float32(len(purls)))
 	// the candidates are in request order, whereas byShape is not
