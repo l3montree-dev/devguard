@@ -396,8 +396,8 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		a.FireAndForget(func() {
 			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(linkedCtx, nil, asset.ID)
 			if err != nil {
-				slog.Error("could not get default asset version", "err", err)
-				return
+				// we don't want to return an error here, because we still want to update the asset in the database
+				slog.Warn("could not get default asset version", "err", err)
 			}
 
 			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion, &userAgent); err != nil {
