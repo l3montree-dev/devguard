@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -49,11 +50,17 @@ var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer
 type candidate struct {
 	purl       packageurl.PackageURL
 	matchCtx   *normalize.PurlMatchContext
+	shape      queryShape
 	components []models.AffectedComponent
 }
 
 func (c *candidate) lookupKey() string {
 	return c.matchCtx.SearchPurl + "@" + c.matchCtx.NormalizedVersion
+}
+
+// builds the key for the cache from a candidate
+func (c *candidate) cacheKey() string {
+	return c.lookupKey() + "|" + string(c.shape.interpretation) + "|" + c.shape.ecosystemPattern
 }
 
 // queryShape identifies a set of candidates that can be matched by a single
@@ -91,6 +98,48 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.P
 	return vulns, nil
 }
 
+var cache = AffectedComponentsCache{}
+
+const initialCacheSize = 10_000
+
+type AffectedComponentsCache struct {
+	mutex sync.RWMutex
+	cache map[string][]models.AffectedComponent
+}
+
+// wrapper for flushing the cache externally
+func FlushCache() {
+	cache.Flush()
+}
+
+func (acc *AffectedComponentsCache) Flush() {
+	acc.mutex.Lock()
+	defer acc.mutex.Unlock()
+	acc.cache = nil
+}
+
+func (acc *AffectedComponentsCache) GetByCandidate(candidate *candidate) ([]models.AffectedComponent, bool) {
+	acc.mutex.RLock()
+	defer acc.mutex.RUnlock()
+	if acc.cache == nil {
+		return nil, false
+	}
+	components, ok := acc.cache[candidate.cacheKey()]
+	return components, ok
+}
+
+// fills the cache with
+func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate) {
+	acc.mutex.Lock()
+	defer acc.mutex.Unlock()
+	if acc.cache == nil {
+		acc.cache = make(map[string][]models.AffectedComponent, initialCacheSize)
+	}
+	for i := range candidates {
+		acc.cache[candidates[i].cacheKey()] = candidates[i].components
+	}
+}
+
 // resolveCandidates looks up the affected components for every purl that can
 // match anything at all, in the order the purls were requested.
 //
@@ -101,6 +150,7 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.P
 func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []packageurl.PackageURL) ([]*candidate, error) {
 	candidates := make([]*candidate, 0, len(purls))
 	byShape := make(map[queryShape][]*candidate)
+	cacheUsage := 0
 
 	for _, purl := range purls {
 		matchCtx := normalize.ParsePurlForMatching(purl)
@@ -108,16 +158,28 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 			continue // No version = no results
 		}
 
-		c := &candidate{purl: purl, matchCtx: matchCtx}
-		candidates = append(candidates, c)
-
-		shape := queryShape{
-			interpretation:   matchCtx.HowToInterpretVersionString,
-			ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace),
+		c := candidate{
+			purl:     purl,
+			matchCtx: matchCtx,
+			shape: queryShape{
+				interpretation:   matchCtx.HowToInterpretVersionString,
+				ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace),
+			},
 		}
-		byShape[shape] = append(byShape[shape], c)
+
+		ac, ok := cache.GetByCandidate(&c) // read from cache if possible
+		if ok {
+			cacheUsage++
+			c.components = ac
+		}
+
+		candidates = append(candidates, &c)
+		if !ok {
+			byShape[c.shape] = append(byShape[c.shape], &c)
+		}
 	}
 
+	// only non cached purls are now in the byShape map (if all were cached we skip the loop)
 	for shape, shapeCandidates := range byShape {
 		componentsByKey, err := comparer.matchAffectedComponents(ctx, shape, shapeCandidates)
 		if err != nil {
@@ -125,7 +187,6 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 		}
 		for _, c := range shapeCandidates {
 			c.components = componentsByKey[c.lookupKey()]
-
 			if shape.interpretation == normalize.EcosystemSpecificVersion {
 				// Ecosystem specific rules can only be expressed in Go, so the
 				// query returned every row for the package and we narrow it here.
@@ -134,6 +195,10 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 		}
 	}
 
+	// only cache after every shape is finished
+	cache.SetForCandidates(candidates)
+
+	slog.Info("finished purl matching", "cache usage", float32(cacheUsage)/float32(len(purls)))
 	// the candidates are in request order, whereas byShape is not
 	return candidates, nil
 }

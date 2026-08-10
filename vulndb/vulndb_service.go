@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -557,6 +558,9 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
+
+	// flush the purl comparer cache since it's values are now outdated
+	scan.FlushCache()
 
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
