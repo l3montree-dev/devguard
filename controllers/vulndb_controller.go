@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -179,9 +178,28 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
 	}
 
-	_, maliciousPackage, err := c.maliciousPackageChecker.IsMalicious(ctx.Request().Context(), purl.Type, fmt.Sprintf("%s/%s", purl.Namespace, purl.Name), purl.Version)
+	packageName := purl.Name
+	if purl.Namespace != "" {
+		packageName = purl.Namespace + "/" + purl.Name
+	}
+
+	maliciousComponents, err := c.maliciousPackageChecker.GetMaliciousComponents(ctx.Request().Context(), purl.Type, packageName)
 	if err != nil {
 		return echo.NewHTTPError(400, "failed to check if package is malicious").WithInternal(err)
+	}
+
+	var maliciousPackage *dtos.OSV
+	for _, comp := range maliciousComponents {
+		if !comp.AffectsAllVersions() && !vulndb.MatchesVersion(comp, purl.Version) {
+			continue
+		}
+		pkg, err := c.maliciousPackageChecker.GetMaliciousPackage(ctx.Request().Context(), comp.MaliciousPackageID)
+		if err != nil {
+			return echo.NewHTTPError(500, "failed to load malicious package metadata").WithInternal(err)
+		}
+		osv := pkg.ToOSV()
+		maliciousPackage = &osv
+		break
 	}
 
 	var componentDTO *dtos.ComponentDTO

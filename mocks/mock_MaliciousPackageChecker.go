@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/database/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,55 +38,48 @@ func (_m *MaliciousPackageChecker) EXPECT() *MaliciousPackageChecker_Expecter {
 	return &MaliciousPackageChecker_Expecter{mock: &_m.Mock}
 }
 
-// IsMalicious provides a mock function for the type MaliciousPackageChecker
-func (_mock *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem string, packageName string, version string) (bool, *dtos.OSV, error) {
-	ret := _mock.Called(ctx, ecosystem, packageName, version)
+// GetMaliciousComponents provides a mock function for the type MaliciousPackageChecker
+func (_mock *MaliciousPackageChecker) GetMaliciousComponents(ctx context.Context, ecosystem string, packageName string) ([]models.MaliciousAffectedComponent, error) {
+	ret := _mock.Called(ctx, ecosystem, packageName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for IsMalicious")
+		panic("no return value specified for GetMaliciousComponents")
 	}
 
-	var r0 bool
-	var r1 *dtos.OSV
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (bool, *dtos.OSV, error)); ok {
-		return returnFunc(ctx, ecosystem, packageName, version)
+	var r0 []models.MaliciousAffectedComponent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]models.MaliciousAffectedComponent, error)); ok {
+		return returnFunc(ctx, ecosystem, packageName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) bool); ok {
-		r0 = returnFunc(ctx, ecosystem, packageName, version)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []models.MaliciousAffectedComponent); ok {
+		r0 = returnFunc(ctx, ecosystem, packageName)
 	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) *dtos.OSV); ok {
-		r1 = returnFunc(ctx, ecosystem, packageName, version)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*dtos.OSV)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.MaliciousAffectedComponent)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, string) error); ok {
-		r2 = returnFunc(ctx, ecosystem, packageName, version)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, ecosystem, packageName)
 	} else {
-		r2 = ret.Error(2)
+		r1 = ret.Error(1)
 	}
-	return r0, r1, r2
+	return r0, r1
 }
 
-// MaliciousPackageChecker_IsMalicious_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsMalicious'
-type MaliciousPackageChecker_IsMalicious_Call struct {
+// MaliciousPackageChecker_GetMaliciousComponents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMaliciousComponents'
+type MaliciousPackageChecker_GetMaliciousComponents_Call struct {
 	*mock.Call
 }
 
-// IsMalicious is a helper method to define mock.On call
+// GetMaliciousComponents is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ecosystem string
 //   - packageName string
-//   - version string
-func (_e *MaliciousPackageChecker_Expecter) IsMalicious(ctx interface{}, ecosystem interface{}, packageName interface{}, version interface{}) *MaliciousPackageChecker_IsMalicious_Call {
-	return &MaliciousPackageChecker_IsMalicious_Call{Call: _e.mock.On("IsMalicious", ctx, ecosystem, packageName, version)}
+func (_e *MaliciousPackageChecker_Expecter) GetMaliciousComponents(ctx any, ecosystem any, packageName any) *MaliciousPackageChecker_GetMaliciousComponents_Call {
+	return &MaliciousPackageChecker_GetMaliciousComponents_Call{Call: _e.mock.On("GetMaliciousComponents", ctx, ecosystem, packageName)}
 }
 
-func (_c *MaliciousPackageChecker_IsMalicious_Call) Run(run func(ctx context.Context, ecosystem string, packageName string, version string)) *MaliciousPackageChecker_IsMalicious_Call {
+func (_c *MaliciousPackageChecker_GetMaliciousComponents_Call) Run(run func(ctx context.Context, ecosystem string, packageName string)) *MaliciousPackageChecker_GetMaliciousComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -100,78 +93,64 @@ func (_c *MaliciousPackageChecker_IsMalicious_Call) Run(run func(ctx context.Con
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *MaliciousPackageChecker_IsMalicious_Call) Return(b bool, oSV *dtos.OSV, err error) *MaliciousPackageChecker_IsMalicious_Call {
-	_c.Call.Return(b, oSV, err)
+func (_c *MaliciousPackageChecker_GetMaliciousComponents_Call) Return(maliciousAffectedComponents []models.MaliciousAffectedComponent, err error) *MaliciousPackageChecker_GetMaliciousComponents_Call {
+	_c.Call.Return(maliciousAffectedComponents, err)
 	return _c
 }
 
-func (_c *MaliciousPackageChecker_IsMalicious_Call) RunAndReturn(run func(ctx context.Context, ecosystem string, packageName string, version string) (bool, *dtos.OSV, error)) *MaliciousPackageChecker_IsMalicious_Call {
+func (_c *MaliciousPackageChecker_GetMaliciousComponents_Call) RunAndReturn(run func(ctx context.Context, ecosystem string, packageName string) ([]models.MaliciousAffectedComponent, error)) *MaliciousPackageChecker_GetMaliciousComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// IsPackageMalicious provides a mock function for the type MaliciousPackageChecker
-func (_mock *MaliciousPackageChecker) IsPackageMalicious(ctx context.Context, ecosystem string, packageName string) (bool, *dtos.OSV, error) {
-	ret := _mock.Called(ctx, ecosystem, packageName)
+// GetMaliciousPackage provides a mock function for the type MaliciousPackageChecker
+func (_mock *MaliciousPackageChecker) GetMaliciousPackage(ctx context.Context, id string) (models.MaliciousPackage, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for IsPackageMalicious")
+		panic("no return value specified for GetMaliciousPackage")
 	}
 
-	var r0 bool
-	var r1 *dtos.OSV
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (bool, *dtos.OSV, error)); ok {
-		return returnFunc(ctx, ecosystem, packageName)
+	var r0 models.MaliciousPackage
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (models.MaliciousPackage, error)); ok {
+		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) bool); ok {
-		r0 = returnFunc(ctx, ecosystem, packageName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) models.MaliciousPackage); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
-		r0 = ret.Get(0).(bool)
+		r0 = ret.Get(0).(models.MaliciousPackage)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) *dtos.OSV); ok {
-		r1 = returnFunc(ctx, ecosystem, packageName)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, id)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*dtos.OSV)
-		}
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
-		r2 = returnFunc(ctx, ecosystem, packageName)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
-// MaliciousPackageChecker_IsPackageMalicious_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsPackageMalicious'
-type MaliciousPackageChecker_IsPackageMalicious_Call struct {
+// MaliciousPackageChecker_GetMaliciousPackage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMaliciousPackage'
+type MaliciousPackageChecker_GetMaliciousPackage_Call struct {
 	*mock.Call
 }
 
-// IsPackageMalicious is a helper method to define mock.On call
+// GetMaliciousPackage is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ecosystem string
-//   - packageName string
-func (_e *MaliciousPackageChecker_Expecter) IsPackageMalicious(ctx any, ecosystem any, packageName any) *MaliciousPackageChecker_IsPackageMalicious_Call {
-	return &MaliciousPackageChecker_IsPackageMalicious_Call{Call: _e.mock.On("IsPackageMalicious", ctx, ecosystem, packageName)}
+//   - id string
+func (_e *MaliciousPackageChecker_Expecter) GetMaliciousPackage(ctx any, id any) *MaliciousPackageChecker_GetMaliciousPackage_Call {
+	return &MaliciousPackageChecker_GetMaliciousPackage_Call{Call: _e.mock.On("GetMaliciousPackage", ctx, id)}
 }
 
-func (_c *MaliciousPackageChecker_IsPackageMalicious_Call) Run(run func(ctx context.Context, ecosystem string, packageName string)) *MaliciousPackageChecker_IsPackageMalicious_Call {
+func (_c *MaliciousPackageChecker_GetMaliciousPackage_Call) Run(run func(ctx context.Context, id string)) *MaliciousPackageChecker_GetMaliciousPackage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -181,25 +160,20 @@ func (_c *MaliciousPackageChecker_IsPackageMalicious_Call) Run(run func(ctx cont
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MaliciousPackageChecker_IsPackageMalicious_Call) Return(b bool, oSV *dtos.OSV, err error) *MaliciousPackageChecker_IsPackageMalicious_Call {
-	_c.Call.Return(b, oSV, err)
+func (_c *MaliciousPackageChecker_GetMaliciousPackage_Call) Return(maliciousPackage models.MaliciousPackage, err error) *MaliciousPackageChecker_GetMaliciousPackage_Call {
+	_c.Call.Return(maliciousPackage, err)
 	return _c
 }
 
-func (_c *MaliciousPackageChecker_IsPackageMalicious_Call) RunAndReturn(run func(ctx context.Context, ecosystem string, packageName string) (bool, *dtos.OSV, error)) *MaliciousPackageChecker_IsPackageMalicious_Call {
+func (_c *MaliciousPackageChecker_GetMaliciousPackage_Call) RunAndReturn(run func(ctx context.Context, id string) (models.MaliciousPackage, error)) *MaliciousPackageChecker_GetMaliciousPackage_Call {
 	_c.Call.Return(run)
 	return _c
 }

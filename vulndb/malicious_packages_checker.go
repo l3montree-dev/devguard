@@ -22,10 +22,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/package-url/packageurl-go"
 )
@@ -98,57 +100,6 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 	return packages, affectedComponents, osvEntries
 }
 
-func (c *MaliciousPackageChecker) IsPackageMalicious(ctx context.Context, ecosystem, packageName string) (bool, *dtos.OSV, error) {
-	if packageName == "" {
-		return false, nil, fmt.Errorf("packageName is required to check if a package is malicious")
-	}
-
-	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
-
-	return c.lookup(ctx, purl)
-}
-
-func (c *MaliciousPackageChecker) IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error) {
-
-	if version == "" {
-		return false, nil, fmt.Errorf("version is required to check if a package is malicious")
-	}
-
-	// construct purl for querying, the database uses purl matching to filter by version ranges, so we need to construct a valid purl here
-	purl := fmt.Sprintf("pkg:%s/%s@%s", strings.ToLower(ecosystem), strings.ToLower(packageName), version)
-
-	return c.lookup(ctx, purl)
-}
-
-func (c *MaliciousPackageChecker) lookup(ctx context.Context, purl string) (bool, *dtos.OSV, error) {
-	// Parse to normalize
-	parsedPurl, err := packageurl.FromString(purl)
-	if err != nil {
-		slog.Debug("Failed to parse purl", "purl", purl, "error", err)
-		return false, nil, fmt.Errorf("failed to parse purl: %w", err)
-	}
-
-	// Query database using purl matching (similar to PurlComparer)
-	components, err := c.repository.GetMaliciousAffectedComponents(ctx, nil, parsedPurl)
-	if err != nil {
-		slog.Debug("Failed to query malicious packages", "error", err)
-		return false, nil, fmt.Errorf("failed to query malicious packages: %w", err)
-	}
-
-	// If we got results from the query, the database already filtered by version ranges
-	if len(components) > 0 {
-		// Take the first match (database already did the version filtering)
-		maliciousPackage, err := c.repository.GetMaliciousPackageByID(ctx, nil, components[0].MaliciousPackageID)
-		if err != nil {
-			return false, nil, fmt.Errorf("failed to load malicious package metadata: %w", err)
-		}
-		osv := maliciousPackage.ToOSV()
-		return true, &osv, nil
-	}
-
-	return false, nil, nil
-}
-
 // insertMaliciousPackagesBulk streams malicious packages and components into staging tables. Call flushStagingTables once after all batches.
 func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.MaliciousPackage, comps []models.MaliciousAffectedComponent, pkgTable, compTable string) error {
 	if len(pkgs) > 0 {
@@ -172,4 +123,93 @@ func insertMaliciousPackagesBulk(ctx context.Context, tx pgx.Tx, pkgs []models.M
 		}
 	}
 	return nil
+}
+
+func (c *MaliciousPackageChecker) GetMaliciousComponents(ctx context.Context, ecosystem, packageName string) ([]models.MaliciousAffectedComponent, error) {
+	if packageName == "" {
+		return nil, fmt.Errorf("packageName is required to check if a package is malicious")
+	}
+
+	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+
+	// Parse to normalize
+	parsedPurl, err := packageurl.FromString(purl)
+	if err != nil {
+		slog.Debug("Failed to parse purl", "purl", purl, "error", err)
+		return nil, fmt.Errorf("failed to parse purl: %w", err)
+	}
+
+	// Query database using purl matching (similar to PurlComparer)
+	components, err := c.repository.GetMaliciousAffectedComponents(ctx, nil, parsedPurl)
+	if err != nil {
+		slog.Debug("Failed to query malicious packages", "error", err)
+		return nil, fmt.Errorf("failed to query malicious packages: %w", err)
+	}
+	return components, nil
+}
+
+func (c *MaliciousPackageChecker) GetMaliciousPackage(ctx context.Context, id string) (models.MaliciousPackage, error) {
+	return c.repository.GetMaliciousPackageByID(ctx, nil, id)
+}
+
+func MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	if comp.AffectsAllVersions() || version == "" {
+		return false
+	}
+
+	if comp.Version != nil {
+		if *comp.Version == version {
+			return true
+		}
+		requested, err := normalize.ConvertToSemver(version)
+		if err != nil {
+			return false
+		}
+		stored, err := normalize.ConvertToSemver(*comp.Version)
+		if err != nil {
+			return false
+		}
+		// A version list entry carries no range, so this is the final answer.
+		return stored == requested
+	}
+
+	if comp.SemverIntroduced == nil && comp.SemverFixed == nil {
+		return false
+	}
+
+	v, err := parseSemver(version)
+	if err != nil {
+		slog.Debug("could not parse version for malicious range match", "version", version, "error", err)
+		return false
+	}
+
+	if comp.SemverIntroduced != nil {
+		introduced, err := semver.ParseTolerant(*comp.SemverIntroduced)
+		if err != nil {
+			return false
+		}
+		if v.LT(introduced) {
+			return false
+		}
+	}
+
+	if comp.SemverFixed != nil {
+		fixed, err := semver.ParseTolerant(*comp.SemverFixed)
+		if err != nil {
+			return false
+		}
+		if v.GTE(fixed) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func parseSemver(version string) (semver.Version, error) {
+	normalized, err := normalize.ConvertToSemver(version)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	return semver.ParseTolerant(normalized)
 }

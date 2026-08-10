@@ -449,7 +449,7 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	}
 
 	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, requestPath); blocked {
-		return d.blockMaliciousPackage(c, ociEco, requestPath, reason)
+		return d.blockMaliciousPackage(c, ociEco, requestPath, reason, http.StatusForbidden)
 	}
 
 	cachePath, err := d.getCachePath(ociEco, ociSafeCachePath(requestPath))
@@ -694,7 +694,7 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
 	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, fqImageName); blocked {
-		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason)
+		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason, http.StatusForbidden)
 	}
 
 	upstreamBase := upstreamURLForRegistry(registry)
@@ -758,7 +758,7 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
 	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, fqImageName); blocked {
-		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason)
+		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason, http.StatusForbidden)
 	}
 
 	upstreamBase := upstreamURLForRegistry(registry)
