@@ -21,6 +21,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.opentelemetry.io/otel"
@@ -76,6 +77,7 @@ type DaemonRunner struct {
 	trustedEntityRepository         shared.TrustedEntityRepository
 	upstreamVEXRuleRepository       shared.UpstreamVEXRuleRepository
 	externalReferenceRepository     shared.ExternalReferenceRepository
+	pgxpool                         *pgxpool.Pool
 
 	debugOptions         DebugOptions
 	fixedVersionResolver shared.FixedVersionResolver
@@ -133,6 +135,7 @@ func NewDaemonRunner(
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	fixedVersionResolver shared.FixedVersionResolver,
 	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
+	pool *pgxpool.Pool,
 ) *DaemonRunner {
 	return &DaemonRunner{
 		db:                              db,
@@ -168,6 +171,7 @@ func NewDaemonRunner(
 		externalReferenceRepository:     externalReferenceRepository,
 		fixedVersionResolver:            fixedVersionResolver,
 		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
+		pgxpool:                         pool,
 	}
 }
 
