@@ -13,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"gorm.io/gorm"
 )
@@ -27,6 +26,7 @@ type fixedVersionJob struct {
 func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions")
 	defer span.End()
+	start := time.Now()
 
 	// we only compare the cve id, therefore we only need to preload those
 	purlComparer := scan.NewPurlComparer(runner.db, scan.WithPreloads(
@@ -37,62 +37,81 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 		},
 	))
 
-	var fixedVersionJobs []fixedVersionJob
-
-	// get all dependency vulns without a fixed version (distinct on purl + cveID)
-	err := runner.dependencyVulnRepository.GetDB(ctx, nil).Raw(`  
-	SELECT component_purl, cve_id 
-	FROM dependency_vulns dv 
-	WHERE dv.component_fixed_version IS NULL 
-	OR dv.component_fixed_version = ''
-  	GROUP BY dv.component_purl,dv.cve_id;`).Find(&fixedVersionJobs).Error
+	// first fetch all vulns which need recalculation
+	fixedVersionJobs, err := runner.FetchVulnsToUpdate(ctx)
 	if err != nil {
-		slog.Error("could not get dependency vulns without fixed version", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("could not fetch vulns to update: %w", err)
 	}
 
-	span.SetAttributes(attribute.Int("amount of jobs", len(fixedVersionJobs)))
-	slog.Info("start updating fixed versions for dependency vulns", "count", len(fixedVersionJobs))
-
-	start := time.Now()
+	// then calculate which vulns need their fixed_version updated
+	slog.Info("start calculating fixed versions for dependency vulns", "count", len(fixedVersionJobs))
 	updatingJobs, err := determineFixedVersionsForPurls(ctx, purlComparer, fixedVersionJobs)
 	if err != nil {
 		return err
 	}
 	slog.Info("finished calculating updating jobs", "time", time.Since(start))
 
-	start = time.Now()
+	slog.Info("start updating fixed versions for dependency vulns", "count", len(updatingJobs))
 	if err := runner.UpdateAllFixedVersions(ctx, updatingJobs); err != nil {
 		return err
 	}
-	slog.Info("successfully updated dependency vulns", "time", time.Since(start))
 	slog.Info("successfully updated all component fixed versions", "time", time.Since(start))
+
 	return nil
+}
+
+// fetches all vulns with no component_fixed_version information and deduplicates them based on purl + cve_id
+func (runner *DaemonRunner) FetchVulnsToUpdate(ctx context.Context) ([]fixedVersionJob, error) {
+	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions.FetchVulnsToUpdate")
+	var fixedVersionJobs []fixedVersionJob
+
+	// get all dependency vulns without a fixed version (distinct on purl + cveID)
+	err := runner.dependencyVulnRepository.GetDB(ctx, nil).Raw(`  
+	SELECT 
+		component_purl, cve_id 
+	FROM 
+		dependency_vulns dv 
+	WHERE 			-- filter for missing fixed_version information
+		dv.component_fixed_version IS NULL 
+	OR 		
+		dv.component_fixed_version = ''
+  	GROUP BY 		-- deduplicates by purl + cve_id
+		dv.component_purl,dv.cve_id;`).Find(&fixedVersionJobs).Error
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("could not fetch vulns to update: %w", err)
+	}
+	return fixedVersionJobs, nil
 }
 
 const updateTmpTableName = "fixed_version_update_stage"
 
-// updates the dependency vulns with the new fixed version data
+// updates the dependency vulns passed using a <staging table + copy + update> from approach
 func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updatingJobs []fixedVersionJob) error {
-	slog.Info("start updating dependency vulns", "amount", len(updatingJobs))
+	if len(updatingJobs) == 0 { // fast exit if empty
+		return nil
+	}
+
+	// handle everything in one transaction
 	tx, err := runner.pgxpool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("could not start pgx transaction: %w", err)
 	}
 
 	defer func() {
+		// make sure to always rollback after we exit (safe to call on a committed transaction)
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
 			slog.Error("fatal could not rollback updating transaction, database state possibly inconsistent", "error", err)
 		}
 		if err == nil {
 			slog.Info("successfully rolled back transaction")
 		}
-	}() // rollback if we fail
+	}()
 
-	// first create temporary staging table
-	_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TEMP TABLE IF NOT EXISTS %s (
+	// first create temporary staging table (gets dropped on commit)
+	_, err = tx.Exec(ctx, fmt.Sprintf(`
+	CREATE TEMP TABLE IF NOT EXISTS %s (
 		component_purl text,
 		cve_id text,
 		component_fixed_version text
@@ -101,7 +120,7 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updating
 		return fmt.Errorf("could not create tmp table for updating: %w", err)
 	}
 
-	// then insert all entries to update into it using copy
+	// then insert all entries into it using copy protocol
 	_, err = tx.CopyFrom(ctx, pgx.Identifier{updateTmpTableName}, []string{"component_purl", "cve_id", "component_fixed_version"},
 		pgx.CopyFromSlice(len(updatingJobs), func(i int) ([]any, error) {
 			return []any{updatingJobs[i].Purl, updatingJobs[i].CVEID, updatingJobs[i].FixedVersion}, nil
@@ -121,14 +140,17 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updating
 		return fmt.Errorf("could not update live table from tmp table: %w", err)
 	}
 
-	// if err := tx.Commit(ctx); err != nil {
-	// 	return fmt.Errorf("could not commit update transaction: %w", err)
-	// }
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("could not commit update transaction: %w", err)
+	}
 	return nil
 }
 
+// calculates fixed version information for fixed version jobs (purl + cve_id)
 func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComparer, fixedVersionJobs []fixedVersionJob) ([]fixedVersionJob, error) {
-	const purlBatchSize = 1000
+	const purlBatchSize = 1000 // optional, parameter limit got fixed
+
+	// map the jobs to a parsed purl slice to be compatible with the purl comparer function
 	purlsFromJobs := make([]packageurl.PackageURL, 0, len(fixedVersionJobs))
 	for _, job := range fixedVersionJobs {
 		parsedPurl, err := packageurl.FromString(job.Purl)
@@ -137,7 +159,8 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 		}
 	}
 
-	// split them up into batches to avoid parameter limit
+	// split them up into batches;
+	// for each batch get the affected components and populate the map with the jobs Purl as key
 	purlToAffectedComponents := make(map[string][]models.AffectedComponent, len(purlsFromJobs))
 	for start := 0; start < len(purlsFromJobs); start += purlBatchSize {
 		batchStart := time.Now()
@@ -156,18 +179,21 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 		slog.Info("finished fetching batch", "amount", end, "time", time.Since(batchStart))
 	}
 
+	//	collect all updating jobs
 	updatingJobs := make([]fixedVersionJob, 0, len(fixedVersionJobs))
-	for i, job := range fixedVersionJobs {
+	for _, job := range fixedVersionJobs {
 		// look up using the same normalization the map keys were built with
 		parsedPurl, err := packageurl.FromString(job.Purl)
 		if err != nil {
 			continue
 		}
+
+		// fetch affected components found for this jobs Purl and iterate over them
 		affectedComponents := purlToAffectedComponents[parsedPurl.String()]
 		for _, ac := range affectedComponents {
 			if !slices.Contains(utils.Map(ac.CVE, func(cve models.CVE) string {
 				return cve.CVE
-			}), job.CVEID) {
+			}), job.CVEID) { // filter if the affected component applies to the jobs CVE
 				continue
 			}
 
@@ -177,8 +203,9 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 			} else if ac.VersionFixed != nil {
 				fixedVersion = normalize.FixFixedVersion(job.Purl, ac.VersionFixed)
 			}
+
+			// if a fixed version could be determined add it to the updating jobs
 			if fixedVersion != nil {
-				slog.Info("i", "i", i)
 				job.FixedVersion = *fixedVersion
 				updatingJobs = append(updatingJobs, job)
 				break
