@@ -63,6 +63,7 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 			FrameworkControlID: mc.FrameworkControlID,
 			RelatedFramework:   mc.RelatedFramework,
 			RelatedControlID:   mc.RelatedControlID,
+			Relationship:       mc.Relationship,
 		}
 	}
 

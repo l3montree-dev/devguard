@@ -32,6 +32,8 @@ type MappedControl struct {
 	RelatedControlID string `json:"relatedControlId" gorm:"type:text;primaryKey;"`
 
 	FrameworkControl FrameworkControl `gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+
+	Relationship string `json:"relationship" gorm:"type:text;primaryKey;default:''"`
 }
 
 func (m FrameworkControl) TableName() string {

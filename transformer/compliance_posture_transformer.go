@@ -59,6 +59,7 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 			FrameworkControlID: m.FrameworkControlID,
 			RelatedFramework:   m.RelatedFramework,
 			RelatedControlID:   m.RelatedControlID,
+			Relationship:       m.Relationship,
 		}
 	}
 

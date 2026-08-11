@@ -67,6 +67,7 @@ type MappedControlDTO struct {
 	FrameworkControlID string `json:"frameworkControlId"`
 	RelatedFramework   string `json:"relatedFramework"`
 	RelatedControlID   string `json:"relatedControlId"`
+	Relationship       string `json:"relationship"`
 }
 
 type CompliancePostureWithDetailsDTO struct {
