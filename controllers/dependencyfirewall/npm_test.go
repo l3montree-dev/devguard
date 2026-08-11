@@ -59,6 +59,12 @@ func TestNPMEcosystem(t *testing.T) {
 		}
 	})
 
+	t.Run("parse tarball path with trailing slash", func(t *testing.T) {
+		pkg, version := npm.parsePackage("/lodash/-/lodash-4.17.21.tgz/")
+		if pkg != "lodash" || version != "4.17.21" {
+			t.Fatalf("expected lodash@4.17.21, got %q@%q", pkg, version)
+		}
+	})
 	t.Run("parse scoped tarball path", func(t *testing.T) {
 		pkg, version := npm.parsePackage("/@babel/core/-/core-7.23.0.tgz")
 		if pkg != "@babel/core" || version != "7.23.0" {

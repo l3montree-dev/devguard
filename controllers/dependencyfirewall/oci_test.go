@@ -73,6 +73,12 @@ func TestOCIEcosystemParsePackage(t *testing.T) {
 			expectedPkg:     "ghcr.io/org/repo",
 			expectedVersion: "v1.0",
 		},
+		{
+			name:            "tags/list path with trailing slash",
+			path:            "/v2/docker.io/library/nginx/tags/list/",
+			expectedPkg:     "docker.io/library/nginx",
+			expectedVersion: "",
+		},
 	}
 
 	for _, tc := range cases {
