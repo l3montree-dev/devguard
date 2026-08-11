@@ -108,7 +108,7 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updating
 	defer func() {
 		// make sure to always rollback after we exit (safe to call on a committed transaction)
 		err := tx.Rollback(ctx)
-		if err != nil && errors.Is(err, pgx.ErrTxClosed) {
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			slog.Error("fatal could not rollback updating transaction, database state possibly inconsistent", "error", err)
 		}
 		if err == nil {
@@ -161,7 +161,7 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 	purlsFromJobs := make([]packageurl.PackageURL, 0, len(fixedVersionJobs))
 	seenPurl := make(map[string]struct{}, len(fixedVersionJobs)) // deduplicate based on purls
 	for _, job := range fixedVersionJobs {
-		if _, ok := seenPurl[job.Purl]; ok {
+		if _, ok := seenPurl[job.Purl]; ok { // already added purl
 			continue
 		}
 
@@ -175,6 +175,7 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 	// split them up into batches;
 	// for each batch get the affected components and populate the map with the jobs Purl as key
 	purlToAffectedComponents := make(map[string][]models.AffectedComponent, len(purlsFromJobs))
+	slog.Info("start fetching affected components fixed version information", "amount", len(purlsFromJobs))
 	for start := 0; start < len(purlsFromJobs); start += purlBatchSize {
 		batchStart := time.Now()
 		end := min(start+purlBatchSize, len(purlsFromJobs))
