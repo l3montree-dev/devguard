@@ -280,6 +280,19 @@ func TestAffectedComponentsCache(t *testing.T) {
 		assert.Nil(t, components)
 	})
 
+	t.Run("entries from one cache scope do not leak into another", func(t *testing.T) {
+		acc := AffectedComponentsCache{}
+		stored := candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1})
+		acc.SetForCandidatesInScope("db-a", []*candidate{stored}, acc.GetCurrentGeneration())
+
+		_, ok := acc.GetByCandidateInScope("db-b", candidateFor(t, "pkg:npm/lodash@4.17.20"))
+		assert.False(t, ok)
+
+		components, ok := acc.GetByCandidateInScope("db-a", candidateFor(t, "pkg:npm/lodash@4.17.20"))
+		assert.True(t, ok)
+		assert.Equal(t, stored.components, components)
+	})
+
 	t.Run("flush drops every entry", func(t *testing.T) {
 		acc := AffectedComponentsCache{}
 		warmCache(&acc,

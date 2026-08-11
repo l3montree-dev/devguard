@@ -42,6 +42,13 @@ func NewPurlComparer(db shared.DB) *PurlComparer {
 	}
 }
 
+func (comparer *PurlComparer) cacheScope() string {
+	if comparer.db == nil {
+		return ""
+	}
+	return fmt.Sprintf("%p", comparer.db)
+}
+
 var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer interface
 
 // candidate is a purl we are looking for, together with everything we learned
@@ -140,17 +147,25 @@ func (acc *AffectedComponentsCache) GetCurrentGeneration() int {
 }
 
 func (acc *AffectedComponentsCache) GetByCandidate(candidate *candidate) ([]models.AffectedComponent, bool) {
+	return acc.GetByCandidateInScope("", candidate)
+}
+
+func (acc *AffectedComponentsCache) GetByCandidateInScope(scope string, candidate *candidate) ([]models.AffectedComponent, bool) {
 	acc.mutex.RLock()
 	defer acc.mutex.RUnlock()
 	if acc.cache == nil {
 		return nil, false
 	}
-	components, ok := acc.cache[candidate.cacheKey()]
+	components, ok := acc.cache[scope+"|"+candidate.cacheKey()]
 	return components, ok
 }
 
 // fills the cache with
 func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate, candidatesGeneration int) {
+	acc.SetForCandidatesInScope("", candidates, candidatesGeneration)
+}
+
+func (acc *AffectedComponentsCache) SetForCandidatesInScope(scope string, candidates []*candidate, candidatesGeneration int) {
 	acc.mutex.Lock()
 	defer acc.mutex.Unlock()
 
@@ -163,7 +178,7 @@ func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate, ca
 		acc.cache = make(map[string][]models.AffectedComponent, initialCacheSize)
 	}
 	for i := range candidates {
-		acc.cache[candidates[i].cacheKey()] = candidates[i].components
+		acc.cache[scope+"|"+candidates[i].cacheKey()] = candidates[i].components
 	}
 }
 
@@ -178,6 +193,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	candidates := make([]*candidate, 0, len(purls))
 	byShape := make(map[queryShape][]*candidate)
 	cacheUsage := 0
+	cacheScope := comparer.cacheScope()
 
 	// get the current generation of the cache to ensure consistency
 	generationOfValues := cache.GetCurrentGeneration()
@@ -188,7 +204,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 			continue // No version = no results
 		}
 
-		ac, ok := cache.GetByCandidate(c) // read from cache if possible
+		ac, ok := cache.GetByCandidateInScope(cacheScope, c) // read from cache if possible
 		if ok {
 			cacheUsage++
 			c.components = ac
@@ -217,7 +233,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	}
 
 	// only cache after every shape is finished
-	cache.SetForCandidates(candidates, generationOfValues)
+	cache.SetForCandidatesInScope(cacheScope, candidates, generationOfValues)
 
 	slog.Info("finished purl matching", "cache usage", float32(cacheUsage)/float32(len(purls)))
 	// the candidates are in request order, whereas byShape is not
