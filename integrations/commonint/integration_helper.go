@@ -568,10 +568,11 @@ func truncateLabelMiddle(name string) string {
 	return name[:headLen] + ellipsis + name[len(name)-tailLen:]
 }
 
-func GetLabels(vuln models.Vuln) []string {
+func GetLabels(vuln models.Vuln, slugs string) []string {
 	labels := []string{
 		"devguard",
 		"state:" + stateToLabel(vuln.GetState()),
+		slugs,
 	}
 
 	riskSeverity, err := vulndb.RiskToSeverity(vuln.GetRawRiskAssessment())

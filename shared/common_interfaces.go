@@ -179,6 +179,7 @@ type AssetRepository interface {
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
 	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadWithProjects(ctx context.Context, tx *gorm.DB, id []uuid.UUID) ([]models.Asset, error)
+	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
 }
 
 type AttestationRepository interface {
