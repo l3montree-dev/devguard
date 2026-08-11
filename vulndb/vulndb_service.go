@@ -559,7 +559,7 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
-	// flush the purl comparer cache since it's values are now outdated
+	// flush the purl comparer cache since its values are now outdated
 	scan.FlushCache()
 
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
