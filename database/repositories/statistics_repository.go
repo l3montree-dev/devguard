@@ -386,7 +386,7 @@ func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, t
 	JOIN assets b ON a.asset_id = b.id
 	JOIN projects c ON b.project_id = c.id
 	WHERE c.organization_id = ?
-	AND a.dependency_id LIKE 'pkg:%' 	-filter out non components like ROOT
+	AND a.dependency_id LIKE 'pkg:%' 	--filter out non components like ROOT
 	GROUP BY a.dependency_id
 	ORDER BY total_amount DESC, a.dependency_id ASC
 	LIMIT ?;`, orgID, limit).Find(&components).Error
