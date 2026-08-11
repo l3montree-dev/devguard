@@ -170,7 +170,7 @@ func (c *VEXRuleController) cachedVulns(ctx shared.Context) ([]map[string]any, e
 		return vulns, nil
 	}
 
-	vulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(ctx.Request().Context(), nil, assetID)
+	vulns, err := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(ctx.Request().Context(), nil, assetID, -1))
 	if err != nil {
 		return nil, err
 	}
@@ -299,16 +299,17 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
-	existingVulns, err := c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(reqCtx, tx, asset.ID)
+	existingVulns, fetchErr := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(reqCtx, tx, asset.ID, -1))
 	var vulns []models.DependencyVuln
-	if err != nil {
-		slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID)
+	if fetchErr != nil {
+		slog.Error("failed to fetch existing vulns for asset", "error", fetchErr, "assetID", asset.ID)
 		tx.Rollback()
 	} else {
 		var events []models.VulnEvent
-		vulns, events, err = services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, existingVulns)
-		if err != nil {
-			slog.Error("failed to apply VEX rules to vulns", "error", err)
+		var applyErr error
+		vulns, events, applyErr = services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, existingVulns)
+		if applyErr != nil {
+			slog.Error("failed to apply VEX rules to vulns", "error", applyErr)
 			tx.Rollback()
 		} else if len(vulns) > 0 {
 			if err := c.dependencyVulnRepository.SaveBatchBestEffort(reqCtx, tx, vulns); err != nil {

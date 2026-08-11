@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.12.4] - 2026-08-10
+
+### Changed
+
+- **VEX rule recommendation daemon now batches over open vulnerabilities** — instead of loading every open vulnerability into memory at once, the daemon streams them in batches of 10,000, fetching upstream rules and computing/saving recommendations per batch, reducing peak memory usage on large instances
+- Updated Go and Go module dependencies, and bumped `gitpython` to 3.1.58
+
+### Fixed
+
+- **Dependency proxy failing on paths with a trailing slash** — the npm dependency firewall's package path parser now trims a trailing slash before parsing, fixing requests that previously failed to resolve the correct package
+
 ## [v1.12.3] - 2026-08-05
 
 ### Fixed

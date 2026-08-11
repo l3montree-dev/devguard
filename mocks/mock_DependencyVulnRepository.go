@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"iter"
 	"time"
 
 	"github.com/google/uuid"
@@ -773,31 +774,22 @@ func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) RunAndReturn(ru
 }
 
 // GetAllOpenVulnsByAssetID provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetID)
+func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	ret := _mock.Called(ctx, tx, assetID, batchSize)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllOpenVulnsByAssetID")
 	}
 
-	var r0 []models.DependencyVuln
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetID)
+	var r0 iter.Seq2[[]models.DependencyVuln, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
+		r0 = returnFunc(ctx, tx, assetID, batchSize)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.DependencyVuln)
+			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetID'
@@ -809,11 +801,12 @@ type DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
-	return &DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetID", ctx, tx, assetID)}
+//   - batchSize int
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetID(ctx interface{}, tx interface{}, assetID interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+	return &DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetID", ctx, tx, assetID, batchSize)}
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID)) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int)) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -827,51 +820,47 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Run(run func(c
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
-	_c.Call.Return(dependencyVulns, err)
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+	_c.Call.Return(seq2)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllOpenVulnsByAssetIDWithoutEvents provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetID)
+func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	ret := _mock.Called(ctx, tx, assetID, batchSize)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllOpenVulnsByAssetIDWithoutEvents")
 	}
 
-	var r0 []models.DependencyVuln
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetID)
+	var r0 iter.Seq2[[]models.DependencyVuln, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
+		r0 = returnFunc(ctx, tx, assetID, batchSize)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.DependencyVuln)
+			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetIDWithoutEvents'
@@ -883,11 +872,12 @@ type DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call struct 
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDWithoutEvents(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
-	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDWithoutEvents", ctx, tx, assetID)}
+//   - batchSize int
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDWithoutEvents(ctx interface{}, tx interface{}, assetID interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
+	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDWithoutEvents", ctx, tx, assetID, batchSize)}
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -901,51 +891,47 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) R
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
-	_c.Call.Return(dependencyVulns, err)
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
+	_c.Call.Return(seq2)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllOpenVulnsByAssetIDs provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetIDs)
+func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	ret := _mock.Called(ctx, tx, assetIDs, batchSize)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllOpenVulnsByAssetIDs")
 	}
 
-	var r0 []models.DependencyVuln
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetIDs)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetIDs)
+	var r0 iter.Seq2[[]models.DependencyVuln, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
+		r0 = returnFunc(ctx, tx, assetIDs, batchSize)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.DependencyVuln)
+			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, []uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetIDs)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetIDs'
@@ -957,11 +943,12 @@ type DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - assetIDs []uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
-	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDs", ctx, tx, assetIDs)}
+//   - batchSize int
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
+	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDs", ctx, tx, assetIDs, batchSize)}
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -975,21 +962,26 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Run(run func(
 		if args[2] != nil {
 			arg2 = args[2].([]uuid.UUID)
 		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
-	_c.Call.Return(dependencyVulns, err)
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
+	_c.Call.Return(seq2)
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
+func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1076,74 +1068,6 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_C
 }
 
 func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetAllOpenVulnsWithoutEvents provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllOpenVulnsWithoutEvents(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllOpenVulnsWithoutEvents")
-	}
-
-	var r0 []models.DependencyVuln
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.DependencyVuln)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB) error); ok {
-		r1 = returnFunc(ctx, tx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsWithoutEvents'
-type DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call struct {
-	*mock.Call
-}
-
-// GetAllOpenVulnsWithoutEvents is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx *gorm.DB
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsWithoutEvents(ctx interface{}, tx interface{}) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
-	return &DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call{Call: _e.mock.On("GetAllOpenVulnsWithoutEvents", ctx, tx)}
-}
-
-func (_c *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB)) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *gorm.DB
-		if args[1] != nil {
-			arg1 = args[1].(*gorm.DB)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
-	_c.Call.Return(dependencyVulns, err)
-	return _c
-}
-
-func (_c *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllOpenVulnsWithoutEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

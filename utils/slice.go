@@ -15,7 +15,23 @@
 
 package utils
 
-import "slices"
+import (
+	"iter"
+	"slices"
+)
+
+// CollectSeq2 drains a paged iter.Seq2[[]T, error] (as produced by batched
+// repository queries) into a single slice, stopping at the first error.
+func CollectSeq2[T any](seq iter.Seq2[[]T, error]) ([]T, error) {
+	var all []T
+	for batch, err := range seq {
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, batch...)
+	}
+	return all, nil
+}
 
 func Filter[T any](s []T, f func(T) bool) []T {
 	// Pre-allocate with input length as capacity (worst case: all elements pass filter)

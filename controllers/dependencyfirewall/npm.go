@@ -46,6 +46,8 @@ func (npmEcosystem) trimPrefix(path string) string {
 }
 
 func (npmEcosystem) parsePackage(path string) (string, string) {
+	// remove any trailing slash
+	path = strings.TrimSuffix(path, "/")
 	if strings.HasSuffix(path, ".tgz") {
 		parts := strings.Split(path, "/-/")
 		if len(parts) == 2 {
