@@ -69,7 +69,7 @@ func loadGrundschutzControls() ([]models.FrameworkControl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, "Grundschutz++", grundschutzAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, GrundschutzPlusPlus, grundschutzAdditionalMapper), nil
 }
 
 type newProperty struct {

@@ -29,7 +29,7 @@ func loadSCFControls() ([]models.FrameworkControl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, "SCF", scfAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, SCF, scfAdditionalMapper), nil
 }
 
 func scfAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
