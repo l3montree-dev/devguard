@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,37 +15,8 @@ import (
 	"github.com/package-url/packageurl-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"gorm.io/gorm"
 )
-
-func getFixedVersion(ctx context.Context, purlComparer *scan.PurlComparer, job fixedVersionJob) (*string, error) {
-	// we only need to update the fixed version
-	parsed, err := packageurl.FromString(job.Purl)
-	if err != nil {
-		return nil, err
-	}
-
-	affected, err := purlComparer.GetAffectedComponents(ctx, parsed)
-	if err != nil {
-		return nil, err
-	}
-	// check if there is a fix for the dependencyVuln
-	for _, c := range affected {
-		// check if this affected component comes from the same cve
-		if !utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
-			return c.CVE
-		}), job.CVEID) {
-			continue
-		}
-
-		if c.SemverFixed != nil {
-			return normalize.FixFixedVersion(job.Purl, c.SemverFixed), nil
-		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
-			return normalize.FixFixedVersion(job.Purl, c.VersionFixed), nil
-		}
-	}
-
-	return nil, nil
-}
 
 type fixedVersionJob struct {
 	Purl         string `gorm:"column:component_purl"`
@@ -54,20 +25,26 @@ type fixedVersionJob struct {
 }
 
 func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
-	// we need to update component depth and fixedVersion for each dependencyVuln.
-	// to make this as efficient as possible, we start by getting all the assets
-	// and then we get all the components for each asset.
 	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions")
 	defer span.End()
 
-	// purlComparer := scan.NewPurlComparer(runner.db)
+	// we only compare the cve id, therefore we only need to preload those
+	purlComparer := scan.NewPurlComparer(runner.db, scan.WithPreloads(
+		func(db *gorm.DB) *gorm.DB {
+			return db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
+				return db.Select("id", "cve")
+			})
+		},
+	))
 
 	var fixedVersionJobs []fixedVersionJob
-	// get all dependency vulns without a fixed version
+
+	// get all dependency vulns without a fixed version (distinct on purl + cveID)
 	err := runner.dependencyVulnRepository.GetDB(ctx, nil).Raw(`  
 	SELECT component_purl, cve_id 
 	FROM dependency_vulns dv 
-	WHERE dv.component_fixed_version IS NULL OR dv.component_fixed_version = ''
+	WHERE dv.component_fixed_version IS NULL 
+	OR dv.component_fixed_version = ''
   	GROUP BY dv.component_purl,dv.cve_id;`).Find(&fixedVersionJobs).Error
 	if err != nil {
 		slog.Error("could not get dependency vulns without fixed version", "err", err)
@@ -77,67 +54,20 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	}
 
 	span.SetAttributes(attribute.Int("amount of jobs", len(fixedVersionJobs)))
-
-	slog.Info("updating fixed versions for dependency vulns", "count", len(fixedVersionJobs))
-
-	wg := utils.ErrGroup[any](20)
-	updatingJobs := make([]fixedVersionJob, 0, len(fixedVersionJobs))
-	updatingJobsChannel := make(chan fixedVersionJob, 50)
-	collectorWaitGroup := &sync.WaitGroup{}
-
-	collectorWaitGroup.Go(
-		func() {
-			for job := range updatingJobsChannel {
-				updatingJobs = append(updatingJobs, job)
-			}
-		})
+	slog.Info("start updating fixed versions for dependency vulns", "count", len(fixedVersionJobs))
 
 	start := time.Now()
-	errorCount := 0
-	for i, job := range fixedVersionJobs {
-		if i%1000 == 0 {
-			slog.Info("status", "count", i, "time", time.Since(start))
-		}
-		wg.Go(func() (any, error) {
-			fixedVersion, err := getFixedVersion(ctx, purlComparer, job)
-			if err != nil {
-				slog.Error(err.Error())
-				errorCount++
-				// return nil, fmt.Errorf("could not get fixed version for purl %s, error: %w", job.Purl, err)
-				return nil, nil
-			}
-			// check if a fixed version could be determined and that its a new value
-			if fixedVersion != nil && *fixedVersion != "" {
-				job.FixedVersion = *fixedVersion
-				updatingJobsChannel <- job
-			}
-
-			return nil, nil
-		})
-	}
-
-	_, err = wg.WaitAndCollect() // all jobs are processed
+	updatingJobs, err := determineFixedVersionsForPurls(ctx, purlComparer, fixedVersionJobs)
 	if err != nil {
-		slog.Error("could not update fixed versions", "err", err)
 		return err
 	}
-	if errorCount > 0 {
-		slog.Warn("ran into errors", "amount", errorCount)
-	}
+	slog.Info("finished calculating updating jobs", "time", time.Since(start))
 
-	close(updatingJobsChannel) // no more results will come in
-
-	collectorWaitGroup.Wait() // then wait until all results are collected
-	// updatingJobs, err := runner.GetFixedVersionInformationForVulns(ctx, fixedVersionJobs)
-	// if err != nil {
-	// 	return fmt.Errorf("could not get fixed version information for vulns: %w", err)
-	// }
-	// slog.Info("finished fetching fixed information", "time", time.Since(start))
-	return nil
-
+	start = time.Now()
 	if err := runner.UpdateAllFixedVersions(ctx, updatingJobs); err != nil {
 		return err
 	}
+	slog.Info("successfully updated dependency vulns", "time", time.Since(start))
 	slog.Info("successfully updated all component fixed versions", "time", time.Since(start))
 	return nil
 }
@@ -145,7 +75,8 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 const updateTmpTableName = "fixed_version_update_stage"
 
 // updates the dependency vulns with the new fixed version data
-func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, fixedVersions []fixedVersionJob) error {
+func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updatingJobs []fixedVersionJob) error {
+	slog.Info("start updating dependency vulns", "amount", len(updatingJobs))
 	tx, err := runner.pgxpool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("could not start pgx transaction: %w", err)
@@ -172,8 +103,8 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, fixedVer
 
 	// then insert all entries to update into it using copy
 	_, err = tx.CopyFrom(ctx, pgx.Identifier{updateTmpTableName}, []string{"component_purl", "cve_id", "component_fixed_version"},
-		pgx.CopyFromSlice(len(fixedVersions), func(i int) ([]any, error) {
-			return []any{fixedVersions[i].Purl, fixedVersions[i].CVEID, fixedVersions[i].FixedVersion}, nil
+		pgx.CopyFromSlice(len(updatingJobs), func(i int) ([]any, error) {
+			return []any{updatingJobs[i].Purl, updatingJobs[i].CVEID, updatingJobs[i].FixedVersion}, nil
 		}))
 	if err != nil {
 		return fmt.Errorf("could not copy into temp table for updating: %w", err)
@@ -196,57 +127,64 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, fixedVer
 	return nil
 }
 
-func (runner *DaemonRunner) GetFixedVersionInformationForVulns(ctx context.Context, jobs []fixedVersionJob) ([]fixedVersionJob, error) {
-	type resultRow struct {
-		CVE          string
-		Purl         string
-		VersionFixed *string
-		SemverFixed  *string
-	}
-
-	cveIDs := make([]string, len(jobs))
-	purls := make([]string, len(jobs))
-	for i := range jobs {
-		cveIDs[i] = jobs[i].CVEID
-		purls[i] = jobs[i].Purl
-	}
-
-	resultSet, err := runner.pgxpool.Query(ctx, `
-	SELECT pairs.cve, pairs.purl, ac.version_fixed, ac.semver_fixed
-	FROM unnest($1::text[], $2::text[]) AS pairs(cve, purl)
-	JOIN cves ON cves.cve = pairs.cve
-	JOIN cve_affected_component cac ON cac.cve_id = cves.id
-	JOIN affected_components ac ON cac.affected_component_id = ac.id
-    AND ac.purl = pairs.purl
-	WHERE ac.version_fixed IS NOT NULL OR ac.semver_fixed IS NOT NULL;`, cveIDs, purls)
-	if err != nil {
-		return nil, fmt.Errorf("could not query fixed versions: %w", err)
-	}
-	defer resultSet.Close()
-
-	fixedVersions := make([]fixedVersionJob, 0, len(jobs))
-	for resultSet.Next() {
-		result := resultRow{}
-		if err := resultSet.Scan(&result); err != nil {
-			return nil, fmt.Errorf("could not scan row: %w", err)
-		}
-
-		var fixedVersion *string
-		if result.SemverFixed != nil {
-			fixedVersion = normalize.FixFixedVersion(result.Purl, result.SemverFixed)
-		} else if result.VersionFixed != nil && *result.VersionFixed != "" {
-			fixedVersion = normalize.FixFixedVersion(result.Purl, result.VersionFixed)
-		}
-		if fixedVersion != nil { //should always be the case
-			fixedVersions = append(fixedVersions, fixedVersionJob{
-				Purl:         result.Purl,
-				CVEID:        result.CVE,
-				FixedVersion: *fixedVersion,
-			})
+func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComparer, fixedVersionJobs []fixedVersionJob) ([]fixedVersionJob, error) {
+	const purlBatchSize = 1000
+	purlsFromJobs := make([]packageurl.PackageURL, 0, len(fixedVersionJobs))
+	for _, job := range fixedVersionJobs {
+		parsedPurl, err := packageurl.FromString(job.Purl)
+		if err == nil {
+			purlsFromJobs = append(purlsFromJobs, parsedPurl)
 		}
 	}
-	if resultSet.Err() != nil {
-		return nil, fmt.Errorf("could not read from results: %w", err)
+
+	// split them up into batches to avoid parameter limit
+	purlToAffectedComponents := make(map[string][]models.AffectedComponent, len(purlsFromJobs))
+	for start := 0; start < len(purlsFromJobs); start += purlBatchSize {
+		batchStart := time.Now()
+		end := min(start+purlBatchSize, len(purlsFromJobs))
+		candidates, err := comparer.GetAffectedComponentsBatch(ctx, purlsFromJobs[start:end])
+		if err != nil {
+			return nil, fmt.Errorf("could not get affected components for purls: %w", err)
+		}
+
+		// map purls to affected components for fast lookups later
+		for _, candidate := range candidates {
+			if candidate.Components != nil { // filter out unnecessary map entries
+				purlToAffectedComponents[candidate.Purl.String()] = candidate.Components
+			}
+		}
+		slog.Info("finished fetching batch", "amount", end, "time", time.Since(batchStart))
 	}
-	return fixedVersions, nil
+
+	updatingJobs := make([]fixedVersionJob, 0, len(fixedVersionJobs))
+	for i, job := range fixedVersionJobs {
+		// look up using the same normalization the map keys were built with
+		parsedPurl, err := packageurl.FromString(job.Purl)
+		if err != nil {
+			continue
+		}
+		affectedComponents := purlToAffectedComponents[parsedPurl.String()]
+		for _, ac := range affectedComponents {
+			if !slices.Contains(utils.Map(ac.CVE, func(cve models.CVE) string {
+				return cve.CVE
+			}), job.CVEID) {
+				continue
+			}
+
+			var fixedVersion *string
+			if ac.SemverFixed != nil {
+				fixedVersion = normalize.FixFixedVersion(job.Purl, ac.SemverFixed)
+			} else if ac.VersionFixed != nil {
+				fixedVersion = normalize.FixFixedVersion(job.Purl, ac.VersionFixed)
+			}
+			if fixedVersion != nil {
+				slog.Info("i", "i", i)
+				job.FixedVersion = *fixedVersion
+				updatingJobs = append(updatingJobs, job)
+				break
+			}
+		}
+	}
+
+	return updatingJobs, nil
 }
