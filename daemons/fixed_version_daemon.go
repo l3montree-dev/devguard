@@ -2,6 +2,7 @@ package daemons
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -63,6 +64,7 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 // fetches all vulns with no component_fixed_version information and deduplicates them based on purl + cve_id
 func (runner *DaemonRunner) FetchVulnsToUpdate(ctx context.Context) ([]fixedVersionJob, error) {
 	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions.FetchVulnsToUpdate")
+	defer span.End()
 	var fixedVersionJobs []fixedVersionJob
 
 	// get all dependency vulns without a fixed version (distinct on purl + cveID)
@@ -93,6 +95,10 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updating
 		return nil
 	}
 
+	if runner.pgxpool == nil {
+		return fmt.Errorf("no pgx pool configured, cannot update fixed versions")
+	}
+
 	// handle everything in one transaction
 	tx, err := runner.pgxpool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -101,7 +107,8 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updating
 
 	defer func() {
 		// make sure to always rollback after we exit (safe to call on a committed transaction)
-		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+		err := tx.Rollback(ctx)
+		if err != nil && errors.Is(err, pgx.ErrTxClosed) {
 			slog.Error("fatal could not rollback updating transaction, database state possibly inconsistent", "error", err)
 		}
 		if err == nil {
@@ -152,10 +159,16 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 
 	// map the jobs to a parsed purl slice to be compatible with the purl comparer function
 	purlsFromJobs := make([]packageurl.PackageURL, 0, len(fixedVersionJobs))
+	seenPurl := make(map[string]struct{}, len(fixedVersionJobs)) // deduplicate based on purls
 	for _, job := range fixedVersionJobs {
+		if _, ok := seenPurl[job.Purl]; ok {
+			continue
+		}
+
 		parsedPurl, err := packageurl.FromString(job.Purl)
 		if err == nil {
 			purlsFromJobs = append(purlsFromJobs, parsedPurl)
+			seenPurl[job.Purl] = struct{}{}
 		}
 	}
 
