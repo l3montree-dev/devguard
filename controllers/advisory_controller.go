@@ -66,7 +66,7 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not create advisory").WithInternal(err)
 	}
 
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetActorName()
 	userAgent := ctx.Request().UserAgent()
 	if _, err := controller.advisoryService.CreateVulnEventAndApply(ctx.Request().Context(), nil, userID, &newAdvisory, dtos.EventTypeCreated, "", "", &userAgent); err != nil {
 		return echo.NewHTTPError(500, "could not create advisory created event").WithInternal(err)
@@ -226,7 +226,7 @@ func (controller *AdvisoryController) CreateEvent(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "advisory not found")
 	}
 
-	userID := shared.GetSession(ctx).GetUserID()
+	userID := shared.GetSession(ctx).GetActorName()
 
 	var status dtos.CreateEventRequest
 	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {

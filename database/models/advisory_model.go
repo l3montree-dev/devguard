@@ -70,7 +70,7 @@ func (m Advisory) GetArtifacts() []Artifact {
 	return nil
 }
 
-func (m Advisory) AssetVersionIndependentHash() string {
+func (m Advisory) CalculateAssetVersionIndependentHash() string {
 	return ""
 }
 
