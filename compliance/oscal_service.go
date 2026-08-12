@@ -147,13 +147,14 @@ func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, gr
 	}
 
 	fc := models.FrameworkControl{
-		Framework:   string(frameworkName),
-		ControlID:   c.ID,
-		Title:       c.Title,
-		Class:       c.Class,
-		Description: description,
-		Importance:  importanceString(additional["importance"]),
-		Additional:  mustMarshalJSON(additional),
+		Framework:     string(frameworkName),
+		ControlID:     c.ID,
+		Title:         c.Title,
+		Class:         c.Class,
+		Description:   description,
+		Importance:    importanceString(additional["importance"]),
+		SecurityLevel: importanceString(additional["security_level"]),
+		Additional:    mustMarshalJSON(additional),
 	}
 	fc.SetID()
 

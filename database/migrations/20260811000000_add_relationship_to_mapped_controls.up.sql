@@ -4,3 +4,5 @@
 
     ALTER TABLE public.mapped_controls
         ADD CONSTRAINT mapped_controls_pkey PRIMARY KEY (framework_control_id, related_framework, related_control_id, relationship);
+
+    ALTER TABLE public.frameworks_controls ADD COLUMN IF NOT EXISTS security_level TEXT;
