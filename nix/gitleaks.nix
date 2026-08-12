@@ -1,6 +1,14 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/gi/gitleaks/package.nix
-{ lib, buildGoModule, fetchFromGitHub, installShellFiles, runCommand, jq, trivy }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  runCommand,
+  jq,
+  trivy,
+}:
 
 let
   pname = "gitleaks";
@@ -53,6 +61,11 @@ in
     toolName = "gitleaks";
     inherit src version modulePurl;
     inherit (package) goModules;
-    binaries = [{ name = "gitleaks"; binPath = "${package}/bin/gitleaks"; }];
+    binaries = [
+      {
+        name = "gitleaks";
+        binPath = "${package}/bin/gitleaks";
+      }
+    ];
   };
 }

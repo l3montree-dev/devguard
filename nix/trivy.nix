@@ -1,6 +1,13 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/tr/trivy/package.nix
-{ lib, buildGoModule, fetchFromGitHub, installShellFiles, runCommand, jq }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  runCommand,
+  jq,
+}:
 
 let
   pname = "trivy";
@@ -75,6 +82,11 @@ in
     src = sbomSrc;
     inherit version modulePurl;
     inherit (package) goModules;
-    binaries = [{ name = "trivy"; binPath = "${package}/bin/trivy"; }];
+    binaries = [
+      {
+        name = "trivy";
+        binPath = "${package}/bin/trivy";
+      }
+    ];
   };
 }

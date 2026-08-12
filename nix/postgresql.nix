@@ -3,7 +3,13 @@
 # Upstream nixpkgs definitions:
 #   https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/servers/sql/postgresql/default.nix
 #   https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/servers/sql/postgresql/ext/pg-semver.nix
-{ postgresql_16, fetchurl, stdenv, runCommand }: rec {
+{
+  postgresql_16,
+  fetchurl,
+  stdenv,
+  runCommand,
+}:
+rec {
   psql = postgresql_16.withPackages (p: [ p.pg-semver ]);
 
   entrypoint = stdenv.mkDerivation {
@@ -18,7 +24,7 @@
     '';
   };
 
-  config = runCommand "postgresql-config" {} ''
+  config = runCommand "postgresql-config" { } ''
     install -D -m 0644 ${./postgresql.conf} $out/etc/postgresql/postgresql.conf
   '';
 }

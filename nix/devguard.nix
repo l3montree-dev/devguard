@@ -1,10 +1,15 @@
 {
-  buildGoModule, lib, self,
+  buildGoModule,
+  lib,
+  self,
   # optional: only needed to build devguardScannerSBOM (passed explicitly
   # from oci.nix). The plain "binaries" call site in flake.nix never
   # references that attribute, so it's fine for these to stay null there.
-  runCommand ? null, jq ? null, trivy ? null,
-}: rec {
+  runCommand ? null,
+  jq ? null,
+  trivy ? null,
+}:
+rec {
   common = import ./common.nix { inherit self lib; };
   ldflags = [
     "-s"
@@ -47,31 +52,39 @@
     proxyVendor = true;
     vendorHash = "sha256-AkMVxG6Lp+6Nd8mpPbOEi86H3PxGgE6WgM69QJF+uaM=";
     inherit ldflags;
-    buildFlags =
-      [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
+    buildFlags = [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
     doCheck = false;
     env = {
       CGO_ENABLED = 0; # static binary, no cgo
     };
   };
 
-  devguardScanner = buildGoModule (commonArgs // {
-    pname = "devguard-scanner";
-    inherit (common) version;
-    subPackages = [ "cmd/devguard-scanner" ];
-  });
+  devguardScanner = buildGoModule (
+    commonArgs
+    // {
+      pname = "devguard-scanner";
+      inherit (common) version;
+      subPackages = [ "cmd/devguard-scanner" ];
+    }
+  );
 
-  devguard = buildGoModule (commonArgs // {
-    pname = "devguard";
-    inherit (common) version;
-    subPackages = [ "cmd/devguard" ];
-  });
+  devguard = buildGoModule (
+    commonArgs
+    // {
+      pname = "devguard";
+      inherit (common) version;
+      subPackages = [ "cmd/devguard" ];
+    }
+  );
 
-  devguardCLI = buildGoModule (commonArgs // {
-    pname = "devguard-cli";
-    inherit (common) version;
-    subPackages = [ "cmd/devguard-cli" ];
-  });
+  devguardCLI = buildGoModule (
+    commonArgs
+    // {
+      pname = "devguard-cli";
+      inherit (common) version;
+      subPackages = [ "cmd/devguard-cli" ];
+    }
+  );
 
   # devguard-scanner ends up scanning devguard's own images, and trivy
   # detects each of these compiled binaries the same way it detects
@@ -93,7 +106,12 @@
     inherit (common) version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
     inherit (devguardScanner) goModules;
-    binaries = [{ name = "devguard-scanner"; binPath = "${devguardScanner}/bin/devguard-scanner"; }];
+    binaries = [
+      {
+        name = "devguard-scanner";
+        binPath = "${devguardScanner}/bin/devguard-scanner";
+      }
+    ];
     externalReferences = [
       {
         type = "exploitability-statement";
@@ -109,7 +127,10 @@
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
     inherit (devguard) goModules;
     binaries = [
-      { name = "devguard"; binPath = "${devguard}/bin/devguard"; }
+      {
+        name = "devguard";
+        binPath = "${devguard}/bin/devguard";
+      }
     ];
   };
 
@@ -119,6 +140,11 @@
     inherit (common) version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
     inherit (devguardCLI) goModules;
-    binaries = [{ name = "devguard-cli"; binPath = "${devguardCLI}/bin/devguard-cli"; }];
+    binaries = [
+      {
+        name = "devguard-cli";
+        binPath = "${devguardCLI}/bin/devguard-cli";
+      }
+    ];
   };
 }
