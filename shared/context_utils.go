@@ -106,6 +106,7 @@ func NewAdminClient(client *client.APIClient) AdminClientImplementation {
 
 func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
 	session, httpResp, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+	session.
 	if err != nil {
 		// a 401 just means "no valid session" - the common, expected case. Anything
 		// else (5xx, connection refused, timeout - reported as a nil httpResp) means
