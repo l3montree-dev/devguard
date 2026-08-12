@@ -18,11 +18,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
+	"math/rand"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -104,18 +108,30 @@ func NewAdminClient(client *client.APIClient) AdminClientImplementation {
 	}
 }
 
+const maxNumberOfRetries = 3
+
 func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
-	session, httpResp, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
-	session.
+	retries := 0
+	session, resp, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+	for shouldRetry(ctx, err, resp, retries) {
+		retries++
+		slog.Warn("could not get identity from cookie, backing off then retrying", "retry", retries, "error", err)
+		select { // check context cancellation
+		case <-ctx.Done():
+			return client.Identity{}, ctx.Err()
+		case <-time.After(calculateBackoffTime(retries)):
+		}
+		session, resp, err = a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+	}
+
 	if err != nil {
-		// a 401 just means "no valid session" - the common, expected case. Anything
-		// else (5xx, connection refused, timeout - reported as a nil httpResp) means
-		// Kratos itself is unreachable or failing, which is worth alerting on.
+		// if we fail after all retries then alert
 		statusCode := 0
-		if httpResp != nil {
-			statusCode = httpResp.StatusCode
+		if resp != nil {
+			statusCode = resp.StatusCode
 		}
 		if statusCode == 0 || statusCode >= 500 {
+			// alter if status Code is missing or not authentication related
 			monitoring.Alert("kratos: could not get identity from cookie", err)
 		}
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
@@ -124,6 +140,26 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 		return client.Identity{}, fmt.Errorf("identity not found in session")
 	}
 	return *session.Identity, nil
+}
+
+// determines if we should retry based on execute results
+func shouldRetry(ctx context.Context, err error, resp *http.Response, retries int) bool {
+	if err == nil || retries >= maxNumberOfRetries {
+		return false // no error or too many retries
+	}
+	if ctx.Err() != nil {
+		return false // context cancelled, no point in retrying
+	}
+	if resp != nil && (resp.StatusCode == 401 || resp.StatusCode == 403) {
+		return false // authentication failed will fail again
+	}
+	return true
+}
+
+// 2 ^ numOfRetries+4 (start at 32ms, max 128ms), halved and jittered so concurrent requests do not retry at the same time
+func calculateBackoffTime(retries int) time.Duration {
+	backoff := time.Duration(1<<(retries+4)) * time.Millisecond
+	return backoff/2 + time.Duration(rand.Int63n(int64(backoff/2))) // #nosec
 }
 
 func (a AdminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
