@@ -22,8 +22,10 @@ import (
 )
 
 //go:embed oscal/catalogs/SCF.json
+//nolint:unused
 var scfCatalogJSON []byte
 
+//nolint:unused
 func loadSCFControls() ([]models.FrameworkControl, error) {
 	catalog, err := parseOSCALCatalog(bytes.NewReader(scfCatalogJSON))
 	if err != nil {
@@ -32,6 +34,7 @@ func loadSCFControls() ([]models.FrameworkControl, error) {
 	return extractControlsFromCatalog(catalog, SCF, scfAdditionalMapper), nil
 }
 
+//nolint:unused
 func scfAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
 	additional := make(map[string]any)
 
