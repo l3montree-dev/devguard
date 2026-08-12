@@ -174,7 +174,7 @@ func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []m
 			ev, err := createVulnEventFromVEXRule(vuln, rule)
 			if err != nil {
 				slog.Error("failed to create event from VEX rule", "error", err)
-				continue
+				return nil, nil, err
 			}
 
 			if isVexEventAlreadyApplied(vuln, ev) {

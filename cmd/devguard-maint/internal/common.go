@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var semverRe = regexp.MustCompile(`^v(\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*)?)$`)
@@ -185,13 +186,62 @@ func CheckChangelogEntry(changelogPath, tag string) error {
 	if err != nil {
 		return fmt.Errorf("could not read %s: %w", changelogPath, err)
 	}
-	needle := "## [" + tag + "]"
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), needle) {
-			return nil
-		}
+	if hasChangelogEntry(string(data), tag) {
+		return nil
 	}
 	return fmt.Errorf("no changelog entry found for %s in %s — add a '## [%s]' section before releasing", tag, changelogPath, tag)
+}
+
+func hasChangelogEntry(content, tag string) bool {
+	needle := "## [" + tag + "]"
+	for _, line := range strings.Split(content, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// EnsureHelmChangelogEntry checks whether the given tag already has an entry
+// in the Helm chart's CHANGELOG.md at changelogPath. If not, it asks the user
+// whether nothing changed in the chart itself besides the bundled image
+// versions; if approved, it generates and inserts a changelog entry
+// documenting just those image bumps. If declined, it returns an error so the
+// release can be aborted for a manual entry.
+func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTag string) error {
+	data, err := os.ReadFile(changelogPath)
+	if err != nil {
+		return fmt.Errorf("could not read %s: %w", changelogPath, err)
+	}
+	content := string(data)
+	if hasChangelogEntry(content, tag) {
+		return nil
+	}
+
+	fmt.Printf("\nHey, you currently have no changelog written for %s.\n", tag)
+	if !Confirm("Nothing changed in the devguard-helm chart itself — should I create a changelog entry containing just the corresponding image updates and their new versions?") {
+		return fmt.Errorf("no changelog entry found for %s in %s — add a '## [%s]' section before releasing", tag, changelogPath, tag)
+	}
+
+	entry := fmt.Sprintf(
+		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`\n\n---\n\n",
+		tag, time.Now().Format("2006-01-02"), apiTag, webTag, ciComponentsTag,
+	)
+
+	idx := strings.Index(content, "\n## [")
+	var updated string
+	if idx == -1 {
+		updated = content + "\n" + entry
+	} else {
+		insertAt := idx + 1
+		updated = content[:insertAt] + entry + content[insertAt:]
+	}
+
+	if err := os.WriteFile(changelogPath, []byte(updated), 0o644); err != nil {
+		return fmt.Errorf("could not write %s: %w", changelogPath, err)
+	}
+	fmt.Printf("✓ Added changelog entry for %s to %s\n", tag, changelogPath)
+	return nil
 }
 
 // ReplaceInFile replaces all occurrences of old with new in the file at path.

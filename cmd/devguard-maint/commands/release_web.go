@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 
@@ -53,6 +54,17 @@ func runReleaseWeb(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("working directory devguard-web is not clean")
 	}
 
+	cl := &i.Changelog{}
+
+	if i.Confirm("Run e2e tests now? They regenerate the docs screenshots in e2e/docs-screenshots.") {
+		if err := runWebE2ETests(); err != nil {
+			return fmt.Errorf("e2e tests failed: %w", err)
+		}
+		cl.Change("Ran e2e tests and regenerated docs screenshots")
+	} else {
+		fmt.Println("Skipping e2e tests — docs screenshots will not be refreshed")
+	}
+
 	pkgJSON := filepath.Join("devguard-web", "package.json")
 	versionRe := regexp.MustCompile(`"version":\s*"[^"]*"`)
 	data, err := os.ReadFile(pkgJSON)
@@ -69,13 +81,12 @@ func runReleaseWeb(_ *cobra.Command, args []string) error {
 
 	if !i.Confirm("Continue with tagging?") {
 		_ = i.GitRun("devguard-web", "checkout", "--", "package.json")
+		_ = i.GitRun("devguard-web", "checkout", "--", "e2e/docs-screenshots")
 		fmt.Println("Operation cancelled.")
 		return nil
 	}
 
-	cl := &i.Changelog{}
-
-	if err := i.GitAdd("devguard-web", "package.json"); err != nil {
+	if err := i.GitAdd("devguard-web", "package.json", "e2e/docs-screenshots"); err != nil {
 		return err
 	}
 	if err := i.GitCommit("devguard-web", "chore: bump version to "+semver); err != nil {
@@ -99,4 +110,17 @@ func runReleaseWeb(_ *cobra.Command, args []string) error {
 	cl.PrintSummary("FINAL SUMMARY")
 	fmt.Println("\n✓ Script completed successfully!")
 	return nil
+}
+
+// runWebE2ETests runs the DevGuard e2e suite (`npm run e2e`) from the
+// devguard-web repo root. The suite requires e2e/.env to be configured
+// (DEVGUARD_DOMAIN and friends — see e2e/README.md) and hits a live
+// DevGuard instance; it also regenerates the screenshots checked into
+// e2e/docs-screenshots.
+func runWebE2ETests() error {
+	cmd := exec.Command("npm", "run", "e2e")
+	cmd.Dir = "devguard-web"
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

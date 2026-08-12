@@ -45,6 +45,7 @@ func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 		Exploits:              utils.Map(cve.Exploits, ExploitModelToDTO),
 		Relationships:         utils.Map(cve.Relationships, RelationshipToDTO),
 		EUVDExploitAdd:        cve.EUVDExploitAdd,
+		AffectedComponents:    utils.Map(cve.AffectedComponents, affectedComponentToDTOWithoutCVEs),
 	}
 }
 
@@ -119,6 +120,12 @@ func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackageDTO {
 }
 
 func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentDTO {
+	dto := affectedComponentToDTOWithoutCVEs(ac)
+	dto.CVEs = utils.Map(ac.CVE, CVEToDTO)
+	return dto
+}
+
+func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.AffectedComponentDTO {
 	return dtos.AffectedComponentDTO{
 		ID:                 ac.ID,
 		PurlWithoutVersion: ac.PurlWithoutVersion,
@@ -128,7 +135,6 @@ func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentD
 		SemverFixed:        ac.SemverFixed,
 		VersionIntroduced:  ac.VersionIntroduced,
 		VersionFixed:       ac.VersionFixed,
-		CVEs:               utils.Map(ac.CVE, CVEToDTO),
 	}
 }
 

@@ -1048,6 +1048,100 @@ func TestScanning(t *testing.T) {
 	})
 }
 
+// TestBranchInheritanceIgnoresGitAncestry documents that inheritance across asset
+// versions is ordered by event CreatedAt, not git ancestry, so an unrelated branch's
+// later event can override a VEX decision that a freshly branched-off version should
+// actually inherit from its real parent.
+func TestBranchInheritanceIgnoresGitAncestry(t *testing.T) {
+	t.Skip()
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		scanController := f.App.ScanController
+		vulnController := f.App.DependencyVulnController
+		app := echo.New()
+		createCVE2025_46569(f.DB)
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupScanContext := func(ctx shared.Context) {
+			authSession := NewUserSession(t, "abc")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		scan := func(branch string) {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomWithVulnerability())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Artifact-Name", "artifact-1")
+			req.Header.Set("X-Asset-Default-Branch", "main")
+			req.Header.Set("X-Origin", "test-origin")
+			req.Header.Set("X-Asset-Ref", branch)
+			ctx := app.NewContext(req, recorder)
+			setupScanContext(ctx)
+			err := scanController.ScanDependencyVulnFromProject(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, recorder.Code)
+		}
+
+		dependencyVulnRepository := f.App.DependencyVulnRepository
+		findVuln := func(branch string) models.DependencyVuln {
+			vulns, err := dependencyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
+			assert.Nil(t, err)
+			for _, v := range vulns {
+				if v.AssetVersionName == branch {
+					return v
+				}
+			}
+			t.Fatalf("no vuln found on branch %s", branch)
+			return models.DependencyVuln{}
+		}
+
+		createEvent := func(branch string, dependencyVulnID string, statusType dtos.VulnEventType, justification string) {
+			assetVersion, err := f.App.AssetVersionRepository.Read(context.Background(), nil, branch, asset.ID)
+			assert.Nil(t, err)
+
+			msg := dtos.DependencyVulnStatus{
+				StatusType:    string(statusType),
+				Justification: justification,
+			}
+			b, err := json.Marshal(msg)
+			assert.Nil(t, err)
+
+			req := httptest.NewRequest("POST", "/dependency_vuln/event", bytes.NewBuffer(b))
+			rec := httptest.NewRecorder()
+			ctx := app.NewContext(req, rec)
+			setupScanContext(ctx)
+			shared.SetAssetVersion(ctx, assetVersion)
+			shared.SetThirdPartyIntegration(ctx, f.App.IntegrationAggregate)
+			ctx.SetParamNames("dependencyVulnID")
+			ctx.SetParamValues(dependencyVulnID)
+
+			err = vulnController.CreateEvent(ctx)
+			assert.Nil(t, err)
+			assert.Equal(t, 200, rec.Code)
+		}
+
+		scan("main")
+		mainVuln := findVuln("main")
+
+		scan("other-branch")
+		otherBranchVuln := findVuln("other-branch")
+
+		createEvent("main", mainVuln.ID.String(), dtos.EventTypeAccepted, "accepted on main")
+		createEvent("other-branch", otherBranchVuln.ID.String(), dtos.EventTypeReopened, "reopened on other-branch")
+
+		scan("new-branch")
+		newBranchVuln := findVuln("new-branch")
+		err := f.DB.Preload("Events").First(&newBranchVuln, "id = ?", newBranchVuln.ID).Error
+		assert.Nil(t, err)
+
+		assert.Equal(t, dtos.VulnStateAccepted, newBranchVuln.State,
+			"BUG: new-branch should inherit main's accepted state, not other-branch's later reopened event")
+	})
+}
+
 func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {

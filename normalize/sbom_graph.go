@@ -1428,7 +1428,8 @@ func (g *SBOMGraph) ToCycloneDX(metadata BOMMetadata) *cdx.BOM {
 
 func RemoveInformationSourcePrefixIfExists(origin string) (InfoSourceType, string) {
 	if after, ok := strings.CutPrefix(origin, fmt.Sprintf("%s:", InfoSourceSBOM)); ok {
-		return InfoSourceSBOM, after
+		// cut any @ artifact suffix
+		return InfoSourceSBOM, strings.Split(after, "@")[0]
 	}
 
 	return "", origin
@@ -1658,7 +1659,7 @@ func InvalidSBOMGraphFromCycloneDX(bom *cdx.BOM, artifactName, infoSourceID stri
 	if rootRef != "" {
 		if isArtifactRootComponent(rootComponent, artifactName) {
 			for _, child := range depMap[rootRef] {
-				g.AddEdge(artifactID, child)
+				g.AddEdge(infoID, child)
 			}
 		} else {
 			g.AddEdge(infoID, rootRef)

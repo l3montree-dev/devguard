@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"iter"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -186,6 +187,17 @@ func (repository *dependencyVulnRepository) FindByCVEAndComponentPurl(ctx contex
 		Find(&vulns).Error
 	return vulns, err
 }
+func dependencyVulnSortSQL(s shared.SortQuery) string {
+	switch s.Field {
+	case "max_risk":
+		s.Field = "dependency_vulns.raw_risk_assessment"
+	case "max_cvss":
+		s.Field = "CVE.cvss"
+	default:
+		s.Field = "dependency_vulns.raw_risk_assessment"
+	}
+	return s.SQL()
+}
 
 func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], map[string]int, error) {
 	var count int64
@@ -242,7 +254,16 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 		return repository.PackageName
 	})
 
-	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Find(&dependencyVulns).Error
+	q = q.Where("dependency_vulns.component_purl IN (?)", packageNames)
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(dependencyVulnSortSQL(s))
+		}
+	} else {
+		q = q.Order("raw_risk_assessment DESC")
+	}
+
+	err = q.Preload("CVE").Find(&dependencyVulns).Error
 
 	if err != nil {
 		return shared.Paged[models.DependencyVuln]{}, map[string]int{}, err
@@ -430,24 +451,20 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 
 }
 
-func (repository *dependencyVulnRepository) GetAllOpenVulnsWithoutEvents(ctx context.Context, tx *gorm.DB) ([]models.DependencyVuln, error) {
-	return repository.getAllOpenVulns(ctx, tx, nil, false)
-}
-
 // GetAllOpenVulnsByAssetID preloads Events, needed by CEL VEX rule matching to
 // tell whether a rule's outcome was already applied to a vuln.
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, true)
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, true, batchSize)
 }
 
 // GetAllOpenVulnsByAssetIDWithoutEvents skips the Events preload for callers
 // that don't need it, such as the crowdsourced-vexing recommendation response.
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, false)
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, false, batchSize)
 }
 
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.DependencyVuln, error) {
-	return repository.getAllOpenVulns(ctx, tx, assetIDs, true)
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return repository.getAllOpenVulns(ctx, tx, assetIDs, true, batchSize)
 }
 
 // getAllOpenVulnsByAssetID omits CVE.Description/References - they're large
@@ -457,60 +474,76 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx contex
 // instead of GORM's Preload building a literal IN(...) list of every
 // already-fetched vuln ID, which is expensive for Postgres to plan at thousands
 // of IDs.
-func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, preloadEvents bool) ([]models.DependencyVuln, error) {
-	db := repository.GetDB(ctx, tx)
+func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, preloadEvents bool, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return func(yield func([]models.DependencyVuln, error) bool) {
+		db := repository.GetDB(ctx, tx)
+		offset := 0
+		for {
+			query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
+				return db.Omit("Description", "References")
+			})
+			if preloadEvents {
+				query = query.Preload("Events")
+			}
 
-	query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
-		return db.Omit("Description", "References")
-	})
-	if preloadEvents {
-		query = query.Preload("Events")
-	}
+			query = query.Where("state = ?", dtos.VulnStateOpen)
+			if len(assetIDs) > 0 {
+				query = query.Where("asset_id IN (?)", assetIDs)
+			}
 
-	query = query.Distinct("ON (cve_id, vulnerability_path) *").Where("state = ?", dtos.VulnStateOpen)
-	if len(assetIDs) > 0 {
-		query = query.Where("asset_id IN (?)", assetIDs)
-	}
+			var vulns = []models.DependencyVuln{}
+			if err := query.Order("cve_id, vulnerability_path, created_at ASC").Limit(batchSize).Offset(offset).Find(&vulns).Error; err != nil {
+				yield(nil, err)
+				return
+			}
 
-	var vulns = []models.DependencyVuln{}
-	if err := query.Order("cve_id, vulnerability_path, created_at ASC").Find(&vulns).Error; err != nil {
-		return nil, err
-	}
+			if len(vulns) == 0 {
+				return
+			}
 
-	if len(vulns) == 0 {
-		return vulns, nil
-	}
+			openIDs := db.Table("dependency_vulns").
+				Select("id").
+				Where("state = ?", dtos.VulnStateOpen)
+			if len(assetIDs) > 0 {
+				openIDs = openIDs.Where("asset_id IN (?)", assetIDs)
+			}
 
-	dedupedIDs := db.Table("dependency_vulns").
-		Select("DISTINCT ON (cve_id, vulnerability_path) id").
-		Where("state = ?", dtos.VulnStateOpen)
-	if len(assetIDs) > 0 {
-		dedupedIDs = dedupedIDs.Where("asset_id IN (?)", assetIDs)
-	}
-	dedupedIDs = dedupedIDs.Order("cve_id, vulnerability_path, created_at ASC")
+			type artifactRow struct {
+				models.Artifact
+				DependencyVulnID uuid.UUID
+			}
+			var rows []artifactRow
+			if err := db.Table("artifact_dependency_vulns AS adv").
+				Select("artifacts.*, adv.dependency_vuln_id").
+				Joins("JOIN artifacts ON adv.artifact_artifact_name = artifacts.artifact_name AND adv.artifact_asset_version_name = artifacts.asset_version_name AND adv.artifact_asset_id = artifacts.asset_id").
+				Where("adv.dependency_vuln_id IN (?)", openIDs).
+				Find(&rows).Error; err != nil {
+				yield(nil, err)
+				return
+			}
 
-	type artifactRow struct {
-		models.Artifact
-		DependencyVulnID uuid.UUID
-	}
-	var rows []artifactRow
-	if err := db.Table("artifact_dependency_vulns AS adv").
-		Select("artifacts.*, adv.dependency_vuln_id").
-		Joins("JOIN artifacts ON adv.artifact_artifact_name = artifacts.artifact_name AND adv.artifact_asset_version_name = artifacts.asset_version_name AND adv.artifact_asset_id = artifacts.asset_id").
-		Where("adv.dependency_vuln_id IN (?)", dedupedIDs).
-		Find(&rows).Error; err != nil {
-		return nil, err
-	}
+			artifactsByVulnID := make(map[uuid.UUID][]models.Artifact, len(vulns))
+			for _, r := range rows {
+				artifactsByVulnID[r.DependencyVulnID] = append(artifactsByVulnID[r.DependencyVulnID], r.Artifact)
+			}
+			for i := range vulns {
+				vulns[i].Artifacts = artifactsByVulnID[vulns[i].ID]
+			}
 
-	artifactsByVulnID := make(map[uuid.UUID][]models.Artifact, len(vulns))
-	for _, r := range rows {
-		artifactsByVulnID[r.DependencyVulnID] = append(artifactsByVulnID[r.DependencyVulnID], r.Artifact)
-	}
-	for i := range vulns {
-		vulns[i].Artifacts = artifactsByVulnID[vulns[i].ID]
-	}
+			if !yield(vulns, nil) {
+				return
+			}
 
-	return vulns, nil
+			// batchSize <= 0 means "no limit" (GORM treats Limit(-1) as unlimited) -
+			// the query above already returned everything there is, so stop instead
+			// of issuing a second, pointless round trip.
+			if batchSize <= 0 || len(vulns) < batchSize {
+				return
+			}
+
+			offset += len(vulns)
+		}
+	}
 }
 
 // Override the base GetAllVulnsByAssetID method to preload artifacts

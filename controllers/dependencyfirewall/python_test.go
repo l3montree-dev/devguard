@@ -31,6 +31,13 @@ func TestPyPIParsePackage(t *testing.T) {
 			t.Fatalf("expected requests@2.31.0, got %q@%q", pkg, version)
 		}
 	})
+
+	t.Run("parses package artifact path with trailing slash", func(t *testing.T) {
+		pkg, version := pypi.parsePackage("/packages/ab/cd/requests-2.31.0-py3-none-any.whl/")
+		if pkg != "requests" || version != "2.31.0" {
+			t.Fatalf("expected requests@2.31.0, got %q@%q", pkg, version)
+		}
+	})
 }
 
 func TestPyPIEcosystemTrimPrefix(t *testing.T) {

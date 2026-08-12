@@ -21,17 +21,8 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 	slog.Info("running vex rule recommendation daemon", "traceID", span.SpanContext().TraceID().String())
 
 	err := runner.db.WithContext(ctx).Transaction(func(tx shared.DB) error {
-		t := time.Now()
-		fetchVulnsCtx, fetchVulnsSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-vulns")
-		allVulns, err := runner.dependencyVulnRepository.GetAllOpenVulnsWithoutEvents(fetchVulnsCtx, tx)
-		if err != nil {
-			return utils.EndSpanWithError(fetchVulnsSpan, errors.Wrap(err, "failed to fetch all open vulns"))
-		}
-		fetchVulnsSpan.SetAttributes(attribute.Int("vulns.count", len(allVulns)))
-		fetchVulnsSpan.End()
-		slog.Info("step: fetch-vulns", "count", len(allVulns), "took", time.Since(t))
 
-		t = time.Now()
+		t := time.Now()
 		fetchRulesCtx, fetchRulesSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-rules")
 		allRules, err := runner.vexRuleRepository.All(fetchRulesCtx, tx)
 		if err != nil {
@@ -40,41 +31,17 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 		fetchRulesSpan.SetAttributes(attribute.Int("rules.count", len(allRules)))
 		fetchRulesSpan.End()
 		slog.Info("step: fetch-rules", "count", len(allRules), "took", time.Since(t))
-
-		t = time.Now()
-		fetchUpstreamCtx, fetchUpstreamSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-upstream-rules")
-		upstreamRules, err := runner.upstreamVEXRuleRepository.All(fetchUpstreamCtx, tx)
-		if err != nil {
-			return utils.EndSpanWithError(fetchUpstreamSpan, errors.Wrap(err, "failed to fetch all upstream VEX rules"))
-		}
-		fetchUpstreamSpan.SetAttributes(attribute.Int("upstream_rules.count", len(upstreamRules)))
-		fetchUpstreamSpan.End()
-		slog.Info("step: fetch-upstream-rules", "count", len(upstreamRules), "took", time.Since(t))
-
 		t = time.Now()
 		buildCtxCtx, buildCtxSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.build-crowdsourced-context")
+
+		// we cannot batch anything related to rules since we need them to build the crowdsourced context
+		// we can only batch over dependency vulns.
 		crowdsourcedCtx, err := runner.buildCrowdsourcedVexingContext(buildCtxCtx, tx, allRules)
 		if err != nil {
 			return utils.EndSpanWithError(buildCtxSpan, errors.Wrap(err, "failed to build crowdsourced vexing context"))
 		}
 		buildCtxSpan.End()
 		slog.Info("step: build-crowdsourced-context", "took", time.Since(t))
-
-		t = time.Now()
-		computeCtx, computeSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.compute")
-		ruleRecommendations, err := services.ComputeVEXRuleRecommendations(computeCtx, allVulns, allRules, upstreamRules, crowdsourcedCtx)
-		if err != nil {
-			return utils.EndSpanWithError(computeSpan, errors.Wrap(err, "failed to compute VEX rule recommendations"))
-		}
-		computeSpan.SetAttributes(attribute.Int("recommendations.count", len(ruleRecommendations)))
-		computeSpan.End()
-		slog.Info("step: compute", "count", len(ruleRecommendations), "took", time.Since(t))
-
-		span.SetAttributes(
-			attribute.Int("vulns.count", len(allVulns)),
-			attribute.Int("recommendations.count", len(ruleRecommendations)),
-		)
-		slog.Info("finished rule recommendation calculation", "amount", len(ruleRecommendations), "traceID", span.SpanContext().TraceID().String())
 
 		t = time.Now()
 		deleteCtx, deleteSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.delete-all")
@@ -84,13 +51,49 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 		deleteSpan.End()
 		slog.Info("step: delete-all", "took", time.Since(t))
 
-		t = time.Now()
-		saveCtx, saveSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.save-batch")
-		defer saveSpan.End()
-		if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(saveCtx, tx, ruleRecommendations); err != nil {
-			return utils.EndSpanWithError(saveSpan, errors.Wrap(err, "failed to save VEX rule recommendations"))
+		fetchVulnsCtx, fetchVulnsSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-vulns")
+		defer fetchVulnsSpan.End()
+		for allVulns, err := range runner.dependencyVulnRepository.GetAllOpenVulnsByAssetIDs(fetchVulnsCtx, tx, nil, 10_000) {
+			if err != nil {
+				return utils.EndSpanWithError(fetchVulnsSpan, errors.Wrap(err, "failed to fetch all open vulns"))
+			}
+			fetchVulnsSpan.SetAttributes(attribute.Int("vulns.count", len(allVulns)))
+			slog.Info("step: fetch-vulns", "count", len(allVulns), "took", time.Since(t))
+
+			t = time.Now()
+			fetchUpstreamCtx, fetchUpstreamSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-upstream-rules")
+			upstreamRules, err := runner.upstreamVEXRuleRepository.All(fetchUpstreamCtx, tx)
+			if err != nil {
+				return utils.EndSpanWithError(fetchUpstreamSpan, errors.Wrap(err, "failed to fetch all upstream VEX rules"))
+			}
+			fetchUpstreamSpan.SetAttributes(attribute.Int("upstream_rules.count", len(upstreamRules)))
+			fetchUpstreamSpan.End()
+			slog.Info("step: fetch-upstream-rules", "count", len(upstreamRules), "took", time.Since(t))
+
+			t = time.Now()
+			computeCtx, computeSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.compute")
+			ruleRecommendations, err := services.ComputeVEXRuleRecommendations(computeCtx, allVulns, allRules, upstreamRules, crowdsourcedCtx)
+			if err != nil {
+				return utils.EndSpanWithError(computeSpan, errors.Wrap(err, "failed to compute VEX rule recommendations"))
+			}
+			computeSpan.SetAttributes(attribute.Int("recommendations.count", len(ruleRecommendations)))
+			computeSpan.End()
+			slog.Info("step: compute", "count", len(ruleRecommendations), "took", time.Since(t))
+
+			span.SetAttributes(
+				attribute.Int("vulns.count", len(allVulns)),
+				attribute.Int("recommendations.count", len(ruleRecommendations)),
+			)
+			slog.Info("finished rule recommendation calculation", "amount", len(ruleRecommendations), "traceID", span.SpanContext().TraceID().String())
+
+			t = time.Now()
+			saveCtx, saveSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.save-batch")
+			if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(saveCtx, tx, ruleRecommendations); err != nil {
+				return utils.EndSpanWithError(saveSpan, errors.Wrap(err, "failed to save VEX rule recommendations"))
+			}
+			saveSpan.End()
+			slog.Info("step: save-batch", "took", time.Since(t))
 		}
-		slog.Info("step: save-batch", "took", time.Since(t))
 		return nil
 	})
 
@@ -131,7 +134,6 @@ func (runner *DaemonRunner) buildCrowdsourcedVexingContext(ctx context.Context, 
 	orgRBACData := make([]services.OrgRBACData, len(orgs))
 	eg := utils.ErrGroup[struct{}](8)
 	for i, org := range orgs {
-		i, org := i, org
 		eg.Go(func() (struct{}, error) {
 			domainRBAC := runner.rbacProvider.GetDomainRBAC(org.ID.String())
 			memberIDs, err := domainRBAC.GetAllMembersOfOrganization()

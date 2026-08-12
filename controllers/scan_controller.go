@@ -198,7 +198,7 @@ func (s *ScanController) ingestVEXRules(ctx context.Context, tx shared.DB, asset
 		return nil
 	}
 
-	vulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID)
+	vulns, err := utils.CollectSeq2(s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID, -1))
 	if err != nil {
 		return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 	}
