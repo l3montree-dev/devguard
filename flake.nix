@@ -168,8 +168,35 @@
             unstablePkgs.gotools
             unstablePkgs.gopls
             unstablePkgs.golangci-lint
+            self.formatter.${system}
           ];
         };
+
+        formatter = unstablePkgs.treefmt.withConfig {
+          settings = {
+            tree-root-file = "flake.nix";
+            on-unmatched = "info";
+            formatter = {
+              nixfmt = {
+                command = lib.getExe unstablePkgs.nixfmt;
+                includes = [ "*.nix" ];
+              };
+              statix = {
+                command = lib.getExe unstablePkgs.statix;
+                options = [ "fix" ];
+                no-positional-arg-support = true;
+                includes = [ "*.nix" ];
+              };
+              deadnix = {
+                command = lib.getExe unstablePkgs.deadnix;
+                options = [ "--edit" ];
+                includes = [ "*.nix" ];
+              };
+            };
+          };
+        };
+
+        checks.formatting = self.formatter.${system}.check self;
       }
     );
 }
