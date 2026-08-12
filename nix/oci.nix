@@ -1,6 +1,5 @@
 { pkgs, self, pyproject-nix, uv2nix, pyproject-build-systems }: rec {
   devguardBinaries = import ./devguard.nix {
-    system = pkgs.stdenv.hostPlatform.system;
     inherit self;
     inherit (pkgs)
       buildGoModule

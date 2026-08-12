@@ -65,7 +65,7 @@
             buildGoModule
             lib
             ;
-          inherit self system;
+          inherit self;
         };
         ociImagesAmd64 = import ./nix/oci.nix {
           pkgs = targetPkgsAmd64;
