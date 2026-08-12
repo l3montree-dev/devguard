@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -51,12 +50,9 @@ func (service ConfigService) SetJSONConfig(ctx context.Context, key string, v an
 	}
 
 	// Keep the in-memory instance settings cache in sync with the DB write
-	if key == "instanceSettings" && instanceSettingsCache != nil {
+	if key == "instanceSettings" {
 		if settings, ok := v.(shared.InstanceSettings); ok {
-			instanceSettingsCacheMutex.Lock()
-			instanceSettingsCache = &settings
-			instanceSettingsExpiry = time.Now().Add(5 * time.Minute)
-			instanceSettingsCacheMutex.Unlock()
+			settingsCache.UpdateCachedSettings(&settings)
 		}
 	}
 
@@ -67,13 +63,10 @@ func (service ConfigService) RemoveConfig(ctx context.Context, key string) error
 	return service.repository.GetDB(ctx, nil).Where("key = ?", key).Delete(&models.Config{}).Error
 }
 
-var instanceSettingsCache *shared.InstanceSettings
-var instanceSettingsExpiry time.Time
-var instanceSettingsCacheMutex = sync.Mutex{}
-
 func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
-	if instanceSettingsCache != nil && time.Now().Before(instanceSettingsExpiry) {
-		return *instanceSettingsCache, nil
+	cachedSettings, ok := settingsCache.GetCachedSettings()
+	if ok {
+		return cachedSettings, nil
 	}
 
 	var settings shared.InstanceSettings
@@ -93,21 +86,52 @@ func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.In
 			settings.BearerTokenAuthDisabled = false
 		}
 	}
-
-	instanceSettingsCacheMutex.Lock()
-	instanceSettingsCache = &settings
-	instanceSettingsExpiry = time.Now().Add(5 * time.Minute) // cache for 5 minutes
-	instanceSettingsCacheMutex.Unlock()
-
+	// one could argue that we should only update when we hit NO error
+	// I think its a tradeoff between correctness and caching effectiveness
+	settingsCache.UpdateCachedSettings(&settings)
 	return settings, nil
 }
 
-func (service ConfigService) GetAndCacheInstanceSettings(ctx context.Context) (shared.InstanceSettings, error) {
+var settingsCache = NewInstanceSettingsCache()
 
-	settings, err := service.GetInstanceSettings(ctx)
-	if err != nil {
-		return shared.InstanceSettings{}, err
+// cache instance settings, no time to life since we know when they change
+type instanceSettingsCache struct {
+	cachedSettings *shared.InstanceSettings
+	mutex          *sync.RWMutex
+}
+
+func NewInstanceSettingsCache() instanceSettingsCache {
+	return instanceSettingsCache{
+		mutex: &sync.RWMutex{},
 	}
+}
 
-	return settings, nil
+// retrieves the cached settings, returns bool to check if anything is cached
+func (cache *instanceSettingsCache) GetCachedSettings() (shared.InstanceSettings, bool) {
+	cache.mutex.RLock()
+	defer cache.mutex.RUnlock()
+	if cache.cachedSettings == nil {
+		return shared.InstanceSettings{}, false
+	}
+	return *cache.cachedSettings, true
+}
+
+// updates the cached settings with new ones
+func (cache *instanceSettingsCache) UpdateCachedSettings(settings *shared.InstanceSettings) {
+	if settings != nil { // only update if values are provided
+		cache.mutex.Lock()
+		defer cache.mutex.Unlock()
+		cache.cachedSettings = settings
+	}
+}
+
+// checks if the provided settings are identical to the cached settings
+func checkIfSettingsAreEqualToCache(settings shared.InstanceSettings) bool {
+	cachedSettings, ok := settingsCache.GetCachedSettings()
+	if !ok { // nothing cached so far -> false
+		return false
+	}
+	// check if all values match
+	return settings.BearerTokenAuthDisabled == cachedSettings.BearerTokenAuthDisabled &&
+		settings.SingleOrganizationMode == cachedSettings.SingleOrganizationMode
 }
