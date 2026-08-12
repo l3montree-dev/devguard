@@ -4656,6 +4656,8 @@ components:
           type: string
         relatedFramework:
           type: string
+        relationship:
+          type: string
       type: object
     dtos.MechanicalJustificationType:
       enum:
