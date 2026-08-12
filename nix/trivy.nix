@@ -74,7 +74,7 @@ in
     toolName = "trivy";
     src = sbomSrc;
     inherit version modulePurl;
-    goModules = package.goModules;
+    inherit (package) goModules;
     binaries = [{ name = "trivy"; binPath = "${package}/bin/trivy"; }];
   };
 }

@@ -50,7 +50,7 @@
 
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
-          buildGoModule = unstablePkgs.buildGoModule;
+          inherit (unstablePkgs) buildGoModule;
         };
 
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
@@ -61,8 +61,10 @@
         };
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix {
-          buildGoModule = hostPkgs.buildGoModule;
-          lib = hostPkgs.lib;
+          inherit (hostPkgs)
+            buildGoModule
+            lib
+            ;
           inherit self system;
         };
         ociImagesAmd64 = import ./nix/oci.nix {
@@ -99,9 +101,11 @@
         # Built for the evaluating system, so these are the only outputs that
         # mean anything on a non-Linux host.
         hostBinaries = {
-          devguardScanner = binaries.devguardScanner;
-          devguard = binaries.devguard;
-          devguardCLI = binaries.devguardCLI;
+          inherit (binaries)
+            devguardScanner
+            devguard
+            devguardCLI
+            ;
         };
 
         # supplementary SBOMs, exposed directly so they can be inspected

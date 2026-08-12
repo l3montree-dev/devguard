@@ -52,7 +52,7 @@ in
   sbom = mkToolSBOM {
     toolName = "gitleaks";
     inherit src version modulePurl;
-    goModules = package.goModules;
+    inherit (package) goModules;
     binaries = [{ name = "gitleaks"; binPath = "${package}/bin/gitleaks"; }];
   };
 }

@@ -1,21 +1,25 @@
 { pkgs, self, pyproject-nix, uv2nix, pyproject-build-systems }: rec {
   devguardBinaries = import ./devguard.nix {
-    inherit self;
-    buildGoModule = pkgs.buildGoModule;
-    lib = pkgs.lib;
     system = pkgs.stdenv.hostPlatform.system;
-    runCommand = pkgs.runCommand;
-    jq = pkgs.jq;
+    inherit self;
+    inherit (pkgs)
+      buildGoModule
+      lib
+      runCommand
+      jq
+      ;
     trivy = trivyFromSource.package;
   };
 
   args = {
-    lib = pkgs.lib;
-    buildGoModule = pkgs.buildGoModule;
-    fetchFromGitHub = pkgs.fetchFromGitHub;
-    installShellFiles = pkgs.installShellFiles;
-    runCommand = pkgs.runCommand;
-    jq = pkgs.jq;
+    inherit (pkgs)
+      lib
+      buildGoModule
+      fetchFromGitHub
+      installShellFiles
+      runCommand
+      jq
+      ;
   };
 
   # trivy is self-contained (scans its own source with its own freshly-built
@@ -24,24 +28,28 @@
   craneFromSource = import ./crane.nix (args // { trivy = trivyFromSource.package; });
   gitleaksFromSource = import ./gitleaks.nix (args // { trivy = trivyFromSource.package; });
 
-  common = import ./common.nix { inherit self; lib = pkgs.lib; };
+  common = import ./common.nix { inherit self; inherit (pkgs) lib; };
   # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
   dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {
-    postgresql_16 = pkgs.postgresql_16;
-    fetchurl = pkgs.fetchurl;
-    stdenv = pkgs.stdenv;
-    runCommand = pkgs.runCommand;
+    inherit (pkgs)
+      postgresql_16
+      fetchurl
+      stdenv
+      runCommand
+      ;
   };
   pythonTools = import ./python-tools.nix {
-  lib = pkgs.lib;
-  python313 = pkgs.python313;
-  callPackage = pkgs.callPackage;
-  runCommand = pkgs.runCommand;
-  jq = pkgs.jq;
-  trivy = trivyFromSource.package;
-  # passed explicitly from flake.nix
-  inherit uv2nix pyproject-nix pyproject-build-systems;
+    inherit (pkgs)
+      lib
+      python313
+      callPackage
+      runCommand
+      jq
+      ;
+    trivy = trivyFromSource.package;
+    # passed explicitly from flake.nix
+    inherit uv2nix pyproject-nix pyproject-build-systems;
   };
 
   # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each

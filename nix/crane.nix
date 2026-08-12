@@ -58,7 +58,7 @@ in
   sbom = mkToolSBOM {
     toolName = "crane";
     inherit src version modulePurl;
-    goModules = package.goModules;
+    inherit (package) goModules;
     binaries = [{ name = "crane"; binPath = "${package}/bin/crane"; }];
   };
 }

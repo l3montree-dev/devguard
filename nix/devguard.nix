@@ -57,19 +57,19 @@
 
   devguardScanner = buildGoModule (commonArgs // {
     pname = "devguard-scanner";
-    version = common.version;
+    inherit (common) version;
     subPackages = [ "cmd/devguard-scanner" ];
   });
 
   devguard = buildGoModule (commonArgs // {
     pname = "devguard";
-    version = common.version;
+    inherit (common) version;
     subPackages = [ "cmd/devguard" ];
   });
 
   devguardCLI = buildGoModule (commonArgs // {
     pname = "devguard-cli";
-    version = common.version;
+    inherit (common) version;
     subPackages = [ "cmd/devguard-cli" ];
   });
 
@@ -90,9 +90,9 @@
   devguardScannerSBOM = mkToolSBOM {
     toolName = "devguard-scanner";
     inherit src;
-    version = common.version;
+    inherit (common) version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
-    goModules = devguardScanner.goModules;
+    inherit (devguardScanner) goModules;
     binaries = [{ name = "devguard-scanner"; binPath = "${devguardScanner}/bin/devguard-scanner"; }];
     externalReferences = [
       {
@@ -105,9 +105,9 @@
   devguardSBOM = mkToolSBOM {
     toolName = "devguard-api";
     inherit src;
-    version = common.version;
+    inherit (common) version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
-    goModules = devguard.goModules;
+    inherit (devguard) goModules;
     binaries = [
       { name = "devguard"; binPath = "${devguard}/bin/devguard"; }
     ];
@@ -116,9 +116,9 @@
   devguardCLISBOM = mkToolSBOM {
     toolName = "devguard-cli";
     inherit src;
-    version = common.version;
+    inherit (common) version;
     modulePurl = "pkg:golang/github.com/l3montree-dev/devguard";
-    goModules = devguardCLI.goModules;
+    inherit (devguardCLI) goModules;
     binaries = [{ name = "devguard-cli"; binPath = "${devguardCLI}/bin/devguard-cli"; }];
   };
 }
