@@ -574,14 +574,18 @@ func truncateLabelMiddle(name string) string {
 // creation and label-based issue search; a mismatch there would make
 // getExcessIIDs unable to find issues by their own label.
 func SlugLabel(orgSlug, projectSlug, assetSlug string) string {
+	if orgSlug == "" || projectSlug == "" || assetSlug == "" {
+		return ""
+	}
 	return truncateLabelMiddle(fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, assetSlug))
 }
 
-func GetLabels(vuln models.Vuln, slugs string) []string {
+func GetLabels(vuln models.Vuln, orgSlug, projectSlug, assetSlug string) []string {
 	labels := []string{
 		"devguard",
 		"state:" + stateToLabel(vuln.GetState()),
 	}
+	slugs := SlugLabel(orgSlug, projectSlug, assetSlug)
 	if slugs != "" {
 		labels = append(labels, slugs)
 	}

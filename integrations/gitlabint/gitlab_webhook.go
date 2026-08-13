@@ -271,7 +271,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			slog.Error("could not get slugs from vuln", "err", err)
 			return err
 		}
-		labels := commonint.GetLabels(vuln, commonint.SlugLabel(vulnOrgSlug, vulnProjectSlug, vulnAssetSlug))
+		labels := commonint.GetLabels(vuln, vulnOrgSlug, vulnProjectSlug, vulnAssetSlug)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: new("close"),
 			Labels:     new(gitlab.LabelOptions(labels)),
@@ -284,7 +284,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			slog.Error("could not get slugs from vuln", "err", err)
 			return err
 		}
-		labels := commonint.GetLabels(vuln, commonint.SlugLabel(vulnOrgSlug, vulnProjectSlug, vulnAssetSlug))
+		labels := commonint.GetLabels(vuln, vulnOrgSlug, vulnProjectSlug, vulnAssetSlug)
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: new("reopen"),
 			Labels:     new(gitlab.LabelOptions(labels)),
