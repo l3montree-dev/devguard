@@ -271,7 +271,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	}
 
 	str.WriteString("\n### Additional guidance for mitigating vulnerabilities\n")
-	str.WriteString("Visit our guides on [devguard.org](https://devguard.org/risk-mitigation-guides/software-composition-analysis)\n")
+	str.WriteString("Visit our guides on [devguard.org](https://docs.devguard.org/how-to-guides/scanning/scan-your-project)\n")
 
 	str.WriteString("\n<details>\n\n<summary>See more details...</summary>\n")
 	str.WriteString("\n### Path to component\n")

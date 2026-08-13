@@ -39,25 +39,26 @@ type RelationshipDTO struct {
 }
 
 type CVEDTO struct {
-	CVE                   string            `json:"cve"`
-	CreatedAt             time.Time         `json:"createdAt"`
-	UpdatedAt             time.Time         `json:"updatedAt"`
-	DatePublished         time.Time         `json:"datePublished"`
-	DateLastModified      time.Time         `json:"dateLastModified"`
-	Description           string            `json:"description"`
-	CVSS                  float32           `json:"cvss"`
-	References            string            `json:"references"`
-	CISAExploitAdd        *datatypes.Date   `json:"cisaExploitAdd" swaggertype:"string" format:"date"`
-	CISAActionDue         *datatypes.Date   `json:"cisaActionDue" swaggertype:"string" format:"date"`
-	CISARequiredAction    *string           `json:"cisaRequiredAction"`
-	CISAVulnerabilityName *string           `json:"cisaVulnerabilityName"`
-	EPSS                  *float64          `json:"epss"`
-	Percentile            *float32          `json:"percentile"`
-	Vector                string            `json:"vector"`
-	Risk                  RiskMetrics       `json:"risk"`
-	Exploits              []ExploitDTO      `json:"exploits"`
-	Relationships         []RelationshipDTO `json:"relationships"`
-	EUVDExploitAdd        *datatypes.Date   `json:"euvdExploitAdd" format:"date"`
+	CVE                   string                 `json:"cve"`
+	CreatedAt             time.Time              `json:"createdAt"`
+	UpdatedAt             time.Time              `json:"updatedAt"`
+	DatePublished         time.Time              `json:"datePublished"`
+	DateLastModified      time.Time              `json:"dateLastModified"`
+	Description           string                 `json:"description"`
+	CVSS                  float32                `json:"cvss"`
+	References            string                 `json:"references"`
+	CISAExploitAdd        *datatypes.Date        `json:"cisaExploitAdd" swaggertype:"string" format:"date"`
+	CISAActionDue         *datatypes.Date        `json:"cisaActionDue" swaggertype:"string" format:"date"`
+	CISARequiredAction    *string                `json:"cisaRequiredAction"`
+	CISAVulnerabilityName *string                `json:"cisaVulnerabilityName"`
+	EPSS                  *float64               `json:"epss"`
+	Percentile            *float32               `json:"percentile"`
+	Vector                string                 `json:"vector"`
+	Risk                  RiskMetrics            `json:"risk"`
+	Exploits              []ExploitDTO           `json:"exploits"`
+	Relationships         []RelationshipDTO      `json:"relationships"`
+	EUVDExploitAdd        *datatypes.Date        `json:"euvdExploitAdd" format:"date"`
+	AffectedComponents    []AffectedComponentDTO `json:"affectedComponents"`
 }
 
 type VulnState string
