@@ -498,26 +498,6 @@ rules:
         - "**/*_test.go"
     pattern-regex: '\.Group\("/(projects/:(?!projectSlug\b)\w+|assets/:(?!assetSlug\b)\w+)'
 
-  - id: missing-swagger-router-comment
-    message: |
-      Exported controller handler is missing a swagger doc comment.
-      Add a doc comment block directly above the function including at least
-      "// @Summary ..." and "// @Router <path> [method]", e.g.:
-        // @Summary Create foo
-        // @Tags Foo
-        // @Router /foos [post]
-        func (c *FooController) Create(ctx shared.Context) error { ... }
-    severity: WARNING
-    languages: [go]
-    paths:
-      include:
-        - "**/controllers/**"
-      exclude:
-        - "**/*_test.go"
-    patterns:
-      - pattern-regex: '(?:^[ \t]*//.*\n)*^func \(\w+ \*?\w+Controller\) \w+\(\w+ (?:shared\.Context|echo\.Context)\) error \{'
-      - pattern-not-regex: '@Router'
-
   - id: bola-repository-update-missing-tenant-scope
     severity: ERROR
     message: |

@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"errors"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -32,7 +31,7 @@ func (r *trustedEntityRepository) UpsertOrganizationTrust(ctx context.Context, t
 	var existing models.TrustedEntity
 	err := db.Where("organization_id = ?", organizationID).First(&existing).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if shared.IsNotFound(err) {
 		// Create new entry
 		trustedEntity := models.TrustedEntity{
 			OrganizationID: &organizationID,

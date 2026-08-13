@@ -63,9 +63,17 @@ foundMatch:
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} compliance.PolicyEvaluation
-// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy}/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance/{policy} [get]
 func (c *ComplianceController) Details(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)
+	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
+	if err != nil {
+		asset := shared.GetAsset(ctx)
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
+		if err != nil {
+			return ctx.JSON(404, nil)
+		}
+	}
 
 	p := ctx.Param("policy")
 	// parse the uuid
@@ -102,7 +110,8 @@ func (c *ComplianceController) Details(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {array} compliance.PolicyEvaluation
-// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/compliance/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance [get]
 func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -130,7 +139,7 @@ func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {array} array{compliance.PolicyEvaluation}
-// @Router /organizations/{orgSlug}/projects/{projectSlug}/compliance/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance [get]
 func (c *ComplianceController) ProjectCompliance(ctx shared.Context) error {
 	// get all default asset version from the project
 	project := shared.GetProject(ctx)

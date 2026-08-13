@@ -155,6 +155,11 @@ func (i *JiraIntegration) Delete(ctx shared.Context) error {
 
 	err = i.jiraIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return ctx.JSON(404, map[string]any{
+				"message": "Jira integration not found",
+			})
+		}
 		return err
 	}
 

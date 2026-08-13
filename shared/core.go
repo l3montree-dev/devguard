@@ -2,6 +2,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"strings"
@@ -24,6 +25,10 @@ type DB = *gorm.DB
 func SanitizeParam(s string) string {
 	// remove trailing or leading slashes
 	return strings.Trim(s, "/")
+}
+
+func IsNotFound(err error) bool {
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 // InitLogger initializes the logger with a tint handler.

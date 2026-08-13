@@ -145,7 +145,7 @@ We just need to extract the CVE-2025-61725 part and store it in the CompiledRule
 
 */
 
-var scopeRegex = regexp.MustCompile(`vuln\.cveId\s*==\s*"([^"]+)" &&`)
+var scopeRegex = regexp.MustCompile(`^vuln\.cveId\s*==\s*"([^"]+)" &&`)
 
 func extractCVEScopeFromCELExpression(expr string) *string {
 	if !strings.Contains(expr, "vuln.cveId") {

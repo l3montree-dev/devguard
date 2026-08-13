@@ -89,7 +89,7 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Success 200
 // @Router /vex [post]
 // vexFormat identifies the serialization of an uploaded VEX document.
-func (s ScanController) UploadVEX(ctx shared.Context) error {
+func (s *ScanController) UploadVEX(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "ScanController.UploadVEX")
 	defer span.End()
 
@@ -777,17 +777,15 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
-		slog.Error("error when parsing data")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return echo.NewHTTPError(400, "could not parse multipart form").WithInternal(err)
 	}
 	file, _, err := c.Request().FormFile("file")
 	if err != nil {
-		slog.Error("error when forming file")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return echo.NewHTTPError(400, "file is required").WithInternal(err)
 	}
 	defer file.Close()
 

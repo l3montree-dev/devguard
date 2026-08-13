@@ -315,8 +315,13 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 		},
 	}
 
+	keyPath := "/intoto-private-key.pem"
+	if p := os.Getenv("INTOTO_PRIVATE_KEY_PATH"); p != "" {
+		keyPath = p
+	}
+
 	var devguardKey toto.Key
-	err = devguardKey.LoadKey("/intoto-private-key.pem", "ecdsa-sha2-nistp256", []string{"sha256"})
+	err = devguardKey.LoadKey(keyPath, "ecdsa-sha2-nistp256", []string{"sha256"})
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load devguard key").WithInternal(err)
 	}

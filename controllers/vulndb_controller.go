@@ -20,9 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
-	"github.com/pkg/errors"
 	"golang.org/x/sync/singleflight"
-	"gorm.io/gorm"
 )
 
 type VulnDBController struct {
@@ -66,7 +64,7 @@ func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChe
 // @Success 200 {object} object{pageSize=int,page=int,total=int,data=[]models.CVE} "A paginated list of CVEs"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb [get]
-func (c VulnDBController) ListPaged(ctx shared.Context) error {
+func (c *VulnDBController) ListPaged(ctx shared.Context) error {
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		ctx.Request().Context(), nil,
 		shared.GetPageInfo(ctx),
@@ -100,14 +98,14 @@ func (c VulnDBController) ListPaged(ctx shared.Context) error {
 // @Success 200 {object} models.CVE "Details of the specified CVE" and optional advisories
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb/{cveID}/ [get]
-func (c VulnDBController) Read(ctx shared.Context) error {
+func (c *VulnDBController) Read(ctx shared.Context) error {
 	cve, err := c.cveRepository.FindCVE(
 		ctx.Request().Context(), nil,
 		shared.GetParam(ctx, "cveID"),
 	)
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "could not get CVEs").WithInternal(err)
 		}
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
@@ -142,8 +140,8 @@ func (c VulnDBController) Read(ctx shared.Context) error {
 // @Success 200 {object} object "Inspection result including PURL, match context, affected components, and vulnerabilities"
 // @Failure 400 {object} object{message=string} "Invalid PURL provided"
 // @Failure 500 {object} object{message=string} "Internal server error"
-// @Router /vulndb/purl/{purl}/ [get]
-func (c VulnDBController) PURLInspect(ctx shared.Context) error {
+// @Router /vulndb/purl-inspect/{purl} [get]
+func (c *VulnDBController) PURLInspect(ctx shared.Context) error {
 	purlString := shared.GetParam(ctx, "purl")
 
 	purlString, err := url.PathUnescape(purlString)
@@ -227,7 +225,7 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 // @Param limit query int false "Maximum number of entries to return"
 // @Success 200 {object} object{total=int,data=[]object{cve=string,createdAt=string,datePublished=string}}
 // @Router /vulndb/list-ids-by-creation-date [get]
-func (c VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
+func (c *VulnDBController) ListIDsByCreationDate(ctx shared.Context) error {
 	type listIDsRow struct {
 		CVEID         string    `gorm:"column:cve"`
 		CreatedAt     time.Time `gorm:"column:created_at"`
@@ -319,7 +317,7 @@ func (c *ecosystemDistributionCache) set(value map[string]int) {
 // @Tags VulnDB
 // @Success 200 {object} map[string]int
 // @Router /vulndb/cve-ecosystem-distribution [get]
-func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
+func (c *VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error {
 	if distribution, found := c.ecosystemDistributionCache.get(); found {
 		return ctx.JSONPretty(200, distribution, config.PrettyJSONIndent)
 	}
@@ -343,7 +341,7 @@ func (c VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error 
 	return ctx.JSONPretty(200, result.(map[string]int), config.PrettyJSONIndent)
 }
 
-func (c VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) (map[string]int, error) {
+func (c *VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) (map[string]int, error) {
 	cveResults := make([]ecosystemRow, 0, 1024)
 	maliciousPackageResults := make([]ecosystemRow, 0, 64)
 

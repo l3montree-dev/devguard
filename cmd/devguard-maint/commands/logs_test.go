@@ -47,7 +47,7 @@ func TestParseLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.raw[:min(len(tt.raw), 40)], func(t *testing.T) {
-			e, ok := parseLine(tt.raw)
+			e, ok := apiFormat.parse(ansiRe.ReplaceAllString(tt.raw, ""))
 			if ok != tt.wantOk {
 				t.Fatalf("parseLine ok=%v, want %v", ok, tt.wantOk)
 			}
@@ -80,15 +80,19 @@ not a valid line
 		t.Fatal(err)
 	}
 
-	entries, err := readLogEntries(path)
+	p, err := readLog(path, apiFormat.name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 4 {
-		t.Errorf("got %d entries, want 4", len(entries))
+	if len(p.entries) != 4 {
+		t.Errorf("got %d entries, want 4", len(p.entries))
+	}
+	// the unparseable line is counted, not silently discarded
+	if p.dropped != 1 {
+		t.Errorf("dropped=%d, want 1", p.dropped)
 	}
 	levels := map[string]int{}
-	for _, e := range entries {
+	for _, e := range p.entries {
 		levels[e.level]++
 	}
 	if levels["DBG"] != 1 || levels["WRN"] != 1 || levels["ERR"] != 1 || levels["INF"] != 1 {

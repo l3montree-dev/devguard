@@ -96,6 +96,11 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 		return err
 	}
 
+	// FindOrCreate rejects an empty name with a plain error - surface that as a client error here
+	if body.Name == "" {
+		return echo.NewHTTPError(400, "name is required")
+	}
+
 	var defaultBranch *string
 	if body.DefaultBranch {
 		defaultBranch = &body.Name

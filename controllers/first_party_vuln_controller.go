@@ -37,8 +37,8 @@ func NewFirstPartyVulnController(firstPartyVulnRepository shared.FirstPartyVulnR
 // @Param organization path string true "Organization slug"
 // @Param search query string false "Search term"
 // @Success 200 {object} object
-// @Router /organizations/{organization}/vulns [get]
-func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
+// @Router /organizations/{organization}/first-party-vulns [get]
+func (c *FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 
 	userAllowedProjectIds, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -74,8 +74,7 @@ func (c FirstPartyVulnController) ListByOrgPaged(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
 // @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/vulns [get]
-func (c FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
+func (c *FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByProjectIDPaged(
@@ -103,8 +102,8 @@ func (c FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param vulnID path string true "Vulnerability ID"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
-// @Router /vulns/{vulnID}/mitigate [post]
-func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/mitigate [post]
+func (c *FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
@@ -146,8 +145,8 @@ func (c FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param vulnID path string true "Vulnerability ID"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
-// @Router /vulns/{vulnID} [get]
-func (c FirstPartyVulnController) Read(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID} [get]
+func (c *FirstPartyVulnController) Read(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
@@ -169,8 +168,8 @@ func (c FirstPartyVulnController) Read(ctx shared.Context) error {
 // @Param vulnID path string true "Vulnerability ID"
 // @Param body body object true "Event data"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
-// @Router /vulns/{vulnID}/events [post]
-func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID} [post]
+func (c *FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -233,8 +232,8 @@ func (c FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param search query string false "Search term"
 // @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns [get]
-func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns [get]
+func (c *FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -267,8 +266,8 @@ func (c FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns.sarif [get]
-func (c FirstPartyVulnController) Sarif(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sarif.json [get]
+func (c *FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -398,8 +397,8 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 // @Security BearerAuth
 // @Param body body dtos.BatchFirstPartyVulnStatus true "Request body"
 // @Success 200 {array} dtos.DetailedFirstPartyVulnDTO
-// @Router /vulns/batch [post]
-func (c FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/batch [post]
+func (c *FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	ownerID := shared.GetSession(ctx).GetActorName()
 

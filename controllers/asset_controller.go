@@ -291,8 +291,9 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	var patchRequest dtos.AssetPatchRequest
 
 	err := json.NewDecoder(req).Decode(&patchRequest)
+	// a missing/empty body is a client error (e.g. io.EOF), not a server fault
 	if err != nil {
-		return fmt.Errorf("error decoding request: %v", err)
+		return echo.NewHTTPError(400, fmt.Sprintf("error decoding request: %s", err.Error()))
 	}
 
 	if err := dtos.V.Struct(patchRequest); err != nil {
@@ -437,7 +438,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 // @Param config-file path string true "Config file ID"
 // @Produce text/plain
 // @Success 200 {string} string "Config file content"
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file} [get]
 func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
@@ -471,7 +472,7 @@ func (a *AssetController) GetConfigFile(ctx shared.Context) error {
 // @Param body body string true "Config file content"
 // @Produce text/plain
 // @Success 200 {string} string "Updated config file content"
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/ [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file} [put]
 func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	configID := ctx.Param("config-file")
@@ -520,6 +521,8 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 // @Produce image/svg+xml
 // @Success 200 {string} string "SVG badge"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/badges/{badge}/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/badges/{badge} [get]
+// @Router /public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/badges/{badge} [get]
 func (a *AssetController) GetBadges(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 

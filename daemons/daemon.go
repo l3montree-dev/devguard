@@ -20,7 +20,7 @@ func getLastMirrorTime(ctx context.Context, configService shared.ConfigService, 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		slog.Error("could not get last mirror time", "err", err, "key", key)
 		return time.Time{}, err
-	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+	} else if shared.IsNotFound(err) {
 		slog.Info("no last mirror time found. Setting to 0", "key", key)
 		return time.Time{}, nil
 	}

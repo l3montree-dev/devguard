@@ -31,9 +31,7 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 		middlewares.InstanceAdminMiddleware(patService),
 	)
 
-	adminRouter.GET("/", func(ctx echo.Context) error {
-		return ctx.JSON(200, map[string]string{"status": "ok"})
-	})
+	adminRouter.GET("/", adminController.Ping)
 
 	// routes to manage admins inside external orgs
 	adminRouter.GET("/external-orgs/", adminController.GetAdminsForExternalOrgs)

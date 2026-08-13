@@ -73,6 +73,15 @@ func NewAdminController(
 	}
 }
 
+// @Summary Confirm admin credentials are accepted
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} object{status=string}
+// @Router /admin [get]
+func (controller *AdminController) Ping(ctx shared.Context) error {
+	return ctx.JSON(200, map[string]string{"status": "ok"})
+}
+
 // @Summary Get admins for all external organizations
 // @Tags Admin
 // @Security AdminSignedAuth
@@ -322,7 +331,7 @@ func evaluateInstanceStatisticsParams(ctx shared.Context) (topCVEsLimit, topComp
 // @Param body body dtos.UpdateInstanceSettingsRequest true "Request body"
 // @Success 200
 // @Router /admin/settings/ [patch]
-func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) error {
+func (controller *AdminController) UpdateInstanceSettings(ctx shared.Context) error {
 	var updateRequest dtos.UpdateInstanceSettingsRequest
 	err := ctx.Bind(&updateRequest)
 	if err != nil {
@@ -350,12 +359,25 @@ func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) err
 // @Security AdminSignedAuth
 // @Success 200 {object} shared.InstanceSettings
 // @Router /admin/settings/ [get]
-func (controller AdminController) GetInstanceSettings(ctx shared.Context) error {
+func (controller *AdminController) GetInstanceSettings(ctx shared.Context) error {
 	instanceSettings, err := controller.configService.GetInstanceSettings(context.Background())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get current instance settings state from config").WithInternal(err)
 	}
 	return ctx.JSON(200, instanceSettings)
+}
+
+// A missing setting is a valid, unconfigured state for a fresh instance, not an error.
+// @Summary Get public instance settings
+// @Tags Admin
+// @Success 200 {object} shared.InstanceSettings
+// @Router /instance-settings [get]
+func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) error {
+	settings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
+	if err != nil {
+		return ctx.JSON(200, shared.InstanceSettings{})
+	}
+	return ctx.JSON(200, settings)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
