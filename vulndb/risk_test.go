@@ -518,7 +518,7 @@ func TestExplanationMarkdown(t *testing.T) {
 
 		// Test additional guidance
 		assert.Contains(t, result, "### Additional guidance for mitigating vulnerabilities")
-		assert.Contains(t, result, "[devguard.org](https://devguard.org/risk-mitigation-guides/software-composition-analysis)")
+		assert.Contains(t, result, "[devguard.org](https://docs.devguard.org/how-to-guides/scanning/scan-your-project)")
 
 		// Test details section
 		assert.Contains(t, result, "<details>")
