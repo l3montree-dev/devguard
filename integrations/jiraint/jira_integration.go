@@ -336,7 +336,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 
 	assetSlug := asset.Slug
 
-	labels := commonint.GetLabels(dependencyVuln, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(dependencyVuln, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
@@ -399,7 +399,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 
 func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *Client, assetVersionSlug string, justification string, orgSlug string, projectSlug string, projectID int) (*CreateIssueResponse, error) {
 
-	labels := commonint.GetLabels(firstPartyVuln, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(firstPartyVuln, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 
 	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {

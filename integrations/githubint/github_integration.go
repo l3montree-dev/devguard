@@ -199,7 +199,7 @@ func (githubIntegration *GithubIntegration) getExcessIIDs(ctx context.Context, a
 		slog.Error("failed to get vuln slugs for asset", "err", err, "assetID", asset.ID)
 		return client, owner, repo, nil, err
 	}
-	slugLabels := fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, assetSlug)
+	slugLabels := commonint.SlugLabel(orgSlug, projectSlug, assetSlug)
 	opts := &github.IssueListByRepoOptions{
 		State:       "open",
 		Labels:      []string{"devguard", slugLabels},
@@ -906,7 +906,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 		expectedIssueState = "open"
 	}
 
-	labels := commonint.GetLabels(firstPartyVuln, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(firstPartyVuln, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState),
 		Title:  new(firstPartyVuln.Title()),
@@ -930,7 +930,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
-	labels := commonint.GetLabels(dependencyVuln, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(dependencyVuln, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState.ToGithub()),
 		Title:  new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
@@ -1021,7 +1021,7 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 }
 
 func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
-	labels := commonint.GetLabels(firstPartyVuln, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(firstPartyVuln, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 	issue := &github.IssueRequest{
 		Title:  new(firstPartyVuln.Title()),
 		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
@@ -1055,7 +1055,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 }
 
 func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
-	labels := commonint.GetLabels(licenseRisk, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(licenseRisk, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 
 	issue := &github.IssueRequest{
 		Title:  new(licenseRisk.Title()),
@@ -1095,7 +1095,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := commonint.GetLabels(dependencyVuln, fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, asset.Slug))
+	labels := commonint.GetLabels(dependencyVuln, commonint.SlugLabel(orgSlug, projectSlug, asset.Slug))
 	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &github.IssueRequest{

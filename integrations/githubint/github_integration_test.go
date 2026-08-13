@@ -417,7 +417,7 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "")
 
 		assert.Contains(t, labels, "devguard")
 		assert.Contains(t, labels, "risk:high")
@@ -435,7 +435,7 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "")
 
 		assert.Contains(t, labels, "state:accepted")
 		assert.Contains(t, labels, "risk:medium")
@@ -449,7 +449,7 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = new(9.8)
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "")
 
 		assert.Contains(t, labels, "cvss-severity:critical")
 		assert.Contains(t, labels, "risk:critical")
@@ -459,7 +459,7 @@ func TestGetLabels(t *testing.T) {
 		vuln := &models.DependencyVuln{}
 		vuln.RawRiskAssessment = new(4.0)
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "")
 
 		assert.Contains(t, labels, "risk:medium")
 
@@ -476,7 +476,7 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = new(0.0)
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "")
 
 		assert.Contains(t, labels, "state:false-positive")
 	})

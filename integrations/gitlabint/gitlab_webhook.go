@@ -264,15 +264,14 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		}
 	}
 
-	vulnOrgSlug, vulnProjectSlug, vulnAssetSlug, err := g.assetRepository.GetOrgProjectAssetSlugsByAssetID(reqCtx, nil, vuln.GetAssetID())
-	if err != nil {
-		slog.Error("could not get slugs from vuln", "err", err)
-		return err
-	}
-
 	switch vulnEvent.Type {
 	case dtos.EventTypeAccepted, dtos.EventTypeFalsePositive:
-		labels := commonint.GetLabels(vuln, fmt.Sprintf("%s/%s/%s", vulnOrgSlug, vulnProjectSlug, vulnAssetSlug))
+		vulnOrgSlug, vulnProjectSlug, vulnAssetSlug, err := g.assetRepository.GetOrgProjectAssetSlugsByAssetID(reqCtx, nil, vuln.GetAssetID())
+		if err != nil {
+			slog.Error("could not get slugs from vuln", "err", err)
+			return err
+		}
+		labels := commonint.GetLabels(vuln, commonint.SlugLabel(vulnOrgSlug, vulnProjectSlug, vulnAssetSlug))
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: new("close"),
 			Labels:     new(gitlab.LabelOptions(labels)),
@@ -280,7 +279,12 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 		return err
 	case dtos.EventTypeReopened:
-		labels := commonint.GetLabels(vuln, fmt.Sprintf("%s/%s/%s", vulnOrgSlug, vulnProjectSlug, vulnAssetSlug))
+		vulnOrgSlug, vulnProjectSlug, vulnAssetSlug, err := g.assetRepository.GetOrgProjectAssetSlugsByAssetID(reqCtx, nil, vuln.GetAssetID())
+		if err != nil {
+			slog.Error("could not get slugs from vuln", "err", err)
+			return err
+		}
+		labels := commonint.GetLabels(vuln, commonint.SlugLabel(vulnOrgSlug, vulnProjectSlug, vulnAssetSlug))
 		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: new("reopen"),
 			Labels:     new(gitlab.LabelOptions(labels)),
