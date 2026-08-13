@@ -47,7 +47,9 @@ func NewCompliancePostureController(compliancePostureRepository shared.Complianc
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} dtos.CompliancePostureDTO
-// @Router /organizations/{orgSlug}/compliance-postures/{frameworkControlID}/ [get]
+// @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [get]
 func (c *CompliancePostureController) Read(ctx shared.Context) error {
 	frameworkControlID := ctx.Param("frameworkControlID")
 	if frameworkControlID == "" {
@@ -59,6 +61,9 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 
 	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, frameworkControlID, assetVersionName, assetID, projectID, orgID)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "compliance posture not found")
+		}
 		return err
 	}
 
@@ -71,7 +76,9 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControlDTO]
-// @Router /organizations/{orgSlug}/compliance-postures/ [get]
+// @Router /organizations/{organization}/compliance-postures [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures [get]
 func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
@@ -106,7 +113,9 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} interface{}
-// @Router /organizations/{orgSlug}/compliance-postures/stats/ [get]
+// @Router /organizations/{organization}/compliance-postures/stats [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/stats [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/stats [get]
 func (c *CompliancePostureController) Stats(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 	filter := shared.GetFilterQuery(ctx)
@@ -142,7 +151,9 @@ func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uui
 // @Security BearerAuth
 // @Param frameworkControlID path string true "Framework Control ID"
 // @Success 200 {object} dtos.CompliancePostureDTO
-// @Router /organizations/{orgSlug}/compliance-postures/{frameworkControlID}/ [post]
+// @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 
 	frameworkControlID := ctx.Param("frameworkControlID")
@@ -207,7 +218,9 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} interface{}
-// @Router /organizations/{orgSlug}/compliance-postures/oscal/ [get]
+// @Router /organizations/{organization}/compliance-postures/oscal [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/oscal [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/oscal [get]
 func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 	var assetVersionName *string
 	var assetID *uuid.UUID
@@ -263,8 +276,14 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 		return err
 	}
 
-	if err := compliance.ValidateOSCAL(oscal); err != nil {
-		return echo.NewHTTPError(500, "OSCAL validation failed").WithInternal(err)
+	// The OSCAL SSP schema requires control-implementation.implemented-requirements
+	// to have at least one entry (minItems: 1), so a scope with zero tracked
+	// controls can never produce a schema-valid document. Skip validation in
+	// that case rather than 500ing on an otherwise-correct empty result.
+	if len(compliancePostures) > 0 {
+		if err := compliance.ValidateOSCAL(oscal); err != nil {
+			return echo.NewHTTPError(500, "OSCAL validation failed").WithInternal(err)
+		}
 	}
 
 	return ctx.JSON(200, oscal)

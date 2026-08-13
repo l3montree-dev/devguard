@@ -5305,6 +5305,23 @@
                 },
                 "type": "object"
             },
+            "dtos.BuildInfo": {
+                "properties": {
+                    "branch": {
+                        "type": "string"
+                    },
+                    "buildDate": {
+                        "type": "string"
+                    },
+                    "commit": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.CVEDTO": {
                 "properties": {
                     "cisaActionDue": {
@@ -5811,6 +5828,59 @@
                 ],
                 "type": "object"
             },
+            "dtos.DatabaseInfo": {
+                "properties": {
+                    "error": {
+                        "type": "string"
+                    },
+                    "idle": {
+                        "type": "integer"
+                    },
+                    "inUse": {
+                        "type": "integer"
+                    },
+                    "maxIdleClosed": {
+                        "type": "integer"
+                    },
+                    "maxIdleTimeClosed": {
+                        "type": "integer"
+                    },
+                    "maxLifetimeClosed": {
+                        "type": "integer"
+                    },
+                    "maxOpenConnections": {
+                        "type": "integer"
+                    },
+                    "migrationDirty": {
+                        "type": "boolean"
+                    },
+                    "migrationError": {
+                        "type": "string"
+                    },
+                    "migrationVersion": {
+                        "type": "integer"
+                    },
+                    "openConnections": {
+                        "type": "integer"
+                    },
+                    "pool": {
+                        "$ref": "#/components/schemas/dtos.PoolInfo"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "vulndbVersion": {
+                        "type": "string"
+                    },
+                    "waitCount": {
+                        "type": "integer"
+                    },
+                    "waitDuration": {
+                        "$ref": "#/components/schemas/time.Duration"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.DependencyVulnDTO": {
                 "properties": {
                     "artifacts": {
@@ -6226,6 +6296,60 @@
                 ]
             },
             "dtos.ExternalSubprojectRequestDTO": {
+                "properties": {
+                    "artifact": {
+                        "type": "string"
+                    },
+                    "assetDescription": {
+                        "type": "string"
+                    },
+                    "assetExternalEntityId": {
+                        "type": "string"
+                    },
+                    "assetName": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "projectDescription": {
+                        "type": "string"
+                    },
+                    "projectExternalEntityId": {
+                        "type": "string"
+                    },
+                    "projectName": {
+                        "type": "string"
+                    },
+                    "sbom": {
+                        "items": {
+                            "type": "integer"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "subProjectDescription": {
+                        "type": "string"
+                    },
+                    "subProjectExternalEntityId": {
+                        "type": "string"
+                    },
+                    "subProjectName": {
+                        "type": "string"
+                    },
+                    "verb": {
+                        "enum": [
+                            "update",
+                            "delete"
+                        ],
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetExternalEntityId",
+                    "projectExternalEntityId",
+                    "verb"
+                ],
                 "type": "object"
             },
             "dtos.FirstPartyScanResponse": {
@@ -6361,6 +6485,23 @@
                     },
                     "url": {
                         "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.InfoResponse": {
+                "properties": {
+                    "build": {
+                        "$ref": "#/components/schemas/dtos.BuildInfo"
+                    },
+                    "database": {
+                        "$ref": "#/components/schemas/dtos.DatabaseInfo"
+                    },
+                    "process": {
+                        "$ref": "#/components/schemas/dtos.ProcessInfo"
+                    },
+                    "runtime": {
+                        "$ref": "#/components/schemas/dtos.RuntimeInfo"
                     }
                 },
                 "type": "object"
@@ -6585,6 +6726,23 @@
                     "VulnerableCodeCannotBeControlledByAdversary",
                     "InlineMitigationsAlreadyExist"
                 ]
+            },
+            "dtos.MemStats": {
+                "properties": {
+                    "alloc": {
+                        "type": "integer"
+                    },
+                    "heapAlloc": {
+                        "type": "integer"
+                    },
+                    "sys": {
+                        "type": "integer"
+                    },
+                    "totalAlloc": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
             },
             "dtos.OrgChangeRoleRequest": {
                 "properties": {
@@ -7235,6 +7393,49 @@
                     },
                     "title": {
                         "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.PoolInfo": {
+                "properties": {
+                    "acquiredConns": {
+                        "type": "integer"
+                    },
+                    "connMaxIdleTime": {
+                        "type": "string"
+                    },
+                    "connMaxLifetime": {
+                        "type": "string"
+                    },
+                    "dbName": {
+                        "type": "string"
+                    },
+                    "idleConns": {
+                        "type": "integer"
+                    },
+                    "maxConns": {
+                        "type": "integer"
+                    },
+                    "maxOpenConns": {
+                        "type": "integer"
+                    },
+                    "totalConns": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.ProcessInfo": {
+                "properties": {
+                    "hostname": {
+                        "type": "string"
+                    },
+                    "pid": {
+                        "type": "integer"
+                    },
+                    "uptimeSeconds": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -7923,6 +8124,20 @@
                     },
                     "withThreatIntelligence": {
                         "type": "number"
+                    }
+                },
+                "type": "object"
+            },
+            "dtos.RuntimeInfo": {
+                "properties": {
+                    "goVersion": {
+                        "type": "string"
+                    },
+                    "mem": {
+                        "$ref": "#/components/schemas/dtos.MemStats"
+                    },
+                    "numGoroutines": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -10060,6 +10275,113 @@
                     }
                 },
                 "type": "object"
+            },
+            "time.Duration": {
+                "enum": [
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000
+                ],
+                "type": "integer",
+                "x-enum-varnames": [
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second"
+                ]
             }
         },
         "securitySchemes": {
@@ -10161,6 +10483,36 @@
                 "summary": "Accept organization invitation",
                 "tags": [
                     "Organizations"
+                ]
+            }
+        },
+        "/admin": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "AdminSignedAuth": []
+                    }
+                ],
+                "summary": "Confirm admin credentials are accepted",
+                "tags": [
+                    "Admin"
                 ]
             }
         },
@@ -11922,6 +12274,89 @@
                 ]
             }
         },
+        "/health": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    },
+                    "503": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Service Unavailable"
+                    }
+                },
+                "summary": "Liveness and readiness check",
+                "tags": [
+                    "System"
+                ]
+            }
+        },
+        "/info": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.InfoResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "Runtime, build and database diagnostics",
+                "tags": [
+                    "System"
+                ]
+            }
+        },
+        "/instance-settings": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/shared.InstanceSettings"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "summary": "Get public instance settings",
+                "tags": [
+                    "Admin"
+                ]
+            }
+        },
         "/integrations/repositories": {
             "get": {
                 "responses": {
@@ -12130,365 +12565,6 @@
                 ]
             }
         },
-        "/organizations/{orgSlug}/compliance-postures/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "List compliance postures paged",
-                "tags": [
-                    "Compliance Postures"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/compliance-postures/oscal/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get OSCAL system security plan",
-                "tags": [
-                    "Compliance Postures"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/compliance-postures/stats/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get compliance posture stats",
-                "tags": [
-                    "Compliance Postures"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/compliance-postures/{frameworkControlID}/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get compliance posture for a framework control",
-                "tags": [
-                    "Compliance Postures"
-                ]
-            },
-            "post": {
-                "parameters": [
-                    {
-                        "description": "Framework Control ID",
-                        "in": "path",
-                        "name": "frameworkControlID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Create a compliance posture event",
-                "tags": [
-                    "Compliance Postures"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/compliance/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/compliance.PolicyEvaluation"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get asset compliance",
-                "tags": [
-                    "Compliance"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy}/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/compliance.PolicyEvaluation"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get policy compliance details",
-                "tags": [
-                    "Compliance"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/components/licenses/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/controllers.licenseResponse"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get license distribution for an asset version",
-                "tags": [
-                    "Components"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependencyDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "List components paged",
-                "tags": [
-                    "Components"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/projects/{projectSlug}/compliance/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "type": "array"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get project compliance",
-                "tags": [
-                    "Compliance"
-                ]
-            }
-        },
-        "/organizations/{orgSlug}/projects/{projectSlug}/components/": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Search component occurrences within a project",
-                "tags": [
-                    "Components"
-                ]
-            }
-        },
         "/organizations/{organization}": {
             "delete": {
                 "parameters": [
@@ -12617,6 +12693,37 @@
                 ]
             }
         },
+        "/organizations/{organization}/compliance-postures": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List compliance postures paged",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
         "/organizations/{organization}/compliance-postures/components/{statementID}/": {
             "delete": {
                 "parameters": [
@@ -12712,6 +12819,139 @@
                 ]
             }
         },
+        "/organizations/{organization}/compliance-postures/oscal": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get OSCAL system security plan",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/compliance-postures/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get compliance posture stats",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/compliance-postures/{frameworkControlID}": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get compliance posture for a framework control",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Framework Control ID",
+                        "in": "path",
+                        "name": "frameworkControlID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create a compliance posture event",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
         "/organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/": {
             "post": {
                 "parameters": [
@@ -12776,7 +13016,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/config-files/{config-file}/": {
+        "/organizations/{organization}/config-files/{config-file}": {
             "get": {
                 "parameters": [
                     {
@@ -13175,6 +13415,56 @@
                 ]
             }
         },
+        "/organizations/{organization}/first-party-vulns": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List first-party vulnerabilities by organization",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            }
+        },
         "/organizations/{organization}/integrations/finish-installation/": {
             "get": {
                 "responses": {
@@ -13321,6 +13611,210 @@
                 "summary": "Delete a Jira integration access token",
                 "tags": [
                     "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/repositories": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List repositories from integrations",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/webhook/test": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Test webhook data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "payloadType": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/webhook/test-and-save": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Webhook data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/webhook/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Webhook ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
+            },
+            "put": {
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Webhook data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update webhook integration",
+                "tags": [
+                    "Webhooks"
                 ]
             }
         },
@@ -14620,7 +15114,106 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}/": {
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/compliance.PolicyEvaluation"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get asset compliance",
+                "tags": [
+                    "Compliance"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy}": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/compliance.PolicyEvaluation"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get policy compliance details",
+                "tags": [
+                    "Compliance"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/components/licenses": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/controllers.licenseResponse"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get license distribution for an asset version",
+                "tags": [
+                    "Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}": {
             "get": {
                 "parameters": [
                     {
@@ -17039,6 +17632,64 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/badges/{badge}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Badge type",
+                        "in": "path",
+                        "name": "badge",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/svg+xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "SVG badge"
+                    }
+                },
+                "summary": "Get asset badge",
+                "tags": [
+                    "Assets"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json/": {
             "get": {
                 "responses": {
@@ -17745,6 +18396,459 @@
                 "summary": "List attestations",
                 "tags": [
                     "Attestations"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/compliance.PolicyEvaluation"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get asset compliance",
+                "tags": [
+                    "Compliance"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List compliance postures paged",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Statement ID",
+                        "in": "path",
+                        "name": "statementID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete a compliance statement",
+                "tags": [
+                    "Compliance Components"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Statement ID",
+                        "in": "path",
+                        "name": "statementID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.statementPayload",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update a compliance statement",
+                "tags": [
+                    "Compliance Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/oscal": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get OSCAL system security plan",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get compliance posture stats",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get compliance posture for a framework control",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Framework Control ID",
+                        "in": "path",
+                        "name": "frameworkControlID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create a compliance posture event",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Framework control ID",
+                        "in": "path",
+                        "name": "frameworkControlID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Compliance component ID",
+                        "in": "path",
+                        "name": "complianceComponentID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.statementPayload",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create a compliance statement for a component",
+                "tags": [
+                    "Compliance Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance/{policy}": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/compliance.PolicyEvaluation"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get policy compliance details",
+                "tags": [
+                    "Compliance"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependencyDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List components paged",
+                "tags": [
+                    "Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/controllers.licenseResponse"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get license distribution for an asset version",
+                "tags": [
+                    "Components"
                 ]
             }
         },
@@ -18712,6 +19816,347 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List first-party vulnerabilities by asset version",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/batch": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.BatchFirstPartyVulnStatus",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Batch update first-party vulnerability states",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Vulnerability ID",
+                        "in": "path",
+                        "name": "vulnID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get first-party vulnerability details",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Vulnerability ID",
+                        "in": "path",
+                        "name": "vulnID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Event data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create first-party vulnerability event",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/events": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Dependency vulnerability ID",
+                        "in": "path",
+                        "name": "dependencyVulnID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List events for a vulnerability",
+                "tags": [
+                    "Vulnerability Events"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/mitigate": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Vulnerability ID",
+                        "in": "path",
+                        "name": "vulnID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Mitigate a first-party vulnerability",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/in-toto/{supplyChainID}/": {
             "get": {
                 "parameters": [
@@ -19494,6 +20939,75 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sarif.json": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get first-party vulnerabilities as SARIF",
+                "tags": [
+                    "Vulnerabilities"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/sbom.json/": {
             "get": {
                 "parameters": [
@@ -19881,152 +21395,6 @@
                 "summary": "Get VEX as CycloneDX JSON",
                 "tags": [
                     "Asset Versions"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset version slug",
-                        "in": "path",
-                        "name": "assetVersionSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Search term",
-                        "in": "query",
-                        "name": "search",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "List first-party vulnerabilities by asset version",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vulns.sarif": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset version slug",
-                        "in": "path",
-                        "name": "assetVersionSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get first-party vulnerabilities as SARIF",
-                "tags": [
-                    "Vulnerabilities"
                 ]
             }
         },
@@ -20499,6 +21867,9 @@
                     },
                     "204": {
                         "description": "No recommendation available"
+                    },
+                    "404": {
+                        "description": "Dependency vulnerability not found"
                     }
                 },
                 "security": [
@@ -20723,7 +22094,395 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/": {
+        "/organizations/{organization}/projects/{projectSlug}/compliance": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "type": "array"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get project compliance",
+                "tags": [
+                    "Compliance"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/compliance-postures": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List compliance postures paged",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Statement ID",
+                        "in": "path",
+                        "name": "statementID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete a compliance statement",
+                "tags": [
+                    "Compliance Components"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Statement ID",
+                        "in": "path",
+                        "name": "statementID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.statementPayload",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update a compliance statement",
+                "tags": [
+                    "Compliance Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/compliance-postures/oscal": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get OSCAL system security plan",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/compliance-postures/stats": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get compliance posture stats",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get compliance posture for a framework control",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Framework Control ID",
+                        "in": "path",
+                        "name": "frameworkControlID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create a compliance posture event",
+                "tags": [
+                    "Compliance Postures"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Framework control ID",
+                        "in": "path",
+                        "name": "frameworkControlID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Compliance component ID",
+                        "in": "path",
+                        "name": "complianceComponentID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/controllers.statementPayload",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create a compliance statement for a component",
+                "tags": [
+                    "Compliance Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/components": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Search component occurrences within a project",
+                "tags": [
+                    "Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/config-files/{config-file}": {
             "get": {
                 "parameters": [
                     {
@@ -21098,6 +22857,176 @@
                 "summary": "Sync or delete an externally managed project/asset tree",
                 "tags": [
                     "External Entity"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/integrations/webhook/test": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Test webhook data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "payloadType": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/integrations/webhook/test-and-save": {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Webhook data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/integrations/webhook/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Webhook ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete webhook integration",
+                "tags": [
+                    "Webhooks"
+                ]
+            },
+            "put": {
+                "requestBody": {
+                    "content": {
+                        "text/plain": {
+                            "schema": {
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Webhook data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update webhook integration",
+                "tags": [
+                    "Webhooks"
                 ]
             }
         },
@@ -21960,6 +23889,65 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/candidates": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Release ID",
+                        "in": "query",
+                        "name": "releaseID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.CandidatesResponseDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List release candidates",
+                "tags": [
+                    "Releases"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/csaf.json": {
             "get": {
                 "responses": null,
@@ -22556,65 +24544,6 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/vulns": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Search term",
-                        "in": "query",
-                        "name": "search",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "List first-party vulnerabilities by project",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
         "/organizations/{organization}/settings": {
             "get": {
                 "parameters": [
@@ -22721,7 +24650,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/vulns": {
+        "/organizations/{organization}/trigger-sync": {
             "get": {
                 "parameters": [
                     {
@@ -22732,25 +24661,10 @@
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    {
-                        "description": "Search term",
-                        "in": "query",
-                        "name": "search",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
                         "description": "OK"
                     }
                 },
@@ -22760,14 +24674,11 @@
                     },
                     {
                         "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
                     }
                 ],
-                "summary": "List first-party vulnerabilities by organization",
+                "summary": "Trigger a sync for the given org",
                 "tags": [
-                    "Vulnerabilities"
+                    "Organizations"
                 ]
             }
         },
@@ -22922,6 +24833,318 @@
                 "summary": "Delete personal access token",
                 "tags": [
                     "Authentication"
+                ]
+            }
+        },
+        "/public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/badges/{badge}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Badge type",
+                        "in": "path",
+                        "name": "badge",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/svg+xml": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "SVG badge"
+                    }
+                },
+                "summary": "Get asset badge",
+                "tags": [
+                    "Assets"
+                ]
+            }
+        },
+        "/public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "CSAF advisory in JSON format"
+                    }
+                },
+                "summary": "Get an aggregated CSAF VEX for all of the artifact's vulnerabilities",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OpenVEX document in JSON format"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get VEX in OpenVEX JSON format",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "CycloneDX BOM in JSON format"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get SBOM in JSON format",
+                "tags": [
+                    "Artifacts"
+                ]
+            }
+        },
+        "/public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "CycloneDX VEX in JSON format"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get VEX in JSON format",
+                "tags": [
+                    "Artifacts"
                 ]
             }
         },
@@ -23215,6 +25438,58 @@
                 ]
             }
         },
+        "/trigger-sync": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    }
+                ],
+                "summary": "Trigger a sync for the current session's org",
+                "tags": [
+                    "Organizations"
+                ]
+            }
+        },
+        "/v2": {
+            "head": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "OCI Distribution Spec v2 version check",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
         "/v2/": {
             "get": {
                 "responses": {
@@ -23317,10 +25592,153 @@
                 "tags": [
                     "Dependency Firewall"
                 ]
+            },
+            "head": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "blob digest",
+                        "in": "path",
+                        "name": "digest",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image blob download",
+                "tags": [
+                    "Dependency Firewall"
+                ]
             }
         },
         "/v2/{registry}/{image}/manifests/{reference}": {
             "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "tag or digest",
+                        "in": "path",
+                        "name": "reference",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image manifest fetch",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            },
+            "head": {
                 "parameters": [
                     {
                         "description": "dependency proxy secret",
@@ -23603,10 +26021,153 @@
                 "tags": [
                     "Dependency Firewall"
                 ]
+            },
+            "head": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "blob digest",
+                        "in": "path",
+                        "name": "digest",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image blob download",
+                "tags": [
+                    "Dependency Firewall"
+                ]
             }
         },
         "/v2/{registry}/{namespace}/{image}/manifests/{reference}": {
             "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "tag or digest",
+                        "in": "path",
+                        "name": "reference",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image manifest fetch",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            },
+            "head": {
                 "parameters": [
                     {
                         "description": "dependency proxy secret",
@@ -23889,10 +26450,153 @@
                 "tags": [
                     "Dependency Firewall"
                 ]
+            },
+            "head": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "blob digest",
+                        "in": "path",
+                        "name": "digest",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image blob download",
+                "tags": [
+                    "Dependency Firewall"
+                ]
             }
         },
         "/v2/{secret}/{registry}/{namespace}/{image}/manifests/{reference}": {
             "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "tag or digest",
+                        "in": "path",
+                        "name": "reference",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image manifest fetch",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            },
+            "head": {
                 "parameters": [
                     {
                         "description": "dependency proxy secret",
@@ -24040,6 +26744,435 @@
             }
         },
         "/v2/{secret}/{registry}/{namespace}/{image}/tags/list": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image tags list",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/v2/{secret}/{registry}/{ns1}/{ns2}/{image}/blobs/{digest}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "blob digest",
+                        "in": "path",
+                        "name": "digest",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image blob download",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            },
+            "head": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "blob digest",
+                        "in": "path",
+                        "name": "digest",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image blob download",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/v2/{secret}/{registry}/{ns1}/{ns2}/{image}/manifests/{reference}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "tag or digest",
+                        "in": "path",
+                        "name": "reference",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image manifest fetch",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            },
+            "head": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "tag or digest",
+                        "in": "path",
+                        "name": "reference",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image manifest fetch",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/v2/{secret}/{registry}/{ns1}/{ns2}/{image}/referrers/{digest}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "registry hostname",
+                        "in": "path",
+                        "name": "registry",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image namespace",
+                        "in": "path",
+                        "name": "namespace",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "image name",
+                        "in": "path",
+                        "name": "image",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "subject digest",
+                        "in": "path",
+                        "name": "digest",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy OCI image referrers list",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/v2/{secret}/{registry}/{ns1}/{ns2}/{image}/tags/list": {
             "get": {
                 "parameters": [
                     {
@@ -24374,7 +27507,7 @@
                 ]
             }
         },
-        "/vulndb/purl/{purl}/": {
+        "/vulndb/purl-inspect/{purl}": {
             "get": {
                 "description": "Analyze a given PURL, determine its match context, and return affected components and related vulnerabilities",
                 "parameters": [
@@ -24508,205 +27641,7 @@
                 ]
             }
         },
-        "/vulns/batch": {
-            "post": {
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/dtos.BatchFirstPartyVulnStatus",
-                                "summary": "body",
-                                "description": "Request body"
-                            }
-                        }
-                    },
-                    "description": "Request body",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Batch update first-party vulnerability states",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
-        "/vulns/{vulnID}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Vulnerability ID",
-                        "in": "path",
-                        "name": "vulnID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get first-party vulnerability details",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
-        "/vulns/{vulnID}/events": {
-            "post": {
-                "parameters": [
-                    {
-                        "description": "Vulnerability ID",
-                        "in": "path",
-                        "name": "vulnID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "title": "body",
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "Event data",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Create first-party vulnerability event",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
-        "/vulns/{vulnID}/mitigate": {
-            "post": {
-                "parameters": [
-                    {
-                        "description": "Vulnerability ID",
-                        "in": "path",
-                        "name": "vulnID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Mitigate a first-party vulnerability",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
         "/webhook": {
-            "post": {
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                },
-                "summary": "Handle an incoming third-party webhook",
-                "tags": [
-                    "Webhooks"
-                ]
-            }
-        },
-        "/webhook/": {
             "post": {
                 "responses": {
                     "200": {
@@ -24723,176 +27658,6 @@
                 "summary": "Handle incoming third-party integration webhook",
                 "tags": [
                     "Integrations"
-                ]
-            }
-        },
-        "/webhooks": {
-            "post": {
-                "requestBody": {
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "title": "body",
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "Webhook data",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Create webhook integration",
-                "tags": [
-                    "Webhooks"
-                ]
-            },
-            "put": {
-                "requestBody": {
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "title": "body",
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "Webhook data",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Update webhook integration",
-                "tags": [
-                    "Webhooks"
-                ]
-            }
-        },
-        "/webhooks/test": {
-            "post": {
-                "requestBody": {
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "title": "body",
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "Test webhook data",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "payloadType": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Test webhook integration",
-                "tags": [
-                    "Webhooks"
-                ]
-            }
-        },
-        "/webhooks/{id}": {
-            "delete": {
-                "parameters": [
-                    {
-                        "description": "Webhook ID",
-                        "in": "path",
-                        "name": "id",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Delete webhook integration",
-                "tags": [
-                    "Webhooks"
                 ]
             }
         },

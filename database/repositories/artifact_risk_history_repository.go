@@ -2,14 +2,15 @@ package repositories
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type artifactRiskHistoryRepository struct {
@@ -44,7 +45,13 @@ func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *
 }
 
 func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx *gorm.DB, assetRisk *models.ArtifactRiskHistory) error {
-	return r.Repository.GetDB(ctx, tx).Save(assetRisk).Error
+	// Save() always inserts here (the composite PK isn't a single auto-increment
+	// field gorm can dirty-check), so re-running the daemon for the same day
+	// hits the "artifact_risk_history_pkey" unique constraint instead of updating.
+	return r.Repository.GetDB(ctx, tx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "artifact_name"}, {Name: "asset_version_name"}, {Name: "asset_id"}, {Name: "day"}},
+		UpdateAll: true,
+	}).Create(assetRisk).Error
 }
 
 // GetLatestRiskHistory returns the row from the most recent day for the given
@@ -57,7 +64,7 @@ func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context
 		db = db.Where("artifact_name = ?", *artifactName)
 	}
 	err := db.Order("day DESC").Limit(1).Take(&row).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if shared.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {

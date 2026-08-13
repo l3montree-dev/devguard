@@ -26,26 +26,13 @@ type SessionRouter struct {
 	*echo.Group
 }
 
-// @Summary Get current session info
-// @Tags Authentication
-// @Security CookieAuth
-// @Security PATAuth
-// @Success 200 {object} object{ownerID=string,ownerType=string}
-// @Router /whoami [get]
-func whoami(ctx echo.Context) error {
-	session := shared.GetSession(ctx)
-	return ctx.JSON(200, map[string]string{
-		"actorId":   session.GetActorID(),
-		"actorType": string(session.GetSessionActorType()),
-	})
-}
-
 func NewSessionRouter(
 	apiV1Router APIV1Router,
 	adminClient shared.PublicClient,
 	configService shared.ConfigService,
 	patService shared.PersonalAccessTokenService,
 	externalEntityProviderService shared.ExternalEntityProviderService,
+	externalEntityProviderController *controllers.ExternalEntityProviderController,
 	integrationController *controllers.IntegrationController,
 	orgController *controllers.OrgController,
 	scanController *controllers.ScanController,
@@ -63,10 +50,10 @@ func NewSessionRouter(
 		middlewares.ExternalEntityProviderOrgSyncMiddleware(externalEntityProviderService),
 	)
 
-	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerOrgSync, middlewares.NeededScope([]string{"manage"}))
+	sessionRouter.GET("/trigger-sync/", externalEntityProviderController.TriggerOrgSync, middlewares.NeededScope([]string{"manage"}))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
-	sessionRouter.GET("/whoami/", whoami)
+	sessionRouter.GET("/whoami/", controllers.Whoami)
 	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, middlewares.NeededScope([]string{"manage"}))
 

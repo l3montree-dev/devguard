@@ -379,6 +379,7 @@ func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context,
 // @Security BearerAuth
 // @Success 200 {object} map[string]string
 // @Router /v2/ [get]
+// @Router /v2 [head]
 func (d *OCIDependencyProxyController) ProxyOCIVersionCheck(c shared.Context) error {
 	c.Response().Header().Set("Content-Type", "application/json")
 	return c.JSON(http.StatusOK, map[string]string{})
@@ -405,8 +406,13 @@ func (d *OCIDependencyProxyController) ProxyOCIVersionCheck(c shared.Context) er
 // @Param reference path string true "tag or digest"
 // @Success 200 {object} map[string]interface{}
 // @Router /v2/{registry}/{image}/manifests/{reference} [get]
+// @Router /v2/{registry}/{image}/manifests/{reference} [head]
 // @Router /v2/{registry}/{namespace}/{image}/manifests/{reference} [get]
+// @Router /v2/{registry}/{namespace}/{image}/manifests/{reference} [head]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/manifests/{reference} [get]
+// @Router /v2/{secret}/{registry}/{namespace}/{image}/manifests/{reference} [head]
+// @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/manifests/{reference} [get]
+// @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/manifests/{reference} [head]
 func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -535,8 +541,13 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 // @Param digest path string true "blob digest"
 // @Success 200 {file} binary
 // @Router /v2/{registry}/{image}/blobs/{digest} [get]
+// @Router /v2/{registry}/{image}/blobs/{digest} [head]
 // @Router /v2/{registry}/{namespace}/{image}/blobs/{digest} [get]
+// @Router /v2/{registry}/{namespace}/{image}/blobs/{digest} [head]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/blobs/{digest} [get]
+// @Router /v2/{secret}/{registry}/{namespace}/{image}/blobs/{digest} [head]
+// @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/blobs/{digest} [get]
+// @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/blobs/{digest} [head]
 func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -659,6 +670,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 // @Router /v2/{registry}/{image}/referrers/{digest} [get]
 // @Router /v2/{registry}/{namespace}/{image}/referrers/{digest} [get]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/referrers/{digest} [get]
+// @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/referrers/{digest} [get]
 func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
@@ -725,6 +737,7 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 // @Router /v2/{registry}/{image}/tags/list [get]
 // @Router /v2/{registry}/{namespace}/{image}/tags/list [get]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/tags/list [get]
+// @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/tags/list [get]
 func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {

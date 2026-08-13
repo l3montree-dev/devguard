@@ -923,6 +923,8 @@ func (g *GitlabIntegration) AutoSetup(ctx shared.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not extract project id from repo id")
 		}
+	default:
+		return echo.NewHTTPError(400, "asset has no configured gitlab integration")
 	}
 
 	err = g.addProjectHook(reqCtx, client, asset, projectIDInt)
@@ -1161,6 +1163,11 @@ func (g *GitlabIntegration) Delete(ctx shared.Context) error {
 
 	err = g.gitlabIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return ctx.JSON(404, map[string]any{
+				"message": "GitLab integration not found",
+			})
+		}
 		return err
 	}
 

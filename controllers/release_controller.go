@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,7 +17,6 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
-	"gorm.io/gorm"
 )
 
 type ReleaseController struct {
@@ -525,7 +523,7 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 	}
 
 	if err := h.service.Delete(c.Request().Context(), id); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "release not found")
 		}
 		return echo.NewHTTPError(500, "could not delete release").WithInternal(err)
@@ -621,7 +619,7 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 	}
 
 	if err := h.service.RemoveItem(c.Request().Context(), itemID); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "release item not found")
 		}
 		return echo.NewHTTPError(500, "could not remove release item").WithInternal(err)
@@ -639,6 +637,7 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID query string false "Release ID"
 // @Success 200 {object} dtos.CandidatesResponseDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/candidates [get]
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/candidates [get]
 func (h *ReleaseController) ListCandidates(c shared.Context) error {
 	project := shared.GetProject(c)

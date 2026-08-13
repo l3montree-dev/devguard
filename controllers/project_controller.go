@@ -471,8 +471,9 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 	defer req.Close()
 	var patchRequest dtos.ProjectPatchRequest
 	err := json.NewDecoder(req).Decode(&patchRequest)
+	// a missing/empty body is a client error (e.g. io.EOF), not a server fault
 	if err != nil {
-		return fmt.Errorf("could not decode request: %w", err)
+		return echo.NewHTTPError(400, fmt.Sprintf("could not decode request: %s", err.Error()))
 	}
 
 	project := shared.GetProject(c)
@@ -527,7 +528,7 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 // @Param config-file path string true "Config file ID"
 // @Produce text/plain
 // @Success 200 {string} string "Config file content"
-// @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file} [get]
 func (projectController *ProjectController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
@@ -555,7 +556,7 @@ func (projectController *ProjectController) GetConfigFile(ctx shared.Context) er
 // @Param body body string true "Config file content"
 // @Produce text/plain
 // @Success 200 {string} string "Updated config file content"
-// @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file}/ [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/config-files/{config-file} [put]
 func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	configID := ctx.Param("config-file")

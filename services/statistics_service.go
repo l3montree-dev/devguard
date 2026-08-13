@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"golang.org/x/sync/singleflight"
+	"gorm.io/gorm/clause"
 )
 
 type statisticsService struct {
@@ -266,7 +267,10 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 
 	// save the last history update timestamp
 	artifact.LastHistoryUpdate = &end
-	err := s.assetVersionRepository.GetDB(ctx, nil).Save(artifact).Error
+	err := s.assetVersionRepository.GetDB(ctx, nil).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "artifact_name"}, {Name: "asset_version_name"}, {Name: "asset_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"last_history_update"}),
+	}).Create(artifact).Error
 	if err != nil {
 		return err
 	}

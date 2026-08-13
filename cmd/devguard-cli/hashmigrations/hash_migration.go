@@ -2,7 +2,6 @@ package hashmigrations
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -38,7 +37,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	db := database.NewGormDB(pool)
 	err := db.Where("key = ?", HashMigrationVersionKey).First(&config).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if shared.IsNotFound(err) {
 		config = models.Config{
 			Key: HashMigrationVersionKey,
 			Val: "4",
