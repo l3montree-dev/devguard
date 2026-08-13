@@ -29,42 +29,42 @@ import (
 type FrameworkName string
 
 const (
-	ISO27001                            FrameworkName = "ISO27001"
-	GrundschutzPlusPlus                 FrameworkName = "Grundschutz++"
-	BSIAnforderungenZumRisikomanagement FrameworkName = "BSI-Anforderungen-zum-Risikomanagement"
-	Lieferkettensicherheit              FrameworkName = "Lieferkettensicherheit"
-	SCF                                 FrameworkName = "SCF"
+	iso27001                            FrameworkName = "ISO27001"
+	grundschutzPlusPlus                 FrameworkName = "Grundschutz++"
+	bsiAnforderungenZumRisikomanagement FrameworkName = "BSI-Anforderungen-zum-Risikomanagement"
+	lieferkettensicherheit              FrameworkName = "Lieferkettensicherheit"
+	scf                                 FrameworkName = "SCF"
 )
 
 //go:embed oscal/catalogs/ISO27001-AnnexA-to-GS++-mapping_collection.json
 var iso27001ToGSPlusPlusMappingCollectionJSON []byte
 
-type MappingCollection struct {
+type mappingCollection struct {
 	MappingCollection struct {
-		Mappings []Mapping `json:"mappings"`
+		Mappings []mapping `json:"mappings"`
 	} `json:"mapping-collection"`
 }
-type Mapping struct {
-	SourceResource Resource `json:"source-resource"`
-	TargetResource Resource `json:"target-resource"`
-	Maps           []Map    `json:"maps"`
+type mapping struct {
+	SourceResource resource     `json:"source-resource"`
+	TargetResource resource     `json:"target-resource"`
+	Maps           []mappingMap `json:"maps"`
 }
-type Map struct {
+type mappingMap struct {
 	UUID         string   `json:"uuid"`
 	Relationship string   `json:"relationship"`
-	Sources      []Source `json:"sources"`
-	Targets      []Target `json:"targets"`
+	Sources      []source `json:"sources"`
+	Targets      []target `json:"targets"`
 }
 
-type Source struct {
+type source struct {
 	Type  string `json:"type"`
 	IDRef string `json:"id-ref"`
 }
-type Target struct {
+type target struct {
 	Type  string `json:"type"`
 	IDRef string `json:"id-ref"`
 }
-type Resource struct {
+type resource struct {
 	Type string `json:"type"`
 	Href string `json:"href"`
 }
@@ -85,8 +85,8 @@ func loadISO27001ToGSPlusPlusMappingCollection() ([]models.MappedControl, error)
 			continue // Skip mappings that are not between the expected catalogs
 		}
 
-		sourceFramework := ISO27001
-		targetFramework := GrundschutzPlusPlus
+		sourceFramework := iso27001
+		targetFramework := grundschutzPlusPlus
 
 		mappedControls, err := extractMappingsFromMappingCollection(mapping.Maps, sourceFramework, targetFramework)
 		if err != nil {
@@ -119,8 +119,8 @@ func loadISO27001ToGSPlusPlusMappingCollection() ([]models.MappedControl, error)
 	return results, nil
 }
 
-func parseOSCALMappingCollection(r io.Reader) (*MappingCollection, error) {
-	var mappingCollection MappingCollection
+func parseOSCALMappingCollection(r io.Reader) (*mappingCollection, error) {
+	var mappingCollection mappingCollection
 
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -135,7 +135,7 @@ func parseOSCALMappingCollection(r io.Reader) (*MappingCollection, error) {
 	return &mappingCollection, nil
 }
 
-func extractMappingsFromMappingCollection(maps []Map, sourceFramework FrameworkName, targetFramework FrameworkName) ([]models.MappedControl, error) {
+func extractMappingsFromMappingCollection(maps []mappingMap, sourceFramework FrameworkName, targetFramework FrameworkName) ([]models.MappedControl, error) {
 	var mappedControls []models.MappedControl
 
 	for _, mapping := range maps {

@@ -30,5 +30,5 @@ func loadLieferkettensicherheitControls() ([]models.FrameworkControl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, Lieferkettensicherheit, grundschutzAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, lieferkettensicherheit, grundschutzAdditionalMapper), nil
 }

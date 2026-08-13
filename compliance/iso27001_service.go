@@ -30,5 +30,5 @@ func loadISO27001Controls() ([]models.FrameworkControl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, ISO27001, grundschutzAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, iso27001, grundschutzAdditionalMapper), nil
 }

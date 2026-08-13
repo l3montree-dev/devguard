@@ -30,5 +30,5 @@ func loadBSIAnforderungenZumRisikomanagementControls() ([]models.FrameworkContro
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, BSIAnforderungenZumRisikomanagement, grundschutzAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, bsiAnforderungenZumRisikomanagement, grundschutzAdditionalMapper), nil
 }

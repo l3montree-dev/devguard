@@ -31,7 +31,7 @@ func loadSCFControls() ([]models.FrameworkControl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, SCF, scfAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, scf, scfAdditionalMapper), nil
 }
 
 //nolint:unused
