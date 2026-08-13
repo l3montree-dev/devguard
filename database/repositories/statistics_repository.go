@@ -620,7 +620,7 @@ func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Contex
 	COUNT(DISTINCT (cd.asset_id)) AS total_amount,
   	COALESCE(1.0 * COUNT(DISTINCT (cd.asset_id)) / NULLIF((SELECT COUNT(*) FROM assets), 0), 0) as relative_amount
 	FROM component_dependencies cd
-	WHERE cd.dependency_id LIKE 'pkg:%'   -filter out non components like ROOT
+	WHERE cd.dependency_id LIKE 'pkg:%'   -- filter out non components like ROOT
 	GROUP BY cd.dependency_id
 	ORDER BY total_amount DESC, cd.dependency_id ASC
 	LIMIT ?;`, limit).Find(&components).Error
