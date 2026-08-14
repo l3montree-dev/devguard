@@ -95,10 +95,6 @@ func (runner *DaemonRunner) UpdateAllFixedVersions(ctx context.Context, updating
 		return nil
 	}
 
-	if runner.pgxpool == nil {
-		return fmt.Errorf("no pgx pool configured, cannot update fixed versions")
-	}
-
 	// handle everything in one transaction
 	tx, err := runner.pgxpool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {

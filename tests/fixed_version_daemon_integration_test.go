@@ -7,7 +7,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -72,7 +71,7 @@ func TestFixedVersionDaemonUpdateFixedVersions(t *testing.T) {
 		fixableCVE := createTestCVEForFixedVersion(f, "CVE-2025-FIXVER-001")
 		affectedComponent, err := createTestAffectedComponent(fixablePurl, []models.CVE{fixableCVE})
 		assert.NoError(t, err)
-		affectedComponent.SemverFixed = utils.Ptr("1.2.3")
+		affectedComponent.SemverFixed = new("1.2.3")
 		assert.NoError(t, f.DB.Create(&affectedComponent).Error)
 
 		// this cve affects the same purl but is not referenced by any affected component
@@ -81,9 +80,9 @@ func TestFixedVersionDaemonUpdateFixedVersions(t *testing.T) {
 		alreadyFixedCVE := createTestCVEForFixedVersion(f, "CVE-2025-FIXVER-003")
 
 		nullFixedVersionVuln := createTestDependencyVuln(f, asset, mainVersion, fixableCVE.CVE, fixablePurl, nil)
-		emptyFixedVersionVuln := createTestDependencyVuln(f, asset, devVersion, fixableCVE.CVE, fixablePurl, utils.Ptr(""))
+		emptyFixedVersionVuln := createTestDependencyVuln(f, asset, devVersion, fixableCVE.CVE, fixablePurl, new(""))
 		unmatchedCVEVuln := createTestDependencyVuln(f, asset, mainVersion, unmatchedCVE.CVE, fixablePurl, nil)
-		alreadyFixedVuln := createTestDependencyVuln(f, asset, mainVersion, alreadyFixedCVE.CVE, unaffectedPurl, utils.Ptr("9.9.9"))
+		alreadyFixedVuln := createTestDependencyVuln(f, asset, mainVersion, alreadyFixedCVE.CVE, unaffectedPurl, new("9.9.9"))
 
 		runner := f.CreateDaemonRunner()
 		ctx := context.Background()
@@ -98,8 +97,8 @@ func TestFixedVersionDaemonUpdateFixedVersions(t *testing.T) {
 		})
 
 		t.Run("should set the fixed version on every vuln missing one", func(t *testing.T) {
-			assert.Equal(t, utils.Ptr("1.2.3"), fetchComponentFixedVersion(f, nullFixedVersionVuln))
-			assert.Equal(t, utils.Ptr("1.2.3"), fetchComponentFixedVersion(f, emptyFixedVersionVuln))
+			assert.Equal(t, new("1.2.3"), fetchComponentFixedVersion(f, nullFixedVersionVuln))
+			assert.Equal(t, new("1.2.3"), fetchComponentFixedVersion(f, emptyFixedVersionVuln))
 		})
 
 		t.Run("should not set a fixed version if the affected component belongs to another cve", func(t *testing.T) {
@@ -107,7 +106,7 @@ func TestFixedVersionDaemonUpdateFixedVersions(t *testing.T) {
 		})
 
 		t.Run("should leave vulns which already have a fixed version untouched", func(t *testing.T) {
-			assert.Equal(t, utils.Ptr("9.9.9"), fetchComponentFixedVersion(f, alreadyFixedVuln))
+			assert.Equal(t, new("9.9.9"), fetchComponentFixedVersion(f, alreadyFixedVuln))
 		})
 
 		t.Run("should update again on a second daemon run", func(t *testing.T) {
@@ -116,7 +115,7 @@ func TestFixedVersionDaemonUpdateFixedVersions(t *testing.T) {
 				Updates(map[string]any{"component_fixed_version": nil}).Error)
 
 			assert.NoError(t, runner.UpdateFixedVersions(ctx))
-			assert.Equal(t, utils.Ptr("1.2.3"), fetchComponentFixedVersion(f, nullFixedVersionVuln))
+			assert.Equal(t, new("1.2.3"), fetchComponentFixedVersion(f, nullFixedVersionVuln))
 		})
 	})
 }
