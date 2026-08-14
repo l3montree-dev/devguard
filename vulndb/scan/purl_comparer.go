@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -41,6 +40,7 @@ type PurlComparer struct {
 
 // cache Size is the maximum number of elements held at one time
 // if 0 is provided the cache gets disabled
+// if nil is provided the default is used
 func NewPurlComparer(db shared.DB, cacheSize *int) *PurlComparer {
 	return &PurlComparer{
 		db:    db,
@@ -129,22 +129,18 @@ type AffectedComponentsCache struct {
 	cache      *expirable.LRU[string, []models.AffectedComponent]
 }
 
-const defaultCacheSizeInBytes = 10_000_000 // 10MB
+const defaultCacheSize = 3000 // about 20% of all components (20/80 rule)
 
 // builds a new affected components cache
 // cache Size is the maximum number of elements held at one time
 // if 0 is provided the cache gets disabled
+// if nil is provided the default is used
 func NewAffectedComponentsCache(cacheSize *int) *AffectedComponentsCache {
 	disabled := false
 	if cacheSize == nil {
-		// roughly calculate the cache size in number of elements based on the target number of bytes
-		sizePerEntry := unsafe.Sizeof(models.AffectedComponent{})
-		memoryPerSlice := sizePerEntry * 5 // assume 5 entries per slice on average
-		maxNumberOfEntries := int(defaultCacheSizeInBytes / memoryPerSlice)
-		cacheSize = &maxNumberOfEntries
+		cacheSize = new(defaultCacheSize)
 	} else if *cacheSize == 0 {
 		disabled = true // 0 disables the cache
-
 	}
 
 	return &AffectedComponentsCache{
