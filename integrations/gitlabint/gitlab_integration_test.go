@@ -41,8 +41,12 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 		mockClientFactory := mocks.NewGitlabClientFactory(t)
 		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
 
+		assetRepository := mocks.NewAssetRepository(t)
+		assetRepository.On("GetOrgProjectAssetSlugsByAssetID", mock.Anything, mock.Anything, asset.ID).Return("org", "project", "asset", nil)
+
 		integration := &GitlabIntegration{
-			clientFactory: mockClientFactory,
+			clientFactory:   mockClientFactory,
+			assetRepository: assetRepository,
 		}
 
 		err := integration.CompareIssueStatesAndResolveDifferences(context.Background(), asset, depVulns)
@@ -65,8 +69,13 @@ func TestCompareStatesAndResolveDifferences(t *testing.T) {
 
 		mockClientFactory := mocks.NewGitlabClientFactory(t)
 		mockClientFactory.On("FromIntegrationUUID", mock.Anything, uuid.MustParse("a73edfce-10f6-402d-9073-157cbc220c0f")).Return(client, nil)
+
+		assetRepository := mocks.NewAssetRepository(t)
+		assetRepository.On("GetOrgProjectAssetSlugsByAssetID", mock.Anything, mock.Anything, asset.ID).Return("org", "project", "asset", nil)
+
 		integration := &GitlabIntegration{
-			clientFactory: mockClientFactory,
+			clientFactory:   mockClientFactory,
+			assetRepository: assetRepository,
 		}
 
 		err := integration.CompareIssueStatesAndResolveDifferences(context.Background(), asset, depVulns)

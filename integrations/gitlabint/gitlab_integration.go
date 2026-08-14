@@ -332,11 +332,18 @@ func (g *GitlabIntegration) getExcessIIDs(ctx context.Context, asset models.Asse
 		depVulnsIIDs = append(depVulnsIIDs, iid)
 	}
 
+	orgSlug, projectSlug, assetSlug, err := g.assetRepository.GetOrgProjectAssetSlugsByAssetID(ctx, nil, asset.ID)
+	if err != nil {
+		slog.Error("failed to get vuln slugs for asset", "err", err, "assetID", asset.ID)
+		return client, projectID, nil, err
+	}
+	slugLabels := commonint.SlugLabel(orgSlug, projectSlug, assetSlug)
+
 	issues, err := FetchPaginatedData(func(page int) ([]*gitlab.Issue, *gitlab.Response, error) {
 		return client.GetProjectIssues(ctx, projectID, &gitlab.ListProjectIssuesOptions{
 			ListOptions: gitlab.ListOptions{PerPage: 100, Page: int64(page)},
 			State:       new("opened"),
-			Labels:      &gitlab.LabelOptions{"devguard"},
+			Labels:      &gitlab.LabelOptions{"devguard", slugLabels},
 		})
 	})
 	if err != nil {
@@ -1287,7 +1294,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 
-	labels := commonint.GetLabels(dependencyVuln)
+	labels := commonint.GetLabels(dependencyVuln, orgSlug, projectSlug, asset.Slug)
 	if err != nil {
 		return err
 	}
@@ -1317,7 +1324,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	if err != nil {
 		return err
 	}
-	labels := commonint.GetLabels(dependencyVuln)
+	labels := commonint.GetLabels(dependencyVuln, orgSlug, projectSlug, asset.Slug)
 
 	expectedState := commonint.GetExpectedIssueState(asset, dependencyVuln)
 
@@ -1430,7 +1437,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
 
-	labels := commonint.GetLabels(vuln)
+	labels := commonint.GetLabels(vuln, orgSlug, projectSlug, asset.Slug)
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       new(vuln.Title()),
@@ -1461,7 +1468,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := commonint.GetLabels(dependencyVuln)
+	labels := commonint.GetLabels(dependencyVuln, orgSlug, projectSlug, asset.Slug)
 	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	issue := &gitlab.CreateIssueOptions{
@@ -1487,7 +1494,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 func (g *GitlabIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
 
-	labels := commonint.GetLabels(licenseRisk)
+	labels := commonint.GetLabels(licenseRisk, orgSlug, projectSlug, asset.Slug)
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       new(licenseRisk.Title()),

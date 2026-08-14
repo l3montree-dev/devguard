@@ -24,7 +24,7 @@ func TestRunMigrations(t *testing.T) {
 	var version int
 	var dirty bool
 	require.NoError(t, pool.QueryRow(ctx, `SELECT version, dirty FROM public.schema_migrations`).Scan(&version, &dirty))
-	assert.Equal(t, 20260802081839, version)
+	assert.Equal(t, 20260811000000, version)
 	assert.False(t, dirty)
 }
 

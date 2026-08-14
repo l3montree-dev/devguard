@@ -349,3 +349,23 @@ func (repository *assetRepository) UpsertSplit(ctx context.Context, tx *gorm.DB,
 
 	return newAssets, updatedAssets, nil
 }
+
+func (repository *assetRepository) GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (string, string, string, error) {
+	var slugs struct {
+		OrgSlug     string `gorm:"column:org_slug"`
+		ProjectSlug string `gorm:"column:project_slug"`
+		AssetSlug   string `gorm:"column:asset_slug"`
+	}
+
+	query := "SELECT organizations.slug AS org_slug, projects.slug AS project_slug, assets.slug AS asset_slug " +
+		"FROM assets " +
+		"JOIN projects ON projects.id = assets.project_id " +
+		"JOIN organizations ON organizations.id = projects.organization_id " +
+		"WHERE assets.id = ?"
+
+	if err := repository.GetDB(ctx, tx).Raw(query, assetID).First(&slugs).Error; err != nil {
+		return "", "", "", err
+	}
+
+	return slugs.OrgSlug, slugs.ProjectSlug, slugs.AssetSlug, nil
+}

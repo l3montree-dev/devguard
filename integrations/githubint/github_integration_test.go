@@ -417,11 +417,12 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "org1", "project1", "asset1")
 
 		assert.Contains(t, labels, "devguard")
 		assert.Contains(t, labels, "risk:high")
 		assert.Contains(t, labels, "state:unknown")
+		assert.Contains(t, labels, "org1/project1/asset1")
 	})
 
 	t.Run("it should include state label if dependency vuln has a state", func(t *testing.T) {
@@ -435,10 +436,11 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "org1", "project1", "asset1")
 
 		assert.Contains(t, labels, "state:accepted")
 		assert.Contains(t, labels, "risk:medium")
+		assert.Contains(t, labels, "org1/project1/asset1")
 	})
 
 	t.Run("it should include cvss-severity label for DependencyVuln", func(t *testing.T) {
@@ -449,17 +451,21 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = new(9.8)
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "org1", "project1", "asset1")
 
 		assert.Contains(t, labels, "cvss-severity:critical")
 		assert.Contains(t, labels, "risk:critical")
+		assert.Contains(t, labels, "org1/project1/asset1")
 	})
 
 	t.Run("it should handle nil CVE gracefully for DependencyVuln", func(t *testing.T) {
 		vuln := &models.DependencyVuln{}
 		vuln.RawRiskAssessment = new(4.0)
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "org2", "project2", "asset2")
+
+		assert.Contains(t, labels, "risk:medium")
+		assert.Contains(t, labels, "org2/project2/asset2")
 
 		assert.Contains(t, labels, "risk:medium")
 
@@ -476,9 +482,10 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = new(0.0)
 
-		labels := commonint.GetLabels(vuln)
+		labels := commonint.GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug")
 
 		assert.Contains(t, labels, "state:false-positive")
+		assert.Contains(t, labels, "orgSlug/projectSlug/assetSlug")
 	})
 }
 

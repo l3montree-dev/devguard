@@ -22,16 +22,19 @@ import (
 )
 
 //go:embed oscal/catalogs/SCF.json
+//nolint:unused
 var scfCatalogJSON []byte
 
+//nolint:unused
 func loadSCFControls() ([]models.FrameworkControl, error) {
 	catalog, err := parseOSCALCatalog(bytes.NewReader(scfCatalogJSON))
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, "SCF", scfAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, scf, scfAdditionalMapper), nil
 }
 
+//nolint:unused
 func scfAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
 	additional := make(map[string]any)
 
@@ -48,7 +51,7 @@ func scfAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property
 	}
 	additional["assessment_objective"] = assessmentObjective
 
-	for _, prop := range derefProps(controlProps) {
+	for _, prop := range deref(controlProps) {
 		switch prop.Name {
 		case "weight":
 			additional["importance"] = prop
