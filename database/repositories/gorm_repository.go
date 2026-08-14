@@ -100,10 +100,23 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 	}
 
 	err := db.Omit(clause.Associations).Save(ts).Error
-	if err == nil {
-		return nil
+	if err != nil && err.Error() == "extended protocol limited to 65535 parameters" {
+		newBatchSize := len(ts) / 2
+		if newBatchSize < 1 {
+			// we can't reduce the batch size anymore
+			// lets try to save the CVEs one by one
+			// this will be slow but it will work
+			for _, t := range ts {
+				if err := db.Omit(clause.Associations).Save(t).Error; err != nil {
+					// log, that we werent able to save the CVE
+					slog.Error("unable to save record", "record", t, "err", err)
+				}
+			}
+			return nil
+		}
+		slog.Warn("protocol error, trying to reduce batch size", "newBatchSize", newBatchSize, "oldBatchSize", len(ts), "err", err)
+		return g.SaveBatchBestEffort(ctx, tx, ts[:newBatchSize])
 	}
-
 	// Roll back to savepoint so the transaction is still usable for retries.
 	if rbErr := db.RollbackTo(sp).Error; rbErr != nil {
 		// Preserve both the original save error and the rollback error for diagnostics.
