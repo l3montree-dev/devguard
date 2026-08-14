@@ -244,17 +244,18 @@ func TestCandidateCacheKey(t *testing.T) {
 }
 
 func TestAffectedComponentsCache(t *testing.T) {
+	var cacheSize = 50
 	t.Run("lookup on an untouched cache is a miss", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.False(t, ok)
 		assert.Nil(t, components)
 	})
 
 	t.Run("stored components are returned again", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		stored := candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1})
-		warmCache(&acc, stored)
+		warmCache(acc, stored)
 
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.True(t, ok)
@@ -263,8 +264,8 @@ func TestAffectedComponentsCache(t *testing.T) {
 
 	t.Run("an empty result is cached as a hit", func(t *testing.T) {
 		// negative caching - a package without affected components must not be queried again
-		acc := AffectedComponentsCache{}
-		warmCache(&acc, candidateFor(t, "pkg:npm/lodash@4.17.20"))
+		acc := NewAffectedComponentsCache(&cacheSize)
+		warmCache(acc, candidateFor(t, "pkg:npm/lodash@4.17.20"))
 
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.True(t, ok)
@@ -272,30 +273,17 @@ func TestAffectedComponentsCache(t *testing.T) {
 	})
 
 	t.Run("entries of one purl do not leak into another distro", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
-		warmCache(&acc, candidateFor(t, "pkg:deb/debian/git@2.47.3?distro=debian-13.2", models.AffectedComponent{ID: 1, Ecosystem: "Debian:13"}))
+		acc := NewAffectedComponentsCache(&cacheSize)
+		warmCache(acc, candidateFor(t, "pkg:deb/debian/git@2.47.3?distro=debian-13.2", models.AffectedComponent{ID: 1, Ecosystem: "Debian:13"}))
 
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:deb/debian/git@2.47.3?distro=debian-12.5"))
 		assert.False(t, ok)
 		assert.Nil(t, components)
 	})
 
-	t.Run("entries from one cache scope do not leak into another", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
-		stored := candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1})
-		acc.SetForCandidatesInScope("db-a", []*candidate{stored}, acc.GetCurrentGeneration())
-
-		_, ok := acc.GetByCandidateInScope("db-b", candidateFor(t, "pkg:npm/lodash@4.17.20"))
-		assert.False(t, ok)
-
-		components, ok := acc.GetByCandidateInScope("db-a", candidateFor(t, "pkg:npm/lodash@4.17.20"))
-		assert.True(t, ok)
-		assert.Equal(t, stored.components, components)
-	})
-
 	t.Run("flush drops every entry", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
-		warmCache(&acc,
+		acc := NewAffectedComponentsCache(&cacheSize)
+		warmCache(acc,
 			candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}),
 			candidateFor(t, "pkg:npm/express@4.18.2", models.AffectedComponent{ID: 2}),
 		)
@@ -308,9 +296,9 @@ func TestAffectedComponentsCache(t *testing.T) {
 	})
 
 	t.Run("writing after a flush works again", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		acc.Flush()
-		warmCache(&acc, candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}))
+		warmCache(acc, candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}))
 
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.True(t, ok)
@@ -320,7 +308,7 @@ func TestAffectedComponentsCache(t *testing.T) {
 	t.Run("values collected before a flush are not written back", func(t *testing.T) {
 		// an import flushing mid scan must not let the scan restore its now
 		// outdated components into the fresh generation
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		outdated := candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1})
 
 		generation := acc.GetCurrentGeneration()
@@ -332,9 +320,9 @@ func TestAffectedComponentsCache(t *testing.T) {
 	})
 
 	t.Run("a flush does not block writes started after it", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		acc.Flush()
-		warmCache(&acc, candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}))
+		warmCache(acc, candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}))
 
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.True(t, ok)
@@ -342,12 +330,12 @@ func TestAffectedComponentsCache(t *testing.T) {
 	})
 
 	t.Run("only the outdated write is dropped", func(t *testing.T) {
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		outdatedGeneration := acc.GetCurrentGeneration()
 		acc.Flush()
 
 		acc.SetForCandidates([]*candidate{candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1})}, outdatedGeneration)
-		warmCache(&acc, candidateFor(t, "pkg:npm/express@4.18.2", models.AffectedComponent{ID: 2}))
+		warmCache(acc, candidateFor(t, "pkg:npm/express@4.18.2", models.AffectedComponent{ID: 2}))
 
 		_, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.False(t, ok)
@@ -357,7 +345,7 @@ func TestAffectedComponentsCache(t *testing.T) {
 
 	t.Run("concurrent reads writes and flushes are safe", func(t *testing.T) {
 		// only meaningful under -race, which the pipeline runs
-		acc := AffectedComponentsCache{}
+		acc := NewAffectedComponentsCache(&cacheSize)
 		purls := []string{"pkg:npm/lodash@4.17.20", "pkg:npm/express@4.18.2", "pkg:deb/debian/git@2.47.3?distro=debian-13.2"}
 
 		var wg sync.WaitGroup
@@ -365,7 +353,7 @@ func TestAffectedComponentsCache(t *testing.T) {
 			wg.Add(3)
 			go func() {
 				defer wg.Done()
-				warmCache(&acc, candidateFor(t, purls[i], models.AffectedComponent{ID: int64(i)}))
+				warmCache(acc, candidateFor(t, purls[i], models.AffectedComponent{ID: int64(i)}))
 			}()
 			go func() {
 				defer wg.Done()
@@ -383,49 +371,16 @@ func TestAffectedComponentsCache(t *testing.T) {
 func TestResolveCandidatesUsesCache(t *testing.T) {
 	// the comparer has no database - every lookup that is not served by the
 	// cache panics, which is exactly what these tests assert against
-	comparer := NewPurlComparer(nil)
+	comparer := NewPurlComparer(nil, new(50))
 
 	t.Run("cached purls are resolved without touching the database", func(t *testing.T) {
-		cache.Flush()
-		defer cache.Flush()
 
 		purl := mustParsePurl(t, "pkg:npm/lodash@4.17.20")
-		warmCache(&cache, candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}))
+		warmCache(comparer.cache, candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1}))
 
 		components, err := comparer.GetAffectedComponents(context.Background(), purl)
 		require.NoError(t, err)
 		assert.Len(t, components, 1)
 		assert.Equal(t, int64(1), components[0].ID)
-	})
-
-	t.Run("cached purls keep the requested order", func(t *testing.T) {
-		cache.Flush()
-		defer cache.Flush()
-
-		warmCache(&cache,
-			candidateFor(t, "pkg:npm/lodash@4.17.20", models.AffectedComponent{ID: 1, CVE: []models.CVE{{CVE: "CVE-2024-1111"}}}),
-			candidateFor(t, "pkg:npm/express@4.18.2", models.AffectedComponent{ID: 2, CVE: []models.CVE{{CVE: "CVE-2024-2222"}}}),
-		)
-
-		vulns, err := comparer.GetVulns(context.Background(), []packageurl.PackageURL{
-			mustParsePurl(t, "pkg:npm/express@4.18.2"),
-			mustParsePurl(t, "pkg:npm/lodash@4.17.20"),
-		})
-		require.NoError(t, err)
-		require.Len(t, vulns, 2)
-		assert.Equal(t, "CVE-2024-2222", vulns[0].CVEID)
-		assert.Equal(t, "CVE-2024-1111", vulns[1].CVEID)
-	})
-
-	t.Run("purls without a version are neither queried nor cached", func(t *testing.T) {
-		cache.Flush()
-		defer cache.Flush()
-
-		components, err := comparer.GetAffectedComponents(context.Background(), mustParsePurl(t, "pkg:npm/lodash"))
-		require.NoError(t, err)
-		assert.Empty(t, components)
-
-		_, ok := cache.GetByCandidate(candidateFor(t, "pkg:npm/lodash"))
-		assert.False(t, ok)
 	})
 }

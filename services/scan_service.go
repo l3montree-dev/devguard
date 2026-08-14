@@ -69,7 +69,6 @@ type scanService struct {
 var _ shared.ScanService = (*scanService)(nil)
 
 func NewScanService(
-	db shared.DB,
 	cveRepository shared.CveRepository,
 	dependencyVulnService shared.DependencyVulnService,
 	synchronizer utils.FireAndForgetSynchronizer,
@@ -83,8 +82,8 @@ func NewScanService(
 	vulnEventRepository shared.VulnEventRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	componentService shared.ComponentService,
+	purlComparer *scan.PurlComparer,
 ) *scanService {
-	purlComparer := scan.NewPurlComparer(db)
 	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{
 		sbomScanner:                 scanner,

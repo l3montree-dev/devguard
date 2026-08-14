@@ -51,6 +51,7 @@ type VulnDBService struct {
 	configService     shared.ConfigService
 	pool              *pgxpool.Pool
 	ghVexFetcher      shared.GitHubVexFetcher
+	purlComparer      *scan.PurlComparer // used to flush the cache after import
 }
 
 func NewVulnDBService(
@@ -62,6 +63,7 @@ func NewVulnDBService(
 	configService shared.ConfigService,
 	ghVexFetcher shared.GitHubVexFetcher,
 	pool *pgxpool.Pool,
+	purlComparer *scan.PurlComparer,
 ) *VulnDBService {
 	return &VulnDBService{
 		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
@@ -75,6 +77,7 @@ func NewVulnDBService(
 		configService:     configService,
 		pool:              pool,
 		ghVexFetcher:      ghVexFetcher,
+		purlComparer:      purlComparer,
 	}
 }
 
@@ -560,7 +563,7 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 	}
 
 	// flush the purl comparer cache since its values are now outdated
-	scan.FlushCache()
+	service.purlComparer.FlushCache()
 
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil

@@ -36,9 +36,10 @@ type VulnDBController struct {
 
 	// pointer, so the value-receiver methods share one cache instead of copying the lock
 	ecosystemDistributionCache *ecosystemDistributionCache
+	purlComparer               *scan.PurlComparer
 }
 
-func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, fixedVersionResolver shared.FixedVersionResolver, dependencyVulnRepository shared.DependencyVulnRepository) *VulnDBController {
+func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChecker shared.MaliciousPackageChecker, affectedComponentRepository shared.AffectedComponentRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, fixedVersionResolver shared.FixedVersionResolver, dependencyVulnRepository shared.DependencyVulnRepository, purlComparer *scan.PurlComparer) *VulnDBController {
 	return &VulnDBController{
 		cveRepository:               cveRepository,
 		maliciousPackageChecker:     maliciousPackageChecker,
@@ -48,6 +49,7 @@ func NewVulnDBController(cveRepository shared.CveRepository, maliciousPackageChe
 		fixedVersionResolver:        fixedVersionResolver,
 		dependencyVulnRepository:    dependencyVulnRepository,
 		ecosystemDistributionCache:  &ecosystemDistributionCache{},
+		purlComparer:                purlComparer,
 	}
 }
 
@@ -167,14 +169,12 @@ func (c VulnDBController) PURLInspect(ctx shared.Context) error {
 
 	matchCtx := normalize.ParsePurlForMatching(purl)
 
-	purlComparer := scan.NewPurlComparer(c.cveRepository.GetDB(ctx.Request().Context(), nil))
-
-	affectedComponents, err := purlComparer.GetAffectedComponents(ctx.Request().Context(), purl)
+	affectedComponents, err := c.purlComparer.GetAffectedComponents(ctx.Request().Context(), purl)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to retrieve affected components for PURL").WithInternal(err)
 	}
 
-	vulns, err := purlComparer.GetVulns(ctx.Request().Context(), []packageurl.PackageURL{purl})
+	vulns, err := c.purlComparer.GetVulns(ctx.Request().Context(), []packageurl.PackageURL{purl})
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to retrieve vulnerabilities for PURL").WithInternal(err)
 	}

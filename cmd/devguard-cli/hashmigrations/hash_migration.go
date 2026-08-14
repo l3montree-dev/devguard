@@ -156,7 +156,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		panic(err)
 	}
 
-	pc := scan.NewPurlComparer(db)
+	pc := scan.NewPurlComparer(db, new(0)) // no cache should be fine
 	totalVulns := len(allVulns)
 	slog.Info("Starting CVE hash migration", "total", totalVulns)
 

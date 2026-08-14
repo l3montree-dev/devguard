@@ -21,7 +21,9 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"unsafe"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/utils"
@@ -33,20 +35,17 @@ import (
 )
 
 type PurlComparer struct {
-	db shared.DB
+	db    shared.DB
+	cache *AffectedComponentsCache
 }
 
-func NewPurlComparer(db shared.DB) *PurlComparer {
+// cache Size is the maximum number of elements held at one time
+// if 0 is provided the cache gets disabled
+func NewPurlComparer(db shared.DB, cacheSize *int) *PurlComparer {
 	return &PurlComparer{
-		db: db,
+		db:    db,
+		cache: NewAffectedComponentsCache(cacheSize),
 	}
-}
-
-func (comparer *PurlComparer) cacheScope() string {
-	if comparer.db == nil {
-		return ""
-	}
-	return fmt.Sprintf("%p", comparer.db)
 }
 
 var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer interface
@@ -118,67 +117,82 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.P
 	return vulns, nil
 }
 
-var cache = AffectedComponentsCache{}
-
-const initialCacheSize = 10_000
-
-type AffectedComponentsCache struct {
-	mutex      sync.RWMutex
-	generation int
-	cache      map[string][]models.AffectedComponent
+// flush cache externally (e.g. vulndb import)
+func (comparer *PurlComparer) FlushCache() {
+	comparer.cache.Flush()
 }
 
-// wrapper for flushing the cache externally
-func FlushCache() {
-	cache.Flush()
+type AffectedComponentsCache struct {
+	disabled   bool
+	generation int
+	mutex      *sync.RWMutex
+	cache      *expirable.LRU[string, []models.AffectedComponent]
+}
+
+const defaultCacheSizeInBytes = 10_000_000 // 10MB
+
+// builds a new affected components cache
+// cache Size is the maximum number of elements held at one time
+// if 0 is provided the cache gets disabled
+func NewAffectedComponentsCache(cacheSize *int) *AffectedComponentsCache {
+	disabled := false
+	if cacheSize == nil {
+		// roughly calculate the cache size in number of elements based on the target number of bytes
+		sizePerEntry := unsafe.Sizeof(models.AffectedComponent{})
+		memoryPerSlice := sizePerEntry * 5 // assume 5 entries per slice on average
+		maxNumberOfEntries := int(defaultCacheSizeInBytes / memoryPerSlice)
+		cacheSize = &maxNumberOfEntries
+	} else if *cacheSize == 0 {
+		disabled = true // 0 disables the cache
+
+	}
+
+	return &AffectedComponentsCache{
+		disabled: disabled,
+		mutex:    &sync.RWMutex{},
+		cache:    expirable.NewLRU[string, []models.AffectedComponent](*cacheSize, nil, 0),
+	}
 }
 
 func (acc *AffectedComponentsCache) Flush() {
+	if acc.disabled {
+		return
+	}
 	acc.mutex.Lock()
 	defer acc.mutex.Unlock()
 	acc.generation++
-	acc.cache = nil
+	acc.cache.Purge()
 }
 
 func (acc *AffectedComponentsCache) GetCurrentGeneration() int {
+	if acc.disabled {
+		return 0
+	}
 	acc.mutex.RLock()
 	defer acc.mutex.RUnlock()
 	return acc.generation
 }
 
 func (acc *AffectedComponentsCache) GetByCandidate(candidate *candidate) ([]models.AffectedComponent, bool) {
-	return acc.GetByCandidateInScope("", candidate)
-}
-
-func (acc *AffectedComponentsCache) GetByCandidateInScope(scope string, candidate *candidate) ([]models.AffectedComponent, bool) {
-	acc.mutex.RLock()
-	defer acc.mutex.RUnlock()
-	if acc.cache == nil {
+	if acc.disabled {
 		return nil, false
 	}
-	components, ok := acc.cache[scope+"|"+candidate.cacheKey()]
-	return components, ok
+	return acc.cache.Get(candidate.cacheKey())
 }
 
-// fills the cache with
 func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate, candidatesGeneration int) {
-	acc.SetForCandidatesInScope("", candidates, candidatesGeneration)
-}
-
-func (acc *AffectedComponentsCache) SetForCandidatesInScope(scope string, candidates []*candidate, candidatesGeneration int) {
-	acc.mutex.Lock()
-	defer acc.mutex.Unlock()
-
+	if acc.disabled {
+		return
+	}
 	// avoid cache poisoning with outdated values
+	acc.mutex.RLock()
+	defer acc.mutex.RUnlock()
 	if candidatesGeneration != acc.generation {
 		return
 	}
 
-	if acc.cache == nil {
-		acc.cache = make(map[string][]models.AffectedComponent, initialCacheSize)
-	}
 	for i := range candidates {
-		acc.cache[scope+"|"+candidates[i].cacheKey()] = candidates[i].components
+		acc.cache.Add(candidates[i].cacheKey(), candidates[i].components)
 	}
 }
 
@@ -191,12 +205,15 @@ func (acc *AffectedComponentsCache) SetForCandidatesInScope(scope string, candid
 // a thousand packages typically collapses to a handful of queries.
 func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []packageurl.PackageURL) ([]*candidate, error) {
 	candidates := make([]*candidate, 0, len(purls))
+	if len(purls) == 0 {
+		return candidates, nil
+	}
+
 	byShape := make(map[queryShape][]*candidate)
 	cacheUsage := 0
-	cacheScope := comparer.cacheScope()
 
 	// get the current generation of the cache to ensure consistency
-	generationOfValues := cache.GetCurrentGeneration()
+	currentGeneration := comparer.cache.GetCurrentGeneration()
 
 	for _, purl := range purls {
 		c := newCandidate(purl)
@@ -204,7 +221,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 			continue // No version = no results
 		}
 
-		ac, ok := cache.GetByCandidateInScope(cacheScope, c) // read from cache if possible
+		ac, ok := comparer.cache.GetByCandidate(c) // read from cache if possible
 		if ok {
 			cacheUsage++
 			c.components = ac
@@ -233,7 +250,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	}
 
 	// only cache after every shape is finished
-	cache.SetForCandidatesInScope(cacheScope, candidates, generationOfValues)
+	comparer.cache.SetForCandidates(candidates, currentGeneration)
 
 	slog.Info("finished purl matching", "cache usage", float32(cacheUsage)/float32(len(purls)))
 	// the candidates are in request order, whereas byShape is not
@@ -268,7 +285,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	}
 
 	// Selecting only the ids keeps the joined result small - the rows are
-	// hydrated by a second query, which is also what lets us preload.
+	// hydrated by a second query, preloading related data.
 	query := `SELECT q.purl, q.version, ac.id FROM affected_components ac
 		JOIN (
 			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version
