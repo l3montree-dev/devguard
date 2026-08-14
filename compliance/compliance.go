@@ -8,15 +8,17 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func LoadControlsIntoDB(db shared.DB) error {
+func LoadControlsIntoDB(tx shared.DB) error {
 	controls, err := loadGrundschutzControls()
 	if err != nil {
 		return err
 	}
-	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
-		UpdateAll: true,
-	}).CreateInBatches(&controls, 100).Error; err != nil {
+
+	tx.Exec(`TRUNCATE TABLE mapped_controls CASCADE;
+	TRUNCATE TABLE frameworks_controls CASCADE;
+	`)
+	// truncate the tables before seeding to av
+	if err := tx.CreateInBatches(&controls, 100).Error; err != nil {
 		return err
 	}
 	slog.Info("seeded Grundschutz++ controls", "count", len(controls))
@@ -25,7 +27,7 @@ func LoadControlsIntoDB(db shared.DB) error {
 	if err != nil {
 		return err
 	}
-	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
+	if err := tx.WithContext(context.Background()).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
 		UpdateAll: true,
 	}).CreateInBatches(&controls, 100).Error; err != nil {
@@ -37,7 +39,7 @@ func LoadControlsIntoDB(db shared.DB) error {
 	if err != nil {
 		return err
 	}
-	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
+	if err := tx.WithContext(context.Background()).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
 		UpdateAll: true,
 	}).CreateInBatches(&controls, 100).Error; err != nil {
@@ -49,7 +51,7 @@ func LoadControlsIntoDB(db shared.DB) error {
 	if err != nil {
 		return err
 	}
-	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
+	if err := tx.WithContext(context.Background()).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
 		UpdateAll: true,
 	}).CreateInBatches(&controls, 100).Error; err != nil {
@@ -61,13 +63,20 @@ func LoadControlsIntoDB(db shared.DB) error {
 	if err != nil {
 		return err
 	}
-	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
+	grundschutzMapping, err := loadGrundschutzToGSPlusPlusMappingCollection()
+	if err != nil {
+		return err
+	}
+	mappingCollection = append(mappingCollection, grundschutzMapping...)
+
+	if err := tx.WithContext(context.Background()).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "framework_control_id"}, {Name: "related_framework"}, {Name: "related_control_id"}, {Name: "relationship"}},
 		UpdateAll: true,
 	}).CreateInBatches(&mappingCollection, 100).Error; err != nil {
 		return err
 	}
 	slog.Info("seeded ISO27001 to Grundschutz++ mappings", "count", len(mappingCollection))
+	slog.Info("seeded Grundschutz to Grundschutz++ mappings", "count", len(grundschutzMapping))
 
 	/*
 		controls, err = loadSCFControls()
@@ -88,7 +97,7 @@ func LoadControlsIntoDB(db shared.DB) error {
 	if err != nil {
 		return err
 	}
-	if err := db.WithContext(context.Background()).Clauses(clause.OnConflict{
+	if err := tx.WithContext(context.Background()).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "uuid"}},
 		UpdateAll: true,
 	}).CreateInBatches(&components, 100).Error; err != nil {

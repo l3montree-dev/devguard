@@ -262,6 +262,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 			frameworks_controls.title,
 			frameworks_controls.description,
 			frameworks_controls.importance,
+			frameworks_controls.security_level,
 			frameworks_controls.class,
 			frameworks_controls.additional,
 			frameworks_controls.parent_framework_control_id,

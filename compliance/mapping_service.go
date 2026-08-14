@@ -30,13 +30,17 @@ type frameworkName string
 const (
 	iso27001                            frameworkName = "ISO27001"
 	grundschutzPlusPlus                 frameworkName = "Grundschutz++"
+	grundschutz                         frameworkName = "Grundschutz"
 	bsiAnforderungenZumRisikomanagement frameworkName = "BSI-Anforderungen-zum-Risikomanagement"
 	lieferkettensicherheit              frameworkName = "Lieferkettensicherheit"
 	scf                                 frameworkName = "SCF"
 )
 
-//go:embed oscal/catalogs/ISO27001-AnnexA-to-GS++-mapping_collection.json
+//go:embed oscal/mappings/ISO27001-AnnexA-to-GS++-mapping_collection.json
 var iso27001ToGSPlusPlusMappingCollectionJSON []byte
+
+//go:embed oscal/mappings/ITGS-to-GS++-mapping_collection.json
+var grundschutzToGSPlusPlusMappingCollectionJSON []byte
 
 type mappingCollection struct {
 	MappingCollection struct {
@@ -68,6 +72,24 @@ type resource struct {
 	Href string `json:"href"`
 }
 
+func loadGrundschutzToGSPlusPlusMappingCollection() ([]models.MappedControl, error) {
+	var results []models.MappedControl
+	var mappingCollection mappingCollection
+
+	if err := json.NewDecoder(bytes.NewReader(grundschutzToGSPlusPlusMappingCollectionJSON)).Decode(&mappingCollection); err != nil {
+		return nil, err
+	}
+
+	for _, mapping := range mappingCollection.MappingCollection.Mappings {
+		mappedControls, err := extractMappingsFromMappingCollection(mapping.Maps, grundschutz, grundschutzPlusPlus)
+		if err != nil {
+			return nil, fmt.Errorf("error extracting mappings from mapping collection: %w", err)
+		}
+		results = append(results, mappedControls...)
+	}
+	return results, nil
+}
+
 func loadISO27001ToGSPlusPlusMappingCollection() ([]models.MappedControl, error) {
 	var results []models.MappedControl
 	var mappingCollection mappingCollection
@@ -92,27 +114,6 @@ func loadISO27001ToGSPlusPlusMappingCollection() ([]models.MappedControl, error)
 			return nil, fmt.Errorf("error extracting mappings from mapping collection: %w", err)
 		}
 		results = append(results, mappedControls...)
-
-		//calculate the reverse mapping
-		var reverseMappedControls []models.MappedControl
-		for _, mc := range mappedControls {
-			relationship := mc.Relationship
-			switch mc.Relationship {
-			case "superset-of":
-				relationship = "subset-of"
-			case "subset-of":
-				relationship = "superset-of"
-			}
-
-			reverseMappedControls = append(reverseMappedControls, models.MappedControl{
-				FrameworkControlID: fmt.Sprintf("%s:%s", targetFramework, mc.RelatedControlID),
-				RelatedFramework:   string(sourceFramework),
-				RelatedControlID:   strings.Split(mc.FrameworkControlID, ":")[1], // Extract the control ID from the FrameworkControlID
-				Relationship:       relationship,
-			})
-		}
-		results = append(results, reverseMappedControls...)
-
 	}
 
 	return results, nil
@@ -141,7 +142,25 @@ func extractMappingsFromMappingCollection(maps []mappingMap, sourceFramework fra
 				mappedControls = append(mappedControls, mappedControl)
 			}
 		}
-
 	}
-	return mappedControls, nil
+	//calculate the reverse mapping
+	// since it is really not a lot, we are precaculating it here to avoid implementing any logic in the u
+	var reverseMappedControls []models.MappedControl
+	for _, mc := range mappedControls {
+		relationship := mc.Relationship
+		switch mc.Relationship {
+		case "superset-of":
+			relationship = "subset-of"
+		case "subset-of":
+			relationship = "superset-of"
+		}
+
+		reverseMappedControls = append(reverseMappedControls, models.MappedControl{
+			FrameworkControlID: fmt.Sprintf("%s:%s", targetFramework, mc.RelatedControlID),
+			RelatedFramework:   string(sourceFramework),
+			RelatedControlID:   strings.Split(mc.FrameworkControlID, ":")[1], // Extract the control ID from the FrameworkControlID
+			Relationship:       relationship,
+		})
+	}
+	return append(mappedControls, reverseMappedControls...), nil
 }

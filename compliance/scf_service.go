@@ -51,7 +51,7 @@ func scfAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property
 	}
 	additional["assessment_objective"] = assessmentObjective
 
-	for _, prop := range derefProps(controlProps) {
+	for _, prop := range deref(controlProps) {
 		switch prop.Name {
 		case "weight":
 			additional["importance"] = prop
