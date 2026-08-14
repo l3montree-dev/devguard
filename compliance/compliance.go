@@ -14,9 +14,6 @@ func LoadControlsIntoDB(tx shared.DB) error {
 		return err
 	}
 
-	tx.Exec(`TRUNCATE TABLE mapped_controls CASCADE;
-	TRUNCATE TABLE frameworks_controls CASCADE;
-	`)
 	// truncate the tables before seeding to av
 	if err := tx.CreateInBatches(&controls, 100).Error; err != nil {
 		return err
