@@ -138,7 +138,7 @@ const defaultCacheSize = 3000 // about 20% of all components (20/80 rule)
 func NewAffectedComponentsCache(cacheSize *int) *AffectedComponentsCache {
 	disabled := false
 	if cacheSize == nil {
-		cacheSize = new(defaultCacheSize)
+		cacheSize = new(defaultCacheSize) // nil used the default value
 	} else if *cacheSize == 0 {
 		disabled = true // 0 disables the cache
 	}
@@ -248,7 +248,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	// only cache after every shape is finished
 	comparer.cache.SetForCandidates(candidates, currentGeneration)
 
-	slog.Info("finished purl matching", "cache usage", float32(cacheUsage)/float32(len(purls)))
+	slog.Info("finished purl matching", "amount", len(purls), "cache usage", float32(cacheUsage)/float32(len(purls)))
 	// the candidates are in request order, whereas byShape is not
 	return candidates, nil
 }
