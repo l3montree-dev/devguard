@@ -106,12 +106,10 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 		return ctx.JSON(500, "failed to get webhook integration")
 	}
 
-	// Save() writes every column, including the zero ones, so the stored createdAt has to be
-	// carried over here - otherwise the update resets it to the zero time.
 	webhookIntegration := &models.WebhookIntegration{
 		Model: models.Model{
 			ID:        uuidID,
-			CreatedAt: oldWebhookIntegration.CreatedAt,
+			CreatedAt: oldWebhookIntegration.CreatedAt, // Save() writes every column, so carry this over or it resets to the zero time
 		},
 		Name:        &data.Name,
 		Description: &data.Description,
