@@ -397,12 +397,12 @@ func TestGetLabels(t *testing.T) {
 		expectedLabels := []string{
 			"devguard",
 			"state:open",
+			"orgSlug/projectSlug/assetSlug",
 			"risk:low",
 			"container",
 			"container:test",
 			"source-code",
 			"source-code:test",
-			"orgSlug/projectSlug/assetSlug",
 		}
 
 		assert.Equal(t, expectedLabels, GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug"))
@@ -419,10 +419,10 @@ func TestGetLabels(t *testing.T) {
 		expectedLabels := []string{
 			"devguard",
 			"state:fixed",
+			"orgSlug/projectSlug/assetSlug",
 			"sast",
 			"secret-scanning",
 			"iac",
-			"orgSlug/projectSlug/assetSlug",
 		}
 
 		assert.Equal(t, expectedLabels, GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug"))
@@ -454,8 +454,8 @@ func TestGetLabels(t *testing.T) {
 		expectedLabels := []string{
 			"devguard",
 			"state:open",
-			"risk:low",
 			"orgSlug/projectSlug/assetSlug",
+			"risk:low",
 			"pkg:oci/scanner?reposito...ch=arm64&tag=main-arm64",
 		}
 		assert.Equal(t, expectedLabels, labels)
