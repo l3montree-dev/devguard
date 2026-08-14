@@ -6706,6 +6706,9 @@
                     },
                     "relatedFramework": {
                         "type": "string"
+                    },
+                    "relationship": {
+                        "type": "string"
                     }
                 },
                 "type": "object"

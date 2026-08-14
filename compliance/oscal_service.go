@@ -52,30 +52,23 @@ func parseOSCALCatalog(r io.Reader) (*oscalTypes.Catalog, error) {
 	return schema.Catalog, nil
 }
 
-func extractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName string, mapper additionalMapper) []models.FrameworkControl {
+func extractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName frameworkName, mapper additionalMapper) []models.FrameworkControl {
 	ctx := newResolveContext(catalog)
 
 	var controls []models.FrameworkControl
-	for _, g := range derefGroups(catalog.Groups) {
+	for _, g := range deref(catalog.Groups) {
 		controls = append(controls, extractFromGroup(nil, g, frameworkName, mapper, ctx)...)
 	}
-	for _, c := range derefControls(catalog.Controls) {
+	for _, c := range deref(catalog.Controls) {
 		controls = append(controls, controlToFrameworkControl(c, nil, nil, frameworkName, mapper, ctx)...)
 	}
 	return controls
 }
 
-func derefLinks(l *[]oscalTypes.Link) []oscalTypes.Link {
-	if l == nil {
-		return nil
-	}
-	return *l
-}
-
 func extractMappedControls(frameworkControlID string, c oscalTypes.Control) ([]models.MappedControl, error) {
 	var mappedControls []models.MappedControl
 
-	for _, link := range derefLinks(c.Links) {
+	for _, link := range deref(c.Links) {
 		if link.Rel == "mapped-to" {
 			relatedControlID := link.Href
 			if relatedControlID == "" {
@@ -101,7 +94,7 @@ func extractMappedControls(frameworkControlID string, c oscalTypes.Control) ([]m
 	return mappedControls, nil
 }
 
-func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName string, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
+func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName frameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	groupTitle := &g.Title
 	if parentGroupTitle != nil {
 		combined := fmt.Sprintf("%s / %s", *parentGroupTitle, *groupTitle)
@@ -109,17 +102,17 @@ func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkNam
 	}
 
 	var controls []models.FrameworkControl
-	for _, c := range derefControls(g.Controls) {
+	for _, c := range deref(g.Controls) {
 		controls = append(controls, controlToFrameworkControl(c, nil, groupTitle, frameworkName, mapper, ctx)...)
 	}
-	for _, sub := range derefGroups(g.Groups) {
+	for _, sub := range deref(g.Groups) {
 		controls = append(controls, extractFromGroup(groupTitle, sub, frameworkName, mapper, ctx)...)
 	}
 	return controls
 }
 
-func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName string, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
-	parts := derefParts(c.Parts)
+func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName frameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
+	parts := deref(c.Parts)
 
 	// Find the statement part for the description; fall back to any part with prose.
 	description := ""
@@ -147,13 +140,14 @@ func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, gr
 	}
 
 	fc := models.FrameworkControl{
-		Framework:   frameworkName,
-		ControlID:   c.ID,
-		Title:       c.Title,
-		Class:       c.Class,
-		Description: description,
-		Importance:  importanceString(additional["importance"]),
-		Additional:  mustMarshalJSON(additional),
+		Framework:     string(frameworkName),
+		ControlID:     c.ID,
+		Title:         c.Title,
+		Class:         c.Class,
+		Description:   description,
+		Importance:    importanceString(additional["importance"]),
+		SecurityLevel: importanceString(additional["security_level"]),
+		Additional:    mustMarshalJSON(additional),
 	}
 	fc.SetID()
 
@@ -168,7 +162,7 @@ func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, gr
 	}
 	result = append(result, fc)
 
-	for _, sub := range derefControls(c.Controls) {
+	for _, sub := range deref(c.Controls) {
 		result = append(result, controlToFrameworkControl(sub, &c.ID, groupTitle, frameworkName, mapper, ctx)...)
 	}
 	return result
@@ -187,32 +181,11 @@ func importanceString(v any) string {
 	}
 }
 
-func derefGroups(g *[]oscalTypes.Group) []oscalTypes.Group {
+func deref[T any](g *[]T) []T {
 	if g == nil {
 		return nil
 	}
 	return *g
-}
-
-func derefControls(c *[]oscalTypes.Control) []oscalTypes.Control {
-	if c == nil {
-		return nil
-	}
-	return *c
-}
-
-func derefParts(p *[]oscalTypes.Part) []oscalTypes.Part {
-	if p == nil {
-		return nil
-	}
-	return *p
-}
-
-func derefProps(p *[]oscalTypes.Property) []oscalTypes.Property {
-	if p == nil {
-		return nil
-	}
-	return *p
 }
 
 // schema matching its detected model type and version.

@@ -63,6 +63,7 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 			FrameworkControlID: mc.FrameworkControlID,
 			RelatedFramework:   mc.RelatedFramework,
 			RelatedControlID:   mc.RelatedControlID,
+			Relationship:       mc.Relationship,
 		}
 	}
 
@@ -73,6 +74,7 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 		Title:                    row.Title,
 		Description:              row.Description,
 		Importance:               row.Importance,
+		SecurityLevel:            row.SecurityLevel,
 		Class:                    row.Class,
 		Additional:               row.Additional,
 		ParentFrameworkControlID: row.ParentFrameworkControlID,
@@ -165,6 +167,7 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 			frameworks_controls.title,
 			frameworks_controls.description,
 			frameworks_controls.importance,
+			frameworks_controls.security_level,
 			frameworks_controls.class,
 			frameworks_controls.additional,
 			frameworks_controls.parent_framework_control_id,
@@ -209,11 +212,11 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is not":
 			subquery = subquery.Where(f.SQL(), f.Value()).Where("state IS NOT NULL")
 		case f.Field == "framework" && f.Operator == "is":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.Value()))
+			subquery = subquery.Where(group.Where(f.SQL(), f.Value()))
 		case f.Field == "framework" && f.Operator == "in":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+			subquery = subquery.Where(group.Where(f.SQL(), f.Value()))
+		case f.Field == "mapped_framework" && f.Operator == "ilike":
+			subquery = subquery.Where(group.Where("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework ILIKE ?)", "%"+fmt.Sprint(f.Value())+"%"))
 		case f.Field == "has_component_coverage" && f.Operator == "is":
 			if fmt.Sprint(f.Value()) == "true" {
 				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
@@ -259,6 +262,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 			frameworks_controls.title,
 			frameworks_controls.description,
 			frameworks_controls.importance,
+			frameworks_controls.security_level,
 			frameworks_controls.class,
 			frameworks_controls.additional,
 			frameworks_controls.parent_framework_control_id,

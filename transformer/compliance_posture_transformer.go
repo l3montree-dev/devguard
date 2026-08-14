@@ -59,6 +59,7 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 			FrameworkControlID: m.FrameworkControlID,
 			RelatedFramework:   m.RelatedFramework,
 			RelatedControlID:   m.RelatedControlID,
+			Relationship:       m.Relationship,
 		}
 	}
 
@@ -170,10 +171,25 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 	implementedRequirements := []oscalTypes.ImplementedRequirement{}
 
 	for _, compliancePosture := range compliancePostures {
+		var props *[]oscalTypes.Property
+		if compliancePosture.SecurityLevel != "" && compliancePosture.Importance != "" {
+			props = new([]oscalTypes.Property{
+				{
+					Name:  "modal_verb",
+					Value: compliancePosture.Importance,
+					Ns:    "https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/tree/main/Dokumentation/namespaces/security_level.csv",
+				},
+				{
+					Name:  "sec_level",
+					Value: compliancePosture.SecurityLevel,
+					Ns:    "https://github.com/BSI-Bund/Stand-der-Technik-Bibliothek/tree/main/Dokumentation/namespaces/effort_level.csv",
+				}})
+		}
+
 		implementedRequirement := oscalTypes.ImplementedRequirement{
 			ControlId: strings.ReplaceAll(strings.ReplaceAll(compliancePosture.FrameworkControlID, "++", ""), ":", "_"),
-
-			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
+			UUID:      uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
+			Props:     props,
 		}
 
 		description := ""

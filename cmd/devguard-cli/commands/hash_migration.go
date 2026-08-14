@@ -96,11 +96,13 @@ func runMigrations() error {
 
 			db := database.NewGormDB(pool)
 			slog.Info("loading compliance controls into database...")
-			if err := compliance.LoadControlsIntoDB(db); err != nil {
-				slog.Error("failed to load compliance controls", "err", err)
-				migrationErr = err
-				return
-			}
+			migrationErr = db.Transaction(func(tx shared.DB) error {
+				if err := compliance.LoadControlsIntoDB(tx); err != nil {
+					slog.Error("failed to load compliance controls", "err", err)
+					return err
+				}
+				return nil
+			})
 		}),
 	)
 
