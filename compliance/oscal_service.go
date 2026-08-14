@@ -52,7 +52,7 @@ func parseOSCALCatalog(r io.Reader) (*oscalTypes.Catalog, error) {
 	return schema.Catalog, nil
 }
 
-func extractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName FrameworkName, mapper additionalMapper) []models.FrameworkControl {
+func extractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName frameworkName, mapper additionalMapper) []models.FrameworkControl {
 	ctx := newResolveContext(catalog)
 
 	var controls []models.FrameworkControl
@@ -101,7 +101,7 @@ func extractMappedControls(frameworkControlID string, c oscalTypes.Control) ([]m
 	return mappedControls, nil
 }
 
-func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName FrameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
+func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName frameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	groupTitle := &g.Title
 	if parentGroupTitle != nil {
 		combined := fmt.Sprintf("%s / %s", *parentGroupTitle, *groupTitle)
@@ -118,7 +118,7 @@ func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkNam
 	return controls
 }
 
-func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName FrameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
+func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName frameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	parts := derefParts(c.Parts)
 
 	// Find the statement part for the description; fall back to any part with prose.

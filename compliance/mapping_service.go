@@ -20,20 +20,19 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
-type FrameworkName string
+type frameworkName string
 
 const (
-	iso27001                            FrameworkName = "ISO27001"
-	grundschutzPlusPlus                 FrameworkName = "Grundschutz++"
-	bsiAnforderungenZumRisikomanagement FrameworkName = "BSI-Anforderungen-zum-Risikomanagement"
-	lieferkettensicherheit              FrameworkName = "Lieferkettensicherheit"
-	scf                                 FrameworkName = "SCF"
+	iso27001                            frameworkName = "ISO27001"
+	grundschutzPlusPlus                 frameworkName = "Grundschutz++"
+	bsiAnforderungenZumRisikomanagement frameworkName = "BSI-Anforderungen-zum-Risikomanagement"
+	lieferkettensicherheit              frameworkName = "Lieferkettensicherheit"
+	scf                                 frameworkName = "SCF"
 )
 
 //go:embed oscal/catalogs/ISO27001-AnnexA-to-GS++-mapping_collection.json
@@ -71,9 +70,9 @@ type resource struct {
 
 func loadISO27001ToGSPlusPlusMappingCollection() ([]models.MappedControl, error) {
 	var results []models.MappedControl
+	var mappingCollection mappingCollection
 
-	mappingCollection, err := parseOSCALMappingCollection(bytes.NewReader(iso27001ToGSPlusPlusMappingCollectionJSON))
-	if err != nil {
+	if err := json.NewDecoder(bytes.NewReader(iso27001ToGSPlusPlusMappingCollectionJSON)).Decode(&mappingCollection); err != nil {
 		return nil, err
 	}
 
@@ -119,23 +118,7 @@ func loadISO27001ToGSPlusPlusMappingCollection() ([]models.MappedControl, error)
 	return results, nil
 }
 
-func parseOSCALMappingCollection(r io.Reader) (*mappingCollection, error) {
-	var mappingCollection mappingCollection
-
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(data, &mappingCollection)
-	if err != nil {
-		return nil, err
-	}
-
-	return &mappingCollection, nil
-}
-
-func extractMappingsFromMappingCollection(maps []mappingMap, sourceFramework FrameworkName, targetFramework FrameworkName) ([]models.MappedControl, error) {
+func extractMappingsFromMappingCollection(maps []mappingMap, sourceFramework frameworkName, targetFramework frameworkName) ([]models.MappedControl, error) {
 	var mappedControls []models.MappedControl
 
 	for _, mapping := range maps {
