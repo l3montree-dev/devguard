@@ -265,11 +265,18 @@ type ComponentRepository interface {
 
 type DependencyVulnRepository interface {
 	utils.Repository[uuid.UUID, models.DependencyVuln, DB]
+
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
-	GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+	GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
+	GetVulnsByAssetSignatures(ctx context.Context, tx *gorm.DB, assetSignatures []int64) ([]models.DependencyVuln, error)
+	GetOpenVulnsDistinctBySignatureIn(ctx context.Context, tx *gorm.DB, signatures []int64) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+	GetOpenVulnsBySignaturesWithoutEvents(ctx context.Context, tx *gorm.DB, signatures []int64, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+
 	GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(ctx context.Context, tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -281,6 +288,8 @@ type DependencyVulnRepository interface {
 	ListByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(ctx context.Context, tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
+	ApplyGroupEventAndSave(ctx context.Context, tx DB, assetSignature int64, vulnEvent *models.VulnEvent) error
+	ApplyGroupEventsAndSave(ctx context.Context, tx DB, events []models.VulnEvent) ([]int64, error)
 	GetDependencyVulnsByDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(ctx context.Context, tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
@@ -369,6 +378,7 @@ type VEXRuleRepository interface {
 
 type UpstreamVEXRuleRepository interface {
 	utils.Repository[string, models.UpstreamVEXRule, DB]
+	ByCveScopes(ctx context.Context, tx DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error]
 }
 
 type VEXRuleRecommendationRepository interface {

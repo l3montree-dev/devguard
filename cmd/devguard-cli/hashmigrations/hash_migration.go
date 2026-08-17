@@ -26,7 +26,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 4
+	CurrentHashVersion = 5
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -101,10 +101,132 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			}
 		}
 
+		if currentVersion < 5 {
+			// we need to calculate the signature for all existing dependency_vulns and update them in the database
+			if err := runDependencyVulnSignatureMigration(pool); err != nil {
+				return fmt.Errorf("failed to run dependency_vuln signature migration (v5): %w", err)
+			}
+
+			// cve_scope was added as a plain column with no backfill - existing
+			// vex_rules/upstream_vex_rules rows need it computed from their
+			// cel_expression, same as SetCELExpression/EnsureID now do for new rows.
+			if err := runVEXRuleCVEScopeBackfill(pool); err != nil {
+				return fmt.Errorf("failed to backfill VEX rule cve_scope (v5): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v5: %w", err)
+			}
+		}
+
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
 
 	return nil
+}
+
+func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
+	start := time.Now()
+	defer func() {
+		slog.Info("dependency_vuln signature migration completed", "duration", time.Since(start))
+	}()
+	db := database.NewGormDB(pool)
+	depVulnRepo := repositories.NewDependencyVulnRepository(db)
+	return db.Transaction(func(tx *gorm.DB) error {
+		total := 0
+		// fetch all in batches and update the signature
+		for batch, err := range depVulnRepo.InBatches(context.Background(), tx, 5_000) {
+			if err != nil {
+				return fmt.Errorf("failed to fetch dependency_vulns in batches: %w", err)
+			}
+
+			total += len(batch)
+
+			if total%100_000 == 0 {
+				slog.Info("updating dependency_vuln signatures", "processed", total)
+			}
+			// just update the signature for each vuln and save it back to the database
+			for i := range batch {
+				batch[i].Signature = batch[i].CalculateSignature()
+				batch[i].AssetSignature = utils.HashToInt64(batch[i].CalculateAssetVersionIndependentHash())
+			}
+
+			if err := depVulnRepo.SaveBatchBestEffort(context.Background(), tx, batch); err != nil {
+				return fmt.Errorf("failed to update dependency_vuln signatures in batch: %w", err)
+			}
+		}
+
+		// The optimize_vex_rule_daemon schema migration intentionally skips adding this constraint
+		// because existing installations have millions of vuln_events rows for license risks /
+		// first-party vulns / compliance postures where dependency_vuln_id and asset_signature are
+		// both legitimately NULL. Add it here, scoped to the columns that actually identify a vuln
+		// event, now that we know the signature backfill above has run.
+		if err := tx.Exec(`
+		ALTER TABLE public.vuln_events
+			ADD CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+			CHECK (
+				dependency_vuln_id IS NOT NULL
+				OR asset_signature IS NOT NULL
+				OR license_risk_id IS NOT NULL
+				OR first_party_vuln_id IS NOT NULL
+				OR compliance_posture_id IS NOT NULL
+			) NOT VALID
+	`).Error; err != nil {
+			return fmt.Errorf("failed to add vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
+		}
+		if err := tx.Exec(`
+		ALTER TABLE public.vuln_events
+			VALIDATE CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+	`).Error; err != nil {
+			return fmt.Errorf("failed to validate vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
+		}
+		return nil
+	})
+
+}
+
+// runVEXRuleCVEScopeBackfill computes cve_scope for every existing vex_rules
+// and upstream_vex_rules row from its cel_expression. cve_scope was added as a
+// plain column with no backfill, and SetCELExpression/EnsureID only compute it
+// going forward - existing rows are stuck at NULL until this runs.
+func runVEXRuleCVEScopeBackfill(pool *pgxpool.Pool) error {
+	start := time.Now()
+	defer func() {
+		slog.Info("VEX rule cve_scope backfill completed", "duration", time.Since(start))
+	}()
+	db := database.NewGormDB(pool)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var upstreamRules []models.UpstreamVEXRule
+		if err := tx.FindInBatches(&upstreamRules, 2_000, func(_ *gorm.DB, _ int) error {
+			for i := range upstreamRules {
+				upstreamRules[i].CVEScope = models.ExtractCVEScopeFromCELExpression(upstreamRules[i].CELExpression)
+				if err := tx.Save(&upstreamRules[i]).Error; err != nil {
+					return fmt.Errorf("failed to save upstream_vex_rules row %s: %w", upstreamRules[i].ID, err)
+				}
+			}
+			return nil
+		}).Error; err != nil {
+			return fmt.Errorf("failed to backfill upstream_vex_rules cve_scope: %w", err)
+		}
+
+		var vexRules []models.VEXRule
+		if err := tx.FindInBatches(&vexRules, 2_000, func(_ *gorm.DB, _ int) error {
+			for i := range vexRules {
+				vexRules[i].CVEScope = models.ExtractCVEScopeFromCELExpression(vexRules[i].CELExpression)
+				if err := tx.Save(&vexRules[i]).Error; err != nil {
+					return fmt.Errorf("failed to save vex_rules row %s: %w", vexRules[i].ID, err)
+				}
+			}
+			return nil
+		}).Error; err != nil {
+			return fmt.Errorf("failed to backfill vex_rules cve_scope: %w", err)
+		}
+
+		return nil
+	})
 }
 
 // this function handles the migration for importing new CVEs from the OSV.

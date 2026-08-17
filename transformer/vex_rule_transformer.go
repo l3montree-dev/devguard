@@ -38,7 +38,6 @@ func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule
 		CELExpression:           rule.CELExpression,
 		CreatedByID:             rule.CreatedByID,
 		CreatedAt:               rule.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:               rule.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 
 		// Metrics
 		AppliesToAmountOfDependencyVulns: appliesToCount,

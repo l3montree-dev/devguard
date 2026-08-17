@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"iter"
 
 	"github.com/l3montree-dev/devguard/utils"
 	mock "github.com/stretchr/testify/mock"
@@ -581,6 +582,71 @@ func (_c *Repository_GetDB_Call[ID, T, Tx]) Return(v Tx) *Repository_GetDB_Call[
 }
 
 func (_c *Repository_GetDB_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx) Tx) *Repository_GetDB_Call[ID, T, Tx] {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InBatches provides a mock function for the type Repository
+func (_mock *Repository[ID, T, Tx]) InBatches(ctx context.Context, tx Tx, batchSize int) iter.Seq2[[]T, error] {
+	ret := _mock.Called(ctx, tx, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InBatches")
+	}
+
+	var r0 iter.Seq2[[]T, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, int) iter.Seq2[[]T, error]); ok {
+		r0 = returnFunc(ctx, tx, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]T, error])
+		}
+	}
+	return r0
+}
+
+// Repository_InBatches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InBatches'
+type Repository_InBatches_Call[ID any, T utils.Tabler, Tx any] struct {
+	*mock.Call
+}
+
+// InBatches is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx Tx
+//   - batchSize int
+func (_e *Repository_Expecter[ID, T, Tx]) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *Repository_InBatches_Call[ID, T, Tx] {
+	return &Repository_InBatches_Call[ID, T, Tx]{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
+}
+
+func (_c *Repository_InBatches_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, batchSize int)) *Repository_InBatches_Call[ID, T, Tx] {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 Tx
+		if args[1] != nil {
+			arg1 = args[1].(Tx)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *Repository_InBatches_Call[ID, T, Tx]) Return(seq2 iter.Seq2[[]T, error]) *Repository_InBatches_Call[ID, T, Tx] {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *Repository_InBatches_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, batchSize int) iter.Seq2[[]T, error]) *Repository_InBatches_Call[ID, T, Tx] {
 	_c.Call.Return(run)
 	return _c
 }

@@ -50,15 +50,6 @@ func BenchmarkVEXRuleRecommendationDaemonDevDB(b *testing.B) {
 
 	ctx := context.Background()
 
-	// Warm up once outside the measurement: the first run pays for cold
-	// caches/connections and any lazily-compiled CEL programs, while later
-	// runs hit the warm path. Without a warmup, a benchmark that only manages
-	// a single iteration measures the cold path and one that manages several
-	// silently mixes both.
-	if err := runner.RunVEXRuleRecommendationDaemon(ctx); err != nil {
-		b.Fatalf("warmup run failed: %v", err)
-	}
-
 	// Force GC and get baseline memory
 	runtime.GC()
 	beforeMem := getMemStats()

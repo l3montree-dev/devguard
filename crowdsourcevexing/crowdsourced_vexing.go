@@ -196,7 +196,7 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 	// Since we are dminishing the values of votes with increasing numbers coming from one user it is important to create a consistent behaviour
 	// for which vote will have less impact, so we sort the incoming vexrules by when they were last updated (update date implies freshness of rule)
 	sort.Slice(matchingRules, func(i, j int) bool {
-		return matchingRules[i].UpdatedAt.Before(matchingRules[j].UpdatedAt)
+		return matchingRules[i].CreatedAt.Before(matchingRules[j].CreatedAt)
 	})
 
 	ruleIDtoIdentity := make(map[string]string)

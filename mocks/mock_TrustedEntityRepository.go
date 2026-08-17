@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"iter"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -1005,6 +1006,71 @@ func (_c *TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call) Return(tr
 }
 
 func (_c *TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error)) *TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InBatches provides a mock function for the type TrustedEntityRepository
+func (_mock *TrustedEntityRepository) InBatches(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.TrustedEntity, error] {
+	ret := _mock.Called(ctx, tx, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InBatches")
+	}
+
+	var r0 iter.Seq2[[]models.TrustedEntity, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) iter.Seq2[[]models.TrustedEntity, error]); ok {
+		r0 = returnFunc(ctx, tx, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.TrustedEntity, error])
+		}
+	}
+	return r0
+}
+
+// TrustedEntityRepository_InBatches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InBatches'
+type TrustedEntityRepository_InBatches_Call struct {
+	*mock.Call
+}
+
+// InBatches is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - batchSize int
+func (_e *TrustedEntityRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *TrustedEntityRepository_InBatches_Call {
+	return &TrustedEntityRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
+}
+
+func (_c *TrustedEntityRepository_InBatches_Call) Run(run func(ctx context.Context, tx shared.DB, batchSize int)) *TrustedEntityRepository_InBatches_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *TrustedEntityRepository_InBatches_Call) Return(seq2 iter.Seq2[[]models.TrustedEntity, error]) *TrustedEntityRepository_InBatches_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *TrustedEntityRepository_InBatches_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.TrustedEntity, error]) *TrustedEntityRepository_InBatches_Call {
 	_c.Call.Return(run)
 	return _c
 }

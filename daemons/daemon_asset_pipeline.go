@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"go.opentelemetry.io/otel/attribute"
@@ -56,6 +57,7 @@ func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid
 	// scan asset will apply all vex rules
 	ch = runner.ScanAsset(ch, errChan)
 	ch = runner.SyncUpstream(ch, errChan)
+	ch = runner.ApplyVEXRules(ch, errChan)
 	ch = runner.AutoReopenTickets(ch, errChan)
 	ch = runner.RecalculateRiskForVulnerabilities(ch, errChan)
 	ch = runner.ResolveFixedVersions(ch, errChan)
@@ -687,6 +689,96 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 		}
 	}()
 	return out
+}
+
+// ApplyVEXRules re-applies this asset's VEX rules on a schedule, not only at
+// rule-creation time or against whatever a scan just found. This is what catches
+// a rule that starts matching a vuln later - e.g. an upstream rule ingested by
+// SyncUpstream above, or a rule whose CEL expression changed since it last ran.
+//
+// False-positive/accepted rules are only evaluated against currently open vulns
+// (closing an already-closed vuln again is a no-op anyway). Reopen rules are the
+// mirror image: they only make sense against vulns a previous rule (or a person)
+// already accepted, so they're evaluated against accepted vulns instead.
+func (runner *DaemonRunner) ApplyVEXRules(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
+	out := make(chan assetWithProjectAndOrg)
+
+	go func() {
+		defer func() {
+			close(out)
+			monitoring.RecoverPanic("apply vex rules panic")
+		}()
+
+		for assetWithDetails := range input {
+			if !runner.stageEnabled("ApplyVEXRules") {
+				out <- assetWithDetails
+				continue
+			}
+			asset := assetWithDetails.asset
+
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.apply-vex-rules")
+
+			rules, err := runner.vexRuleRepository.FindByAssetID(stageCtx, runner.db, asset.ID)
+			if err != nil {
+				slog.Error("failed to fetch VEX rules for asset", "error", err, "assetID", asset.ID)
+				errChan <- pipelineError{asset: asset, err: fmt.Errorf("could not fetch VEX rules: %w", err)}
+				span.End()
+				out <- assetWithDetails
+				continue
+			}
+
+			runner.applyVEXRules(stageCtx, asset, rules)
+
+			span.End()
+			out <- assetWithDetails
+		}
+	}()
+	return out
+}
+
+// applyVEXRules mirrors what VEXRuleController.Create does for a single
+// newly-created rule, generalized to every rule currently enabled for the asset:
+// group rules by the vuln state services.VulnStateForVEXRuleEventType says they
+// apply to, fetch one representative vuln per distinct signature in that state,
+// let the VEX rule service compute which group events that implies, and persist
+// them. Errors are logged rather than propagated to the pipeline's error channel -
+// a failure here shouldn't stop the rest of this asset's pipeline stages.
+func (runner *DaemonRunner) applyVEXRules(ctx context.Context, asset models.Asset, rules []models.VEXRule) {
+	rulesByState := make(map[dtos.VulnState][]models.VEXRule)
+	for _, rule := range rules {
+		state := services.VulnStateForVEXRuleEventType(rule.EventType)
+		rulesByState[state] = append(rulesByState[state], rule)
+	}
+
+	for state, rulesForState := range rulesByState {
+		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, state)
+		if err != nil {
+			slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID, "state", state)
+			continue
+		}
+
+		groupEvents, err := services.ComputeGroupVEXRuleEvents(ctx, rulesForState, representativeVulns)
+		if err != nil {
+			slog.Error("failed to apply VEX rules to vulns", "error", err, "assetID", asset.ID, "state", state)
+			continue
+		}
+		if len(groupEvents) == 0 {
+			continue
+		}
+
+		tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+		if _, err := runner.dependencyVulnRepository.ApplyGroupEventsAndSave(ctx, tx, groupEvents); err != nil {
+			slog.Error("could not save group VEX rule events", "err", err, "assetID", asset.ID, "state", state)
+			tx.Rollback()
+			continue
+		}
+
+		if runner.debugOptions.DryRun {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}
 }
 
 func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {

@@ -20,6 +20,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -87,9 +88,8 @@ func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
 	if len(listOfUsers) == 0 {
 		return "", fmt.Errorf("no owner found for organization")
 	}
-	if len(listOfUsers) > 1 {
-		return "", fmt.Errorf("more than one owner found for organization")
-	}
+
+	sort.Strings(listOfUsers)
 	return strings.TrimPrefix(listOfUsers[0], "user::"), nil
 }
 

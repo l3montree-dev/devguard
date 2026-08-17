@@ -17,11 +17,8 @@ package vexrules
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"reflect"
-	"regexp"
 	"sync"
 
 	"crypto/sha256"
@@ -41,7 +38,25 @@ import (
 	"github.com/package-url/packageurl-go"
 )
 
+// CelEnv is the CEL environment used for real VEX rule matching, where the
+// vuln's real artifacts are known.
 var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
+	return newCelEnv(func(pattern, path, artifactPurls []string) bool {
+		return PathPattern(pattern).Matches(path, artifactPurls)
+	})
+})
+
+// SoftMatchCelEnv is for callers that haven't loaded artifacts at all - e.g.
+// crowdsourced-vexing's soft-match phase, run against representative vulns
+// before their real artifacts are known. See PathPattern.SoftMatches for the
+// semantics this widens matchesPattern to.
+var SoftMatchCelEnv = sync.OnceValues(func() (*cel.Env, error) {
+	return newCelEnv(func(pattern, path, _ []string) bool {
+		return PathPattern(pattern).SoftMatches(path)
+	})
+})
+
+func newCelEnv(matchesPattern func(pattern, path, artifactPurls []string) bool) (*cel.Env, error) {
 	return cel.NewEnv(
 		cel.Variable("vuln", cel.AnyType),
 		cel.Function("matchesPattern",
@@ -62,8 +77,7 @@ var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
 					if err != nil {
 						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
 					}
-					matches := PathPattern(pattern).Matches(path, artifactPurls)
-					return types.Bool(matches)
+					return types.Bool(matchesPattern(pattern, path, artifactPurls))
 				}),
 			),
 		),
@@ -97,21 +111,10 @@ var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
 			),
 		),
 	)
-})
+}
 
 func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
-	m, err := json.Marshal(vuln)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal vuln to JSON: %w", err)
-	}
-
-	var vulnMap map[string]any
-	if err := json.Unmarshal(m, &vulnMap); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
-	}
-	// artifactPurls is derived (vuln.ArtifactPurls()), not a JSON field of
-	// DependencyVuln, so it has to be added to the map explicitly for
-	// matchesPattern(vuln, pattern) to see it.
+	vulnMap := vuln.ToCELMap()
 	vulnMap["artifactPurls"] = vuln.ArtifactPurls()
 	return vulnMap, nil
 }
@@ -128,41 +131,43 @@ func PrepareVulnsForEval(ctx context.Context, vulns []models.DependencyVuln) ([]
 	return prepared, nil
 }
 
+func PrepareVulnsForEvalMap(ctx context.Context, vulns []models.DependencyVuln) (map[string]map[string]any, error) {
+	prepared := make(map[string]map[string]any, len(vulns))
+	for _, vuln := range vulns {
+		vulnMap, err := vulnToCELMap(vuln)
+		if err != nil {
+			return nil, err
+		}
+		prepared[vuln.Vulnerability.ID.String()] = vulnMap
+	}
+	return prepared, nil
+}
+
+// CompiledRule pairs a compiled CEL program with the CVE scope of the rule it
+// came from, so EvalCompiledRules can narrow evaluation to just the vulns
+// sharing that CVE instead of cross-evaluating every rule against every vuln
+// in the batch (a scoped rule's own vuln.cveId == "..." check would reject
+// every mismatch anyway - this just skips paying for that Eval call at all).
 type CompiledRule struct {
-	cel.Program
-	// a lot of rules are defined for a specific scope, that does not necessarily hold for all but at least ALL upstream vex rules we are synchronizing.
-	// this makes it much faster to filter out rules that are not relevant for a specific vuln if we know the scope of the rule.
+	Program  cel.Program
 	CVEScope *string
 }
 
-/*
-
-Thats a typical example of a rule that exists in a cveId scope.
-
-vuln.cveId == "CVE-2025-61725" && matchesPattern(vuln, ["*", "pkg:golang/k8s.io/component-helpers@v1.35.7-k3s1", "*", "pkg:golang/stdlib@v1.25.0"])
-
-We just need to extract the CVE-2025-61725 part and store it in the CompiledRule.CVEScope field.
-
-*/
-
-var scopeRegex = regexp.MustCompile(`^vuln\.cveId\s*==\s*"([^"]+)" &&`)
-
-func extractCVEScopeFromCELExpression(expr string) *string {
-	if !strings.Contains(expr, "vuln.cveId") {
-		return nil
-	}
-	matches := scopeRegex.FindStringSubmatch(expr)
-	if len(matches) < 2 {
-		return nil
-	}
-	cveID := matches[1]
-	return &cveID
+// CompileRules compiles every rule's CEL expression against the real-match
+// CelEnv. cel.Env is safe for concurrent Compile/Program calls, so rules are
+// compiled in parallel batches.
+func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
+	return compileRulesWithEnv(ctx, rules, CelEnv)
 }
 
-// CompileRules compiles every rule's CEL expression. cel.Env is safe for
-// concurrent Compile/Program calls, so rules are compiled in parallel batches.
-func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
-	celEnv, err := CelEnv()
+// CompileRulesForSoftMatching is CompileRules against SoftMatchCelEnv, for
+// crowdsourced-vexing's soft-match phase over vulns without real artifacts.
+func CompileRulesForSoftMatching(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
+	return compileRulesWithEnv(ctx, rules, SoftMatchCelEnv)
+}
+
+func compileRulesWithEnv(ctx context.Context, rules []models.UpstreamVEXRule, env func() (*cel.Env, error)) (map[string]CompiledRule, error) {
+	celEnv, err := env()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
 	}
@@ -182,12 +187,7 @@ func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[stri
 				return nil, fmt.Errorf("failed to build CEL program: %w", err)
 			}
 
-			scope := extractCVEScopeFromCELExpression(rule.CELExpression)
-
-			local[rule.ID] = CompiledRule{
-				Program:  prg,
-				CVEScope: scope,
-			}
+			local[rule.ID] = CompiledRule{Program: prg, CVEScope: rule.CVEScope}
 		}
 		return local, nil
 	})
@@ -206,21 +206,6 @@ func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[stri
 
 // returns map keyed by vulnID and value is a list of ruleIDs that match that vuln
 func EvalCompiledRules(ctx context.Context, compiled map[string]CompiledRule, vulnMaps []map[string]any) (map[string][]string, error) {
-	// try to reduce the cartesian product by filtering out rules that have a CVE scope that does not match the vuln's CVE ID
-	unscopedRules := make(map[string]CompiledRule, len(compiled))
-	scopedRules := make(map[string]map[string]CompiledRule, len(compiled)) // map[cveID]map[ruleID]CompiledRule
-	for ruleID, rule := range compiled {
-		if rule.CVEScope == nil {
-			unscopedRules[ruleID] = rule
-			continue
-		}
-		cveID := *rule.CVEScope
-		if _, exists := scopedRules[cveID]; !exists {
-			scopedRules[cveID] = make(map[string]CompiledRule)
-		}
-		scopedRules[cveID][ruleID] = rule
-	}
-
 	cveToVulnMap := make(map[string][]map[string]any, len(vulnMaps))
 	for _, vulnMap := range vulnMaps {
 		vulnCVEID, _ := vulnMap["cveId"].(string)
@@ -230,26 +215,19 @@ func EvalCompiledRules(ctx context.Context, compiled map[string]CompiledRule, vu
 		cveToVulnMap[vulnCVEID] = append(cveToVulnMap[vulnCVEID], vulnMap)
 	}
 
-	slog.Info("evaluating cel rules", "cveScoped (different cve buckets)", len(scopedRules), "unscoped", len(unscopedRules))
-
 	type ruleJob struct {
 		id      string
-		prg     CompiledRule
+		prg     cel.Program
 		relVuln []map[string]any
 	}
 
 	jobs := make([]ruleJob, 0, len(compiled))
-	for ruleID, prg := range unscopedRules {
-		jobs = append(jobs, ruleJob{id: ruleID, prg: prg, relVuln: vulnMaps})
-	}
-	for cveID, rules := range scopedRules {
-		vulnsForCVE, exists := cveToVulnMap[cveID]
-		if !exists {
-			continue
+	for ruleID, cr := range compiled {
+		relVuln := vulnMaps
+		if cr.CVEScope != nil {
+			relVuln = cveToVulnMap[*cr.CVEScope]
 		}
-		for ruleID, prg := range rules {
-			jobs = append(jobs, ruleJob{id: ruleID, prg: prg, relVuln: vulnsForCVE})
-		}
+		jobs = append(jobs, ruleJob{id: ruleID, prg: cr.Program, relVuln: relVuln})
 	}
 
 	partials, err := utils.ParallelBatches(jobs, func(batch []ruleJob) (map[string][]string, error) {
