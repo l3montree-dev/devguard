@@ -17,18 +17,25 @@ package shared
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"log/slog"
+	"math/rand"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -85,12 +92,16 @@ type PublicClient interface {
 }
 
 type PublicClientImplementation struct {
-	apiClient *client.APIClient
+	apiClient         *client.APIClient
+	sessionCache      *sessionCache
+	singleflightGroup *singleflight.Group
 }
 
 func NewPublicClient(client *client.APIClient) PublicClientImplementation {
 	return PublicClientImplementation{
-		apiClient: client,
+		apiClient:         client,
+		sessionCache:      newSessionCache(),
+		singleflightGroup: &singleflight.Group{},
 	}
 }
 
@@ -104,25 +115,164 @@ func NewAdminClient(client *client.APIClient) AdminClientImplementation {
 	}
 }
 
-func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
-	session, httpResp, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+const sessionTTL = 30 * time.Second
+const sessionCacheSize = 2000
+
+// leaving out unnecessary struct fields from the client.Session struct to reduce memory consumption
+type minimalSession struct {
+	identity  client.Identity
+	active    *bool
+	expiresAt *time.Time
+	err       error // also cache failed verifications
+}
+
+// caches successful as well as unsuccessful verifications via ory kratos
+// key: hash of the cookie, value: session information + error (error determines success of the authentication)
+// successful entries are checked for staleness before retrieval
+// unsuccessful entries live for the full ttl before being reevaluated
+type sessionCache struct {
+	cache *expirable.LRU[string, minimalSession]
+}
+
+func newSessionCache() *sessionCache {
+	return &sessionCache{
+		cache: expirable.NewLRU[string, minimalSession](sessionCacheSize, nil, sessionTTL),
+	}
+}
+
+// reads the session from the cache, returns true if a usable session was found
+// returns false if there is no session or it expired already
+func (cache *sessionCache) ReadFromCache(cookie string) (result minimalSession, ok bool) {
+	session, found := cache.cache.Get(hashCookie(cookie))
+	if found && shouldReturnCached(session) {
+		return session, true
+	}
+	return result, false
+}
+
+// calculates the sha256 checksum of a cookie
+func hashCookie(cookie string) string {
+	sum := sha256.Sum256([]byte(cookie))
+	return string(sum[:])
+}
+
+func (cache *sessionCache) WriteToCache(cookie string, session *client.Session, err error) {
+	cache.cache.Add(hashCookie(cookie), sessionToMinimalSession(session, err))
+}
+
+func shouldReturnCached(session minimalSession) bool {
+	// Option A: we have an error -> return the unsuccessful verification
+	// Option B: we have no error -> check if the session is still valid
+	return session.err != nil || (session.active != nil && *session.active && session.expiresAt != nil && time.Now().Before(*session.expiresAt))
+}
+
+// transformer to convert a ory session to a minimal session
+func sessionToMinimalSession(session *client.Session, err error) minimalSession {
+	if session == nil || session.Identity == nil {
+		// default to empty struct if session is nil
+		// we want to also cache unsuccessful verifications
+		return minimalSession{
+			identity:  client.Identity{},
+			active:    nil,
+			expiresAt: nil,
+			err:       err,
+		}
+	}
+	return minimalSession{
+		identity:  *session.Identity,
+		active:    session.Active,
+		expiresAt: session.ExpiresAt,
+		err:       err,
+	}
+}
+
+const maxNumberOfRetries = 3
+
+func (publicClient PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
+	// first try to read from the cache
+	cachedSession, ok := publicClient.sessionCache.ReadFromCache(cookie)
+	if ok {
+		// now check if it was a successful or unsuccessful verification
+		if cachedSession.err != nil {
+			slog.Info("unsuccessful verification with cache", "reason", cachedSession.err)
+			return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", cachedSession.err)
+		}
+		slog.Info("successful verification with cache")
+		return cachedSession.identity, nil
+	}
+
+	retries := 0
+	session, resp, err := publicClient.getIdentitySingleflight(ctx, cookie)
+	for shouldRetry(ctx, err, resp, retries) {
+		retries++
+		slog.Warn("could not get identity from cookie, backing off then retrying", "retry", retries, "error", err)
+		select { // check context cancellation
+		case <-ctx.Done():
+			slog.Error("cancel retry due to context cancellation", "reason", ctx.Err().Error())
+			return client.Identity{}, ctx.Err()
+		case <-time.After(calculateBackoffTime(retries)):
+		}
+		session, resp, err = publicClient.getIdentitySingleflight(ctx, cookie)
+	}
+
 	if err != nil {
-		// a 401 just means "no valid session" - the common, expected case. Anything
-		// else (5xx, connection refused, timeout - reported as a nil httpResp) means
-		// Kratos itself is unreachable or failing, which is worth alerting on.
+		// if we fail after all retries then alert
 		statusCode := 0
-		if httpResp != nil {
-			statusCode = httpResp.StatusCode
+		if resp != nil {
+			statusCode = resp.StatusCode
 		}
 		if statusCode == 0 || statusCode >= 500 {
+			// alter if status Code is missing or not authentication related
 			monitoring.Alert("kratos: could not get identity from cookie", err)
+		} else if statusCode == 401 {
+			// cache unsuccessful verifications
+			publicClient.sessionCache.WriteToCache(cookie, session, err)
 		}
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
 	}
-	if session.Identity == nil {
+
+	if session == nil || session.Identity == nil {
 		return client.Identity{}, fmt.Errorf("identity not found in session")
 	}
+
+	// cache successful verifications
+	publicClient.sessionCache.WriteToCache(cookie, session, nil)
 	return *session.Identity, nil
+}
+
+type singleflightResponse struct {
+	session *client.Session
+	resp    *http.Response
+}
+
+// wraps the cookie verification request inside a singleflight
+func (publicClient PublicClientImplementation) getIdentitySingleflight(ctx context.Context, cookie string) (*client.Session, *http.Response, error) {
+	result, err, _ := publicClient.singleflightGroup.Do(hashCookie(cookie), func() (any, error) {
+		session, resp, err := publicClient.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+		return singleflightResponse{session: session, resp: resp}, err
+	})
+	response, _ := result.(singleflightResponse) // will always succeed
+	return response.session, response.resp, err
+}
+
+// determines if we should retry based on kratos response
+func shouldRetry(ctx context.Context, err error, resp *http.Response, retries int) bool {
+	if err == nil || retries >= maxNumberOfRetries {
+		return false // no error or too many retries
+	}
+	if ctx.Err() != nil {
+		return false // context cancelled, no point in retrying
+	}
+	if resp != nil && (resp.StatusCode == 401 || resp.StatusCode == 403) {
+		return false // authentication failed -> will fail again
+	}
+	return true
+}
+
+// 2 ^ numOfRetries+4 (start at 32ms, max 128ms), halved and jittered so concurrent requests do not retry at the same time
+func calculateBackoffTime(retries int) time.Duration {
+	backoff := time.Duration(1<<(retries+4)) * time.Millisecond
+	return backoff/2 + time.Duration(rand.Int63n(int64(backoff/2))) // #nosec
 }
 
 func (a AdminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
