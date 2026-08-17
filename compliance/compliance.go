@@ -14,8 +14,10 @@ func LoadControlsIntoDB(tx shared.DB) error {
 		return err
 	}
 
-	// truncate the tables before seeding to av
-	if err := tx.CreateInBatches(&controls, 100).Error; err != nil {
+	if err := tx.WithContext(context.Background()).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "framework"}, {Name: "control_id"}},
+		UpdateAll: true,
+	}).CreateInBatches(&controls, 100).Error; err != nil {
 		return err
 	}
 	slog.Info("seeded Grundschutz++ controls", "count", len(controls))
