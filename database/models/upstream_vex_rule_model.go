@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -48,6 +49,8 @@ type UpstreamVEXRule struct {
 	CELExpression string `json:"celExpression" gorm:"type:text;"`
 
 	CVEScope *string `json:"cveScope" gorm:"type:text;index"` // optional CVE scope for filtering
+
+	CreatedAt time.Time `json:"createdAt" gorm:"not null;default:now();"`
 }
 
 func (UpstreamVEXRule) TableName() string {

@@ -16,8 +16,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -39,9 +37,6 @@ type VEXRule struct {
 
 	// this will be set, when the rule was recommended by the crowdsourced vexing algorithm.
 	WasRecommended bool `json:"recommendedRule" gorm:"default:false;not null;"`
-
-	CreatedAt time.Time `json:"createdAt"`
-	// cant be updated, thus no UpdatedAt field. If the rule is modified, it will be deleted and a new one created.
 }
 
 func (VEXRule) TableName() string {

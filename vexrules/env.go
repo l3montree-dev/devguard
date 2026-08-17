@@ -143,27 +143,37 @@ func PrepareVulnsForEvalMap(ctx context.Context, vulns []models.DependencyVuln) 
 	return prepared, nil
 }
 
+// CompiledRule pairs a compiled CEL program with the CVE scope of the rule it
+// came from, so EvalCompiledRules can narrow evaluation to just the vulns
+// sharing that CVE instead of cross-evaluating every rule against every vuln
+// in the batch (a scoped rule's own vuln.cveId == "..." check would reject
+// every mismatch anyway - this just skips paying for that Eval call at all).
+type CompiledRule struct {
+	Program  cel.Program
+	CVEScope *string
+}
+
 // CompileRules compiles every rule's CEL expression against the real-match
 // CelEnv. cel.Env is safe for concurrent Compile/Program calls, so rules are
 // compiled in parallel batches.
-func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]cel.Program, error) {
+func CompileRules(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
 	return compileRulesWithEnv(ctx, rules, CelEnv)
 }
 
 // CompileRulesForSoftMatching is CompileRules against SoftMatchCelEnv, for
 // crowdsourced-vexing's soft-match phase over vulns without real artifacts.
-func CompileRulesForSoftMatching(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]cel.Program, error) {
+func CompileRulesForSoftMatching(ctx context.Context, rules []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
 	return compileRulesWithEnv(ctx, rules, SoftMatchCelEnv)
 }
 
-func compileRulesWithEnv(ctx context.Context, rules []models.UpstreamVEXRule, env func() (*cel.Env, error)) (map[string]cel.Program, error) {
+func compileRulesWithEnv(ctx context.Context, rules []models.UpstreamVEXRule, env func() (*cel.Env, error)) (map[string]CompiledRule, error) {
 	celEnv, err := env()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
 	}
 
-	partials, err := utils.ParallelBatches(rules, func(batch []models.UpstreamVEXRule) (map[string]cel.Program, error) {
-		local := make(map[string]cel.Program, len(batch))
+	partials, err := utils.ParallelBatches(rules, func(batch []models.UpstreamVEXRule) (map[string]CompiledRule, error) {
+		local := make(map[string]CompiledRule, len(batch))
 		for _, rule := range batch {
 			if rule.CELExpression == "" {
 				continue
@@ -177,7 +187,7 @@ func compileRulesWithEnv(ctx context.Context, rules []models.UpstreamVEXRule, en
 				return nil, fmt.Errorf("failed to build CEL program: %w", err)
 			}
 
-			local[rule.ID] = prg
+			local[rule.ID] = CompiledRule{Program: prg, CVEScope: rule.CVEScope}
 		}
 		return local, nil
 	})
@@ -185,7 +195,7 @@ func compileRulesWithEnv(ctx context.Context, rules []models.UpstreamVEXRule, en
 		return nil, err
 	}
 
-	compiled := make(map[string]cel.Program, len(rules))
+	compiled := make(map[string]CompiledRule, len(rules))
 	for _, local := range partials {
 		for id, cr := range local {
 			compiled[id] = cr
@@ -195,7 +205,7 @@ func compileRulesWithEnv(ctx context.Context, rules []models.UpstreamVEXRule, en
 }
 
 // returns map keyed by vulnID and value is a list of ruleIDs that match that vuln
-func EvalCompiledRules(ctx context.Context, compiled map[string]cel.Program, vulnMaps []map[string]any) (map[string][]string, error) {
+func EvalCompiledRules(ctx context.Context, compiled map[string]CompiledRule, vulnMaps []map[string]any) (map[string][]string, error) {
 	cveToVulnMap := make(map[string][]map[string]any, len(vulnMaps))
 	for _, vulnMap := range vulnMaps {
 		vulnCVEID, _ := vulnMap["cveId"].(string)
@@ -212,8 +222,12 @@ func EvalCompiledRules(ctx context.Context, compiled map[string]cel.Program, vul
 	}
 
 	jobs := make([]ruleJob, 0, len(compiled))
-	for ruleID, prg := range compiled {
-		jobs = append(jobs, ruleJob{id: ruleID, prg: prg, relVuln: vulnMaps})
+	for ruleID, cr := range compiled {
+		relVuln := vulnMaps
+		if cr.CVEScope != nil {
+			relVuln = cveToVulnMap[*cr.CVEScope]
+		}
+		jobs = append(jobs, ruleJob{id: ruleID, prg: cr.Program, relVuln: relVuln})
 	}
 
 	partials, err := utils.ParallelBatches(jobs, func(batch []ruleJob) (map[string][]string, error) {

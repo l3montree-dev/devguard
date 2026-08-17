@@ -558,7 +558,49 @@ func (repository *dependencyVulnRepository) GetVulnsByAssetSignatures(ctx contex
 	return vulns, nil
 }
 
+// GetOpenVulnsDistinctBySignatureIn fetches one representative open vuln per
+// given signature - used by the VEX rule recommendation daemon to fetch just
+// the representatives a SQL join against upstream_vex_rules.cve_scope already
+// identified as candidates, instead of paging through every open vuln.
+func (repository *dependencyVulnRepository) GetOpenVulnsDistinctBySignatureIn(ctx context.Context, tx *gorm.DB, signatures []int64) ([]models.DependencyVuln, error) {
+	if len(signatures) == 0 {
+		return nil, nil
+	}
+	var vulns = []models.DependencyVuln{}
+	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE", func(db *gorm.DB) *gorm.DB {
+		return db.Omit("Description", "References")
+	}).Select("DISTINCT ON (signature) *").
+		Where("state = ? AND signature IN ?", dtos.VulnStateOpen, signatures).
+		Order("signature ASC, id ASC").
+		Find(&vulns).Error; err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
+
+// GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation is
+// GetAllOpenVulnsDistinctBySignature, scoped to vulns whose signature has no
+// upstream-rule recommendation yet - upstream matches are stable across runs
+// (matchScopedUpstreamRules already skips re-checking unchanged rule/vuln
+// pairs), so once a signature has one there's no need to keep re-fetching it
+// here just to discard it in Go. Crowdsourced recommendations are excluded
+// from this filter on purpose: those must be re-evaluated every run (trust
+// scores etc. can change), so a signature that only has a crowdsourced
+// recommendation still needs to flow through here again.
+func (repository *dependencyVulnRepository) GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return repository.getAllOpenVulnsDistinctBySignature(ctx, tx, batchSize, func(db *gorm.DB) *gorm.DB {
+		return db.Where(`NOT EXISTS (
+			SELECT 1 FROM vex_rule_recommendations r
+			WHERE r.dependency_vuln_signature = dependency_vulns.signature AND r.upstream_vex_rule_id IS NOT NULL
+		)`)
+	})
+}
+
 func (repository *dependencyVulnRepository) GetAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return repository.getAllOpenVulnsDistinctBySignature(ctx, tx, batchSize)
+}
+
+func (repository *dependencyVulnRepository) getAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int, extraScopes ...func(*gorm.DB) *gorm.DB) iter.Seq2[[]models.DependencyVuln, error] {
 	return func(yield func([]models.DependencyVuln, error) bool) {
 		db := repository.GetDB(ctx, tx)
 		var lastSignature int64
@@ -568,7 +610,8 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsDistinctBySignature(c
 			query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
 				return db.Omit("Description", "References")
 			}).Select("DISTINCT ON (signature) *").
-				Where("state = ?", dtos.VulnStateOpen)
+				Where("state = ?", dtos.VulnStateOpen).
+				Scopes(extraScopes...)
 
 			if hasLastSignature {
 				query = query.Where("signature > ?", lastSignature)

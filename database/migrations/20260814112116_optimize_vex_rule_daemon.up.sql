@@ -16,7 +16,6 @@
 -- We can inspect upstream vex rules and scope them to a specific CVE. This allows us to do database filtering and avoid unnecessary processing of unrelated rules.
 ALTER TABLE public.upstream_vex_rules ADD COLUMN cve_scope TEXT;
 
-ALTER TABLE public.upstream_vex_rules DROP COLUMN IF EXISTS created_at;
 ALTER TABLE public.upstream_vex_rules DROP COLUMN IF EXISTS updated_at;
 
 ALTER TABLE public.vex_rules ADD COLUMN cve_scope TEXT;
