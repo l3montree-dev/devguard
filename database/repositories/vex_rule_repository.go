@@ -34,7 +34,7 @@ type upstreamVEXRuleRepository struct {
 
 var errStopIteration = errors.New("stop iteration")
 
-func (r *upstreamVEXRuleRepository) ByCveScopes(ctx context.Context, tx shared.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
+func (r *upstreamVEXRuleRepository) ByCveScopes(ctx context.Context, tx *gorm.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
 	return func(yield func([]models.UpstreamVEXRule, error) bool) {
 		var rules []models.UpstreamVEXRule
 		err := r.GetDB(ctx, tx).Where("cve_scope IN ?", cveIDs).FindInBatches(&rules, batchSize, func(_ *gorm.DB, _ int) error {

@@ -73,7 +73,7 @@ var liveTableSpecs = func() []syncSpec {
 	malPkgAllCols := []string{"id", "content_hash", "summary", "details", "published", "modified"}
 	malCompInsertCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
-	upstreamVEXRuleAllCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
+	upstreamVEXRuleAllCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression", "cve_scope"}
 	return []syncSpec{
 		{
 			live: "cves", stage: "cves_stage", keyCols: []string{"id"},
