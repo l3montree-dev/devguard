@@ -211,3 +211,81 @@ func TestAdvisoryUpdateRemovesDroppedAffectedPackage(t *testing.T) {
 		assert.Equal(t, int64(0), orphanCount, "the removed affected package row itself must be deleted, not just unlinked")
 	})
 }
+
+// TestAdvisoryReadCSAFOfDifferentOrg covers
+// https://github.com/l3montree-dev/devguard/security/advisories/GHSA-3r3r-2xcx-4r3c: reading a
+// CSAF report of a draft advisory of a different organization. The backend does not validate
+// if the organization is allowed to read the given ID of the report.
+// the test does the same.
+func TestAdvisoryReadCSAFOfDifferentOrg(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.AdvisoryController
+		app := echo.New()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		setupContext := func(ctx shared.Context) {
+			authSession := NewUserSession(t, "victim")
+			shared.SetAsset(ctx, asset)
+			shared.SetProject(ctx, project)
+			shared.SetOrg(ctx, org)
+			shared.SetSession(ctx, authSession)
+		}
+
+		createBody := `{
+			"title": "Test 3 VictimAdvisory",
+			"description": "Test 3",
+			"severity": "None",
+			"vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N",
+			"affectedPackages": [
+				{
+					"ecosystem": "cargo",
+					"packageName": "pkg:csaf-validator",
+					"semverStart": "0.5.0",
+					"semverEnd": "0.5.2"
+				}
+			],
+			"visibility": "draft"
+		}`
+
+		// Create the draft advisory with a single affected package.
+		createReq := httptest.NewRequest("POST", "/advisory/", bytes.NewBufferString(createBody))
+		createReq.Header.Set("Content-Type", "application/json")
+		createRecorder := httptest.NewRecorder()
+		createCtx := app.NewContext(createReq, createRecorder)
+		setupContext(createCtx)
+		assert.Nil(t, controller.Create(createCtx))
+		assert.Equal(t, 200, createRecorder.Code)
+
+		var advisories []models.Advisory
+		assert.Nil(t, f.DB.Preload("AffectedPackages").Where("asset_id = ?", asset.ID).Find(&advisories).Error)
+		assert.Len(t, advisories, 1)
+		advisoryID := advisories[0].ID
+		assert.Len(t, advisories[0].AffectedPackages, 1)
+		// packageID := advisories[0].AffectedPackages[0].ID
+
+		// Attacker creates his org, project, asset and enables sharing their own asset.
+		attackOrg := f.CreateOrg("attackerOrg")
+		attackProject := f.CreateProject(attackOrg.ID, "attackerProject")
+		attackAsset := f.CreateAsset(attackProject.ID, "attackerAsset")
+		assert.Nil(t, f.DB.Model(&attackAsset).Update("shares_information", true).Error)
+		attackReq := httptest.NewRequest("GET", "/", nil)
+		attackRecorder := httptest.NewRecorder()
+		attackCtx := app.NewContext(attackReq, attackRecorder)
+		attackCtx.SetParamNames("year", "version")
+		currentYear := advisories[0].CreatedAt.Year()
+		version := fmt.Sprintf("dgsa-%d-%d.json", currentYear, advisoryID)
+		attackCtx.SetParamValues(strconv.Itoa(currentYear), version)
+		shared.SetOrg(attackCtx, attackOrg)
+		shared.SetProject(attackCtx, attackProject)
+		shared.SetAsset(attackCtx, attackAsset)
+		shared.SetSession(attackCtx, NewUserSession(t, "attacker"))
+
+		err := f.App.CSAFController.ServeCSAFReportRequest(attackCtx)
+		assert.NotContains(t, attackRecorder.Body.String(), "Test 3 VictimAdvisory")
+		var httpErr *echo.HTTPError
+		if assert.ErrorAs(t, err, &httpErr) {
+			assert.Equal(t, 404, httpErr.Code)
+		}
+	})
+}
