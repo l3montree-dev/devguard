@@ -98,7 +98,7 @@ type PublicClientImplementation struct {
 func NewPublicClient(client *client.APIClient) PublicClientImplementation {
 	return PublicClientImplementation{
 		apiClient:    client,
-		sessionCache: NewSessionCache(),
+		sessionCache: newSessionCache(),
 	}
 }
 
@@ -131,7 +131,7 @@ type sessionCache struct {
 	cache *expirable.LRU[string, minimalSession]
 }
 
-func NewSessionCache() *sessionCache {
+func newSessionCache() *sessionCache {
 	return &sessionCache{
 		cache: expirable.NewLRU[string, minimalSession](sessionCacheSize, nil, sessionTTL),
 	}
@@ -165,14 +165,18 @@ func shouldReturnCached(session minimalSession) bool {
 
 // transformer to convert a ory session to a minimal session
 func sessionToMinimalSession(session *client.Session, err error) minimalSession {
-	// default to empty struct if session is nil
-	// we want to also cache unsuccessful verifications
-	identity := client.Identity{}
-	if session != nil {
-		identity = *session.Identity
+	if session == nil || session.Identity == nil {
+		// default to empty struct if session is nil
+		// we want to also cache unsuccessful verifications
+		return minimalSession{
+			identity:  client.Identity{},
+			active:    nil,
+			expiresAt: nil,
+			err:       err,
+		}
 	}
 	return minimalSession{
-		identity:  identity,
+		identity:  *session.Identity,
 		active:    session.Active,
 		expiresAt: session.ExpiresAt,
 		err:       err,
@@ -188,7 +192,7 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 		// now check if it was a successful or unsuccessful verification
 		if cachedSession.err != nil {
 			slog.Info("unsuccessful verification with cache", "reason", cachedSession.err)
-			return client.Identity{}, cachedSession.err
+			return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", cachedSession.err)
 		}
 		slog.Info("successful verification with cache")
 		return cachedSession.identity, nil
@@ -216,8 +220,8 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 		if statusCode == 0 || statusCode >= 500 {
 			// alter if status Code is missing or not authentication related
 			monitoring.Alert("kratos: could not get identity from cookie", err)
-		} else {
-			// cache unsuccessful verification (if its a 4xx error)
+		} else if statusCode == 401 {
+			// cache unsuccessful verifications
 			a.sessionCache.WriteToCache(cookie, session, err)
 		}
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
@@ -232,7 +236,7 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 	return *session.Identity, nil
 }
 
-// determines if we should retry based on execute results
+// determines if we should retry based on kratos response
 func shouldRetry(ctx context.Context, err error, resp *http.Response, retries int) bool {
 	if err == nil || retries >= maxNumberOfRetries {
 		return false // no error or too many retries
@@ -241,7 +245,7 @@ func shouldRetry(ctx context.Context, err error, resp *http.Response, retries in
 		return false // context cancelled, no point in retrying
 	}
 	if resp != nil && (resp.StatusCode == 401 || resp.StatusCode == 403) {
-		return false // authentication failed will fail again
+		return false // authentication failed -> will fail again
 	}
 	return true
 }
