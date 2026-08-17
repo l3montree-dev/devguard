@@ -280,8 +280,19 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 		return err
 	}
 
+	members, err := shared.FetchMembersOfOrganization(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization")
+	}
+
 	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	for _, member := range members {
+		if member.Email == req.Email {
+			return echo.NewHTTPError(409, "user is already member of the organization")
+		}
 	}
 
 	// get the organization from the context
@@ -294,7 +305,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	}
 
 	// save the model
-	err := controller.invitationRepository.Save(ctx.Request().Context(), nil, &model)
+	err = controller.invitationRepository.Save(ctx.Request().Context(), nil, &model)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not save invitation").WithInternal(err)
 	}
