@@ -208,10 +208,11 @@ func (publicClient PublicClientImplementation) GetIdentityFromCookie(ctx context
 		slog.Warn("could not get identity from cookie, backing off then retrying", "retry", retries, "error", err)
 		select { // check context cancellation
 		case <-ctx.Done():
+			slog.Error("cancel retry due to context cancellation", "reason", ctx.Err().Error())
 			return client.Identity{}, ctx.Err()
 		case <-time.After(calculateBackoffTime(retries)):
 		}
-		session, resp, err = publicClient.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+		session, resp, err = publicClient.getIdentitySingleflight(ctx, cookie)
 	}
 
 	if err != nil {
@@ -246,14 +247,11 @@ type singleflightResponse struct {
 
 // wraps the cookie verification request inside a singleflight
 func (publicClient PublicClientImplementation) getIdentitySingleflight(ctx context.Context, cookie string) (*client.Session, *http.Response, error) {
-	result, err, _ := publicClient.singleflightGroup.Do(cookie, func() (any, error) {
+	result, err, _ := publicClient.singleflightGroup.Do(hashCookie(cookie), func() (any, error) {
 		session, resp, err := publicClient.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
 		return singleflightResponse{session: session, resp: resp}, err
 	})
-	response, ok := result.(singleflightResponse)
-	if !ok {
-		return nil, nil, fmt.Errorf("could not parse singleflight response")
-	}
+	response, _ := result.(singleflightResponse) // will always succeed
 	return response.session, response.resp, err
 }
 
