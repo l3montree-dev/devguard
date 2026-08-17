@@ -7,4 +7,12 @@ ALTER TABLE public.mapped_controls
 
 ALTER TABLE public.frameworks_controls ADD COLUMN IF NOT EXISTS security_level TEXT;
 
-ALTER TABLE public.mapped_controls DROP CONSTRAINT IF EXISTS fk_mapped_controls_framework_control;
+DELETE FROM public.mapped_controls
+WHERE framework_control_id IN (
+    SELECT fc.framework_control_id
+    FROM public.frameworks_controls AS fc
+    WHERE fc.framework = 'SCF'
+);
+
+DELETE FROM public.frameworks_controls
+WHERE framework = 'SCF';

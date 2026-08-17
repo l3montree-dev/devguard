@@ -108,7 +108,8 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 
 	webhookIntegration := &models.WebhookIntegration{
 		Model: models.Model{
-			ID: uuidID,
+			ID:        uuidID,
+			CreatedAt: oldWebhookIntegration.CreatedAt, // Save() writes every column, so carry this over or it resets to the zero time
 		},
 		Name:        &data.Name,
 		Description: &data.Description,
