@@ -14,6 +14,31 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
+func timeToCEL(t time.Time) string {
+	return t.Format(time.RFC3339Nano)
+}
+
+// ptrToAny returns nil for a nil pointer, or the dereferenced value boxed as
+// any otherwise - used by the ToCELMap family to match how json.Unmarshal
+// represents an absent-vs-present-but-null field.
+func ptrToAny[T any](p *T) any {
+	if p == nil {
+		return nil
+	}
+	return *p
+}
+
+func stringSliceToAny(s []string) []any {
+	if s == nil {
+		return nil
+	}
+	out := make([]any, len(s))
+	for i, v := range s {
+		out[i] = v
+	}
+	return out
+}
+
 type DependencyVuln struct {
 	Vulnerability
 
@@ -72,6 +97,60 @@ func (vuln *DependencyVuln) ArtifactPurls() []string {
 		identities = append(identities, normalize.Purlify(artifact.ArtifactName, vuln.AssetVersionName))
 	}
 	return identities
+}
+
+// we need this to avoid json.Marshal and json.Unmarshal in the fast path of the vex rule recommendation daemon
+func (vuln DependencyVuln) ToCELMap() map[string]any {
+	m := map[string]any{
+		// promoted from the embedded Vulnerability
+		"id":                   vuln.ID.String(),
+		"assetVersionName":     vuln.AssetVersionName,
+		"vulnAssetId":          vuln.AssetID.String(),
+		"state":                string(vuln.State),
+		"lastDetected":         timeToCEL(vuln.LastDetected),
+		"manualTicketCreation": vuln.ManualTicketCreation,
+		"createdAt":            timeToCEL(vuln.CreatedAt),
+		"updatedAt":            timeToCEL(vuln.UpdatedAt),
+
+		// DependencyVuln's own fields
+		"cveId":              vuln.CVEID,
+		"componentPurl":      vuln.ComponentPurl,
+		"vulnerabilityPath":  stringSliceToAny(vuln.VulnerabilityPath),
+		"riskRecalculatedAt": timeToCEL(vuln.RiskRecalculatedAt),
+		"signature":          float64(vuln.Signature),
+		"assetSignature":     float64(vuln.AssetSignature),
+	}
+
+	m["message"] = ptrToAny(vuln.Message)
+	m["ticketId"] = ptrToAny(vuln.TicketID)
+	m["ticketUrl"] = ptrToAny(vuln.TicketURL)
+	m["componentFixedVersion"] = ptrToAny(vuln.ComponentFixedVersion)
+	m["directDependencyFixedVersion"] = ptrToAny(vuln.DirectDependencyFixedVersion)
+	m["rawRiskAssessment"] = ptrToAny(vuln.RawRiskAssessment)
+
+	if vuln.Effort != nil {
+		m["effort"] = float64(*vuln.Effort)
+	} else {
+		m["effort"] = nil
+	}
+	if vuln.RiskAssessment != nil {
+		m["riskAssessment"] = float64(*vuln.RiskAssessment)
+	} else {
+		m["riskAssessment"] = nil
+	}
+	if vuln.Priority != nil {
+		m["priority"] = float64(*vuln.Priority)
+	} else {
+		m["priority"] = nil
+	}
+
+	if vuln.CVE != nil {
+		m["cve"] = vuln.CVE.ToCELMap()
+	} else {
+		m["cve"] = nil
+	}
+
+	return m
 }
 
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {

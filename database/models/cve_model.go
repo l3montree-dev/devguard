@@ -66,6 +66,78 @@ func (m Weakness) TableName() string {
 	return "weaknesses"
 }
 
+func (w Weakness) ToCELMap() map[string]any {
+	return map[string]any{
+		"source": w.Source,
+		"type":   w.Type,
+		"cve":    w.CVEID,
+		"cwe":    w.CWEID,
+	}
+}
+
+func (cve CVE) ToCELMap() map[string]any {
+	m := map[string]any{
+		"id":               float64(cve.ID),
+		"contentHash":      float64(cve.ContentHash),
+		"cve":              cve.CVE,
+		"datePublished":    timeToCEL(cve.DatePublished),
+		"dateLastModified": timeToCEL(cve.DateLastModified),
+		"description":      cve.Description,
+		"cvss":             float64(cve.CVSS),
+		"references":       cve.References,
+		"vector":           cve.Vector,
+		"risk": map[string]any{
+			"baseScore":                            cve.Risk.BaseScore,
+			"withEnvironment":                      cve.Risk.WithEnvironment,
+			"withThreatIntelligence":                cve.Risk.WithThreatIntelligence,
+			"withEnvironmentAndThreatIntelligence": cve.Risk.WithEnvironmentAndThreatIntelligence,
+		},
+	}
+
+	m["cisaRequiredAction"] = ptrToAny(cve.CISARequiredAction)
+	m["cisaVulnerabilityName"] = ptrToAny(cve.CISAVulnerabilityName)
+	m["epss"] = ptrToAny(cve.EPSS)
+	if cve.Percentile != nil {
+		m["percentile"] = float64(*cve.Percentile)
+	} else {
+		m["percentile"] = nil
+	}
+
+	for _, dp := range []struct {
+		key string
+		val *datatypes.Date
+	}{
+		{"cisaExploitAdd", cve.CISAExploitAdd},
+		{"cisaActionDue", cve.CISAActionDue},
+		{"euvdExploitAdd", cve.EUVDExploitAdd},
+	} {
+		if dp.val != nil {
+			m[dp.key] = timeToCEL(time.Time(*dp.val))
+		} else {
+			m[dp.key] = nil
+		}
+	}
+
+	weaknesses := make([]any, len(cve.Weaknesses))
+	for i, w := range cve.Weaknesses {
+		weaknesses[i] = w.ToCELMap()
+	}
+	m["weaknesses"] = weaknesses
+
+	exploits := make([]any, len(cve.Exploits))
+	for i, e := range cve.Exploits {
+		exploits[i] = e.ToCELMap()
+	}
+	m["exploits"] = exploits
+
+	// affectedComponents/relationships are deliberately not converted here -
+	// no VEX rule references them today.
+	m["affectedComponents"] = []any{}
+	m["relationships"] = []any{}
+
+	return m
+}
+
 func (cve CVE) TableName() string {
 	return "cves"
 }

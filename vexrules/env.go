@@ -17,10 +17,8 @@ package vexrules
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
 	"sync"
 
 	"crypto/sha256"
@@ -115,38 +113,8 @@ func newCelEnv(matchesPattern func(pattern, path, artifactPurls []string) bool) 
 	)
 }
 
-/*
-Thats a typical example of a rule that exists in a cveId scope.
-vuln.cveId == "CVE-2025-61725" && matchesPattern(vuln, ["*", "pkg:golang/k8s.io/component-helpers@v1.35.7-k3s1", "*", "pkg:golang/stdlib@v1.25.0"])
-We just need to extract the CVE-2025-61725 part and store it in the CompiledRule.CVEScope field.
-*/
-var scopeRegex = regexp.MustCompile(`^vuln\.cveId\s*==\s*"([^"]+)" &&`)
-
-func ExtractCVEScopeFromCELExpression(expr string) *string {
-	if !strings.Contains(expr, "vuln.cveId") {
-		return nil
-	}
-	matches := scopeRegex.FindStringSubmatch(expr)
-	if len(matches) < 2 {
-		return nil
-	}
-	cveID := matches[1]
-	return &cveID
-}
-
 func vulnToCELMap(vuln models.DependencyVuln) (map[string]any, error) {
-	m, err := json.Marshal(vuln)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal vuln to JSON: %w", err)
-	}
-
-	var vulnMap map[string]any
-	if err := json.Unmarshal(m, &vulnMap); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
-	}
-	// artifactPurls is derived (vuln.ArtifactPurls()), not a JSON field of
-	// DependencyVuln, so it has to be added to the map explicitly for
-	// matchesPattern(vuln, pattern) to see it.
+	vulnMap := vuln.ToCELMap()
 	vulnMap["artifactPurls"] = vuln.ArtifactPurls()
 	return vulnMap, nil
 }

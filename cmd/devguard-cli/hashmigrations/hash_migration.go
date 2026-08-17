@@ -107,6 +107,13 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 				return fmt.Errorf("failed to run dependency_vuln signature migration (v5): %w", err)
 			}
 
+			// cve_scope was added as a plain column with no backfill - existing
+			// vex_rules/upstream_vex_rules rows need it computed from their
+			// cel_expression, same as SetCELExpression/EnsureID now do for new rows.
+			if err := runVEXRuleCVEScopeBackfill(pool); err != nil {
+				return fmt.Errorf("failed to backfill VEX rule cve_scope (v5): %w", err)
+			}
+
 			// Persist the new version so this migration does not re-run on the next startup.
 			config.Val = strconv.Itoa(CurrentHashVersion)
 			if err := db.Save(&config).Error; err != nil {
@@ -138,7 +145,7 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 			total += len(batch)
 
 			if total%100_000 == 0 {
-				slog.Info("updating dependency_vuln signatures", "processed", batch)
+				slog.Info("updating dependency_vuln signatures", "processed", total)
 			}
 			// just update the signature for each vuln and save it back to the database
 			for i := range batch {
@@ -178,6 +185,48 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 		return nil
 	})
 
+}
+
+// runVEXRuleCVEScopeBackfill computes cve_scope for every existing vex_rules
+// and upstream_vex_rules row from its cel_expression. cve_scope was added as a
+// plain column with no backfill, and SetCELExpression/EnsureID only compute it
+// going forward - existing rows are stuck at NULL until this runs.
+func runVEXRuleCVEScopeBackfill(pool *pgxpool.Pool) error {
+	start := time.Now()
+	defer func() {
+		slog.Info("VEX rule cve_scope backfill completed", "duration", time.Since(start))
+	}()
+	db := database.NewGormDB(pool)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var upstreamRules []models.UpstreamVEXRule
+		if err := tx.FindInBatches(&upstreamRules, 2_000, func(_ *gorm.DB, _ int) error {
+			for i := range upstreamRules {
+				upstreamRules[i].CVEScope = models.ExtractCVEScopeFromCELExpression(upstreamRules[i].CELExpression)
+				if err := tx.Save(&upstreamRules[i]).Error; err != nil {
+					return fmt.Errorf("failed to save upstream_vex_rules row %s: %w", upstreamRules[i].ID, err)
+				}
+			}
+			return nil
+		}).Error; err != nil {
+			return fmt.Errorf("failed to backfill upstream_vex_rules cve_scope: %w", err)
+		}
+
+		var vexRules []models.VEXRule
+		if err := tx.FindInBatches(&vexRules, 2_000, func(_ *gorm.DB, _ int) error {
+			for i := range vexRules {
+				vexRules[i].CVEScope = models.ExtractCVEScopeFromCELExpression(vexRules[i].CELExpression)
+				if err := tx.Save(&vexRules[i]).Error; err != nil {
+					return fmt.Errorf("failed to save vex_rules row %s: %w", vexRules[i].ID, err)
+				}
+			}
+			return nil
+		}).Error; err != nil {
+			return fmt.Errorf("failed to backfill vex_rules cve_scope: %w", err)
+		}
+
+		return nil
+	})
 }
 
 // this function handles the migration for importing new CVEs from the OSV.

@@ -2,6 +2,8 @@ package daemons
 
 import (
 	"context"
+	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
@@ -21,17 +23,24 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 			return errors.Wrap(err, "failed to clear vex_rule_recommendations table")
 		}
 
+		start := time.Now()
 		unmatchedRepresentatives, err := runner.matchUpstreamRules(ctx, tx)
 		if err != nil {
 			return err
 		}
+		slog.Info("vex rule recommendation daemon: matched upstream rules", "duration", time.Since(start), "unmatched", len(unmatchedRepresentatives))
 
+		start = time.Now()
 		matchedVEXRules, softMatchedSignatures, err := runner.softMatchCrowdsourcedRules(ctx, tx, unmatchedRepresentatives)
 		if err != nil {
 			return err
 		}
+		slog.Info("vex rule recommendation daemon: soft-matched crowdsourced rules", "duration", time.Since(start), "matchedRules", len(matchedVEXRules), "softMatchedSignatures", len(softMatchedSignatures))
 
-		return runner.confirmCrowdsourcedRecommendations(ctx, tx, matchedVEXRules, softMatchedSignatures)
+		start = time.Now()
+		err = runner.confirmCrowdsourcedRecommendations(ctx, tx, matchedVEXRules, softMatchedSignatures)
+		slog.Info("vex rule recommendation daemon: confirmed crowdsourced recommendations", "duration", time.Since(start))
+		return err
 	})
 }
 
@@ -150,6 +159,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 	if err != nil {
 		return errors.Wrap(err, "failed to build crowdsourced vexing context")
 	}
+	createdRecommendationsCount := 0
 
 	compiledMatchedRules, err := vexrules.CompileRules(ctx, utils.Map(utils.Values(matchedVEXRules), func(r models.VEXRule) models.UpstreamVEXRule {
 		return r.UpstreamVEXRule
@@ -182,7 +192,11 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 		if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels); err != nil {
 			return errors.Wrap(err, "failed to save crowdsourced VEX rule recommendations")
 		}
+		createdRecommendationsCount += len(recModels)
 	}
+
+	slog.Info("created recommendations", "count", createdRecommendationsCount)
+
 	return nil
 }
 

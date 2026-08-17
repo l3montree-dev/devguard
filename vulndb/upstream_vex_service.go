@@ -23,7 +23,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 var upstreamSources = []string{"https://github.com/rancher/vexhub"}
@@ -65,7 +64,7 @@ func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.Ups
 		[]string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression", "cve_scope"},
 		pgx.CopyFromSlice(len(rules), func(i int) ([]any, error) {
 			r := rules[i]
-			return []any{r.ID, r.VexSource, r.Title, r.Justification, string(r.MechanicalJustification), string(r.EventType), r.CELExpression, vexrules.ExtractCVEScopeFromCELExpression(r.CELExpression)}, nil
+			return []any{r.ID, r.VexSource, r.Title, r.Justification, string(r.MechanicalJustification), string(r.EventType), r.CELExpression, models.ExtractCVEScopeFromCELExpression(r.CELExpression)}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy system vex rules into staging table: %w", err)
 	}
