@@ -17,7 +17,9 @@ import (
 func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) error {
 	return runner.db.WithContext(ctx).Transaction(func(tx shared.DB) error {
 		// clear the whole table.
-		tx.Exec("DELETE FROM vex_rule_recommendations;")
+		if err := tx.Exec("DELETE FROM vex_rule_recommendations;").Error; err != nil {
+			return errors.Wrap(err, "failed to clear vex_rule_recommendations table")
+		}
 
 		unmatchedRepresentatives, err := runner.matchUpstreamRules(ctx, tx)
 		if err != nil {

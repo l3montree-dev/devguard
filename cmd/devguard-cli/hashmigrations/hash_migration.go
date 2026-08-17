@@ -121,24 +121,63 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 }
 
 func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
+	start := time.Now()
+	defer func() {
+		slog.Info("dependency_vuln signature migration completed", "duration", time.Since(start))
+	}()
 	db := database.NewGormDB(pool)
-	// fetch all in batches and update the signature
-	for batch, err := range repositories.NewDependencyVulnRepository(db).InBatches(context.Background(), db, 1000) {
-		if err != nil {
-			return fmt.Errorf("failed to fetch dependency_vulns in batches: %w", err)
+	depVulnRepo := repositories.NewDependencyVulnRepository(db)
+	return db.Transaction(func(tx *gorm.DB) error {
+		total := 0
+		// fetch all in batches and update the signature
+		for batch, err := range depVulnRepo.InBatches(context.Background(), tx, 5_000) {
+			if err != nil {
+				return fmt.Errorf("failed to fetch dependency_vulns in batches: %w", err)
+			}
+
+			total += len(batch)
+
+			if total%100_000 == 0 {
+				slog.Info("updating dependency_vuln signatures", "processed", batch)
+			}
+			// just update the signature for each vuln and save it back to the database
+			for i := range batch {
+				batch[i].Signature = batch[i].CalculateSignature()
+				batch[i].AssetSignature = utils.HashToInt64(batch[i].CalculateAssetVersionIndependentHash())
+			}
+
+			if err := depVulnRepo.SaveBatchBestEffort(context.Background(), tx, batch); err != nil {
+				return fmt.Errorf("failed to update dependency_vuln signatures in batch: %w", err)
+			}
 		}
 
-		// just update the signature for each vuln and save it back to the database
-		for i := range batch {
-			batch[i].Signature = batch[i].CalculateSignature()
-			batch[i].AssetSignature = utils.HashToInt64(batch[i].CalculateAssetVersionIndependentHash())
+		// The optimize_vex_rule_daemon schema migration intentionally skips adding this constraint
+		// because existing installations have millions of vuln_events rows for license risks /
+		// first-party vulns / compliance postures where dependency_vuln_id and asset_signature are
+		// both legitimately NULL. Add it here, scoped to the columns that actually identify a vuln
+		// event, now that we know the signature backfill above has run.
+		if err := tx.Exec(`
+		ALTER TABLE public.vuln_events
+			ADD CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+			CHECK (
+				dependency_vuln_id IS NOT NULL
+				OR asset_signature IS NOT NULL
+				OR license_risk_id IS NOT NULL
+				OR first_party_vuln_id IS NOT NULL
+				OR compliance_posture_id IS NOT NULL
+			) NOT VALID
+	`).Error; err != nil {
+			return fmt.Errorf("failed to add vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
 		}
+		if err := tx.Exec(`
+		ALTER TABLE public.vuln_events
+			VALIDATE CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+	`).Error; err != nil {
+			return fmt.Errorf("failed to validate vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
+		}
+		return nil
+	})
 
-		if err := db.Save(&batch).Error; err != nil {
-			return fmt.Errorf("failed to update dependency_vuln signatures in batch: %w", err)
-		}
-	}
-	return nil
 }
 
 // this function handles the migration for importing new CVEs from the OSV.

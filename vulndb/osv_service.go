@@ -889,7 +889,8 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			justification            text,
 			mechanical_justification text,
 			event_type               text,
-			cel_expression           text
+			cel_expression           text,
+			cve_scope                text
 		) ON COMMIT DROP;`)
 	if err != nil {
 		return fmt.Errorf("could not create staging tables: %w", err)

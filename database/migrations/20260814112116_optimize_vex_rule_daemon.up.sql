@@ -50,6 +50,8 @@ ALTER TABLE public.vuln_events
 
 CREATE INDEX IF NOT EXISTS idx_vuln_events_asset_signature ON public.vuln_events (asset_signature);
 
-ALTER TABLE public.vuln_events
-    ADD CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
-    CHECK (dependency_vuln_id IS NOT NULL OR asset_signature IS NOT NULL);
+-- The check constraint tying dependency_vuln_id/asset_signature together is added in the
+-- hash_migration.go Go migration instead of here: existing installations already have millions
+-- of vuln_events rows for license risks/first-party vulns/compliance postures where both of these
+-- columns are legitimately NULL, so the constraint must account for those columns too. Adding it
+-- as a plain schema migration would fail against that existing data.

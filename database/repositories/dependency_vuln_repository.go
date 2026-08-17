@@ -493,6 +493,48 @@ func (repository *dependencyVulnRepository) ApplyGroupEventAndSave(ctx context.C
 	return repository.GetDB(ctx, tx).Save(ev).Error
 }
 
+// ApplyGroupEventsAndSave is the bulk counterpart to ApplyGroupEventAndSave: instead of
+// one UPDATE + one INSERT round trip per event, it does one UPDATE covering every touched
+// asset signature and one bulk INSERT for all the events. Returns the asset signatures it
+// touched, so the caller can look up the vulns it affected (e.g. via
+// GetVulnsByAssetSignatures) without duplicating this loop at every call site.
+func (repository *dependencyVulnRepository) ApplyGroupEventsAndSave(ctx context.Context, tx *gorm.DB, events []models.VulnEvent) ([]int64, error) {
+	if len(events) == 0 {
+		return nil, nil
+	}
+
+	assetSignatures := make([]int64, 0, len(events))
+	states := make([]string, 0, len(events))
+	for i := range events {
+		ev := &events[i]
+		if ev.AssetSignature == nil {
+			continue
+		}
+		scratch := &models.DependencyVuln{}
+		statemachine.Apply(scratch, *ev)
+		assetSignatures = append(assetSignatures, *ev.AssetSignature)
+		states = append(states, string(scratch.GetState()))
+	}
+	if len(assetSignatures) == 0 {
+		return nil, nil
+	}
+
+	if err := repository.GetDB(ctx, tx).Exec(`
+		UPDATE dependency_vulns dv
+		SET state = v.state
+		FROM (SELECT unnest($1::bigint[]) AS asset_signature, unnest($2::text[]) AS state) v
+		WHERE dv.asset_signature = v.asset_signature AND dv.state != $3
+	`, assetSignatures, states, dtos.VulnStateFixed).Error; err != nil {
+		return nil, err
+	}
+
+	if err := repository.GetDB(ctx, tx).Create(&events).Error; err != nil {
+		return nil, err
+	}
+
+	return assetSignatures, nil
+}
+
 func (repository *dependencyVulnRepository) GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
 	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE", func(db *gorm.DB) *gorm.DB {
@@ -519,16 +561,21 @@ func (repository *dependencyVulnRepository) GetVulnsByAssetSignatures(ctx contex
 func (repository *dependencyVulnRepository) GetAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
 	return func(yield func([]models.DependencyVuln, error) bool) {
 		db := repository.GetDB(ctx, tx)
-		offset := 0
+		var lastSignature int64
+		hasLastSignature := false
+
 		for {
 			query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
 				return db.Omit("Description", "References")
-			})
+			}).Select("DISTINCT ON (signature) *").
+				Where("state = ?", dtos.VulnStateOpen)
 
-			query = query.Where("state = ?", dtos.VulnStateOpen)
+			if hasLastSignature {
+				query = query.Where("signature > ?", lastSignature)
+			}
 
 			var vulns = []models.DependencyVuln{}
-			if err := query.Distinct("signature").Limit(batchSize).Offset(offset).Find(&vulns).Error; err != nil {
+			if err := query.Order("signature ASC, id ASC").Limit(batchSize).Find(&vulns).Error; err != nil {
 				yield(nil, err)
 				return
 			}
@@ -548,7 +595,8 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsDistinctBySignature(c
 				return
 			}
 
-			offset += len(vulns)
+			lastSignature = vulns[len(vulns)-1].Signature
+			hasLastSignature = true
 		}
 	}
 }

@@ -270,11 +270,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
-	lookingForVulnState := dtos.VulnStateOpen
-
-	if req.EventType == dtos.EventTypeReopened {
-		lookingForVulnState = dtos.VulnStateAccepted
-	}
+	lookingForVulnState := services.VulnStateForVEXRuleEventType(req.EventType)
 
 	rule := &models.VEXRule{
 		AssetID:        asset.ID,
@@ -308,28 +304,16 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID)
 		tx.Rollback()
 	} else {
-		matched, _, matchErr := services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, representativeVulns)
-		if matchErr != nil {
-			slog.Error("failed to apply VEX rules to vulns", "error", matchErr)
+		groupEvents, computeErr := services.ComputeGroupVEXRuleEvents(reqCtx, []models.VEXRule{*rule}, representativeVulns)
+		if computeErr != nil {
+			slog.Error("failed to apply VEX rules to vulns", "error", computeErr)
 			tx.Rollback()
 		} else {
-			assetSignatures := make([]int64, 0, len(matched))
-			for _, v := range matched {
-				ev, evErr := services.NewGroupVEXRuleEvent(rule, v.AssetSignature)
-				if evErr != nil {
-					slog.Error("failed to build group VEX rule event", "error", evErr)
-					tx.Rollback()
-					break
-				}
-				if err := c.dependencyVulnRepository.ApplyGroupEventAndSave(reqCtx, tx, v.AssetSignature, &ev); err != nil {
-					slog.Error("failed to apply group VEX rule event", "error", err)
-					tx.Rollback()
-					break
-				}
-				assetSignatures = append(assetSignatures, v.AssetSignature)
-			}
-
-			if len(assetSignatures) > 0 {
+			assetSignatures, saveErr := c.dependencyVulnRepository.ApplyGroupEventsAndSave(reqCtx, tx, groupEvents)
+			if saveErr != nil {
+				slog.Error("failed to save group VEX rule events", "error", saveErr)
+				tx.Rollback()
+			} else if len(assetSignatures) > 0 {
 				vulns, err = c.dependencyVulnRepository.GetVulnsByAssetSignatures(reqCtx, tx, assetSignatures)
 				if err != nil {
 					slog.Error("failed to fetch updated vulns", "error", err)
