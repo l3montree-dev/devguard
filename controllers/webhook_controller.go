@@ -79,7 +79,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		URL         string `json:"url"`
+		URL         string `json:"url" validate:"required"`
 		Secret      string `json:"secret"`
 		SbomEnabled bool   `json:"sbomEnabled"`
 		VulnEnabled bool   `json:"vulnEnabled"`
@@ -88,7 +88,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
-	if data.URL == "" {
+	if err := dtos.V.Struct(&data); err != nil {
 		return ctx.JSON(400, "url is required")
 	}
 
@@ -148,7 +148,7 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 	var data struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		URL         string `json:"url"`
+		URL         string `json:"url" validate:"required"`
 		Secret      string `json:"secret"`
 		SbomEnabled bool   `json:"sbomEnabled"`
 		VulnEnabled bool   `json:"vulnEnabled"`
@@ -157,7 +157,7 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
-	if data.URL == "" {
+	if err := dtos.V.Struct(&data); err != nil {
 		return ctx.JSON(400, "url is required")
 	}
 
@@ -205,7 +205,7 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test [post]
 func (w *WebhookController) Test(ctx shared.Context) error {
 	var data struct {
-		URL         string `json:"url"`
+		URL         string `json:"url" validate:"required"`
 		Secret      string `json:"secret"`
 		PayloadType string `json:"payloadType"`
 	}
@@ -213,7 +213,7 @@ func (w *WebhookController) Test(ctx shared.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
-	if data.URL == "" {
+	if err := dtos.V.Struct(&data); err != nil {
 		return ctx.JSON(400, "url is required")
 	}
 

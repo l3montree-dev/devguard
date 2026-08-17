@@ -209,12 +209,15 @@ func (controller *LicenseRiskController) Read(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/mitigate [post]
 func (controller *LicenseRiskController) Mitigate(ctx shared.Context) error {
 	var justification struct {
-		Comment string `json:"comment"`
+		Comment string `json:"comment" validate:"required,max=2000"`
 	}
 
 	err := ctx.Bind(&justification)
 	if err != nil {
 		return echo.NewHTTPError(400, "could not bind the request to a justification").WithInternal(err)
+	}
+	if err := dtos.V.Struct(&justification); err != nil {
+		return echo.NewHTTPError(400, "comment is required").WithInternal(err)
 	}
 	userAgent := ctx.Request().UserAgent()
 

@@ -240,7 +240,7 @@ func (controller *DependencyVulnController) ListPaged(ctx shared.Context) error 
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/mitigate [post]
 func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 	type justification struct {
-		Comment string `json:"comment"`
+		Comment string `json:"comment" validate:"required,max=2000"`
 	}
 
 	var j justification
@@ -248,6 +248,9 @@ func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 	err := ctx.Bind(&j)
 	if err != nil {
 		slog.Error("could not bind justification", "err", err)
+	}
+	if err := dtos.V.Struct(&j); err != nil {
+		return echo.NewHTTPError(400, "comment is required").WithInternal(err)
 	}
 
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)

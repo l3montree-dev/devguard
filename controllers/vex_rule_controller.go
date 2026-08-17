@@ -208,6 +208,9 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
+	}
 
 	var vexRules []models.UpstreamVEXRule
 	for _, expr := range req.CelExpression {
@@ -263,11 +266,8 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
-
-	// perform explicit validation to provide clear errors and avoid relying solely on the validator
-	// a rule either matches via a CEL expression, or via a CVE ID + path pattern
-	if req.CELExpression == "" {
-		return echo.NewHTTPError(400, "CEL expression is required for VEX rule creation")
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
 	eventType := req.EventType

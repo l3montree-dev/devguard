@@ -106,6 +106,9 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
+	}
 
 	// check if valid - get the signed pat
 	fingerprint := ctx.Request().Header.Get("X-Fingerprint")

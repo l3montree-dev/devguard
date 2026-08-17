@@ -189,6 +189,9 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 	if err := ctx.Bind(&policy); err != nil {
 		return err
 	}
+	if err := dtos.V.Struct(&policy); err != nil {
+		return echo.NewHTTPError(400, "invalid policy request body").WithInternal(err)
+	}
 
 	org := shared.GetOrg(ctx)
 
@@ -231,6 +234,9 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 	policy := dtos.PolicyDTO{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
+	}
+	if err := dtos.V.Struct(&policy); err != nil {
+		return echo.NewHTTPError(400, "invalid policy request body").WithInternal(err)
 	}
 
 	org := shared.GetOrg(ctx)

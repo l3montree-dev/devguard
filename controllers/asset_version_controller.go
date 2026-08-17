@@ -86,7 +86,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
 	type requestBody struct {
-		Name          string `json:"name"`
+		Name          string `json:"name" validate:"required"`
 		Tag           bool   `json:"tag"`
 		DefaultBranch bool   `json:"defaultBranch"`
 	}
@@ -94,6 +94,9 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 	var body requestBody
 	if err := ctx.Bind(&body); err != nil {
 		return err
+	}
+	if err := dtos.V.Struct(&body); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
 	// FindOrCreate rejects an empty name with a plain error - surface that as a client error here

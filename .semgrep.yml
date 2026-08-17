@@ -498,6 +498,64 @@ rules:
         - "**/*_test.go"
     pattern-regex: '\.Group\("/(projects/:(?!projectSlug\b)\w+|assets/:(?!assetSlug\b)\w+)'
 
+  - id: bind-without-validate
+    severity: WARNING
+    message: |
+      $C.Bind(&$REQ) is called without a following dtos.V.Struct($REQ) validation.
+      Bind only decodes the request body/query/params into the struct — it does not
+      enforce validate tags (required, min/max, enum, etc.). Without dtos.V.Struct,
+      malformed or missing fields flow straight into business logic.
+
+      Fix: validate immediately after binding:
+        if err := ctx.Bind(&req); err != nil { ... }
+        if err := dtos.V.Struct(req); err != nil {
+          return echo.NewHTTPError(400, "...").WithInternal(err)
+        }
+
+      If the DTO genuinely has nothing to validate (e.g. it's a passthrough or every
+      field is optional with no constraints), silence with a nosemgrep comment.
+    languages: [go]
+    paths:
+      include:
+        - "**/controllers/**"
+      exclude:
+        - "**/*_test.go"
+    patterns:
+      - pattern-either:
+          - pattern: $C.Bind(&$REQ)
+      - pattern-not-inside: |
+          func $F(...) $RET {
+            ...
+            $C.Bind(&$REQ)
+            ...
+            dtos.V.Struct($REQ)
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $F(...) $RET {
+            ...
+            $C.Bind(&$REQ)
+            ...
+            dtos.V.Struct($REQ)
+            ...
+          }
+      - pattern-not-inside: |
+          func $F(...) $RET {
+            ...
+            $C.Bind(&$REQ)
+            ...
+            dtos.V.Struct(&$REQ)
+            ...
+          }
+      - pattern-not-inside: |
+          func ($RECV $TYPE) $F(...) $RET {
+            ...
+            $C.Bind(&$REQ)
+            ...
+            dtos.V.Struct(&$REQ)
+            ...
+          }
+
   - id: bola-repository-update-missing-tenant-scope
     severity: ERROR
     message: |
