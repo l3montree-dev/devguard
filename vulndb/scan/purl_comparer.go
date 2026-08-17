@@ -248,7 +248,6 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 	// only cache after every shape is finished
 	comparer.cache.SetForCandidates(candidates, currentGeneration)
 
-	slog.Info("finished purl matching", "amount", len(purls), "cache usage", float32(cacheUsage)/float32(len(purls)))
 	// the candidates are in request order, whereas byShape is not
 	return candidates, nil
 }
