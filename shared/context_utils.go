@@ -231,7 +231,7 @@ func (publicClient PublicClientImplementation) GetIdentityFromCookie(ctx context
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
 	}
 
-	if session.Identity == nil {
+	if session == nil || session.Identity == nil {
 		return client.Identity{}, fmt.Errorf("identity not found in session")
 	}
 
