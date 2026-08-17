@@ -52,7 +52,8 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	ctx, span := daemonTracer.Start(ctx, "daemon.fixed-versions")
 	defer span.End()
 
-	purlComparer := scan.NewPurlComparer(runner.db)
+	// cache should never be hit since we are using distinct purls
+	purlComparer := scan.NewPurlComparer(runner.db, new(0))
 
 	var dependencyVulns []models.DependencyVuln
 	// get all dependency vulns without a fixed version
