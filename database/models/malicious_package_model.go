@@ -103,3 +103,9 @@ func (mac *MaliciousAffectedComponent) BeforeSave(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+func (mac MaliciousAffectedComponent) AffectsAllVersions() bool {
+	return mac.Version == nil &&
+		mac.SemverIntroduced == nil && mac.SemverFixed == nil &&
+		mac.VersionIntroduced == nil && mac.VersionFixed == nil
+}
