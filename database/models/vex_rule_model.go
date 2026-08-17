@@ -75,7 +75,7 @@ type VEXRuleRecommendation struct {
 	TotalVotes    int     `json:"totalVotes" gorm:"default:0;not null;"`
 	Confidence    float64 `json:"confidence" gorm:"default:0;not null;"`
 
-	DependencyVulnSignature string `json:"dependencyVulnerabilitySignature" gorm:"type:text;not null;index;primaryKey"`
+	DependencyVulnSignature int64 `json:"dependencyVulnSignature" gorm:"type:bigint;not null;index;primaryKey"`
 }
 
 func (VEXRuleRecommendation) TableName() string {

@@ -131,6 +131,7 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 		// just update the signature for each vuln and save it back to the database
 		for i := range batch {
 			batch[i].Signature = batch[i].CalculateSignature()
+			batch[i].AssetSignature = utils.HashToInt64(batch[i].CalculateAssetVersionIndependentHash())
 		}
 
 		if err := db.Save(&batch).Error; err != nil {

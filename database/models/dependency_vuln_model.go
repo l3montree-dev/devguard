@@ -41,7 +41,11 @@ type DependencyVuln struct {
 	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE"`
 
 	// hash of cve_id + vulnerability_path
-	Signature string `json:"signature" gorm:"type:text;not null;index"`
+	Signature int64 `json:"signature" gorm:"type:bigint;not null;index"`
+
+	// hash of cve_id + vulnerability_path + asset_id
+	// used by vuln events to deduplicate them.
+	AssetSignature int64 `json:"assetSignature" gorm:"type:bigint;not null;index"`
 }
 
 var _ Vuln = &DependencyVuln{}
@@ -137,13 +141,14 @@ func (vuln *DependencyVuln) CalculateHash() uuid.UUID {
 	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))
 }
 
-func (vuln *DependencyVuln) CalculateSignature() string {
-	return utils.HashString(fmt.Sprintf("%s/%s", vuln.CVEID, strings.Join(vuln.VulnerabilityPath, ",")))
+func (vuln *DependencyVuln) CalculateSignature() int64 {
+	return utils.HashToInt64(fmt.Sprintf("%s/%s", vuln.CVEID, strings.Join(vuln.VulnerabilityPath, ",")))
 }
 
 // hook to calculate the hash before creating the dependencyVuln
 func (vuln *DependencyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	vuln.ID = vuln.CalculateHash()
 	vuln.Signature = vuln.CalculateSignature()
+	vuln.AssetSignature = utils.HashToInt64(vuln.CalculateAssetVersionIndependentHash())
 	return nil
 }

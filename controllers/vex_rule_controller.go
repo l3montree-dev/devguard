@@ -264,15 +264,14 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
-	// perform explicit validation to provide clear errors and avoid relying solely on the validator
-	// a rule either matches via a CEL expression, or via a CVE ID + path pattern
-	if req.CELExpression == "" {
-		return echo.NewHTTPError(400, "CEL expression is required for VEX rule creation")
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "validation failed").WithInternal(err)
 	}
 
-	eventType := req.EventType
-	if eventType != dtos.EventTypeAccepted {
-		eventType = dtos.EventTypeFalsePositive
+	lookingForVulnState := dtos.VulnStateOpen
+
+	if req.EventType == dtos.EventTypeReopened {
+		lookingForVulnState = dtos.VulnStateAccepted
 	}
 
 	rule := &models.VEXRule{
@@ -285,7 +284,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 			VexSource:               "manual",
 			Justification:           req.Justification,
 			MechanicalJustification: req.MechanicalJustification,
-			EventType:               eventType,
+			EventType:               req.EventType,
 			CELExpression:           req.CELExpression,
 			CVEScope:                vexrules.ExtractCVEScopeFromCELExpression(req.CELExpression),
 		},
@@ -300,26 +299,40 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
-	existingVulns, fetchErr := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetID(reqCtx, tx, asset.ID, -1))
+	representativeVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, tx, asset.ID, lookingForVulnState)
+
 	var vulns []models.DependencyVuln
-	if fetchErr != nil {
-		slog.Error("failed to fetch existing vulns for asset", "error", fetchErr, "assetID", asset.ID)
+	if err != nil {
+		slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID)
 		tx.Rollback()
 	} else {
-		var events []models.VulnEvent
-		var applyErr error
-		vulns, events, applyErr = services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, existingVulns)
-		if applyErr != nil {
-			slog.Error("failed to apply VEX rules to vulns", "error", applyErr)
+		matched, _, matchErr := services.ApplyVEXRulesToVulns(reqCtx, []models.VEXRule{*rule}, representativeVulns)
+		if matchErr != nil {
+			slog.Error("failed to apply VEX rules to vulns", "error", matchErr)
 			tx.Rollback()
-		} else if len(vulns) > 0 {
-			if err := c.dependencyVulnRepository.SaveBatchBestEffort(reqCtx, tx, vulns); err != nil {
-				slog.Error("failed to save updated vulns", "error", err)
-				tx.Rollback()
+		} else {
+			assetSignatures := make([]int64, 0, len(matched))
+			for _, v := range matched {
+				ev, evErr := services.NewGroupVEXRuleEvent(rule, v.AssetSignature)
+				if evErr != nil {
+					slog.Error("failed to build group VEX rule event", "error", evErr)
+					tx.Rollback()
+					break
+				}
+				if err := c.dependencyVulnRepository.ApplyGroupEventAndSave(reqCtx, tx, v.AssetSignature, &ev); err != nil {
+					slog.Error("failed to apply group VEX rule event", "error", err)
+					tx.Rollback()
+					break
+				}
+				assetSignatures = append(assetSignatures, v.AssetSignature)
 			}
-			if err := c.vulnEventRepository.SaveBatchBestEffort(reqCtx, tx, events); err != nil {
-				slog.Error("failed to save events", "error", err)
-				tx.Rollback()
+
+			if len(assetSignatures) > 0 {
+				vulns, err = c.dependencyVulnRepository.GetVulnsByAssetSignatures(reqCtx, tx, assetSignatures)
+				if err != nil {
+					slog.Error("failed to fetch updated vulns", "error", err)
+					tx.Rollback()
+				}
 			}
 		}
 	}

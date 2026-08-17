@@ -38,7 +38,7 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 // each match, and returns the representatives left unmatched.
 func (runner *DaemonRunner) matchUpstreamRules(ctx context.Context, tx shared.DB) ([]map[string]any, error) {
 	var unmatchedRepresentatives []map[string]any
-	for representativeVulns, err := range runner.dependencyVulnRepository.GetOpenVulnsDistinctBySignature(ctx, tx, nil, 10_000) {
+	for representativeVulns, err := range runner.dependencyVulnRepository.GetAllOpenVulnsDistinctBySignature(ctx, tx, 10_000) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch distinct representative vulns")
 		}
@@ -75,7 +75,7 @@ func (runner *DaemonRunner) matchUpstreamRules(ctx context.Context, tx shared.DB
 				delete(vulnsMaps, vulnID)
 				recModels = append(recModels, models.VEXRuleRecommendation{
 					UpstreamVEXRuleID:       new(rules[0]),
-					DependencyVulnSignature: vulnsMaps[vulnID]["signature"].(string),
+					DependencyVulnSignature: int64(vulnsMaps[vulnID]["signature"].(float64)),
 				})
 			}
 
@@ -98,14 +98,14 @@ func (runner *DaemonRunner) matchUpstreamRules(ctx context.Context, tx shared.DB
 // for rules that matched at least once, since the confirm phase needs to
 // recompile them against the strict CelEnv and CrowdsourcedVexing needs
 // their Asset/CreatedAt.
-func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx shared.DB, unmatchedRepresentatives []map[string]any) (map[string]models.VEXRule, map[string]struct{}, error) {
+func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx shared.DB, unmatchedRepresentatives []map[string]any) (map[string]models.VEXRule, map[int64]struct{}, error) {
 	representativeByID := make(map[string]map[string]any, len(unmatchedRepresentatives))
 	for _, vuln := range unmatchedRepresentatives {
 		representativeByID[vuln["id"].(string)] = vuln
 	}
 
 	matchedVEXRules := make(map[string]models.VEXRule)
-	softMatchedSignatures := make(map[string]struct{})
+	softMatchedSignatures := make(map[int64]struct{})
 	var vexRules []models.VEXRule
 	err := runner.vexRuleRepository.GetDB(ctx, tx).FindInBatches(&vexRules, 10_000, func(_ *gorm.DB, _ int) error {
 		rulesByID := make(map[string]models.VEXRule, len(vexRules))
@@ -126,7 +126,7 @@ func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx s
 		}
 
 		for vulnID, ruleIDs := range matches {
-			softMatchedSignatures[representativeByID[vulnID]["signature"].(string)] = struct{}{}
+			softMatchedSignatures[int64(representativeByID[vulnID]["signature"].(float64))] = struct{}{}
 			for _, ruleID := range ruleIDs {
 				matchedVEXRules[ruleID] = rulesByID[ruleID]
 			}
@@ -143,7 +143,7 @@ func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx s
 // confirmCrowdsourcedRecommendations loads the real, artifact-aware vulns for
 // every soft-matched signature and runs them through crowdsourced vexing
 // against the soft-matched rules, recompiled against the strict CelEnv.
-func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Context, tx shared.DB, matchedVEXRules map[string]models.VEXRule, softMatchedSignatures map[string]struct{}) error {
+func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Context, tx shared.DB, matchedVEXRules map[string]models.VEXRule, softMatchedSignatures map[int64]struct{}) error {
 	crowdsourcedCtx, err := runner.buildCrowdsourcedVexingContext(ctx, tx, utils.Values(matchedVEXRules))
 	if err != nil {
 		return errors.Wrap(err, "failed to build crowdsourced vexing context")
@@ -210,7 +210,7 @@ func crowdsourcedRecommendationsForVulns(matches map[string][]string, vulnMaps m
 		recModels = append(recModels, models.VEXRuleRecommendation{
 			DependencyVulnID:        uuid.MustParse(vulnID),
 			VEXRuleID:               new(recommendedRule.ID),
-			DependencyVulnSignature: vulnMaps[vulnID]["signature"].(string),
+			DependencyVulnSignature: int64(vulnMaps[vulnID]["signature"].(float64)),
 			Confidence:              confidence,
 			VerifiedVotes:           votes.Verified,
 			TotalVotes:              votes.Total,

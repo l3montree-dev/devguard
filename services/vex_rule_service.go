@@ -37,6 +37,16 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	var err error
 
 	switch rule.EventType {
+	case dtos.EventTypeReopened:
+		ev, err = models.NewReopenedEvent(
+			vuln.CalculateHash(),
+			dtos.VulnTypeDependencyVuln,
+			rule.CreatedByID,
+			rule.Justification,
+			true,
+			nil,
+		), nil
+
 	case dtos.EventTypeFalsePositive:
 		ev, err = models.NewFalsePositiveEvent(
 			vuln.CalculateHash(),
@@ -67,6 +77,26 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 		return models.VulnEvent{}, fmt.Errorf("failed to create event from VEX rule: %w", err)
 	}
 
+	return ev, nil
+}
+
+func NewGroupVEXRuleEvent(rule *models.VEXRule, assetSignature int64) (models.VulnEvent, error) {
+	var ev models.VulnEvent
+
+	switch rule.EventType {
+	case dtos.EventTypeReopened:
+		ev = models.NewReopenedEvent(uuid.Nil, dtos.VulnTypeDependencyVuln, rule.CreatedByID, rule.Justification, true, nil)
+	case dtos.EventTypeFalsePositive:
+		ev = models.NewFalsePositiveEvent(uuid.Nil, dtos.VulnTypeDependencyVuln, rule.CreatedByID, rule.Justification, rule.MechanicalJustification, "", true, nil)
+	case dtos.EventTypeAccepted:
+		ev = models.NewAcceptedEvent(uuid.Nil, dtos.VulnTypeDependencyVuln, rule.CreatedByID, rule.Justification, true, nil)
+	default:
+		return models.VulnEvent{}, fmt.Errorf("unsupported event type from VEX rule: %s", rule.EventType)
+	}
+
+	ev.DependencyVulnID = nil
+	ev.AssetSignature = &assetSignature
+	ev.VexRuleID = &rule.ID
 	return ev, nil
 }
 

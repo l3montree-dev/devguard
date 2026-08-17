@@ -26,15 +26,30 @@ ALTER TABLE public.vex_rules DROP COLUMN IF EXISTS updated_at;
 CREATE INDEX IF NOT EXISTS idx_upstream_vex_rules_cve_scope ON public.upstream_vex_rules USING hash (cve_scope);
 
 
-ALTER TABLE public.dependency_vulns ADD COLUMN signature TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.dependency_vulns ADD COLUMN signature BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE public.dependency_vulns ADD COLUMN asset_signature BIGINT NOT NULL DEFAULT 0;
 
-ALTER TABLE public.vex_rule_recommendations ADD COLUMN dependency_vuln_signature TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.vex_rule_recommendations ADD COLUMN dependency_vuln_signature BIGINT NOT NULL DEFAULT 0;
 
-CREATE INDEX IF NOT EXISTS idx_dependency_vulns_signature ON public.dependency_vulns USING hash (signature);
+CREATE INDEX IF NOT EXISTS idx_dependency_vulns_signature ON public.dependency_vulns (signature);
 
-CREATE INDEX IF NOT EXISTS idx_vex_rule_recommendations_signature ON public.vex_rule_recommendations USING hash (dependency_vuln_signature);
+CREATE INDEX IF NOT EXISTS idx_dependency_vulns_asset_signature ON public.dependency_vulns (asset_signature);
+
+CREATE INDEX IF NOT EXISTS idx_vex_rule_recommendations_signature ON public.vex_rule_recommendations (dependency_vuln_signature);
 
 ALTER TABLE public.vex_rule_recommendations DROP CONSTRAINT IF EXISTS vex_rule_recommendations_pkey;
 
 ALTER TABLE public.vex_rule_recommendations
     ADD CONSTRAINT vex_rule_recommendations_pkey PRIMARY KEY (dependency_vuln_id, dependency_vuln_signature);
+
+ALTER TABLE public.vuln_events
+    ALTER COLUMN dependency_vuln_id DROP NOT NULL;
+
+ALTER TABLE public.vuln_events
+    ADD COLUMN asset_signature BIGINT;
+
+CREATE INDEX IF NOT EXISTS idx_vuln_events_asset_signature ON public.vuln_events (asset_signature);
+
+ALTER TABLE public.vuln_events
+    ADD CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+    CHECK (dependency_vuln_id IS NOT NULL OR asset_signature IS NOT NULL);
