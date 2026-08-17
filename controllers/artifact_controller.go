@@ -104,7 +104,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	type requestBody struct {
-		ArtifactName       string              `json:"artifactName"`
+		ArtifactName       string              `json:"artifactName" validate:"required"`
 		InformationSources []informationSource `json:"informationSources"`
 	}
 
@@ -114,6 +114,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	if err := ctx.Bind(&body); err != nil {
 		return err
+	}
+	if err := dtos.V.Struct(&body); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
 	artifact := models.Artifact{
@@ -320,7 +323,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	var body requestBody
 
-	if err := ctx.Bind(&body); err != nil {
+	if err := ctx.Bind(&body); err != nil { // nosemgrep: bind-without-validate -- requestBody has no constrained fields (InformationSources may legitimately be empty)
 		return err
 	}
 

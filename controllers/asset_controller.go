@@ -152,10 +152,13 @@ func (a *AssetController) AttachSigningKey(ctx shared.Context) error {
 
 	// read the fingerprint from request body
 	var req struct {
-		PubKey string `json:"publicKey"`
+		PubKey string `json:"publicKey" validate:"required"`
 	}
 
 	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+	if err := dtos.V.Struct(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 

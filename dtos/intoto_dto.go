@@ -16,9 +16,9 @@
 package dtos
 
 type CreateInTotoLinkRequest struct {
-	SupplyChainID           string `json:"supplyChainId"`
-	Step                    string `json:"step"`
-	Payload                 string `json:"payload"`
-	Filename                string `json:"filename"`
+	SupplyChainID           string `json:"supplyChainId" validate:"required"`
+	Step                    string `json:"step" validate:"required"`
+	Payload                 string `json:"payload" validate:"required"`
+	Filename                string `json:"filename" validate:"required"`
 	SupplyChainOutputDigest string `json:"supplyChainOutputDigest"`
 }

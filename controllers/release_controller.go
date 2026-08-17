@@ -449,6 +449,9 @@ func (h *ReleaseController) Create(c shared.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
 
 	if err := h.validateReleaseItemRefs(c.Request().Context(), req.Items); err != nil {
 		return err
@@ -484,6 +487,9 @@ func (h *ReleaseController) Update(c shared.Context) error {
 
 	var req dtos.ReleasePatchRequest
 	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+	if err := dtos.V.Struct(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
@@ -552,6 +558,9 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 
 	var dto dtos.ReleaseItemDTO
 	if err := c.Bind(&dto); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+	if err := dtos.V.Struct(&dto); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
