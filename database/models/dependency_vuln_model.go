@@ -39,6 +39,9 @@ type DependencyVuln struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 
 	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE"`
+
+	// hash of cve_id + vulnerability_path
+	Signature string `json:"signature" gorm:"type:text;not null;index"`
 }
 
 var _ Vuln = &DependencyVuln{}
@@ -134,8 +137,13 @@ func (vuln *DependencyVuln) CalculateHash() uuid.UUID {
 	return utils.HashToUUID(fmt.Sprintf("%s/%s/%s/%s", vuln.CVEID, vuln.AssetVersionName, vuln.AssetID, strings.Join(vuln.VulnerabilityPath, ",")))
 }
 
+func (vuln *DependencyVuln) CalculateSignature() string {
+	return utils.HashString(fmt.Sprintf("%s/%s", vuln.CVEID, strings.Join(vuln.VulnerabilityPath, ",")))
+}
+
 // hook to calculate the hash before creating the dependencyVuln
 func (vuln *DependencyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	vuln.ID = vuln.CalculateHash()
+	vuln.Signature = vuln.CalculateSignature()
 	return nil
 }

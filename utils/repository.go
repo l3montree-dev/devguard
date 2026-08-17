@@ -16,6 +16,7 @@ package utils
 
 import (
 	"context"
+	"iter"
 
 	"gorm.io/gorm/clause"
 )
@@ -36,6 +37,7 @@ type ModelReader[ID any, T Tabler, Tx any] interface {
 	Read(ctx context.Context, tx Tx, id ID) (T, error)
 	List(ctx context.Context, tx Tx, ids []ID) ([]T, error)
 	All(ctx context.Context, tx Tx) ([]T, error)
+	InBatches(ctx context.Context, tx Tx, batchSize int) iter.Seq2[[]T, error]
 	Upsert(ctx context.Context, tx Tx, t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error
 }
 

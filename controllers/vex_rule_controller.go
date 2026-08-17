@@ -287,6 +287,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 			MechanicalJustification: req.MechanicalJustification,
 			EventType:               eventType,
 			CELExpression:           req.CELExpression,
+			CVEScope:                vexrules.ExtractCVEScopeFromCELExpression(req.CELExpression),
 		},
 	}
 

@@ -915,77 +915,6 @@ func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call) R
 	return _c
 }
 
-// GetAllOpenVulnsByAssetIDs provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
-	ret := _mock.Called(ctx, tx, assetIDs, batchSize)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetAllOpenVulnsByAssetIDs")
-	}
-
-	var r0 iter.Seq2[[]models.DependencyVuln, error]
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
-		r0 = returnFunc(ctx, tx, assetIDs, batchSize)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
-		}
-	}
-	return r0
-}
-
-// DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllOpenVulnsByAssetIDs'
-type DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call struct {
-	*mock.Call
-}
-
-// GetAllOpenVulnsByAssetIDs is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx *gorm.DB
-//   - assetIDs []uuid.UUID
-//   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
-	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDs", ctx, tx, assetIDs, batchSize)}
-}
-
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int)) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *gorm.DB
-		if args[1] != nil {
-			arg1 = args[1].(*gorm.DB)
-		}
-		var arg2 []uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].([]uuid.UUID)
-		}
-		var arg3 int
-		if args[3] != nil {
-			arg3 = args[3].(int)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
-	_c.Call.Return(seq2)
-	return _c
-}
-
-func (_c *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDs_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetAllOpenVulnsByAssetVersionNameAndAssetID provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, artifactName, assetVersionName, assetID)
@@ -2539,6 +2468,213 @@ func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) Return(de
 }
 
 func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOpenVulnsBySignaturesWithoutEvents provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetOpenVulnsBySignaturesWithoutEvents(ctx context.Context, tx *gorm.DB, signatures []string, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	ret := _mock.Called(ctx, tx, signatures, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOpenVulnsBySignaturesWithoutEvents")
+	}
+
+	var r0 iter.Seq2[[]models.DependencyVuln, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []string, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
+		r0 = returnFunc(ctx, tx, signatures, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
+		}
+	}
+	return r0
+}
+
+// DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOpenVulnsBySignaturesWithoutEvents'
+type DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call struct {
+	*mock.Call
+}
+
+// GetOpenVulnsBySignaturesWithoutEvents is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - signatures []string
+//   - batchSize int
+func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsBySignaturesWithoutEvents(ctx interface{}, tx interface{}, signatures interface{}, batchSize interface{}) *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call {
+	return &DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call{Call: _e.mock.On("GetOpenVulnsBySignaturesWithoutEvents", ctx, tx, signatures, batchSize)}
+}
+
+func (_c *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB, signatures []string, batchSize int)) *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, signatures []string, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetOpenVulnsDistinctBySignature provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	ret := _mock.Called(ctx, tx, assetIDs, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOpenVulnsDistinctBySignature")
+	}
+
+	var r0 iter.Seq2[[]models.DependencyVuln, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
+		r0 = returnFunc(ctx, tx, assetIDs, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
+		}
+	}
+	return r0
+}
+
+// DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOpenVulnsDistinctBySignature'
+type DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call struct {
+	*mock.Call
+}
+
+// GetOpenVulnsDistinctBySignature is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - assetIDs []uuid.UUID
+//   - batchSize int
+func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsDistinctBySignature(ctx interface{}, tx interface{}, assetIDs interface{}, batchSize interface{}) *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call {
+	return &DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call{Call: _e.mock.On("GetOpenVulnsDistinctBySignature", ctx, tx, assetIDs, batchSize)}
+}
+
+func (_c *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int)) *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_GetOpenVulnsDistinctBySignature_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InBatches provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) InBatches(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	ret := _mock.Called(ctx, tx, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InBatches")
+	}
+
+	var r0 iter.Seq2[[]models.DependencyVuln, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) iter.Seq2[[]models.DependencyVuln, error]); ok {
+		r0 = returnFunc(ctx, tx, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.DependencyVuln, error])
+		}
+	}
+	return r0
+}
+
+// DependencyVulnRepository_InBatches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InBatches'
+type DependencyVulnRepository_InBatches_Call struct {
+	*mock.Call
+}
+
+// InBatches is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - batchSize int
+func (_e *DependencyVulnRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *DependencyVulnRepository_InBatches_Call {
+	return &DependencyVulnRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
+}
+
+func (_c *DependencyVulnRepository_InBatches_Call) Run(run func(ctx context.Context, tx shared.DB, batchSize int)) *DependencyVulnRepository_InBatches_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_InBatches_Call) Return(seq2 iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_InBatches_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_InBatches_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]) *DependencyVulnRepository_InBatches_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -261,3 +261,17 @@ func (p PathPattern) Matches(path []string, artifactPurls []string) bool {
 	}
 	return p.matchesSuffix(path)
 }
+
+// SoftMatches is Matches for callers that haven't loaded artifacts at all
+// (e.g. crowdsourced-vexing's soft-match phase, run against representative
+// vulns before their real artifacts are known). It always assumes the
+// artifact-anchor element would have matched, since a real vuln always has
+// at least one artifact and none can be ruled out here - so a "no match"
+// from SoftMatches reliably implies Matches would also not match once real
+// artifacts are loaded, but a "match" is only a candidate to confirm.
+func (p PathPattern) SoftMatches(path []string) bool {
+	if len(p) > 0 {
+		return matchPattern(p[1:], path)
+	}
+	return p.matchesSuffix(path)
+}

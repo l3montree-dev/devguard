@@ -454,27 +454,33 @@ func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAnd
 // GetAllOpenVulnsByAssetID preloads Events, needed by CEL VEX rule matching to
 // tell whether a rule's outcome was already applied to a vuln.
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
-	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, true, batchSize)
+	return repository.GetVulnsWithCveAndArtifacts(ctx, tx, batchSize,
+		func(db *gorm.DB) *gorm.DB { return db.Where("state = ?", dtos.VulnStateOpen) },
+		func(db *gorm.DB) *gorm.DB { return db.Where("asset_id = ?", assetID) },
+		func(db *gorm.DB) *gorm.DB { return db.Preload("Events") },
+	)
 }
 
 // GetAllOpenVulnsByAssetIDWithoutEvents skips the Events preload for callers
 // that don't need it, such as the crowdsourced-vexing recommendation response.
 func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
-	return repository.getAllOpenVulns(ctx, tx, []uuid.UUID{assetID}, false, batchSize)
+	return repository.GetVulnsWithCveAndArtifacts(ctx, tx, batchSize,
+		func(db *gorm.DB) *gorm.DB { return db.Where("state = ?", dtos.VulnStateOpen) },
+		func(db *gorm.DB) *gorm.DB { return db.Where("asset_id = ?", assetID) },
+	)
 }
 
-func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
-	return repository.getAllOpenVulns(ctx, tx, assetIDs, true, batchSize)
+// GetOpenVulnsBySignaturesWithoutEvents fetches every open vuln whose signature is in the
+// given set, regardless of asset - used to find vulns that upstream VEX rules
+// didn't already produce a recommendation for.
+func (repository *dependencyVulnRepository) GetOpenVulnsBySignaturesWithoutEvents(ctx context.Context, tx *gorm.DB, signatures []string, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+	return repository.GetVulnsWithCveAndArtifacts(ctx, tx, batchSize,
+		func(db *gorm.DB) *gorm.DB { return db.Where("state = ?", dtos.VulnStateOpen) },
+		func(db *gorm.DB) *gorm.DB { return db.Where("signature IN (?)", signatures) },
+	)
 }
 
-// getAllOpenVulnsByAssetID omits CVE.Description/References - they're large
-// text/jsonb columns that dominate scan/materialization cost for thousands of
-// rows, and aren't needed by any caller. Artifacts are loaded manually (not via
-// Preload) so the dependency_vuln_id filter stays a subquery on (asset_id, state)
-// instead of GORM's Preload building a literal IN(...) list of every
-// already-fetched vuln ID, which is expensive for Postgres to plan at thousands
-// of IDs.
-func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, preloadEvents bool, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
+func (repository *dependencyVulnRepository) GetOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error] {
 	return func(yield func([]models.DependencyVuln, error) bool) {
 		db := repository.GetDB(ctx, tx)
 		offset := 0
@@ -482,14 +488,53 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 			query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
 				return db.Omit("Description", "References")
 			})
-			if preloadEvents {
-				query = query.Preload("Events")
-			}
 
 			query = query.Where("state = ?", dtos.VulnStateOpen)
 			if len(assetIDs) > 0 {
 				query = query.Where("asset_id IN (?)", assetIDs)
 			}
+
+			var vulns = []models.DependencyVuln{}
+			if err := query.Distinct("signature").Limit(batchSize).Offset(offset).Find(&vulns).Error; err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if len(vulns) == 0 {
+				return
+			}
+
+			if !yield(vulns, nil) {
+				return
+			}
+
+			// batchSize <= 0 means "no limit" (GORM treats Limit(-1) as unlimited) -
+			// the query above already returned everything there is, so stop instead
+			// of issuing a second, pointless round trip.
+			if batchSize <= 0 || len(vulns) < batchSize {
+				return
+			}
+
+			offset += len(vulns)
+		}
+	}
+}
+
+// GetVulnsWithCveAndArtifacts omits CVE.Description/References - they're large
+// text/jsonb columns that dominate scan/materialization cost for thousands of
+// rows, and aren't needed by any caller. Artifacts are loaded manually (not via
+// Preload) so the dependency_vuln_id filter stays a subquery on the scoped IDs
+// instead of GORM's Preload building a literal IN(...) list of every
+// already-fetched vuln ID, which is expensive for Postgres to plan at thousands
+// of IDs.
+func (repository *dependencyVulnRepository) GetVulnsWithCveAndArtifacts(ctx context.Context, tx *gorm.DB, batchSize int, scopes ...func(*gorm.DB) *gorm.DB) iter.Seq2[[]models.DependencyVuln, error] {
+	return func(yield func([]models.DependencyVuln, error) bool) {
+		db := repository.GetDB(ctx, tx)
+		offset := 0
+		for {
+			query := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
+				return db.Omit("Description", "References")
+			}).Scopes(scopes...)
 
 			var vulns = []models.DependencyVuln{}
 			if err := query.Order("cve_id, vulnerability_path, created_at ASC").Limit(batchSize).Offset(offset).Find(&vulns).Error; err != nil {
@@ -503,10 +548,7 @@ func (repository *dependencyVulnRepository) getAllOpenVulns(ctx context.Context,
 
 			openIDs := db.Table("dependency_vulns").
 				Select("id").
-				Where("state = ?", dtos.VulnStateOpen)
-			if len(assetIDs) > 0 {
-				openIDs = openIDs.Where("asset_id IN (?)", assetIDs)
-			}
+				Scopes(scopes...)
 
 			type artifactRow struct {
 				models.Artifact

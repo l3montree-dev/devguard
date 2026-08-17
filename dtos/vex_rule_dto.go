@@ -37,7 +37,6 @@ type VEXRuleDTO struct {
 	CELExpression           string                      `json:"celExpression"`
 	CreatedByID             string                      `json:"createdById"`
 	CreatedAt               string                      `json:"createdAt"`
-	UpdatedAt               string                      `json:"updatedAt"`
 
 	// Metrics
 	AppliesToAmountOfDependencyVulns int `json:"appliesToAmountOfDependencyVulns"`

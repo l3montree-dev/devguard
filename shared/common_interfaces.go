@@ -265,11 +265,14 @@ type ComponentRepository interface {
 
 type DependencyVulnRepository interface {
 	utils.Repository[uuid.UUID, models.DependencyVuln, DB]
+
 	GetByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
-	GetAllOpenVulnsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+	GetOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+	GetOpenVulnsBySignaturesWithoutEvents(ctx context.Context, tx *gorm.DB, signatures []string, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
+
 	GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnByCVEIDAndAssetID(ctx context.Context, tx DB, cveID string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
@@ -369,6 +372,7 @@ type VEXRuleRepository interface {
 
 type UpstreamVEXRuleRepository interface {
 	utils.Repository[string, models.UpstreamVEXRule, DB]
+	ByCveScopes(ctx context.Context, tx DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error]
 }
 
 type VEXRuleRecommendationRepository interface {

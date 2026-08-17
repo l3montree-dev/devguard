@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -15,10 +14,6 @@ type UpstreamVEXRule struct {
 
 	VexSource string `json:"vexSource" gorm:"type:text;not null;index:,composite:vex_composite_key"`
 
-	// Timestamps
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-
 	// Rule data
 	Title                   string                           `json:"title" gorm:"type:text;not null"`
 	Justification           string                           `json:"justification" gorm:"type:text;not null"`
@@ -26,6 +21,8 @@ type UpstreamVEXRule struct {
 	EventType               dtos.VulnEventType               `json:"eventType" gorm:"type:text;not null;"`
 
 	CELExpression string `json:"celExpression" gorm:"type:text;"`
+
+	CVEScope *string `json:"cveScope" gorm:"type:text;index"` // optional CVE scope for filtering
 }
 
 func (UpstreamVEXRule) TableName() string {

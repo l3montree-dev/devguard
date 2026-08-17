@@ -17,6 +17,8 @@ package repositories
 
 import (
 	"context"
+	"errors"
+	"iter"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -28,6 +30,24 @@ import (
 
 type upstreamVEXRuleRepository struct {
 	utils.Repository[string, models.UpstreamVEXRule, shared.DB]
+}
+
+var errStopIteration = errors.New("stop iteration")
+
+func (r *upstreamVEXRuleRepository) ByCveScopes(ctx context.Context, tx shared.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
+	return func(yield func([]models.UpstreamVEXRule, error) bool) {
+		var rules []models.UpstreamVEXRule
+		err := r.GetDB(ctx, tx).Where("cve_scope IN ?", cveIDs).FindInBatches(&rules, batchSize, func(_ *gorm.DB, _ int) error {
+			if !yield(rules, nil) {
+				return errStopIteration
+			}
+			return nil
+		}).Error
+
+		if err != nil && !errors.Is(err, errStopIteration) {
+			yield(nil, err)
+		}
+	}
 }
 
 var _ shared.UpstreamVEXRuleRepository = (*upstreamVEXRuleRepository)(nil)

@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -40,6 +41,37 @@ type GormRepository[ID comparable, T utils.Tabler] struct {
 func newGormRepository[ID comparable, T utils.Tabler](db *gorm.DB) *GormRepository[ID, T] {
 	return &GormRepository[ID, T]{
 		db: db,
+	}
+}
+
+func (g *GormRepository[ID, T]) InBatches(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]T, error] {
+	return func(yield func([]T, error) bool) {
+		db := g.GetDB(ctx, tx)
+		offset := 0
+		for {
+			var res = []T{}
+			if err := db.Limit(batchSize).Offset(offset).Find(&res).Error; err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if len(res) == 0 {
+				return
+			}
+
+			if !yield(res, nil) {
+				return
+			}
+
+			// batchSize <= 0 means "no limit" (GORM treats Limit(-1) as unlimited) -
+			// the query above already returned everything there is, so stop instead
+			// of issuing a second, pointless round trip.
+			if batchSize <= 0 || len(res) < batchSize {
+				return
+			}
+
+			offset += len(res)
+		}
 	}
 }
 

@@ -26,7 +26,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 4
+	CurrentHashVersion = 5
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -101,9 +101,42 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			}
 		}
 
+		if currentVersion < 5 {
+			// we need to calculate the signature for all existing dependency_vulns and update them in the database
+			if err := runDependencyVulnSignatureMigration(pool); err != nil {
+				return fmt.Errorf("failed to run dependency_vuln signature migration (v5): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v5: %w", err)
+			}
+		}
+
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
 
+	return nil
+}
+
+func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
+	db := database.NewGormDB(pool)
+	// fetch all in batches and update the signature
+	for batch, err := range repositories.NewDependencyVulnRepository(db).InBatches(context.Background(), db, 1000) {
+		if err != nil {
+			return fmt.Errorf("failed to fetch dependency_vulns in batches: %w", err)
+		}
+
+		// just update the signature for each vuln and save it back to the database
+		for i := range batch {
+			batch[i].Signature = batch[i].CalculateSignature()
+		}
+
+		if err := db.Save(&batch).Error; err != nil {
+			return fmt.Errorf("failed to update dependency_vuln signatures in batch: %w", err)
+		}
+	}
 	return nil
 }
 

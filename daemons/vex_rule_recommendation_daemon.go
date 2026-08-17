@@ -2,106 +2,221 @@ package daemons
 
 import (
 	"context"
-	"log/slog"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/crowdsourcevexing"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/otel/attribute"
+	"gorm.io/gorm"
 )
 
 func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) error {
-	ctx, span := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation")
-	defer span.End()
+	return runner.db.WithContext(ctx).Transaction(func(tx shared.DB) error {
+		// clear the whole table.
+		tx.Exec("DELETE FROM vex_rule_recommendations;")
 
-	slog.Info("running vex rule recommendation daemon", "traceID", span.SpanContext().TraceID().String())
-
-	err := runner.db.WithContext(ctx).Transaction(func(tx shared.DB) error {
-
-		t := time.Now()
-		fetchRulesCtx, fetchRulesSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-rules")
-		allRules, err := runner.vexRuleRepository.All(fetchRulesCtx, tx)
+		unmatchedRepresentatives, err := runner.matchUpstreamRules(ctx, tx)
 		if err != nil {
-			return utils.EndSpanWithError(fetchRulesSpan, errors.Wrap(err, "failed to fetch all VEX rules"))
+			return err
 		}
-		fetchRulesSpan.SetAttributes(attribute.Int("rules.count", len(allRules)))
-		fetchRulesSpan.End()
-		slog.Info("step: fetch-rules", "count", len(allRules), "took", time.Since(t))
-		t = time.Now()
-		buildCtxCtx, buildCtxSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.build-crowdsourced-context")
 
-		// we cannot batch anything related to rules since we need them to build the crowdsourced context
-		// we can only batch over dependency vulns.
-		crowdsourcedCtx, err := runner.buildCrowdsourcedVexingContext(buildCtxCtx, tx, allRules)
+		matchedVEXRules, softMatchedSignatures, err := runner.softMatchCrowdsourcedRules(ctx, tx, unmatchedRepresentatives)
 		if err != nil {
-			return utils.EndSpanWithError(buildCtxSpan, errors.Wrap(err, "failed to build crowdsourced vexing context"))
+			return err
 		}
-		buildCtxSpan.End()
-		slog.Info("step: build-crowdsourced-context", "took", time.Since(t))
 
-		t = time.Now()
-		deleteCtx, deleteSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.delete-all")
-		if err := runner.vexRuleRecommendationRepository.DeleteAll(deleteCtx, tx); err != nil {
-			return utils.EndSpanWithError(deleteSpan, errors.Wrap(err, "failed to delete all VEX rule recommendations"))
-		}
-		deleteSpan.End()
-		slog.Info("step: delete-all", "took", time.Since(t))
-
-		fetchVulnsCtx, fetchVulnsSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-vulns")
-		defer fetchVulnsSpan.End()
-		for allVulns, err := range runner.dependencyVulnRepository.GetAllOpenVulnsByAssetIDs(fetchVulnsCtx, tx, nil, 10_000) {
-			if err != nil {
-				return utils.EndSpanWithError(fetchVulnsSpan, errors.Wrap(err, "failed to fetch all open vulns"))
-			}
-			fetchVulnsSpan.SetAttributes(attribute.Int("vulns.count", len(allVulns)))
-			slog.Info("step: fetch-vulns", "count", len(allVulns), "took", time.Since(t))
-
-			t = time.Now()
-			fetchUpstreamCtx, fetchUpstreamSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.fetch-upstream-rules")
-			upstreamRules, err := runner.upstreamVEXRuleRepository.All(fetchUpstreamCtx, tx)
-			if err != nil {
-				return utils.EndSpanWithError(fetchUpstreamSpan, errors.Wrap(err, "failed to fetch all upstream VEX rules"))
-			}
-			fetchUpstreamSpan.SetAttributes(attribute.Int("upstream_rules.count", len(upstreamRules)))
-			fetchUpstreamSpan.End()
-			slog.Info("step: fetch-upstream-rules", "count", len(upstreamRules), "took", time.Since(t))
-
-			t = time.Now()
-			computeCtx, computeSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.compute")
-			ruleRecommendations, err := services.ComputeVEXRuleRecommendations(computeCtx, allVulns, allRules, upstreamRules, crowdsourcedCtx)
-			if err != nil {
-				return utils.EndSpanWithError(computeSpan, errors.Wrap(err, "failed to compute VEX rule recommendations"))
-			}
-			computeSpan.SetAttributes(attribute.Int("recommendations.count", len(ruleRecommendations)))
-			computeSpan.End()
-			slog.Info("step: compute", "count", len(ruleRecommendations), "took", time.Since(t))
-
-			span.SetAttributes(
-				attribute.Int("vulns.count", len(allVulns)),
-				attribute.Int("recommendations.count", len(ruleRecommendations)),
-			)
-			slog.Info("finished rule recommendation calculation", "amount", len(ruleRecommendations), "traceID", span.SpanContext().TraceID().String())
-
-			t = time.Now()
-			saveCtx, saveSpan := daemonTracer.Start(ctx, "daemon.vex-rule-recommendation.save-batch")
-			if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(saveCtx, tx, ruleRecommendations); err != nil {
-				return utils.EndSpanWithError(saveSpan, errors.Wrap(err, "failed to save VEX rule recommendations"))
-			}
-			saveSpan.End()
-			slog.Info("step: save-batch", "took", time.Since(t))
-		}
-		return nil
+		return runner.confirmCrowdsourcedRecommendations(ctx, tx, matchedVEXRules, softMatchedSignatures)
 	})
+}
 
-	if err != nil {
-		utils.RecordSpanError(span, err)
+// matchUpstreamRules matches every upstream VEX rule against one
+// representative vuln per distinct signature, saving a recommendation for
+// each match, and returns the representatives left unmatched.
+func (runner *DaemonRunner) matchUpstreamRules(ctx context.Context, tx shared.DB) ([]map[string]any, error) {
+	var unmatchedRepresentatives []map[string]any
+	for representativeVulns, err := range runner.dependencyVulnRepository.GetOpenVulnsDistinctBySignature(ctx, tx, nil, 10_000) {
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch distinct representative vulns")
+		}
+
+		cveIDs := make(map[string][]models.DependencyVuln, len(representativeVulns))
+		for _, vuln := range representativeVulns {
+			if cveIDs[vuln.CVEID] == nil {
+				cveIDs[vuln.CVEID] = make([]models.DependencyVuln, 0)
+			}
+			cveIDs[vuln.CVEID] = append(cveIDs[vuln.CVEID], vuln)
+		}
+
+		vulnsMaps, err := vexrules.PrepareVulnsForEvalMap(ctx, representativeVulns)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to prepare representative vulns for evaluation")
+		}
+
+		for rules, err := range runner.upstreamVEXRuleRepository.ByCveScopes(ctx, tx, utils.Keys(cveIDs), 10_000) {
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to fetch upstream rules")
+			}
+
+			compiled, err := vexrules.CompileRules(ctx, rules)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to compile VEX rules and vulns")
+			}
+
+			recommendations, err := vexrules.EvalCompiledRules(ctx, compiled, utils.Values(vulnsMaps))
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to evaluate VEX rules against representative vulns")
+			}
+			recModels := make([]models.VEXRuleRecommendation, 0, len(recommendations))
+			for vulnID, rules := range recommendations {
+				delete(vulnsMaps, vulnID)
+				recModels = append(recModels, models.VEXRuleRecommendation{
+					UpstreamVEXRuleID:       new(rules[0]),
+					DependencyVulnSignature: vulnsMaps[vulnID]["signature"].(string),
+				})
+			}
+
+			if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels); err != nil {
+				return nil, errors.Wrap(err, "failed to save VEX rule recommendations")
+			}
+		}
+
+		for _, vuln := range vulnsMaps {
+			unmatchedRepresentatives = append(unmatchedRepresentatives, vuln)
+		}
+	}
+	return unmatchedRepresentatives, nil
+}
+
+// softMatchCrowdsourcedRules matches crowdsourced VEX rules against
+// artifact-less representative vulns (see PathPattern.SoftMatches /
+// SoftMatchCelEnv): a "no match" here is certain, a "match" only a candidate
+// to confirm once real artifacts are loaded. Returns the full models.VEXRule
+// for rules that matched at least once, since the confirm phase needs to
+// recompile them against the strict CelEnv and CrowdsourcedVexing needs
+// their Asset/CreatedAt.
+func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx shared.DB, unmatchedRepresentatives []map[string]any) (map[string]models.VEXRule, map[string]struct{}, error) {
+	representativeByID := make(map[string]map[string]any, len(unmatchedRepresentatives))
+	for _, vuln := range unmatchedRepresentatives {
+		representativeByID[vuln["id"].(string)] = vuln
 	}
 
-	return err
+	matchedVEXRules := make(map[string]models.VEXRule)
+	softMatchedSignatures := make(map[string]struct{})
+	var vexRules []models.VEXRule
+	err := runner.vexRuleRepository.GetDB(ctx, tx).FindInBatches(&vexRules, 10_000, func(_ *gorm.DB, _ int) error {
+		rulesByID := make(map[string]models.VEXRule, len(vexRules))
+		for _, rule := range vexRules {
+			rulesByID[rule.ID] = rule
+		}
+
+		compiled, err := vexrules.CompileRulesForSoftMatching(ctx, utils.Map(vexRules, func(r models.VEXRule) models.UpstreamVEXRule {
+			return r.UpstreamVEXRule
+		}))
+		if err != nil {
+			return errors.Wrap(err, "failed to compile VEX rules for crowdsourced vexing")
+		}
+
+		matches, err := vexrules.EvalCompiledRules(ctx, compiled, unmatchedRepresentatives)
+		if err != nil {
+			return errors.Wrap(err, "failed to soft-match VEX rules for crowdsourced vexing")
+		}
+
+		for vulnID, ruleIDs := range matches {
+			softMatchedSignatures[representativeByID[vulnID]["signature"].(string)] = struct{}{}
+			for _, ruleID := range ruleIDs {
+				matchedVEXRules[ruleID] = rulesByID[ruleID]
+			}
+		}
+		return nil
+	}).Error
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to soft-match crowdsourced VEX rules")
+	}
+
+	return matchedVEXRules, softMatchedSignatures, nil
+}
+
+// confirmCrowdsourcedRecommendations loads the real, artifact-aware vulns for
+// every soft-matched signature and runs them through crowdsourced vexing
+// against the soft-matched rules, recompiled against the strict CelEnv.
+func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Context, tx shared.DB, matchedVEXRules map[string]models.VEXRule, softMatchedSignatures map[string]struct{}) error {
+	crowdsourcedCtx, err := runner.buildCrowdsourcedVexingContext(ctx, tx, utils.Values(matchedVEXRules))
+	if err != nil {
+		return errors.Wrap(err, "failed to build crowdsourced vexing context")
+	}
+
+	compiledMatchedRules, err := vexrules.CompileRules(ctx, utils.Map(utils.Values(matchedVEXRules), func(r models.VEXRule) models.UpstreamVEXRule {
+		return r.UpstreamVEXRule
+	}))
+	if err != nil {
+		return errors.Wrap(err, "failed to compile soft-matched VEX rules for crowdsourced vexing")
+	}
+
+	for vulns, err := range runner.dependencyVulnRepository.GetOpenVulnsBySignaturesWithoutEvents(ctx, tx, utils.Keys(softMatchedSignatures), 10_000) {
+		if err != nil {
+			return errors.Wrap(err, "failed to fetch soft-matched vulns for crowdsourced vexing")
+		}
+
+		// convert the vulns into a map for easy lookup, keyed by vuln ID
+		vulnMaps, err := vexrules.PrepareVulnsForEvalMap(ctx, vulns)
+		if err != nil {
+			return errors.Wrap(err, "failed to prepare vulns for evaluation")
+		}
+
+		matches, err := vexrules.EvalCompiledRules(ctx, compiledMatchedRules, utils.Values(vulnMaps))
+		if err != nil {
+			return errors.Wrap(err, "failed to evaluate VEX rules for crowdsourced vexing")
+		}
+
+		recModels, err := crowdsourcedRecommendationsForVulns(matches, vulnMaps, matchedVEXRules, crowdsourcedCtx)
+		if err != nil {
+			return err
+		}
+
+		if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels); err != nil {
+			return errors.Wrap(err, "failed to save crowdsourced VEX rule recommendations")
+		}
+	}
+	return nil
+}
+
+// crowdsourcedRecommendationsForVulns runs CrowdsourcedVexing once per vuln
+// in matches, picking a single winning rule out of its matching candidates.
+// Vulns with no winning rule (ErrNoRecommendation) are silently skipped.
+func crowdsourcedRecommendationsForVulns(matches map[string][]string, vulnMaps map[string]map[string]any, matchedVEXRules map[string]models.VEXRule, crowdsourcedCtx services.CrowdsourcedVexingContext) ([]models.VEXRuleRecommendation, error) {
+	recModels := make([]models.VEXRuleRecommendation, 0, len(matches))
+	for vulnID, ruleIDs := range matches {
+		matchingRules := utils.Map(ruleIDs, func(ruleID string) models.VEXRule {
+			return matchedVEXRules[ruleID]
+		})
+
+		recommendedRule, confidence, votes, err := crowdsourcevexing.CrowdsourcedVexing(
+			matchingRules,
+			crowdsourcedCtx.CrowdSourceVexingOrgs,
+			crowdsourcedCtx.CrowdSourceVexingProj,
+			crowdsourcedCtx.Assets,
+		)
+		if err != nil {
+			if errors.Is(err, crowdsourcevexing.ErrNoRecommendation) {
+				continue
+			}
+			return nil, errors.Wrap(err, "failed to compute crowdsourced VEX rule recommendation")
+		}
+
+		recModels = append(recModels, models.VEXRuleRecommendation{
+			DependencyVulnID:        uuid.MustParse(vulnID),
+			VEXRuleID:               new(recommendedRule.ID),
+			DependencyVulnSignature: vulnMaps[vulnID]["signature"].(string),
+			Confidence:              confidence,
+			VerifiedVotes:           votes.Verified,
+			TotalVotes:              votes.Total,
+		})
+	}
+	return recModels, nil
 }
 
 func (runner *DaemonRunner) buildCrowdsourcedVexingContext(ctx context.Context, tx shared.DB, vexRules []models.VEXRule) (services.CrowdsourcedVexingContext, error) {
