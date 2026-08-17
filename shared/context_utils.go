@@ -35,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -91,14 +92,16 @@ type PublicClient interface {
 }
 
 type PublicClientImplementation struct {
-	apiClient    *client.APIClient
-	sessionCache *sessionCache
+	apiClient         *client.APIClient
+	sessionCache      *sessionCache
+	singleflightGroup *singleflight.Group
 }
 
 func NewPublicClient(client *client.APIClient) PublicClientImplementation {
 	return PublicClientImplementation{
-		apiClient:    client,
-		sessionCache: newSessionCache(),
+		apiClient:         client,
+		sessionCache:      newSessionCache(),
+		singleflightGroup: &singleflight.Group{},
 	}
 }
 
@@ -185,9 +188,9 @@ func sessionToMinimalSession(session *client.Session, err error) minimalSession 
 
 const maxNumberOfRetries = 3
 
-func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
+func (publicClient PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
 	// first try to read from the cache
-	cachedSession, ok := a.sessionCache.ReadFromCache(cookie)
+	cachedSession, ok := publicClient.sessionCache.ReadFromCache(cookie)
 	if ok {
 		// now check if it was a successful or unsuccessful verification
 		if cachedSession.err != nil {
@@ -199,7 +202,7 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 	}
 
 	retries := 0
-	session, resp, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+	session, resp, err := publicClient.getIdentitySingleflight(ctx, cookie)
 	for shouldRetry(ctx, err, resp, retries) {
 		retries++
 		slog.Warn("could not get identity from cookie, backing off then retrying", "retry", retries, "error", err)
@@ -208,7 +211,7 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 			return client.Identity{}, ctx.Err()
 		case <-time.After(calculateBackoffTime(retries)):
 		}
-		session, resp, err = a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+		session, resp, err = publicClient.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
 	}
 
 	if err != nil {
@@ -222,7 +225,7 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 			monitoring.Alert("kratos: could not get identity from cookie", err)
 		} else if statusCode == 401 {
 			// cache unsuccessful verifications
-			a.sessionCache.WriteToCache(cookie, session, err)
+			publicClient.sessionCache.WriteToCache(cookie, session, err)
 		}
 		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
 	}
@@ -232,8 +235,26 @@ func (a PublicClientImplementation) GetIdentityFromCookie(ctx context.Context, c
 	}
 
 	// cache successful verifications
-	a.sessionCache.WriteToCache(cookie, session, nil)
+	publicClient.sessionCache.WriteToCache(cookie, session, nil)
 	return *session.Identity, nil
+}
+
+type singleflightResponse struct {
+	session *client.Session
+	resp    *http.Response
+}
+
+// wraps the cookie verification request inside a singleflight
+func (publicClient PublicClientImplementation) getIdentitySingleflight(ctx context.Context, cookie string) (*client.Session, *http.Response, error) {
+	result, err, _ := publicClient.singleflightGroup.Do(cookie, func() (any, error) {
+		session, resp, err := publicClient.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+		return singleflightResponse{session: session, resp: resp}, err
+	})
+	response, ok := result.(singleflightResponse)
+	if !ok {
+		return nil, nil, fmt.Errorf("could not parse singleflight response")
+	}
+	return response.session, response.resp, err
 }
 
 // determines if we should retry based on kratos response
