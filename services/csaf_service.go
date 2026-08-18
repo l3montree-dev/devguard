@@ -521,6 +521,7 @@ func (service csafService) GenerateCSAFReportForVulns(ctx context.Context, orgNa
 		},
 	}
 	if len(vulns) == 0 {
+		csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_base"))
 		return csafDoc, nil
 	}
 
