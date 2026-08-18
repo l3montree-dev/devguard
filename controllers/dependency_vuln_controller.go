@@ -67,7 +67,7 @@ func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnR
 // @Param search query string false "Search term"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/dependency-vulns [get]
-func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) error {
+func (controller *DependencyVulnController) ListByOrgPaged(ctx shared.Context) error {
 
 	userAllowedProjectIds, err := controller.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -104,7 +104,7 @@ func (controller DependencyVulnController) ListByOrgPaged(ctx shared.Context) er
 // @Param search query string false "Search term"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/dependency-vulns [get]
-func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context) error {
+func (controller *DependencyVulnController) ListByProjectPaged(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	pagedResp, err := controller.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIDPaged(
@@ -139,7 +139,7 @@ func (controller DependencyVulnController) ListByProjectPaged(ctx shared.Context
 // @Param search query string false "Search term"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns [get]
-func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
+func (controller *DependencyVulnController) ListPaged(ctx shared.Context) error {
 	formattedSearch := strings.TrimSpace(ctx.QueryParam("search"))
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -238,9 +238,9 @@ func (controller DependencyVulnController) ListPaged(ctx shared.Context) error {
 // @Param body body object true "Request body"
 // @Success 200 {object} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/mitigate [post]
-func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
+func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 	type justification struct {
-		Comment string `json:"comment"`
+		Comment string `json:"comment" validate:"required,max=2000"`
 	}
 
 	var j justification
@@ -248,6 +248,9 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 	err := ctx.Bind(&j)
 	if err != nil {
 		slog.Error("could not bind justification", "err", err)
+	}
+	if err := dtos.V.Struct(&j); err != nil {
+		return echo.NewHTTPError(400, "comment is required").WithInternal(err)
 	}
 
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
@@ -261,6 +264,9 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 		Ctx:           ctx,
 		Justification: j.Comment,
 	}, &userAgent); err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "could not find dependencyVuln")
+		}
 		return echo.NewHTTPError(500, "could not mitigate dependencyVuln").WithInternal(err)
 	}
 
@@ -285,7 +291,7 @@ func (controller DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Param dependencyVulnID path string true "Vulnerability ID"
 // @Success 200 {object} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
-func (controller DependencyVulnController) Read(ctx shared.Context) error {
+func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
@@ -333,7 +339,7 @@ func (controller DependencyVulnController) Read(ctx shared.Context) error {
 // @Param dependencyVulnID path string true "Vulnerability ID"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/hints [get]
-func (controller DependencyVulnController) Hints(ctx shared.Context) error {
+func (controller *DependencyVulnController) Hints(ctx shared.Context) error {
 	//if enabled in org settings we also want to send hints
 	org := shared.GetOrg(ctx)
 
@@ -366,7 +372,7 @@ func (controller DependencyVulnController) Hints(ctx shared.Context) error {
 // @Param body body object true "Request body"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/sync [post]
-func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Context) error {
+func (controller *DependencyVulnController) SyncDependencyVulns(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)
@@ -440,7 +446,7 @@ func (controller DependencyVulnController) SyncDependencyVulns(ctx shared.Contex
 // @Param body body object true "Request body"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [post]
-func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error {
+func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -531,7 +537,7 @@ func (controller DependencyVulnController) CreateEvent(ctx shared.Context) error
 // @Param body body dtos.BatchDependencyVulnStatus true "Request body"
 // @Success 200 {array} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/batch [post]
-func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) error {
+func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -600,7 +606,7 @@ func (controller DependencyVulnController) BatchCreateEvent(ctx shared.Context) 
 // @Param currentValue query string true "Current version value"
 // @Success 200 {object} dtos.Recommendation
 // @Router /renovate/recommendation [get]
-func (controller DependencyVulnController) GetRecommendation(ctx echo.Context) error {
+func (controller *DependencyVulnController) GetRecommendation(ctx echo.Context) error {
 	packageName := ctx.QueryParam("packageName")
 
 	if packageName == "" {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
 )
@@ -41,4 +42,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewAdvisoryService, fx.As(new(shared.AdvisoryService)))),
 	fx.Provide(fx.Annotate(NewCompliancePostureService, fx.As(new(shared.CompliancePostureService)))),
 	fx.Provide(fx.Annotate(NewGitHubVexFetcher, fx.As(new(shared.GitHubVexFetcher)))),
+	fx.Provide(func(db shared.DB) *scan.PurlComparer {
+		return scan.NewPurlComparer(db, nil) // nil to use default cache size
+	}),
 )

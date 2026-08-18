@@ -28,7 +28,7 @@ func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.
 	if groupTitle != nil {
 		additional["group_title"] = *groupTitle
 	}
-	for _, prop := range derefProps(controlProps) {
+	for _, prop := range deref(controlProps) {
 		switch prop.Name {
 		case "sec_level":
 			additional["security_level"] = enrichProp(prop)
@@ -37,14 +37,14 @@ func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.
 		case "tags":
 			additional["tags"] = enrichProp(prop)
 		}
-
 	}
+
 	for _, p := range parts {
 		if p.Name == "guidance" && p.Prose != "" {
 			additional["guidance"] = p.Prose
 		}
 		if p.Name == "statement" {
-			for _, prop := range derefProps(p.Props) {
+			for _, prop := range deref(p.Props) {
 				switch prop.Name {
 				case "modal_verb":
 					additional["importance"] = enrichProp(prop)
@@ -69,7 +69,7 @@ func loadGrundschutzControls() ([]models.FrameworkControl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractControlsFromCatalog(catalog, "Grundschutz++", grundschutzAdditionalMapper), nil
+	return extractControlsFromCatalog(catalog, grundschutzPlusPlus, grundschutzAdditionalMapper), nil
 }
 
 type newProperty struct {

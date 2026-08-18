@@ -37,7 +37,6 @@ type VEXRuleDTO struct {
 	CELExpression           string                      `json:"celExpression"`
 	CreatedByID             string                      `json:"createdById"`
 	CreatedAt               string                      `json:"createdAt"`
-	UpdatedAt               string                      `json:"updatedAt"`
 
 	// Metrics
 	AppliesToAmountOfDependencyVulns int `json:"appliesToAmountOfDependencyVulns"`
@@ -81,14 +80,14 @@ type VexRuleRecommendation struct {
 }
 
 type TestVEXRulesRequest struct {
-	ID            string   `json:"id" validate:"required"`
-	CelExpression []string `json:"celExpression" validate:"required"`
+	CelExpression []string      `json:"celExpression" validate:"required"`
+	EventType     VulnEventType `json:"eventType" validate:"required,oneof=accepted falsePositive reopened"`
 }
 type CreateVEXRuleRequest struct {
 	Title                   string                      `json:"title"`
 	Justification           string                      `json:"justification" validate:"required"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
-	CELExpression           string                      `json:"celExpression"`
-	EventType               VulnEventType               `json:"eventType"`
+	CELExpression           string                      `json:"celExpression" validate:"required"`
+	EventType               VulnEventType               `json:"eventType" validate:"required,oneof=accepted falsePositive reopened"`
 	WasRecommended          bool                        `json:"wasRecommended"`
 }

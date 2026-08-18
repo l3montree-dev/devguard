@@ -25,7 +25,7 @@ type OrgInformation struct {
 }
 
 type UpdateAssetRequest struct {
-	NewSlug string `json:"new_slug"`
+	NewSlug string `json:"new_slug" validate:"required"`
 }
 
 type UpdateInstanceSettingsRequest struct {

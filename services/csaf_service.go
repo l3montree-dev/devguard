@@ -501,10 +501,6 @@ func (service csafService) GenerateCSAFReport(ctx context.Context, orgName strin
 // release-wide report be produced from the union of its items' vulnerabilities.
 func (service csafService) GenerateCSAFReportForVulns(ctx context.Context, orgName string, title *string, vulns []models.DependencyVuln) (gocsaf.Advisory, error) {
 	csafDoc := gocsaf.Advisory{}
-	if len(vulns) == 0 {
-		return csafDoc, fmt.Errorf("no vulnerabilities to build a csaf report from")
-	}
-
 	// build static parts of the document field first
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: new(gocsaf.CSAFVersion20),
@@ -523,6 +519,10 @@ func (service csafService) GenerateCSAFReportForVulns(ctx context.Context, orgNa
 			DocumentTLPLabel: new(gocsaf.TLPLabel(gocsaf.TLPLabelWhite)),
 			URL:              new("https://first.org/tlp"),
 		},
+	}
+	if len(vulns) == 0 {
+		csafDoc.Document.Category = new(gocsaf.DocumentCategory("csaf_base"))
+		return csafDoc, nil
 	}
 
 	tracking, err := generateTrackingObject(ctx, vulns, title)

@@ -58,4 +58,11 @@ func TestGoEcosystem(t *testing.T) {
 			t.Fatalf("expected github.com/foo/bar with empty version, got %q@%q", pkg, version)
 		}
 	})
+
+	t.Run("parse explicit version info path with trailing slash", func(t *testing.T) {
+		pkg, version := golang.parsePackage("/github.com/foo/bar@v/v1.2.3.info/")
+		if pkg != "github.com/foo/bar" || version != "v1.2.3" {
+			t.Fatalf("expected github.com/foo/bar@v1.2.3, got %q@%q", pkg, version)
+		}
+	})
 }

@@ -30,7 +30,8 @@ func (runner *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	start := time.Now()
 
 	// we only compare the cve id, therefore we only need to preload those
-	purlComparer := scan.NewPurlComparer(runner.db, scan.WithPreloads(
+	// disable cache since we are scanning distinct purls
+	purlComparer := scan.NewPurlComparer(runner.db, new(0), scan.WithPreloads(
 		func(db *gorm.DB) *gorm.DB {
 			return db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
 				return db.Select("id", "cve")

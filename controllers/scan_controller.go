@@ -89,7 +89,7 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Success 200
 // @Router /vex [post]
 // vexFormat identifies the serialization of an uploaded VEX document.
-func (s ScanController) UploadVEX(ctx shared.Context) error {
+func (s *ScanController) UploadVEX(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "ScanController.UploadVEX")
 	defer span.End()
 
@@ -458,7 +458,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxSize)
 	defer ctx.Request().Body.Close()
 
-	if err := ctx.Bind(&sarifScan); err != nil {
+	if err := ctx.Bind(&sarifScan); err != nil { // nosemgrep: bind-without-validate -- sarif.SarifSchema210Json is a generated third-party schema type with no validate tags
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err
@@ -631,7 +631,7 @@ func (s *ScanController) FirstPartyVulnScanUnauthenticated(c echo.Context) error
 	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, maxSize)
 	defer c.Request().Body.Close()
 
-	if err := c.Bind(&sarifScan); err != nil {
+	if err := c.Bind(&sarifScan); err != nil { // nosemgrep: bind-without-validate -- sarif.SarifSchema210Json is a generated third-party schema type with no validate tags
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(400, "Invalid SARIF format").WithInternal(err)
@@ -737,7 +737,7 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, maxSize)
 	defer c.Request().Body.Close()
 
-	if err := c.Bind(&sarifScan); err != nil {
+	if err := c.Bind(&sarifScan); err != nil { // nosemgrep: bind-without-validate -- sarif.SarifSchema210Json is a generated third-party schema type with no validate tags
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(400, "Invalid SARIF format").WithInternal(err)
@@ -777,17 +777,15 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
-		slog.Error("error when parsing data")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return echo.NewHTTPError(400, "could not parse multipart form").WithInternal(err)
 	}
 	file, _, err := c.Request().FormFile("file")
 	if err != nil {
-		slog.Error("error when forming file")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return echo.NewHTTPError(400, "file is required").WithInternal(err)
 	}
 	defer file.Close()
 
@@ -879,7 +877,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, maxSize)
 	defer c.Request().Body.Close()
 
-	if err := c.Bind(&sarifScan); err != nil {
+	if err := c.Bind(&sarifScan); err != nil { // nosemgrep: bind-without-validate -- sarif.SarifSchema210Json is a generated third-party schema type with no validate tags
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err

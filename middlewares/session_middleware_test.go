@@ -147,13 +147,14 @@ func TestSessionMiddleware(t *testing.T) {
 		verifier.AssertExpectations(t)
 	})
 
-	t.Run("should fall through to request signature when cookie auth fails", func(t *testing.T) {
+	t.Run("should set no session and skip the remaining auth methods when cookie auth fails", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{
 			Name:  "ory_kratos_session",
 			Value: "bad_cookie",
 		})
+		req.Header.Set("Authorization", "Bearer mytoken123")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
@@ -161,21 +162,22 @@ func TestSessionMiddleware(t *testing.T) {
 		mockAdminClient.On("GetIdentityFromCookie", mock.Anything, "ory_kratos_session=bad_cookie").Return(client.Identity{}, errors.New("invalid cookie"))
 
 		verifier := new(mocks.Authorizer)
-		verifier.On("VerifyRequestSignature", mock.Anything, mock.Anything).Return(shared.NewSession("user4", shared.SessionActorUser, []string{"read"}, false), nil)
 
-		mw := SessionMiddleware(mockAdminClient, newConfigMock(t, shared.InstanceSettings{}), verifier)
+		// a config mock without expectations - the instance settings must not be read either
+		mw := SessionMiddleware(mockAdminClient, mocks.NewConfigService(t), verifier)
 
 		var called bool
 		handler := mw(func(ctx echo.Context) error {
 			called = true
 			sess := shared.GetSession(ctx)
-			assert.Equal(t, "user4", sess.GetActorID())
+			assert.Equal(t, shared.AnonymousSession, sess)
 			return nil
 		})
 
 		_ = handler(c)
 		assert.True(t, called)
-		verifier.AssertExpectations(t)
+		verifier.AssertNotCalled(t, "VerifyAPIToken")
+		verifier.AssertNotCalled(t, "VerifyRequestSignature")
 	})
 
 	t.Run("should set the correct scopes and userID using cookie auth", func(t *testing.T) {
@@ -194,7 +196,7 @@ func TestSessionMiddleware(t *testing.T) {
 			Id: "user2",
 		}, nil)
 
-		mw := SessionMiddleware(mockAdminClient, newConfigMock(t, shared.InstanceSettings{}), nil)
+		mw := SessionMiddleware(mockAdminClient, mocks.NewConfigService(t), nil)
 
 		var called bool
 		handler := mw(func(ctx echo.Context) error {

@@ -244,6 +244,9 @@ func (p *PatController) Delete(c shared.Context) error {
 	// check if the current user is allowed to delete the token
 	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.UserID != session.UserID
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "personal access token not found")
+		}
 		return echo.NewHTTPError(500, "could not read personal access token").WithInternal(err)
 	}
 	// check the owner of the token
@@ -279,6 +282,9 @@ func (p *PatController) DeleteByOrg(c shared.Context) error {
 	// check if the token exists
 	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.OrgID != org.ID
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "organization access token not found")
+		}
 		return echo.NewHTTPError(500, "could not read organization access token").WithInternal(err)
 	}
 	// ensure the token belongs to this org (org write permission is already enforced by the router middleware)
@@ -310,6 +316,9 @@ func (p *PatController) DeleteByProject(c shared.Context) error {
 	// check if the token exists
 	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.ProjectID != project.ID
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "project access token not found")
+		}
 		return echo.NewHTTPError(500, "could not read project access token").WithInternal(err)
 	}
 	// ensure the token belongs to this project (project write permission is already enforced by the router middleware)
@@ -342,6 +351,9 @@ func (p *PatController) DeleteByAsset(c shared.Context) error {
 	// check if the token exists
 	pat, err := p.patRepository.ReadUnscoped(c.Request().Context(), nil, uuid.MustParse(tokenID)) // nosemgrep: bola-controller-read-without-tenant-check -- ownership verified on the next lines: pat.AssetID != asset.ID
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "asset access token not found")
+		}
 		return echo.NewHTTPError(500, "could not read asset access token").WithInternal(err)
 	}
 	// ensure the token belongs to this asset (projassetect write permission is already enforced by the router middleware)

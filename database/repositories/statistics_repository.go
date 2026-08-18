@@ -386,6 +386,7 @@ func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, t
 	JOIN assets b ON a.asset_id = b.id
 	JOIN projects c ON b.project_id = c.id
 	WHERE c.organization_id = ?
+	AND a.dependency_id LIKE 'pkg:%' 	--filter out non components like ROOT
 	GROUP BY a.dependency_id
 	ORDER BY total_amount DESC, a.dependency_id ASC
 	LIMIT ?;`, orgID, limit).Find(&components).Error
@@ -619,6 +620,7 @@ func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Contex
 	COUNT(DISTINCT (cd.asset_id)) AS total_amount,
   	COALESCE(1.0 * COUNT(DISTINCT (cd.asset_id)) / NULLIF((SELECT COUNT(*) FROM assets), 0), 0) as relative_amount
 	FROM component_dependencies cd
+	WHERE cd.dependency_id LIKE 'pkg:%'   -- filter out non components like ROOT
 	GROUP BY cd.dependency_id
 	ORDER BY total_amount DESC, cd.dependency_id ASC
 	LIMIT ?;`, limit).Find(&components).Error

@@ -44,8 +44,9 @@ type licenseResponse struct {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {array} licenseResponse
-// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/components/licenses/ [get]
-func (componentController ComponentController) LicenseDistribution(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/components/licenses [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses [get]
+func (componentController *ComponentController) LicenseDistribution(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 
@@ -107,8 +108,8 @@ func (componentController ComponentController) LicenseDistribution(ctx shared.Co
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} shared.Paged[dtos.ComponentDependencyDTO]
-// @Router /organizations/{orgSlug}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/ [get]
-func (componentController ComponentController) ListPaged(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components [get]
+func (componentController *ComponentController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	filter := shared.GetFilterQuery(ctx)
@@ -205,8 +206,8 @@ func (componentController ComponentController) ListPaged(ctx shared.Context) err
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
-// @Router /organizations/{orgSlug}/projects/{projectSlug}/components/ [get]
-func (componentController ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/components [get]
+func (componentController *ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	// get all child projects as well

@@ -155,6 +155,11 @@ func (i *JiraIntegration) Delete(ctx shared.Context) error {
 
 	err = i.jiraIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return ctx.JSON(404, map[string]any{
+				"message": "Jira integration not found",
+			})
+		}
 		return err
 	}
 
@@ -336,7 +341,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 
 	assetSlug := asset.Slug
 
-	labels := commonint.GetLabels(dependencyVuln)
+	labels := commonint.GetLabels(dependencyVuln, orgSlug, projectSlug, asset.Slug)
 	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
 
 	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
@@ -399,7 +404,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 
 func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *Client, assetVersionSlug string, justification string, orgSlug string, projectSlug string, projectID int) (*CreateIssueResponse, error) {
 
-	labels := commonint.GetLabels(firstPartyVuln)
+	labels := commonint.GetLabels(firstPartyVuln, orgSlug, projectSlug, asset.Slug)
 
 	jiraClient, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {

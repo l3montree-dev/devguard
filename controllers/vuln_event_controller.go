@@ -1,15 +1,13 @@
 package controllers
 
 import (
-	"errors"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	_ "github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
 type VulnEventController struct {
@@ -36,7 +34,8 @@ func NewVulnEventController(vulnEventRepository shared.VulnEventRepository, asse
 // @Param dependencyVulnID path string true "Dependency vulnerability ID"
 // @Success 200 {array} dtos.VulnEventDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/events [get]
-func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/events [get]
+func (c *VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 	vulnID, vulnType, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "vulnID is required").WithInternal(err)
@@ -44,6 +43,9 @@ func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 
 	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(ctx.Request().Context(), nil, vulnID, vulnType)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return ctx.JSON(404, []dtos.VulnEventDTO{})
+		}
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 
@@ -62,7 +64,7 @@ func (c VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {array} dtos.VulnEventDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events [get]
-func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
+func (c *VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
 
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -99,7 +101,7 @@ func (c VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.C
 // @Param eventID path string true "Event ID"
 // @Success 204
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events/{eventID} [delete]
-func (c VulnEventController) DeleteEventByID(ctx shared.Context) error {
+func (c *VulnEventController) DeleteEventByID(ctx shared.Context) error {
 	eventID, err := shared.GetEventID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "eventID is required").WithInternal(err)
@@ -107,7 +109,7 @@ func (c VulnEventController) DeleteEventByID(ctx shared.Context) error {
 
 	err = c.vulnEventRepository.DeleteEventByID(ctx.Request().Context(), nil, eventID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "event not found")
 		}
 		return echo.NewHTTPError(500, "could not delete event").WithInternal(err)

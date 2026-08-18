@@ -5,7 +5,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
-	"gorm.io/gorm"
 )
 
 type WebhookController struct {
@@ -36,7 +34,8 @@ func NewWebhookController(webhookRepository shared.WebhookIntegrationRepository)
 // @Security BearerAuth
 // @Param id path string true "Webhook ID"
 // @Success 200
-// @Router /webhooks/{id} [delete]
+// @Router /organizations/{organization}/integrations/webhook/{id} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/{id} [delete]
 func (w *WebhookController) Delete(ctx shared.Context) error {
 	id := ctx.Param("id")
 	if id == "" {
@@ -49,7 +48,7 @@ func (w *WebhookController) Delete(ctx shared.Context) error {
 	}
 
 	if err := w.webhookRepository.Delete(ctx.Request().Context(), nil, uuidID); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return ctx.JSON(404, "webhook integration not found")
 		}
 		slog.Error("failed to delete webhook integration", "err", err)
@@ -73,13 +72,14 @@ func (w *WebhookController) GetExcessTicketIDs(ctx context.Context, asset models
 // @Security BearerAuth
 // @Param body body object true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
-// @Router /webhooks [put]
+// @Router /organizations/{organization}/integrations/webhook/{id} [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/{id} [put]
 func (w *WebhookController) Update(ctx shared.Context) error {
 	var data struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		URL         string `json:"url"`
+		URL         string `json:"url" validate:"required"`
 		Secret      string `json:"secret"`
 		SbomEnabled bool   `json:"sbomEnabled"`
 		VulnEnabled bool   `json:"vulnEnabled"`
@@ -88,7 +88,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
-	if data.URL == "" {
+	if err := dtos.V.Struct(&data); err != nil {
 		return ctx.JSON(400, "url is required")
 	}
 
@@ -99,7 +99,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 
 	oldWebhookIntegration, err := w.webhookRepository.GetClientByIntegrationID(ctx.Request().Context(), nil, uuidID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return ctx.JSON(404, "webhook integration not found")
 		}
 		slog.Error("failed to get webhook integration by ID", "err", err)
@@ -108,7 +108,8 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 
 	webhookIntegration := &models.WebhookIntegration{
 		Model: models.Model{
-			ID: uuidID,
+			ID:        uuidID,
+			CreatedAt: oldWebhookIntegration.CreatedAt, // Save() writes every column, so carry this over or it resets to the zero time
 		},
 		Name:        &data.Name,
 		Description: &data.Description,
@@ -141,12 +142,13 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param body body object true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
-// @Router /webhooks [post]
+// @Router /organizations/{organization}/integrations/webhook/test-and-save [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test-and-save [post]
 func (w *WebhookController) Save(ctx shared.Context) error {
 	var data struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		URL         string `json:"url"`
+		URL         string `json:"url" validate:"required"`
 		Secret      string `json:"secret"`
 		SbomEnabled bool   `json:"sbomEnabled"`
 		VulnEnabled bool   `json:"vulnEnabled"`
@@ -155,7 +157,7 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
-	if data.URL == "" {
+	if err := dtos.V.Struct(&data); err != nil {
 		return ctx.JSON(400, "url is required")
 	}
 
@@ -199,10 +201,11 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param body body object true "Test webhook data"
 // @Success 200 {object} object{message=string,payloadType=string}
-// @Router /webhooks/test [post]
+// @Router /organizations/{organization}/integrations/webhook/test [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test [post]
 func (w *WebhookController) Test(ctx shared.Context) error {
 	var data struct {
-		URL         string `json:"url"`
+		URL         string `json:"url" validate:"required"`
 		Secret      string `json:"secret"`
 		PayloadType string `json:"payloadType"`
 	}
@@ -210,7 +213,7 @@ func (w *WebhookController) Test(ctx shared.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
-	if data.URL == "" {
+	if err := dtos.V.Struct(&data); err != nil {
 		return ctx.JSON(400, "url is required")
 	}
 
@@ -382,7 +385,6 @@ func (w *WebhookController) WantsToHandleWebhook(ctx shared.Context) bool {
 // @Summary Handle an incoming third-party webhook
 // @Tags Webhooks
 // @Success 200
-// @Router /webhook [post]
 func (w *WebhookController) HandleWebhook(ctx shared.Context) error {
 	// Logic to handle the webhook
 	return nil

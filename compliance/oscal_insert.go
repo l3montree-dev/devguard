@@ -45,10 +45,10 @@ func newResolveContext(catalog *oscalTypes.Catalog) *resolveContext {
 	}
 
 	indexParams(ctx, catalog.Params)
-	for _, g := range derefGroups(catalog.Groups) {
+	for _, g := range deref(catalog.Groups) {
 		indexGroup(ctx, g)
 	}
-	for _, c := range derefControls(catalog.Controls) {
+	for _, c := range deref(catalog.Controls) {
 		indexControl(ctx, c)
 	}
 	return ctx
@@ -59,10 +59,10 @@ func indexGroup(ctx *resolveContext, g oscalTypes.Group) {
 		ctx.Groups[g.ID] = g
 	}
 	indexParams(ctx, g.Params)
-	for _, c := range derefControls(g.Controls) {
+	for _, c := range deref(g.Controls) {
 		indexControl(ctx, c)
 	}
-	for _, sub := range derefGroups(g.Groups) {
+	for _, sub := range deref(g.Groups) {
 		indexGroup(ctx, sub)
 	}
 }
@@ -72,7 +72,7 @@ func indexControl(ctx *resolveContext, c oscalTypes.Control) {
 		ctx.Controls[c.ID] = c
 	}
 	indexParams(ctx, c.Params)
-	for _, sub := range derefControls(c.Controls) {
+	for _, sub := range deref(c.Controls) {
 		indexControl(ctx, sub)
 	}
 }
