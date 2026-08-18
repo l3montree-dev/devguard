@@ -62,7 +62,7 @@ type Weakness struct {
 	CWEID  string `json:"cwe" gorm:"primaryKey;not null;type:text;"`
 }
 
-func (m Weakness) TableName() string {
+func (w Weakness) TableName() string {
 	return "weaknesses"
 }
 
