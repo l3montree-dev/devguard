@@ -163,6 +163,15 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 		// first-party vulns / compliance postures where dependency_vuln_id and asset_signature are
 		// both legitimately NULL. Add it here, scoped to the columns that actually identify a vuln
 		// event, now that we know the signature backfill above has run.
+		// the old one_vuln_parent constraint required exactly one of
+		// dependency_vuln_id/license_risk_id/first_party_vuln_id/compliance_posture_id
+		// to be set, which rejects asset_signature-only group events outright -
+		// superseded by the constraint added below.
+		if err := tx.Exec(`
+			ALTER TABLE public.vuln_events DROP CONSTRAINT IF EXISTS one_vuln_parent
+		`).Error; err != nil {
+			return fmt.Errorf("failed to drop vuln_events one_vuln_parent constraint: %w", err)
+		}
 		if err := tx.Exec(`
 		ALTER TABLE public.vuln_events
 			ADD CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature

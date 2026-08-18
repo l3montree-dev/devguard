@@ -49,6 +49,8 @@ ALTER TABLE public.vuln_events
 
 CREATE INDEX IF NOT EXISTS idx_vuln_events_asset_signature ON public.vuln_events (asset_signature);
 
+ALTER TABLE public.vuln_events DROP CONSTRAINT IF EXISTS one_vuln_parent;
+
 -- The check constraint tying dependency_vuln_id/asset_signature together is added in the
 -- hash_migration.go Go migration instead of here: existing installations already have millions
 -- of vuln_events rows for license risks/first-party vulns/compliance postures where both of these

@@ -80,8 +80,8 @@ type VexRuleRecommendation struct {
 }
 
 type TestVEXRulesRequest struct {
-	ID            string   `json:"id" validate:"required"`
-	CelExpression []string `json:"celExpression" validate:"required"`
+	CelExpression []string      `json:"celExpression" validate:"required"`
+	EventType     VulnEventType `json:"eventType" validate:"required,oneof=accepted falsePositive reopened"`
 }
 type CreateVEXRuleRequest struct {
 	Title                   string                      `json:"title"`

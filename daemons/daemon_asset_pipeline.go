@@ -726,7 +726,6 @@ func (runner *DaemonRunner) ApplyVEXRules(input <-chan assetWithProjectAndOrg, e
 				out <- assetWithDetails
 				continue
 			}
-
 			runner.applyVEXRules(stageCtx, asset, rules)
 
 			span.End()
@@ -756,7 +755,6 @@ func (runner *DaemonRunner) applyVEXRules(ctx context.Context, asset models.Asse
 			slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID, "state", state)
 			continue
 		}
-
 		groupEvents, err := services.ComputeGroupVEXRuleEvents(ctx, rulesForState, representativeVulns)
 		if err != nil {
 			slog.Error("failed to apply VEX rules to vulns", "error", err, "assetID", asset.ID, "state", state)

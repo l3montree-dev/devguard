@@ -539,7 +539,10 @@ func (repository *dependencyVulnRepository) GetVulnsDistinctBySignature(ctx cont
 	var vulns = []models.DependencyVuln{}
 	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE", func(db *gorm.DB) *gorm.DB {
 		return db.Omit("Description", "References")
-	}).Where("asset_id = ? AND state = ?", assetID, state).Distinct("signature").Find(&vulns).Error; err != nil {
+	}).Select("DISTINCT ON (signature) *").
+		Where("asset_id = ? AND state = ?", assetID, state).
+		Order("signature ASC, id ASC").
+		Find(&vulns).Error; err != nil {
 		return nil, err
 	}
 	return vulns, nil
