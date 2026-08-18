@@ -2352,7 +2352,7 @@ func TestPathPatternVEXRules(t *testing.T) {
 			// Create a VEX rule via the new dedicated endpoint
 			pathPattern := []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"}
 			celExpression := fmt.Sprintf(`vuln.cveId == "CVE-2025-46569" && matchesPattern(vuln, [%q])`, pathPattern[0])
-			ruleBody := fmt.Sprintf(`{"justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","celExpression":%q}`, celExpression)
+			ruleBody := fmt.Sprintf(`{"justification":"Not exploitable in our context","mechanicalJustification":"componentNotPresent","celExpression":%q,"eventType":"falsePositive"}`, celExpression)
 			recorder = httptest.NewRecorder()
 			req = httptest.NewRequest("POST", "/false-positive-rules", strings.NewReader(ruleBody))
 			req.Header.Set("Content-Type", "application/json")

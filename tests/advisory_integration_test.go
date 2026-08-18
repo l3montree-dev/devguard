@@ -38,11 +38,12 @@ func TestAdvisoryUpdateDoesNotDuplicateAffectedPackages(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.AdvisoryController
 		app := echo.New()
-		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
 			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
 			shared.SetSession(ctx, authSession)
@@ -135,11 +136,12 @@ func TestAdvisoryUpdateRemovesDroppedAffectedPackage(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.AdvisoryController
 		app := echo.New()
-		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
 			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
 			shared.SetSession(ctx, authSession)
@@ -222,11 +224,12 @@ func TestAdvisoryReadCSAFOfDifferentOrg(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		controller := f.App.AdvisoryController
 		app := echo.New()
-		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		setupContext := func(ctx shared.Context) {
 			authSession := NewUserSession(t, "victim")
 			shared.SetAsset(ctx, asset)
+			shared.SetAssetVersion(ctx, assetVersion)
 			shared.SetProject(ctx, project)
 			shared.SetOrg(ctx, org)
 			shared.SetSession(ctx, authSession)
@@ -274,7 +277,7 @@ func TestAdvisoryReadCSAFOfDifferentOrg(t *testing.T) {
 		attackCtx := app.NewContext(attackReq, attackRecorder)
 		attackCtx.SetParamNames("year", "version")
 		currentYear := advisories[0].CreatedAt.Year()
-		version := fmt.Sprintf("dgsa-%d-%d.json", currentYear, advisoryID)
+		version := fmt.Sprintf("dgsa-%s.json", advisoryID)
 		attackCtx.SetParamValues(strconv.Itoa(currentYear), version)
 		shared.SetOrg(attackCtx, attackOrg)
 		shared.SetProject(attackCtx, attackProject)

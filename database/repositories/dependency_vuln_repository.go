@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -72,13 +73,59 @@ func (repository *dependencyVulnRepository) GetByAssetID(ctx context.Context, tx
 
 func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, tx *gorm.DB, vexRuleID string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	err := repository.Repository.GetDB(ctx, tx).Model(&models.VulnEvent{}).Select("DISTINCT dependency_vulns.*").Joins("JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id").Where("vuln_events.vex_rule_id = ?", vexRuleID).Preload("Events", func(db *gorm.DB) *gorm.DB {
+	err := repository.Repository.GetDB(ctx, tx).Model(&models.VulnEvent{}).Select("DISTINCT dependency_vulns.*").
+		Joins("JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id OR (vuln_events.asset_signature IS NOT NULL AND vuln_events.asset_signature = dependency_vulns.asset_signature)").
+		Where("vuln_events.vex_rule_id = ?", vexRuleID).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Events.VexRule").Find(&dependencyVulns).Error
 	if err != nil {
 		return nil, err
 	}
+	if err := repository.attachGroupEvents(ctx, tx, dependencyVulns); err != nil {
+		return nil, err
+	}
 	return dependencyVulns, nil
+}
+
+func (repository *dependencyVulnRepository) attachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln) error {
+	if len(vulns) == 0 {
+		return nil
+	}
+
+	seen := make(map[int64]bool, len(vulns))
+	signatures := make([]int64, 0, len(vulns))
+	for _, vuln := range vulns {
+		if !seen[vuln.AssetSignature] {
+			seen[vuln.AssetSignature] = true
+			signatures = append(signatures, vuln.AssetSignature)
+		}
+	}
+
+	var groupEvents []models.VulnEvent
+	if err := repository.Repository.GetDB(ctx, tx).Preload("VexRule").
+		Where("asset_signature IN (?)", signatures).Order("created_at ASC").Find(&groupEvents).Error; err != nil {
+		return err
+	}
+	if len(groupEvents) == 0 {
+		return nil
+	}
+
+	eventsBySignature := make(map[int64][]models.VulnEvent, len(signatures))
+	for _, ev := range groupEvents {
+		eventsBySignature[*ev.AssetSignature] = append(eventsBySignature[*ev.AssetSignature], ev)
+	}
+
+	for i := range vulns {
+		extra, ok := eventsBySignature[vulns[i].AssetSignature]
+		if !ok {
+			continue
+		}
+		vulns[i].Events = append(vulns[i].Events, extra...)
+		sort.Slice(vulns[i].Events, func(a, b int) bool {
+			return vulns[i].Events[a].CreatedAt.Before(vulns[i].Events[b].CreatedAt)
+		})
+	}
+	return nil
 }
 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error) {
@@ -303,8 +350,15 @@ func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB
 	err := db.Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Events.VexRule").Joins("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").Preload("Artifacts").First(&t).Error
+	if err != nil {
+		return t, err
+	}
 
-	return t, err
+	vulns := []models.DependencyVuln{t}
+	if err := repository.attachGroupEvents(ctx, tx, vulns); err != nil {
+		return t, err
+	}
+	return vulns[0], nil
 }
 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByPurl(ctx context.Context, tx *gorm.DB, purl []string) ([]models.DependencyVuln, error) {

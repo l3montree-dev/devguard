@@ -73,8 +73,7 @@ func TestDaemonPipelineApplyVEXRulesAppliesExistingRuleToExistingVuln(t *testing
 		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
 
-		var updatedVuln models.DependencyVuln
-		err = f.DB.Preload("Events").First(&updatedVuln, "id = ?", vulnerability.ID).Error
+		updatedVuln, err := f.App.DependencyVulnRepository.Read(context.Background(), nil, vulnerability.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State, "vuln should have been accepted by the VEX rule")
 
@@ -152,8 +151,7 @@ func TestDaemonPipelineApplyVEXRulesReopensAcceptedVuln(t *testing.T) {
 		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
 
-		var updatedVuln models.DependencyVuln
-		err = f.DB.Preload("Events").First(&updatedVuln, "id = ?", vulnerability.ID).Error
+		updatedVuln, err := f.App.DependencyVulnRepository.Read(context.Background(), nil, vulnerability.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, dtos.VulnStateOpen, updatedVuln.State, "vuln should have been reopened by the VEX rule")
 	})

@@ -300,21 +300,16 @@ func DiffVEXRulesForSource(newRules []models.VEXRule, existingRules []models.VEX
 	return result.OnlyInA, result.OnlyInB
 }
 
-func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.DependencyVuln, vexRules []models.VEXRule, assetIDsForSession []string) (map[uuid.UUID][]models.VEXRule, error) {
-	assetIDSet := make(map[string]struct{}, len(assetIDsForSession))
-	for _, id := range assetIDsForSession {
-		assetIDSet[id] = struct{}{}
+// MatchingRules evaluates vexRules against vulns and returns, per vuln, every
+// rule that matched. Callers are responsible for scoping vexRules to whatever
+// session/access rules apply beforehand.
+func MatchingRules(ctx context.Context, vulns []models.DependencyVuln, vexRules []models.VEXRule) (map[uuid.UUID][]models.VEXRule, error) {
+	ruleByID := make(map[string]models.VEXRule, len(vexRules))
+	for _, rule := range vexRules {
+		ruleByID[rule.ID] = rule
 	}
 
-	sessionRuleMap := make(map[string]models.VEXRule, len(vexRules))
-	sessionRules := make([]models.VEXRule, 0, len(vexRules))
-	for _, rule := range vexRules {
-		if _, ok := assetIDSet[rule.AssetID.String()]; ok {
-			sessionRuleMap[rule.ID] = rule
-			sessionRules = append(sessionRules, rule)
-		}
-	}
-	compiledRules, err := vexrules.CompileRules(ctx, utils.Map(sessionRules, transformer.VEXRuleToUpstreamVEXRule))
+	compiledRules, err := vexrules.CompileRules(ctx, utils.Map(vexRules, transformer.VEXRuleToUpstreamVEXRule))
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile VEX rules: %w", err)
 	}
@@ -339,7 +334,7 @@ func MatchingSessionAccessibleRules(ctx context.Context, vulns []models.Dependen
 			return nil, fmt.Errorf("failed to parse vulnID %s: %w", vulnID, err)
 		}
 		for _, ruleID := range matchingRuleIDs {
-			result[parsedVulnID] = append(result[parsedVulnID], sessionRuleMap[ruleID])
+			result[parsedVulnID] = append(result[parsedVulnID], ruleByID[ruleID])
 		}
 	}
 

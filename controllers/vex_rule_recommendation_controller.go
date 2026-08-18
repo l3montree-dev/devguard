@@ -1,13 +1,15 @@
 package controllers
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -65,23 +67,23 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	vexRules, err := c.vexRuleRepository.All(reqCtx, nil)
+	sessionAssetIDs, err := sessionAssetIDsExcluding(ctx, vuln.AssetID)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	assetIDs, err := sessionAvailableAssetIDs(ctx)
+	vexRules, err := c.vexRuleRepository.FindByAssetIDs(reqCtx, nil, sessionAssetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	matchingSessionRules, err := services.MatchingSessionAccessibleRules(reqCtx, []models.DependencyVuln{vuln}, vexRules, assetIDs)
+	matchingSessionRules, err := services.MatchingRules(reqCtx, []models.DependencyVuln{vuln}, vexRules)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
 	// we need to get the amount of dependency vulns, this rule applies to, so we can set the AppliesToAmountOfDependencyVulns field in the recommendation DTO
-	allOpenVulns, err := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, vuln.AssetID, -1))
+	allOpenVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, vuln.AssetID, dtos.VulnStateOpen)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
@@ -147,24 +149,55 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 	asset := shared.GetAsset(ctx)
 	span.SetAttributes(attribute.String("asset.id", asset.ID.String()))
 
-	vulns, err := utils.CollectSeq2(c.dependencyVulnRepository.GetAllOpenVulnsByAssetIDWithoutEvents(reqCtx, nil, asset.ID, -1))
+	sessionAssetIDs, err := sessionAssetIDsExcluding(ctx, asset.ID)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
+
+	vexRules, err := c.vexRuleRepository.FindByAssetIDs(reqCtx, nil, sessionAssetIDs)
+	if err != nil {
+		return traceErr(span, 500, "Could not calculate recommendation.", err)
+	}
+	if len(vexRules) == 0 {
+		return ctx.JSON(200, []dtos.VexRuleRecommendation{})
+	}
+
+	// split vexrules into open and closed
+	reopenRules := make([]models.VEXRule, 0)
+	closedRules := make([]models.VEXRule, 0)
+	for _, rule := range vexRules {
+		if rule.EventType == dtos.EventTypeReopened {
+			reopenRules = append(reopenRules, rule)
+		} else {
+			closedRules = append(closedRules, rule)
+		}
+	}
+
+	// closed rules (accept/false-positive) only make sense against open vulns, and
+	// reopen rules only make sense against already-accepted vulns - so match each
+	// rule set against its own vuln set instead of running every rule against every vuln.
+	openVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, asset.ID, dtos.VulnStateOpen)
+	if err != nil {
+		return traceErr(span, 500, "Could not calculate recommendation.", err)
+	}
+	acceptedVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, asset.ID, dtos.VulnStateAccepted)
+	if err != nil {
+		return traceErr(span, 500, "Could not calculate recommendation.", err)
+	}
+	vulns := append(openVulns, acceptedVulns...)
 	span.SetAttributes(attribute.Int("dependencyVulns.total", len(vulns)))
 
-	vexRules, err := c.vexRuleRepository.All(reqCtx, nil)
+	matchingClosedRules, err := services.MatchingRules(reqCtx, openVulns, closedRules)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
-	hasAccessToAssetIDs, err := sessionAvailableAssetIDs(ctx)
+	matchingReopenRules, err := services.MatchingRules(reqCtx, acceptedVulns, reopenRules)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
-
-	matchingSessionRules, err := services.MatchingSessionAccessibleRules(reqCtx, vulns, vexRules, hasAccessToAssetIDs)
-	if err != nil {
-		return traceErr(span, 500, "Could not calculate recommendation.", err)
+	matchingSessionRules := matchingClosedRules
+	for vulnID, rules := range matchingReopenRules {
+		matchingSessionRules[vulnID] = append(matchingSessionRules[vulnID], rules...)
 	}
 	// fetch all assets for the matched rules in one query to avoid N+1 queries
 	assetIDs := make([]uuid.UUID, 0, len(matchingSessionRules))
@@ -229,6 +262,10 @@ func buildDedupedVexRuleRecommendations(matchingSessionRules map[uuid.UUID][]mod
 	for _, recommendation := range recommendationsByKey {
 		recommendations = append(recommendations, recommendation)
 	}
+
+	slices.SortFunc(recommendations, func(a, b dtos.VexRuleRecommendation) int {
+		return strings.Compare(a.Title, b.Title)
+	})
 
 	return recommendations
 }

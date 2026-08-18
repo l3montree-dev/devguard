@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -36,6 +37,25 @@ func traceErr(span oteltrace.Span, statusCode int, msg string, err error) error 
 func sessionAvailableAssetIDs(ctx shared.Context) ([]string, error) {
 	rbac := shared.GetRBAC(ctx)
 	return rbac.GetAllAssetsForSession(ctx.Request().Context(), shared.GetSession(ctx))
+}
+
+// sessionAssetIDsExcluding resolves the session's accessible asset IDs as
+// uuid.UUID, leaving out excludeAssetID.
+func sessionAssetIDsExcluding(ctx shared.Context, excludeAssetID uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := sessionAvailableAssetIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	assetIDs := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		parsed, err := uuid.Parse(id)
+		if err != nil || parsed == excludeAssetID {
+			continue
+		}
+		assetIDs = append(assetIDs, parsed)
+	}
+	return assetIDs, nil
 }
 
 func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {

@@ -467,7 +467,7 @@ func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) erro
 		event := events[i]
 		if event.Type == dtos.EventTypeRawRiskAssessmentUpdated {
 			continue
-		} else if event.CreatedByVexRule {
+		} else if event.CreatedByVexRule && event.Type != dtos.EventTypeReopened {
 			return echo.NewHTTPError(400, "cannot create a new event. The last event was created by a VEX rule. Please create a new event of type 'rawRiskAssessmentUpdated' to override the risk assessment created by the VEX rule.")
 		}
 		break
