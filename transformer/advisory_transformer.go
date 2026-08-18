@@ -18,7 +18,10 @@ func AdvisoryCreateRequestToModel(c dtos.AdvisoryCreate) models.Advisory {
 		AffectedPackages: components,
 		Severity:         c.Severity,
 		VectorString:     c.VectorString,
-		AssetID:          c.AssetID,
+		Vulnerability: models.Vulnerability{
+			AssetID: c.AssetID,
+			State:   dtos.VulnStateDraft,
+		},
 	}
 }
 
@@ -45,10 +48,6 @@ func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdate, advisory models.Advisor
 	if c.AssetID != nil {
 		advisory.AssetID = *c.AssetID
 	}
-	if c.State != nil {
-		advisory.State = *c.State
-	}
-
 	return advisory
 }
 

@@ -71,7 +71,8 @@ const (
 	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
 	VulnStateImplemented       VulnState = "implemented"   // for compliance posture
 	VulnStateNotApplicable     VulnState = "notApplicable" // for compliance posture
-	VulnStatePublished         VulnState = "published"     // for advisory
+	VulnStateDraft             VulnState = "draft"         // for advisory
+	VulnStatePublished         VulnState = "public"        // for advisory
 	VulnStateWithdrawn         VulnState = "withdrawn"     // for advisory
 )
 

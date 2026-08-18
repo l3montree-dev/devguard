@@ -18,28 +18,24 @@ package statemachine
 import (
 	"fmt"
 	"slices"
+
+	"github.com/l3montree-dev/devguard/dtos"
 )
 
-const (
-	StateDraft     = "draft"
-	StatePublic    = "public"
-	StateWithdrawn = "withdrawn"
-)
-
-var validTransitions = map[string][]string{
-	StatePublic:    {StateDraft},
-	StateWithdrawn: {StatePublic},
+var validTransitions = map[dtos.VulnState][]dtos.VulnState{
+	dtos.VulnStatePublished: {dtos.VulnStateDraft},
+	dtos.VulnStateWithdrawn: {dtos.VulnStatePublished},
 }
 
-func CheckStateTransition(currentState string, newState string) error {
+func CheckStateTransition(currentState dtos.VulnState, newState dtos.VulnState) error {
 	if states, ok := validTransitions[newState]; ok && slices.Contains(states, currentState) {
 		return nil
 	}
 	return fmt.Errorf("invalid state transfer")
 }
 
-func CanDelete(currentState string) error {
-	if currentState == StateDraft {
+func CanDelete(currentState dtos.VulnState) error {
+	if currentState == dtos.VulnStateDraft {
 		return nil
 	}
 	return fmt.Errorf("advisory can not be deleted")

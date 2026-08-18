@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -35,12 +34,7 @@ func (s *AdvisoryService) ReadAdvisory(ctx context.Context, tx shared.DB, id uui
 	return s.advisoryRepository.ReadAdvisory(ctx, tx, id)
 }
 
-func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory, currentState string) error {
-	if currentState != advisory.State {
-		if err := statemachine.CheckStateTransition(currentState, advisory.State); err != nil {
-			return fmt.Errorf("invalid state change from %q to %q: %w", currentState, advisory.State, err)
-		}
-	}
+func (s *AdvisoryService) Update(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory) error {
 	return s.advisoryRepository.Update(ctx, tx, id, advisory)
 }
 

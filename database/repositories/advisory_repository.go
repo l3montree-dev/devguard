@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -66,7 +67,7 @@ func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *go
 	db := advisoryRepository.GetDB(ctx, tx)
 
 	return db.Transaction(func(tx *gorm.DB) error {
-		if err := withOwnershipScope(ctx, tx.Model(advisory), advisory).Association("AffectedPackages").Replace(advisory.AffectedPackages); err != nil {
+		if err := tx.Model(advisory).Association("AffectedPackages").Replace(advisory.AffectedPackages); err != nil {
 			return err
 		}
 		if err := tx.Omit("AffectedPackages").Save(advisory).Error; err != nil {
@@ -84,7 +85,7 @@ func (advisoryRepository *AdvisoryRepository) Update(ctx context.Context, tx *go
 }
 
 func (advisoryRepository *AdvisoryRepository) Delete(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
-	err := advisoryRepository.GetDB(ctx, tx).Delete(&models.Advisory{ID: id}).Error
+	err := advisoryRepository.GetDB(ctx, tx).Delete(&models.Advisory{Vulnerability: models.Vulnerability{ID: id}}).Error
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx cont
 	err := advisoryRepository.GetDB(ctx, tx).
 		Preload("AffectedPackages").
 		Where("asset_id = ?", assetID).
-		Where("state IN ?", []string{statemachine.StatePublic, statemachine.StateWithdrawn}).
+		Where("state IN ?", []dtos.VulnState{dtos.VulnStatePublished, dtos.VulnStateWithdrawn}).
 		Find(&advisories).Error
 	return advisories, err
 

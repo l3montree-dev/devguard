@@ -59,6 +59,7 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 
 	newAdvisory := transformer.AdvisoryCreateRequestToModel(req)
 	newAdvisory.AssetID = shared.GetAsset(ctx).ID
+	newAdvisory.AssetVersionName = shared.GetAssetVersion(ctx).Name
 
 	err := controller.advisoryService.Create(ctx.Request().Context(), nil, &newAdvisory)
 
@@ -157,12 +158,10 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 		return echo.NewHTTPError(404, "advisory not found")
 	}
 
-	currentState := advisory.State
-
 	advisory = transformer.AdvisoryUpdateRequestToModel(req, advisory)
 	advisory.AssetID = shared.GetAsset(ctx).ID
 
-	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory, currentState)
+	err = controller.advisoryService.Update(ctx.Request().Context(), nil, parsedID, &advisory)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not update advisory").WithInternal(err)

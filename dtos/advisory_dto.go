@@ -32,7 +32,6 @@ type AdvisoryUpdate struct {
 	Severity         *string           `json:"severity"`
 	VectorString     *string           `json:"vectorString"`
 	AssetID          *uuid.UUID        `json:"assetID"`
-	State            *string           `json:"state"`
 }
 
 type AdvisoryDTO struct {
@@ -43,7 +42,7 @@ type AdvisoryDTO struct {
 	Severity         string            `json:"severity"`
 	VectorString     string            `json:"vectorString"`
 	AssetID          uuid.UUID         `json:"assetID"`
-	State            string            `json:"state"`
+	State            VulnState         `json:"state"`
 }
 
 type AffectedPackage struct {

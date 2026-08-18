@@ -1,24 +1,18 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"gorm.io/gorm"
 )
 
 type Advisory struct {
-	Vulnerability    `gorm:"-"`
-	ID               uuid.UUID         `json:"id" gorm:"primaryKey;type:uuid;column:id;default:gen_random_uuid()"`
-	CreatedAt        time.Time         `json:"createdAt"`
-	UpdatedAt        time.Time         `json:"updatedAt"`
+	Vulnerability
 	Title            string            `json:"title" gorm:"type:text;column:title"`
 	Description      string            `json:"description" gorm:"type:text;column:description"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages" gorm:"many2many:advisories_affected_packages;foreignKey:ID;joinForeignKey:advisory_id;References:ID;joinReferences:affected_package_id;constraint:OnDelete:CASCADE"`
 	Severity         string            `json:"severity" gorm:"type:text;column:severity"`
 	VectorString     string            `json:"vectorString" gorm:"type:text;column:vector_string"`
-	AssetID          uuid.UUID         `json:"assetID" gorm:"type:uuid;column:asset_id"`
-	State            string            `json:"state" gorm:"type:text;column:state;default:draft"`
 	Events           []VulnEvent       `json:"events" gorm:"foreignKey:SecurityAdvisoryID;constraint:OnDelete:CASCADE;"`
 }
 type AffectedPackage struct {
@@ -42,24 +36,11 @@ func (m Advisory) GetType() dtos.VulnType {
 	return dtos.VulnTypeSecurityAdvisory
 }
 
-func (m *Advisory) SetState(state dtos.VulnState) {
-	switch state {
-	case dtos.VulnStatePublished:
-		m.State = "public"
-	case dtos.VulnStateWithdrawn:
-		m.State = "withdrawn"
+func (m *Advisory) BeforeSave(tx *gorm.DB) error {
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
 	}
-}
-
-func (m *Advisory) GetState() dtos.VulnState {
-	switch m.State {
-	case "public":
-		return dtos.VulnStatePublished
-	case "withdrawn":
-		return dtos.VulnStateWithdrawn
-	default:
-		return dtos.VulnState(m.State)
-	}
+	return nil
 }
 
 func (m Advisory) GetEvents() []VulnEvent {
