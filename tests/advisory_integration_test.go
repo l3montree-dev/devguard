@@ -100,12 +100,12 @@ func TestAdvisoryUpdateDoesNotDuplicateAffectedPackages(t *testing.T) {
 		}`, packageID)
 
 		patchOnce := func() {
-			req := httptest.NewRequest("PATCH", "/advisory/"+strconv.FormatInt(advisoryID, 10)+"/", bytes.NewBufferString(patchBody))
+			req := httptest.NewRequest("PATCH", "/advisory/"+advisoryID.String()+"/", bytes.NewBufferString(patchBody))
 			req.Header.Set("Content-Type", "application/json")
 			recorder := httptest.NewRecorder()
 			ctx := app.NewContext(req, recorder)
 			ctx.SetParamNames("id")
-			ctx.SetParamValues(strconv.FormatInt(advisoryID, 10))
+			ctx.SetParamValues(advisoryID.String())
 			setupContext(ctx)
 			assert.Nil(t, controller.Update(ctx))
 			assert.Equal(t, 200, recorder.Code)
@@ -191,12 +191,12 @@ func TestAdvisoryUpdateRemovesDroppedAffectedPackage(t *testing.T) {
 			"visibility": "draft"
 		}`, keptID)
 
-		req := httptest.NewRequest("PATCH", "/advisory/"+strconv.FormatInt(advisoryID, 10)+"/", bytes.NewBufferString(patchBody))
+		req := httptest.NewRequest("PATCH", "/advisory/"+advisoryID.String()+"/", bytes.NewBufferString(patchBody))
 		req.Header.Set("Content-Type", "application/json")
 		recorder := httptest.NewRecorder()
 		ctx := app.NewContext(req, recorder)
 		ctx.SetParamNames("id")
-		ctx.SetParamValues(strconv.FormatInt(advisoryID, 10))
+		ctx.SetParamValues(advisoryID.String())
 		setupContext(ctx)
 		assert.Nil(t, controller.Update(ctx))
 		assert.Equal(t, 200, recorder.Code)

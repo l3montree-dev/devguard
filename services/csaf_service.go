@@ -1193,7 +1193,7 @@ func (service csafService) GenerateCSAFReportForAdvisory(ctx context.Context, ad
 		return csafDoc, fmt.Errorf("no affected packages found for asset %s", advisory.AssetID)
 	}
 
-	cveID := fmt.Sprintf("DGSA-%d-%d", advisory.CreatedAt.Year(), advisory.ID)
+	cveID := fmt.Sprintf("DGSA-%s", advisory.ID)
 
 	csafDoc.Document = &gocsaf.Document{
 		CSAFVersion: new(gocsaf.CSAFVersion20),
@@ -1303,12 +1303,12 @@ func generateProductTreeForAdvisory(ctx context.Context, assetID uuid.UUID, affe
 
 func versRangeForAffectedPackage(ap models.AffectedPackage) string {
 	switch {
-	case ap.SemverIntroduced != nil && ap.SemverFixed != nil:
-		return fmt.Sprintf("vers:%s/>=%s|<%s", ap.Ecosystem, *ap.SemverIntroduced, *ap.SemverFixed)
-	case ap.SemverIntroduced != nil:
-		return fmt.Sprintf("vers:%s/>=%s", ap.Ecosystem, *ap.SemverIntroduced)
-	case ap.SemverFixed != nil:
-		return fmt.Sprintf("vers:%s/<%s", ap.Ecosystem, *ap.SemverFixed)
+	case ap.VersionIntroduced != nil && ap.VersionFixed != nil:
+		return fmt.Sprintf("vers:%s/>=%s|<%s", ap.Ecosystem, *ap.VersionIntroduced, *ap.VersionFixed)
+	case ap.VersionIntroduced != nil:
+		return fmt.Sprintf("vers:%s/>=%s", ap.Ecosystem, *ap.VersionIntroduced)
+	case ap.VersionFixed != nil:
+		return fmt.Sprintf("vers:%s/<%s", ap.Ecosystem, *ap.VersionFixed)
 	default:
 		return fmt.Sprintf("vers:%s/*", ap.Ecosystem)
 	}
@@ -1349,8 +1349,8 @@ func generateVulnerabilityObjectsForAdvisory(advisory *models.Advisory, cveID st
 		productID := productIDForAffectedPackage(ap)
 		knownAffected = append(knownAffected, new(productID))
 
-		if ap.SemverFixed != nil {
-			details := fmt.Sprintf("Upgrade %s to version %s or later.", ap.PackageName, *ap.SemverFixed)
+		if ap.VersionFixed != nil {
+			details := fmt.Sprintf("Upgrade %s to version %s or later.", ap.PackageName, *ap.VersionFixed)
 			remediations = append(remediations, &gocsaf.Remediation{
 				Category:   new(gocsaf.CSAFRemediationCategoryVendorFix),
 				Details:    &details,

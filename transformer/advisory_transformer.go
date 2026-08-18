@@ -18,7 +18,10 @@ func AdvisoryCreateRequestToModel(c dtos.AdvisoryCreate) models.Advisory {
 		AffectedPackages: components,
 		Severity:         c.Severity,
 		VectorString:     c.VectorString,
-		AssetID:          c.AssetID,
+		Vulnerability: models.Vulnerability{
+			AssetID: c.AssetID,
+			State:   dtos.VulnStateDraft,
+		},
 	}
 }
 
@@ -45,19 +48,15 @@ func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdate, advisory models.Advisor
 	if c.AssetID != nil {
 		advisory.AssetID = *c.AssetID
 	}
-	if c.Visibility != nil {
-		advisory.Visibility = *c.Visibility
-	}
-
 	return advisory
 }
 
 func AffectedPackageToModel(c dtos.AffectedPackage) models.AffectedPackage {
 	return models.AffectedPackage{
-		Model:            models.Model{ID: c.ID},
-		Ecosystem:        c.Ecosystem,
-		PackageName:      c.PackageName,
-		SemverIntroduced: c.SemverIntroduced,
-		SemverFixed:      c.SemverFixed,
+		Model:             models.Model{ID: c.ID},
+		Ecosystem:         c.Ecosystem,
+		PackageName:       c.PackageName,
+		VersionIntroduced: c.VersionIntroduced,
+		VersionFixed:      c.VersionFixed,
 	}
 }

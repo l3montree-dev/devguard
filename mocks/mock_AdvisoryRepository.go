@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // NewAdvisoryRepository creates a new instance of AdvisoryRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -40,6 +41,75 @@ func (_m *AdvisoryRepository) EXPECT() *AdvisoryRepository_Expecter {
 	return &AdvisoryRepository_Expecter{mock: &_m.Mock}
 }
 
+// ApplyAndSave provides a mock function for the type AdvisoryRepository
+func (_mock *AdvisoryRepository) ApplyAndSave(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, vulnEvent *models.VulnEvent) error {
+	ret := _mock.Called(ctx, tx, advisory, vulnEvent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAndSave")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *models.Advisory, *models.VulnEvent) error); ok {
+		r0 = returnFunc(ctx, tx, advisory, vulnEvent)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AdvisoryRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
+type AdvisoryRepository_ApplyAndSave_Call struct {
+	*mock.Call
+}
+
+// ApplyAndSave is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - advisory *models.Advisory
+//   - vulnEvent *models.VulnEvent
+func (_e *AdvisoryRepository_Expecter) ApplyAndSave(ctx any, tx any, advisory any, vulnEvent any) *AdvisoryRepository_ApplyAndSave_Call {
+	return &AdvisoryRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, advisory, vulnEvent)}
+}
+
+func (_c *AdvisoryRepository_ApplyAndSave_Call) Run(run func(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, vulnEvent *models.VulnEvent)) *AdvisoryRepository_ApplyAndSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 *models.Advisory
+		if args[2] != nil {
+			arg2 = args[2].(*models.Advisory)
+		}
+		var arg3 *models.VulnEvent
+		if args[3] != nil {
+			arg3 = args[3].(*models.VulnEvent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AdvisoryRepository_ApplyAndSave_Call) Return(err error) *AdvisoryRepository_ApplyAndSave_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AdvisoryRepository_ApplyAndSave_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, advisory *models.Advisory, vulnEvent *models.VulnEvent) error) *AdvisoryRepository_ApplyAndSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type AdvisoryRepository
 func (_mock *AdvisoryRepository) Create(ctx context.Context, tx shared.DB, advisory *models.Advisory) error {
 	ret := _mock.Called(ctx, tx, advisory)
@@ -66,7 +136,7 @@ type AdvisoryRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - advisory *models.Advisory
-func (_e *AdvisoryRepository_Expecter) Create(ctx interface{}, tx interface{}, advisory interface{}) *AdvisoryRepository_Create_Call {
+func (_e *AdvisoryRepository_Expecter) Create(ctx any, tx any, advisory any) *AdvisoryRepository_Create_Call {
 	return &AdvisoryRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, advisory)}
 }
 
@@ -104,7 +174,7 @@ func (_c *AdvisoryRepository_Create_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // Delete provides a mock function for the type AdvisoryRepository
-func (_mock *AdvisoryRepository) Delete(ctx context.Context, tx shared.DB, id int64) error {
+func (_mock *AdvisoryRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -112,7 +182,7 @@ func (_mock *AdvisoryRepository) Delete(ctx context.Context, tx shared.DB, id in
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int64) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -128,12 +198,12 @@ type AdvisoryRepository_Delete_Call struct {
 // Delete is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id int64
-func (_e *AdvisoryRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AdvisoryRepository_Delete_Call {
+//   - id uuid.UUID
+func (_e *AdvisoryRepository_Expecter) Delete(ctx any, tx any, id any) *AdvisoryRepository_Delete_Call {
 	return &AdvisoryRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *AdvisoryRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id int64)) *AdvisoryRepository_Delete_Call {
+func (_c *AdvisoryRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *AdvisoryRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -143,9 +213,9 @@ func (_c *AdvisoryRepository_Delete_Call) Run(run func(ctx context.Context, tx s
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 int64
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(int64)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -161,7 +231,7 @@ func (_c *AdvisoryRepository_Delete_Call) Return(err error) *AdvisoryRepository_
 	return _c
 }
 
-func (_c *AdvisoryRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id int64) error) *AdvisoryRepository_Delete_Call {
+func (_c *AdvisoryRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *AdvisoryRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -203,7 +273,7 @@ type AdvisoryRepository_GetAllAdvisoriesByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AdvisoryRepository_Expecter) GetAllAdvisoriesByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AdvisoryRepository_GetAllAdvisoriesByAssetID_Call {
+func (_e *AdvisoryRepository_Expecter) GetAllAdvisoriesByAssetID(ctx any, tx any, assetID any) *AdvisoryRepository_GetAllAdvisoriesByAssetID_Call {
 	return &AdvisoryRepository_GetAllAdvisoriesByAssetID_Call{Call: _e.mock.On("GetAllAdvisoriesByAssetID", ctx, tx, assetID)}
 }
 
@@ -241,7 +311,7 @@ func (_c *AdvisoryRepository_GetAllAdvisoriesByAssetID_Call) RunAndReturn(run fu
 }
 
 // ReadAdvisory provides a mock function for the type AdvisoryRepository
-func (_mock *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx shared.DB, id int64) (models.Advisory, error) {
+func (_mock *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Advisory, error) {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -250,15 +320,15 @@ func (_mock *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx shared.DB,
 
 	var r0 models.Advisory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int64) (models.Advisory, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Advisory, error)); ok {
 		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int64) models.Advisory); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Advisory); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.Advisory)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, int64) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -274,12 +344,12 @@ type AdvisoryRepository_ReadAdvisory_Call struct {
 // ReadAdvisory is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id int64
-func (_e *AdvisoryRepository_Expecter) ReadAdvisory(ctx interface{}, tx interface{}, id interface{}) *AdvisoryRepository_ReadAdvisory_Call {
+//   - id uuid.UUID
+func (_e *AdvisoryRepository_Expecter) ReadAdvisory(ctx any, tx any, id any) *AdvisoryRepository_ReadAdvisory_Call {
 	return &AdvisoryRepository_ReadAdvisory_Call{Call: _e.mock.On("ReadAdvisory", ctx, tx, id)}
 }
 
-func (_c *AdvisoryRepository_ReadAdvisory_Call) Run(run func(ctx context.Context, tx shared.DB, id int64)) *AdvisoryRepository_ReadAdvisory_Call {
+func (_c *AdvisoryRepository_ReadAdvisory_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *AdvisoryRepository_ReadAdvisory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -289,9 +359,9 @@ func (_c *AdvisoryRepository_ReadAdvisory_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 int64
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(int64)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -307,7 +377,7 @@ func (_c *AdvisoryRepository_ReadAdvisory_Call) Return(advisory models.Advisory,
 	return _c
 }
 
-func (_c *AdvisoryRepository_ReadAdvisory_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id int64) (models.Advisory, error)) *AdvisoryRepository_ReadAdvisory_Call {
+func (_c *AdvisoryRepository_ReadAdvisory_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.Advisory, error)) *AdvisoryRepository_ReadAdvisory_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -349,7 +419,7 @@ type AdvisoryRepository_ReadAll_Call struct {
 //   - assetID uuid.UUID
 //   - filter []shared.FilterQuery
 //   - pagination shared.PageInfo
-func (_e *AdvisoryRepository_Expecter) ReadAll(ctx interface{}, tx interface{}, assetID interface{}, filter interface{}, pagination interface{}) *AdvisoryRepository_ReadAll_Call {
+func (_e *AdvisoryRepository_Expecter) ReadAll(ctx any, tx any, assetID any, filter any, pagination any) *AdvisoryRepository_ReadAll_Call {
 	return &AdvisoryRepository_ReadAll_Call{Call: _e.mock.On("ReadAll", ctx, tx, assetID, filter, pagination)}
 }
 
@@ -397,7 +467,7 @@ func (_c *AdvisoryRepository_ReadAll_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // Update provides a mock function for the type AdvisoryRepository
-func (_mock *AdvisoryRepository) Update(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory) error {
+func (_mock *AdvisoryRepository) Update(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory) error {
 	ret := _mock.Called(ctx, tx, id, advisory)
 
 	if len(ret) == 0 {
@@ -405,7 +475,7 @@ func (_mock *AdvisoryRepository) Update(ctx context.Context, tx shared.DB, id in
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int64, *models.Advisory) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *models.Advisory) error); ok {
 		r0 = returnFunc(ctx, tx, id, advisory)
 	} else {
 		r0 = ret.Error(0)
@@ -421,13 +491,13 @@ type AdvisoryRepository_Update_Call struct {
 // Update is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id int64
+//   - id uuid.UUID
 //   - advisory *models.Advisory
-func (_e *AdvisoryRepository_Expecter) Update(ctx interface{}, tx interface{}, id interface{}, advisory interface{}) *AdvisoryRepository_Update_Call {
+func (_e *AdvisoryRepository_Expecter) Update(ctx any, tx any, id any, advisory any) *AdvisoryRepository_Update_Call {
 	return &AdvisoryRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, id, advisory)}
 }
 
-func (_c *AdvisoryRepository_Update_Call) Run(run func(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory)) *AdvisoryRepository_Update_Call {
+func (_c *AdvisoryRepository_Update_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory)) *AdvisoryRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -437,9 +507,9 @@ func (_c *AdvisoryRepository_Update_Call) Run(run func(ctx context.Context, tx s
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 int64
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(int64)
+			arg2 = args[2].(uuid.UUID)
 		}
 		var arg3 *models.Advisory
 		if args[3] != nil {
@@ -460,7 +530,7 @@ func (_c *AdvisoryRepository_Update_Call) Return(err error) *AdvisoryRepository_
 	return _c
 }
 
-func (_c *AdvisoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id int64, advisory *models.Advisory) error) *AdvisoryRepository_Update_Call {
+func (_c *AdvisoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID, advisory *models.Advisory) error) *AdvisoryRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,30 +1,27 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
+	"gorm.io/gorm"
 )
 
 type Advisory struct {
-	ID               int64             `json:"id" gorm:"primaryKey;column:id"`
-	CreatedAt        time.Time         `json:"createdAt"`
-	UpdatedAt        time.Time         `json:"updatedAt"`
+	Vulnerability
 	Title            string            `json:"title" gorm:"type:text;column:title"`
 	Description      string            `json:"description" gorm:"type:text;column:description"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages" gorm:"many2many:advisories_affected_packages;foreignKey:ID;joinForeignKey:advisory_id;References:ID;joinReferences:affected_package_id;constraint:OnDelete:CASCADE"`
 	Severity         string            `json:"severity" gorm:"type:text;column:severity"`
 	VectorString     string            `json:"vectorString" gorm:"type:text;column:vector_string"`
-	AssetID          uuid.UUID         `json:"assetID" gorm:"type:uuid;column:asset_id"`
-	Visibility       string            `json:"visibility" gorm:"type:text;column:visibility;default:draft"`
+	Events           []VulnEvent       `json:"events" gorm:"foreignKey:SecurityAdvisoryID;constraint:OnDelete:CASCADE;"`
 }
 type AffectedPackage struct {
 	Model
-	Ecosystem        string     `json:"ecosystem" gorm:"type:text;column:ecosystem"`
-	PackageName      string     `json:"packageName" gorm:"type:text;column:package_name"`
-	SemverIntroduced *string    `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed      *string    `json:"semverEnd" gorm:"type:semver;index"`
-	Advisory         []Advisory `json:"-" gorm:"many2many:advisories_affected_packages;constraint:OnDelete:CASCADE"`
+	Ecosystem         string     `json:"ecosystem" gorm:"type:text;column:ecosystem"`
+	PackageName       string     `json:"packageName" gorm:"type:text;column:package_name"`
+	VersionIntroduced *string    `json:"versionStart" gorm:"type:text;index"`
+	VersionFixed      *string    `json:"versionEnd" gorm:"type:text;index"`
+	Advisory          []Advisory `json:"-" gorm:"many2many:advisories_affected_packages;constraint:OnDelete:CASCADE"`
 }
 
 func (m Advisory) TableName() string {
@@ -33,4 +30,31 @@ func (m Advisory) TableName() string {
 
 func (m AffectedPackage) TableName() string {
 	return "affected_packages"
+}
+
+func (m Advisory) GetType() dtos.VulnType {
+	return dtos.VulnTypeSecurityAdvisory
+}
+
+func (m *Advisory) BeforeSave(tx *gorm.DB) error {
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	return nil
+}
+
+func (m Advisory) GetEvents() []VulnEvent {
+	return m.Events
+}
+
+func (m Advisory) GetArtifacts() []Artifact {
+	return nil
+}
+
+func (m Advisory) CalculateAssetVersionIndependentHash() string {
+	return ""
+}
+
+func (m Advisory) CalculateHash() uuid.UUID {
+	return uuid.Nil
 }
