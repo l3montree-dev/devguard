@@ -88,28 +88,6 @@ func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace strin
 	return ""
 }
 
-// BuildVersionRangeQuery creates the database query for version range matching
-func buildVersionRangeQuery(db *gorm.DB, normalizedVersion string) *gorm.DB {
-	// Use GORM's group conditions to properly wrap OR clauses
-	return db.Where(
-		db.Session(&gorm.Session{NewDB: true}).Where("version = ?", normalizedVersion).
-			Or("semver_introduced IS NULL AND semver_fixed > ?", normalizedVersion).
-			Or("semver_introduced <= ? AND semver_fixed IS NULL", normalizedVersion).
-			Or("semver_introduced <= ? AND semver_fixed > ?", normalizedVersion, normalizedVersion),
-	)
-}
-
-func buildEmptyVersionQuery(db *gorm.DB) *gorm.DB {
-	return db.Where(
-		db.Session(&gorm.Session{NewDB: true}).Where("version IS NULL AND semver_introduced IS NULL AND semver_fixed IS NULL AND version_introduced IS NULL AND version_fixed IS NULL"),
-	)
-}
-
-// BatchedVersionPredicate expresses the same version matching rules as
-// BuildQueryBasedOnMatchContext, but against a version coming from a joined
-// relation instead of a bound parameter, so that many purls can be matched in one
-// round trip. Keep the two in sync.
-//
 // The returned SQL references the affected components as "ac" and the joined
 // candidates as "q" (with a text column "version"). An empty string means the
 // mode carries no SQL-expressible version predicate: EcosystemSpecificVersion
@@ -128,25 +106,4 @@ func BatchedVersionPredicate(interpretation normalize.VersionInterpretationType)
 	default:
 		return ""
 	}
-}
-
-func BuildQueryBasedOnMatchContext(db *gorm.DB, ctx *normalize.PurlMatchContext) *gorm.DB {
-	query := db
-
-	switch ctx.HowToInterpretVersionString {
-	case normalize.ExactVersionString:
-		// Version is to be interpreted as exact string match only
-		query = query.Where("version = ?", ctx.NormalizedVersion)
-	case normalize.EmptyVersion:
-		// Version is empty, match only entries with no version info
-		query = buildEmptyVersionQuery(query)
-	case normalize.EcosystemSpecificVersion:
-		// Version is to be interpreted based on ecosystem-specific rules
-		// those rules CAN ONLY BE expressed in Golang code, not in SQL
-	case normalize.SemanticVersionString:
-		// Version is to be interpreted as semantic versioning range
-		query = buildVersionRangeQuery(query, ctx.NormalizedVersion)
-	}
-
-	return query
 }

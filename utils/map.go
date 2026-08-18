@@ -22,3 +22,11 @@ func Values[K comparable, T any](m map[K]T) []T {
 	}
 	return res
 }
+
+func Keys[K comparable, T any](m map[K]T) []K {
+	res := make([]K, 0, len(m))
+	for k := range m {
+		res = append(res, k)
+	}
+	return res
+}

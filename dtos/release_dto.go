@@ -25,10 +25,10 @@ type ReleaseItemDTO struct {
 	ID               uuid.UUID  `json:"id,omitempty"`
 	ReleaseID        uuid.UUID  `json:"releaseId,omitempty"`
 	ChildReleaseName *string    `json:"childReleaseName,omitempty"`
-	ChildReleaseID   *uuid.UUID `json:"childReleaseId,omitempty"`
+	ChildReleaseID   *uuid.UUID `json:"childReleaseId,omitempty" validate:"required_without=AssetID"`
 	ArtifactName     *string    `json:"artifactName,omitempty"`
 	AssetVersionName *string    `json:"assetVersionName,omitempty"`
-	AssetID          *uuid.UUID `json:"assetId,omitempty"`
+	AssetID          *uuid.UUID `json:"assetId,omitempty" validate:"required_without=ChildReleaseID"`
 }
 
 type ReleaseDTO struct {
@@ -54,10 +54,10 @@ type CandidatesResponseDTO struct {
 
 // requests
 type ReleaseCreateRequest struct {
-	Name  string           `json:"name"`
-	Items []ReleaseItemDTO `json:"items,omitempty"`
+	Name  string           `json:"name" validate:"required"`
+	Items []ReleaseItemDTO `json:"items,omitempty" validate:"omitempty,dive"`
 }
 
 type ReleasePatchRequest struct {
-	Items []ReleaseItemDTO `json:"items,omitempty"`
+	Items []ReleaseItemDTO `json:"items,omitempty" validate:"omitempty,dive"`
 }

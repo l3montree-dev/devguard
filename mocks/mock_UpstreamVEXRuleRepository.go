@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"iter"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -220,6 +221,77 @@ func (_c *UpstreamVEXRuleRepository_Begin_Call) Return(v shared.DB) *UpstreamVEX
 }
 
 func (_c *UpstreamVEXRuleRepository_Begin_Call) RunAndReturn(run func(ctx context.Context) shared.DB) *UpstreamVEXRuleRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ByCveScopes provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) ByCveScopes(ctx context.Context, tx shared.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
+	ret := _mock.Called(ctx, tx, cveIDs, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ByCveScopes")
+	}
+
+	var r0 iter.Seq2[[]models.UpstreamVEXRule, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, int) iter.Seq2[[]models.UpstreamVEXRule, error]); ok {
+		r0 = returnFunc(ctx, tx, cveIDs, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.UpstreamVEXRule, error])
+		}
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_ByCveScopes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ByCveScopes'
+type UpstreamVEXRuleRepository_ByCveScopes_Call struct {
+	*mock.Call
+}
+
+// ByCveScopes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - cveIDs []string
+//   - batchSize int
+func (_e *UpstreamVEXRuleRepository_Expecter) ByCveScopes(ctx interface{}, tx interface{}, cveIDs interface{}, batchSize interface{}) *UpstreamVEXRuleRepository_ByCveScopes_Call {
+	return &UpstreamVEXRuleRepository_ByCveScopes_Call{Call: _e.mock.On("ByCveScopes", ctx, tx, cveIDs, batchSize)}
+}
+
+func (_c *UpstreamVEXRuleRepository_ByCveScopes_Call) Run(run func(ctx context.Context, tx shared.DB, cveIDs []string, batchSize int)) *UpstreamVEXRuleRepository_ByCveScopes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_ByCveScopes_Call) Return(seq2 iter.Seq2[[]models.UpstreamVEXRule, error]) *UpstreamVEXRuleRepository_ByCveScopes_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_ByCveScopes_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error]) *UpstreamVEXRuleRepository_ByCveScopes_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -582,6 +654,71 @@ func (_c *UpstreamVEXRuleRepository_GetDB_Call) Return(v shared.DB) *UpstreamVEX
 }
 
 func (_c *UpstreamVEXRuleRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *UpstreamVEXRuleRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InBatches provides a mock function for the type UpstreamVEXRuleRepository
+func (_mock *UpstreamVEXRuleRepository) InBatches(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
+	ret := _mock.Called(ctx, tx, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InBatches")
+	}
+
+	var r0 iter.Seq2[[]models.UpstreamVEXRule, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) iter.Seq2[[]models.UpstreamVEXRule, error]); ok {
+		r0 = returnFunc(ctx, tx, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.UpstreamVEXRule, error])
+		}
+	}
+	return r0
+}
+
+// UpstreamVEXRuleRepository_InBatches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InBatches'
+type UpstreamVEXRuleRepository_InBatches_Call struct {
+	*mock.Call
+}
+
+// InBatches is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - batchSize int
+func (_e *UpstreamVEXRuleRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *UpstreamVEXRuleRepository_InBatches_Call {
+	return &UpstreamVEXRuleRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
+}
+
+func (_c *UpstreamVEXRuleRepository_InBatches_Call) Run(run func(ctx context.Context, tx shared.DB, batchSize int)) *UpstreamVEXRuleRepository_InBatches_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_InBatches_Call) Return(seq2 iter.Seq2[[]models.UpstreamVEXRule, error]) *UpstreamVEXRuleRepository_InBatches_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *UpstreamVEXRuleRepository_InBatches_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error]) *UpstreamVEXRuleRepository_InBatches_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -101,7 +101,7 @@ func (s *compliancePostureService) GetForControl(ctx context.Context, tx *gorm.D
 		return nil, err
 	}
 	if posture == nil {
-		return nil, fmt.Errorf("compliance posture not found for control ID: %s", controlID)
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	if posture.State == "" {

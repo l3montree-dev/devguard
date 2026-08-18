@@ -16,7 +16,6 @@
 package controllers
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
 type AdvisoryController struct {
@@ -104,7 +102,7 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 	advisory, err = controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
 		}
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
@@ -128,7 +126,7 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [patch]
 func (controller *AdvisoryController) Update(ctx shared.Context) error {
 	var req dtos.AdvisoryUpdate
-	if err := ctx.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil { // nosemgrep: bind-without-validate -- AdvisoryUpdate fields are all optional patch pointers with no constraints
 		return echo.NewHTTPError(400, "unable to process request")
 	}
 
@@ -140,7 +138,7 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 
 	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
 		}
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)
@@ -181,7 +179,7 @@ func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 
 	advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, parsedID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "advisory not found").WithInternal(err)
 		}
 		return echo.NewHTTPError(500, "could not get any data").WithInternal(err)

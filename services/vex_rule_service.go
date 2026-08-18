@@ -37,6 +37,16 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	var err error
 
 	switch rule.EventType {
+	case dtos.EventTypeReopened:
+		ev, err = models.NewReopenedEvent(
+			vuln.CalculateHash(),
+			dtos.VulnTypeDependencyVuln,
+			rule.CreatedByID,
+			rule.Justification,
+			true,
+			nil,
+		), nil
+
 	case dtos.EventTypeFalsePositive:
 		ev, err = models.NewFalsePositiveEvent(
 			vuln.CalculateHash(),
@@ -208,6 +218,43 @@ func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []m
 		"vulnsUpdated", len(updatedVulns),
 		"eventsCreated", len(events))
 	return updatedVulns, events, nil
+}
+
+func VulnStateForVEXRuleEventType(eventType dtos.VulnEventType) dtos.VulnState {
+	if eventType == dtos.EventTypeReopened {
+		return dtos.VulnStateAccepted
+	}
+	return dtos.VulnStateOpen
+}
+
+func ComputeGroupVEXRuleEvents(ctx context.Context, rules []models.VEXRule, representativeVulns []models.DependencyVuln) ([]models.VulnEvent, error) {
+	_, events, err := ApplyVEXRulesToVulns(ctx, rules, representativeVulns)
+	if err != nil {
+		return nil, err
+	}
+	if len(events) == 0 {
+		return nil, nil
+	}
+
+	vulnByID := make(map[uuid.UUID]models.DependencyVuln, len(representativeVulns))
+	for _, v := range representativeVulns {
+		vulnByID[v.ID] = v
+	}
+
+	groupEvents := make([]models.VulnEvent, 0, len(events))
+	for _, ev := range events {
+		if ev.DependencyVulnID == nil {
+			continue
+		}
+		vuln, ok := vulnByID[*ev.DependencyVulnID]
+		if !ok {
+			continue
+		}
+		ev.DependencyVulnID = nil
+		ev.AssetSignature = &vuln.AssetSignature
+		groupEvents = append(groupEvents, ev)
+	}
+	return groupEvents, nil
 }
 
 func SetVEXRulesEnabledFromParanoidMode(rules []models.VEXRule, paranoidMode bool) {

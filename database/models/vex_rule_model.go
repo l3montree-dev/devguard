@@ -43,10 +43,14 @@ func (VEXRule) TableName() string {
 	return "vex_rules"
 }
 
-// SetCELExpression sets the CELExpression and recalculates the ID.
+// SetCELExpression sets the CELExpression, recalculates the ID, and re-derives
+// CVEScope - mirrors UpstreamVEXRule.SetCELExpression, but with the ID formula
+// VEXRule actually uses (asset-scoped, not a content hash), which is why this
+// method exists instead of relying on the embedded one.
 func (r *VEXRule) SetCELExpression(expression string) {
 	r.CELExpression = expression
 	r.ID = CalculateVEXRuleID(r.AssetID, r.CELExpression, r.VexSource)
+	r.CVEScope = ExtractCVEScopeFromCELExpression(r.CELExpression)
 }
 
 // EnsureID calculates the ID if it hasn't been set yet.
@@ -69,6 +73,8 @@ type VEXRuleRecommendation struct {
 	VerifiedVotes int     `json:"verifiedVotes" gorm:"default:0;not null;"`
 	TotalVotes    int     `json:"totalVotes" gorm:"default:0;not null;"`
 	Confidence    float64 `json:"confidence" gorm:"default:0;not null;"`
+
+	DependencyVulnSignature int64 `json:"dependencyVulnSignature" gorm:"type:bigint;not null;index;primaryKey"`
 }
 
 func (VEXRuleRecommendation) TableName() string {

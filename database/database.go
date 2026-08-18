@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -53,7 +53,11 @@ func (s *sentryLogger) alert(msg string, data ...any) {
 		err, ok := data[0].(error)
 		if ok {
 			// check if record not found error
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if shared.IsNotFound(err) {
+				return
+			}
+			// SaveBatchBestEffort expects this error when a batch is too large for the
+			if strings.Contains(err.Error(), "extended protocol limited to 65535 parameters") {
 				return
 			}
 			monitoring.Alert(msg, err)

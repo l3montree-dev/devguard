@@ -13,7 +13,8 @@ type FrameworkControl struct {
 	Class              string `json:"class"`
 	Description        string `json:"description"`
 
-	Importance string `json:"importance"`
+	Importance    string `json:"importance"`
+	SecurityLevel string `json:"securityLevel"`
 
 	Framework string `yaml:"framework" json:"framework"`
 	ControlID string `yaml:"controls"  json:"controls" gorm:"column:control_id;type:text;index"`
@@ -32,6 +33,8 @@ type MappedControl struct {
 	RelatedControlID string `json:"relatedControlId" gorm:"type:text;primaryKey;"`
 
 	FrameworkControl FrameworkControl `gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+
+	Relationship string `json:"relationship" gorm:"type:text;primaryKey;default:''"`
 }
 
 func (m FrameworkControl) TableName() string {

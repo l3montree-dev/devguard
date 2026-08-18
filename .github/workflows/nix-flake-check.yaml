@@ -1,0 +1,29 @@
+# Evaluates and builds all flake outputs (packages, devShells, checks)
+
+name: Nix-Flake-Check
+
+on:
+  workflow_dispatch:
+  push:
+
+permissions: {}
+
+jobs:
+  flake-check:
+    name: nix flake check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Check out code
+      uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # main @ 2026-07-20 (post v7.0.1)
+      with:
+        submodules: recursive
+        persist-credentials: false
+    - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      with:
+        extra_nix_config: |
+          substituters = https://cache.nixos.org https://nix.garage.l3montree.cloud
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+    - name: Run nix flake check
+      run: nix flake check -L

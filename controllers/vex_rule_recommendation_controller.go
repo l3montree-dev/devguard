@@ -39,6 +39,7 @@ func NewVexRuleRecommendationController(vexRuleRepository shared.VEXRuleReposito
 // @Param dependencyVulnID path string true "Dependency vuln ID"
 // @Success 200 {object} dtos.VexRuleRecommendation
 // @Success 204 "No recommendation available"
+// @Success 404 "Dependency vulnerability not found"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/recommendations/{dependencyVulnID} [get]
 func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingController.Recommend")
@@ -58,6 +59,9 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 
 	vuln, err := c.dependencyVulnRepository.Read(reqCtx, nil, dependencyVulnIDParsed)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return ctx.NoContent(404)
+		}
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
@@ -198,7 +202,6 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 
 	return ctx.JSON(200, recommendations)
 }
-
 
 func buildDedupedVexRuleRecommendations(matchingSessionRules map[uuid.UUID][]models.VEXRule, storedRecommendations map[uuid.UUID]models.VEXRuleRecommendation, assetsByID map[uuid.UUID]models.Asset) []dtos.VexRuleRecommendation {
 	recommendationsByKey := make(map[string]dtos.VexRuleRecommendation, len(matchingSessionRules)+len(storedRecommendations))

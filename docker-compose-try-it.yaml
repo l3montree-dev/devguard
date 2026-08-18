@@ -18,7 +18,7 @@ services:
         BASE=https://raw.githubusercontent.com/l3montree-dev/devguard/refs/heads/main &&
 
         if [ ! -f /keys/app_side_encryption.key ]; then
-          od -vN 32 -An -tx1 /dev/urandom | tr -d ' \n' > /keys/app_side_encryption.key &&
+          od -vN 32 -An -tx1 /dev/urandom | tr -dc '0-9a-f' > /keys/app_side_encryption.key &&
           echo 'Generated new encryption key.';
         else
           echo 'Encryption key already exists, skipping.';
@@ -188,7 +188,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:v1.12.2
+    image: ghcr.io/l3montree-dev/devguard-web:v1.12.3
     read_only: true
     tmpfs:
       - /tmp:size=100M

@@ -397,6 +397,7 @@ func TestGetLabels(t *testing.T) {
 		expectedLabels := []string{
 			"devguard",
 			"state:open",
+			"orgSlug/projectSlug/assetSlug",
 			"risk:low",
 			"container",
 			"container:test",
@@ -404,7 +405,7 @@ func TestGetLabels(t *testing.T) {
 			"source-code:test",
 		}
 
-		assert.Equal(t, expectedLabels, GetLabels(vuln))
+		assert.Equal(t, expectedLabels, GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug"))
 	})
 
 	t.Run("should return correct labels for a FirstPartyVuln", func(t *testing.T) {
@@ -418,12 +419,13 @@ func TestGetLabels(t *testing.T) {
 		expectedLabels := []string{
 			"devguard",
 			"state:fixed",
+			"orgSlug/projectSlug/assetSlug",
 			"sast",
 			"secret-scanning",
 			"iac",
 		}
 
-		assert.Equal(t, expectedLabels, GetLabels(vuln))
+		assert.Equal(t, expectedLabels, GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug"))
 	})
 
 	t.Run("should truncate artifact names exceeding GitHub's 50 char label limit", func(t *testing.T) {
@@ -444,7 +446,7 @@ func TestGetLabels(t *testing.T) {
 			RawRiskAssessment: new(0.2),
 		}
 
-		labels := GetLabels(vuln)
+		labels := GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug")
 		for _, label := range labels {
 			assert.LessOrEqual(t, len(label), 50, "label %q exceeds GitHub's 50 char limit", label)
 		}
@@ -452,6 +454,7 @@ func TestGetLabels(t *testing.T) {
 		expectedLabels := []string{
 			"devguard",
 			"state:open",
+			"orgSlug/projectSlug/assetSlug",
 			"risk:low",
 			"pkg:oci/scanner?reposito...ch=arm64&tag=main-arm64",
 		}
@@ -639,7 +642,7 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 				Artifacts:         order,
 				RawRiskAssessment: new(0.5),
 			}
-			labels := GetLabels(vuln)
+			labels := GetLabels(vuln, "org1", "project1", "asset1")
 			if i == 0 {
 				reference = labels
 			} else {

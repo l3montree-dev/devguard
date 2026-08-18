@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
@@ -54,11 +55,7 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl = ?", matchCtx.SearchPurl)
 	query = BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
 
-	// Align version matching behavior with PurlComparer:
-	// - If VersionIsValid is not nil, perform an exact version match.
-	// - Otherwise, fall back to semver range matching.
-
-	err := BuildQueryBasedOnMatchContext(query, matchCtx).Find(&components).Error
+	err := query.Order("id").Find(&components).Error
 	return components, err
 }
 

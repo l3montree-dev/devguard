@@ -73,6 +73,15 @@ func NewAdminController(
 	}
 }
 
+// @Summary Confirm admin credentials are accepted
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} object{status=string}
+// @Router /admin [get]
+func (controller *AdminController) Ping(ctx shared.Context) error {
+	return ctx.JSON(200, map[string]string{"status": "ok"})
+}
+
 // @Summary Get admins for all external organizations
 // @Tags Admin
 // @Security AdminSignedAuth
@@ -126,7 +135,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 
-	userID, err := controller.adminService.GetUserIDFromMail(context.Background(), authAdminClient, user)
+	userID, err := controller.adminService.GetUserIDFromMail(ctx.Request().Context(), authAdminClient, user)
 	if err != nil {
 		switch {
 		case errors.Is(err, dtos.ErrCouldNotFindUserWithMail):
@@ -138,7 +147,7 @@ func (controller *AdminController) AddAdminToOrg(ctx shared.Context) error {
 		}
 	}
 
-	err = controller.adminService.AddAdminToOrg(context.Background(), parsedOrgID, userID)
+	err = controller.adminService.AddAdminToOrg(ctx.Request().Context(), parsedOrgID, userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not add admin to organization").WithInternal(err)
 	}
@@ -165,7 +174,7 @@ func (controller *AdminController) RevokeAdmin(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid or missing user id in path parameters")
 	}
 
-	err = controller.adminService.RevokeAdminFromOrg(context.Background(), parsedOrgID, parsedUserID)
+	err = controller.adminService.RevokeAdminFromOrg(ctx.Request().Context(), parsedOrgID, parsedUserID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not revoke admin role from user")
 	}
@@ -185,7 +194,7 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "invalid or missing organization id in path parameters")
 	}
 
-	err = controller.adminService.CheckIfOrgExists(context.Background(), orgIDParsed)
+	err = controller.adminService.CheckIfOrgExists(ctx.Request().Context(), orgIDParsed)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return echo.NewHTTPError(404, "organization does not exist")
@@ -193,14 +202,14 @@ func (controller *AdminController) GetOrgInformation(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get organization information")
 	}
 
-	ownerID, err := controller.adminService.GetOwnerForOrg(context.Background(), orgIDParsed)
+	ownerID, err := controller.adminService.GetOwnerForOrg(ctx.Request().Context(), orgIDParsed)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization")
 	}
 
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 
-	email, err := controller.adminService.GetMailFromUserID(context.Background(), authAdminClient, ownerID)
+	email, err := controller.adminService.GetMailFromUserID(ctx.Request().Context(), authAdminClient, ownerID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get email of the owner")
 	}
@@ -222,7 +231,7 @@ func (controller *AdminController) GetUserInformation(ctx shared.Context) error 
 	}
 
 	var orgs []models.Org
-	orgs, err = controller.adminService.GetOrgsWhereUserIsOwner(context.Background(), parsedUserID)
+	orgs, err = controller.adminService.GetOrgsWhereUserIsOwner(ctx.Request().Context(), parsedUserID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get organizations for user").WithInternal(err)
 	}
@@ -245,15 +254,18 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 
 	var updateRequest dtos.UpdateAssetRequest
 	err = ctx.Bind(&updateRequest)
-	if err != nil || updateRequest.NewSlug == "" {
+	if err != nil {
 		return echo.NewHTTPError(400, "could not parse request body")
+	}
+	if err := dtos.V.Struct(&updateRequest); err != nil {
+		return echo.NewHTTPError(400, "could not parse request body").WithInternal(err)
 	}
 
 	if !slug.IsSlug(updateRequest.NewSlug) {
 		return echo.NewHTTPError(400, "slug contains invalid characters")
 	}
 
-	err = controller.assetService.UpdateAssetSlug(context.Background(), parsedAssetID, updateRequest.NewSlug)
+	err = controller.assetService.UpdateAssetSlug(ctx.Request().Context(), parsedAssetID, updateRequest.NewSlug)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return echo.NewHTTPError(404, "asset does not exist")
@@ -271,7 +283,7 @@ func (controller *AdminController) UpdateAsset(ctx shared.Context) error {
 func (controller *AdminController) GetInstanceUsageStatistics(ctx shared.Context) error {
 	authAdminClient := shared.GetAuthAdminClient(ctx)
 
-	usageStatistics, err := controller.adminService.GetInstanceUsageStatistics(context.Background(), nil, authAdminClient)
+	usageStatistics, err := controller.adminService.GetInstanceUsageStatistics(ctx.Request().Context(), nil, authAdminClient)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not calculate instance statistics").WithInternal(err)
 	}
@@ -322,14 +334,14 @@ func evaluateInstanceStatisticsParams(ctx shared.Context) (topCVEsLimit, topComp
 // @Param body body dtos.UpdateInstanceSettingsRequest true "Request body"
 // @Success 200
 // @Router /admin/settings/ [patch]
-func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) error {
+func (controller *AdminController) UpdateInstanceSettings(ctx shared.Context) error {
 	var updateRequest dtos.UpdateInstanceSettingsRequest
-	err := ctx.Bind(&updateRequest)
+	err := ctx.Bind(&updateRequest) // nosemgrep: bind-without-validate -- DisableOrgCreation is an optional pointer with no constraints
 	if err != nil {
 		return echo.NewHTTPError(400, "could not parse update request parameters")
 	}
 
-	instanceSettings, err := controller.configService.GetInstanceSettings(context.Background())
+	instanceSettings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get current instance settings state from config").WithInternal(err)
 	}
@@ -337,7 +349,7 @@ func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) err
 	if updateRequest.DisableOrgCreation != nil {
 		updateInstanceSettings := instanceSettings
 		updateInstanceSettings.SingleOrganizationMode = *updateRequest.DisableOrgCreation
-		err = controller.configService.SetJSONConfig(context.Background(), "instanceSettings", updateInstanceSettings)
+		err = controller.configService.SetJSONConfig(ctx.Request().Context(), "instanceSettings", updateInstanceSettings)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not update instance settings config").WithInternal(err)
 		}
@@ -350,12 +362,25 @@ func (controller AdminController) UpdateInstanceSettings(ctx shared.Context) err
 // @Security AdminSignedAuth
 // @Success 200 {object} shared.InstanceSettings
 // @Router /admin/settings/ [get]
-func (controller AdminController) GetInstanceSettings(ctx shared.Context) error {
-	instanceSettings, err := controller.configService.GetInstanceSettings(context.Background())
+func (controller *AdminController) GetInstanceSettings(ctx shared.Context) error {
+	instanceSettings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get current instance settings state from config").WithInternal(err)
 	}
 	return ctx.JSON(200, instanceSettings)
+}
+
+// A missing setting is a valid, unconfigured state for a fresh instance, not an error.
+// @Summary Get public instance settings
+// @Tags Admin
+// @Success 200 {object} shared.InstanceSettings
+// @Router /instance-settings [get]
+func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) error {
+	settings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
+	if err != nil {
+		return ctx.JSON(200, shared.InstanceSettings{})
+	}
+	return ctx.JSON(200, settings)
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
@@ -520,13 +545,13 @@ func (controller *AdminController) TriggerAssetPipelineAll(ctx shared.Context) e
 // @Router /admin/daemons/asset-pipeline-single/trigger [post]
 func (controller *AdminController) TriggerAssetPipelineSingle(ctx shared.Context) error {
 	var req struct {
-		AssetID string `json:"assetId"`
+		AssetID string `json:"assetId" validate:"required"`
 	}
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "invalid request body")
 	}
-	if req.AssetID == "" {
-		return echo.NewHTTPError(400, "assetId is required")
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "assetId is required").WithInternal(err)
 	}
 	assetID, err := uuid.Parse(req.AssetID)
 	if err != nil {

@@ -61,10 +61,10 @@ func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.Ups
 	}
 
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{table},
-		[]string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"},
+		[]string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression", "cve_scope"},
 		pgx.CopyFromSlice(len(rules), func(i int) ([]any, error) {
 			r := rules[i]
-			return []any{r.ID, r.VexSource, r.Title, r.Justification, string(r.MechanicalJustification), string(r.EventType), r.CELExpression}, nil
+			return []any{r.ID, r.VexSource, r.Title, r.Justification, string(r.MechanicalJustification), string(r.EventType), r.CELExpression, models.ExtractCVEScopeFromCELExpression(r.CELExpression)}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy system vex rules into staging table: %w", err)
 	}
@@ -77,8 +77,8 @@ func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.Ups
 // already truncated by truncateUpstreamVEXRules.
 func flushUpstreamVEXRulesStagingTable(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO upstream_vex_rules (id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, created_at, updated_at)
-		SELECT id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, now(), now()
+		INSERT INTO upstream_vex_rules (id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, cve_scope)
+		SELECT id, vex_source, title, justification, mechanical_justification, event_type, cel_expression, cve_scope
 		FROM upstream_vex_rules_stage`); err != nil {
 		return fmt.Errorf("could not flush system vex rules: %w", err)
 	}

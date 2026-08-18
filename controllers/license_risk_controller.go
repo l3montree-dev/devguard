@@ -50,7 +50,7 @@ func NewLicenseRiskController(licenseOverwriteRepository shared.LicenseRiskRepos
 // @Param body body object{componentPurl=string,finalLicenseDecision=string} true "Request body"
 // @Success 200 {object} models.LicenseRisk
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks [post]
-func (controller LicenseRiskController) Create(ctx shared.Context) error {
+func (controller *LicenseRiskController) Create(ctx shared.Context) error {
 	var newLicenseRisk struct {
 		ComponentPurl        string `json:"componentPurl" validate:"required"`
 		FinalLicenseDecision string `json:"finalLicenseDecision" validate:"required"`
@@ -112,7 +112,7 @@ func (controller LicenseRiskController) Create(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks [get]
-func (controller LicenseRiskController) ListPaged(ctx shared.Context) error {
+func (controller *LicenseRiskController) ListPaged(ctx shared.Context) error {
 	// get the asset
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -136,7 +136,7 @@ func (controller LicenseRiskController) ListPaged(ctx shared.Context) error {
 
 }
 
-func (controller LicenseRiskController) GetComponentOverwriteForAssetVersion(ctx context.Context, assetID uuid.UUID, assetVersionName string, pURL string) (models.LicenseRisk, error) {
+func (controller *LicenseRiskController) GetComponentOverwriteForAssetVersion(ctx context.Context, assetID uuid.UUID, assetVersionName string, pURL string) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
 	validPURL, err := packageurl.FromString(pURL)
 	if err != nil {
@@ -182,7 +182,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 // @Param licenseRiskID path string true "License risk ID"
 // @Success 200 {object} dtos.DetailedLicenseRiskDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID} [get]
-func (controller LicenseRiskController) Read(ctx shared.Context) error {
+func (controller *LicenseRiskController) Read(ctx shared.Context) error {
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "could not get license risk ID")
@@ -207,14 +207,17 @@ func (controller LicenseRiskController) Read(ctx shared.Context) error {
 // @Param body body object{comment=string} true "Request body"
 // @Success 200 {object} dtos.DetailedLicenseRiskDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/mitigate [post]
-func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
+func (controller *LicenseRiskController) Mitigate(ctx shared.Context) error {
 	var justification struct {
-		Comment string `json:"comment"`
+		Comment string `json:"comment" validate:"required,max=2000"`
 	}
 
 	err := ctx.Bind(&justification)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not bind the request to a justification")
+		return echo.NewHTTPError(400, "could not bind the request to a justification").WithInternal(err)
+	}
+	if err := dtos.V.Struct(&justification); err != nil {
+		return echo.NewHTTPError(400, "comment is required").WithInternal(err)
 	}
 	userAgent := ctx.Request().UserAgent()
 
@@ -230,6 +233,9 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 		Justification: justification.Comment,
 	}, &userAgent)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "could not find licenseRisk")
+		}
 		return echo.NewHTTPError(500, "could not mitigate licenseRisk").WithInternal(err)
 	}
 
@@ -253,7 +259,7 @@ func (controller LicenseRiskController) Mitigate(ctx shared.Context) error {
 // @Param body body LicenseRiskStatus true "Request body"
 // @Success 200 {object} dtos.DetailedLicenseRiskDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID} [post]
-func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
+func (controller *LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
 	if err != nil {
@@ -315,12 +321,12 @@ func (controller LicenseRiskController) CreateEvent(ctx shared.Context) error {
 // @Param body body dtos.MakeFinalLicenseDecisionRequest true "Request body"
 // @Success 200 {object} dtos.DetailedLicenseRiskDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/final-license-decision [post]
-func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Context) error {
+func (controller *LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Context) error {
 	var licenseDecision dtos.MakeFinalLicenseDecisionRequest
 
 	err := ctx.Bind(&licenseDecision)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not bind the request to a licenseDecision")
+		return echo.NewHTTPError(400, "could not bind the request to a licenseDecision").WithInternal(err)
 	}
 
 	if err := dtos.V.Struct(licenseDecision); err != nil {
@@ -329,13 +335,16 @@ func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Cont
 
 	vulnID, vulnType, err := shared.GetVulnID(ctx)
 	if err != nil || vulnType != dtos.VulnTypeLicenseRisk {
-		return echo.NewHTTPError(500, "could not get vulnID")
+		return echo.NewHTTPError(400, "could not get vulnID")
 	}
 
 	ownerID := shared.GetSession(ctx).GetActorName()
 	userAgent := ctx.Request().UserAgent()
 	err = controller.licenseRiskService.MakeFinalLicenseDecision(ctx.Request().Context(), nil, vulnID, licenseDecision.License, licenseDecision.Justification, ownerID, &userAgent)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "could not find licenseRisk")
+		}
 		return echo.NewHTTPError(500, "could not make final license decision").WithInternal(err)
 	}
 

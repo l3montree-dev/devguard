@@ -106,7 +106,6 @@ func TestMaliciousPackageChecker(t *testing.T) {
 			pkgName:   "fake-malicious-npm-package",
 			version:   "",
 			expected:  false,
-			error:     true,
 		},
 		{
 			name:      "Safe package",
@@ -126,21 +125,24 @@ func TestMaliciousPackageChecker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isMalicious, entry, err := checker.IsMalicious(context.Background(), tt.ecosystem, tt.pkgName, tt.version)
-			if isMalicious != tt.expected {
-				t.Errorf("IsMalicious(%s, %s, %s) = %v, want %v",
-					tt.ecosystem, tt.pkgName, tt.version, isMalicious, tt.expected)
-			}
-			if isMalicious && entry == nil {
-				t.Error("Expected entry to be non-nil for malicious package")
-			}
-			if !isMalicious && entry != nil {
-				t.Error("Expected entry to be nil for safe package")
-			}
+			components, err := checker.GetMaliciousComponents(context.Background(), tt.ecosystem, tt.pkgName)
 			if tt.error {
 				assert.NotNil(t, err)
-			} else {
-				assert.Nil(t, err)
+				return
+			}
+			assert.Nil(t, err)
+
+			isMalicious := false
+			for _, comp := range components {
+				if comp.AffectsAllVersions() || vulndb.MatchesVersion(comp, tt.version) {
+					isMalicious = true
+					break
+				}
+			}
+
+			if isMalicious != tt.expected {
+				t.Errorf("malicious check (%s, %s, %s) = %v, want %v",
+					tt.ecosystem, tt.pkgName, tt.version, isMalicious, tt.expected)
 			}
 		})
 	}

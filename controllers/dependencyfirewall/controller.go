@@ -32,8 +32,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -449,28 +451,62 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 	return false, ""
 }
 
-func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string) {
-	packageName, version := eco.parsePackage(path)
+func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecosystem, packageName, version string) (int, string, error) {
 	if packageName == "" {
-		return false, ""
+		return 0, "", nil
 	}
 
 	slog.Debug("Checking package against malicious database", "ecosystem", eco.name(), "package", packageName, "version", version)
-	isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, eco.name(), packageName, version)
+	components, err := d.maliciousChecker.GetMaliciousComponents(ctx, eco.name(), packageName)
+	if err != nil {
+		return 0, "", fmt.Errorf("could not query malicious package database: %w", err)
+	}
+
+	for _, comp := range components {
+		if comp.AffectsAllVersions() {
+			return http.StatusForbidden, d.maliciousReason(ctx, packageName, "", comp), nil
+		}
+	}
+
+	if version == "" {
+		return 0, "", nil
+	}
+
+	for _, comp := range components {
+		if vulndb.MatchesVersion(comp, version) {
+			return http.StatusForbidden, d.maliciousReason(ctx, packageName, version, comp), nil
+		}
+	}
+
+	return 0, "", nil
+}
+
+func (d *DependencyProxyController) maliciousReason(ctx context.Context, packageName, version string, comp models.MaliciousAffectedComponent) string {
+	identifier := packageName
+	if version != "" {
+		identifier = packageName + "@" + version
+	}
+	reason := fmt.Sprintf("Package %s is flagged as malicious (ID: %s)", identifier, comp.MaliciousPackageID)
+
+	pkg, err := d.maliciousChecker.GetMaliciousPackage(ctx, comp.MaliciousPackageID)
+	if err != nil {
+		slog.Warn("Could not load malicious package metadata", "id", comp.MaliciousPackageID, "error", err)
+		return reason
+	}
+	if pkg.Summary != "" {
+		reason += ": " + pkg.Summary
+	}
+	return reason
+}
+
+func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string) {
+	packageName, version := eco.parsePackage(path)
+	status, reason, err := d.checkMalicious(ctx, eco, packageName, version)
 	if err != nil {
 		slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
 		return false, ""
 	}
-
-	if isMalicious {
-		reason := fmt.Sprintf("Package %s is flagged as malicious (ID: %s)", packageName, entry.ID)
-		if entry.Summary != "" {
-			reason += ": " + entry.Summary
-		}
-		return true, reason
-	}
-
-	return false, ""
+	return status != 0, reason
 }
 
 func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco ecosystem, path, reason string) error {
@@ -500,7 +536,7 @@ func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco
 	})
 }
 
-func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, eco ecosystem, path, reason string) error {
+func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, eco ecosystem, path, reason string, status int) error {
 	span := trace.SpanFromContext(c.Request().Context())
 	span.SetAttributes(
 		attribute.Bool("proxy.malicious_blocked", true),
@@ -518,7 +554,13 @@ func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, eco 
 	}
 	span.SetAttributes(attribute.String("proxy.package", packageName))
 
-	return c.JSON(http.StatusForbidden, map[string]any{
+	if status == http.StatusNotFound {
+		return c.JSON(status, map[string]any{
+			"error": "Not found",
+		})
+	}
+
+	return c.JSON(status, map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the malicious package firewall",
 		"reason":  reason,

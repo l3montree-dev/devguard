@@ -175,7 +175,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		if err := os.Remove(cachePath); err == nil {
 			slog.Info("Removed malicious package from cache", "path", cachePath)
 		}
-		return d.blockMaliciousPackage(c, pypi, requestPath, reason)
+		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 	}
 
 	if pypi.isCached(cachePath) {
@@ -308,19 +308,14 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 			return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
 		}
 
-		slog.Debug("Checking resolved version for malicious package", "package", pkgName, "version", resolvedVersion)
-		isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, "pypi", pkgName, resolvedVersion)
+		status, reason, err := d.checkMalicious(ctx, pypi, pkgName, resolvedVersion)
 		if err != nil {
 			slog.Error("Error checking malicious package", "proxy", "pypi", "error", err)
 			return echo.NewHTTPError(500, "failed to check if package is malicious").WithInternal(err)
 		}
-		if isMalicious {
-			reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", pkgName, resolvedVersion, entry.ID)
-			if entry.Summary != "" {
-				reason += ": " + entry.Summary
-			}
+		if status != 0 {
 			slog.Warn("Blocked malicious package after version resolution", "proxy", "pypi", "package", pkgName, "version", resolvedVersion, "reason", reason)
-			return d.blockMaliciousPackage(c, pypi, requestPath, reason)
+			return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 		}
 
 		if configs.MinReleaseAge > 0 {

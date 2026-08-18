@@ -106,6 +106,9 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
+	}
 
 	// check if valid - get the signed pat
 	fingerprint := ctx.Request().Header.Get("X-Fingerprint")
@@ -315,8 +318,13 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 		},
 	}
 
+	keyPath := "/intoto-private-key.pem"
+	if p := os.Getenv("INTOTO_PRIVATE_KEY_PATH"); p != "" {
+		keyPath = p
+	}
+
 	var devguardKey toto.Key
-	err = devguardKey.LoadKey("/intoto-private-key.pem", "ecdsa-sha2-nistp256", []string{"sha256"})
+	err = devguardKey.LoadKey(keyPath, "ecdsa-sha2-nistp256", []string{"sha256"})
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load devguard key").WithInternal(err)
 	}
