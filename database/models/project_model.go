@@ -62,12 +62,15 @@ func (m Project) IsExternalEntity() bool {
 }
 
 func (m *Project) Same(other *Project) bool {
-	if m.ExternalEntityID == nil || m.ExternalEntityProviderID == nil {
-		return m.ID != uuid.Nil && m.ID == other.ID
+	if m == nil || other == nil {
+		return m == other
 	}
 
-	return *m.ExternalEntityID == *other.ExternalEntityID &&
-		*m.ExternalEntityProviderID == *other.ExternalEntityProviderID
+	return sameExternalEntityOrID(
+		m.ID, other.ID,
+		m.ExternalEntityID, other.ExternalEntityID,
+		m.ExternalEntityProviderID, other.ExternalEntityProviderID,
+	)
 }
 
 func (m *Project) GetSlug() string {

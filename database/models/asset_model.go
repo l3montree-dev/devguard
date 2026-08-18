@@ -69,12 +69,15 @@ func (m Asset) TableName() string {
 }
 
 func (m *Asset) Same(other *Asset) bool {
-	if m.ExternalEntityID == nil || m.ExternalEntityProviderID == nil {
-		return m.ID != uuid.Nil && m.ID == other.ID
+	if m == nil || other == nil {
+		return m == other
 	}
 
-	return *m.ExternalEntityID == *other.ExternalEntityID &&
-		*m.ExternalEntityProviderID == *other.ExternalEntityProviderID
+	return sameExternalEntityOrID(
+		m.ID, other.ID,
+		m.ExternalEntityID, other.ExternalEntityID,
+		m.ExternalEntityProviderID, other.ExternalEntityProviderID,
+	)
 }
 
 func (m *Asset) GetSlug() string {
