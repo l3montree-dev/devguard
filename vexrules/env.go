@@ -138,7 +138,7 @@ func PrepareVulnsForEvalMap(ctx context.Context, vulns []models.DependencyVuln) 
 		if err != nil {
 			return nil, err
 		}
-		prepared[vuln.Vulnerability.ID.String()] = vulnMap
+		prepared[vuln.ID.String()] = vulnMap
 	}
 	return prepared, nil
 }

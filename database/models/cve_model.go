@@ -62,7 +62,7 @@ type Weakness struct {
 	CWEID  string `json:"cwe" gorm:"primaryKey;not null;type:text;"`
 }
 
-func (m Weakness) TableName() string {
+func (w Weakness) TableName() string {
 	return "weaknesses"
 }
 
@@ -89,7 +89,7 @@ func (cve CVE) ToCELMap() map[string]any {
 		"risk": map[string]any{
 			"baseScore":                            cve.Risk.BaseScore,
 			"withEnvironment":                      cve.Risk.WithEnvironment,
-			"withThreatIntelligence":                cve.Risk.WithThreatIntelligence,
+			"withThreatIntelligence":               cve.Risk.WithThreatIntelligence,
 			"withEnvironmentAndThreatIntelligence": cve.Risk.WithEnvironmentAndThreatIntelligence,
 		},
 	}
