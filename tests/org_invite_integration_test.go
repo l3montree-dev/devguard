@@ -86,6 +86,13 @@ func (f *TestFixture) InviteMember(t testing.TB, e *echo.Echo, org models.Org, i
 	shared.SetOrg(ctx, org)
 	shared.SetRBAC(ctx, f.App.RBACProvider.GetDomainRBAC(org.ID.String()))
 
+	adminClient := &mocks.AdminClient{}
+	adminClient.On("ListUser", mock.Anything).Return([]client.Identity{}, nil)
+	shared.SetAuthAdminClient(ctx, adminClient)
+	integration := &mocks.IntegrationAggregate{}
+	integration.On("GetUsers", mock.Anything).Return([]dtos.UserDTO{})
+	shared.SetThirdPartyIntegration(ctx, integration)
+
 	require.NoError(t, f.App.OrgController.InviteMember(ctx))
 	require.Equal(t, 200, rec.Code)
 
