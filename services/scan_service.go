@@ -755,59 +755,60 @@ func (s *scanService) FetchVexFromUpstream(ctx context.Context, assetID uuid.UUI
 	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
 	mut := sync.Mutex{}
 	wg := sync.WaitGroup{}
+	recordInvalid := func(url string, format dtos.ExternalReferenceType, reason string) {
+		slog.Warn("could not fetch vex from upstream", "url", url, "reason", reason, "assetID", assetID)
+		mut.Lock()
+		defer mut.Unlock()
+		invalid = append(invalid, models.ExternalReference{
+			AssetID: assetID,
+			URL:     url,
+			Type:    format,
+			Error:   new(reason),
+		})
+	}
+	recordValid := func(url string, format dtos.ExternalReferenceType, vexRules []models.UpstreamVEXRule) {
+		mut.Lock()
+		defer mut.Unlock()
+		rules = append(rules, transformer.AllUpstreamVEXRulesToVEXRules(vexRules, "system", assetID)...)
+		valid = append(valid, models.ExternalReference{
+			URL:     url,
+			AssetID: assetID,
+			Type:    format,
+		})
+	}
+
 	for _, url := range upstreamURLs {
 		// fetch the url and sniff the type
 		wg.Go(func() {
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{
-					AssetID: assetID,
-					URL:     url,
-					Type:    dtos.ExternalReferenceTypeUnknown,
-					Error:   new(fmt.Sprintf("could not create request for url: %v", err)),
-				})
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not create request for url: %v", err))
 				return
 			}
 
 			resp, err := utils.EgressClient.Do(req)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{})
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not fetch url: %v", err))
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not fetch url, status code: %d", resp.StatusCode))
 				return
 			}
 
-			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{
-					AssetID: assetID,
-					URL:     url,
-					Type:    dtos.ExternalReferenceTypeUnknown,
-					Error:   new(fmt.Sprintf("could not read response body: %v", err)),
-				})
+				recordInvalid(url, dtos.ExternalReferenceTypeUnknown, fmt.Sprintf("could not read response body: %v", err))
 				return
 			}
 			vexRules, format, err := s.VexRulesFromDocument(body, url)
 			if err != nil {
-				mut.Lock()
-				invalid = append(invalid, models.ExternalReference{
-					Type:    format,
-					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
-					AssetID: assetID,
-					URL:     url,
-				})
+				recordInvalid(url, format, fmt.Sprintf("could not parse vex file from url: %v", err))
 				return
 			}
-			mut.Lock()
-			rules = append(rules, transformer.AllUpstreamVEXRulesToVEXRules(vexRules, "system", assetID)...)
-			valid = append(valid, models.ExternalReference{
-				URL:     url,
-				AssetID: assetID,
-				Type:    format,
-			})
-			mut.Unlock()
+			recordValid(url, format, vexRules)
 		})
 	}
 	wg.Wait()
