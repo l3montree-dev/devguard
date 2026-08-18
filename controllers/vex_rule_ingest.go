@@ -60,9 +60,12 @@ func ingestVEXRules(
 		return fmt.Errorf("failed to add new VEX rules: %w", err)
 	}
 
-	vulns, err := dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID)
-	if err != nil {
-		return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
+	var vulns []models.DependencyVuln
+	for batch, err := range dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID, 1000) {
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
+		}
+		vulns = append(vulns, batch...)
 	}
 
 	updatedVulns, events, err := services.ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)

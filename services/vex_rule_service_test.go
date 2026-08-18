@@ -671,3 +671,18 @@ func TestParseVEXRulesInBOMMultiplePathPatternProperties(t *testing.T) {
 	assert.Contains(t, celExprs, celFor("CVE-2024-1234", []string{"pkg:golang/root-a@v1.0", "*", "pkg:golang/vulnerable-lib@v2.0"}))
 	assert.Contains(t, celExprs, celFor("CVE-2024-1234", []string{"pkg:golang/root-b@v1.0", "*", "pkg:golang/vulnerable-lib@v2.0"}))
 }
+
+func TestDiffVEXRulesDiffsPerSource(t *testing.T) {
+	assetID := uuid.New()
+	rule := func(id, source string) models.VEXRule {
+		return models.VEXRule{AssetID: assetID, UpstreamVEXRule: models.UpstreamVEXRule{ID: id, VexSource: source}}
+	}
+
+	rulesToAdd, rulesToRemove := DiffVEXRules(
+		[]models.VEXRule{rule("a2", "source-a"), rule("b2", "source-b")},
+		[]models.VEXRule{rule("a1", "source-a"), rule("b1", "source-b"), rule("c1", "source-c")},
+	)
+
+	assert.ElementsMatch(t, []models.VEXRule{rule("a2", "source-a"), rule("b2", "source-b")}, rulesToAdd)
+	assert.ElementsMatch(t, []models.VEXRule{rule("a1", "source-a"), rule("b1", "source-b")}, rulesToRemove)
+}
