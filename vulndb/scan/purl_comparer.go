@@ -213,7 +213,7 @@ func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate, ca
 	}
 
 	for i := range candidates {
-		acc.cache.Add(candidates[i].cacheKey(), candidates[i].components)
+		acc.cache.Add(candidates[i].cacheKey(), candidates[i].Components)
 	}
 }
 
