@@ -434,7 +434,7 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		for j := len(vuln.Events) - 1; j >= 0; j-- {
 
 			if vuln.Events[j].Type == dtos.EventTypeReopened || vuln.Events[j].Type == dtos.EventTypeAccepted || vuln.Events[j].Type == dtos.EventTypeFalsePositive {
-				if *vuln.Events[j].VexRuleID == ruleID {
+				if vuln.Events[j].VexRuleID != nil && *vuln.Events[j].VexRuleID == ruleID {
 					continue // Skip events created by the rule being deleted
 				}
 
