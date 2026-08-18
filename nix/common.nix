@@ -9,9 +9,12 @@ let
       githubRef = builtins.getEnv "GITHUB_REF_NAME";
       gitlabRef = builtins.getEnv "CI_COMMIT_REF_NAME";
     in
-    if githubRef != "" then githubRef
-    else if gitlabRef != "" then gitlabRef
-    else "";
+    if githubRef != "" then
+      githubRef
+    else if gitlabRef != "" then
+      gitlabRef
+    else
+      "";
 in
 rec {
   version = if refName != "" then refName else self.shortRev or self.dirtyShortRev or "dev";

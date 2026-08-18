@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"iter"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -1045,6 +1046,71 @@ func (_c *ReleaseRepository_GetDB_Call) Return(v shared.DB) *ReleaseRepository_G
 }
 
 func (_c *ReleaseRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *ReleaseRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InBatches provides a mock function for the type ReleaseRepository
+func (_mock *ReleaseRepository) InBatches(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.Release, error] {
+	ret := _mock.Called(ctx, tx, batchSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InBatches")
+	}
+
+	var r0 iter.Seq2[[]models.Release, error]
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, int) iter.Seq2[[]models.Release, error]); ok {
+		r0 = returnFunc(ctx, tx, batchSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(iter.Seq2[[]models.Release, error])
+		}
+	}
+	return r0
+}
+
+// ReleaseRepository_InBatches_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InBatches'
+type ReleaseRepository_InBatches_Call struct {
+	*mock.Call
+}
+
+// InBatches is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - batchSize int
+func (_e *ReleaseRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *ReleaseRepository_InBatches_Call {
+	return &ReleaseRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
+}
+
+func (_c *ReleaseRepository_InBatches_Call) Run(run func(ctx context.Context, tx shared.DB, batchSize int)) *ReleaseRepository_InBatches_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ReleaseRepository_InBatches_Call) Return(seq2 iter.Seq2[[]models.Release, error]) *ReleaseRepository_InBatches_Call {
+	_c.Call.Return(seq2)
+	return _c
+}
+
+func (_c *ReleaseRepository_InBatches_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, batchSize int) iter.Seq2[[]models.Release, error]) *ReleaseRepository_InBatches_Call {
 	_c.Call.Return(run)
 	return _c
 }

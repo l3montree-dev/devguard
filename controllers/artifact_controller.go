@@ -104,7 +104,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 
 	type requestBody struct {
-		ArtifactName       string              `json:"artifactName"`
+		ArtifactName       string              `json:"artifactName" validate:"required"`
 		InformationSources []informationSource `json:"informationSources"`
 	}
 
@@ -114,6 +114,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	if err := ctx.Bind(&body); err != nil {
 		return err
+	}
+	if err := dtos.V.Struct(&body); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
 
 	artifact := models.Artifact{
@@ -320,7 +323,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	var body requestBody
 
-	if err := ctx.Bind(&body); err != nil {
+	if err := ctx.Bind(&body); err != nil { // nosemgrep: bind-without-validate -- requestBody has no constrained fields (InformationSources may legitimately be empty)
 		return err
 	}
 
@@ -450,6 +453,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 // @Produce application/json
 // @Success 200 {object} object "CycloneDX BOM in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json/ [get]
+// @Router /public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.json [get]
 func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
@@ -538,6 +542,7 @@ func (c *ArtifactController) CycloneDXVexXML(ctx shared.Context) error {
 // @Produce application/json
 // @Success 200 {object} object "CycloneDX VEX in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json/ [get]
+// @Router /public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/vex.json [get]
 func (c *ArtifactController) CycloneDXVexJSON(ctx shared.Context) error {
 	sbom, err := c.buildCycloneDXVex(ctx)
 	if err != nil {
@@ -563,6 +568,7 @@ func (c *ArtifactController) CycloneDXVexJSON(ctx shared.Context) error {
 // @Produce application/json
 // @Success 200 {object} object "OpenVEX document in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/ [get]
+// @Router /public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json [get]
 func (c *ArtifactController) OpenCycloneDXVexJSON(ctx shared.Context) error {
 	vex, err := c.buildOpenVex(ctx)
 	if err != nil {
@@ -591,6 +597,7 @@ func (c *ArtifactController) buildOpenVex(ctx shared.Context) (vex.VEX, error) {
 // @Produce application/json
 // @Success 200 {object} object "CSAF advisory in JSON format"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json/ [get]
+// @Router /public/{assetID}/refs/{assetVersionSlug}/artifacts/{artifactName}/csaf.json [get]
 func (c *ArtifactController) CSAFJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	org := shared.GetOrg(ctx)

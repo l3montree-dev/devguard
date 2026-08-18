@@ -280,8 +280,19 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 		return err
 	}
 
+	members, err := shared.FetchMembersOfOrganization(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization")
+	}
+
 	if err := dtos.V.Struct(req); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	for _, member := range members {
+		if member.Email == req.Email {
+			return echo.NewHTTPError(409, "user is already member of the organization")
+		}
 	}
 
 	// get the organization from the context
@@ -294,7 +305,7 @@ func (controller *OrgController) InviteMember(ctx shared.Context) error {
 	}
 
 	// save the model
-	err := controller.invitationRepository.Save(ctx.Request().Context(), nil, &model)
+	err = controller.invitationRepository.Save(ctx.Request().Context(), nil, &model)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not save invitation").WithInternal(err)
 	}
@@ -419,7 +430,7 @@ func (controller *OrgController) Metrics(ctx shared.Context) error {
 // @Param config-file path string true "Config file ID"
 // @Produce text/plain
 // @Success 200 {string} string "Config file content"
-// @Router /organizations/{organization}/config-files/{config-file}/ [get]
+// @Router /organizations/{organization}/config-files/{config-file} [get]
 func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
@@ -441,7 +452,7 @@ func (controller *OrgController) GetConfigFile(ctx shared.Context) error {
 // @Param body body string true "Config file content"
 // @Produce text/plain
 // @Success 200 {string} string "Updated config file content"
-// @Router /organizations/{organization}/config-files/{config-file}/ [put]
+// @Router /organizations/{organization}/config-files/{config-file} [put]
 func (controller *OrgController) UpdateConfigFile(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
 	configID := ctx.Param("config-file")
@@ -535,7 +546,6 @@ func (controller *OrgController) Read(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {object} dtos.OrgDetailsDTO
-// @Router /organizations/{organization} [get]
 func (controller *OrgController) readDetails(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
@@ -629,6 +639,9 @@ func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
 
 	err = controller.invitationRepository.Delete(reqCtx, nil, invitationID)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "invitation not found")
+		}
 		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
 	}
 

@@ -80,6 +80,9 @@ func (c *ComplianceComponentController) Details(ctx shared.Context) error {
 
 	component, err := c.complianceComponentRepository.GetDetails(ctx.Request().Context(), nil, id)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "compliance component not found")
+		}
 		return err
 	}
 
@@ -101,6 +104,8 @@ type statementPayload struct {
 // @Param body body statementPayload true "Request body"
 // @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
 func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) error {
 	frameworkControlID := ctx.Param("frameworkControlID")
 	if frameworkControlID == "" {
@@ -173,6 +178,8 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 // @Param body body statementPayload true "Request body"
 // @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID} [put]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID} [put]
 func (c *ComplianceComponentController) UpdateStatement(ctx shared.Context) error {
 	statementID, err := uuid.Parse(ctx.Param("statementID"))
 	if err != nil {
@@ -200,6 +207,8 @@ func (c *ComplianceComponentController) UpdateStatement(ctx shared.Context) erro
 // @Param statementID path string true "Statement ID"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID} [delete]
 func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) error {
 	statementID, err := uuid.Parse(ctx.Param("statementID"))
 	if err != nil {
@@ -223,6 +232,11 @@ func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) erro
 		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, &posture, &ev)
 	})
 	if err != nil {
+		// a missing statementID surfaces as gorm.ErrRecordNotFound from inside the
+		// transaction - translate that into a 404 instead of a 500
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "statement not found")
+		}
 		return err
 	}
 

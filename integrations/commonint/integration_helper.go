@@ -568,10 +568,26 @@ func truncateLabelMiddle(name string) string {
 	return name[:headLen] + ellipsis + name[len(name)-tailLen:]
 }
 
-func GetLabels(vuln models.Vuln) []string {
+// SlugLabel builds the "org/project/asset" label used to scope issues to a
+// specific org/project/asset. Kept in one place so the format - and its
+// truncation to githubLabelMaxLength - stays identical between label
+// creation and label-based issue search; a mismatch there would make
+// getExcessIIDs unable to find issues by their own label.
+func SlugLabel(orgSlug, projectSlug, assetSlug string) string {
+	if orgSlug == "" || projectSlug == "" || assetSlug == "" {
+		return ""
+	}
+	return truncateLabelMiddle(fmt.Sprintf("%s/%s/%s", orgSlug, projectSlug, assetSlug))
+}
+
+func GetLabels(vuln models.Vuln, orgSlug, projectSlug, assetSlug string) []string {
 	labels := []string{
 		"devguard",
 		"state:" + stateToLabel(vuln.GetState()),
+	}
+	slugs := SlugLabel(orgSlug, projectSlug, assetSlug)
+	if slugs != "" {
+		labels = append(labels, slugs)
 	}
 
 	riskSeverity, err := vulndb.RiskToSeverity(vuln.GetRawRiskAssessment())

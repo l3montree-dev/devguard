@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type PolicyController struct {
@@ -166,6 +167,9 @@ func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 	policy, err := c.policyRepository.Read(ctx.Request().Context(), nil, policyUUID)
 
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "policy not found")
+		}
 		return err
 	}
 
@@ -184,6 +188,9 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 	policy := dtos.PolicyDTO{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
+	}
+	if err := dtos.V.Struct(&policy); err != nil {
+		return echo.NewHTTPError(400, "invalid policy request body").WithInternal(err)
 	}
 
 	org := shared.GetOrg(ctx)
@@ -228,6 +235,9 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 	if err := ctx.Bind(&policy); err != nil {
 		return err
 	}
+	if err := dtos.V.Struct(&policy); err != nil {
+		return echo.NewHTTPError(400, "invalid policy request body").WithInternal(err)
+	}
 
 	org := shared.GetOrg(ctx)
 
@@ -267,6 +277,9 @@ func (c *PolicyController) DeletePolicy(ctx shared.Context) error {
 
 	// delete the policy
 	if err := c.policyRepository.Delete(ctx.Request().Context(), nil, policyUUID); err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "policy not found")
+		}
 		return err
 	}
 

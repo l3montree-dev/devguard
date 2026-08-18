@@ -609,8 +609,8 @@ func (controller *CSAFController) ServeCSAFReportRequest(ctx shared.Context) err
 		}
 
 		advisory, err := controller.advisoryService.ReadAdvisory(ctx.Request().Context(), nil, id)
-		if err != nil {
-			return err
+		if err != nil || advisory.AssetID != asset.ID {
+			return echo.NewHTTPError(404, "not found")
 		}
 
 		report, err = controller.csafService.GenerateCSAFReportForAdvisory(ctx.Request().Context(), &advisory, org.Name, asset.ID, asset.Name)

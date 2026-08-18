@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -40,6 +41,60 @@ type GormRepository[ID comparable, T utils.Tabler] struct {
 func newGormRepository[ID comparable, T utils.Tabler](db *gorm.DB) *GormRepository[ID, T] {
 	return &GormRepository[ID, T]{
 		db: db,
+	}
+}
+
+
+func (g *GormRepository[ID, T]) InBatches(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]T, error] {
+	return func(yield func([]T, error) bool) {
+		db := g.GetDB(ctx, tx)
+
+		stmt := &gorm.Statement{DB: db}
+		if err := stmt.Parse(new(T)); err != nil {
+			yield(nil, fmt.Errorf("failed to parse schema for batched query: %w", err))
+			return
+		}
+		if len(stmt.Schema.PrimaryFields) != 1 {
+			yield(nil, fmt.Errorf("InBatches requires exactly one primary key column, got %d", len(stmt.Schema.PrimaryFields)))
+			return
+		}
+		pkField := stmt.Schema.PrimaryFields[0]
+
+		var lastID any
+		hasLastID := false
+
+		for {
+			var res = []T{}
+			query := db.Order(pkField.DBName)
+			if hasLastID {
+				query = query.Where(fmt.Sprintf("%s > ?", pkField.DBName), lastID)
+			}
+			if batchSize > 0 {
+				query = query.Limit(batchSize)
+			}
+			if err := query.Find(&res).Error; err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if len(res) == 0 {
+				return
+			}
+
+			if !yield(res, nil) {
+				return
+			}
+
+			// batchSize <= 0 means "no limit" (GORM treats Limit(-1) as unlimited) -
+			// the query above already returned everything there is, so stop instead
+			// of issuing a second, pointless round trip.
+			if batchSize <= 0 || len(res) < batchSize {
+				return
+			}
+
+			lastID = reflect.ValueOf(res[len(res)-1]).FieldByName(pkField.Name).Interface()
+			hasLastID = true
+		}
 	}
 }
 

@@ -29,6 +29,10 @@ type VulnEvent struct {
 	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 	CreatedByVexRule         bool    `json:"createdByVexRule" gorm:"column:created_by_vex_rule;default:false;not null"`
 	UserAgent                *string `json:"userAgent" gorm:"column:user_agent;type:text;default:null;"`
+
+	// set instead of DependencyVulnID for a group event applying to every
+	// DependencyVuln sharing this AssetSignature.
+	AssetSignature *int64 `json:"assetSignature" gorm:"column:asset_signature;type:bigint;index"`
 }
 
 func (event VulnEvent) GetUserAgent() string {

@@ -67,6 +67,8 @@ func (service ConfigService) RemoveConfig(ctx context.Context, key string) error
 	return service.repository.GetDB(ctx, nil).Where("key = ?", key).Delete(&models.Config{}).Error
 }
 
+const instanceSettingsTTL = 5 * time.Minute // cache for 5 minutes
+
 var instanceSettingsCache *shared.InstanceSettings
 var instanceSettingsExpiry time.Time
 var instanceSettingsCacheMutex = sync.Mutex{}
@@ -96,7 +98,7 @@ func (service ConfigService) GetInstanceSettings(ctx context.Context) (shared.In
 
 	instanceSettingsCacheMutex.Lock()
 	instanceSettingsCache = &settings
-	instanceSettingsExpiry = time.Now().Add(5 * time.Minute) // cache for 5 minutes
+	instanceSettingsExpiry = time.Now().Add(instanceSettingsTTL)
 	instanceSettingsCacheMutex.Unlock()
 
 	return settings, nil

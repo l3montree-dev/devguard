@@ -1,6 +1,14 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/go/go-containerregistry/package.nix
-{ lib, buildGoModule, fetchFromGitHub, installShellFiles, runCommand, jq, trivy }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  runCommand,
+  jq,
+  trivy,
+}:
 
 let
   pname = "crane";
@@ -35,7 +43,9 @@ let
       "-X github.com/google/go-containerregistry/cmd/crane/cmd.Version=v${version}"
       "-X github.com/google/go-containerregistry/internal/version.Version=${version}"
     ];
-    env = { CGO_ENABLED = 0; };
+    env = {
+      CGO_ENABLED = 0;
+    };
     nativeBuildInputs = [ installShellFiles ];
 
     postInstall = "";
@@ -58,7 +68,12 @@ in
   sbom = mkToolSBOM {
     toolName = "crane";
     inherit src version modulePurl;
-    goModules = package.goModules;
-    binaries = [{ name = "crane"; binPath = "${package}/bin/crane"; }];
+    inherit (package) goModules;
+    binaries = [
+      {
+        name = "crane";
+        binPath = "${package}/bin/crane";
+      }
+    ];
   };
 }

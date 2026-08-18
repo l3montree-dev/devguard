@@ -178,9 +178,10 @@ func fetchMembersOfOrganization(ctx context.Context, organization models.Org, ac
 
 		for _, member := range m {
 			users = append(users, dtos.UserDTO{
-				ID:   member.Id,
-				Name: IdentityName(member.Traits),
-				Role: string(roleMap[member.Id]),
+				ID:    member.Id,
+				Name:  IdentityName(member.Traits),
+				Role:  string(roleMap[member.Id]),
+				Email: IdentityEmail(member.Traits),
 			})
 		}
 	}

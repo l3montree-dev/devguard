@@ -97,11 +97,99 @@ devguard-maint docs /tmp/scanner-docs
 
 ### `logs`
 
-Inspect devguard log files.
+Inspect and correlate log files from any devguard component. The format is
+detected per file:
+
+| Format | Produced by | Notes |
+|---|---|---|
+| `api` | devguard-api, scanner (zerolog console writer) | wall clock only — **no date, no timezone** |
+| `kratos` | Ory Kratos (logfmt) | absolute timestamps |
+| `postgres` | PostgreSQL server log | absolute timestamps; `DETAIL`/`HINT`/`STATEMENT`/`CONTEXT` are folded into the entry they annotate |
+| `web` | devguard-web (Next.js server output) | **no timestamps**; stack frames folded into the error, grouped by Next.js `digest` |
+
+Levels are normalised to `DBG`/`INF`/`WRN`/`ERR`/`FTL` across every format, so
+`--level`, `errors` and `timeline` behave the same whichever log you point them
+at. Override detection with `--format/-F`, and check what a file looks like with
+`logs formats`.
+
+Any log collected with `kubectl logs --timestamps` is also understood — the
+RFC3339 prefix is stripped and used as the entry's timestamp. That is the only
+way to put the Next.js web log on a timeline.
+
+Log content is printed in full: nothing is truncated by width, and the
+continuation lines of a multi-line entry are printed indented under it. Lines
+matching neither a format's parse nor its continuation rules are counted and
+reported on stderr rather than silently dropped.
 
 ```bash
-devguard-maint logs --help
+devguard-maint logs -f api.log summary        # levels, top sources, top messages
+devguard-maint logs -f api.log errors         # every ERR and FTL entry
+devguard-maint logs -f api.log filter -l ERR -c auswaertiges-amt
+devguard-maint logs -f postgres.log timeline  # per-minute level histogram
+devguard-maint logs -f web.log formats        # what did it detect, and why
 ```
+
+#### Counting a kind of failure
+
+`summary` groups on the exact message, so events carrying a request id, address
+or duration each land in their own bucket. `--normalize/-N` replaces those tokens
+with placeholders first, which collapses one kind of failure into one row.
+Combine it with `--top/-t` to reach past the default 15:
+
+```bash
+devguard-maint logs -f api.log summary -N --top 200 | grep "connection refused"
+```
+
+```
+    12  could not get session from cookie error="... dial tcp <addr>: connect: connection refused"
+    12  critical error encountered msg="kratos: could not get identity from cookie" error="... <addr> ..."
+     2  failed to get identity err="... /admin/identities/<uuid> ... <addr> ..."
+```
+
+Tokens replaced: `<ts>`, `<date>`, `<uuid>`, `<addr>` (IP, optionally with port),
+`<hex>` (16+ hex chars), `<dur>`, `<n>`. For a plain occurrence count of one
+substring, `filter -c "connection refused"` reports the number of matches.
+
+#### `logs correlate <file> <file> [file...]`
+
+Lines several logs up on one timeline so an error in one component can be read
+against what every other component was doing at that instant. The matrix shows
+`total/errors` per bucket, and `!` marks any bucket containing an `ERR` or `FTL`.
+
+```bash
+devguard-maint logs correlate api.log kratos.log postgres.log --only-errors
+```
+
+```
+  BUCKET           api        kratos     postgres
+! 2026-08-11 14:09 31/4       72         16
+! 2026-08-11 14:11 431/25     121        50
+! 2026-08-11 14:12 142/2      290        92
+```
+
+Then drop into the actual interleaved lines around a moment of interest:
+
+```bash
+devguard-maint logs correlate api.log kratos.log --around 14:11 --window 30s
+```
+
+**Timestamps differ per component, and this is the main source of wrong
+conclusions.** Postgres and Kratos log absolute dates in UTC. The api log prints
+a wall clock with no date and no timezone; it is anchored so its last entry lands
+on the last date seen in the dated logs, and is *assumed to share their zone* —
+the header states when a date was inferred. Its stamps have minute resolution, so
+api entries land at second `:00` relative to postgres and kratos. If a log really
+is in another zone, shift it:
+
+```bash
+devguard-maint logs correlate api.log kratos.log --offset api=+2h
+```
+
+A log with no timestamps at all cannot be aligned; it is reported separately with
+its errors listed, not folded silently into the matrix.
+
+Other flags: `--bucket second|minute|hour`, `--level`, and `--date YYYY-MM-DD` to
+anchor undated logs explicitly.
 
 ## Typical release order
 

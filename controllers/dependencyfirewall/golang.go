@@ -184,7 +184,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		if err := os.Remove(cachePath); err == nil {
 			slog.Info("Removed malicious package from cache", "path", cachePath)
 		}
-		return d.blockMaliciousPackage(c, eco, requestPath, reason)
+		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 	}
 
 	if eco.isCached(cachePath) {
@@ -294,19 +294,14 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 			return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
 		}
 
-		slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
-		isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, eco.name(), packageName, resolvedVersion)
+		status, reason, err := d.checkMalicious(ctx, eco, packageName, resolvedVersion)
 		if err != nil {
 			slog.Error("Error checking malicious package", "proxy", "go", "error", err)
 			return echo.NewHTTPError(500, "failed to check if package is malicious").WithInternal(err)
 		}
-		if isMalicious {
-			reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", packageName, resolvedVersion, entry.ID)
-			if entry.Summary != "" {
-				reason += ": " + entry.Summary
-			}
+		if status != 0 {
 			slog.Warn("Blocked malicious package after version resolution", "proxy", "go", "package", packageName, "version", resolvedVersion, "reason", reason)
-			return d.blockMaliciousPackage(c, eco, requestPath, reason)
+			return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 		}
 	}
 

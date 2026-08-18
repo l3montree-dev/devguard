@@ -33,80 +33,102 @@
 # components by exact Name, so this gives it two independent, correctly
 # identified nodes to fix: the path-keyed application stub, and the
 # versionless module/library duplicate.
-{ lib, runCommand, jq }:
+{
+  lib,
+  runCommand,
+  jq,
+}:
 
 { trivy }:
 
-{ toolName, src, version, modulePurl, binaries, externalReferences ? [ ], goModules ? null }:
+{
+  toolName,
+  src,
+  version,
+  modulePurl,
+  binaries,
+  externalReferences ? [ ],
+  goModules ? null,
+}:
 let
   versionedModule = "${modulePurl}@${version}";
   externalReferencesJson = builtins.toJSON externalReferences;
 in
-runCommand "${toolName}-sbom" {
-  nativeBuildInputs = [ trivy jq ];
-} ''
-  mkdir -p $out/sboms
+runCommand "${toolName}-sbom"
+  {
+    nativeBuildInputs = [
+      trivy
+      jq
+    ];
+  }
+  ''
+    mkdir -p $out/sboms
 
-  export HOME="$TMPDIR"
-  export TRIVY_CACHE_DIR="$TMPDIR/.trivy-cache"
+    export HOME="$TMPDIR"
+    export TRIVY_CACHE_DIR="$TMPDIR/.trivy-cache"
 
-  cp -r ${src} ./src
-  chmod -R u+w ./src
+    cp -r ${src} ./src
+    chmod -R u+w ./src
 
-  ${lib.optionalString (goModules != null) ''
-    # For a real transitive tree, trivy reads each dependency's go.mod from the
-    # EXTRACTED module layout ($GOPATH/pkg/mod/<escaped-module>@<version>/go.mod;
-    # it reads GOPATH, never GOMODCACHE, and never runs `go`). goModules only
-    # ships the DOWNLOAD cache (.../cache/download/<module>/@v/<version>.mod),
-    # which trivy ignores - so without this, no dep go.mod is found, no edges
-    # are built, and every module is dumped flat under the main module.
-    # Both layouts share the same escaping, so materialize the extracted go.mod
-    # tree from the download cache with a plain copy - no `go`, no network.
-    export GOPATH="$TMPDIR/go"
-    modcache="$GOPATH/pkg/mod"
-    mkdir -p "$modcache/cache"
-    cp -r --no-preserve=mode,ownership ${goModules} "$modcache/cache/download"
-    chmod -R u+w "$modcache/cache/download"
+    ${lib.optionalString (goModules != null) ''
+      # For a real transitive tree, trivy reads each dependency's go.mod from the
+      # EXTRACTED module layout ($GOPATH/pkg/mod/<escaped-module>@<version>/go.mod;
+      # it reads GOPATH, never GOMODCACHE, and never runs `go`). goModules only
+      # ships the DOWNLOAD cache (.../cache/download/<module>/@v/<version>.mod),
+      # which trivy ignores - so without this, no dep go.mod is found, no edges
+      # are built, and every module is dumped flat under the main module.
+      # Both layouts share the same escaping, so materialize the extracted go.mod
+      # tree from the download cache with a plain copy - no `go`, no network.
+      export GOPATH="$TMPDIR/go"
+      modcache="$GOPATH/pkg/mod"
+      mkdir -p "$modcache/cache"
+      cp -r --no-preserve=mode,ownership ${goModules} "$modcache/cache/download"
+      chmod -R u+w "$modcache/cache/download"
 
-    prefix="$modcache/cache/download/"
-    find "$modcache/cache/download" -type f -name '*.mod' | while read -r modfile; do
-      rel="''${modfile#$prefix}"   # <escaped-module>/@v/<version>.mod
-      mod="''${rel%%/@v/*}"        # <escaped-module>
-      ver="$(basename "$modfile" .mod)"  # <version>
-      dest="$modcache/$mod@$ver"
-      mkdir -p "$dest"
-      cp "$modfile" "$dest/go.mod"
-    done
-  ''}
+      prefix="$modcache/cache/download/"
+      find "$modcache/cache/download" -type f -name '*.mod' | while read -r modfile; do
+        rel="''${modfile#$prefix}"   # <escaped-module>/@v/<version>.mod
+        mod="''${rel%%/@v/*}"        # <escaped-module>
+        ver="$(basename "$modfile" .mod)"  # <version>
+        dest="$modcache/$mod@$ver"
+        mkdir -p "$dest"
+        cp "$modfile" "$dest/go.mod"
+      done
+    ''}
 
-  trivy fs --offline-scan --format cyclonedx --output raw.json ./src
+    trivy fs --offline-scan --format cyclonedx --output raw.json ./src
 
-  # A source tree full of its own embedded test fixtures (e.g. trivy's own
-  # repo, full of testdata go.mod/package.json/etc fixtures for its own
-  # analyzer tests) makes trivy's fs scan produce a mess of synthetic
-  # intermediate grouping nodes - referenced from .dependencies but with no
-  # matching entry in .components at all. Left in, these become dangling refs
-  # our merge tries to graft in as if they were real components and crashes
-  # on. Filter every dependsOn list (and drop whole dependency entries whose
-  # own ref isn't a real component) down to just what's actually backed by a
-  # component - the versioned module itself, or one of its real dependencies.
-  jq --arg old "${modulePurl}" --arg new "${versionedModule}" --arg version "${version}" '
-    (.. | select(. == $old)) = $new
-    | (.components[]? | select(."bom-ref" == $new)) |= (. + {"version": $version})
-    | (([.components[]?."bom-ref"] + [$new]) | unique) as $valid
-    | .dependencies = [
-        .dependencies[]?
-        | select(.ref as $r | $valid | index($r))
-        | .dependsOn = [(.dependsOn // [])[] | select(. as $d | $valid | index($d))]
-      ]
-  ' raw.json > versioned.json
+    # A source tree full of its own embedded test fixtures (e.g. trivy's own
+    # repo, full of testdata go.mod/package.json/etc fixtures for its own
+    # analyzer tests) makes trivy's fs scan produce a mess of synthetic
+    # intermediate grouping nodes - referenced from .dependencies but with no
+    # matching entry in .components at all. Left in, these become dangling refs
+    # our merge tries to graft in as if they were real components and crashes
+    # on. Filter every dependsOn list (and drop whole dependency entries whose
+    # own ref isn't a real component) down to just what's actually backed by a
+    # component - the versioned module itself, or one of its real dependencies.
+    jq --arg old "${modulePurl}" --arg new "${versionedModule}" --arg version "${version}" '
+      (.. | select(. == $old)) = $new
+      | (.components[]? | select(."bom-ref" == $new)) |= (. + {"version": $version})
+      | (([.components[]?."bom-ref"] + [$new]) | unique) as $valid
+      | .dependencies = [
+          .dependencies[]?
+          | select(.ref as $r | $valid | index($r))
+          | .dependsOn = [(.dependsOn // [])[] | select(. as $d | $valid | index($d))]
+        ]
+    ' raw.json > versioned.json
 
-  ${lib.concatMapStringsSep "\n" ({ name, binPath }:
-    let binRef = lib.removePrefix "/" binPath; in ''
-    jq --argjson externalReferences '${externalReferencesJson}' '
-      .metadata.component = {"type": "application", "bom-ref": "${binRef}", "name": "${binRef}"}
-      | .dependencies += [{"ref": "${binRef}", "dependsOn": ["${versionedModule}"]}]
-      | if ($externalReferences | length) > 0 then .externalReferences = ((.externalReferences // []) + $externalReferences) else . end
-    ' versioned.json > $out/sboms/${name}.json
-  '') binaries}
-''
+    ${lib.concatMapStringsSep "\n" (
+      { name, binPath }:
+      let
+        binRef = lib.removePrefix "/" binPath;
+      in
+      ''
+        jq --argjson externalReferences '${externalReferencesJson}' '
+          .metadata.component = {"type": "application", "bom-ref": "${binRef}", "name": "${binRef}"}
+          | .dependencies += [{"ref": "${binRef}", "dependsOn": ["${versionedModule}"]}]
+          | if ($externalReferences | length) > 0 then .externalReferences = ((.externalReferences // []) + $externalReferences) else . end
+        ' versioned.json > $out/sboms/${name}.json
+      ''
+    ) binaries}
+  ''

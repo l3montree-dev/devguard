@@ -89,6 +89,8 @@ var ControllerModule = fx.Options(
 
 	// Organization & Project Management
 	fx.Provide(NewOrganizationController),
+	fx.Provide(NewExternalEntityProviderController),
+	fx.Provide(NewSystemController),
 	fx.Provide(NewProjectController),
 
 	// Security & Compliance

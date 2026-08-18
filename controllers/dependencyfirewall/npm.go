@@ -168,12 +168,18 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
-	if blocked, reason := d.checkMaliciousPackage(ctx, npm, requestPath); blocked {
-		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "reason", reason)
+	packageName, version := npm.parsePackage(requestPath)
+	status, reason, err := d.checkMalicious(ctx, npm, packageName, version)
+	if err != nil {
+		slog.Error("Error checking malicious package", "proxy", "npm", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
+	}
+	if status != 0 {
+		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "status", status, "reason", reason)
 		if err := os.Remove(cachePath); err == nil {
 			slog.Info("Removed malicious package from cache", "path", cachePath)
 		}
-		return d.blockMaliciousPackage(c, npm, requestPath, reason)
+		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
 	if npm.isCached(cachePath) {
@@ -295,6 +301,19 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
+	status, reason, err := d.checkMalicious(ctx, npm, packageName, "")
+	if err != nil {
+		slog.Error("Error checking malicious package", "proxy", "npm", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
+	}
+	if status != 0 {
+		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "status", status, "reason", reason)
+		if err := os.Remove(cachePath); err == nil {
+			slog.Info("Removed malicious package from cache", "path", cachePath)
+		}
+		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
+	}
+
 	// Fetch from upstream — we need the metadata to resolve the version before we can check rules.
 	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, npmRegistry, requestPath, c.Request().Header, nil)
 	if err != nil {
@@ -316,24 +335,6 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "npm", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, npm, requestPath, notAllowedReason)
-	}
-
-	if resolvedVersion != "" {
-		slog.Debug("Checking resolved version for malicious package", "package", packageName, "version", resolvedVersion)
-		isMalicious, entry, err := d.maliciousChecker.IsMalicious(ctx, "npm", packageName, resolvedVersion)
-		if err != nil {
-			slog.Error("Error checking malicious package", "proxy", "npm", "error", err)
-			return echo.NewHTTPError(500, "failed to check if package is malicious").WithInternal(err)
-		}
-
-		if isMalicious {
-			reason := fmt.Sprintf("Package %s@%s is flagged as malicious (ID: %s)", packageName, resolvedVersion, entry.ID)
-			if entry.Summary != "" {
-				reason += ": " + entry.Summary
-			}
-			slog.Warn("Blocked malicious package after version resolution", "proxy", "npm", "package", packageName, "version", resolvedVersion, "reason", reason)
-			return d.blockMaliciousPackage(c, npm, requestPath, reason)
-		}
 	}
 
 	if configs.MinReleaseAge > 0 && packageName != "" {

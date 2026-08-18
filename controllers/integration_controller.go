@@ -58,6 +58,7 @@ func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Success 200 {array} object
+// @Router /organizations/{organization}/integrations/repositories [get]
 // @Router /integrations/repositories [get]
 func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -93,7 +94,7 @@ func (c *IntegrationController) FinishInstallation(ctx shared.Context) error {
 // @Summary Handle incoming third-party integration webhook
 // @Tags Integrations
 // @Success 200 {string} string
-// @Router /webhook/ [post]
+// @Router /webhook [post]
 func (c *IntegrationController) HandleWebhook(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	if err := thirdPartyIntegration.HandleWebhook(ctx); err != nil {

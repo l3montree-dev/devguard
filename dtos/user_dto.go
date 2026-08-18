@@ -18,6 +18,7 @@ type UserDTO struct {
 	Name      string  `json:"name"`
 	ID        string  `json:"id"`
 	AvatarURL *string `json:"avatarUrl"`
+	Email     string  `json:"-"`
 
 	Role string `json:"role"`
 }

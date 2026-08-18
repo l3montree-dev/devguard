@@ -17,6 +17,7 @@ package utils
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -24,6 +25,11 @@ import (
 
 func HashString(s string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
+}
+
+func HashToInt64(s string) int64 {
+	hash := sha256.Sum256([]byte(s))
+	return int64(binary.BigEndian.Uint64(hash[:8]))
 }
 
 // HashToUUID hashes the input string with SHA-256 and returns the first 128 bits as a UUID.

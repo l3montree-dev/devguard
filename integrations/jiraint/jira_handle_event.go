@@ -21,11 +21,10 @@ func (i *JiraIntegration) HandleEvent(ctx context.Context, event any, userAgent 
 	case shared.ManualMitigateEvent:
 		asset := shared.GetAsset(event.Ctx)
 
+		// An asset with no repository configured at all is not an error here -
+		// it just means this integration doesn't apply, same as a non-jira repo.
 		repoID, err := shared.GetRepositoryID(&asset)
-		if err != nil {
-			return err
-		}
-		if !strings.HasPrefix(repoID, "jira:") {
+		if err != nil || !strings.HasPrefix(repoID, "jira:") {
 			return nil
 		}
 
