@@ -50,7 +50,7 @@
 
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
-          buildGoModule = unstablePkgs.buildGoModule;
+          inherit (unstablePkgs) buildGoModule;
         };
 
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
@@ -61,9 +61,11 @@
         };
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix {
-          buildGoModule = hostPkgs.buildGoModule;
-          lib = hostPkgs.lib;
-          inherit self system;
+          inherit (hostPkgs)
+            buildGoModule
+            lib
+            ;
+          inherit self;
         };
         ociImagesAmd64 = import ./nix/oci.nix {
           pkgs = targetPkgsAmd64;
@@ -99,9 +101,11 @@
         # Built for the evaluating system, so these are the only outputs that
         # mean anything on a non-Linux host.
         hostBinaries = {
-          devguardScanner = binaries.devguardScanner;
-          devguard = binaries.devguard;
-          devguardCLI = binaries.devguardCLI;
+          inherit (binaries)
+            devguardScanner
+            devguard
+            devguardCLI
+            ;
         };
 
         # supplementary SBOMs, exposed directly so they can be inspected
@@ -164,8 +168,35 @@
             unstablePkgs.gotools
             unstablePkgs.gopls
             unstablePkgs.golangci-lint
+            self.formatter.${system}
           ];
         };
+
+        formatter = unstablePkgs.treefmt.withConfig {
+          settings = {
+            tree-root-file = "flake.nix";
+            on-unmatched = "info";
+            formatter = {
+              nixfmt = {
+                command = lib.getExe unstablePkgs.nixfmt;
+                includes = [ "*.nix" ];
+              };
+              statix = {
+                command = lib.getExe unstablePkgs.statix;
+                options = [ "fix" ];
+                no-positional-arg-support = true;
+                includes = [ "*.nix" ];
+              };
+              deadnix = {
+                command = lib.getExe unstablePkgs.deadnix;
+                options = [ "--edit" ];
+                includes = [ "*.nix" ];
+              };
+            };
+          };
+        };
+
+        checks.formatting = self.formatter.${system}.check self;
       }
     );
 }

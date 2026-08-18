@@ -248,7 +248,8 @@ type AffectedComponentRepository interface {
 }
 
 type MaliciousPackageChecker interface {
-	IsMalicious(ctx context.Context, ecosystem, packageName, version string) (bool, *dtos.OSV, error)
+	GetMaliciousComponents(ctx context.Context, ecosystem, packageName string) ([]models.MaliciousAffectedComponent, error)
+	GetMaliciousPackage(ctx context.Context, id string) (models.MaliciousPackage, error)
 }
 
 type ComponentRepository interface {

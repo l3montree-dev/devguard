@@ -36,7 +36,6 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 }
 
 func cookieAuth(ctx context.Context, oryAPIClient shared.PublicClient, oryKratosSessionCookie string) (string, error) {
-	// check if we have a session
 	unescaped, err := url.QueryUnescape(oryKratosSessionCookie)
 	if err != nil {
 		return "", err
@@ -50,41 +49,51 @@ func cookieAuth(ctx context.Context, oryAPIClient shared.PublicClient, oryKratos
 	return session.Id, nil
 }
 
+// try to authenticate request using (in order) kratos session cookie, bearer token or request signature
+// if one of these methods fail the verification we set "no session" and skip the others
 func SessionMiddleware(oryAPIClient shared.PublicClient, configService shared.ConfigService, verifier shared.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
+			if oryKratosSessionCookie != nil {
+				// found a cookie, try to authenticate with it
+				if userID, err := cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String()); err == nil {
+					// successful authentication; set session and continue
+					shared.SetSession(ctx, shared.NewSession(userID, shared.SessionActorUser, strings.Fields("scan manage"), false))
+					return next(ctx)
+				} else {
+					slog.Warn("could not get session from cookie", "error", err)
+					shared.SetSession(ctx, shared.AnonymousSession)
+					return next(ctx)
+				}
+			}
+
 			instanceSettings, err := configService.GetInstanceSettings(ctx.Request().Context())
 			if err != nil {
 				return err
 			}
-			authHeader := ctx.Request().Header.Get("Authorization")
 
-			var userID string
-			var scopes string
-
-			if oryKratosSessionCookie != nil {
-				if userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String()); err == nil {
-					scopes = "scan manage"
-					scopesArray := strings.Fields(scopes)
-					shared.SetSession(ctx, shared.NewSession(userID, shared.SessionActorUser, scopesArray, false))
-					return next(ctx)
-				} else {
-					slog.Warn("could not get session from cookie", "error", err)
-				}
-			}
-			if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok && !instanceSettings.BearerTokenAuthDisabled {
-				if session, err := verifier.VerifyAPIToken(ctx.Request().Context(), token); err == nil {
-					shared.SetSession(ctx, session)
-					return next(ctx)
-				}
-			} else {
-				if session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
-					shared.SetSession(ctx, session)
-					return next(ctx)
+			// try to authenticate via bearer tokens
+			if !instanceSettings.BearerTokenAuthDisabled {
+				authHeader := ctx.Request().Header.Get("Authorization")
+				if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok { // check if a token can be parsed
+					if session, err := verifier.VerifyAPIToken(ctx.Request().Context(), token); err == nil { // then verify the token
+						shared.SetSession(ctx, session)
+						return next(ctx)
+					} else {
+						shared.SetSession(ctx, shared.AnonymousSession)
+						return next(ctx)
+					}
 				}
 			}
 
+			// lastly check if we can authenticate via the request signature
+			if session, err := verifier.VerifyRequestSignature(ctx.Request().Context(), ctx.Request()); err == nil {
+				shared.SetSession(ctx, session)
+				return next(ctx)
+			}
+
+			// could not authenticate; set to anonymous
 			shared.SetSession(ctx, shared.AnonymousSession)
 			return next(ctx)
 		}

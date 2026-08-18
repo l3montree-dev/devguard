@@ -104,6 +104,17 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx
 	return dependencyVulns, nil
 }
 
+// otherAssetVersionsBatchSize bounds how many rows GetDependencyVulnsByOtherAssetVersions
+// materializes per round trip.
+//
+// GORM resolves a Preload with a single `... IN (?, ?, ...)` carrying one bind parameter
+// per parent row already fetched - the same behaviour getAllOpenVulns documents above.
+// Postgres' extended protocol caps a statement at 65535 bind parameters, so an asset whose
+// other versions hold more vulns than that fails with "extended protocol limited to 65535
+// parameters" inside the Events preload, not in the Where below. Batching the parents
+// bounds every preload issued for them.
+const otherAssetVersionsBatchSize = 1000
+
 func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
@@ -111,9 +122,14 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersio
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
 
-	if err := q.Find(&dependencyVulns).Error; err != nil {
+	var batch []models.DependencyVuln
+	if err := q.FindInBatches(&batch, otherAssetVersionsBatchSize, func(*gorm.DB, int) error {
+		dependencyVulns = append(dependencyVulns, batch...)
+		return nil
+	}).Error; err != nil {
 		return nil, err
 	}
+
 	return dependencyVulns, nil
 }
 
