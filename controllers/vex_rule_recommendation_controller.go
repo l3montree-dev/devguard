@@ -82,24 +82,14 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	// we need to get the amount of dependency vulns, this rule applies to, so we can set the AppliesToAmountOfDependencyVulns field in the recommendation DTO
-	allOpenVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, vuln.AssetID, dtos.VulnStateOpen)
-	if err != nil {
-		return traceErr(span, 500, "Could not calculate recommendation.", err)
-	}
-
 	if rules := matchingSessionRules[vuln.ID]; len(rules) > 0 {
 		rule := rules[0]
-		matches, err := services.MatchRulesToVulns(ctx.Request().Context(), []models.UpstreamVEXRule{rule.UpstreamVEXRule}, allOpenVulns)
-		if err != nil {
-			return traceErr(span, 500, "Could not calculate recommendation.", err)
-		}
 
 		asset, err := c.assetRepository.ReadWithProject(reqCtx, nil, rule.AssetID)
 		if err != nil {
 			return traceErr(span, 500, "Could not calculate recommendation.", err)
 		}
-		return ctx.JSON(200, transformer.VEXRuleToOriginRecommendationDTO(rule, len(matches[rule.ID]), asset.Slug, asset.Project.Slug))
+		return ctx.JSON(200, transformer.VEXRuleToOriginRecommendationDTO(rule, asset.Slug, asset.Project.Slug))
 	}
 
 	// no session rule was found - lets look for upstream or crowdsourced recommendations
@@ -112,23 +102,10 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 		return ctx.NoContent(204)
 	}
 
-	selectedRecommendation := recommendations[dependencyVulnIDParsed]
-	var selectedRecommendationEvalStruct models.UpstreamVEXRule
-	var matchesKey string
-	if selectedRecommendation.VEXRuleID != nil {
-		selectedRecommendationEvalStruct = transformer.VEXRuleToUpstreamVEXRule(selectedRecommendation.VEXRule)
-		matchesKey = *selectedRecommendation.VEXRuleID
-	} else if selectedRecommendation.UpstreamVEXRuleID != nil {
-		selectedRecommendationEvalStruct = selectedRecommendation.UpstreamVEXRule
-		matchesKey = *selectedRecommendation.UpstreamVEXRuleID
-	}
-
-	matches, err := services.MatchRulesToVulns(ctx.Request().Context(), []models.UpstreamVEXRule{selectedRecommendationEvalStruct}, allOpenVulns)
-
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
-	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendations[dependencyVulnIDParsed], len(matches[matchesKey])))
+	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendations[dependencyVulnIDParsed]))
 }
 
 // @Summary Get crowdsourced VEX recommendations for all vulns of an asset
@@ -245,7 +222,7 @@ func buildDedupedVexRuleRecommendations(matchingSessionRules map[uuid.UUID][]mod
 			continue
 		}
 		if _, ok := recommendationsByKey[key]; !ok {
-			recommendationsByKey[key] = transformer.VEXRuleRecommendationToDTO(recommendation, 0)
+			recommendationsByKey[key] = transformer.VEXRuleRecommendationToDTO(recommendation)
 		}
 	}
 
@@ -253,7 +230,7 @@ func buildDedupedVexRuleRecommendations(matchingSessionRules map[uuid.UUID][]mod
 		for _, rule := range rules {
 			if _, ok := recommendationsByKey[rule.ID]; !ok {
 				assetWithProject := assetsByID[rule.AssetID]
-				recommendationsByKey[rule.ID] = transformer.VEXRuleToOriginRecommendationDTO(rule, 0, assetWithProject.Project.Slug, assetWithProject.Slug)
+				recommendationsByKey[rule.ID] = transformer.VEXRuleToOriginRecommendationDTO(rule, assetWithProject.Project.Slug, assetWithProject.Slug)
 			}
 		}
 	}

@@ -59,17 +59,16 @@ const (
 )
 
 type VexRuleRecommendation struct {
-	Title                            string                      `json:"title"`
-	CELExpression                    string                      `json:"celExpression"`
-	Justification                    string                      `json:"justification"`
-	MechanicalJustification          MechanicalJustificationType `json:"mechanicalJustification"`
-	EventType                        VulnEventType               `json:"eventType"`
-	Type                             VexRuleRecommendationType   `json:"type"`
-	Source                           string                      `json:"source,omitempty"`
-	Confidence                       float64                     `json:"confidence"`
-	AppliesToAmountOfDependencyVulns int                         `json:"appliesToAmountOfDependencyVulns,omitempty"`
-	VerifiedVotes                    int                         `json:"verifiedVotes"`
-	TotalVotes                       int                         `json:"totalVotes"`
+	Title                   string                      `json:"title"`
+	CELExpression           string                      `json:"celExpression"`
+	Justification           string                      `json:"justification"`
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
+	EventType               VulnEventType               `json:"eventType"`
+	Type                    VexRuleRecommendationType   `json:"type"`
+	Source                  string                      `json:"source,omitempty"`
+	Confidence              float64                     `json:"confidence"`
+	VerifiedVotes           int                         `json:"verifiedVotes"`
+	TotalVotes              int                         `json:"totalVotes"`
 
 	// ProjectSlug/OriginAssetSlug are set when this recommendation was
 	// taken directly from a rule on an asset the requesting user already has
