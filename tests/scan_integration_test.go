@@ -1102,7 +1102,7 @@ func TestBranchInheritanceIgnoresGitAncestry(t *testing.T) {
 			assetVersion, err := f.App.AssetVersionRepository.Read(context.Background(), nil, branch, asset.ID)
 			assert.Nil(t, err)
 
-			msg := dtos.DependencyVulnStatus{
+			msg := dtos.CreateEventRequest{
 				StatusType:    string(statusType),
 				Justification: justification,
 			}
