@@ -45,8 +45,9 @@ ALTER TABLE public.vuln_events
     ADD CONSTRAINT vuln_events_security_advisory_id_fkey
         FOREIGN KEY (security_advisory_id) REFERENCES public.advisories(id) ON DELETE CASCADE;
 
+
 ALTER TABLE public.vuln_events ADD CONSTRAINT one_vuln_parent CHECK (
-  (dependency_vuln_id    IS NOT NULL)::int +
+  (dependency_vuln_id IS NOT NULL OR asset_signature IS NOT NULL)::int +
   (license_risk_id       IS NOT NULL)::int +
   (first_party_vuln_id   IS NOT NULL)::int +
   (compliance_posture_id IS NOT NULL)::int +
