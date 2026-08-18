@@ -37,7 +37,7 @@ func mustParsePurl(t *testing.T, purl string) packageurl.PackageURL {
 func candidateFor(t *testing.T, purl string, components ...models.AffectedComponent) *candidate {
 	t.Helper()
 	c := newCandidate(mustParsePurl(t, purl))
-	c.components = components
+	c.Components = components
 	return c
 }
 
@@ -259,7 +259,7 @@ func TestAffectedComponentsCache(t *testing.T) {
 
 		components, ok := acc.GetByCandidate(candidateFor(t, "pkg:npm/lodash@4.17.20"))
 		assert.True(t, ok)
-		assert.Equal(t, stored.components, components)
+		assert.Equal(t, stored.Components, components)
 	})
 
 	t.Run("an empty result is cached as a hit", func(t *testing.T) {

@@ -29,23 +29,43 @@ import (
 
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/lib/pq"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
-type PurlComparer struct {
-	db    shared.DB
-	cache *AffectedComponentsCache
+// existing behavior as the default preloads
+var defaultPreloads = []func(*gorm.DB) *gorm.DB{
+	func(db *gorm.DB) *gorm.DB {
+		return db.Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships")
+	},
 }
 
-// cache Size is the maximum number of elements held at one time
-// if 0 is provided the cache gets disabled
-// if nil is provided the default is used
-func NewPurlComparer(db shared.DB, cacheSize *int) *PurlComparer {
-	return &PurlComparer{
-		db:    db,
-		cache: NewAffectedComponentsCache(cacheSize),
+type PurlComparer struct {
+	db       shared.DB
+	cache    *AffectedComponentsCache
+	preloads []func(*gorm.DB) *gorm.DB
+}
+
+// WithPreloads replaces the default CVE preloads. Callers can customize what gets preloaded.
+func WithPreloads(preloads ...func(*gorm.DB) *gorm.DB) func(*PurlComparer) {
+	return func(comparer *PurlComparer) {
+		comparer.preloads = preloads
 	}
+}
+
+func NewPurlComparer(db shared.DB, cacheSize *int, opts ...func(*PurlComparer)) *PurlComparer {
+	comparer := &PurlComparer{
+		db:       db,
+		cache:    NewAffectedComponentsCache(cacheSize),
+		preloads: defaultPreloads,
+	}
+	// apply all options to the comparer
+	for _, opt := range opts {
+		opt(comparer)
+	}
+	return comparer
 }
 
 var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer interface
@@ -54,17 +74,17 @@ var _ comparer = (*PurlComparer)(nil) // Ensure PurlComparer implements comparer
 // about it along the way. Carrying the results on the candidate itself keeps the
 // input order intact without any index bookkeeping.
 type candidate struct {
-	purl       packageurl.PackageURL
+	Purl       packageurl.PackageURL
 	matchCtx   *normalize.PurlMatchContext
 	shape      queryShape
-	components []models.AffectedComponent
+	Components []models.AffectedComponent
 }
 
 // helper function to unify candidate construction on all occurrences
 func newCandidate(purl packageurl.PackageURL) *candidate {
 	matchCtx := normalize.ParsePurlForMatching(purl)
 	return &candidate{
-		purl:     purl,
+		Purl:     purl,
 		matchCtx: matchCtx,
 		shape: queryShape{
 			interpretation:   matchCtx.HowToInterpretVersionString,
@@ -99,7 +119,12 @@ func (comparer *PurlComparer) GetAffectedComponents(ctx context.Context, purl pa
 	if len(candidates) == 0 {
 		return []models.AffectedComponent{}, nil // no version = no results
 	}
-	return candidates[0].components, nil
+	return candidates[0].Components, nil
+}
+
+// wrapper for calling resolve candidates itself with multiple purls
+func (comparer *PurlComparer) GetAffectedComponentsBatch(ctx context.Context, purls []packageurl.PackageURL) ([]*candidate, error) {
+	return comparer.resolveCandidates(ctx, purls)
 }
 
 // GetVulns resolves the vulnerabilities for a set of purls. Callers looking at a
@@ -112,7 +137,7 @@ func (comparer *PurlComparer) GetVulns(ctx context.Context, purls []packageurl.P
 
 	vulns := make([]models.VulnInPackage, 0, len(candidates))
 	for _, c := range candidates {
-		vulns = append(vulns, vulnsFromAffectedComponents(c.purl, c.components)...)
+		vulns = append(vulns, vulnsFromAffectedComponents(c.Purl, c.Components)...)
 	}
 	return vulns, nil
 }
@@ -188,7 +213,7 @@ func (acc *AffectedComponentsCache) SetForCandidates(candidates []*candidate, ca
 	}
 
 	for i := range candidates {
-		acc.cache.Add(candidates[i].cacheKey(), candidates[i].components)
+		acc.cache.Add(candidates[i].cacheKey(), candidates[i].Components)
 	}
 }
 
@@ -220,7 +245,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 		ac, ok := comparer.cache.GetByCandidate(c) // read from cache if possible
 		if ok {
 			cacheUsage++
-			c.components = ac
+			c.Components = ac
 		}
 
 		candidates = append(candidates, c)
@@ -236,12 +261,7 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 			return nil, err
 		}
 		for _, c := range shapeCandidates {
-			c.components = componentsByKey[c.lookupKey()]
-			if shape.interpretation == normalize.EcosystemSpecificVersion {
-				// Ecosystem specific rules can only be expressed in Go, so the
-				// query returned every row for the package and we narrow it here.
-				c.components = filterMatchingComponentsByVersion(c.components, c.matchCtx.NormalizedVersion)
-			}
+			c.Components = componentsByKey[c.lookupKey()]
 		}
 	}
 
@@ -279,9 +299,15 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 		args = append(args, shape.ecosystemPattern)
 	}
 
-	// Selecting only the ids keeps the joined result small - the rows are
-	// hydrated by a second query, preloading related data.
-	query := `SELECT q.purl, q.version, ac.id FROM affected_components ac
+	// Selecting the ids plus the columns the ecosystem specific version check
+	// needs keeps the joined result small - the rows are hydrated by a second
+	// query using preloads AFTER filtering
+	query := `SELECT q.purl, q.version, ac.id,
+			ac.purl AS component_purl,
+			ac.version AS component_version,
+			ac.version_introduced AS component_version_introduced,
+			ac.version_fixed AS component_version_fixed
+		FROM affected_components ac
 		JOIN (
 			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version
 		) q ON ac.purl = q.purl`
@@ -293,11 +319,29 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 		Purl    string
 		Version string
 		ID      int64
+
+		// used for filtering
+		ComponentPurl              string
+		ComponentVersion           *string
+		ComponentVersionIntroduced *string
+		ComponentVersionFixed      *string
 	}
 	if err := comparer.db.WithContext(ctx).Raw(query, args...).Scan(&matches).Error; err != nil {
 		slog.Error("error executing batched affected components query", "error", err, "interpretation", shape.interpretation)
 		return nil, errors.Wrap(err, "could not match affected components")
 	}
+
+	// filter versions before preloading to keep the preload small
+	if shape.interpretation == normalize.EcosystemSpecificVersion {
+		narrowed := matches[:0]
+		for _, match := range matches {
+			if matchesEcosystemVersion(match.ComponentPurl, match.ComponentVersion, match.ComponentVersionIntroduced, match.ComponentVersionFixed, match.Version) {
+				narrowed = append(narrowed, match)
+			}
+		}
+		matches = narrowed
+	}
+
 	if len(matches) == 0 {
 		return nil, nil
 	}
@@ -307,11 +351,15 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 		ids = append(ids, match.ID)
 	}
 
+	// build the hydration query using all preloads from purl comparer
+	hydrateQuery := comparer.db.WithContext(ctx).Model(&models.AffectedComponent{}).
+		Where("id = ANY(?)", pq.Array(ids))
+	for _, preload := range comparer.preloads {
+		hydrateQuery = preload(hydrateQuery)
+	}
+
 	var components []models.AffectedComponent
-	if err := comparer.db.WithContext(ctx).Model(&models.AffectedComponent{}).
-		Where("id IN ?", ids).
-		Preload("CVE").Preload("CVE.Exploits").Preload("CVE.Relationships").
-		Find(&components).Error; err != nil {
+	if err := hydrateQuery.Find(&components).Error; err != nil {
 		slog.Error("error loading affected components", "error", err)
 		return nil, errors.Wrap(err, "could not load affected components")
 	}
@@ -432,24 +480,17 @@ func deduplicateByAlias(vulns []models.VulnInPackage) []models.VulnInPackage {
 	return result
 }
 
-func filterMatchingComponentsByVersion(components []models.AffectedComponent, lookingForVersion string) []models.AffectedComponent {
-	matchingComponents := make([]models.AffectedComponent, 0, len(components))
-
-	for _, component := range components {
-		purl, err := packageurl.FromString(component.PurlWithoutVersion)
-		if err != nil {
-			slog.Warn("invalid purl, skipping affected component")
-			continue
-		}
-		match, err := normalize.CheckVersion(component.Version, component.VersionIntroduced, component.VersionFixed, lookingForVersion, purl.Type)
-		if err != nil {
-			slog.Warn("could not check version for affected component", "error", err, "lookingForVersion", lookingForVersion, "purl", component.PurlWithoutVersion, "introduced", utils.OrDefault(component.VersionIntroduced, "<nil>"), "fixed", utils.OrDefault(component.VersionFixed, "<nil>"))
-			continue
-		}
-		if match {
-			matchingComponents = append(matchingComponents, component)
-		}
+// apply ecosystem specific filter to an individual affected component
+func matchesEcosystemVersion(purlWithoutVersion string, version, versionIntroduced, versionFixed *string, lookingForVersion string) bool {
+	purl, err := packageurl.FromString(purlWithoutVersion)
+	if err != nil {
+		slog.Warn("invalid purl, skipping affected component")
+		return false
 	}
-
-	return matchingComponents
+	match, err := normalize.CheckVersion(version, versionIntroduced, versionFixed, lookingForVersion, purl.Type)
+	if err != nil {
+		slog.Warn("could not check version for affected component", "error", err, "lookingForVersion", lookingForVersion, "purl", purlWithoutVersion, "introduced", utils.OrDefault(versionIntroduced, "<nil>"), "fixed", utils.OrDefault(versionFixed, "<nil>"))
+		return false
+	}
+	return match
 }
