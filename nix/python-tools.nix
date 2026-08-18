@@ -21,7 +21,8 @@
   pyproject-build-systems,
   # passed explicitly from oci.nix (its own package, built from trivy.nix)
   trivy,
-}: rec {
+}:
+rec {
   workspace = uv2nix.lib.workspace.loadWorkspace {
     workspaceRoot = ./python-tools;
   };
@@ -32,12 +33,16 @@
     sourcePreference = "wheel";
   };
 
-  pythonSet = (callPackage pyproject-nix.build.packages {
-    python = python313;
-  }).overrideScope (lib.composeManyExtensions [
-    pyproject-build-systems.overlays.wheel
-    overlay
-  ]);
+  pythonSet =
+    (callPackage pyproject-nix.build.packages {
+      python = python313;
+    }).overrideScope
+      (
+        lib.composeManyExtensions [
+          pyproject-build-systems.overlays.wheel
+          overlay
+        ]
+      );
   venv = pythonSet.mkVirtualEnv "devguard-scanner-tools" workspace.deps.default;
 
   # Trivy's *image* scan of the venv (installed site-packages) can only see a
@@ -74,29 +79,34 @@
   # (which considers every bundled component, not just direct children)
   # demotes each one's flat direct-root edge in this single merge, no matter
   # how deep it sits in the real tree.
-  sbom = runCommand "python-tools-sbom" {
-    nativeBuildInputs = [ trivy jq ];
-  } ''
-    mkdir -p $out/sboms
+  sbom =
+    runCommand "python-tools-sbom"
+      {
+        nativeBuildInputs = [
+          trivy
+          jq
+        ];
+      }
+      ''
+        mkdir -p $out/sboms
 
-    export HOME="$TMPDIR"
-    export TRIVY_CACHE_DIR="$TMPDIR/.trivy-cache"
+        export HOME="$TMPDIR"
+        export TRIVY_CACHE_DIR="$TMPDIR/.trivy-cache"
 
-    cp -r ${./python-tools} ./src
-    chmod -R u+w ./src
+        cp -r ${./python-tools} ./src
+        chmod -R u+w ./src
 
-    trivy fs --offline-scan --format cyclonedx --output raw.json ./src
+        trivy fs --offline-scan --format cyclonedx --output raw.json ./src
 
-    jq '
-      ([.components[]?."bom-ref"]) as $valid
-      | .components = [.components[] | select(."bom-ref" as $r | $valid | index($r))]
-      | .dependencies = [
-          .dependencies[]?
-          | select(.ref as $r | $valid | index($r))
-          | .dependsOn = [(.dependsOn // [])[] | select(. as $d | $valid | index($d))]
-        ]
-      | .metadata.component = (.components[] | select(.name == "devguard-scanner-tools"))
-    ' raw.json > "$out/sboms/devguard-scanner-tools.json"
-  '';
+        jq '
+          ([.components[]?."bom-ref"]) as $valid
+          | .components = [.components[] | select(."bom-ref" as $r | $valid | index($r))]
+          | .dependencies = [
+              .dependencies[]?
+              | select(.ref as $r | $valid | index($r))
+              | .dependsOn = [(.dependsOn // [])[] | select(. as $d | $valid | index($d))]
+            ]
+          | .metadata.component = (.components[] | select(.name == "devguard-scanner-tools"))
+        ' raw.json > "$out/sboms/devguard-scanner-tools.json"
+      '';
 }
-
