@@ -100,7 +100,7 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		if err != nil {
 			return nil, err
 		}
-		if c.Secret != nil {
+		if c.Secret != nil && *c.Secret != "" {
 			req.Header.Set("X-Webhook-Secret", *c.Secret)
 		}
 		if signature != "" {
