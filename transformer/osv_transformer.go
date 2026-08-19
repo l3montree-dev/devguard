@@ -74,8 +74,9 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 	cve.DateLastModified = osv.Modified
 	cve.Withdrawn = (*datatypes.Date)(osv.Withdrawn)
 
-	if osv.DatabaseSpecifics.CWEs != nil { // omit cve.cwes if osv.cvwes is empty
-		cve.CWEs = new(strings.Join(osv.DatabaseSpecifics.CWEs, ","))
+	cwes := strings.Join(osv.DatabaseSpecific.CWEs, ",")
+	if cwes != "" { // omit cve.cwes if osv.cwes is empty
+		cve.CWEs = &cwes
 	}
 
 	return cve

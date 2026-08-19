@@ -51,7 +51,7 @@ type OSV struct {
 		Type  string `json:"type"`
 		Score string `json:"score"`
 	} `json:"severity"`
-	DatabaseSpecifics DatabaseSpecifics `json:"database_specific"` // specific additional information, not standardized
+	DatabaseSpecific DatabaseSpecifics `json:"database_specific"` // specific additional information, not standardized
 }
 
 // can include a lot of custom attributes but we are only interested in the cwes field

@@ -77,6 +77,8 @@ type quickDiffCVE struct {
 	EPSS                  *float64
 	Percentile            *float32
 	Vector                string
+	Withdrawn             *time.Time
+	CWEs                  *string
 }
 
 type quickDiffRelKey struct {
@@ -444,7 +446,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.CVEsInserted) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsInserted), func(i int) ([]any, error) {
 			c := diff.CVEsInserted[i]
-			return []any{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector, c.EUVDExploitAdd}, nil
+			return []any{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector, c.EUVDExploitAdd, c.Withdrawn, c.CWEs}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_cves: %w", err)
 		}
@@ -455,7 +457,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.CVEsUpdated) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_upd_cves"}, cvePlain, pgx.CopyFromSlice(len(diff.CVEsUpdated), func(i int) ([]any, error) {
 			c := diff.CVEsUpdated[i]
-			return []any{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector, c.EUVDExploitAdd}, nil
+			return []any{c.ID, c.ContentHash, c.CVE, c.DatePublished, c.DateLastModified, c.Description, c.CVSS, c.References, c.CISAExploitAdd, c.CISAActionDue, c.CISARequiredAction, c.CISAVulnerabilityName, c.EPSS, c.Percentile, c.Vector, c.EUVDExploitAdd, c.Withdrawn, c.CWEs}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_upd_cves: %w", err)
 		}
@@ -697,6 +699,7 @@ func collectCVERows(rows pgx.Rows) ([]quickDiffCVE, error) {
 			&c.Description, &c.CVSS, &c.References, &c.CISARequiredAction,
 			&c.CISAVulnerabilityName, &c.EPSS, &c.Percentile, &c.Vector,
 			&c.CISAExploitAdd, &c.CISAActionDue, &c.EUVDExploitAdd,
+			&c.Withdrawn, &c.CWEs,
 		); err != nil {
 			return nil, err
 		}
