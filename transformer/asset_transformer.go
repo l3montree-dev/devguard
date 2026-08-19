@@ -47,32 +47,35 @@ func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDT
 
 func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 	return dtos.AssetDTO{
-		ID:                            asset.ID,
-		Name:                          asset.Name,
-		Avatar:                        asset.Avatar,
-		Slug:                          asset.Slug,
-		Description:                   asset.Description,
-		ProjectID:                     asset.ProjectID,
-		AvailabilityRequirement:       asset.AvailabilityRequirement,
-		IntegrityRequirement:          asset.IntegrityRequirement,
-		ConfidentialityRequirement:    asset.ConfidentialityRequirement,
-		ReachableFromInternet:         asset.ReachableFromInternet,
-		RepositoryID:                  asset.RepositoryID,
-		RepositoryName:                asset.RepositoryName,
-		SigningPubKey:                 asset.SigningPubKey,
-		CVSSAutomaticTicketThreshold:  asset.CVSSAutomaticTicketThreshold,
-		RiskAutomaticTicketThreshold:  asset.RiskAutomaticTicketThreshold,
-		VulnAutoReopenAfterDays:       asset.VulnAutoReopenAfterDays,
-		AssetVersions:                 utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
-		ExternalEntityProviderID:      asset.ExternalEntityProviderID,
-		ExternalEntityID:              asset.ExternalEntityID,
-		RepositoryProvider:            asset.RepositoryProvider,
-		IsPublic:                      asset.IsPublic,
-		ParanoidMode:                  asset.ParanoidMode,
-		SharesInformation:             asset.SharesInformation,
-		PipelineLastRun:               asset.PipelineLastRun,
-		PipelineError:                 asset.PipelineError,
-		State:                         string(asset.State),
+		ID:                           asset.ID,
+		Name:                         asset.Name,
+		Avatar:                       asset.Avatar,
+		Slug:                         asset.Slug,
+		Description:                  asset.Description,
+		ProjectID:                    asset.ProjectID,
+		AvailabilityRequirement:      asset.AvailabilityRequirement,
+		IntegrityRequirement:         asset.IntegrityRequirement,
+		ConfidentialityRequirement:   asset.ConfidentialityRequirement,
+		ModifiedAttackVector:         asset.ModifiedAttackVector,
+		ModifiedAttackComplexity:     asset.ModifiedAttackComplexity,
+		ModifiedPrivilegesRequired:   asset.ModifiedPrivilegesRequired,
+		ModifiedScope:                asset.ModifiedScope,
+		RepositoryID:                 asset.RepositoryID,
+		RepositoryName:               asset.RepositoryName,
+		SigningPubKey:                asset.SigningPubKey,
+		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
+		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
+		VulnAutoReopenAfterDays:      asset.VulnAutoReopenAfterDays,
+		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
+		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
+		ExternalEntityID:             asset.ExternalEntityID,
+		RepositoryProvider:           asset.RepositoryProvider,
+		IsPublic:                     asset.IsPublic,
+		ParanoidMode:                 asset.ParanoidMode,
+		SharesInformation:            asset.SharesInformation,
+		PipelineLastRun:              asset.PipelineLastRun,
+		PipelineError:                asset.PipelineError,
+		State:                        string(asset.State),
 	}
 }
 
@@ -89,13 +92,17 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 		ProjectID:   projectID,
 		Description: assetCreateRequest.Description,
 
-		Importance:            assetCreateRequest.Importance,
-		ReachableFromInternet: assetCreateRequest.ReachableFromInternet,
+		Importance: assetCreateRequest.Importance,
 
 		ConfidentialityRequirement: sanitizeRequirementLevel(assetCreateRequest.ConfidentialityRequirement),
 		IntegrityRequirement:       sanitizeRequirementLevel(assetCreateRequest.IntegrityRequirement),
 		AvailabilityRequirement:    sanitizeRequirementLevel(assetCreateRequest.AvailabilityRequirement),
-		RepositoryProvider:         assetCreateRequest.RepositoryProvider,
+		ModifiedAttackVector:       sanitizeAttackVector(assetCreateRequest.ModifiedAttackVector),
+		ModifiedAttackComplexity:   sanitizeAttackComplexity(assetCreateRequest.ModifiedAttackComplexity),
+		ModifiedPrivilegesRequired: sanitizePrivilegesRequired(assetCreateRequest.ModifiedPrivilegesRequired),
+		ModifiedScope:              sanitizeScope(assetCreateRequest.ModifiedScope),
+
+		RepositoryProvider: assetCreateRequest.RepositoryProvider,
 	}
 
 	if assetCreateRequest.EnableTicketRange {
@@ -115,6 +122,42 @@ func sanitizeRequirementLevel(level string) dtos.RequirementLevel {
 	}
 }
 
+func sanitizeAttackVector(level string) dtos.ModifiedAttackVector {
+	switch level {
+	case "network", "adjacent", "local", "physical", "X":
+		return dtos.ModifiedAttackVector(level)
+	default:
+		return "X"
+	}
+}
+
+func sanitizeAttackComplexity(level string) dtos.ModifiedAttackComplexity {
+	switch level {
+	case "low", "high", "X":
+		return dtos.ModifiedAttackComplexity(level)
+	default:
+		return "X"
+	}
+}
+
+func sanitizePrivilegesRequired(level string) dtos.ModifiedPrivilegesRequired {
+	switch level {
+	case "none", "low", "high", "X":
+		return dtos.ModifiedPrivilegesRequired(level)
+	default:
+		return "X"
+	}
+}
+
+func sanitizeScope(level string) dtos.ModifiedScope {
+	switch level {
+	case "unchanged", "changed", "X":
+		return dtos.ModifiedScope(level)
+	default:
+		return "X"
+	}
+}
+
 func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *models.Asset) bool {
 	updated := false
 	if assetPatch.Name != nil {
@@ -130,11 +173,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.Description != nil {
 		updated = true
 		asset.Description = *assetPatch.Description
-	}
-
-	if assetPatch.ReachableFromInternet != nil {
-		updated = true
-		asset.ReachableFromInternet = *assetPatch.ReachableFromInternet
 	}
 
 	if assetPatch.RepositoryID != nil {

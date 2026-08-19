@@ -39,21 +39,6 @@ func TestApplyToModel(t *testing.T) {
 			updated: true,
 		},
 		{
-			name: "Update ReachableFromInternet",
-			patch: dtos.AssetPatchRequest{
-				ReachableFromInternet: new(true),
-			},
-			initial: models.Asset{
-
-				ReachableFromInternet: false,
-			},
-			expected: models.Asset{
-
-				ReachableFromInternet: true,
-			},
-			updated: true,
-		},
-		{
 			name: "Update RepositoryID and RepositoryName",
 			patch: dtos.AssetPatchRequest{
 				RepositoryID:   new("new-repo-id"),

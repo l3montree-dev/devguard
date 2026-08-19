@@ -271,7 +271,10 @@ func (w *WebhookController) Test(ctx shared.Context) error {
 		AvailabilityRequirement:    "high",
 		IntegrityRequirement:       "high",
 		ConfidentialityRequirement: "high",
-		ReachableFromInternet:      false,
+		ModifiedAttackVector:       "network",
+		ModifiedAttackComplexity:   "low",
+		ModifiedPrivilegesRequired: "none",
+		ModifiedScope:              "changed",
 	}
 
 	assetVersion = shared.AssetVersionObject{

@@ -79,7 +79,6 @@ type AssetDTO struct {
 	ModifiedAttackComplexity   ModifiedAttackComplexity   `json:"modifiedAttackComplexity"`
 	ModifiedPrivilegesRequired ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired"`
 	ModifiedScope              ModifiedScope              `json:"modifiedScope"`
-	ReachableFromInternet      bool                       `json:"reachableFromInternet"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
@@ -131,8 +130,7 @@ type AssetCreateRequest struct {
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
-	Importance            int  `json:"importance"`
-	ReachableFromInternet bool `json:"reachableFromInternet"`
+	Importance int `json:"importance"`
 
 	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required,oneof=low medium high"`
 	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required,oneof=low medium high"`
@@ -153,8 +151,6 @@ type AssetPatchRequest struct {
 	EnableTicketRange            *bool    `json:"enableTicketRange"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
-
-	ReachableFromInternet *bool `json:"reachableFromInternet"`
 
 	ConfidentialityRequirement *RequirementLevel           `json:"confidentialityRequirement" validate:"omitempty,oneof=low medium high"`
 	IntegrityRequirement       *RequirementLevel           `json:"integrityRequirement" validate:"omitempty,oneof=low medium high"`
