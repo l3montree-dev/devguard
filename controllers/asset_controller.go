@@ -325,6 +325,38 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		asset.AvailabilityRequirement = *patchRequest.AvailabilityRequirement
 	}
 
+	if patchRequest.ModifiedAttackVector != nil && *patchRequest.ModifiedAttackVector != asset.ModifiedAttackVector {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Attack Vector updated: " + string(asset.ModifiedAttackVector) + " -> " + string(*patchRequest.ModifiedAttackVector)
+		asset.ModifiedAttackVector = *patchRequest.ModifiedAttackVector
+	}
+
+	if patchRequest.ModifiedAttackComplexity != nil && *patchRequest.ModifiedAttackComplexity != asset.ModifiedAttackComplexity {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Attack Complexity updated: " + string(asset.ModifiedAttackComplexity) + " -> " + string(*patchRequest.ModifiedAttackComplexity)
+		asset.ModifiedAttackComplexity = *patchRequest.ModifiedAttackComplexity
+	}
+
+	if patchRequest.ModifiedPrivilegesRequired != nil && *patchRequest.ModifiedPrivilegesRequired != asset.ModifiedPrivilegesRequired {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Privileges Required updated: " + string(asset.ModifiedPrivilegesRequired) + " -> " + string(*patchRequest.ModifiedPrivilegesRequired)
+		asset.ModifiedPrivilegesRequired = *patchRequest.ModifiedPrivilegesRequired
+	}
+
+	if patchRequest.ModifiedScope != nil && *patchRequest.ModifiedScope != asset.ModifiedScope {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Scope updated: " + string(asset.ModifiedScope) + " -> " + string(*patchRequest.ModifiedScope)
+		asset.ModifiedScope = *patchRequest.ModifiedScope
+	}
+
 	if justification != "" {
 		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetActorName(), justification)
 		if err != nil {
