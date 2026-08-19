@@ -189,7 +189,7 @@ func pendingVersions(src migsource.Driver, currentVersion int) ([]uint, error) {
 
 // GetMigrationVersionWithDB returns the current migration version using an existing GORM database instance
 func GetMigrationVersionWithDB() (uint, bool, error) {
-	if migrationVersion != 0 || migratorErr != nil {
+	if migrationVersion == 0 || migratorErr != nil {
 		db := NewGormDB(NewPgxConnPool(GetPoolConfigFromEnv()))
 		migrator, _ = getMigrator(db)
 		defer migrator.Close()
