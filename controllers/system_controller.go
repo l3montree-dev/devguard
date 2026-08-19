@@ -152,7 +152,7 @@ func (s *SystemController) Info(c shared.Context) error {
 		poolInfo.AcquiredConns = int(stats.AcquiredConns())
 		poolInfo.MaxConns = int(stats.MaxConns())
 
-		if ver, dirty, err := database.GetMigrationVersionWithDB(); err == nil {
+		if ver, dirty, err := database.GetMigrationVersionFromDB(s.db); err == nil {
 			v := ver
 			dbInfo.MigrationVersion = &v
 			dbInfo.MigrationDirty = &dirty
