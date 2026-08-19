@@ -1,0 +1,1 @@
+ALTER TABLE public.cves ADD COLUMN IF NOT EXISTS withdrawn timestamptz;
