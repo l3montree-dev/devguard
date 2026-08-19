@@ -109,6 +109,7 @@ type quickDiffUpstreamVEXRule struct {
 	MechanicalJustification string
 	EventType               string
 	CELExpression           string
+	CVEScope                *string
 }
 
 // SnapshotPrevState creates lightweight temp tables capturing the current DB state
@@ -374,7 +375,7 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 	}
 
 	rows, err = tx.Query(ctx, `
-		SELECT v.id, v.vex_source, v.title, v.justification, v.mechanical_justification, v.event_type, v.cel_expression
+		SELECT v.id, v.vex_source, v.title, v.justification, v.mechanical_justification, v.event_type, v.cel_expression, v.cve_scope
 		FROM upstream_vex_rules v
 		WHERE NOT EXISTS (SELECT 1 FROM _snap_upstream_vex_rules s WHERE s.id = v.id)
 	`)
@@ -612,7 +613,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	}
 
 	// --- upstream_vex_rules ---
-	upstreamVEXRuleCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression"}
+	upstreamVEXRuleCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression", "cve_scope"}
 	if err := createLike("_diff_del_upstream_vex_rules", "upstream_vex_rules", "id"); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_del_upstream_vex_rules: %w", err)
 	}
@@ -625,7 +626,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	if len(diff.UpstreamVEXRulesInserted) > 0 {
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"_diff_ins_upstream_vex_rules"}, upstreamVEXRuleCols, pgx.CopyFromSlice(len(diff.UpstreamVEXRulesInserted), func(i int) ([]any, error) {
 			v := diff.UpstreamVEXRulesInserted[i]
-			return []any{v.ID, v.VexSource, v.Title, v.Justification, v.MechanicalJustification, v.EventType, v.CELExpression}, nil
+			return []any{v.ID, v.VexSource, v.Title, v.Justification, v.MechanicalJustification, v.EventType, v.CELExpression, v.CVEScope}, nil
 		})); err != nil {
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_upstream_vex_rules: %w", err)
 		}
@@ -780,7 +781,7 @@ func collectUpstreamVEXRuleRows(rows pgx.Rows) ([]quickDiffUpstreamVEXRule, erro
 		var v quickDiffUpstreamVEXRule
 		if err := rows.Scan(
 			&v.ID, &v.VexSource, &v.Title, &v.Justification,
-			&v.MechanicalJustification, &v.EventType, &v.CELExpression,
+			&v.MechanicalJustification, &v.EventType, &v.CELExpression, &v.CVEScope,
 		); err != nil {
 			return nil, err
 		}

@@ -206,6 +206,15 @@ func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 	return ctx.NoContent(200)
 }
 
+// @Summary Create advisory event
+// @Tags Advisories
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param id path string true "Advisory ID"
+// @Param event body dtos.CreateEventRequest true "Event"
+// @Success 200
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/events/ [post]
 func (controller *AdvisoryController) CreateEvent(ctx shared.Context) error {
 	advisoryID := ctx.Param("id")
 	parsedID, err := uuid.Parse(advisoryID)

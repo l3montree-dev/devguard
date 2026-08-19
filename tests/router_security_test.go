@@ -73,6 +73,7 @@ var routeMinLevel = map[string]shared.Role{
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/pats/:tokenID/":                                                      shared.RoleAdmin,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/":                                             shared.RoleAdmin,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/:id/":                                shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/:id/events/":                          shared.RoleAdmin,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/":                     shared.RoleAdmin,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/compliance-postures/components/:statementID/": shared.RoleMember,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/events/:eventID/":                             shared.RoleAdmin,
