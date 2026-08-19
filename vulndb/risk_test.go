@@ -707,3 +707,39 @@ func TestExploitMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestModifiedAttackVectorLowersRisk(t *testing.T) {
+	cve := &models.CVE{
+		CVE:    "CVE-TEST-0001",
+		Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+		CVSS:   9.8,
+	}
+
+	baseline := RawRisk(cve, shared.Environmental{}, 1)
+	scoped := RawRisk(cve, shared.Environmental{
+		ModifiedAttackVector: "local",
+	}, 1)
+
+	if !(scoped.Risk < baseline.Risk) {
+		t.Errorf("expected MAV=local to lower risk: baseline=%.2f scoped=%.2f",
+			baseline.Risk, scoped.Risk)
+	}
+}
+
+func TestModifiedAttackComplexityLowersRisk(t *testing.T) {
+	cve := &models.CVE{
+		CVE:    "CVE-TEST-0002",
+		Vector: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+		CVSS:   9.8,
+	}
+
+	baseline := RawRisk(cve, shared.Environmental{}, 1)
+	scoped := RawRisk(cve, shared.Environmental{
+		ModifiedAttackComplexity: "high",
+	}, 1)
+
+	if !(scoped.Risk < baseline.Risk) {
+		t.Errorf("expected MAC=local to lower risk: baseline=%.2f scoped=%.2f",
+			baseline.Risk, scoped.Risk)
+	}
+}
