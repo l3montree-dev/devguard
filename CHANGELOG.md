@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.12.5] - 2026-08-19
+
+### Added
+
+- **New compliance frameworks** — added support for ISO 27001 Annex A, BSI "Anforderungen zum Risikomanagement", Lieferkettensicherheit, and a Grundschutz++ mapping derived from IT-Grundschutz, each shipped with its own control catalog, seeding, and a mapping service to relate controls across frameworks (#2831)
+- **Org/project/asset context in external issue labels** — GitHub, GitLab, and Jira issues created by DevGuard now carry an extra label encoding the organization/project/asset slugs, making it easier to identify where a synced issue originated (#2848)
+- Purl matching now uses an in-memory cache for repeated affected-component and malicious-package lookups, cutting redundant database round trips during scanning and the fixed-version daemon (#2819, #2805)
+
+### Changed
+
+- **VEX rule recommendation daemon rewritten for reliability** — the daemon now runs as part of a dedicated asset pipeline, computes recommendations more robustly, and RBAC/hash-migration handling around VEX rules was reworked accordingly (#2865)
+- **Fixed-version daemon improvements** — purl comparison logic was reworked to batch affected-component matching and filter before preloading, avoiding database parameter limits on instances with many versions, plus new integration test coverage (#2830)
+- **More resilient Kratos session handling** — session lookups now retry on transient Ory Kratos connection failures, and authentication now fails fast on the first verification failure instead of continuing with a bad session (#2867)
+- **"Sync all sources" reworked** — the button's scan/VEX-sync logic was refactored into a dedicated VEX rule ingest controller and service, fixing cases where triggering a full sync from the UI didn't actually sync all upstream sources (#2797)
+- Malicious-package detection was reworked into its own checker with clearer request handling across the npm, Go, Python, and OCI dependency firewalls (#2805)
+- Statistics queries now filter out fake/placeholder components so dependency counts and risk aggregates aren't inflated by them (#2832)
+- Compliance controls are now upserted on conflict instead of plain-inserted, and obsolete SCF controls are removed via migration instead of truncating shared tables, avoiding data loss on shared schemas (#2868, #2863)
+
+### Fixed
+
+- **Nil pointer when syncing external entities with matching names** — `Asset.Same` (and the equivalent `Project.Same`) could dereference a nil field when comparing assets/projects during external entity sync; comparisons are now nil-safe (#2872)
+- **Organization invitations rejected for existing users** — inviting a user who already had an account elsewhere failed an unnecessary check; the invite flow now correctly recognizes and accepts them (#2869)
+- **CSAF report generation failing with zero vulnerabilities** — generating a CSAF report for an advisory with no vulnerabilities no longer errors out (#2860)
+- **Advisory CSAF export security fix** — hardened the CSAF controller against an issue surfaced by new advisory integration tests (#2866)
+- **Dependency vulnerability query hitting the database parameter limit** — loading other asset versions' dependency vulnerabilities could exceed Postgres's parameter limit on assets with many versions; the query is now chunked (#2861)
+- **Webhook `createdAt` reset on update** — updating a webhook integration no longer overwrites its original creation timestamp (#2854)
+- **Broken links in GitLab issue markdown** — risk explanation links generated for GitLab issues now render as working links (#2822)
+- **Affected component data missing for vulndb-sourced vulnerabilities** — dependency vulnerability DTOs and transformers now populate the affected component correctly (#2824)
+- The try-it Docker Compose setup now generates its encryption key without a stray backslash escape that broke key generation on old docker versions (#2851)
+
 ## [v1.12.4] - 2026-08-10
 
 ### Changed
