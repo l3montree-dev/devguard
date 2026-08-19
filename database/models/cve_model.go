@@ -53,7 +53,7 @@ type CVE struct {
 	Relationships         []CVERelationship   `json:"relationships" gorm:"foreignKey:SourceCVE;references:CVE;constraint:OnDelete:CASCADE;" cve:"relationships"`
 	EUVDExploitAdd        *datatypes.Date     `json:"euvdExploitAdd" gorm:"type:date"`
 	Withdrawn             *datatypes.Date     `json:"withdrawn" gorm:"type:date"`
-	CWEs                  *string             `json:"cves"` // comma separated list of associated cwe ids
+	CWEs                  *string             `json:"cves" gorm:"column:cwes"` // comma separated list of associated cwe ids
 }
 
 type Weakness struct {

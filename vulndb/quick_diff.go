@@ -440,7 +440,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 	}
 
 	cvePlain := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add", "withdrawn", "cwes"}
-	if err := createLike("_diff_ins_cves", "cves", `id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add,"withdrawn,cwes`); err != nil {
+	if err := createLike("_diff_ins_cves", "cves", `id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add,withdrawn,cwes`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_cves: %w", err)
 	}
 	if len(diff.CVEsInserted) > 0 {
