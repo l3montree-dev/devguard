@@ -196,6 +196,15 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 		if env.AvailabilityRequirements != "" {
 			cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
 		}
+		if env.ModifiedAttackVector != "" && env.ModifiedAttackVector != "X" {
+			cvss.Set("MAV", env.ModifiedAttackVector) // nolint:errcheck
+		}
+		if env.ModifiedAttackComplexity != "" && env.ModifiedAttackComplexity != "X" {
+			cvss.Set("MAC", env.ModifiedAttackComplexity) // nolint:errcheck
+		}
+		if env.ModifiedPrivilegesRequired != "" && env.ModifiedPrivilegesRequired != "X" {
+			cvss.Set("MPR", env.ModifiedPrivilegesRequired) // nolint:errcheck
+		}
 		environmentalScore := cvss.Score()
 		cvss.Set("E", oldE) // nolint:errcheck
 
@@ -329,6 +338,18 @@ func setEnv(cvss cvssInterface, env shared.Environmental) {
 	}
 	if env.AvailabilityRequirements != "" {
 		cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
+	}
+	if env.ModifiedAttackVector != "" && env.ModifiedAttackVector != "X" {
+		cvss.Set("MAV", env.ModifiedAttackVector) // nolint:errcheck
+	}
+	if env.ModifiedAttackComplexity != "" && env.ModifiedAttackComplexity != "X" {
+		cvss.Set("MAC", env.ModifiedAttackComplexity) // nolint:errcheck
+	}
+	if env.ModifiedPrivilegesRequired != "" && env.ModifiedPrivilegesRequired != "X" {
+		cvss.Set("MPR", env.ModifiedPrivilegesRequired) // nolint:errcheck
+	}
+	if env.ModifiedScope != "" && env.ModifiedScope != "X" {
+		cvss.Set("MS", env.ModifiedScope) // nolint:errcheck
 	}
 }
 

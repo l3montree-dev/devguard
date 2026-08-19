@@ -833,6 +833,10 @@ type Environmental struct {
 	ConfidentialityRequirements string
 	IntegrityRequirements       string
 	AvailabilityRequirements    string
+	ModifiedAttackVector        string
+	ModifiedAttackComplexity    string
+	ModifiedPrivilegesRequired  string
+	ModifiedScope               string
 }
 
 func GetEnvironmental(ctx Context) Environmental {
@@ -840,28 +844,35 @@ func GetEnvironmental(ctx Context) Environmental {
 		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
 		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
 		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
+		ModifiedAttackVector:        ctx.QueryParam("modifiedAttackVector"),
+		ModifiedAttackComplexity:    ctx.QueryParam("modifiedAttackComplexity"),
+		ModifiedPrivilegesRequired:  ctx.QueryParam("modifiedPrivilegesRequired"),
+		ModifiedScope:               ctx.QueryParam("modifiedScope"),
 	}
 	return SanitizeEnv(env)
 }
 
 func SanitizeEnv(env Environmental) Environmental {
+	reqToShort := map[string]string{"low": "L", "medium": "M", "high": "H"}
+	mavToShort := map[string]string{"network": "N", "adjacent": "A", "local": "L", "physical": "P", "X": "X"}
+	macToShort := map[string]string{"low": "L", "high": "H", "X": "X"}
+	mprToShort := map[string]string{"none": "N", "low": "L", "high": "H", "X": "X"}
+	msToShort := map[string]string{"unchanged": "U", "changed": "C", "X": "X"}
 
-	replacements := map[string]string{
-		"high":   "H",
-		"medium": "M",
-		"low":    "L",
-	}
-
-	replaceValue := func(value string) string {
-		if newValue, exists := replacements[value]; exists {
-			return newValue
+	lookup := func(m map[string]string, v string) string {
+		if s, ok := m[v]; ok {
+			return s
 		}
-		return value
+		return v
 	}
 
-	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
-	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
-	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
+	env.ConfidentialityRequirements = lookup(reqToShort, env.ConfidentialityRequirements)
+	env.IntegrityRequirements = lookup(reqToShort, env.IntegrityRequirements)
+	env.AvailabilityRequirements = lookup(reqToShort, env.AvailabilityRequirements)
+	env.ModifiedAttackVector = lookup(mavToShort, env.ModifiedAttackVector)
+	env.ModifiedAttackComplexity = lookup(macToShort, env.ModifiedAttackComplexity)
+	env.ModifiedPrivilegesRequired = lookup(mprToShort, env.ModifiedPrivilegesRequired)
+	env.ModifiedScope = lookup(msToShort, env.ModifiedScope)
 
 	return env
 }
