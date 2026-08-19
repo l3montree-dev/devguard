@@ -56,18 +56,32 @@ func TestWebhookClient_CreateRequest_HMACSignature(t *testing.T) {
 }
 
 func TestWebhookClient_CreateRequest_DoesNotSignWithoutSecret(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Empty(t, r.Header.Get("X-Hub-Signature-256"))
-		assert.Empty(t, r.Header.Get("X-Webhook-Secret"))
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+	emptySecret := ""
+	cases := []struct {
+		name   string
+		secret *string
+	}{
+		{name: "nil secret", secret: nil},
+		{name: "empty secret", secret: &emptySecret},
+	}
 
-	client := newTestWebhookService(server.URL)
-	resp, err := client.CreateRequest(context.Background(), http.MethodPost, server.URL, strings.NewReader(`{"test":"data"}`))
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	defer resp.Body.Close()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Empty(t, r.Header.Get("X-Hub-Signature-256"))
+				assert.Empty(t, r.Header.Get("X-Webhook-Secret"))
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			client := NewWebhookService(server.URL, tc.secret)
+			client.retryDelays = []time.Duration{0, 0, 0}
+			resp, err := client.CreateRequest(context.Background(), http.MethodPost, server.URL, strings.NewReader(`{"test":"data"}`))
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			defer resp.Body.Close()
+		})
+	}
 }
 
 func TestWebhookClient_CreateRequest_ReusesSignatureAcrossRetries(t *testing.T) {

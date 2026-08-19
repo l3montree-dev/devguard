@@ -73,8 +73,9 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
+	hasSecret := c.Secret != nil && *c.Secret != ""
 	var signature string
-	if c.Secret != nil && *c.Secret != "" {
+	if hasSecret {
 		mac := hmac.New(sha256.New, []byte(*c.Secret))
 		_, _ = mac.Write(bodyBytes)
 		signature = "sha256=" + hex.EncodeToString(mac.Sum(nil))
@@ -100,7 +101,7 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		if err != nil {
 			return nil, err
 		}
-		if c.Secret != nil && *c.Secret != "" {
+		if hasSecret {
 			req.Header.Set("X-Webhook-Secret", *c.Secret)
 		}
 		if signature != "" {
