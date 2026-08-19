@@ -80,4 +80,46 @@ func TestInjectUniqueSlugs(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "alpha-1", projects[0].Slug)
 	})
+
+	t.Run("should assign new slug when incoming asset has external entity but existing does not", func(t *testing.T) {
+		externalID := "12471"
+		providerID := "opencode"
+		existing := []*models.Asset{
+			{Slug: "frontend", Model: models.Model{ID: uuid.New()}},
+		}
+		assets := []*models.Asset{
+			{
+				Slug:                     "frontend",
+				ExternalEntityID:         &externalID,
+				ExternalEntityProviderID: &providerID,
+			},
+		}
+
+		err := injectUniqueSlugs(existing, assets)
+		assert.NoError(t, err)
+		assert.Equal(t, "frontend-1", assets[0].Slug)
+	})
+
+	t.Run("should keep slug when incoming and existing assets share the same external entity", func(t *testing.T) {
+		externalID := "12471"
+		providerID := "opencode"
+		existing := []*models.Asset{
+			{
+				Slug:                     "frontend",
+				ExternalEntityID:         &externalID,
+				ExternalEntityProviderID: &providerID,
+			},
+		}
+		assets := []*models.Asset{
+			{
+				Slug:                     "frontend",
+				ExternalEntityID:         &externalID,
+				ExternalEntityProviderID: &providerID,
+			},
+		}
+
+		err := injectUniqueSlugs(existing, assets)
+		assert.NoError(t, err)
+		assert.Equal(t, "frontend", assets[0].Slug)
+	})
 }
