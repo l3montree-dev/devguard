@@ -236,5 +236,25 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 		asset.ParanoidMode = *assetPatch.ParanoidMode
 	}
 
+	if assetPatch.ModifiedAttackVector != nil {
+		updated = true
+		asset.ModifiedAttackVector = *assetPatch.ModifiedAttackVector
+	}
+
+	if assetPatch.ModifiedAttackComplexity != nil {
+		updated = true
+		asset.ModifiedAttackComplexity = *assetPatch.ModifiedAttackComplexity
+	}
+
+	if assetPatch.ModifiedPrivilegesRequired != nil {
+		updated = true
+		asset.ModifiedPrivilegesRequired = *assetPatch.ModifiedPrivilegesRequired
+	}
+
+	if assetPatch.ModifiedScope != nil {
+		updated = true
+		asset.ModifiedScope = *assetPatch.ModifiedScope
+	}
+
 	return updated
 }

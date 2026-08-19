@@ -135,10 +135,10 @@ type AssetCreateRequest struct {
 	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required,oneof=low medium high"`
 	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required,oneof=low medium high"`
 	AvailabilityRequirement    string  `json:"availabilityRequirement" validate:"required,oneof=low medium high"`
-	ModifiedAttackVector       string  `json:"modifiedAttackVector" validate:"required,oneof=X network adjacent local physical"`
-	ModifiedAttackComplexity   string  `json:"modifiedAttackComplexity" validate:"required,oneof=X low high"`
-	ModifiedPrivilegesRequired string  `json:"modifiedPrivilegesRequired" validate:"required,oneof=X none low high"`
-	ModifiedScope              string  `json:"modifiedScope" validate:"required,oneof=X unchanged changed"`
+	ModifiedAttackVector       string  `json:"modifiedAttackVector" validate:"omitempty,oneof=X network adjacent local physical"`
+	ModifiedAttackComplexity   string  `json:"modifiedAttackComplexity" validate:"omitempty,oneof=X low high"`
+	ModifiedPrivilegesRequired string  `json:"modifiedPrivilegesRequired" validate:"omitempty,oneof=X none low high"`
+	ModifiedScope              string  `json:"modifiedScope" validate:"omitempty,oneof=X unchanged changed"`
 	RepositoryProvider         *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
