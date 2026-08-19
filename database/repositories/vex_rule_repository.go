@@ -157,7 +157,7 @@ func (r *vexRuleRepository) FindByAssetIDPaged(ctx context.Context, tx *gorm.DB,
 	// Apply search filter
 	if search != "" {
 		searchPattern := "%" + search + "%"
-		query = query.Where("cve_id ILIKE ? OR justification ILIKE ?", searchPattern, searchPattern)
+		query = query.Where("cve_scope ILIKE ? OR title ILIKE ? OR justification ILIKE ?", searchPattern, searchPattern, searchPattern)
 	}
 
 	// Apply filter queries
