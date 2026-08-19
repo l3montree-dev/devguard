@@ -59,6 +59,7 @@ type CVEDTO struct {
 	Relationships         []RelationshipDTO      `json:"relationships"`
 	EUVDExploitAdd        *datatypes.Date        `json:"euvdExploitAdd" format:"date"`
 	AffectedComponents    []AffectedComponentDTO `json:"affectedComponents"`
+	Withdrawn             *datatypes.Date        `json:"withdrawn"`
 }
 
 type VulnState string
