@@ -14,6 +14,7 @@ import (
 	gocvss30 "github.com/pandatix/go-cvss/30"
 	gocvss31 "github.com/pandatix/go-cvss/31"
 	gocvss40 "github.com/pandatix/go-cvss/40"
+	"gorm.io/datatypes"
 )
 
 // need Optimus Prime here
@@ -71,6 +72,7 @@ func OSVToCVE(osv *dtos.OSV) models.CVE {
 
 	cve.DatePublished = osv.Published
 	cve.DateLastModified = osv.Modified
+	cve.Withdrawn = (*datatypes.Date)(osv.Withdrawn)
 
 	return cve
 }

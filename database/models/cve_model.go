@@ -52,6 +52,7 @@ type CVE struct {
 	Exploits              []Exploit           `json:"exploits" gorm:"foreignKey:CVEID;references:CVE;"`
 	Relationships         []CVERelationship   `json:"relationships" gorm:"foreignKey:SourceCVE;references:CVE;constraint:OnDelete:CASCADE;" cve:"relationships"`
 	EUVDExploitAdd        *datatypes.Date     `json:"euvdExploitAdd" gorm:"type:date"`
+	Withdrawn             *datatypes.Date     `json:"withdrawn" gorm:"type:date"`
 }
 
 type Weakness struct {

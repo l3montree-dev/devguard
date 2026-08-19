@@ -64,7 +64,7 @@ type syncSpec struct {
 // Both SyncAllTables (staging→live) and applyQuickDiff (QuickDiff struct→live)
 // use these specs so all apply logic lives in one place.
 var liveTableSpecs = func() []syncSpec {
-	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add"}
+	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add", "withdrawn"}
 	relAllCols := []string{"target_cve", "source_cve", "relationship_type"}
 	acInsertCols := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	acInsertExprs := []string{"id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
@@ -622,10 +622,10 @@ func InsertCVEsBulk(ctx context.Context, tx pgx.Tx, cves []models.CVE, table str
 	if len(cves) == 0 {
 		return nil
 	}
-	columnNames := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add"}
+	columnNames := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add", "withdrawn"}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{table}, columnNames, pgx.CopyFromSlice(len(cves), func(i int) ([]any, error) {
 		row := cves[i]
-		return []any{row.ID, row.ContentHash, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector, row.EUVDExploitAdd}, nil
+		return []any{row.ID, row.ContentHash, row.CVE, row.DatePublished, row.DateLastModified, row.Description, row.CVSS, row.References, row.CISAExploitAdd, row.CISAActionDue, row.CISARequiredAction, row.CISAVulnerabilityName, row.EPSS, row.Percentile, row.Vector, row.EUVDExploitAdd, row.Withdrawn}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy cve rows into staging table: %w", err)
@@ -818,7 +818,8 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			epss                    numeric(6,5),
 			percentile              numeric(6,5),
 			vector                  text,
-			euvd_exploit_add		date
+			euvd_exploit_add		date,
+			withdrawn 				date
 		) ON COMMIT DROP;
 
 		CREATE TEMP TABLE IF NOT EXISTS cve_relationships_stage (
