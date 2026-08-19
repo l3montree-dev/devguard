@@ -83,22 +83,12 @@ func NewExternalReferenceController(
 func (c *ExternalReferenceController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 
-	refs, err := c.externalReferenceRepository.FindByAssetID(ctx.Request().Context(), nil, asset.ID)
+	refs, err := c.externalReferenceRepository.FindByAssetIDWithVexRuleCount(ctx.Request().Context(), nil, asset.ID)
 	if err != nil {
 		slog.Error("failed to list external references", "error", err)
 		return echo.NewHTTPError(500, "failed to list external references").WithInternal(err)
 	}
-
-	result := make([]dtos.ExternalReferenceDTO, len(refs))
-	for i, ref := range refs {
-		result[i] = dtos.ExternalReferenceDTO{
-			AssetID: ref.AssetID.String(),
-			URL:     ref.URL,
-			Type:    ref.Type,
-		}
-	}
-
-	return ctx.JSON(200, result)
+	return ctx.JSON(200, refs)
 }
 
 // @Summary Create an external reference

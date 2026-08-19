@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 )
@@ -45,6 +46,17 @@ func (r *externalReferenceRepository) SaveBatch(ctx context.Context, tx *gorm.DB
 func (r *externalReferenceRepository) FindByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.ExternalReference, error) {
 	var refs []models.ExternalReference
 	err := r.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&refs).Error
+	return refs, err
+}
+
+func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCount(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]dtos.ExternalReferenceDTO, error) {
+	var refs []dtos.ExternalReferenceDTO
+	err := r.GetDB(ctx, tx).Table("external_references").
+		Select("external_references.*, COUNT(vex_rules.id) AS vex_rule_count").
+		Joins("LEFT JOIN vex_rules ON vex_rules.vex_source = external_references.url AND vex_rules.asset_id = external_references.asset_id").
+		Where("external_references.asset_id = ?", assetID).
+		Group("external_references.asset_id, external_references.url").
+		Find(&refs).Error
 	return refs, err
 }
 
