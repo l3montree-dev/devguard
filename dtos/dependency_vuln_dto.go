@@ -60,6 +60,7 @@ type CVEDTO struct {
 	EUVDExploitAdd        *datatypes.Date        `json:"euvdExploitAdd" format:"date"`
 	AffectedComponents    []AffectedComponentDTO `json:"affectedComponents"`
 	Withdrawn             *datatypes.Date        `json:"withdrawn"`
+	CWEs                  []string               `json:"cwes"`
 }
 
 type VulnState string

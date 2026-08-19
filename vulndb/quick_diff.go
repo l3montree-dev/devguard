@@ -159,7 +159,9 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 		       c.cisa_vulnerability_name, c.epss, c.percentile, c.vector,
 		       c.cisa_exploit_add,
 		       c.cisa_action_due,
-		       c.euvd_exploit_add
+		       c.euvd_exploit_add,
+			   c.withdrawn,
+			   c.cwes
 		FROM cves c
 		WHERE NOT EXISTS (SELECT 1 FROM _snap_cves s WHERE s.id = c.id)
 	`)
@@ -177,7 +179,9 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 		       c.cisa_vulnerability_name, c.epss, c.percentile, c.vector,
 		       c.cisa_exploit_add,
 		       c.cisa_action_due,
-		       c.euvd_exploit_add
+		       c.euvd_exploit_add,
+			   c.withdrawn,
+			   c.cwes
 		FROM cves c
 		JOIN _snap_cves s ON s.id = c.id
 		WHERE s.content_hash != c.content_hash
@@ -433,8 +437,8 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_cves: %w", err)
 	}
 
-	cvePlain := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add"}
-	if err := createLike("_diff_ins_cves", "cves", `id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add`); err != nil {
+	cvePlain := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", "references", "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add", "withdrawn", "cwes"}
+	if err := createLike("_diff_ins_cves", "cves", `id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add,"withdrawn,cwes`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_cves: %w", err)
 	}
 	if len(diff.CVEsInserted) > 0 {
@@ -445,7 +449,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 			return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_ins_cves: %w", err)
 		}
 	}
-	if err := createLike("_diff_upd_cves", "cves", `id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add`); err != nil {
+	if err := createLike("_diff_upd_cves", "cves", `id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add,withdrawn,cwes`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_upd_cves: %w", err)
 	}
 	if len(diff.CVEsUpdated) > 0 {
