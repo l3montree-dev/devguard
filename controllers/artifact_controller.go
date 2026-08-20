@@ -19,6 +19,7 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -130,7 +131,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	//save the artifact
 	err := c.artifactRepository.Create(ctx.Request().Context(), tx, &artifact)
 	if err != nil {
-		tx.Rollback()
+		if database.IsDuplicateKeyError(err) {
+			return echo.NewHTTPError(409, "duplicate key value violated").WithInternal(err)
+		}
 		return err
 	}
 
