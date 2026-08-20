@@ -163,7 +163,7 @@ type AssetCreateRequest struct {
 	ModifiedUserInteraction    string  `json:"modifiedUserInteraction" validate:"omitempty,oneof=X none required"`
 	ModifiedConfidentiality    string  `json:"modifiedConfidentiality" validate:"omitempty,oneof=X none low high"`
 	ModifiedIntegrity          string  `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
-	ModifiedAvailability       string  `json:"modifiedAvaiModifiedAvailability" validate:"omitempty,oneof=X none low high"`
+	ModifiedAvailability       string  `json:"modifiedAvailability" validate:"omitempty,oneof=X none low high"`
 	RepositoryProvider         *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
