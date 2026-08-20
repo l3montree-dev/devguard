@@ -6,6 +6,9 @@ package services
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,6 +73,14 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 
+	hasSecret := c.Secret != nil && *c.Secret != ""
+	var signature string
+	if hasSecret {
+		mac := hmac.New(sha256.New, []byte(*c.Secret))
+		_, _ = mac.Write(bodyBytes)
+		signature = "sha256=" + hex.EncodeToString(mac.Sum(nil))
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
@@ -90,8 +101,11 @@ func (c *webhookClient) CreateRequest(ctx context.Context, method, url string, b
 		if err != nil {
 			return nil, err
 		}
-		if c.Secret != nil {
+		if hasSecret {
 			req.Header.Set("X-Webhook-Secret", *c.Secret)
+		}
+		if signature != "" {
+			req.Header.Set("X-Hub-Signature-256", signature)
 		}
 		req.Header.Set("Content-Type", "application/json")
 
