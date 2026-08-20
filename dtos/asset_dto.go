@@ -187,7 +187,7 @@ type AssetPatchRequest struct {
 	ModifiedUserInteraction    *ModifiedUserInteraction    `json:"modifiedUserInteraction" validate:"omitempty,oneof=X none required"`
 	ModifiedConfidentiality    *ModifiedRequirementLevel   `json:"modifiedConfidentiality" validate:"omitempty,oneof=X none low high"`
 	ModifiedIntegrity          *ModifiedRequirementLevel   `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
-	ModifiedAvailability       *ModifiedRequirementLevel   `json:"modifiedAvaiModifiedAvailability" validate:"omitempty,oneof=X none low high"`
+	ModifiedAvailability       *ModifiedRequirementLevel   `json:"modifiedAvailability" validate:"omitempty,oneof=X none low high"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
