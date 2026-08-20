@@ -61,6 +61,10 @@ func GetEnvironmentalFromAsset(m models.Asset) Environmental {
 		ModifiedAttackComplexity:    string(m.ModifiedAttackComplexity),
 		ModifiedPrivilegesRequired:  string(m.ModifiedPrivilegesRequired),
 		ModifiedScope:               string(m.ModifiedScope),
+		ModifiedUserInteraction:     string(m.ModifiedUserInteraction),
+		ModifiedConfidentiality:     string(m.ModifiedConfidentiality),
+		ModifiedIntegrity:           string(m.ModifiedIntegrity),
+		ModifiedAvailability:        string(m.ModifiedAvailability),
 	})
 }
 

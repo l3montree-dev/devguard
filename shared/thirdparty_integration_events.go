@@ -93,6 +93,10 @@ type AssetObject struct {
 	ModifiedAttackComplexity   string `json:"modifiedAttackComplexity"`
 	ModifiedPrivilegesRequired string `json:"modifiedPrivilegesRequired"`
 	ModifiedScope              string `json:"modifiedScope"`
+	ModifiedUserInteraction    string `json:"modifiedUserInteraction"`
+	ModifiedConfidentiality    string `json:"modifiedConfidentiality"`
+	ModifiedIntegrity          string `json:"modifiedIntegrity"`
+	ModifiedAvailability       string `json:"modifiedAvailability"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
@@ -154,6 +158,10 @@ func ToAssetObject(a models.Asset) AssetObject {
 		ModifiedAttackComplexity:   string(a.ModifiedAttackComplexity),
 		ModifiedPrivilegesRequired: string(a.ModifiedPrivilegesRequired),
 		ModifiedScope:              string(a.ModifiedScope),
+		ModifiedUserInteraction:    string(a.ModifiedUserInteraction),
+		ModifiedConfidentiality:    string(a.ModifiedConfidentiality),
+		ModifiedIntegrity:          string(a.ModifiedIntegrity),
+		ModifiedAvailability:       string(a.ModifiedAvailability),
 
 		RepositoryID:   a.RepositoryID,
 		RepositoryName: a.RepositoryName,

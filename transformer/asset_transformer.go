@@ -101,6 +101,10 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 		ModifiedAttackComplexity:   sanitizeAttackComplexity(assetCreateRequest.ModifiedAttackComplexity),
 		ModifiedPrivilegesRequired: sanitizePrivilegesRequired(assetCreateRequest.ModifiedPrivilegesRequired),
 		ModifiedScope:              sanitizeScope(assetCreateRequest.ModifiedScope),
+		ModifiedUserInteraction:    sanitizeUserInteraction(assetCreateRequest.ModifiedUserInteraction),
+		ModifiedConfidentiality:    sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedConfidentiality),
+		ModifiedIntegrity:          sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedIntegrity),
+		ModifiedAvailability:       sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedAvailability),
 
 		RepositoryProvider: assetCreateRequest.RepositoryProvider,
 	}
@@ -153,6 +157,24 @@ func sanitizeScope(level string) dtos.ModifiedScope {
 	switch level {
 	case "unchanged", "changed", "X":
 		return dtos.ModifiedScope(level)
+	default:
+		return "X"
+	}
+}
+
+func sanitizeUserInteraction(level string) dtos.ModifiedUserInteraction {
+	switch level {
+	case "none", "required", "X":
+		return dtos.ModifiedUserInteraction(level)
+	default:
+		return "X"
+	}
+}
+
+func sanitizeModifiedRequirementLevel(level string) dtos.ModifiedRequirementLevel {
+	switch level {
+	case "X", "none", "low", "high":
+		return dtos.ModifiedRequirementLevel(level)
 	default:
 		return "X"
 	}
@@ -254,6 +276,26 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.ModifiedScope != nil {
 		updated = true
 		asset.ModifiedScope = *assetPatch.ModifiedScope
+	}
+
+	if assetPatch.ModifiedUserInteraction != nil {
+		updated = true
+		asset.ModifiedUserInteraction = *assetPatch.ModifiedUserInteraction
+	}
+
+	if assetPatch.ModifiedConfidentiality != nil {
+		updated = true
+		asset.ModifiedConfidentiality = *assetPatch.ModifiedConfidentiality
+	}
+
+	if assetPatch.ModifiedIntegrity != nil {
+		updated = true
+		asset.ModifiedIntegrity = *assetPatch.ModifiedIntegrity
+	}
+
+	if assetPatch.ModifiedAvailability != nil {
+		updated = true
+		asset.ModifiedAvailability = *assetPatch.ModifiedAvailability
 	}
 
 	return updated

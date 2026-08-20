@@ -357,6 +357,38 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		asset.ModifiedScope = *patchRequest.ModifiedScope
 	}
 
+	if patchRequest.ModifiedUserInteraction != nil && *patchRequest.ModifiedUserInteraction != asset.ModifiedUserInteraction {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified UserInteraction updated: " + string(asset.ModifiedUserInteraction) + " -> " + string(*patchRequest.ModifiedUserInteraction)
+		asset.ModifiedUserInteraction = *patchRequest.ModifiedUserInteraction
+	}
+
+	if patchRequest.ModifiedConfidentiality != nil && *patchRequest.ModifiedConfidentiality != asset.ModifiedConfidentiality {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Confidentiality updated: " + string(asset.ModifiedConfidentiality) + " -> " + string(*patchRequest.ModifiedConfidentiality)
+		asset.ModifiedConfidentiality = *patchRequest.ModifiedConfidentiality
+	}
+
+	if patchRequest.ModifiedIntegrity != nil && *patchRequest.ModifiedIntegrity != asset.ModifiedIntegrity {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Integrity updated: " + string(asset.ModifiedIntegrity) + " -> " + string(*patchRequest.ModifiedIntegrity)
+		asset.ModifiedIntegrity = *patchRequest.ModifiedIntegrity
+	}
+
+	if patchRequest.ModifiedAvailability != nil && *patchRequest.ModifiedAvailability != asset.ModifiedAvailability {
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Modified Availability updated: " + string(asset.ModifiedAvailability) + " -> " + string(*patchRequest.ModifiedAvailability)
+		asset.ModifiedAvailability = *patchRequest.ModifiedAvailability
+	}
+
 	if justification != "" {
 		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetActorName(), justification)
 		if err != nil {

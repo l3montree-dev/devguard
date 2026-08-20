@@ -837,6 +837,10 @@ type Environmental struct {
 	ModifiedAttackComplexity    string
 	ModifiedPrivilegesRequired  string
 	ModifiedScope               string
+	ModifiedUserInteraction     string
+	ModifiedConfidentiality     string
+	ModifiedIntegrity           string
+	ModifiedAvailability        string
 }
 
 func GetEnvironmental(ctx Context) Environmental {
@@ -848,6 +852,10 @@ func GetEnvironmental(ctx Context) Environmental {
 		ModifiedAttackComplexity:    ctx.QueryParam("modifiedAttackComplexity"),
 		ModifiedPrivilegesRequired:  ctx.QueryParam("modifiedPrivilegesRequired"),
 		ModifiedScope:               ctx.QueryParam("modifiedScope"),
+		ModifiedUserInteraction:     ctx.QueryParam("modifiedUserInteraction"),
+		ModifiedConfidentiality:     ctx.QueryParam("modifiedConfidentiality"),
+		ModifiedIntegrity:           ctx.QueryParam("modifiedIntegrity"),
+		ModifiedAvailability:        ctx.QueryParam("modifiedAvailability"),
 	}
 	return SanitizeEnv(env)
 }
@@ -858,6 +866,8 @@ func SanitizeEnv(env Environmental) Environmental {
 	macToShort := map[string]string{"low": "L", "high": "H", "X": "X"}
 	mprToShort := map[string]string{"none": "N", "low": "L", "high": "H", "X": "X"}
 	msToShort := map[string]string{"unchanged": "U", "changed": "C", "X": "X"}
+	muiToShort := map[string]string{"X": "X", "none": "N", "required": "R"}
+	mreqToShort := map[string]string{"X": "X", "none": "N", "low": "L", "high": "H"}
 
 	lookup := func(m map[string]string, v string) string {
 		if s, ok := m[v]; ok {
@@ -873,6 +883,10 @@ func SanitizeEnv(env Environmental) Environmental {
 	env.ModifiedAttackComplexity = lookup(macToShort, env.ModifiedAttackComplexity)
 	env.ModifiedPrivilegesRequired = lookup(mprToShort, env.ModifiedPrivilegesRequired)
 	env.ModifiedScope = lookup(msToShort, env.ModifiedScope)
+	env.ModifiedUserInteraction = lookup(muiToShort, env.ModifiedUserInteraction)
+	env.ModifiedConfidentiality = lookup(mreqToShort, env.ModifiedConfidentiality)
+	env.ModifiedIntegrity = lookup(mreqToShort, env.ModifiedIntegrity)
+	env.ModifiedAvailability = lookup(mreqToShort, env.ModifiedAvailability)
 
 	return env
 }

@@ -205,6 +205,18 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 		if env.ModifiedPrivilegesRequired != "" && env.ModifiedPrivilegesRequired != "X" {
 			cvss.Set("MPR", env.ModifiedPrivilegesRequired) // nolint:errcheck
 		}
+		if env.ModifiedUserInteraction != "" && env.ModifiedUserInteraction != "X" {
+			cvss.Set("MUU", env.ModifiedUserInteraction) // nolint:errcheck
+		}
+		if env.ModifiedConfidentiality != "" && env.ModifiedConfidentiality != "X" {
+			cvss.Set("MC", env.ModifiedConfidentiality) // nolint:errcheck
+		}
+		if env.ModifiedIntegrity != "" && env.ModifiedIntegrity != "X" {
+			cvss.Set("MI", env.ModifiedIntegrity) // nolint:errcheck
+		}
+		if env.ModifiedAvailability != "" && env.ModifiedAvailability != "X" {
+			cvss.Set("MA", env.ModifiedAvailability) // nolint:errcheck
+		}
 		environmentalScore := cvss.Score()
 		cvss.Set("E", oldE) // nolint:errcheck
 
@@ -350,6 +362,18 @@ func setEnv(cvss cvssInterface, env shared.Environmental) {
 	}
 	if env.ModifiedScope != "" && env.ModifiedScope != "X" {
 		cvss.Set("MS", env.ModifiedScope) // nolint:errcheck
+	}
+	if env.ModifiedUserInteraction != "" && env.ModifiedUserInteraction != "X" {
+		cvss.Set("MUU", env.ModifiedUserInteraction) // nolint:errcheck
+	}
+	if env.ModifiedConfidentiality != "" && env.ModifiedConfidentiality != "X" {
+		cvss.Set("MC", env.ModifiedConfidentiality) // nolint:errcheck
+	}
+	if env.ModifiedIntegrity != "" && env.ModifiedIntegrity != "X" {
+		cvss.Set("MI", env.ModifiedIntegrity) // nolint:errcheck
+	}
+	if env.ModifiedAvailability != "" && env.ModifiedAvailability != "X" {
+		cvss.Set("MA", env.ModifiedAvailability) // nolint:errcheck
 	}
 }
 

@@ -47,6 +47,10 @@ type Asset struct {
 	ModifiedAttackComplexity     dtos.ModifiedAttackComplexity   `json:"modifiedAttackComplexity" gorm:"default:'X';type:text;"`
 	ModifiedPrivilegesRequired   dtos.ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired" gorm:"default:'X';type:text;"`
 	ModifiedScope                dtos.ModifiedScope              `json:"modifiedScope" gorm:"default:'X';type:text;"`
+	ModifiedUserInteraction      dtos.ModifiedUserInteraction    `json:"modifiedUserInteraction" gorm:"default:'X';type:text;"`
+	ModifiedConfidentiality      dtos.ModifiedRequirementLevel   `json:"modifiedConfidentiality" gorm:"default:'X';type:text;"`
+	ModifiedIntegrity            dtos.ModifiedRequirementLevel   `json:"modifiedIntegrity" gorm:"default:'X';type:text;"`
+	ModifiedAvailability         dtos.ModifiedRequirementLevel   `json:"modifiedAvailability" gorm:"default:'X';type:text;"`
 	RepositoryID                 *string                         `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName               *string                         `json:"repositoryName" gorm:"type:text;"`
 	CVSSAutomaticTicketThreshold *float64                        `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`

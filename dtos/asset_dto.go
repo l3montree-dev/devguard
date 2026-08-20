@@ -14,6 +14,15 @@ const (
 	RequirementLevelHigh   RequirementLevel = "high"
 )
 
+type ModifiedRequirementLevel string
+
+const (
+	ModifiedRequirementLevelNotDefined ModifiedRequirementLevel = "X"
+	ModifiedRequirementLevelNone       ModifiedRequirementLevel = "none"
+	ModifiedRequirementLevelLow        ModifiedRequirementLevel = "low"
+	ModifiedRequirementLevelHigh       ModifiedRequirementLevel = "high"
+)
+
 type ModifiedAttackVector string
 
 const (
@@ -49,6 +58,14 @@ const (
 	MSNotDefined ModifiedScope = "X"
 )
 
+type ModifiedUserInteraction string
+
+const (
+	MUINotDefined ModifiedUserInteraction = "X"
+	MUINone       ModifiedUserInteraction = "none"
+	MUIRequired   ModifiedUserInteraction = "required"
+)
+
 type LookupResponse struct {
 	Org     string `json:"org"`
 	Project string `json:"project"`
@@ -79,6 +96,10 @@ type AssetDTO struct {
 	ModifiedAttackComplexity   ModifiedAttackComplexity   `json:"modifiedAttackComplexity"`
 	ModifiedPrivilegesRequired ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired"`
 	ModifiedScope              ModifiedScope              `json:"modifiedScope"`
+	ModifiedUserInteraction    ModifiedUserInteraction    `json:"modifiedUserInteraction"`
+	ModifiedConfidentiality    ModifiedRequirementLevel   `json:"modifiedConfidentiality"`
+	ModifiedIntegrity          ModifiedRequirementLevel   `json:"modifiedIntegrity"`
+	ModifiedAvailability       ModifiedRequirementLevel   `json:"modifiedAvailability"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
@@ -139,6 +160,10 @@ type AssetCreateRequest struct {
 	ModifiedAttackComplexity   string  `json:"modifiedAttackComplexity" validate:"omitempty,oneof=X low high"`
 	ModifiedPrivilegesRequired string  `json:"modifiedPrivilegesRequired" validate:"omitempty,oneof=X none low high"`
 	ModifiedScope              string  `json:"modifiedScope" validate:"omitempty,oneof=X unchanged changed"`
+	ModifiedUserInteraction    string  `json:"modifiedUserInteraction" validate:"omitempty,oneof=X none required"`
+	ModifiedConfidentiality    string  `json:"modifiedConfidentiality" validate:"omitempty,oneof=X none low high"`
+	ModifiedIntegrity          string  `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
+	ModifiedAvailability       string  `json:"modifiedAvaiModifiedAvailability" validate:"omitempty,oneof=X none low high"`
 	RepositoryProvider         *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
@@ -159,6 +184,10 @@ type AssetPatchRequest struct {
 	ModifiedAttackComplexity   *ModifiedAttackComplexity   `json:"modifiedAttackComplexity" validate:"omitempty,oneof=X low high"`
 	ModifiedPrivilegesRequired *ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired" validate:"omitempty,oneof=X none low high"`
 	ModifiedScope              *ModifiedScope              `json:"modifiedScope" validate:"omitempty,oneof=X unchanged changed"`
+	ModifiedUserInteraction    *ModifiedUserInteraction    `json:"modifiedUserInteraction" validate:"omitempty,oneof=X none required"`
+	ModifiedConfidentiality    *ModifiedRequirementLevel   `json:"modifiedConfidentiality" validate:"omitempty,oneof=X none low high"`
+	ModifiedIntegrity          *ModifiedRequirementLevel   `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
+	ModifiedAvailability       *ModifiedRequirementLevel   `json:"modifiedAvaiModifiedAvailability" validate:"omitempty,oneof=X none low high"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`

@@ -261,6 +261,10 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 		ModifiedAttackComplexity:    string(asset.ModifiedAttackComplexity),
 		ModifiedPrivilegesRequired:  string(asset.ModifiedPrivilegesRequired),
 		ModifiedScope:               string(asset.ModifiedScope),
+		ModifiedUserInteraction:     string(asset.ModifiedUserInteraction),
+		ModifiedConfidentiality:     string(asset.ModifiedConfidentiality),
+		ModifiedIntegrity:           string(asset.ModifiedIntegrity),
+		ModifiedAvailability:        string(asset.ModifiedAvailability),
 	}
 
 	// create a new VulnEvent for each updated dependencyVuln
