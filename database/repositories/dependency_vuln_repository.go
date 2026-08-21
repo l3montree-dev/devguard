@@ -253,11 +253,11 @@ func (repository *dependencyVulnRepository) FindByCVEAndComponentPurl(ctx contex
 func dependencyVulnSortSQL(s shared.SortQuery) string {
 	switch s.Field {
 	case "max_risk":
-		s.Field = "dependency_vulns.raw_risk_assessment"
+		s.Field = "dependency_vulns.risk_assessment"
 	case "max_cvss":
 		s.Field = "CVE.cvss"
 	default:
-		s.Field = "dependency_vulns.raw_risk_assessment"
+		s.Field = "dependency_vulns.risk_assessment"
 	}
 	return s.SQL()
 }
@@ -283,7 +283,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 	}
 
 	packageNameQuery := repository.GetDB(ctx, tx).Table("components").
-		Select("SUM(dependency_vulns.raw_risk_assessment) as total_risk, AVG(dependency_vulns.raw_risk_assessment) as avg_risk, MAX(dependency_vulns.raw_risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.id as package_name").
+		Select("SUM(dependency_vulns.risk_assessment) as total_risk, AVG(dependency_vulns.risk_assessment) as avg_risk, MAX(dependency_vulns.risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.id as package_name").
 		Joins("INNER JOIN dependency_vulns ON components.id = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
 		Joins("INNER JOIN cves \"CVE\" ON dependency_vulns.cve_id = \"CVE\".cve").
@@ -323,7 +323,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 			q = q.Order(dependencyVulnSortSQL(s))
 		}
 	} else {
-		q = q.Order("raw_risk_assessment DESC")
+		q = q.Order("risk_assessment DESC")
 	}
 
 	err = q.Preload("CVE").Find(&dependencyVulns).Error
@@ -876,7 +876,7 @@ func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPac
 		Where("direct_dependency_fixed_version IS NOT NULL AND direct_dependency_fixed_version != ''").
 		Where("vulnerability_path ->> 0 LIKE '%/' || ? || '@%'", packageName).
 		Select("direct_dependency_fixed_version").
-		Order("last_detected DESC").
+		Order("last_state_change DESC").
 		Limit(1).
 		Scan(&directDependencyFixedVersion).Error
 

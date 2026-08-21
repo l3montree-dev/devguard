@@ -195,3 +195,7 @@ func TestWebhookClient_CreateRequest_RetryLogic(t *testing.T) {
 		assert.Equal(t, 3, attemptCount, "Should retry on 429")
 	})
 }
+
+func TestCreateSampleSBOMUsesCycloneDX16(t *testing.T) {
+	assert.Equal(t, "1.6", createSampleSBOM().SpecVersion.String())
+}

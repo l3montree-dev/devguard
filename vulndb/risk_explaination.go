@@ -317,7 +317,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		CVSSMessage:           describeCVSS(cvss),
 		DependencyVulnID:      dependencyVuln.ID,
 
-		Risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
+		Risk:  utils.OrDefault(dependencyVuln.RiskAssessment, 0),
 		EPSS:  utils.OrDefault(dependencyVuln.GetCVE().EPSS, 0),
 		Depth: max(len(dependencyVuln.VulnerabilityPath), 1),
 

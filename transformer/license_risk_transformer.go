@@ -33,7 +33,6 @@ func LicenseRiskToDTO(f models.LicenseRisk) dtos.LicenseRiskDTO {
 	return dtos.LicenseRiskDTO{
 		ID:                   f.ID,
 		Artifacts:            artifacts,
-		Message:              f.Message,
 		AssetVersionName:     f.AssetVersionName,
 		AssetID:              f.AssetID.String(),
 		State:                f.State,

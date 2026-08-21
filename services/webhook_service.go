@@ -209,7 +209,7 @@ func testPayload(payloadType TestPayloadType) (any, WebhookType) {
 func createSampleSBOM() cdx.BOM {
 	return cdx.BOM{
 		BOMFormat:    "CycloneDX",
-		SpecVersion:  cdx.SpecVersion1_4,
+		SpecVersion:  cdx.SpecVersion1_6,
 		SerialNumber: "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
 		Version:      1,
 		Metadata: &cdx.Metadata{
@@ -248,10 +248,7 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 	cve := "CVE-2021-44228"
 	purl := "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
 	fixedVersion := "2.15.0"
-	risk := 95
-	rawRisk := 9.8
-	priority := 1
-	effort := 4
+	risk := 9.8
 
 	cveData := models.CVE{
 		CVE:         "CVE-2021-44228",
@@ -271,11 +268,8 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 			CVE:                   utils.PtrMap(&cveData, transformer.CVEToDTO),
 			ComponentPurl:         purl,
 			ComponentFixedVersion: &fixedVersion,
-			Effort:                &effort,
 			RiskAssessment:        &risk,
-			RawRiskAssessment:     &rawRisk,
-			Priority:              &priority,
-			LastDetected:          time.Now(),
+			LastStateChange:       time.Now(),
 			CreatedAt:             time.Now().Add(-24 * time.Hour),
 			RiskRecalculatedAt:    time.Now(),
 		},

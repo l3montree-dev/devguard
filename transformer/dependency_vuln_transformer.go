@@ -58,7 +58,6 @@ func RelationshipToDTO(relation models.CVERelationship) dtos.RelationshipDTO {
 func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 	return dtos.DependencyVulnDTO{
 		ID:                           f.ID,
-		Message:                      f.Message,
 		AssetVersionName:             f.AssetVersionName,
 		AssetID:                      f.AssetID.String(),
 		State:                        dtos.VulnState(f.State),
@@ -68,11 +67,8 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 		ComponentFixedVersion:        f.ComponentFixedVersion,
 		VulnerabilityPath:            f.VulnerabilityPath,
 		DirectDependencyFixedVersion: f.DirectDependencyFixedVersion,
-		Effort:                       f.Effort,
 		RiskAssessment:               f.RiskAssessment,
-		RawRiskAssessment:            f.RawRiskAssessment,
-		Priority:                     f.Priority,
-		LastDetected:                 f.LastDetected,
+		LastStateChange:              f.LastStateChange,
 		CreatedAt:                    f.CreatedAt,
 		TicketID:                     f.TicketID,
 		TicketURL:                    f.TicketURL,
@@ -88,7 +84,6 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 	return dtos.DetailedDependencyVulnDTO{
 		DependencyVulnDTO: dtos.DependencyVulnDTO{
 			ID:                           dependencyVuln.ID,
-			Message:                      dependencyVuln.Message,
 			AssetVersionName:             dependencyVuln.AssetVersionName,
 			AssetID:                      dependencyVuln.AssetID.String(),
 			State:                        dependencyVuln.State,
@@ -98,11 +93,8 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			ComponentFixedVersion:        dependencyVuln.ComponentFixedVersion,
 			VulnerabilityPath:            dependencyVuln.VulnerabilityPath,
 			DirectDependencyFixedVersion: dependencyVuln.DirectDependencyFixedVersion,
-			Effort:                       dependencyVuln.Effort,
 			RiskAssessment:               dependencyVuln.RiskAssessment,
-			RawRiskAssessment:            dependencyVuln.RawRiskAssessment,
-			Priority:                     dependencyVuln.Priority,
-			LastDetected:                 dependencyVuln.LastDetected,
+			LastStateChange:              dependencyVuln.LastStateChange,
 			CreatedAt:                    dependencyVuln.CreatedAt,
 			TicketID:                     dependencyVuln.TicketID,
 			TicketURL:                    dependencyVuln.TicketURL,

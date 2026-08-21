@@ -54,9 +54,9 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 			AssetVersionName: assetVersion.Name,
 			AssetID:          asset.ID,
 		},
-		CVEID:             cve.CVE,
-		ComponentPurl:     "pkg:npm/reopen-test@1.0.0",
-		RawRiskAssessment: &risk,
+		CVEID:          cve.CVE,
+		ComponentPurl:  "pkg:npm/reopen-test@1.0.0",
+		RiskAssessment: &risk,
 	}
 	require.NoError(t, db.Create(&depVuln).Error)
 	vulnID := depVuln.ID // set by BeforeSave hook after Create
@@ -150,9 +150,9 @@ func TestAverageRemediationTimesForRelease(t *testing.T) {
 			AssetVersionName: assetVersion.Name,
 			AssetID:          asset.ID,
 		},
-		CVEID:             cve.CVE,
-		ComponentPurl:     "pkg:npm/test-pkg@1.0.0",
-		RawRiskAssessment: &risk,
+		CVEID:          cve.CVE,
+		ComponentPurl:  "pkg:npm/test-pkg@1.0.0",
+		RiskAssessment: &risk,
 	}
 	require.NoError(t, db.Create(&depVuln).Error)
 	// ID is set by BeforeSave hook (hash of CVEID+AssetVersionName+AssetID+path)

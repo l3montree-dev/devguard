@@ -46,9 +46,8 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		vuln1 := models.FirstPartyVuln{
 			URI:             "test-uri",
 			SnippetContents: snippetJSON1,
-			Vulnerability: models.Vulnerability{
-				Message: new("Test message"),
-			},
+			Vulnerability:   models.Vulnerability{},
+			Message:         new("Test message"),
 		}
 
 		snippet2 := dtos.SnippetContent{
@@ -67,9 +66,8 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		vuln2 := models.FirstPartyVuln{
 			URI:             "test-uri",
 			SnippetContents: snippetJSON2,
-			Vulnerability: models.Vulnerability{
-				Message: new("other message"),
-			},
+			Vulnerability:   models.Vulnerability{},
+			Message:         new("other message"),
 		}
 
 		assert.Equal(t, vuln1.CalculateHash(), vuln2.CalculateHash())
@@ -91,9 +89,8 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		vuln1 := models.FirstPartyVuln{
 			URI:             "test-uri",
 			SnippetContents: snippetJSON1,
-			Vulnerability: models.Vulnerability{
-				Message: new("Test message"),
-			},
+			Vulnerability:   models.Vulnerability{},
+			Message:         new("Test message"),
 		}
 
 		snippet2 := dtos.SnippetContent{
@@ -112,9 +109,8 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		vuln2 := models.FirstPartyVuln{
 			URI:             "another-uri",
 			SnippetContents: snippetJSON2,
-			Vulnerability: models.Vulnerability{
-				Message: new("Another message"),
-			},
+			Vulnerability:   models.Vulnerability{},
+			Message:         new("Another message"),
 		}
 
 		assert.NotEqual(t, vuln1.CalculateHash(), vuln2.CalculateHash())

@@ -32,11 +32,11 @@ func TestGetOrgStatistics(t *testing.T) {
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
-		// CVE-A: critical risk (raw_risk_assessment = 9.5, cvss = 9.5)
+		// CVE-A: critical risk (risk_assessment = 9.5, cvss = 9.5)
 		cveA := models.CVE{CVE: "CVE-2024-00001", CVSS: 9.5}
 		require.NoError(t, f.DB.Create(&cveA).Error)
 
-		// CVE-B: medium risk (raw_risk_assessment = 5.0, cvss = 5.0)
+		// CVE-B: medium risk (risk_assessment = 5.0, cvss = 5.0)
 		cveB := models.CVE{CVE: "CVE-2024-00002", CVSS: 5.0}
 		require.NoError(t, f.DB.Create(&cveB).Error)
 
@@ -58,7 +58,7 @@ func TestGetOrgStatistics(t *testing.T) {
 			CVEID:             cveA.CVE,
 			ComponentPurl:     componentX.ID,
 			VulnerabilityPath: []string{componentX.ID},
-			RawRiskAssessment: &criticalRisk,
+			RiskAssessment:    &criticalRisk,
 		}
 		require.NoError(t, f.DB.Create(&depVuln1).Error)
 
@@ -73,7 +73,7 @@ func TestGetOrgStatistics(t *testing.T) {
 			CVEID:             cveA.CVE,
 			ComponentPurl:     componentX.ID,
 			VulnerabilityPath: []string{"pkg:npm/parent@3.0.0", componentX.ID},
-			RawRiskAssessment: &criticalRisk,
+			RiskAssessment:    &criticalRisk,
 		}
 		require.NoError(t, f.DB.Create(&depVuln2).Error)
 
@@ -87,7 +87,7 @@ func TestGetOrgStatistics(t *testing.T) {
 			CVEID:             cveB.CVE,
 			ComponentPurl:     componentY.ID,
 			VulnerabilityPath: []string{componentY.ID},
-			RawRiskAssessment: &mediumRisk,
+			RiskAssessment:    &mediumRisk,
 		}
 		require.NoError(t, f.DB.Create(&depVuln3).Error)
 

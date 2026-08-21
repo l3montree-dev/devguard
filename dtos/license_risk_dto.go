@@ -15,7 +15,6 @@ type LicenseRiskArtifactDTO struct {
 
 type LicenseRiskDTO struct {
 	ID                   uuid.UUID `json:"id"`
-	Message              *string   `json:"message"`
 	AssetVersionName     string    `json:"assetVersionName"`
 	AssetID              string    `json:"assetId"`
 	State                VulnState `json:"state"`

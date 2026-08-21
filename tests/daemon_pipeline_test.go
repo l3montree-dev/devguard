@@ -283,7 +283,7 @@ func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
 				State:            dtos.VulnStateAccepted,
-				LastDetected:     time.Now().Add(-48 * time.Hour),
+				LastStateChange:  time.Now().Add(-48 * time.Hour),
 			},
 			CVEID:             cve.CVE,
 			ComponentPurl:     "pkg:npm/test-package@1.0.0",
@@ -390,7 +390,7 @@ func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
 				AssetID:          asset.ID,
 				AssetVersionName: assetVersion.Name,
 				State:            dtos.VulnStateAccepted,
-				LastDetected:     time.Now().Add(-48 * time.Hour),
+				LastStateChange:  time.Now().Add(-48 * time.Hour),
 			},
 			CVEID:             cve.CVE,
 			ComponentPurl:     "pkg:npm/test-package@1.0.0",
@@ -814,8 +814,8 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			assert.Greater(t, len(vulnerabilities), 0, "Should detect vulnerability")
 
 			vuln := vulnerabilities[0]
-			assert.NotNil(t, vuln.RawRiskAssessment, "Risk assessment should be calculated")
-			assert.Greater(t, *vuln.RawRiskAssessment, float64(3), "Risk should be calculated (can be 0 or greater)")
+			assert.NotNil(t, vuln.RiskAssessment, "Risk assessment should be calculated")
+			assert.Greater(t, *vuln.RiskAssessment, float64(3), "Risk should be calculated (can be 0 or greater)")
 		})
 	})
 }
