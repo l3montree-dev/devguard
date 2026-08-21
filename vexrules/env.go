@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/google/cel-go/cel"
 	celast "github.com/google/cel-go/common/ast"
@@ -78,6 +79,13 @@ func newCelEnv(matchesPattern func(pattern, path, artifactPurls []string) bool) 
 						return types.NewErr("matchesPattern: invalid pattern argument: %v", err)
 					}
 					return types.Bool(matchesPattern(pattern, path, artifactPurls))
+				}),
+			),
+		),
+		cel.Function("now",
+			cel.Overload("now_timestamp", []*cel.Type{}, cel.TimestampType,
+				cel.FunctionBinding(func(args ...ref.Val) ref.Val {
+					return types.Timestamp{Time: time.Now()}
 				}),
 			),
 		),
