@@ -416,7 +416,7 @@ type ExternalReferenceRepository interface {
 	SaveBatch(ctx context.Context, tx DB, ts []models.ExternalReference) error
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.ExternalReference, error)
 	DeleteByURL(ctx context.Context, tx DB, assetID uuid.UUID, url string) error
-	FindByAssetIDWithVexRuleCount(ctx context.Context, tx DB, assetID uuid.UUID) ([]dtos.ExternalReferenceDTO, error)
+	FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[dtos.ExternalReferenceDTO], error)
 }
 
 type ExternalEntityProviderService interface {
