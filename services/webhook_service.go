@@ -209,7 +209,7 @@ func testPayload(payloadType TestPayloadType) (any, WebhookType) {
 func createSampleSBOM() cdx.BOM {
 	return cdx.BOM{
 		BOMFormat:    "CycloneDX",
-		SpecVersion:  cdx.SpecVersion1_4,
+		SpecVersion:  cdx.SpecVersion1_6,
 		SerialNumber: "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
 		Version:      1,
 		Metadata: &cdx.Metadata{
