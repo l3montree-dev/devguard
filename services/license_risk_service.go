@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -97,7 +96,6 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, t
 					AssetID:          assetVersion.AssetID,
 					AssetVersion:     assetVersion,
 					State:            dtos.VulnStateOpen,
-					LastDetected:     time.Now(),
 				},
 				FinalLicenseDecision: nil,
 				ComponentPurl:        comp.ID,

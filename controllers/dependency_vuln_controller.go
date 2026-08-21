@@ -191,9 +191,9 @@ func (controller *DependencyVulnController) ListPaged(ctx shared.Context) error 
 		maxCvss := 0.
 
 		for _, f := range v.DependencyVulns {
-			totalRisk += utils.OrDefault(f.RawRiskAssessment, 0)
-			if utils.OrDefault(f.RawRiskAssessment, 0) > maxRisk {
-				maxRisk = *f.RawRiskAssessment
+			totalRisk += utils.OrDefault(f.RiskAssessment, 0)
+			if utils.OrDefault(f.RiskAssessment, 0) > maxRisk {
+				maxRisk = *f.RiskAssessment
 			}
 
 			if float64(f.GetCVE().CVSS) > maxCvss {

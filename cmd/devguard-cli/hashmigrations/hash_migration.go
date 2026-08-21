@@ -417,12 +417,8 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 			if create.copyStateFrom != nil {
 				// Copy all state and risk assessment fields from the old vuln
 				newVuln.State = create.copyStateFrom.State
-				newVuln.RawRiskAssessment = create.copyStateFrom.RawRiskAssessment
 				newVuln.RiskAssessment = create.copyStateFrom.RiskAssessment
-				newVuln.Effort = create.copyStateFrom.Effort
-				newVuln.Priority = create.copyStateFrom.Priority
 				newVuln.RiskRecalculatedAt = create.copyStateFrom.RiskRecalculatedAt
-				newVuln.Message = create.copyStateFrom.Message
 
 				// Only copy ticket ID and URL once per ticket to avoid duplicate ticket associations
 				if create.copyStateFrom.TicketID != nil && !copiedTicketIDs[*create.copyStateFrom.TicketID] {

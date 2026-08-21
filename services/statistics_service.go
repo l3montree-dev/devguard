@@ -63,7 +63,7 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 
 		distribution := distributionPerComponent[componentName]
 
-		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
+		risk := utils.OrDefault(dependencyVuln.RiskAssessment, 0)
 		cvss := float64(dependencyVuln.GetCVE().CVSS)
 
 		switch {
@@ -149,10 +149,10 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 			riskAggregation := risks[key]
 
 			if riskAggregation.Min == -1.0 {
-				riskAggregation.Min = utils.OrDefault(dependencyVuln.RawRiskAssessment, -1)
+				riskAggregation.Min = utils.OrDefault(dependencyVuln.RiskAssessment, -1)
 			}
 
-			risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
+			risk := utils.OrDefault(dependencyVuln.RiskAssessment, 0)
 
 			if riskAggregation.Min <= risk {
 				riskAggregation.Min = risk
@@ -291,7 +291,7 @@ func (s *statisticsService) GetRemediationTimeAveragesForRelease(ctx context.Con
 
 func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
 	for _, vuln := range dependencyVulns {
-		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		switch {
 		case risk >= 0.0 && risk < 4.0:
 			low++
@@ -313,7 +313,7 @@ func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVul
 			continue
 		}
 
-		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		switch {
 		case risk >= 0.0 && risk < 4.0:
 			low++
@@ -354,7 +354,7 @@ func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln)
 
 	// get the highest risk for each unique CVE+PURL combination to avoid double counting vulnerabilities that affect multiple components
 	for _, vuln := range dependencyVulns {
-		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
 		existingRisk, exists := uniqueCombinations[combinationKey]
@@ -386,7 +386,7 @@ func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.Dependen
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
 			continue
 		}
-		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
 		existingRisk, exists := uniqueCombinations[combinationKey]

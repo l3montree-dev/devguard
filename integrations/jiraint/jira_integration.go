@@ -376,7 +376,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	// a possible workaround is to ask which priority schema are available, then check which projects are using which priority schema, and then check the priorities of the project.
 	//so for now we will just set the priority to "highest" if the risk is critical or high
 	// check if the risk is critical or high and set the priority accordingly
-	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
+	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RiskAssessment)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert risk assessment to severity: %w", err)
 	}
@@ -715,7 +715,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		},
 	}
 
-	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
+	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RiskAssessment)
 	if err != nil {
 		slog.Error("failed to convert risk assessment to severity", "err", err, "vuln", dependencyVuln)
 		return fmt.Errorf("failed to convert risk assessment to severity: %w", err)

@@ -16,6 +16,8 @@ type FirstPartyVuln struct {
 
 	Events []VulnEvent `gorm:"foreignKey:FirstPartyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
+	Message *string `json:"message" gorm:"default:null;"`
+
 	// the scanner which was used to detect this firstPartyVuln
 	ScannerIDs      string              `json:"scannerIds" gorm:"not null;column:scanner_ids"` //List of scanner ids separated by a white space
 	Fingerprint     string              `json:"fingerprint" gorm:"type:text;"`

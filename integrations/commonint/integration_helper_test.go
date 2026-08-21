@@ -392,7 +392,7 @@ func TestGetLabels(t *testing.T) {
 				{ArtifactName: "container:test"},
 				{ArtifactName: "source-code:test"},
 			},
-			RawRiskAssessment: new(0.2),
+			RiskAssessment: new(0.2),
 		}
 		expectedLabels := []string{
 			"devguard",
@@ -443,7 +443,7 @@ func TestGetLabels(t *testing.T) {
 			Artifacts: []models.Artifact{
 				{ArtifactName: longArtifactName},
 			},
-			RawRiskAssessment: new(0.2),
+			RiskAssessment: new(0.2),
 		}
 
 		labels := GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug")
@@ -584,10 +584,11 @@ func TestRenderMarkdown(t *testing.T) {
 
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability: models.Vulnerability{Message: new("A detailed Message"),
+			Vulnerability: models.Vulnerability{
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
 			},
-			URI: "the/uri/of/the/vuln",
+			Message: new("A detailed Message"),
+			URI:     "the/uri/of/the/vuln",
 		}
 		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
 		assert.Contains(t, result, "A detailed Message")
@@ -605,9 +606,10 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.NoError(t, err)
 		firstPartyVuln := models.FirstPartyVuln{
 			SnippetContents: snippetJSON,
-			Vulnerability: models.Vulnerability{Message: new("A detailed Message"),
+			Vulnerability: models.Vulnerability{
 				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
-			URI: "the/uri/of/the/vuln",
+			Message: new("A detailed Message"),
+			URI:     "the/uri/of/the/vuln",
 		}
 
 		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
@@ -638,9 +640,9 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 		var reference []string
 		for i, order := range orders {
 			vuln := &models.DependencyVuln{
-				Vulnerability:     models.Vulnerability{State: dtos.VulnStateOpen},
-				Artifacts:         order,
-				RawRiskAssessment: new(0.5),
+				Vulnerability:  models.Vulnerability{State: dtos.VulnStateOpen},
+				Artifacts:      order,
+				RiskAssessment: new(0.5),
 			}
 			labels := GetLabels(vuln, "org1", "project1", "asset1")
 			if i == 0 {

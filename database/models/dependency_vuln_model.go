@@ -53,13 +53,7 @@ type DependencyVuln struct {
 
 	VulnerabilityPath []string `json:"vulnerabilityPath" gorm:"type:jsonb;default:'[]';serializer:json"`
 
-	Effort            *int     `json:"effort" gorm:"default:null;"`
-	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
-	RawRiskAssessment *float64 `json:"rawRiskAssessment" gorm:"default:null;"`
-
-	Priority *int `json:"priority" gorm:"default:null;"`
-
-	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
+	RiskAssessment *float64 `json:"riskAssessment" gorm:"default:null;"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 
@@ -107,7 +101,7 @@ func (vuln DependencyVuln) ToCELMap() map[string]any {
 		"assetVersionName":     vuln.AssetVersionName,
 		"vulnAssetId":          vuln.AssetID.String(),
 		"state":                string(vuln.State),
-		"lastDetected":         timeToCEL(vuln.LastDetected),
+		"lastStateChange":      timeToCEL(vuln.LastStateChange),
 		"manualTicketCreation": vuln.ManualTicketCreation,
 		"createdAt":            timeToCEL(vuln.CreatedAt),
 		"updatedAt":            timeToCEL(vuln.UpdatedAt),
@@ -121,28 +115,11 @@ func (vuln DependencyVuln) ToCELMap() map[string]any {
 		"assetSignature":     float64(vuln.AssetSignature),
 	}
 
-	m["message"] = ptrToAny(vuln.Message)
 	m["ticketId"] = ptrToAny(vuln.TicketID)
 	m["ticketUrl"] = ptrToAny(vuln.TicketURL)
 	m["componentFixedVersion"] = ptrToAny(vuln.ComponentFixedVersion)
 	m["directDependencyFixedVersion"] = ptrToAny(vuln.DirectDependencyFixedVersion)
-	m["rawRiskAssessment"] = ptrToAny(vuln.RawRiskAssessment)
-
-	if vuln.Effort != nil {
-		m["effort"] = float64(*vuln.Effort)
-	} else {
-		m["effort"] = nil
-	}
-	if vuln.RiskAssessment != nil {
-		m["riskAssessment"] = float64(*vuln.RiskAssessment)
-	} else {
-		m["riskAssessment"] = nil
-	}
-	if vuln.Priority != nil {
-		m["priority"] = float64(*vuln.Priority)
-	} else {
-		m["priority"] = nil
-	}
+	m["riskAssessment"] = ptrToAny(vuln.RiskAssessment)
 
 	if vuln.CVE != nil {
 		m["cve"] = vuln.CVE.ToCELMap()
@@ -154,15 +131,15 @@ func (vuln DependencyVuln) ToCELMap() map[string]any {
 }
 
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {
-	vuln.RawRiskAssessment = &risk
+	vuln.RiskAssessment = &risk
 }
 
 func (vuln *DependencyVuln) GetRawRiskAssessment() float64 {
-	if vuln.RawRiskAssessment == nil {
+	if vuln.RiskAssessment == nil {
 		return 0.0
 	}
 
-	return *vuln.RawRiskAssessment
+	return *vuln.RiskAssessment
 }
 
 func (vuln *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
