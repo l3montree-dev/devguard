@@ -264,7 +264,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 	events := make([]models.VulnEvent, 0)
 
 	for i, dependencyVuln := range dependencyVulns {
-		oldRiskAssessment := dependencyVuln.RawRiskAssessment
+		oldRiskAssessment := dependencyVuln.RiskAssessment
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
 		newRiskAssessment := vulndb.RawRisk(dependencyVuln.CVE, env, depth)
 
@@ -332,7 +332,7 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), false, userAgent)
 	case dtos.EventTypeDetected:
 		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dtos.RiskCalculationReport{
-			Risk: utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
+			Risk: utils.OrDefault(dependencyVuln.RiskAssessment, 0),
 		}, "", false, userAgent)
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, false, userAgent)

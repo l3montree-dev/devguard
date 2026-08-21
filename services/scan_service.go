@@ -236,8 +236,8 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
-					Message:          &result.Message.Text,
 				},
+				Message:         &result.Message.Text,
 				ScannerIDs:      scannerID,
 				RuleID:          utils.OrDefault(result.RuleID, ""),
 				RuleHelp:        preferMarkdown(utils.OrDefault(rule.Help, sarif.MultiformatMessageString{})),

@@ -95,7 +95,6 @@ type ExploitDTO struct {
 
 type DependencyVulnDTO struct {
 	ID                           uuid.UUID     `json:"id"`
-	Message                      *string       `json:"message"`
 	AssetVersionName             string        `json:"assetVersionId"`
 	AssetID                      string        `json:"assetId"`
 	State                        VulnState     `json:"state"`
@@ -105,11 +104,8 @@ type DependencyVulnDTO struct {
 	ComponentFixedVersion        *string       `json:"componentFixedVersion"`
 	VulnerabilityPath            []string      `json:"vulnerabilityPath"`
 	DirectDependencyFixedVersion *string       `json:"directDependencyFixedVersion"`
-	Effort                       *int          `json:"effort"`
-	RiskAssessment               *int          `json:"riskAssessment"`
-	RawRiskAssessment            *float64      `json:"rawRiskAssessment"`
-	Priority                     *int          `json:"priority"`
-	LastDetected                 time.Time     `json:"lastDetected"`
+	RiskAssessment               *float64      `json:"riskAssessment"`
+	LastStateChange              time.Time     `json:"lastStateChange"`
 	CreatedAt                    time.Time     `json:"createdAt"`
 	TicketID                     *string       `json:"ticketId"`
 	TicketURL                    *string       `json:"ticketUrl"`

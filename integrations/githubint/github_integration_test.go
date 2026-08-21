@@ -150,7 +150,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
 			CVEID:                 "CVE-2021-1234",
-			RawRiskAssessment:     new(8.5),
+			RiskAssessment:        new(8.5),
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
 			ComponentFixedVersion: new("1.0.1"),
 		}, nil)
@@ -220,7 +220,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
 			CVEID:                 "CVE-2021-1234",
-			RawRiskAssessment:     new(8.5),
+			RiskAssessment:        new(8.5),
 			ComponentPurl:         "pkg:github/owner/repo@1.0.0",
 			ComponentFixedVersion: new("1.0.1"),
 		}
@@ -307,9 +307,9 @@ func TestGithubIntegrationUpdateIssueUnlinksDeletedGithubIssue(t *testing.T) {
 			CVSS:   9.8,
 			Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 		},
-		CVEID:             "CVE-2024-1234",
-		ComponentPurl:     "pkg:golang/example.com/repo@1.0.0",
-		RawRiskAssessment: new(9.8),
+		CVEID:          "CVE-2024-1234",
+		ComponentPurl:  "pkg:golang/example.com/repo@1.0.0",
+		RiskAssessment: new(9.8),
 	}
 
 	githubClient := mocks.NewGithubClientFacade(t)
@@ -411,7 +411,7 @@ func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 func TestGetLabels(t *testing.T) {
 	t.Run("it should return labels with devguard and risk severity", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
-			RawRiskAssessment: new(8.0),
+			RiskAssessment: new(8.0),
 			CVE: &models.CVE{
 				CVSS: 8.0,
 			},
@@ -430,7 +430,7 @@ func TestGetLabels(t *testing.T) {
 			Vulnerability: models.Vulnerability{
 				State: dtos.VulnStateAccepted,
 			},
-			RawRiskAssessment: new(5.0),
+			RiskAssessment: new(5.0),
 			CVE: &models.CVE{
 				CVSS: 5.0,
 			},
@@ -449,7 +449,7 @@ func TestGetLabels(t *testing.T) {
 				CVSS: 9.8,
 			},
 		}
-		vuln.RawRiskAssessment = new(9.8)
+		vuln.RiskAssessment = new(9.8)
 
 		labels := commonint.GetLabels(vuln, "org1", "project1", "asset1")
 
@@ -460,7 +460,7 @@ func TestGetLabels(t *testing.T) {
 
 	t.Run("it should handle nil CVE gracefully for DependencyVuln", func(t *testing.T) {
 		vuln := &models.DependencyVuln{}
-		vuln.RawRiskAssessment = new(4.0)
+		vuln.RiskAssessment = new(4.0)
 
 		labels := commonint.GetLabels(vuln, "org2", "project2", "asset2")
 
@@ -480,7 +480,7 @@ func TestGetLabels(t *testing.T) {
 				CVSS: 0.0,
 			},
 		}
-		vuln.RawRiskAssessment = new(0.0)
+		vuln.RiskAssessment = new(0.0)
 
 		labels := commonint.GetLabels(vuln, "orgSlug", "projectSlug", "assetSlug")
 

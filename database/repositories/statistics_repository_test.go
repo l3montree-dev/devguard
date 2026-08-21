@@ -115,8 +115,8 @@ func TestReplayHistoricalEvents(t *testing.T) {
 				Vulnerability: models.Vulnerability{
 					State: dtos.VulnStateFixed,
 				},
-				Events:            []models.VulnEvent{{Type: dtos.EventTypeDetected}},
-				RawRiskAssessment: &risk,
+				Events:         []models.VulnEvent{{Type: dtos.EventTypeDetected}},
+				RiskAssessment: &risk,
 			},
 			{
 				Vulnerability: models.Vulnerability{

@@ -1110,12 +1110,12 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 		return nil, err
 	}
 
-	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
+	riskSeverity, err := vulndb.RiskToSeverity(*dependencyVuln.RiskAssessment)
 	if err == nil {
 		// todo - we are editing the labels on each call. Actually we only need todo it once
 		_, _, err = client.EditIssueLabel(ctx, owner, repo, "risk:"+strings.ToLower(riskSeverity), &github.Label{
 			Description: new("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
-			Color:       new(vulndb.RiskToColor(*dependencyVuln.RawRiskAssessment)),
+			Color:       new(vulndb.RiskToColor(*dependencyVuln.RiskAssessment)),
 		})
 
 		if err != nil {
