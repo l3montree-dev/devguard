@@ -829,66 +829,20 @@ func (s SortQuery) GetField() string {
 	return sanitizeField(s.Field)
 }
 
-type Environmental struct {
-	ConfidentialityRequirements string
-	IntegrityRequirements       string
-	AvailabilityRequirements    string
-	ModifiedAttackVector        string
-	ModifiedAttackComplexity    string
-	ModifiedPrivilegesRequired  string
-	ModifiedScope               string
-	ModifiedUserInteraction     string
-	ModifiedConfidentiality     string
-	ModifiedIntegrity           string
-	ModifiedAvailability        string
-}
-
-func GetEnvironmental(ctx Context) Environmental {
-	env := Environmental{
-		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
-		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
-		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
-		ModifiedAttackVector:        ctx.QueryParam("modifiedAttackVector"),
-		ModifiedAttackComplexity:    ctx.QueryParam("modifiedAttackComplexity"),
-		ModifiedPrivilegesRequired:  ctx.QueryParam("modifiedPrivilegesRequired"),
-		ModifiedScope:               ctx.QueryParam("modifiedScope"),
-		ModifiedUserInteraction:     ctx.QueryParam("modifiedUserInteraction"),
-		ModifiedConfidentiality:     ctx.QueryParam("modifiedConfidentiality"),
-		ModifiedIntegrity:           ctx.QueryParam("modifiedIntegrity"),
-		ModifiedAvailability:        ctx.QueryParam("modifiedAvailability"),
+func GetEnvironmental(ctx Context) dtos.Environmental {
+	return dtos.Environmental{
+		ConfidentialityRequirement: dtos.RequirementLevel(ctx.QueryParam("confidentialityRequirements")),
+		IntegrityRequirement:       dtos.RequirementLevel(ctx.QueryParam("integrityRequirements")),
+		AvailabilityRequirement:    dtos.RequirementLevel(ctx.QueryParam("availabilityRequirements")),
+		ModifiedAttackVector:       dtos.ModifiedAttackVector(ctx.QueryParam("modifiedAttackVector")),
+		ModifiedAttackComplexity:   dtos.ModifiedAttackComplexity(ctx.QueryParam("modifiedAttackComplexity")),
+		ModifiedPrivilegesRequired: dtos.ModifiedPrivilegesRequired(ctx.QueryParam("modifiedPrivilegesRequired")),
+		ModifiedScope:              dtos.ModifiedScope(ctx.QueryParam("modifiedScope")),
+		ModifiedUserInteraction:    dtos.ModifiedUserInteraction(ctx.QueryParam("modifiedUserInteraction")),
+		ModifiedConfidentiality:    dtos.ModifiedRequirementLevel(ctx.QueryParam("modifiedConfidentiality")),
+		ModifiedIntegrity:          dtos.ModifiedRequirementLevel(ctx.QueryParam("modifiedIntegrity")),
+		ModifiedAvailability:       dtos.ModifiedRequirementLevel(ctx.QueryParam("modifiedAvailability")),
 	}
-	return SanitizeEnv(env)
-}
-
-func SanitizeEnv(env Environmental) Environmental {
-	reqToShort := map[string]string{"low": "L", "medium": "M", "high": "H"}
-	mavToShort := map[string]string{"network": "N", "adjacent": "A", "local": "L", "physical": "P", "X": "X"}
-	macToShort := map[string]string{"low": "L", "high": "H", "X": "X"}
-	mprToShort := map[string]string{"none": "N", "low": "L", "high": "H", "X": "X"}
-	msToShort := map[string]string{"unchanged": "U", "changed": "C", "X": "X"}
-	muiToShort := map[string]string{"X": "X", "none": "N", "required": "R"}
-	mreqToShort := map[string]string{"X": "X", "none": "N", "low": "L", "high": "H"}
-
-	lookup := func(m map[string]string, v string) string {
-		if s, ok := m[v]; ok {
-			return s
-		}
-		return v
-	}
-
-	env.ConfidentialityRequirements = lookup(reqToShort, env.ConfidentialityRequirements)
-	env.IntegrityRequirements = lookup(reqToShort, env.IntegrityRequirements)
-	env.AvailabilityRequirements = lookup(reqToShort, env.AvailabilityRequirements)
-	env.ModifiedAttackVector = lookup(mavToShort, env.ModifiedAttackVector)
-	env.ModifiedAttackComplexity = lookup(macToShort, env.ModifiedAttackComplexity)
-	env.ModifiedPrivilegesRequired = lookup(mprToShort, env.ModifiedPrivilegesRequired)
-	env.ModifiedScope = lookup(msToShort, env.ModifiedScope)
-	env.ModifiedUserInteraction = lookup(muiToShort, env.ModifiedUserInteraction)
-	env.ModifiedConfidentiality = lookup(mreqToShort, env.ModifiedConfidentiality)
-	env.ModifiedIntegrity = lookup(mreqToShort, env.ModifiedIntegrity)
-	env.ModifiedAvailability = lookup(mreqToShort, env.ModifiedAvailability)
-
-	return env
 }
 
 type BadgeValues struct {

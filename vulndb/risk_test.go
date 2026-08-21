@@ -23,7 +23,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/datatypes"
 )
@@ -31,7 +30,7 @@ import (
 type tableTest struct {
 	vector             string
 	metrics            dtos.RiskMetrics
-	env                shared.Environmental
+	env                dtos.Environmental
 	exploits           []models.Exploit
 	expectedVector     string
 	cvss               float32
@@ -45,10 +44,10 @@ func TestCalculateRawRisk(t *testing.T) {
 			CVSS:   5,
 			Vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
 		}
-		env := shared.Environmental{
-			ConfidentialityRequirements: "L",
-			IntegrityRequirements:       "L",
-			AvailabilityRequirements:    "L",
+		env := dtos.Environmental{
+			ConfidentialityRequirement: dtos.RequirementLevelLow,
+			IntegrityRequirement:       dtos.RequirementLevelLow,
+			AvailabilityRequirement:    dtos.RequirementLevelLow,
 		}
 		affectedComponentDepth := 0
 		riskReport := RawRisk(&sut, env, affectedComponentDepth)
@@ -65,7 +64,7 @@ func TestCalculateRisk(t *testing.T) {
 			CVSS:   5,
 			Vector: "",
 		}
-		env := shared.Environmental{}
+		env := dtos.Environmental{}
 		riskMetrics, vector := RiskCalculation(&sut, env)
 
 		if riskMetrics.BaseScore != 0 {
@@ -98,7 +97,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.0,
 				WithEnvironmentAndThreatIntelligence: 5.0,
 			},
-			env:            shared.Environmental{},
+			env:            dtos.Environmental{},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:U/RL:ND/RC:C",
 			cvss:           5.9,
 		},
@@ -110,10 +109,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.0,
 				WithEnvironmentAndThreatIntelligence: 3.4,
 			},
-			env: shared.Environmental{
-				ConfidentialityRequirements: "L",
-				IntegrityRequirements:       "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:U/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
@@ -126,10 +125,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
-			env: shared.Environmental{
-				ConfidentialityRequirements: "L",
-				IntegrityRequirements:       "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			exploits: []models.Exploit{
 				{
@@ -147,10 +146,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
-			env: shared.Environmental{
-				ConfidentialityRequirements: "L",
-				IntegrityRequirements:       "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			exploits: []models.Exploit{
 				{
@@ -171,10 +170,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
-			env: shared.Environmental{
-				ConfidentialityRequirements: "L",
-				IntegrityRequirements:       "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			exploits: []models.Exploit{
 				{
@@ -195,7 +194,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.4,
 				WithEnvironmentAndThreatIntelligence: 2.4,
 			},
-			env:            shared.Environmental{},
+			env:            dtos.Environmental{},
 			expectedVector: "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:U/RC:C",
 			cvss:           2.6,
 		},
@@ -207,10 +206,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.4,
 				WithEnvironmentAndThreatIntelligence: 1.8,
 			},
-			env: shared.Environmental{
-				IntegrityRequirements:       "L",
-				ConfidentialityRequirements: "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:U/RC:C/CR:L/IR:L/AR:L",
 			cvss:           2.6,
@@ -223,10 +222,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.6,
 				WithEnvironmentAndThreatIntelligence: 3.3,
 			},
-			env: shared.Environmental{
-				IntegrityRequirements:       "H",
-				ConfidentialityRequirements: "H",
-				AvailabilityRequirements:    "H",
+			env: dtos.Environmental{
+				IntegrityRequirement:       dtos.RequirementLevelHigh,
+				ConfidentialityRequirement: dtos.RequirementLevelHigh,
+				AvailabilityRequirement:    dtos.RequirementLevelHigh,
 			},
 			exploits: []models.Exploit{
 				{
@@ -247,10 +246,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.6,
 				WithEnvironmentAndThreatIntelligence: 3.3,
 			},
-			env: shared.Environmental{
-				IntegrityRequirements:       "H",
-				ConfidentialityRequirements: "H",
-				AvailabilityRequirements:    "H",
+			env: dtos.Environmental{
+				IntegrityRequirement:       dtos.RequirementLevelHigh,
+				ConfidentialityRequirement: dtos.RequirementLevelHigh,
+				AvailabilityRequirement:    dtos.RequirementLevelHigh,
 			},
 			exploits: []models.Exploit{
 				{
@@ -271,10 +270,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               4.8,
 				WithEnvironmentAndThreatIntelligence: 2.4,
 			},
-			env: shared.Environmental{
-				IntegrityRequirements:       "L",
-				ConfidentialityRequirements: "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			cvss:           7.5,
 			expectedVector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:U/CR:L/IR:L/AR:L",
@@ -287,10 +286,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               6.6,
 				WithEnvironmentAndThreatIntelligence: 5.1,
 			},
-			env: shared.Environmental{
-				IntegrityRequirements:       "L",
-				ConfidentialityRequirements: "L",
-				AvailabilityRequirements:    "L",
+			env: dtos.Environmental{
+				IntegrityRequirement:       dtos.RequirementLevelLow,
+				ConfidentialityRequirement: dtos.RequirementLevelLow,
+				AvailabilityRequirement:    dtos.RequirementLevelLow,
 			},
 			exploits:       []models.Exploit{{Verified: true}},
 			cvss:           7.5,
@@ -304,10 +303,10 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               6.0,
 				WithEnvironmentAndThreatIntelligence: 6.6,
 			},
-			env: shared.Environmental{
-				IntegrityRequirements:       "M",
-				ConfidentialityRequirements: "H",
-				AvailabilityRequirements:    "M",
+			env: dtos.Environmental{
+				IntegrityRequirement:       dtos.RequirementLevelMedium,
+				ConfidentialityRequirement: dtos.RequirementLevelHigh,
+				AvailabilityRequirement:    dtos.RequirementLevelMedium,
 			},
 			expectedVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N/E:F/RC:C/CR:H/IR:M/AR:M",
 			cvss:           6.1,
@@ -321,7 +320,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               2.6,
 				WithEnvironmentAndThreatIntelligence: 2.6,
 			},
-			env:               shared.Environmental{},
+			env:               dtos.Environmental{},
 			activelyExploited: true,
 			expectedVector:    "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:H/RC:C",
 			cvss:              2.6,
@@ -334,7 +333,7 @@ func TestCalculateRisk(t *testing.T) {
 				WithThreatIntelligence:               5.9,
 				WithEnvironmentAndThreatIntelligence: 5.9,
 			},
-			env:               shared.Environmental{},
+			env:               dtos.Environmental{},
 			activelyExploited: true,
 			expectedVector:    "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:H/RL:ND/RC:C",
 			cvss:              5.9,
@@ -715,8 +714,8 @@ func TestModifiedAttackVectorLowersRisk(t *testing.T) {
 		CVSS:   9.8,
 	}
 
-	baseline := RawRisk(cve, shared.Environmental{}, 1)
-	scoped := RawRisk(cve, shared.Environmental{
+	baseline := RawRisk(cve, dtos.Environmental{}, 1)
+	scoped := RawRisk(cve, dtos.Environmental{
 		ModifiedAttackVector: "local",
 	}, 1)
 
@@ -733,8 +732,8 @@ func TestModifiedAttackComplexityLowersRisk(t *testing.T) {
 		CVSS:   9.8,
 	}
 
-	baseline := RawRisk(cve, shared.Environmental{}, 1)
-	scoped := RawRisk(cve, shared.Environmental{
+	baseline := RawRisk(cve, dtos.Environmental{}, 1)
+	scoped := RawRisk(cve, dtos.Environmental{
 		ModifiedAttackComplexity: "high",
 	}, 1)
 

@@ -12,20 +12,18 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
+func RawRisk(cve *models.CVE, env dtos.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
 	if cve == nil {
 		return dtos.RiskCalculationReport{}
 	}
 	if affectedComponentDepth == 0 {
 		affectedComponentDepth = 1
 	}
-	e := shared.SanitizeEnv(env)
-	r, vector := RiskCalculation(cve, e)
+	r, vector := RiskCalculation(cve, env)
 	risk := r.WithEnvironmentAndThreatIntelligence
 	one := float64(1)
 	epss := float64(utils.OrDefault(cve.EPSS, 0))
@@ -53,15 +51,15 @@ func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth i
 			},
 		),
 
-		ConfidentialityRequirement: e.ConfidentialityRequirements,
-		IntegrityRequirement:       e.IntegrityRequirements,
-		AvailabilityRequirement:    e.AvailabilityRequirements,
+		ConfidentialityRequirement: dtos.ToCVSS(env.ConfidentialityRequirement),
+		IntegrityRequirement:       dtos.ToCVSS(env.IntegrityRequirement),
+		AvailabilityRequirement:    dtos.ToCVSS(env.AvailabilityRequirement),
 
 		Vector: vector,
 	}
 }
 
-func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetrics, string) {
+func RiskCalculation(cve *models.CVE, env dtos.Environmental) (dtos.RiskMetrics, string) {
 	if cve == nil || cve.Vector == "" {
 		return dtos.RiskMetrics{}, ""
 	}
@@ -186,36 +184,10 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 
 		oldE, _ := cvss.Get("E")
 		cvss.Set("E", "X") // nolint:errcheck
-		// set the env manually
-		if env.ConfidentialityRequirements != "" {
-			cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
-		}
-		if env.IntegrityRequirements != "" {
-			cvss.Set("IR", env.IntegrityRequirements) // nolint:errcheck
-		}
-		if env.AvailabilityRequirements != "" {
-			cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
-		}
-		if env.ModifiedAttackVector != "" && env.ModifiedAttackVector != "X" {
-			cvss.Set("MAV", env.ModifiedAttackVector) // nolint:errcheck
-		}
-		if env.ModifiedAttackComplexity != "" && env.ModifiedAttackComplexity != "X" {
-			cvss.Set("MAC", env.ModifiedAttackComplexity) // nolint:errcheck
-		}
-		if env.ModifiedPrivilegesRequired != "" && env.ModifiedPrivilegesRequired != "X" {
-			cvss.Set("MPR", env.ModifiedPrivilegesRequired) // nolint:errcheck
-		}
-		if env.ModifiedUserInteraction != "" && env.ModifiedUserInteraction != "X" {
-			cvss.Set("MUU", env.ModifiedUserInteraction) // nolint:errcheck
-		}
-		if env.ModifiedConfidentiality != "" && env.ModifiedConfidentiality != "X" {
-			cvss.Set("MC", env.ModifiedConfidentiality) // nolint:errcheck
-		}
-		if env.ModifiedIntegrity != "" && env.ModifiedIntegrity != "X" {
-			cvss.Set("MI", env.ModifiedIntegrity) // nolint:errcheck
-		}
-		if env.ModifiedAvailability != "" && env.ModifiedAvailability != "X" {
-			cvss.Set("MA", env.ModifiedAvailability) // nolint:errcheck
+		for key, value := range envMetrics(env) {
+			if value != "" {
+				cvss.Set(key, value) // nolint:errcheck
+			}
 		}
 		environmentalScore := cvss.Score()
 		cvss.Set("E", oldE) // nolint:errcheck
@@ -277,7 +249,7 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 		}
 
 		setEnv(cvss, env)
-		if env != (shared.Environmental{}) {
+		if env != (dtos.Environmental{}) {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
 		} else {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
@@ -341,39 +313,27 @@ func getBaseAndEnvironmentalScore(cvss cvssInterface, version string) float64 {
 	return score
 }
 
-func setEnv(cvss cvssInterface, env shared.Environmental) {
-	if env.ConfidentialityRequirements != "" {
-		cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
+func envMetrics(env dtos.Environmental) map[string]string {
+	return map[string]string{
+		"CR":  dtos.ToCVSS(env.ConfidentialityRequirement),
+		"IR":  dtos.ToCVSS(env.IntegrityRequirement),
+		"AR":  dtos.ToCVSS(env.AvailabilityRequirement),
+		"MAV": dtos.ToCVSS(env.ModifiedAttackVector),
+		"MAC": dtos.ToCVSS(env.ModifiedAttackComplexity),
+		"MPR": dtos.ToCVSS(env.ModifiedPrivilegesRequired),
+		"MS":  dtos.ToCVSS(env.ModifiedScope),
+		"MUU": dtos.ToCVSS(env.ModifiedUserInteraction),
+		"MC":  dtos.ToCVSS(env.ModifiedConfidentiality),
+		"MI":  dtos.ToCVSS(env.ModifiedIntegrity),
+		"MA":  dtos.ToCVSS(env.ModifiedAvailability),
 	}
-	if env.IntegrityRequirements != "" {
-		cvss.Set("IR", env.IntegrityRequirements) // nolint:errcheck
-	}
-	if env.AvailabilityRequirements != "" {
-		cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
-	}
-	if env.ModifiedAttackVector != "" && env.ModifiedAttackVector != "X" {
-		cvss.Set("MAV", env.ModifiedAttackVector) // nolint:errcheck
-	}
-	if env.ModifiedAttackComplexity != "" && env.ModifiedAttackComplexity != "X" {
-		cvss.Set("MAC", env.ModifiedAttackComplexity) // nolint:errcheck
-	}
-	if env.ModifiedPrivilegesRequired != "" && env.ModifiedPrivilegesRequired != "X" {
-		cvss.Set("MPR", env.ModifiedPrivilegesRequired) // nolint:errcheck
-	}
-	if env.ModifiedScope != "" && env.ModifiedScope != "X" {
-		cvss.Set("MS", env.ModifiedScope) // nolint:errcheck
-	}
-	if env.ModifiedUserInteraction != "" && env.ModifiedUserInteraction != "X" {
-		cvss.Set("MUU", env.ModifiedUserInteraction) // nolint:errcheck
-	}
-	if env.ModifiedConfidentiality != "" && env.ModifiedConfidentiality != "X" {
-		cvss.Set("MC", env.ModifiedConfidentiality) // nolint:errcheck
-	}
-	if env.ModifiedIntegrity != "" && env.ModifiedIntegrity != "X" {
-		cvss.Set("MI", env.ModifiedIntegrity) // nolint:errcheck
-	}
-	if env.ModifiedAvailability != "" && env.ModifiedAvailability != "X" {
-		cvss.Set("MA", env.ModifiedAvailability) // nolint:errcheck
+}
+
+func setEnv(cvss cvssInterface, env dtos.Environmental) {
+	for key, value := range envMetrics(env) {
+		if value != "" {
+			cvss.Set(key, value) // nolint:errcheck
+		}
 	}
 }
 

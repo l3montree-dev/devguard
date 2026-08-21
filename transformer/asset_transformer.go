@@ -53,17 +53,7 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		Slug:                         asset.Slug,
 		Description:                  asset.Description,
 		ProjectID:                    asset.ProjectID,
-		AvailabilityRequirement:      asset.AvailabilityRequirement,
-		IntegrityRequirement:         asset.IntegrityRequirement,
-		ConfidentialityRequirement:   asset.ConfidentialityRequirement,
-		ModifiedAttackVector:         asset.ModifiedAttackVector,
-		ModifiedAttackComplexity:     asset.ModifiedAttackComplexity,
-		ModifiedPrivilegesRequired:   asset.ModifiedPrivilegesRequired,
-		ModifiedScope:                asset.ModifiedScope,
-		ModifiedUserInteraction:      asset.ModifiedUserInteraction,
-		ModifiedConfidentiality:      asset.ModifiedConfidentiality,
-		ModifiedIntegrity:            asset.ModifiedIntegrity,
-		ModifiedAvailability:         asset.ModifiedAvailability,
+		Environmental:                asset.Environmental,
 		RepositoryID:                 asset.RepositoryID,
 		RepositoryName:               asset.RepositoryName,
 		SigningPubKey:                asset.SigningPubKey,
@@ -98,17 +88,19 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 
 		Importance: assetCreateRequest.Importance,
 
-		ConfidentialityRequirement: sanitizeRequirementLevel(assetCreateRequest.ConfidentialityRequirement),
-		IntegrityRequirement:       sanitizeRequirementLevel(assetCreateRequest.IntegrityRequirement),
-		AvailabilityRequirement:    sanitizeRequirementLevel(assetCreateRequest.AvailabilityRequirement),
-		ModifiedAttackVector:       sanitizeAttackVector(assetCreateRequest.ModifiedAttackVector),
-		ModifiedAttackComplexity:   sanitizeAttackComplexity(assetCreateRequest.ModifiedAttackComplexity),
-		ModifiedPrivilegesRequired: sanitizePrivilegesRequired(assetCreateRequest.ModifiedPrivilegesRequired),
-		ModifiedScope:              sanitizeScope(assetCreateRequest.ModifiedScope),
-		ModifiedUserInteraction:    sanitizeUserInteraction(assetCreateRequest.ModifiedUserInteraction),
-		ModifiedConfidentiality:    sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedConfidentiality),
-		ModifiedIntegrity:          sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedIntegrity),
-		ModifiedAvailability:       sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedAvailability),
+		Environmental: dtos.Environmental{
+			ConfidentialityRequirement: sanitizeRequirementLevel(assetCreateRequest.ConfidentialityRequirement),
+			IntegrityRequirement:       sanitizeRequirementLevel(assetCreateRequest.IntegrityRequirement),
+			AvailabilityRequirement:    sanitizeRequirementLevel(assetCreateRequest.AvailabilityRequirement),
+			ModifiedAttackVector:       sanitizeAttackVector(assetCreateRequest.ModifiedAttackVector),
+			ModifiedAttackComplexity:   sanitizeAttackComplexity(assetCreateRequest.ModifiedAttackComplexity),
+			ModifiedPrivilegesRequired: sanitizePrivilegesRequired(assetCreateRequest.ModifiedPrivilegesRequired),
+			ModifiedScope:              sanitizeScope(assetCreateRequest.ModifiedScope),
+			ModifiedUserInteraction:    sanitizeUserInteraction(assetCreateRequest.ModifiedUserInteraction),
+			ModifiedConfidentiality:    sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedConfidentiality),
+			ModifiedIntegrity:          sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedIntegrity),
+			ModifiedAvailability:       sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedAvailability),
+		},
 
 		RepositoryProvider: assetCreateRequest.RepositoryProvider,
 	}
@@ -121,66 +113,66 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 	return asset
 }
 
-func sanitizeRequirementLevel(level string) dtos.RequirementLevel {
+func sanitizeRequirementLevel(level dtos.RequirementLevel) dtos.RequirementLevel {
 	switch level {
-	case "low", "medium", "high":
-		return dtos.RequirementLevel(level)
+	case dtos.RequirementLevelLow, dtos.RequirementLevelMedium, dtos.RequirementLevelHigh:
+		return level
 	default:
-		return "medium"
+		return dtos.RequirementLevelMedium
 	}
 }
 
-func sanitizeAttackVector(level string) dtos.ModifiedAttackVector {
+func sanitizeAttackVector(level dtos.ModifiedAttackVector) dtos.ModifiedAttackVector {
 	switch level {
-	case "network", "adjacent", "local", "physical", "X":
-		return dtos.ModifiedAttackVector(level)
+	case dtos.MAVNetwork, dtos.MAVAdjacentNetwork, dtos.MAVLocal, dtos.MAVPhysical, dtos.MAVNotDefined:
+		return level
 	default:
-		return "X"
+		return dtos.MAVNotDefined
 	}
 }
 
-func sanitizeAttackComplexity(level string) dtos.ModifiedAttackComplexity {
+func sanitizeAttackComplexity(level dtos.ModifiedAttackComplexity) dtos.ModifiedAttackComplexity {
 	switch level {
-	case "low", "high", "X":
-		return dtos.ModifiedAttackComplexity(level)
+	case dtos.MACLow, dtos.MACHigh, dtos.MACNotDefined:
+		return level
 	default:
-		return "X"
+		return dtos.MACNotDefined
 	}
 }
 
-func sanitizePrivilegesRequired(level string) dtos.ModifiedPrivilegesRequired {
+func sanitizePrivilegesRequired(level dtos.ModifiedPrivilegesRequired) dtos.ModifiedPrivilegesRequired {
 	switch level {
-	case "none", "low", "high", "X":
-		return dtos.ModifiedPrivilegesRequired(level)
+	case dtos.MPRNone, dtos.MPRLow, dtos.MPRHigh, dtos.MPRNotDefined:
+		return level
 	default:
-		return "X"
+		return dtos.MPRNotDefined
 	}
 }
 
-func sanitizeScope(level string) dtos.ModifiedScope {
+func sanitizeScope(level dtos.ModifiedScope) dtos.ModifiedScope {
 	switch level {
-	case "unchanged", "changed", "X":
-		return dtos.ModifiedScope(level)
+	case dtos.MSUnchanged, dtos.MSChanged, dtos.MSNotDefined:
+		return level
 	default:
-		return "X"
+		return dtos.MSNotDefined
 	}
 }
 
-func sanitizeUserInteraction(level string) dtos.ModifiedUserInteraction {
+func sanitizeUserInteraction(level dtos.ModifiedUserInteraction) dtos.ModifiedUserInteraction {
 	switch level {
-	case "none", "required", "X":
-		return dtos.ModifiedUserInteraction(level)
+	case dtos.MUINone, dtos.MUIRequired, dtos.MUINotDefined:
+		return level
 	default:
-		return "X"
+		return dtos.MUINotDefined
 	}
 }
 
-func sanitizeModifiedRequirementLevel(level string) dtos.ModifiedRequirementLevel {
+func sanitizeModifiedRequirementLevel(level dtos.ModifiedRequirementLevel) dtos.ModifiedRequirementLevel {
 	switch level {
-	case "X", "none", "low", "high":
-		return dtos.ModifiedRequirementLevel(level)
+	case dtos.MRLNone, dtos.MRLLow, dtos.MRLHigh, dtos.MRLNotDefined:
+		return level
 	default:
-		return "X"
+		return dtos.MRLNotDefined
 	}
 }
 
