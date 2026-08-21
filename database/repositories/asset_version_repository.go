@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
+	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -108,7 +109,7 @@ func (repository *assetVersionRepository) findByAssetVersionNameAndAssetID(ctx c
 	return app, nil
 }
 
-func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string, recentCommitHashes []string) (models.AssetVersion, error) {
 	var assetVersion models.AssetVersion
 	assetVersion, err := repository.findByAssetVersionNameAndAssetID(ctx, tx, assetVersionName, assetID)
 	if err != nil {
@@ -125,6 +126,9 @@ func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *
 			Slug:    slug.Make(assetVersionName),
 			Type:    assetVersionType,
 		}
+		if len(recentCommitHashes) > 0 {
+			assetVersion.RecentCommitHashes = databasetypes.JSONB{models.RecentCommitsKey: recentCommitHashes}
+		}
 
 		if assetVersion.Name == "" || assetVersion.Slug == "" {
 			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
@@ -133,9 +137,20 @@ func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *
 		err := repository.GetDB(ctx, tx).Create(&assetVersion).Error
 		//Check if the given assetVersion already exists if thats the case don't want to add repository new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			repository.GetDB(ctx, tx).Unscoped().Model(&assetVersion).Where("name", assetVersionName)
+			repository.GetDB(ctx, tx).Unscoped().Model(&assetVersion).Where("name = ?", assetVersionName).Updates(assetVersion)
 		} else if err != nil {
 			return models.AssetVersion{}, err
+		}
+	}
+
+	if len(recentCommitHashes) > 0 {
+		hashes := databasetypes.JSONB{models.RecentCommitsKey: recentCommitHashes}
+		if err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).
+			Where("name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).
+			Update("recent_commit_hashes", hashes).Error; err != nil {
+			slog.Error("could not update recent commit hashes", "err", err, "assetVersion", assetVersion.Name, "assetID", assetID)
+		} else {
+			assetVersion.RecentCommitHashes = hashes
 		}
 	}
 
@@ -150,6 +165,29 @@ func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *
 	}
 
 	return assetVersion, nil
+}
+
+func (repository *assetVersionRepository) GetNearestAncestorAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (*models.AssetVersion, error) {
+	var nearest models.AssetVersion
+	err := repository.GetDB(ctx, tx).Raw(`
+SELECT candidate.*
+FROM asset_versions target
+CROSS JOIN LATERAL jsonb_array_elements_text(target.recent_commit_hashes -> ?) WITH ORDINALITY AS t(hash, ord)
+JOIN asset_versions candidate
+  ON candidate.asset_id = target.asset_id
+ AND candidate.name <> target.name
+ AND candidate.recent_commit_hashes -> ? @> to_jsonb(t.hash)
+WHERE target.name = ? AND target.asset_id = ?
+GROUP BY candidate.name, candidate.asset_id
+ORDER BY MIN(t.ord) ASC, candidate.default_branch DESC, candidate.last_accessed_at DESC
+LIMIT 1`,
+		models.RecentCommitsKey, models.RecentCommitsKey, assetVersionName, assetID,
+	).First(&nearest).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return &nearest, nil
 }
 
 func (repository *assetVersionRepository) UpdateAssetDefaultBranch(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, defaultBranch string) error {

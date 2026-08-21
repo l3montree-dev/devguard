@@ -670,7 +670,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset: %s", err.Error())).WithInternal(err)
 	}
 
-	assetVersion, err := projectController.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, probe.AssetVersionName, asset.ID, false, nil)
+	assetVersion, err := projectController.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, probe.AssetVersionName, asset.ID, false, nil, nil)
 	if err != nil {
 		return echo.NewHTTPError(500, fmt.Sprintf("could not create asset version: %s", err.Error())).WithInternal(err)
 	}

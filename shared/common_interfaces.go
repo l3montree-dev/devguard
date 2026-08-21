@@ -501,9 +501,10 @@ type AssetVersionRepository interface {
 	GetAssetVersionsByAssetIDWithArtifacts(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.AssetVersion, error)
-	FindOrCreate(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
+	FindOrCreate(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string, recentCommitHashes []string) (models.AssetVersion, error)
 	ReadBySlug(ctx context.Context, tx DB, assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID) (models.AssetVersion, error)
+	GetNearestAncestorAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) (*models.AssetVersion, error)
 	GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
 	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
