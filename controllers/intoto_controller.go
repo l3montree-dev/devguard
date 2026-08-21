@@ -164,7 +164,8 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	if defaultBranch == "" {
 		defaultBranch = "main"
 	}
-	assetVersion, err := a.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	recentCommitHashes := utils.ParseRecentCommitHashes(ctx.Request().Header.Get("X-Recent-Commit-Hashes"))
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch), recentCommitHashes)
 	if err != nil {
 		return err
 	}

@@ -215,6 +215,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
+	recentCommitHashes := utils.ParseRecentCommitHashes(c.Request().Header.Get("X-Recent-Commit-Hashes"))
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	origin := c.Request().Header.Get("X-Origin")
 
@@ -249,7 +250,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		findOrCreateTx = earlyTx
 	}
 
-	assetVersion, err = s.assetVersionRepository.FindOrCreate(scanCtx, findOrCreateTx, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	assetVersion, err = s.assetVersionRepository.FindOrCreate(scanCtx, findOrCreateTx, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch), recentCommitHashes)
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		span.RecordError(err)
@@ -390,6 +391,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Tag header string false "Tag flag"
 // @Param X-Asset-Default-Branch header string false "Default branch"
+// @Param X-Recent-Commit-Hashes header string false "Comma separated commit hashes of the scanned ref, newest first"
 // @Param X-Scanner header string true "Scanner ID"
 // @Success 200 {object} dtos.FirstPartyScanResponse
 // @Router /sarif-scan [post]
@@ -425,6 +427,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 		assetVersionName = "main"
 		defaultBranch = "main"
 	}
+	recentCommitHashes := utils.ParseRecentCommitHashes(ctx.Request().Header.Get("X-Recent-Commit-Hashes"))
 
 	span.SetAttributes(
 		attribute.String("org.slug", org.Slug),
@@ -433,7 +436,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 		attribute.String("assetVersion.name", assetVersionName),
 	)
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(reqCtx, nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(reqCtx, nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch), recentCommitHashes)
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		span.RecordError(err)
@@ -500,6 +503,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 // @Param X-Artifact-Name header string false "Artifact name"
 // @Param X-Tag header string false "Tag flag"
 // @Param X-Asset-Default-Branch header string false "Default branch"
+// @Param X-Recent-Commit-Hashes header string false "Comma separated commit hashes of the scanned ref, newest first"
 // @Param X-Origin header string false "Origin"
 // @Param X-Scanner header string false "Scanner ID"
 // @Success 200 {object} dtos.ScanResponse
@@ -842,8 +846,9 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 		assetVersionName = "main"
 		defaultBranch = "main"
 	}
+	recentCommitHashes := utils.ParseRecentCommitHashes(c.Request().Header.Get("X-Recent-Commit-Hashes"))
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(c.Request().Context(), nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(c.Request().Context(), nil, assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch), recentCommitHashes)
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		span.RecordError(err)
