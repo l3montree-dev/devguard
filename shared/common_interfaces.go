@@ -384,7 +384,8 @@ type UpstreamVEXRuleRepository interface {
 
 type VEXRuleRecommendationRepository interface {
 	utils.Repository[string, models.VEXRuleRecommendation, DB]
-	FindByDependencyVulnIDs(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)
+	FindByDependencyVulnID(ctx context.Context, tx DB, dependencyVulnID uuid.UUID) (models.VEXRuleRecommendation, error)
+	FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID, vexRuleIDs []string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRuleRecommendation], error)
 	DeleteAll(ctx context.Context, tx DB) error
 	CreateBatch(ctx context.Context, tx DB, recommendations []models.VEXRuleRecommendation) error
 }

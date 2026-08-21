@@ -70,26 +70,108 @@ func NewVEXRuleRecommendationRepository(db *gorm.DB) *vexRuleRecommendationRepos
 	}
 }
 
-func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx *gorm.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error) {
-	if len(dependencyVulnIDs) == 0 {
-		return nil, nil
-	}
+func (r *vexRuleRecommendationRepository) FindByDependencyVulnID(ctx context.Context, tx *gorm.DB, dependencyVulnID uuid.UUID) (models.VEXRuleRecommendation, error) {
 
-	var recommendations []models.VEXRuleRecommendation
+	var recommendation models.VEXRuleRecommendation
 	err := r.GetDB(ctx, tx).
 		Preload("VEXRule").
 		Preload("UpstreamVEXRule").
-		Where("dependency_vuln_id IN ?", dependencyVulnIDs).
-		Find(&recommendations).Error
+		Where("dependency_vuln_id = ?", dependencyVulnID).
+		First(&recommendation).Error
 	if err != nil {
-		return nil, err
+		return models.VEXRuleRecommendation{}, err
 	}
 
-	result := make(map[uuid.UUID]models.VEXRuleRecommendation, len(recommendations))
-	for _, recommendation := range recommendations {
-		result[recommendation.DependencyVulnID] = recommendation
+	return recommendation, nil
+}
+
+func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx context.Context, tx *gorm.DB, dependencyVulnIDs []uuid.UUID, vexRuleIDs []string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRuleRecommendation], error) {
+	if len(dependencyVulnIDs) == 0 && len(vexRuleIDs) == 0 {
+		return shared.NewPaged(pageInfo, 0, []models.VEXRuleRecommendation{}), nil
 	}
-	return result, nil
+
+	db := r.GetDB(ctx, tx)
+
+	const ruleColumns = `title, justification, mechanical_justification, event_type,
+		cve_scope, vex_source`
+
+	byVuln := db.Model(&models.VEXRuleRecommendation{}).
+		Select(`vex_rule_recommendations.dependency_vuln_id,
+			vex_rule_recommendations.vex_rule_id,
+			vex_rule_recommendations.upstream_vex_rule_id,
+			vex_rule_recommendations.verified_votes,
+			vex_rule_recommendations.total_votes,
+			vex_rule_recommendations.confidence,
+			vex_rule_recommendations.dependency_vuln_signature,
+			COALESCE(vex_rules.title, upstream_vex_rules.title) AS title,
+			COALESCE(vex_rules.justification, upstream_vex_rules.justification) AS justification,
+			COALESCE(vex_rules.mechanical_justification, upstream_vex_rules.mechanical_justification) AS mechanical_justification,
+			COALESCE(vex_rules.event_type, upstream_vex_rules.event_type) AS event_type,
+			COALESCE(vex_rules.cve_scope, upstream_vex_rules.cve_scope) AS cve_scope,
+			COALESCE(vex_rules.vex_source, upstream_vex_rules.vex_source) AS vex_source`).
+		Joins("LEFT JOIN vex_rules ON vex_rules.id = vex_rule_recommendations.vex_rule_id").
+		Joins("LEFT JOIN upstream_vex_rules ON upstream_vex_rules.id = vex_rule_recommendations.upstream_vex_rule_id").
+		Where("vex_rule_recommendations.dependency_vuln_id IN ?", dependencyVulnIDs)
+
+	byRule := db.Table("vex_rules").
+		Select(`'00000000-0000-0000-0000-000000000000'::uuid AS dependency_vuln_id,
+			id AS vex_rule_id,
+			NULL::text AS upstream_vex_rule_id,
+			0 AS verified_votes,
+			0 AS total_votes,
+			1 AS confidence,
+			0 AS dependency_vuln_signature,
+			`+ruleColumns).
+		Where("id IN ?", vexRuleIDs)
+
+	var union *gorm.DB
+	switch {
+	case len(vexRuleIDs) == 0:
+		union = byVuln
+	case len(dependencyVulnIDs) == 0:
+		union = byRule
+	default:
+		union = db.Raw("? UNION ?", byVuln, byRule)
+	}
+
+	var recommendations []models.VEXRuleRecommendation
+	var total int64
+
+	query := db.Model(&models.VEXRuleRecommendation{}).Table("(?) AS vex_rule_recommendations", union)
+
+	if search != "" {
+		searchPattern := "%" + search + "%"
+		query = query.Where("cve_scope ILIKE ? OR title ILIKE ? OR justification ILIKE ?",
+			searchPattern, searchPattern, searchPattern)
+	}
+
+	// Apply filter queries
+	for _, filter := range filterQuery {
+		query = query.Where(filter.SQL(), filter.Value())
+	}
+
+	// Count total before pagination
+	if err := query.Count(&total).Error; err != nil {
+		return shared.Paged[models.VEXRuleRecommendation]{}, err
+	}
+
+	// Apply sorting
+	if len(sortQuery) > 0 {
+		for _, sort := range sortQuery {
+			query = query.Order(sort.SQL())
+		}
+	} else {
+		query = query.Order("confidence DESC")
+	}
+
+	// Apply pagination
+	query = pageInfo.ApplyOnDB(query)
+
+	if err := query.Preload("VEXRule").Preload("UpstreamVEXRule").Find(&recommendations).Error; err != nil {
+		return shared.Paged[models.VEXRuleRecommendation]{}, err
+	}
+
+	return shared.NewPaged(pageInfo, total, recommendations), nil
 }
 
 func (r *vexRuleRecommendationRepository) DeleteAll(ctx context.Context, tx *gorm.DB) error {
