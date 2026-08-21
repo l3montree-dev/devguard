@@ -17,6 +17,7 @@ package vexrules
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -73,10 +74,8 @@ func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyV
 	matches, err := EvalCompiledRules(context.Background(), compiled, vulnMaps)
 	require.NoError(t, err)
 	for _, matchingRuleIDs := range matches {
-		for _, matchingRuleID := range matchingRuleIDs {
-			if matchingRuleID == rule.ID {
-				return true
-			}
+		if slices.Contains(matchingRuleIDs, rule.ID) {
+			return true
 		}
 	}
 	return false
