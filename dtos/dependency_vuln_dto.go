@@ -118,6 +118,9 @@ type DependencyVulnDTO struct {
 	Exploits                     []ExploitDTO  `json:"exploits"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
+
+	Signature      int64 `json:"signature,string"`
+	AssetSignature int64 `json:"assetSignature,string"`
 }
 
 func (d DependencyVulnDTO) GetCVE() CVEDTO {

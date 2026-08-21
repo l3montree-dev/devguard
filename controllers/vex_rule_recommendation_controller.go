@@ -193,14 +193,21 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		}
 	}
 
+	vulnsByID := make(map[uuid.UUID]models.DependencyVuln, len(vulns))
+	for _, vuln := range vulns {
+		vulnsByID[vuln.ID] = vuln
+	}
+
+	// a session rule has no stored recommendation row and therefore no vuln signature of its
+	// own - take the asset signature of the vuln it matched against instead
 	matchingSessionRuleIDs := make([]string, 0, len(matchingSessionRules))
-	isSessionRuleID := make(map[string]struct{}, len(matchingSessionRules))
-	for _, rules := range matchingSessionRules {
+	assetSignatureByRuleID := make(map[string]int64, len(matchingSessionRules))
+	for vulnID, rules := range matchingSessionRules {
 		for _, rule := range rules {
-			if _, ok := isSessionRuleID[rule.ID]; ok {
+			if _, ok := assetSignatureByRuleID[rule.ID]; ok {
 				continue
 			}
-			isSessionRuleID[rule.ID] = struct{}{}
+			assetSignatureByRuleID[rule.ID] = vulnsByID[vulnID].AssetSignature
 			matchingSessionRuleIDs = append(matchingSessionRuleIDs, rule.ID)
 		}
 	}
@@ -218,9 +225,11 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 
 	return ctx.JSON(200, pagedRecommendations.Map(func(recommendation models.VEXRuleRecommendation) any {
 		if recommendation.VEXRuleID != nil {
-			if _, ok := isSessionRuleID[*recommendation.VEXRuleID]; ok {
+			if assetSignature, ok := assetSignatureByRuleID[*recommendation.VEXRuleID]; ok {
 				originAsset := assetsByID[recommendation.VEXRule.AssetID]
-				return transformer.VEXRuleToOriginRecommendationDTO(recommendation.VEXRule, originAsset.Project.Slug, originAsset.Slug)
+				dto := transformer.VEXRuleToOriginRecommendationDTO(recommendation.VEXRule, originAsset.Project.Slug, originAsset.Slug)
+				dto.AssetSignature = assetSignature
+				return dto
 			}
 		}
 		return transformer.VEXRuleRecommendationToDTO(recommendation)

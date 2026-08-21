@@ -79,6 +79,8 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 		ManualTicketCreation:         f.ManualTicketCreation,
 		RiskRecalculatedAt:           f.RiskRecalculatedAt,
 		Artifacts:                    utils.Map(f.Artifacts, ArtifactModelToDTO),
+		Signature:                    f.Signature,
+		AssetSignature:               f.AssetSignature,
 	}
 }
 
@@ -107,6 +109,8 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			ManualTicketCreation:         dependencyVuln.ManualTicketCreation,
 			RiskRecalculatedAt:           dependencyVuln.RiskRecalculatedAt,
 			Artifacts:                    utils.Map(dependencyVuln.Artifacts, ArtifactModelToDTO),
+			Signature:                    dependencyVuln.Signature,
+			AssetSignature:               dependencyVuln.AssetSignature,
 		},
 		Events: utils.Map(dependencyVuln.Events, ConvertVulnEventToDto),
 	}
