@@ -672,6 +672,69 @@ func TestParseVEXRulesInBOMMultiplePathPatternProperties(t *testing.T) {
 	assert.Contains(t, celExprs, celFor("CVE-2024-1234", []string{"pkg:golang/root-b@v1.0", "*", "pkg:golang/vulnerable-lib@v2.0"}))
 }
 
+// TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet verifies that a
+// VEX rule whose CEL expression checks vuln.componentFixedVersion != null
+// reopens a previously false-positive/accepted dependency vuln once a fixed
+// version becomes known, and leaves it untouched while no fixed version is known.
+func TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet(t *testing.T) {
+	assetID := uuid.New()
+
+	reopenRule := models.VEXRule{
+		UpstreamVEXRule: models.UpstreamVEXRule{
+			ID:            "reopen-rule",
+			CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/vulnerable-lib@v1.0"}) + " && vuln.componentFixedVersion != null",
+			EventType:     dtos.EventTypeReopened,
+			Justification: "fixed version is now known",
+		},
+		AssetID:     assetID,
+		Enabled:     true,
+		CreatedByID: "test-user",
+	}
+
+	fixedVersion := "1.0.1"
+
+	t.Run("reopens the vuln when a fixed version is known", func(t *testing.T) {
+		vuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				ID:      uuid.New(),
+				AssetID: assetID,
+				State:   dtos.VulnStateFalsePositive,
+			},
+			CVEID:                 "CVE-2024-1234",
+			VulnerabilityPath:     []string{"pkg:golang/vulnerable-lib@v1.0"},
+			ComponentPurl:         "pkg:golang/vulnerable-lib@v1.0",
+			ComponentFixedVersion: &fixedVersion,
+		}
+
+		updatedVulns, events, err := ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{reopenRule}, []models.DependencyVuln{vuln})
+		assert.NoError(t, err)
+
+		assert.Len(t, updatedVulns, 1, "the vuln should be updated once a fixed version is known")
+		assert.Len(t, events, 1)
+		assert.Equal(t, dtos.EventTypeReopened, events[0].Type)
+		assert.Equal(t, dtos.VulnStateOpen, updatedVulns[0].State, "reopening should move the vuln back to open")
+	})
+
+	t.Run("does not reopen the vuln when no fixed version is known", func(t *testing.T) {
+		vuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				ID:      uuid.New(),
+				AssetID: assetID,
+				State:   dtos.VulnStateFalsePositive,
+			},
+			CVEID:                 "CVE-2024-1234",
+			VulnerabilityPath:     []string{"pkg:golang/vulnerable-lib@v1.0"},
+			ComponentPurl:         "pkg:golang/vulnerable-lib@v1.0",
+			ComponentFixedVersion: nil,
+		}
+
+		updatedVulns, events, err := ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{reopenRule}, []models.DependencyVuln{vuln})
+		assert.NoError(t, err)
+		assert.Empty(t, updatedVulns, "no fixed version means the rule should not match")
+		assert.Empty(t, events)
+	})
+}
+
 func TestDiffVEXRulesDiffsPerSource(t *testing.T) {
 	assetID := uuid.New()
 	rule := func(id, source string) models.VEXRule {

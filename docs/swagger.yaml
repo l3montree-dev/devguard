@@ -3354,7 +3354,29 @@ components:
           type: string
         vectorString:
           type: string
-        visibility:
+      type: object
+    dtos.AffectedComponentDTO:
+      properties:
+        cves:
+          items:
+            $ref: '#/components/schemas/dtos.CVEDTO'
+          type: array
+          uniqueItems: false
+        ecosystem:
+          type: string
+        id:
+          type: integer
+        purl:
+          type: string
+        semverEnd:
+          type: string
+        semverStart:
+          type: string
+        version:
+          type: string
+        versionFixed:
+          type: string
+        versionIntroduced:
           type: string
       type: object
     dtos.AffectedPackage:
@@ -3365,9 +3387,9 @@ components:
           type: string
         packageName:
           type: string
-        semverEnd:
+        versionEnd:
           type: string
-        semverStart:
+        versionStart:
           type: string
       type: object
     dtos.ArtifactDTO:
@@ -3813,6 +3835,11 @@ components:
       type: object
     dtos.CVEDTO:
       properties:
+        affectedComponents:
+          items:
+            $ref: '#/components/schemas/dtos.AffectedComponentDTO'
+          type: array
+          uniqueItems: false
         cisaActionDue:
           format: date
           type: string
@@ -3957,6 +3984,8 @@ components:
         parentFrameworkControlId:
           type: string
         projectId:
+          type: string
+        securityLevel:
           type: string
         state:
           $ref: '#/components/schemas/dtos.VulnState'
@@ -4116,6 +4145,16 @@ components:
       - ComponentTypeMachineLearningModel
       - ComponentTypeOS
       - ComponentTypePlatform
+    dtos.CreateEventRequest:
+      properties:
+        justification:
+          maxLength: 4000
+          type: string
+        mechanicalJustification:
+          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
+        status:
+          type: string
+      type: object
     dtos.CreateExternalReferenceRequest:
       properties:
         csafPackageScope:
@@ -4141,6 +4180,11 @@ components:
           type: string
         supplyChainOutputDigest:
           type: string
+      required:
+      - filename
+      - payload
+      - step
+      - supplyChainId
       type: object
     dtos.CreateVEXRuleRequest:
       properties:
@@ -4157,6 +4201,8 @@ components:
         wasRecommended:
           type: boolean
       required:
+      - celExpression
+      - eventType
       - justification
       type: object
     dtos.DatabaseInfo:
@@ -5216,6 +5262,10 @@ components:
           type: string
         title:
           type: string
+      required:
+      - predicateType
+      - rego
+      - title
       type: object
     dtos.PoolInfo:
       properties:
@@ -5509,6 +5559,8 @@ components:
           uniqueItems: false
         name:
           type: string
+      required:
+      - name
       type: object
     dtos.ReleaseDTO:
       properties:
@@ -5769,16 +5821,18 @@ components:
             type: string
           type: array
           uniqueItems: false
-        id:
-          type: string
+        eventType:
+          $ref: '#/components/schemas/dtos.VulnEventType'
       required:
       - celExpression
-      - id
+      - eventType
       type: object
     dtos.UpdateAssetRequest:
       properties:
         new_slug:
           type: string
+      required:
+      - new_slug
       type: object
     dtos.UpdateInstanceSettingsRequest:
       properties:
@@ -5831,15 +5885,11 @@ components:
         title:
           description: Rule data
           type: string
-        updatedAt:
-          type: string
         vexSource:
           type: string
       type: object
     dtos.VexRuleRecommendation:
       properties:
-        appliesToAmountOfDependencyVulns:
-          type: integer
         assetSlug:
           type: string
         celExpression:
@@ -5928,12 +5978,21 @@ components:
       - falsePositive
       - markedForTransfer
       - comment
+      - published
+      - withdrawn
+      - created
       - implemented
       - notApplicable
       - attachedComplianceComponent
       - removedComplianceComponent
       - detected
       - rawRiskAssessmentUpdated
+      - accepted
+      - falsePositive
+      - reopened
+      - accepted
+      - falsePositive
+      - reopened
       type: string
       x-enum-varnames:
       - EventTypeFixed
@@ -5944,6 +6003,9 @@ components:
       - EventTypeFalsePositive
       - EventTypeMarkedForTransfer
       - EventTypeComment
+      - EventTypePublish
+      - EventTypeWithdraw
+      - EventTypeCreated
       - EventTypeImplemented
       - EventTypeNotApplicable
       - EventTypeAttachedComplianceComponent
@@ -5978,15 +6040,21 @@ components:
       - markedForTransfer
       - implemented
       - notApplicable
+      - draft
+      - public
+      - withdrawn
       type: string
       x-enum-comments:
         VulnStateAccepted: like ignore
+        VulnStateDraft: for advisory
         VulnStateFalsePositive: we can use that for crowdsource vulnerability management.
           27 People marked this as false positive and they have the same dependency
           tree - propably you are not either
         VulnStateFixed: we did not find the dependencyVuln anymore in the last scan!
         VulnStateImplemented: for compliance posture
         VulnStateNotApplicable: for compliance posture
+        VulnStatePublished: for advisory
+        VulnStateWithdrawn: for advisory
       x-enum-varnames:
       - VulnStateOpen
       - VulnStateFixed
@@ -5995,18 +6063,23 @@ components:
       - VulnStateMarkedForTransfer
       - VulnStateImplemented
       - VulnStateNotApplicable
+      - VulnStateDraft
+      - VulnStatePublished
+      - VulnStateWithdrawn
     dtos.VulnType:
       enum:
       - dependencyVuln
       - firstPartyVuln
       - licenseRisk
       - compliancePosture
+      - securityAdvisory
       type: string
       x-enum-varnames:
       - VulnTypeDependencyVuln
       - VulnTypeFirstPartyVuln
       - VulnTypeLicenseRisk
       - VulnTypeCompliancePosture
+      - VulnTypeSecurityAdvisory
     dtos.WebhookIntegrationDTO:
       properties:
         description:
@@ -6033,15 +6106,35 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AffectedPackage'
           type: array
           uniqueItems: false
-        assetID:
+        assetVersion:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
+        assetVersionName:
           type: string
         createdAt:
           type: string
         description:
           type: string
+        events:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.VulnEvent'
+          type: array
+          uniqueItems: false
         id:
-          type: integer
+          type: string
+        lastDetected:
+          type: string
+        manualTicketCreation:
+          type: boolean
+        message:
+          type: string
         severity:
+          type: string
+        state:
+          $ref: '#/components/schemas/dtos.VulnState'
+        ticketId:
+          description: might be set by integrations
+          type: string
+        ticketUrl:
           type: string
         title:
           type: string
@@ -6049,7 +6142,7 @@ components:
           type: string
         vectorString:
           type: string
-        visibility:
+        vulnAssetId:
           type: string
       type: object
     github_com_l3montree-dev_devguard_database_models.AffectedComponent:
@@ -6093,11 +6186,11 @@ components:
           type: string
         packageName:
           type: string
-        semverEnd:
-          type: string
-        semverStart:
-          type: string
         updatedAt:
+          type: string
+        versionEnd:
+          type: string
+        versionStart:
           type: string
       type: object
     github_com_l3montree-dev_devguard_database_models.Artifact:
@@ -6542,6 +6635,11 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
           type: array
           uniqueItems: false
+        assetSignature:
+          description: |-
+            hash of cve_id + vulnerability_path + asset_id
+            used by vuln events to deduplicate them.
+          type: integer
         assetVersion:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
         assetVersionName:
@@ -6581,6 +6679,9 @@ components:
           type: integer
         riskRecalculatedAt:
           type: string
+        signature:
+          description: hash of cve_id + vulnerability_path
+          type: integer
         state:
           $ref: '#/components/schemas/dtos.VulnState'
         ticketId:
@@ -7007,9 +7108,11 @@ components:
         celExpression:
           type: string
         createdAt:
-          description: Timestamps
           type: string
         createdById:
+          type: string
+        cveScope:
+          description: optional CVE scope for filtering
           type: string
         enabled:
           description: |-
@@ -7033,8 +7136,6 @@ components:
         title:
           description: Rule data
           type: string
-        updatedAt:
-          type: string
         vexSource:
           type: string
       type: object
@@ -7042,6 +7143,11 @@ components:
       properties:
         arbitraryJSONData:
           type: string
+        assetSignature:
+          description: |-
+            set instead of DependencyVulnID for a group event applying to every
+            DependencyVuln sharing this AssetSignature.
+          type: integer
         compliancePostureId:
           type: string
         createdAt:
@@ -7061,6 +7167,8 @@ components:
         mechanicalJustification:
           $ref: '#/components/schemas/dtos.MechanicalJustificationType'
         originalAssetVersionName:
+          type: string
+        securityAdvisoryId:
           type: string
         type:
           $ref: '#/components/schemas/dtos.VulnEventType'
@@ -7219,40 +7327,16 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -7271,40 +7355,16 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
   securitySchemes:
     AdminSignedAuth:
       description: Instance admin authentication using ECDSA P-256 HTTP message signing.
@@ -11210,6 +11270,34 @@ paths:
       summary: Update advisory
       tags:
       - Advisories
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/events/:
+    post:
+      parameters:
+      - description: Advisory ID
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.CreateEventRequest'
+              description: Event
+              summary: event
+        description: Event
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Create advisory event
+      tags:
+      - Advisories
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/affected-components/:
     get:
       parameters:
@@ -14136,7 +14224,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Test VEX rules against open vulnerabilities
+      summary: Test VEX rules against the vulnerabilities they'd apply to
       tags:
       - VEXRules
   /organizations/{organization}/projects/{projectSlug}/compliance:
