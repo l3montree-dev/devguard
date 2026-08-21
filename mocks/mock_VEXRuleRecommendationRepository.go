@@ -586,48 +586,123 @@ func (_c *VEXRuleRecommendationRepository_DeleteBatch_Call) RunAndReturn(run fun
 	return _c
 }
 
-// FindByDependencyVulnIDs provides a mock function for the type VEXRuleRecommendationRepository
-func (_mock *VEXRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error) {
-	ret := _mock.Called(ctx, tx, dependencyVulnIDs)
+// FindByDependencyVulnID provides a mock function for the type VEXRuleRecommendationRepository
+func (_mock *VEXRuleRecommendationRepository) FindByDependencyVulnID(ctx context.Context, tx shared.DB, dependencyVulnID uuid.UUID) (models.VEXRuleRecommendation, error) {
+	ret := _mock.Called(ctx, tx, dependencyVulnID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByDependencyVulnIDs")
+		panic("no return value specified for FindByDependencyVulnID")
 	}
 
-	var r0 map[uuid.UUID]models.VEXRuleRecommendation
+	var r0 models.VEXRuleRecommendation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)); ok {
-		return returnFunc(ctx, tx, dependencyVulnIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.VEXRuleRecommendation, error)); ok {
+		return returnFunc(ctx, tx, dependencyVulnID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) map[uuid.UUID]models.VEXRuleRecommendation); ok {
-		r0 = returnFunc(ctx, tx, dependencyVulnIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.VEXRuleRecommendation); ok {
+		r0 = returnFunc(ctx, tx, dependencyVulnID)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[uuid.UUID]models.VEXRuleRecommendation)
-		}
+		r0 = ret.Get(0).(models.VEXRuleRecommendation)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, dependencyVulnIDs)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, dependencyVulnID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByDependencyVulnIDs'
-type VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call struct {
+// VEXRuleRecommendationRepository_FindByDependencyVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByDependencyVulnID'
+type VEXRuleRecommendationRepository_FindByDependencyVulnID_Call struct {
 	*mock.Call
 }
 
-// FindByDependencyVulnIDs is a helper method to define mock.On call
+// FindByDependencyVulnID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - dependencyVulnID uuid.UUID
+func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnID(ctx interface{}, tx interface{}, dependencyVulnID interface{}) *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call {
+	return &VEXRuleRecommendationRepository_FindByDependencyVulnID_Call{Call: _e.mock.On("FindByDependencyVulnID", ctx, tx, dependencyVulnID)}
+}
+
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call) Run(run func(ctx context.Context, tx shared.DB, dependencyVulnID uuid.UUID)) *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call) Return(vEXRuleRecommendation models.VEXRuleRecommendation, err error) *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call {
+	_c.Call.Return(vEXRuleRecommendation, err)
+	return _c
+}
+
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, dependencyVulnID uuid.UUID) (models.VEXRuleRecommendation, error)) *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindByDependencyVulnIDsAndVexRuleIDsPaged provides a mock function for the type VEXRuleRecommendationRepository
+func (_mock *VEXRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID, vexRuleIDs []string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRuleRecommendation], error) {
+	ret := _mock.Called(ctx, tx, dependencyVulnIDs, vexRuleIDs, pageInfo, search, filterQuery, sortQuery)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByDependencyVulnIDsAndVexRuleIDsPaged")
+	}
+
+	var r0 shared.Paged[models.VEXRuleRecommendation]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID, []string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.VEXRuleRecommendation], error)); ok {
+		return returnFunc(ctx, tx, dependencyVulnIDs, vexRuleIDs, pageInfo, search, filterQuery, sortQuery)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID, []string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.VEXRuleRecommendation]); ok {
+		r0 = returnFunc(ctx, tx, dependencyVulnIDs, vexRuleIDs, pageInfo, search, filterQuery, sortQuery)
+	} else {
+		r0 = ret.Get(0).(shared.Paged[models.VEXRuleRecommendation])
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID, []string, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, dependencyVulnIDs, vexRuleIDs, pageInfo, search, filterQuery, sortQuery)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByDependencyVulnIDsAndVexRuleIDsPaged'
+type VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call struct {
+	*mock.Call
+}
+
+// FindByDependencyVulnIDsAndVexRuleIDsPaged is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - dependencyVulnIDs []uuid.UUID
-func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnIDs(ctx interface{}, tx interface{}, dependencyVulnIDs interface{}) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
-	return &VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call{Call: _e.mock.On("FindByDependencyVulnIDs", ctx, tx, dependencyVulnIDs)}
+//   - vexRuleIDs []string
+//   - pageInfo shared.PageInfo
+//   - search string
+//   - filterQuery []shared.FilterQuery
+//   - sortQuery []shared.SortQuery
+func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx interface{}, tx interface{}, dependencyVulnIDs interface{}, vexRuleIDs interface{}, pageInfo interface{}, search interface{}, filterQuery interface{}, sortQuery interface{}) *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call {
+	return &VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call{Call: _e.mock.On("FindByDependencyVulnIDsAndVexRuleIDsPaged", ctx, tx, dependencyVulnIDs, vexRuleIDs, pageInfo, search, filterQuery, sortQuery)}
 }
 
-func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) Run(run func(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID)) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call) Run(run func(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID, vexRuleIDs []string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery)) *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -641,21 +716,46 @@ func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) Run(run 
 		if args[2] != nil {
 			arg2 = args[2].([]uuid.UUID)
 		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		var arg4 shared.PageInfo
+		if args[4] != nil {
+			arg4 = args[4].(shared.PageInfo)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 []shared.FilterQuery
+		if args[6] != nil {
+			arg6 = args[6].([]shared.FilterQuery)
+		}
+		var arg7 []shared.SortQuery
+		if args[7] != nil {
+			arg7 = args[7].([]shared.SortQuery)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
 		)
 	})
 	return _c
 }
 
-func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) Return(uUIDToVEXRuleRecommendation map[uuid.UUID]models.VEXRuleRecommendation, err error) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
-	_c.Call.Return(uUIDToVEXRuleRecommendation, err)
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call) Return(paged shared.Paged[models.VEXRuleRecommendation], err error) *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call {
+	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)) *VEXRuleRecommendationRepository_FindByDependencyVulnIDs_Call {
+func (_c *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, dependencyVulnIDs []uuid.UUID, vexRuleIDs []string, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[models.VEXRuleRecommendation], error)) *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

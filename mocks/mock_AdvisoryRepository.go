@@ -68,7 +68,7 @@ type AdvisoryRepository_ApplyAndSave_Call struct {
 //   - tx *gorm.DB
 //   - advisory *models.Advisory
 //   - vulnEvent *models.VulnEvent
-func (_e *AdvisoryRepository_Expecter) ApplyAndSave(ctx any, tx any, advisory any, vulnEvent any) *AdvisoryRepository_ApplyAndSave_Call {
+func (_e *AdvisoryRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, advisory interface{}, vulnEvent interface{}) *AdvisoryRepository_ApplyAndSave_Call {
 	return &AdvisoryRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, advisory, vulnEvent)}
 }
 
@@ -136,7 +136,7 @@ type AdvisoryRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - advisory *models.Advisory
-func (_e *AdvisoryRepository_Expecter) Create(ctx any, tx any, advisory any) *AdvisoryRepository_Create_Call {
+func (_e *AdvisoryRepository_Expecter) Create(ctx interface{}, tx interface{}, advisory interface{}) *AdvisoryRepository_Create_Call {
 	return &AdvisoryRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, advisory)}
 }
 
@@ -199,7 +199,7 @@ type AdvisoryRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AdvisoryRepository_Expecter) Delete(ctx any, tx any, id any) *AdvisoryRepository_Delete_Call {
+func (_e *AdvisoryRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AdvisoryRepository_Delete_Call {
 	return &AdvisoryRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -273,7 +273,7 @@ type AdvisoryRepository_GetAllAdvisoriesByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AdvisoryRepository_Expecter) GetAllAdvisoriesByAssetID(ctx any, tx any, assetID any) *AdvisoryRepository_GetAllAdvisoriesByAssetID_Call {
+func (_e *AdvisoryRepository_Expecter) GetAllAdvisoriesByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AdvisoryRepository_GetAllAdvisoriesByAssetID_Call {
 	return &AdvisoryRepository_GetAllAdvisoriesByAssetID_Call{Call: _e.mock.On("GetAllAdvisoriesByAssetID", ctx, tx, assetID)}
 }
 
@@ -345,7 +345,7 @@ type AdvisoryRepository_ReadAdvisory_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AdvisoryRepository_Expecter) ReadAdvisory(ctx any, tx any, id any) *AdvisoryRepository_ReadAdvisory_Call {
+func (_e *AdvisoryRepository_Expecter) ReadAdvisory(ctx interface{}, tx interface{}, id interface{}) *AdvisoryRepository_ReadAdvisory_Call {
 	return &AdvisoryRepository_ReadAdvisory_Call{Call: _e.mock.On("ReadAdvisory", ctx, tx, id)}
 }
 
@@ -419,7 +419,7 @@ type AdvisoryRepository_ReadAll_Call struct {
 //   - assetID uuid.UUID
 //   - filter []shared.FilterQuery
 //   - pagination shared.PageInfo
-func (_e *AdvisoryRepository_Expecter) ReadAll(ctx any, tx any, assetID any, filter any, pagination any) *AdvisoryRepository_ReadAll_Call {
+func (_e *AdvisoryRepository_Expecter) ReadAll(ctx interface{}, tx interface{}, assetID interface{}, filter interface{}, pagination interface{}) *AdvisoryRepository_ReadAll_Call {
 	return &AdvisoryRepository_ReadAll_Call{Call: _e.mock.On("ReadAll", ctx, tx, assetID, filter, pagination)}
 }
 
@@ -493,7 +493,7 @@ type AdvisoryRepository_Update_Call struct {
 //   - tx shared.DB
 //   - id uuid.UUID
 //   - advisory *models.Advisory
-func (_e *AdvisoryRepository_Expecter) Update(ctx any, tx any, id any, advisory any) *AdvisoryRepository_Update_Call {
+func (_e *AdvisoryRepository_Expecter) Update(ctx interface{}, tx interface{}, id interface{}, advisory interface{}) *AdvisoryRepository_Update_Call {
 	return &AdvisoryRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, id, advisory)}
 }
 
