@@ -82,7 +82,8 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 	if rules := matchingSessionRules[vuln.ID]; len(rules) > 0 {
 		rule := rules[0]
 
-		asset, err := c.assetRepository.ReadWithProject(reqCtx, nil, rule.AssetID)
+		// same as in RecommendForAsset: these assets are session assets, not the one in the URL, so they have to be read outside of the request scoped ownership scope
+		asset, err := c.assetRepository.ReadWithProject(shared.WithoutOwnershipScope(reqCtx), nil, rule.AssetID)
 		if err != nil {
 			return traceErr(span, 500, "Could not calculate recommendation.", err)
 		}
@@ -174,7 +175,9 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		}
 	}
 
-	assets, err := c.assetRepository.ReadWithProjects(reqCtx, nil, assetIDs)
+	// same as in Recommend: these assets are session assets, not the one in the URL, so they
+	// have to be read outside of the request scoped ownership scope
+	assets, err := c.assetRepository.ReadWithProjects(shared.WithoutOwnershipScope(reqCtx), nil, assetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
