@@ -42,3 +42,7 @@ func HashToUUID(s string) uuid.UUID {
 	}
 	return id
 }
+
+func HashBytes(b []byte) string {
+	return fmt.Sprintf("%x", sha256.Sum256(b))
+}

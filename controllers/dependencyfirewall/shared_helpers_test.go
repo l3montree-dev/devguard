@@ -100,26 +100,17 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 	}
 }
 
-func TestGetCachePathPreventsTraversal(t *testing.T) {
-	d := &DependencyProxyController{cacheDir: t.TempDir()}
-	cacheRoot := filepath.Join(d.cacheDir, npm.name())
+func TestCacheValidateKeyPreventsTraversal(t *testing.T) {
+	dir := t.TempDir()
+	c := newCache(dir, 10)
 
-	t.Run("normal path stays in cache root", func(t *testing.T) {
-		path, err := d.getCachePath(npm, "lodash/-/lodash-4.17.21.tgz")
-		if err != nil {
-			t.Fatalf("expected no error for normal path, got %v", err)
-		}
-
-		rel, err := filepath.Rel(cacheRoot, path)
-		if err != nil {
-			t.Fatalf("failed to compute relative path: %v", err)
-		}
-		if strings.HasPrefix(rel, "..") {
-			t.Fatalf("normal path escaped cache root: %q", path)
+	t.Run("normal key stays in cache root", func(t *testing.T) {
+		if err := c.ValidateKey("npm/tarball/lodash/-/lodash-4.17.21.tgz"); err != nil {
+			t.Fatalf("expected no error for normal key, got %v", err)
 		}
 	})
 
-	t.Run("traversal-like paths cannot escape cache root", func(t *testing.T) {
+	t.Run("traversal-like keys cannot escape cache root", func(t *testing.T) {
 		cases := []string{
 			"../../etc/passwd",
 			"/../../etc/passwd",
@@ -129,12 +120,16 @@ func TestGetCachePathPreventsTraversal(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc, func(t *testing.T) {
-				path, err := d.getCachePath(npm, tc)
-				if err != nil {
-					t.Fatalf("expected traversal input to be sanitized in-root, got error: %v", err)
+				if err := c.Set(tc, cacheValue{data: []byte("x")}); err != nil {
+					// Rejecting the key outright is also an acceptable outcome.
+					return
 				}
 
-				rel, err := filepath.Rel(cacheRoot, path)
+				path, err := c.keyToPath(tc)
+				if err != nil {
+					t.Fatalf("failed to resolve key to path: %v", err)
+				}
+				rel, err := filepath.Rel(dir, path)
 				if err != nil {
 					t.Fatalf("failed to compute relative path: %v", err)
 				}

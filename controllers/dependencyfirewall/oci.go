@@ -24,7 +24,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -105,21 +104,15 @@ func (ociEcosystem) packageIdentifier(packageName, version string) string {
 	return packageName + ":" + version
 }
 
-func (ociEcosystem) isCached(cachePath string) bool {
-	info, err := os.Stat(cachePath)
-	if err != nil {
-		return false
-	}
-	// Blobs are content-addressed and immutable.
-	if strings.Contains(cachePath, "/blobs/") {
+// ociManifestFresh reports whether a cached manifest entry is still usable.
+// Digest-pinned manifests are immutable (verified by content hash on every
+// read), so they never expire; tag-based manifests get a 1 hour TTL since the
+// tag can move to point at different content at any time.
+func (d *DependencyProxyController) ociManifestFresh(cacheKey, requestPath string) bool {
+	if strings.Contains(requestPath, "/manifests/sha256_") {
 		return true
 	}
-	// Digest-pinned manifests are immutable.
-	if strings.Contains(cachePath, "/manifests/sha256_") {
-		return true
-	}
-	// Tag-based manifests: 1 hour TTL.
-	return time.Since(info.ModTime()) < time.Hour
+	return d.cache.Fresh(cacheKey, time.Hour)
 }
 
 func (ociEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
@@ -458,23 +451,22 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 		return d.blockMaliciousPackage(c, ociEco, requestPath, reason, http.StatusForbidden)
 	}
 
-	cachePath, err := d.getCachePath(ociEco, ociSafeCachePath(requestPath))
-	if err != nil {
+	cacheKey := "oci/manifest/" + ociSafeCachePath(requestPath)
+	if err := d.cache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "oci", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid image path")
 	}
 
-	if method == http.MethodGet && ociEco.isCached(cachePath) {
-		data, err := os.ReadFile(cachePath)
-		if err == nil && d.VerifyCacheIntegrity(cachePath, data) {
+	if method == http.MethodGet && d.ociManifestFresh(cacheKey, requestPath) {
+		if entry, ok := d.cache.Get(cacheKey); ok {
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			if ct, err := os.ReadFile(cachePath + ".contenttype"); err == nil {
-				c.Response().Header().Set("Content-Type", string(ct))
+			if entry.contentType != "" {
+				c.Response().Header().Set("Content-Type", entry.contentType)
 			}
-			if digest, err := os.ReadFile(cachePath + ".digest"); err == nil {
-				c.Response().Header().Set("Docker-Content-Digest", string(digest))
+			if entry.digest != "" {
+				c.Response().Header().Set("Docker-Content-Digest", entry.digest)
 			}
-			return ociEco.writeResponse(c, data, requestPath, true)
+			return ociEco.writeResponse(c, entry.data, requestPath, true)
 		}
 	}
 
@@ -501,18 +493,12 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	}
 
 	if method == http.MethodGet && len(data) > 0 {
-		if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
+		if err := d.cache.Set(cacheKey, cacheValue{
+			data:        data,
+			contentType: headers.Get("Content-Type"),
+			digest:      headers.Get("Docker-Content-Digest"),
+		}); err != nil {
 			slog.Warn("Failed to cache OCI manifest", "proxy", "oci", "error", err)
-		}
-		if ct := headers.Get("Content-Type"); ct != "" {
-			if err := os.WriteFile(cachePath+".contenttype", []byte(ct), 0644); err != nil {
-				slog.Warn("Failed to cache OCI manifest content-type", "proxy", "oci", "error", err)
-			}
-		}
-		if digest := headers.Get("Docker-Content-Digest"); digest != "" {
-			if err := os.WriteFile(cachePath+".digest", []byte(digest), 0644); err != nil {
-				slog.Warn("Failed to cache OCI manifest digest", "proxy", "oci", "error", err)
-			}
 		}
 	}
 
@@ -588,20 +574,19 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
 
-	cachePath, err := d.getCachePath(ociEco, ociSafeCachePath(requestPath))
-	if err != nil {
+	cacheKey := "oci/blob/" + ociSafeCachePath(requestPath)
+	if err := d.cache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "oci", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid image path")
 	}
 
 	// Blobs are content-addressed and immutable; serve from cache unconditionally once present.
-	if method == http.MethodGet && ociEco.isCached(cachePath) {
-		data, err := os.ReadFile(cachePath)
-		if err == nil && d.VerifyCacheIntegrity(cachePath, data) {
+	if method == http.MethodGet {
+		if entry, ok := d.cache.Get(cacheKey); ok {
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			c.Response().Header().Set("Content-Type", "application/octet-stream")
 			c.Response().Header().Set("Docker-Content-Digest", digest)
-			return ociEco.writeResponse(c, data, requestPath, true)
+			return ociEco.writeResponse(c, entry.data, requestPath, true)
 		}
 	}
 
@@ -644,7 +629,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 				return echo.NewHTTPError(http.StatusBadGateway, "upstream blob digest mismatch")
 			}
 		}
-		if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
+		if err := d.cache.Set(cacheKey, cacheValue{data: data}); err != nil {
 			slog.Warn("Failed to cache OCI blob", "proxy", "oci", "error", err)
 		}
 	}

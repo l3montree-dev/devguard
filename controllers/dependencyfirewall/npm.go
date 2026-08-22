@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -79,21 +78,10 @@ func (npmEcosystem) packageIdentifier(packageName, version string) string {
 	return fmt.Sprintf("pkg:npm/%s", packageName)
 }
 
-func (npmEcosystem) isCached(cachePath string) bool {
-	info, err := os.Stat(cachePath)
-	if err != nil {
-		return false
-	}
-
-	var maxAge time.Duration
-	if strings.HasSuffix(cachePath, ".tgz") {
-		maxAge = 24 * time.Hour
-	} else {
-		maxAge = 1 * time.Hour
-	}
-
-	return time.Since(info.ModTime()) < maxAge
-}
+// metadataCacheTTL is how long cached npm metadata (dist-tags, version list)
+// stays fresh. Unlike tarballs, metadata changes whenever a new version is
+// published, so it can't be cached indefinitely.
+const metadataCacheTTL = 1 * time.Hour
 
 func (npmEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
 	if c.Response().Header().Get("Content-Type") == "" {
@@ -155,8 +143,8 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 
 	slog.Info("Proxy request", "proxy", "npm", "type", "tarball", "method", c.Request().Method, "path", requestPath)
 
-	cachePath, err := d.getCachePath(npm, requestPath)
-	if err != nil {
+	cacheKey := "npm/tarball/" + requestPath
+	if err := d.cache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "npm", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -176,38 +164,27 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "status", status, "reason", reason)
-		if err := os.Remove(cachePath); err == nil {
-			slog.Info("Removed malicious package from cache", "path", cachePath)
-		}
+		d.cache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
-	if npm.isCached(cachePath) {
+	// Tarballs are immutable once published to npm, so a hash-verified hit
+	// never needs a freshness check — it's valid forever.
+	if entry, ok := d.cache.Get(cacheKey); ok {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
-		data, err := os.ReadFile(cachePath)
-		if err == nil {
-			if d.VerifyCacheIntegrity(cachePath, data) {
-				if configs.MinReleaseAge > 0 {
-					if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-						if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
-							return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
-						}
-						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-						return npm.writeResponse(c, data, requestPath, true)
-					}
-					// No cached release time — fall through to upstream to retrieve it.
-					slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "npm", "path", requestPath)
-				} else {
-					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-					return npm.writeResponse(c, data, requestPath, true)
+		if configs.MinReleaseAge > 0 {
+			if !entry.releaseTime.IsZero() {
+				if time.Since(entry.releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+					return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
 				}
-			} else {
-				slog.Warn("Cache integrity verification failed, refetching", "proxy", "npm", "path", requestPath)
-				os.Remove(cachePath)
-				os.Remove(cachePath + ".sha256")
+				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+				return npm.writeResponse(c, entry.data, requestPath, true)
 			}
+			// No cached release time — fall through to upstream to retrieve it.
+			slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "npm", "path", requestPath)
 		} else {
-			slog.Warn("Cache read error", "proxy", "npm", "error", err)
+			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+			return npm.writeResponse(c, entry.data, requestPath, true)
 		}
 	}
 
@@ -234,11 +211,8 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		}
 	}
 
-	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
+	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
-	}
-	if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
-		slog.Warn("Failed to cache release time", "proxy", "npm", "error", err)
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
@@ -292,11 +266,6 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "npm", "type", "metadata", "method", c.Request().Method, "path", requestPath)
 
-	cachePath, err := d.getCachePath(npm, requestPath)
-	if err != nil {
-		slog.Warn("Invalid cache path", "proxy", "npm", "path", requestPath, "error", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
-	}
 	packageName, _ := npm.parsePackage(requestPath)
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
@@ -308,9 +277,6 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "status", status, "reason", reason)
-		if err := os.Remove(cachePath); err == nil {
-			slog.Info("Removed malicious package from cache", "path", cachePath)
-		}
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
@@ -341,13 +307,6 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
 		}
-	}
-
-	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
-		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
-	}
-	if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
-		slog.Warn("Failed to cache release time", "proxy", "npm", "error", err)
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
