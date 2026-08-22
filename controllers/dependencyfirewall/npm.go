@@ -78,11 +78,6 @@ func (npmEcosystem) packageIdentifier(packageName, version string) string {
 	return fmt.Sprintf("pkg:npm/%s", packageName)
 }
 
-// metadataCacheTTL is how long cached npm metadata (dist-tags, version list)
-// stays fresh. Unlike tarballs, metadata changes whenever a new version is
-// published, so it can't be cached indefinitely.
-const metadataCacheTTL = 1 * time.Hour
-
 func (npmEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
 	if c.Response().Header().Get("Content-Type") == "" {
 		contentType := "application/json"
