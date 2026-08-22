@@ -1,9 +1,6 @@
 package controllers
 
 import (
-	"slices"
-	"strings"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -85,27 +82,24 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 	if rules := matchingSessionRules[vuln.ID]; len(rules) > 0 {
 		rule := rules[0]
 
-		asset, err := c.assetRepository.ReadWithProject(reqCtx, nil, rule.AssetID)
+		// same as in RecommendForAsset: these assets are session assets, not the one in the URL, so they have to be read outside of the request scoped ownership scope
+		asset, err := c.assetRepository.ReadWithProject(shared.WithoutOwnershipScope(reqCtx), nil, rule.AssetID)
 		if err != nil {
 			return traceErr(span, 500, "Could not calculate recommendation.", err)
 		}
-		return ctx.JSON(200, transformer.VEXRuleToOriginRecommendationDTO(rule, asset.Slug, asset.Project.Slug))
+		return ctx.JSON(200, transformer.VEXRuleToOriginRecommendationDTO(rule, asset.Project.Slug, asset.Slug))
 	}
 
 	// no session rule was found - lets look for upstream or crowdsourced recommendations
-	recommendations, err := c.vexRuleRecommendationRepository.FindByDependencyVulnIDs(reqCtx, nil, []uuid.UUID{dependencyVulnIDParsed})
+	recommendation, err := c.vexRuleRecommendationRepository.FindByDependencyVulnID(reqCtx, nil, dependencyVulnIDParsed)
 	if err != nil {
+		if shared.IsNotFound(err) {
+			return ctx.NoContent(204)
+		}
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	if len(recommendations) == 0 {
-		return ctx.NoContent(204)
-	}
-
-	if err != nil {
-		return traceErr(span, 500, "Could not calculate recommendation.", err)
-	}
-	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendations[dependencyVulnIDParsed]))
+	return ctx.JSON(200, transformer.VEXRuleRecommendationToDTO(recommendation))
 }
 
 // @Summary Get crowdsourced VEX recommendations for all vulns of an asset
@@ -134,9 +128,6 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 	vexRules, err := c.vexRuleRepository.FindByAssetIDs(reqCtx, nil, sessionAssetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
-	}
-	if len(vexRules) == 0 {
-		return ctx.JSON(200, []dtos.VexRuleRecommendation{})
 	}
 
 	// split vexrules into open and closed
@@ -184,7 +175,9 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		}
 	}
 
-	assets, err := c.assetRepository.ReadWithProjects(reqCtx, nil, assetIDs)
+	// same as in Recommend: these assets are session assets, not the one in the URL, so they
+	// have to be read outside of the request scoped ownership scope
+	assets, err := c.assetRepository.ReadWithProjects(shared.WithoutOwnershipScope(reqCtx), nil, assetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
@@ -203,56 +196,45 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		}
 	}
 
-	storedRecommendations, err := c.vexRuleRecommendationRepository.FindByDependencyVulnIDs(reqCtx, nil, unmatchedVulnIDs)
+	vulnsByID := make(map[uuid.UUID]models.DependencyVuln, len(vulns))
+	for _, vuln := range vulns {
+		vulnsByID[vuln.ID] = vuln
+	}
+
+	// a session rule has no stored recommendation row and therefore no vuln signature of its
+	// own - take the asset signature of the vuln it matched against instead
+	matchingSessionRuleIDs := make([]string, 0, len(matchingSessionRules))
+	assetSignatureByRuleID := make(map[string]int64, len(matchingSessionRules))
+	for vulnID, rules := range matchingSessionRules {
+		for _, rule := range rules {
+			if _, ok := assetSignatureByRuleID[rule.ID]; ok {
+				continue
+			}
+			assetSignatureByRuleID[rule.ID] = vulnsByID[vulnID].AssetSignature
+			matchingSessionRuleIDs = append(matchingSessionRuleIDs, rule.ID)
+		}
+	}
+
+	pageInfo := shared.GetPageInfo(ctx)
+	search := ctx.QueryParam("search")
+	filterQuery := shared.GetFilterQuery(ctx)
+	sortQuery := shared.GetSortQuery(ctx)
+
+	pagedRecommendations, err := c.vexRuleRecommendationRepository.FindByDependencyVulnIDsAndVexRuleIDsPaged(reqCtx, nil, unmatchedVulnIDs, matchingSessionRuleIDs, pageInfo, search, filterQuery, sortQuery)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
+	span.SetAttributes(attribute.Int("recommendations.page_size", len(pagedRecommendations.Data)))
 
-	recommendations := buildDedupedVexRuleRecommendations(matchingSessionRules, storedRecommendations, assetsByID)
-
-	return ctx.JSON(200, recommendations)
-}
-
-func buildDedupedVexRuleRecommendations(matchingSessionRules map[uuid.UUID][]models.VEXRule, storedRecommendations map[uuid.UUID]models.VEXRuleRecommendation, assetsByID map[uuid.UUID]models.Asset) []dtos.VexRuleRecommendation {
-	recommendationsByKey := make(map[string]dtos.VexRuleRecommendation, len(matchingSessionRules)+len(storedRecommendations))
-
-	for _, recommendation := range storedRecommendations {
-		key, ok := vexRuleRecommendationDedupKey(recommendation)
-		if !ok {
-			continue
-		}
-		if _, ok := recommendationsByKey[key]; !ok {
-			recommendationsByKey[key] = transformer.VEXRuleRecommendationToDTO(recommendation)
-		}
-	}
-
-	for _, rules := range matchingSessionRules {
-		for _, rule := range rules {
-			if _, ok := recommendationsByKey[rule.ID]; !ok {
-				assetWithProject := assetsByID[rule.AssetID]
-				recommendationsByKey[rule.ID] = transformer.VEXRuleToOriginRecommendationDTO(rule, assetWithProject.Project.Slug, assetWithProject.Slug)
+	return ctx.JSON(200, pagedRecommendations.Map(func(recommendation models.VEXRuleRecommendation) any {
+		if recommendation.VEXRuleID != nil {
+			if assetSignature, ok := assetSignatureByRuleID[*recommendation.VEXRuleID]; ok {
+				originAsset := assetsByID[recommendation.VEXRule.AssetID]
+				dto := transformer.VEXRuleToOriginRecommendationDTO(recommendation.VEXRule, originAsset.Project.Slug, originAsset.Slug)
+				dto.AssetSignature = assetSignature
+				return dto
 			}
 		}
-	}
-
-	recommendations := make([]dtos.VexRuleRecommendation, 0, len(recommendationsByKey))
-	for _, recommendation := range recommendationsByKey {
-		recommendations = append(recommendations, recommendation)
-	}
-
-	slices.SortFunc(recommendations, func(a, b dtos.VexRuleRecommendation) int {
-		return strings.Compare(a.Title, b.Title)
-	})
-
-	return recommendations
-}
-
-func vexRuleRecommendationDedupKey(recommendation models.VEXRuleRecommendation) (string, bool) {
-	if recommendation.VEXRuleID != nil {
-		return *recommendation.VEXRuleID, true
-	}
-	if recommendation.UpstreamVEXRuleID != nil {
-		return *recommendation.UpstreamVEXRuleID, true
-	}
-	return "", false
+		return transformer.VEXRuleRecommendationToDTO(recommendation)
+	}))
 }

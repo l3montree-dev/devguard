@@ -67,7 +67,7 @@ type AdvisoryService_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - advisory *models.Advisory
-func (_e *AdvisoryService_Expecter) Create(ctx any, tx any, advisory any) *AdvisoryService_Create_Call {
+func (_e *AdvisoryService_Expecter) Create(ctx interface{}, tx interface{}, advisory interface{}) *AdvisoryService_Create_Call {
 	return &AdvisoryService_Create_Call{Call: _e.mock.On("Create", ctx, tx, advisory)}
 }
 
@@ -144,7 +144,7 @@ type AdvisoryService_CreateVulnEventAndApply_Call struct {
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - userAgent *string
-func (_e *AdvisoryService_Expecter) CreateVulnEventAndApply(ctx any, tx any, userID any, advisory any, vulnEventType any, justification any, mechanicalJustification any, userAgent any) *AdvisoryService_CreateVulnEventAndApply_Call {
+func (_e *AdvisoryService_Expecter) CreateVulnEventAndApply(ctx interface{}, tx interface{}, userID interface{}, advisory interface{}, vulnEventType interface{}, justification interface{}, mechanicalJustification interface{}, userAgent interface{}) *AdvisoryService_CreateVulnEventAndApply_Call {
 	return &AdvisoryService_CreateVulnEventAndApply_Call{Call: _e.mock.On("CreateVulnEventAndApply", ctx, tx, userID, advisory, vulnEventType, justification, mechanicalJustification, userAgent)}
 }
 
@@ -232,7 +232,7 @@ type AdvisoryService_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AdvisoryService_Expecter) Delete(ctx any, tx any, id any) *AdvisoryService_Delete_Call {
+func (_e *AdvisoryService_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AdvisoryService_Delete_Call {
 	return &AdvisoryService_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -304,7 +304,7 @@ type AdvisoryService_ReadAdvisory_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AdvisoryService_Expecter) ReadAdvisory(ctx any, tx any, id any) *AdvisoryService_ReadAdvisory_Call {
+func (_e *AdvisoryService_Expecter) ReadAdvisory(ctx interface{}, tx interface{}, id interface{}) *AdvisoryService_ReadAdvisory_Call {
 	return &AdvisoryService_ReadAdvisory_Call{Call: _e.mock.On("ReadAdvisory", ctx, tx, id)}
 }
 
@@ -378,7 +378,7 @@ type AdvisoryService_ReadAll_Call struct {
 //   - assetID uuid.UUID
 //   - filter []shared.FilterQuery
 //   - pagination shared.PageInfo
-func (_e *AdvisoryService_Expecter) ReadAll(ctx any, tx any, assetID any, filter any, pagination any) *AdvisoryService_ReadAll_Call {
+func (_e *AdvisoryService_Expecter) ReadAll(ctx interface{}, tx interface{}, assetID interface{}, filter interface{}, pagination interface{}) *AdvisoryService_ReadAll_Call {
 	return &AdvisoryService_ReadAll_Call{Call: _e.mock.On("ReadAll", ctx, tx, assetID, filter, pagination)}
 }
 
@@ -452,7 +452,7 @@ type AdvisoryService_Update_Call struct {
 //   - tx shared.DB
 //   - id uuid.UUID
 //   - advisory *models.Advisory
-func (_e *AdvisoryService_Expecter) Update(ctx any, tx any, id any, advisory any) *AdvisoryService_Update_Call {
+func (_e *AdvisoryService_Expecter) Update(ctx interface{}, tx interface{}, id interface{}, advisory interface{}) *AdvisoryService_Update_Call {
 	return &AdvisoryService_Update_Call{Call: _e.mock.On("Update", ctx, tx, id, advisory)}
 }
 
