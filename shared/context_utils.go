@@ -829,41 +829,20 @@ func (s SortQuery) GetField() string {
 	return sanitizeField(s.Field)
 }
 
-type Environmental struct {
-	ConfidentialityRequirements string
-	IntegrityRequirements       string
-	AvailabilityRequirements    string
-}
-
-func GetEnvironmental(ctx Context) Environmental {
-	env := Environmental{
-		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
-		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
-		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
+func GetEnvironmental(ctx Context) dtos.Environmental {
+	return dtos.Environmental{
+		ConfidentialityRequirement: dtos.RequirementLevel(ctx.QueryParam("confidentialityRequirements")),
+		IntegrityRequirement:       dtos.RequirementLevel(ctx.QueryParam("integrityRequirements")),
+		AvailabilityRequirement:    dtos.RequirementLevel(ctx.QueryParam("availabilityRequirements")),
+		ModifiedAttackVector:       dtos.ModifiedAttackVector(ctx.QueryParam("modifiedAttackVector")),
+		ModifiedAttackComplexity:   dtos.ModifiedAttackComplexity(ctx.QueryParam("modifiedAttackComplexity")),
+		ModifiedPrivilegesRequired: dtos.ModifiedPrivilegesRequired(ctx.QueryParam("modifiedPrivilegesRequired")),
+		ModifiedScope:              dtos.ModifiedScope(ctx.QueryParam("modifiedScope")),
+		ModifiedUserInteraction:    dtos.ModifiedUserInteraction(ctx.QueryParam("modifiedUserInteraction")),
+		ModifiedConfidentiality:    dtos.ModifiedRequirementLevel(ctx.QueryParam("modifiedConfidentiality")),
+		ModifiedIntegrity:          dtos.ModifiedRequirementLevel(ctx.QueryParam("modifiedIntegrity")),
+		ModifiedAvailability:       dtos.ModifiedRequirementLevel(ctx.QueryParam("modifiedAvailability")),
 	}
-	return SanitizeEnv(env)
-}
-
-func SanitizeEnv(env Environmental) Environmental {
-
-	replacements := map[string]string{
-		"high":   "H",
-		"medium": "M",
-		"low":    "L",
-	}
-
-	replaceValue := func(value string) string {
-		if newValue, exists := replacements[value]; exists {
-			return newValue
-		}
-		return value
-	}
-
-	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
-	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
-	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
-
-	return env
 }
 
 type BadgeValues struct {
