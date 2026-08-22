@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -44,13 +45,27 @@ func ProvideDependencyProxyCache() dependencyfirewall.DependencyProxyCache {
 
 	}
 
+	maxSizeMB := os.Getenv("DEPENDENCY_PROXY_CACHE_MAX_SIZE_MB")
+	if maxSizeMB != "" {
+		slog.Info("Using custom dependency proxy cache max size", "size", maxSizeMB)
+	} else {
+		slog.Info("Using default dependency proxy cache max size", "size", "1024MB")
+		maxSizeMB = "1024"
+	}
+
+	maxSizeMBInt, err := strconv.Atoi(maxSizeMB)
+	if err != nil {
+		panic(fmt.Sprintf("Invalid DEPENDENCY_PROXY_CACHE_MAX_SIZE_MB value: %v", err))
+	}
+
 	// Ensure directory exists
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		slog.Error("Failed to create cache directory", "error", err)
 	}
 
 	return dependencyfirewall.DependencyProxyCache{
-		CacheDir: cacheDir,
+		CacheDir:  cacheDir,
+		MaxSizeMB: maxSizeMBInt,
 	}
 }
 
