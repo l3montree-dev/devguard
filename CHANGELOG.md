@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.0] - 2026-08-24
+
+### Added
+
+- **Per-asset exposure metrics** — the backend now tracks and exposes additional per-asset exposure metrics, and the internet-reachability flag was removed in favor of the richer metric set (#2881)
+- **Webhook payloads are now HMAC-signed** — outgoing webhook deliveries carry an HMAC signature so receivers can verify the payload came from DevGuard and wasn't tampered with in transit
+- **Dependency proxy file cache rework** — the npm, Go, Python, and OCI dependency firewalls now share a single on-disk file cache implementation with a configurable maximum size in MB, replacing the ad-hoc per-firewall caching logic (#2905)
+- Daemon runner now alerts on collection errors and on failures during VEX rule recommendation, and crowdsourced VEX rule matching now only recommends rules that have a CVE scope
+- `devguard-maint`'s Helm release command was updated to work with the new Docker-based deployment, and the try-it Docker Compose file was removed in favor of it
+- A `now()` function was added to the CEL evaluation environment used for VEX rule expressions
+- Vulnerability models gained a "last state change" column, and unused columns were dropped (#2902)
+
+### Changed
+
+- Database connections in the fixed-version daemon are now reused instead of a new connection being opened on every run
+- Schema migration version fetching was fixed to report the correct version (#2891)
+
+### Fixed
+
+- **Nil pointer when syncing external entities with matching names** — carried forward fix for `Asset.Same`/`Project.Same` nil dereferences during external entity sync (#2872)
+- **Duplicated key error managing artifacts** — saving/updating artifacts no longer fails with a duplicate key error (#2895)
+- **Sample SBOM used an outdated CycloneDX version** — the bundled sample SBOM now uses CycloneDX 1.6 (#2900)
+- **Empty webhook secrets no longer break signing** — webhooks configured without a secret are now ignored instead of erroring when computing the HMAC signature
+- Risk recalculation now records a justification for the change
+- Asset DTOs/transformers and the asset controller were fixed and cleaned up (removed redundant `if` statements in favor of a generic helper) as part of the exposure-metrics work
+
 ## [v1.12.5] - 2026-08-19
 
 ### Added
