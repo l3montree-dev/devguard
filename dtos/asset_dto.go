@@ -14,6 +14,76 @@ const (
 	RequirementLevelHigh   RequirementLevel = "high"
 )
 
+type ModifiedRequirementLevel string
+
+const (
+	MRLNotDefined ModifiedRequirementLevel = "X"
+	MRLNone       ModifiedRequirementLevel = "none"
+	MRLLow        ModifiedRequirementLevel = "low"
+	MRLHigh       ModifiedRequirementLevel = "high"
+)
+
+type ModifiedAttackVector string
+
+const (
+	MAVNetwork         ModifiedAttackVector = "network"
+	MAVAdjacentNetwork ModifiedAttackVector = "adjacent"
+	MAVLocal           ModifiedAttackVector = "local"
+	MAVPhysical        ModifiedAttackVector = "physical"
+	MAVNotDefined      ModifiedAttackVector = "X"
+)
+
+type ModifiedAttackComplexity string
+
+const (
+	MACLow        ModifiedAttackComplexity = "low"
+	MACHigh       ModifiedAttackComplexity = "high"
+	MACNotDefined ModifiedAttackComplexity = "X"
+)
+
+type ModifiedPrivilegesRequired string
+
+const (
+	MPRNone       ModifiedPrivilegesRequired = "none"
+	MPRLow        ModifiedPrivilegesRequired = "low"
+	MPRHigh       ModifiedPrivilegesRequired = "high"
+	MPRNotDefined ModifiedPrivilegesRequired = "X"
+)
+
+type ModifiedScope string
+
+const (
+	MSUnchanged  ModifiedScope = "unchanged"
+	MSChanged    ModifiedScope = "changed"
+	MSNotDefined ModifiedScope = "X"
+)
+
+type ModifiedUserInteraction string
+
+const (
+	MUINotDefined ModifiedUserInteraction = "X"
+	MUINone       ModifiedUserInteraction = "none"
+	MUIRequired   ModifiedUserInteraction = "required"
+)
+
+var cvssMapping = map[string]string{
+	"low":       "L",
+	"medium":    "M",
+	"high":      "H",
+	"none":      "N",
+	"required":  "R",
+	"network":   "N",
+	"adjacent":  "A",
+	"local":     "L",
+	"physical":  "P",
+	"unchanged": "U",
+	"changed":   "C",
+}
+
+func ToCVSS[T ~string](v T) string {
+	return cvssMapping[string(v)]
+}
+
 type LookupResponse struct {
 	Org     string `json:"org"`
 	Project string `json:"project"`
@@ -29,6 +99,20 @@ type AssetInviteToAssetRequest struct {
 	Ids []string `json:"ids" validate:"required"`
 }
 
+type Environmental struct {
+	ConfidentialityRequirement RequirementLevel           `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
+	IntegrityRequirement       RequirementLevel           `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
+	AvailabilityRequirement    RequirementLevel           `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
+	ModifiedAttackVector       ModifiedAttackVector       `json:"modifiedAttackVector" gorm:"default:'X';type:text;"`
+	ModifiedAttackComplexity   ModifiedAttackComplexity   `json:"modifiedAttackComplexity" gorm:"default:'X';type:text;"`
+	ModifiedPrivilegesRequired ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired" gorm:"default:'X';type:text;"`
+	ModifiedScope              ModifiedScope              `json:"modifiedScope" gorm:"default:'X';type:text;"`
+	ModifiedUserInteraction    ModifiedUserInteraction    `json:"modifiedUserInteraction" gorm:"default:'X';type:text;"`
+	ModifiedConfidentiality    ModifiedRequirementLevel   `json:"modifiedConfidentiality" gorm:"default:'X';type:text;"`
+	ModifiedIntegrity          ModifiedRequirementLevel   `json:"modifiedIntegrity" gorm:"default:'X';type:text;"`
+	ModifiedAvailability       ModifiedRequirementLevel   `json:"modifiedAvailability" gorm:"default:'X';type:text;"`
+}
+
 type AssetDTO struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
@@ -37,10 +121,7 @@ type AssetDTO struct {
 	Description string    `json:"description"`
 	ProjectID   uuid.UUID `json:"projectId"`
 
-	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement"`
-	IntegrityRequirement       RequirementLevel `json:"integrityRequirement"`
-	ConfidentialityRequirement RequirementLevel `json:"confidentialityRequirement"`
-	ReachableFromInternet      bool             `json:"reachableFromInternet"`
+	Environmental
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
@@ -92,13 +173,21 @@ type AssetCreateRequest struct {
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
-	Importance            int  `json:"importance"`
-	ReachableFromInternet bool `json:"reachableFromInternet"`
+	Importance int `json:"importance"`
 
-	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required,oneof=low medium high"`
-	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required,oneof=low medium high"`
-	AvailabilityRequirement    string  `json:"availabilityRequirement" validate:"required,oneof=low medium high"`
-	RepositoryProvider         *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
+	ConfidentialityRequirement RequirementLevel           `json:"confidentialityRequirement" validate:"required,oneof=low medium high"`
+	IntegrityRequirement       RequirementLevel           `json:"integrityRequirement" validate:"required,oneof=low medium high"`
+	AvailabilityRequirement    RequirementLevel           `json:"availabilityRequirement" validate:"required,oneof=low medium high"`
+	ModifiedAttackVector       ModifiedAttackVector       `json:"modifiedAttackVector" validate:"omitempty,oneof=X network adjacent local physical"`
+	ModifiedAttackComplexity   ModifiedAttackComplexity   `json:"modifiedAttackComplexity" validate:"omitempty,oneof=X low high"`
+	ModifiedPrivilegesRequired ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired" validate:"omitempty,oneof=X none low high"`
+	ModifiedScope              ModifiedScope              `json:"modifiedScope" validate:"omitempty,oneof=X unchanged changed"`
+	ModifiedUserInteraction    ModifiedUserInteraction    `json:"modifiedUserInteraction" validate:"omitempty,oneof=X none required"`
+	ModifiedConfidentiality    ModifiedRequirementLevel   `json:"modifiedConfidentiality" validate:"omitempty,oneof=X none low high"`
+	ModifiedIntegrity          ModifiedRequirementLevel   `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
+	ModifiedAvailability       ModifiedRequirementLevel   `json:"modifiedAvailability" validate:"omitempty,oneof=X none low high"`
+
+	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
 type AssetPatchRequest struct {
@@ -111,11 +200,17 @@ type AssetPatchRequest struct {
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
-	ReachableFromInternet *bool `json:"reachableFromInternet"`
-
-	ConfidentialityRequirement *RequirementLevel `json:"confidentialityRequirement" validate:"omitempty,oneof=low medium high"`
-	IntegrityRequirement       *RequirementLevel `json:"integrityRequirement" validate:"omitempty,oneof=low medium high"`
-	AvailabilityRequirement    *RequirementLevel `json:"availabilityRequirement" validate:"omitempty,oneof=low medium high"`
+	ConfidentialityRequirement *RequirementLevel           `json:"confidentialityRequirement" validate:"omitempty,oneof=low medium high"`
+	IntegrityRequirement       *RequirementLevel           `json:"integrityRequirement" validate:"omitempty,oneof=low medium high"`
+	AvailabilityRequirement    *RequirementLevel           `json:"availabilityRequirement" validate:"omitempty,oneof=low medium high"`
+	ModifiedAttackVector       *ModifiedAttackVector       `json:"modifiedAttackVector" validate:"omitempty,oneof=X network adjacent local physical"`
+	ModifiedAttackComplexity   *ModifiedAttackComplexity   `json:"modifiedAttackComplexity" validate:"omitempty,oneof=X low high"`
+	ModifiedPrivilegesRequired *ModifiedPrivilegesRequired `json:"modifiedPrivilegesRequired" validate:"omitempty,oneof=X none low high"`
+	ModifiedScope              *ModifiedScope              `json:"modifiedScope" validate:"omitempty,oneof=X unchanged changed"`
+	ModifiedUserInteraction    *ModifiedUserInteraction    `json:"modifiedUserInteraction" validate:"omitempty,oneof=X none required"`
+	ModifiedConfidentiality    *ModifiedRequirementLevel   `json:"modifiedConfidentiality" validate:"omitempty,oneof=X none low high"`
+	ModifiedIntegrity          *ModifiedRequirementLevel   `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
+	ModifiedAvailability       *ModifiedRequirementLevel   `json:"modifiedAvailability" validate:"omitempty,oneof=X none low high"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`

@@ -31,23 +31,20 @@ type AssetTuple = struct {
 
 type Asset struct {
 	Model
-	Name                         string                `json:"name" gorm:"type:text"`
-	Avatar                       *string               `json:"avatar" gorm:"type:text"`
-	Slug                         string                `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
-	ProjectID                    uuid.UUID             `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
-	Description                  string                `json:"description" gorm:"type:text"`
-	Type                         AssetType             `json:"type" gorm:"type:text;not null;"`
-	AssetVersions                []AssetVersion        `json:"refs" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
-	Project                      Project               `json:"project" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
-	Importance                   int                   `json:"importance" gorm:"default:1;"`
-	ReachableFromInternet        bool                  `json:"reachableFromInternet" gorm:"default:false;"`
-	ConfidentialityRequirement   dtos.RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
-	IntegrityRequirement         dtos.RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
-	AvailabilityRequirement      dtos.RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
-	RepositoryID                 *string               `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
-	RepositoryName               *string               `json:"repositoryName" gorm:"type:text;"`
-	CVSSAutomaticTicketThreshold *float64              `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
-	RiskAutomaticTicketThreshold *float64              `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
+	Name          string         `json:"name" gorm:"type:text"`
+	Avatar        *string        `json:"avatar" gorm:"type:text"`
+	Slug          string         `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
+	ProjectID     uuid.UUID      `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
+	Description   string         `json:"description" gorm:"type:text"`
+	Type          AssetType      `json:"type" gorm:"type:text;not null;"`
+	AssetVersions []AssetVersion `json:"refs" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
+	Project       Project        `json:"project" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
+	Importance    int            `json:"importance" gorm:"default:1;"`
+	dtos.Environmental
+	RepositoryID                 *string  `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
+	RepositoryName               *string  `json:"repositoryName" gorm:"type:text;"`
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 	// Auto-reopen configuration - number of days after which closed/accepted vulnerabilities should be reopened
 	VulnAutoReopenAfterDays  *int                `json:"vulnAutoReopenAfterDays" gorm:"type:integer;"`
 	SigningPubKey            *string             `json:"signingPubKey" gorm:"type:text;"`

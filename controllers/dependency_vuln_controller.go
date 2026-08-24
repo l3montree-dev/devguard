@@ -315,7 +315,7 @@ func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 		})
 	}
 
-	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	risk, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 	if dependencyVuln.CVE != nil {
 		dependencyVuln.CVE.Risk = risk
 		dependencyVuln.CVE.Vector = vector

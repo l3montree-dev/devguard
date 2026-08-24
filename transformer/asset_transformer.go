@@ -47,32 +47,29 @@ func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDT
 
 func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 	return dtos.AssetDTO{
-		ID:                            asset.ID,
-		Name:                          asset.Name,
-		Avatar:                        asset.Avatar,
-		Slug:                          asset.Slug,
-		Description:                   asset.Description,
-		ProjectID:                     asset.ProjectID,
-		AvailabilityRequirement:       asset.AvailabilityRequirement,
-		IntegrityRequirement:          asset.IntegrityRequirement,
-		ConfidentialityRequirement:    asset.ConfidentialityRequirement,
-		ReachableFromInternet:         asset.ReachableFromInternet,
-		RepositoryID:                  asset.RepositoryID,
-		RepositoryName:                asset.RepositoryName,
-		SigningPubKey:                 asset.SigningPubKey,
-		CVSSAutomaticTicketThreshold:  asset.CVSSAutomaticTicketThreshold,
-		RiskAutomaticTicketThreshold:  asset.RiskAutomaticTicketThreshold,
-		VulnAutoReopenAfterDays:       asset.VulnAutoReopenAfterDays,
-		AssetVersions:                 utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
-		ExternalEntityProviderID:      asset.ExternalEntityProviderID,
-		ExternalEntityID:              asset.ExternalEntityID,
-		RepositoryProvider:            asset.RepositoryProvider,
-		IsPublic:                      asset.IsPublic,
-		ParanoidMode:                  asset.ParanoidMode,
-		SharesInformation:             asset.SharesInformation,
-		PipelineLastRun:               asset.PipelineLastRun,
-		PipelineError:                 asset.PipelineError,
-		State:                         string(asset.State),
+		ID:                           asset.ID,
+		Name:                         asset.Name,
+		Avatar:                       asset.Avatar,
+		Slug:                         asset.Slug,
+		Description:                  asset.Description,
+		ProjectID:                    asset.ProjectID,
+		Environmental:                asset.Environmental,
+		RepositoryID:                 asset.RepositoryID,
+		RepositoryName:               asset.RepositoryName,
+		SigningPubKey:                asset.SigningPubKey,
+		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
+		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
+		VulnAutoReopenAfterDays:      asset.VulnAutoReopenAfterDays,
+		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
+		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
+		ExternalEntityID:             asset.ExternalEntityID,
+		RepositoryProvider:           asset.RepositoryProvider,
+		IsPublic:                     asset.IsPublic,
+		ParanoidMode:                 asset.ParanoidMode,
+		SharesInformation:            asset.SharesInformation,
+		PipelineLastRun:              asset.PipelineLastRun,
+		PipelineError:                asset.PipelineError,
+		State:                        string(asset.State),
 	}
 }
 
@@ -89,13 +86,23 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 		ProjectID:   projectID,
 		Description: assetCreateRequest.Description,
 
-		Importance:            assetCreateRequest.Importance,
-		ReachableFromInternet: assetCreateRequest.ReachableFromInternet,
+		Importance: assetCreateRequest.Importance,
 
-		ConfidentialityRequirement: sanitizeRequirementLevel(assetCreateRequest.ConfidentialityRequirement),
-		IntegrityRequirement:       sanitizeRequirementLevel(assetCreateRequest.IntegrityRequirement),
-		AvailabilityRequirement:    sanitizeRequirementLevel(assetCreateRequest.AvailabilityRequirement),
-		RepositoryProvider:         assetCreateRequest.RepositoryProvider,
+		Environmental: dtos.Environmental{
+			ConfidentialityRequirement: sanitizeRequirementLevel(assetCreateRequest.ConfidentialityRequirement),
+			IntegrityRequirement:       sanitizeRequirementLevel(assetCreateRequest.IntegrityRequirement),
+			AvailabilityRequirement:    sanitizeRequirementLevel(assetCreateRequest.AvailabilityRequirement),
+			ModifiedAttackVector:       sanitizeAttackVector(assetCreateRequest.ModifiedAttackVector),
+			ModifiedAttackComplexity:   sanitizeAttackComplexity(assetCreateRequest.ModifiedAttackComplexity),
+			ModifiedPrivilegesRequired: sanitizePrivilegesRequired(assetCreateRequest.ModifiedPrivilegesRequired),
+			ModifiedScope:              sanitizeScope(assetCreateRequest.ModifiedScope),
+			ModifiedUserInteraction:    sanitizeUserInteraction(assetCreateRequest.ModifiedUserInteraction),
+			ModifiedConfidentiality:    sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedConfidentiality),
+			ModifiedIntegrity:          sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedIntegrity),
+			ModifiedAvailability:       sanitizeModifiedRequirementLevel(assetCreateRequest.ModifiedAvailability),
+		},
+
+		RepositoryProvider: assetCreateRequest.RepositoryProvider,
 	}
 
 	if assetCreateRequest.EnableTicketRange {
@@ -106,12 +113,66 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 	return asset
 }
 
-func sanitizeRequirementLevel(level string) dtos.RequirementLevel {
+func sanitizeRequirementLevel(level dtos.RequirementLevel) dtos.RequirementLevel {
 	switch level {
-	case "low", "medium", "high":
-		return dtos.RequirementLevel(level)
+	case dtos.RequirementLevelLow, dtos.RequirementLevelMedium, dtos.RequirementLevelHigh:
+		return level
 	default:
-		return "medium"
+		return dtos.RequirementLevelMedium
+	}
+}
+
+func sanitizeAttackVector(level dtos.ModifiedAttackVector) dtos.ModifiedAttackVector {
+	switch level {
+	case dtos.MAVNetwork, dtos.MAVAdjacentNetwork, dtos.MAVLocal, dtos.MAVPhysical, dtos.MAVNotDefined:
+		return level
+	default:
+		return dtos.MAVNotDefined
+	}
+}
+
+func sanitizeAttackComplexity(level dtos.ModifiedAttackComplexity) dtos.ModifiedAttackComplexity {
+	switch level {
+	case dtos.MACLow, dtos.MACHigh, dtos.MACNotDefined:
+		return level
+	default:
+		return dtos.MACNotDefined
+	}
+}
+
+func sanitizePrivilegesRequired(level dtos.ModifiedPrivilegesRequired) dtos.ModifiedPrivilegesRequired {
+	switch level {
+	case dtos.MPRNone, dtos.MPRLow, dtos.MPRHigh, dtos.MPRNotDefined:
+		return level
+	default:
+		return dtos.MPRNotDefined
+	}
+}
+
+func sanitizeScope(level dtos.ModifiedScope) dtos.ModifiedScope {
+	switch level {
+	case dtos.MSUnchanged, dtos.MSChanged, dtos.MSNotDefined:
+		return level
+	default:
+		return dtos.MSNotDefined
+	}
+}
+
+func sanitizeUserInteraction(level dtos.ModifiedUserInteraction) dtos.ModifiedUserInteraction {
+	switch level {
+	case dtos.MUINone, dtos.MUIRequired, dtos.MUINotDefined:
+		return level
+	default:
+		return dtos.MUINotDefined
+	}
+}
+
+func sanitizeModifiedRequirementLevel(level dtos.ModifiedRequirementLevel) dtos.ModifiedRequirementLevel {
+	switch level {
+	case dtos.MRLNone, dtos.MRLLow, dtos.MRLHigh, dtos.MRLNotDefined:
+		return level
+	default:
+		return dtos.MRLNotDefined
 	}
 }
 
@@ -130,11 +191,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.Description != nil {
 		updated = true
 		asset.Description = *assetPatch.Description
-	}
-
-	if assetPatch.ReachableFromInternet != nil {
-		updated = true
-		asset.ReachableFromInternet = *assetPatch.ReachableFromInternet
 	}
 
 	if assetPatch.RepositoryID != nil {
@@ -196,6 +252,46 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.ParanoidMode != nil {
 		updated = true
 		asset.ParanoidMode = *assetPatch.ParanoidMode
+	}
+
+	if assetPatch.ModifiedAttackVector != nil {
+		updated = true
+		asset.ModifiedAttackVector = *assetPatch.ModifiedAttackVector
+	}
+
+	if assetPatch.ModifiedAttackComplexity != nil {
+		updated = true
+		asset.ModifiedAttackComplexity = *assetPatch.ModifiedAttackComplexity
+	}
+
+	if assetPatch.ModifiedPrivilegesRequired != nil {
+		updated = true
+		asset.ModifiedPrivilegesRequired = *assetPatch.ModifiedPrivilegesRequired
+	}
+
+	if assetPatch.ModifiedScope != nil {
+		updated = true
+		asset.ModifiedScope = *assetPatch.ModifiedScope
+	}
+
+	if assetPatch.ModifiedUserInteraction != nil {
+		updated = true
+		asset.ModifiedUserInteraction = *assetPatch.ModifiedUserInteraction
+	}
+
+	if assetPatch.ModifiedConfidentiality != nil {
+		updated = true
+		asset.ModifiedConfidentiality = *assetPatch.ModifiedConfidentiality
+	}
+
+	if assetPatch.ModifiedIntegrity != nil {
+		updated = true
+		asset.ModifiedIntegrity = *assetPatch.ModifiedIntegrity
+	}
+
+	if assetPatch.ModifiedAvailability != nil {
+		updated = true
+		asset.ModifiedAvailability = *assetPatch.ModifiedAvailability
 	}
 
 	return updated

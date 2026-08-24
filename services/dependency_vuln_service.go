@@ -159,11 +159,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 
 	// create a new VulnEvent for each detected dependencyVuln
 	events := make([]models.VulnEvent, len(dependencyVulns))
-	e := shared.Environmental{
-		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
-		IntegrityRequirements:       string(asset.IntegrityRequirement),
-		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
-	}
+	e := asset.Environmental
 
 	for i, dependencyVuln := range dependencyVulns {
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
@@ -253,11 +249,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 		return nil, nil
 	}
 
-	env := shared.Environmental{
-		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
-		IntegrityRequirements:       string(asset.IntegrityRequirement),
-		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
-	}
+	env := asset.Environmental
 
 	// create a new VulnEvent for each updated dependencyVuln
 
