@@ -9,29 +9,25 @@ import (
 	i "github.com/l3montree-dev/devguard/cmd/devguard-maint/internal"
 )
 
-func TestUpdateDockerCompose(t *testing.T) {
+func TestUpdateDockerDeployment(t *testing.T) {
 	dir := t.TempDir()
-	devguardDir := filepath.Join(dir, "devguard")
-	if err := os.MkdirAll(devguardDir, 0o755); err != nil {
+	deploymentDir := filepath.Join(dir, "devguard-docker-deployment")
+	if err := os.MkdirAll(deploymentDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	compose := `services:
-  api:
-    image: ghcr.io/l3montree-dev/devguard:v1.0.0
-  web:
-    image: ghcr.io/l3montree-dev/devguard-web:v1.0.0
-  db:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v1.0.0
-  exporter:
-    image: some-other-image:latest
+	env := `DEVGUARD_API_TAG=v1.0.0
+DEVGUARD_WEB_TAG=v1.0.0
+POSTGRESQL_TAG=v1.0.0
+ORY_KRATOS_TAG=v26.2.0-distroless@sha256:481bfc3022e5427ffb94570eef84480b99c9f8158388378c57df8c1a4a104b3d
+TRAEFIK_TAG=v3.7
 `
-	composeFile := filepath.Join(devguardDir, "docker-compose-try-it.yaml")
-	if err := os.WriteFile(composeFile, []byte(compose), 0o644); err != nil {
+	envFile := filepath.Join(deploymentDir, ".env.example")
+	if err := os.WriteFile(envFile, []byte(env), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// updateDockerCompose uses relative paths — run from temp dir
+	// updateDockerDeployment uses relative paths — run from temp dir
 	orig, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -42,25 +38,25 @@ func TestUpdateDockerCompose(t *testing.T) {
 	defer func() { _ = os.Chdir(orig) }()
 
 	cl := &i.Changelog{}
-	if _, err := updateDockerCompose("v2.0.1", "v2.0.3", cl); err != nil {
+	if _, err := updateDockerDeployment("v2.0.1", "v2.0.3", cl); err != nil {
 		t.Fatal(err)
 	}
 
-	got, _ := os.ReadFile(composeFile)
+	got, _ := os.ReadFile(envFile)
 	content := string(got)
 
 	for _, want := range []string{
-		"ghcr.io/l3montree-dev/devguard:v2.0.1",
-		"ghcr.io/l3montree-dev/devguard/postgresql:v2.0.1",
-		"ghcr.io/l3montree-dev/devguard-web:v2.0.3",
+		"DEVGUARD_API_TAG=v2.0.1",
+		"POSTGRESQL_TAG=v2.0.1",
+		"DEVGUARD_WEB_TAG=v2.0.3",
 	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("missing %q in output:\n%s", want, content)
 		}
 	}
-	// third-party image must be untouched
-	if !strings.Contains(content, "some-other-image:latest") {
-		t.Error("third-party image was modified")
+	// unrelated tag variable must be untouched
+	if !strings.Contains(content, "TRAEFIK_TAG=v3.7") {
+		t.Error("unrelated tag variable was modified")
 	}
 	if cl.HasErrors() {
 		t.Error("unexpected errors in changelog")

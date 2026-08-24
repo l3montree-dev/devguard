@@ -161,7 +161,7 @@
           default = hostBinaries.devguard;
         }
         // hostBinaries
-        // lib.optionalAttrs isLinux (sbomOutputs // arm64Packages // amd64Packages);
+        // sbomOutputs // arm64Packages // amd64Packages;
         devShells.default = hostPkgs.mkShell {
           buildInputs = [
             unstablePkgs.go
