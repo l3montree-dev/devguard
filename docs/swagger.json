@@ -90,6 +90,78 @@
                 },
                 "type": "object"
             },
+            "controllers.webhookCreateData": {
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sbomEnabled": {
+                        "type": "boolean"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "vulnEnabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
+            "controllers.webhookTestData": {
+                "properties": {
+                    "payloadType": {
+                        "type": "string"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
+            "controllers.webhookUpdateData": {
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sbomEnabled": {
+                        "type": "boolean"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "vulnEnabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
             "cyclonedx.Advisory": {
                 "properties": {
                     "title": {
@@ -5980,9 +6052,6 @@
                     "directDependencyFixedVersion": {
                         "type": "string"
                     },
-                    "effort": {
-                        "type": "integer"
-                    },
                     "exploits": {
                         "items": {
                             "$ref": "#/components/schemas/dtos.ExploitDTO"
@@ -5993,23 +6062,14 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "priority": {
-                        "type": "integer"
-                    },
-                    "rawRiskAssessment": {
-                        "type": "number"
-                    },
                     "riskAssessment": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "riskRecalculatedAt": {
                         "type": "string"
@@ -6066,9 +6126,6 @@
                     "directDependencyFixedVersion": {
                         "type": "string"
                     },
-                    "effort": {
-                        "type": "integer"
-                    },
                     "events": {
                         "items": {
                             "$ref": "#/components/schemas/dtos.VulnEventDTO"
@@ -6086,23 +6143,14 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "priority": {
-                        "type": "integer"
-                    },
-                    "rawRiskAssessment": {
-                        "type": "number"
-                    },
                     "riskAssessment": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "riskRecalculatedAt": {
                         "type": "string"
@@ -6248,9 +6296,6 @@
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
-                    },
-                    "message": {
-                        "type": "string"
                     },
                     "state": {
                         "$ref": "#/components/schemas/dtos.VulnState"
@@ -8688,14 +8733,11 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
-                    },
-                    "message": {
-                        "type": "string"
                     },
                     "severity": {
                         "type": "string"
@@ -9462,9 +9504,6 @@
                     "directDependencyFixedVersion": {
                         "type": "string"
                     },
-                    "effort": {
-                        "type": "integer"
-                    },
                     "events": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.VulnEvent"
@@ -9475,23 +9514,14 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "priority": {
-                        "type": "integer"
-                    },
-                    "rawRiskAssessment": {
-                        "type": "number"
-                    },
                     "riskAssessment": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "riskRecalculatedAt": {
                         "type": "string"
@@ -9769,14 +9799,11 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
-                    },
-                    "message": {
-                        "type": "string"
                     },
                     "state": {
                         "$ref": "#/components/schemas/dtos.VulnState"
@@ -10439,10 +10466,6 @@
                     1000,
                     1000000,
                     1000000000,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
                     60000000000,
                     3600000000000
                 ],
@@ -10464,10 +10487,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -13745,10 +13764,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookTestData",
+                                "summary": "body",
+                                "description": "Test webhook data"
                             }
                         }
                     },
@@ -13796,10 +13816,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookCreateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
@@ -13872,10 +13893,11 @@
             "put": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookUpdateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
@@ -23005,10 +23027,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookTestData",
+                                "summary": "body",
+                                "description": "Test webhook data"
                             }
                         }
                     },
@@ -23056,10 +23079,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookCreateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
@@ -23132,10 +23156,11 @@
             "put": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookUpdateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
