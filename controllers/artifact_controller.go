@@ -736,7 +736,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return result, nil
 		},
 		func() (any, error) {
-			distribution, err := c.statisticsService.GetArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
+			distribution, err := c.statisticsService.GetArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), &assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
 			if len(distribution) == 0 {
 				return models.Distribution{}, nil
 			}

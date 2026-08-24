@@ -79,7 +79,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	assetVersion := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
 
-	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
+	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), &assetVersion.Name, asset.ID, start, end)
 	if err != nil {
 		slog.Error("Error getting assetversion risk history", "error", err)
 		return ctx.JSON(500, nil)
@@ -94,7 +94,28 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
+func (c *StatisticsController) GetAssetRiskHistory(ctx shared.Context) error {
+	artifact := ctx.QueryParam("artifactName")
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+
+	asset := shared.GetAsset(ctx)
+
+	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), nil, asset.ID, start, end)
+	if err != nil {
+		slog.Error("Error getting asset risk history", "error", err)
+		return ctx.JSON(500, nil)
+	}
+
+	dtoResults := make([]dtos.RiskHistoryDTO, 0, len(results))
+	for _, r := range results {
+		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryToDTO(r))
+	}
+
+	return ctx.JSON(200, dtoResults)
+}
+
+func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName *string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")

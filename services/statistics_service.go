@@ -96,7 +96,7 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 	return distributionPerComponent, nil
 }
 
-func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	return s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, start, end)
 }
 

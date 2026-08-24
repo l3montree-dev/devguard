@@ -25,12 +25,17 @@ func NewArtifactRiskHistoryRepository(db *gorm.DB) *artifactRiskHistoryRepositor
 	}
 }
 
-func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	var assetRisk = []models.ArtifactRiskHistory{}
 	db := r.GetDB(ctx, tx)
 
 	// base query
-	db = db.Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	db = db.Where("asset_id = ?", assetID)
+
+	// optional asset version filter
+	if assetVersionName != nil {
+		db = db.Where("asset_version_name = ?", *assetVersionName)
+	}
 
 	// optional artifact filter
 	if artifactName != nil {
