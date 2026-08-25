@@ -48,7 +48,13 @@
   modulePurl,
   binaries,
   externalReferences ? [ ],
+  extraNativeBuildInputs ? [ ],
   goModules ? null,
+  # Shell commands run against the copied source before the trivy scan below,
+  # e.g. the same `go mod edit -replace` lines applied to the actual build -
+  # otherwise the SBOM would report pre-patch versions for a binary that
+  # doesn't actually contain them.
+  postPatch ? "",
 }:
 let
   versionedModule = "${modulePurl}@${version}";
@@ -59,7 +65,8 @@ runCommand "${toolName}-sbom"
     nativeBuildInputs = [
       trivy
       jq
-    ];
+    ]
+    ++ extraNativeBuildInputs;
   }
   ''
     mkdir -p $out/sboms
@@ -69,6 +76,10 @@ runCommand "${toolName}-sbom"
 
     cp -r ${src} ./src
     chmod -R u+w ./src
+
+    ${lib.optionalString (postPatch != "") ''
+      (cd ./src && ${postPatch})
+    ''}
 
     ${lib.optionalString (goModules != null) ''
       # For a real transitive tree, trivy reads each dependency's go.mod from the
@@ -107,9 +118,22 @@ runCommand "${toolName}-sbom"
     # on. Filter every dependsOn list (and drop whole dependency entries whose
     # own ref isn't a real component) down to just what's actually backed by a
     # component - the versioned module itself, or one of its real dependencies.
+    #
+    # Separately: a `replace` directive in go.mod (see postPatch above) doesn't
+    # erase the original `require` line - trivy's fs scan parses go.mod
+    # structurally and reports both the pre-replace and post-replace version as
+    # independent components. The pre-replace one ends up with zero incoming
+    # dependency edges (verified directly against trivy's raw output - nothing
+    # in .dependencies[].dependsOn ever names it), since nothing in the actual
+    # build graph depends on it. Drop any component with no incoming edge
+    # (other than the versioned root module itself) before the dangling-edge
+    # cleanup below, so stale/orphaned versions like that don't linger in the
+    # SBOM alongside the real one.
     jq --arg old "${modulePurl}" --arg new "${versionedModule}" --arg version "${version}" '
       (.. | select(. == $old)) = $new
       | (.components[]? | select(."bom-ref" == $new)) |= (. + {"version": $version})
+      | ([ .dependencies[]? | (.dependsOn // [])[] ]) as $incoming
+      | .components = [ .components[]? | select(."bom-ref" as $r | $r == $new or ($incoming | index($r))) ]
       | (([.components[]?."bom-ref"] + [$new]) | unique) as $valid
       | .dependencies = [
           .dependencies[]?

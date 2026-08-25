@@ -117,6 +117,7 @@
           crane-sbom = ociImagesArm64.craneFromSource.sbom;
           gitleaks-sbom = ociImagesArm64.gitleaksFromSource.sbom;
           trivy-sbom = ociImagesArm64.trivyFromSource.sbom;
+          kratos-sbom = ociImagesArm64.kratosFromSource.kratosSBOM;
         };
 
         arm64Packages = {
@@ -125,6 +126,8 @@
           postgresql-arm64 = ociImagesArm64.postgresqlOCI { debug = false; };
           devguard-debug-arm64 = ociImagesArm64.devguardOCI { debug = true; };
           postgresql-debug-arm64 = ociImagesArm64.postgresqlOCI { debug = true; };
+          kratos-arm64 = ociImagesArm64.kratosOCI { debug = false; };
+          kratos-debug-arm64 = ociImagesArm64.kratosOCI { debug = true; };
 
           deps-arm64 = hostPkgs.symlinkJoin {
             name = "devguard-deps-arm64";
@@ -139,6 +142,8 @@
           postgresql-amd64 = ociImagesAmd64.postgresqlOCI { debug = false; };
           devguard-debug-amd64 = ociImagesAmd64.devguardOCI { debug = true; };
           postgresql-debug-amd64 = ociImagesAmd64.postgresqlOCI { debug = true; };
+          kratos-amd64 = ociImagesAmd64.kratosOCI { debug = false; };
+          kratos-debug-amd64 = ociImagesAmd64.kratosOCI { debug = true; };
 
           deps-amd64 = hostPkgs.symlinkJoin {
             name = "devguard-deps-amd64";

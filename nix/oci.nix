@@ -22,7 +22,6 @@ rec {
       lib
       buildGoModule
       fetchFromGitHub
-      installShellFiles
       runCommand
       jq
       ;
@@ -30,9 +29,27 @@ rec {
 
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
-  trivyFromSource = import ./trivy.nix args;
-  craneFromSource = import ./crane.nix (args // { trivy = trivyFromSource.package; });
-  gitleaksFromSource = import ./gitleaks.nix (args // { trivy = trivyFromSource.package; });
+  trivyFromSource = import ./trivy.nix (
+    args
+    // {
+      inherit (pkgs) installShellFiles;
+    }
+  );
+
+  craneFromSource = import ./crane.nix (
+    args
+    // {
+      inherit (pkgs) installShellFiles;
+      trivy = trivyFromSource.package;
+    }
+  );
+  gitleaksFromSource = import ./gitleaks.nix (
+    args
+    // {
+      inherit (pkgs) installShellFiles;
+      trivy = trivyFromSource.package;
+    }
+  );
 
   common = import ./common.nix {
     inherit self;
@@ -60,6 +77,13 @@ rec {
     # passed explicitly from flake.nix
     inherit uv2nix pyproject-nix pyproject-build-systems;
   };
+  kratosFromSource = import ./kratos.nix (
+    args
+    // {
+      trivy = trivyFromSource.package;
+      inherit (pkgs) go;
+    }
+  );
 
   # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each
   # own their own supplementary SBOM via nix/sbom-lib.nix), semgrep ships a
@@ -164,6 +188,26 @@ rec {
       ];
     };
   };
+
+  kratosOCI =
+    { debug }:
+    pkgs.dockerTools.buildLayeredImage {
+      name = "kratos";
+      tag = dockerTag;
+      contents = [
+        pkgs.cacert # TLS root certificates (needed for outbound HTTPS)
+        kratosFromSource.kratos
+        kratosFromSource.kratosSBOM
+      ]
+      ++ (if debug then [ pkgs.busybox ] else [ ]);
+
+      config = {
+        Cmd = [ "/bin/kratos" ];
+        User = "53111:53111";
+        Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" ];
+        Entrypoint = [ "/bin/kratos" ];
+      };
+    };
 
   postgresqlOCI =
     { debug }:
