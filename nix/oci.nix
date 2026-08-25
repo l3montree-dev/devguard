@@ -77,7 +77,13 @@ rec {
     # passed explicitly from flake.nix
     inherit uv2nix pyproject-nix pyproject-build-systems;
   };
-  kratosFromSource = import ./kratos.nix (args // { trivy = trivyFromSource.package; inherit(pkgs) go; });
+  kratosFromSource = import ./kratos.nix (
+    args
+    // {
+      trivy = trivyFromSource.package;
+      inherit (pkgs) go;
+    }
+  );
 
   # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each
   # own their own supplementary SBOM via nix/sbom-lib.nix), semgrep ships a
