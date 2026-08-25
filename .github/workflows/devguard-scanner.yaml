@@ -129,6 +129,31 @@ jobs:
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
+  kratos-pipeline:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    with:
+      nix-target-amd64: kratos-amd64
+      nix-target-arm64: kratos-arm64
+      nix-version: '2.34.4'
+      image-name: ghcr.io/${{ github.repository }}/kratos
+      artifact-name-suffix: kratos
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/kratos
+      devguard-api-url: https://api.main.devguard.org
+      devguard-web-ui: https://main.devguard.org
+      fail-on-cvss: high
+      fail-on-risk: high
+      nix-cache-substituter: https://nix.garage.l3montree.cloud
+      nix-cache-public-key: nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      nix-cache-s3-bucket: nix
+      nix-cache-region: garage
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+
   postgresql-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main

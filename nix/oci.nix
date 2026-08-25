@@ -60,6 +60,7 @@ rec {
     # passed explicitly from flake.nix
     inherit uv2nix pyproject-nix pyproject-build-systems;
   };
+  kratosFromSource = import ./kratos.nix (args // { trivy = trivyFromSource.package; });
 
   # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each
   # own their own supplementary SBOM via nix/sbom-lib.nix), semgrep ships a
@@ -164,6 +165,25 @@ rec {
       ];
     };
   };
+
+  kratosOCI =
+    { debug }:
+    pkgs.dockerTools.buildLayeredImage {
+      name = "kratos";
+      tag = dockerTag;
+      contents = [
+        pkgs.cacert # TLS root certificates (needed for outbound HTTPS)
+        kratosFromSource.kratos
+        kratosFromSource.kratosSBOM
+      ]
+      ++ (if debug then [ pkgs.busybox ] else [ ]);
+
+      config = {
+        Cmd = [ "/bin/kratos" ];
+        User = "53111:53111";
+        Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" ];
+      };
+    };
 
   postgresqlOCI =
     { debug }:
