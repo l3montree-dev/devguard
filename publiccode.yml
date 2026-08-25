@@ -20,7 +20,7 @@ releaseDate: "2026-08-24"
 softwareType: "standalone/web"
 url: "https://github.com/l3montree-dev/devguard"
 landingURL: "https://devguard.org"
-logo: ".opencode/devguard-logo.svg"
+logo: "docs/logo_inverse_horizontal.svg"
 maintenance:
   type: "internal"
 
@@ -36,12 +36,11 @@ legal:
     2023-2026 L3montree Cybersecurity GmbH
 intendedAudience:
   scope:
+    - "manufacturing"
     - "government"
-    - "local-authorities"
     - "research"
 localisation:
   availableLanguages:
-    - "de"
     - "en"
   localisationReady: true
 roadmap: "https://devguard.org"
