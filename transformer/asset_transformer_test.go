@@ -39,21 +39,6 @@ func TestApplyToModel(t *testing.T) {
 			updated: true,
 		},
 		{
-			name: "Update ReachableFromInternet",
-			patch: dtos.AssetPatchRequest{
-				ReachableFromInternet: new(true),
-			},
-			initial: models.Asset{
-
-				ReachableFromInternet: false,
-			},
-			expected: models.Asset{
-
-				ReachableFromInternet: true,
-			},
-			updated: true,
-		},
-		{
 			name: "Update RepositoryID and RepositoryName",
 			patch: dtos.AssetPatchRequest{
 				RepositoryID:   new("new-repo-id"),
@@ -111,6 +96,73 @@ func TestApplyToModel(t *testing.T) {
 				WebhookSecret: &webhookSecret,
 			},
 			updated: true,
+		},
+		{
+			name: "Update all modified environmental metrics",
+			patch: dtos.AssetPatchRequest{
+				ModifiedAttackVector:       new(dtos.MAVPhysical),
+				ModifiedAttackComplexity:   new(dtos.MACHigh),
+				ModifiedPrivilegesRequired: new(dtos.MPRLow),
+				ModifiedScope:              new(dtos.MSChanged),
+				ModifiedUserInteraction:    new(dtos.MUIRequired),
+				ModifiedConfidentiality:    new(dtos.MRLNone),
+				ModifiedIntegrity:          new(dtos.MRLLow),
+				ModifiedAvailability:       new(dtos.MRLHigh),
+			},
+			initial: models.Asset{
+				Environmental: dtos.Environmental{
+					ModifiedAttackVector:       dtos.MAVNotDefined,
+					ModifiedAttackComplexity:   dtos.MACNotDefined,
+					ModifiedPrivilegesRequired: dtos.MPRNotDefined,
+					ModifiedScope:              dtos.MSNotDefined,
+					ModifiedUserInteraction:    dtos.MUINotDefined,
+					ModifiedConfidentiality:    dtos.MRLNotDefined,
+					ModifiedIntegrity:          dtos.MRLNotDefined,
+					ModifiedAvailability:       dtos.MRLNotDefined,
+				},
+			},
+			expected: models.Asset{
+				Environmental: dtos.Environmental{
+					ModifiedAttackVector:       dtos.MAVPhysical,
+					ModifiedAttackComplexity:   dtos.MACHigh,
+					ModifiedPrivilegesRequired: dtos.MPRLow,
+					ModifiedScope:              dtos.MSChanged,
+					ModifiedUserInteraction:    dtos.MUIRequired,
+					ModifiedConfidentiality:    dtos.MRLNone,
+					ModifiedIntegrity:          dtos.MRLLow,
+					ModifiedAvailability:       dtos.MRLHigh,
+				},
+			},
+			updated: true,
+		},
+		{
+			name:  "Keep modified environmental metrics untouched if not part of the patch",
+			patch: dtos.AssetPatchRequest{},
+			initial: models.Asset{
+				Environmental: dtos.Environmental{
+					ModifiedAttackVector:       dtos.MAVPhysical,
+					ModifiedAttackComplexity:   dtos.MACHigh,
+					ModifiedPrivilegesRequired: dtos.MPRLow,
+					ModifiedScope:              dtos.MSChanged,
+					ModifiedUserInteraction:    dtos.MUIRequired,
+					ModifiedConfidentiality:    dtos.MRLNone,
+					ModifiedIntegrity:          dtos.MRLLow,
+					ModifiedAvailability:       dtos.MRLHigh,
+				},
+			},
+			expected: models.Asset{
+				Environmental: dtos.Environmental{
+					ModifiedAttackVector:       dtos.MAVPhysical,
+					ModifiedAttackComplexity:   dtos.MACHigh,
+					ModifiedPrivilegesRequired: dtos.MPRLow,
+					ModifiedScope:              dtos.MSChanged,
+					ModifiedUserInteraction:    dtos.MUIRequired,
+					ModifiedConfidentiality:    dtos.MRLNone,
+					ModifiedIntegrity:          dtos.MRLLow,
+					ModifiedAvailability:       dtos.MRLHigh,
+				},
+			},
+			updated: false,
 		},
 	}
 

@@ -46,8 +46,6 @@
     eachSystem systems (
       system:
       let
-        inherit (lib.systems.elaborate system) isLinux;
-
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           inherit (unstablePkgs) buildGoModule;
@@ -161,7 +159,9 @@
           default = hostBinaries.devguard;
         }
         // hostBinaries
-        // lib.optionalAttrs isLinux (sbomOutputs // arm64Packages // amd64Packages);
+        // sbomOutputs
+        // arm64Packages
+        // amd64Packages;
         devShells.default = hostPkgs.mkShell {
           buildInputs = [
             unstablePkgs.go

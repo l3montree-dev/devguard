@@ -20,11 +20,12 @@ All release commands work with **sibling directories**. Before running any `rele
 
 ```
 ~/workspace/
-├── devguard/               ← main backend repo (also where you build this tool)
-├── devguard-web/           ← frontend repo
-├── devguard-helm-chart/    ← Helm chart repo
-├── devguard-ci-component/  ← CI component repo
-└── devguard-documentation/ ← public documentation repo
+├── devguard/                    ← main backend repo (also where you build this tool)
+├── devguard-web/                ← frontend repo
+├── devguard-helm-chart/         ← Helm chart repo
+├── devguard-ci-component/       ← CI component repo
+├── devguard-docker-deployment/  ← Docker Compose deployment repo
+└── devguard-documentation/      ← public documentation repo
 ```
 
 ```bash
@@ -40,6 +41,7 @@ The directory names must match exactly:
 | `devguard-web` | `github.com/l3montree-dev/devguard-web` |
 | `devguard-helm-chart` | `github.com/l3montree-dev/devguard-helm-chart` |
 | `devguard-ci-component` | `github.com/l3montree-dev/devguard-ci-component` |
+| `devguard-docker-deployment` | `github.com/l3montree-dev/devguard-docker-deployment` |
 | `devguard-documentation` | `github.com/l3montree-dev/devguard-documentation` |
 
 ## Commands
@@ -66,8 +68,9 @@ devguard-maint release web v1.8.0
 
 ### `release helm-chart <tag>`
 
-Updates `Chart.yaml`, `values.yaml`, and `docker-compose-try-it.yaml` with the latest detected `devguard` and `devguard-web` patch tags for the same minor version, then commits, pushes, and tags `devguard-helm-chart`. Fails if:
+Updates `Chart.yaml`, `values.yaml`, and `devguard-docker-deployment/.env.example` with the latest detected `devguard` and `devguard-web` patch tags for the same minor version, then commits, pushes, and tags `devguard-helm-chart` (and pushes the `devguard-docker-deployment` changes, if any). Fails if:
 - `devguard-helm-chart/CHANGELOG.md` has no entry for `<tag>`
+- `devguard-docker-deployment/CHANGELOG.md` has no entry for `<tag>` (you will be offered to auto-generate one documenting just the image bumps)
 - No `devguard` or `devguard-web` release exists with the same minor version
 
 ```bash

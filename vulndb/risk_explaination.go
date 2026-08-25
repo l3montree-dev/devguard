@@ -117,27 +117,23 @@ func componentDepthMessages(depth int) string {
 	return fmt.Sprintf("The vulnerability is in a dependency of a dependency in your project. It is %d levels deep.", depth)
 }
 
-const (
-	RequirementsLevelHigh = "High"
-)
-
 // cvssBE generates a message based on the asset and CVSS object.
 func cvssBE(asset models.Asset, cvssObj map[string]string) string {
 	elements := []string{}
 
-	if asset.AvailabilityRequirement == RequirementsLevelHigh && cvssObj["A"] == "H" {
+	if asset.AvailabilityRequirement == dtos.RequirementLevelHigh && cvssObj["A"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability is critical because the asset requires high availability, and the vulnerability significantly impacts availability.")
 	} else if cvssObj["A"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability significantly impacts availability.")
 	}
 
-	if asset.IntegrityRequirement == RequirementsLevelHigh && cvssObj["I"] == "H" {
+	if asset.IntegrityRequirement == dtos.RequirementLevelHigh && cvssObj["I"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability is critical because the asset requires high integrity, and the vulnerability significantly impacts integrity.")
 	} else if cvssObj["I"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability significantly impacts integrity.")
 	}
 
-	if asset.ConfidentialityRequirement == RequirementsLevelHigh && cvssObj["C"] == "H" {
+	if asset.ConfidentialityRequirement == dtos.RequirementLevelHigh && cvssObj["C"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability is critical because the asset requires high confidentiality, and the vulnerability significantly impacts confidentiality.")
 	} else if cvssObj["C"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability significantly impacts confidentiality.")
