@@ -29,9 +29,13 @@ rec {
 
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
-  trivyFromSource = import ./trivy.nix args // {
-    inherit (pkgs) installShellFiles;
-  };
+  trivyFromSource = import ./trivy.nix (
+    args
+    // {
+      inherit (pkgs) installShellFiles;
+    }
+  );
+
   craneFromSource = import ./crane.nix (
     args
     // {
