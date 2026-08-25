@@ -89,7 +89,14 @@ type AssetObject struct {
 	AvailabilityRequirement    string `json:"availabilityRequirement"`
 	IntegrityRequirement       string `json:"integrityRequirement"`
 	ConfidentialityRequirement string `json:"confidentialityRequirement"`
-	ReachableFromInternet      bool   `json:"reachableFromInternet"`
+	ModifiedAttackVector       string `json:"modifiedAttackVector"`
+	ModifiedAttackComplexity   string `json:"modifiedAttackComplexity"`
+	ModifiedPrivilegesRequired string `json:"modifiedPrivilegesRequired"`
+	ModifiedScope              string `json:"modifiedScope"`
+	ModifiedUserInteraction    string `json:"modifiedUserInteraction"`
+	ModifiedConfidentiality    string `json:"modifiedConfidentiality"`
+	ModifiedIntegrity          string `json:"modifiedIntegrity"`
+	ModifiedAvailability       string `json:"modifiedAvailability"`
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
@@ -147,7 +154,14 @@ func ToAssetObject(a models.Asset) AssetObject {
 		AvailabilityRequirement:    string(a.AvailabilityRequirement),
 		IntegrityRequirement:       string(a.IntegrityRequirement),
 		ConfidentialityRequirement: string(a.ConfidentialityRequirement),
-		ReachableFromInternet:      a.ReachableFromInternet,
+		ModifiedAttackVector:       string(a.ModifiedAttackVector),
+		ModifiedAttackComplexity:   string(a.ModifiedAttackComplexity),
+		ModifiedPrivilegesRequired: string(a.ModifiedPrivilegesRequired),
+		ModifiedScope:              string(a.ModifiedScope),
+		ModifiedUserInteraction:    string(a.ModifiedUserInteraction),
+		ModifiedConfidentiality:    string(a.ModifiedConfidentiality),
+		ModifiedIntegrity:          string(a.ModifiedIntegrity),
+		ModifiedAvailability:       string(a.ModifiedAvailability),
 
 		RepositoryID:   a.RepositoryID,
 		RepositoryName: a.RepositoryName,

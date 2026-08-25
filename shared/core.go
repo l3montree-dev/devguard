@@ -10,8 +10,6 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/l3montree-dev/devguard/database/models"
-
 	"github.com/labstack/echo/v4"
 	"github.com/lmittmann/tint"
 	"gorm.io/gorm"
@@ -50,14 +48,6 @@ func InitLogger() {
 
 func LoadConfig() error {
 	return godotenv.Load()
-}
-
-func GetEnvironmentalFromAsset(m models.Asset) Environmental {
-	return SanitizeEnv(Environmental{
-		ConfidentialityRequirements: string(m.ConfidentialityRequirement),
-		AvailabilityRequirements:    string(m.AvailabilityRequirement),
-		IntegrityRequirements:       string(m.IntegrityRequirement),
-	})
 }
 
 func BootstrapOrg(ctx context.Context, rbac AccessControl, userID string, userRole Role) error {
