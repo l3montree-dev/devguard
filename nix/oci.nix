@@ -22,7 +22,6 @@ rec {
       lib
       buildGoModule
       fetchFromGitHub
-      installShellFiles
       runCommand
       jq
       ;
@@ -30,9 +29,23 @@ rec {
 
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
-  trivyFromSource = import ./trivy.nix args;
-  craneFromSource = import ./crane.nix (args // { trivy = trivyFromSource.package; });
-  gitleaksFromSource = import ./gitleaks.nix (args // { trivy = trivyFromSource.package; });
+  trivyFromSource = import ./trivy.nix args // {
+    inherit (pkgs) installShellFiles;
+  };
+  craneFromSource = import ./crane.nix (
+    args
+    // {
+      inherit (pkgs) installShellFiles;
+      trivy = trivyFromSource.package;
+    }
+  );
+  gitleaksFromSource = import ./gitleaks.nix (
+    args
+    // {
+      inherit (pkgs) installShellFiles;
+      trivy = trivyFromSource.package;
+    }
+  );
 
   common = import ./common.nix {
     inherit self;

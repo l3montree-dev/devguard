@@ -2,7 +2,6 @@
   buildGoModule,
   lib,
   fetchFromGitHub,
-  installShellFiles,
   # optional: only needed to build devguardScannerSBOM (passed explicitly
   # from oci.nix). The plain "binaries" call site in flake.nix never
   # references that attribute, so it's fine for these to stay null there.
