@@ -2,6 +2,7 @@
   buildGoModule,
   lib,
   fetchFromGitHub,
+  go,
   # optional: only needed to build devguardScannerSBOM (passed explicitly
   # from oci.nix). The plain "binaries" call site in flake.nix never
   # references that attribute, so it's fine for these to stay null there.
@@ -29,11 +30,12 @@ rec {
     "github.com/slack-go/slack" = "v0.29.0";
   };
 
-  goModPatchScript = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
-      modulePath: ver: "go mod edit -replace ${modulePath}=${modulePath}@${ver}"
-    ) goModPatches
-  );
+  goModPatchScript =
+    lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (
+        modulePath: ver: "go mod edit -replace ${modulePath}=${modulePath}@${ver}"
+      ) goModPatches
+    );
 
   # Only include files that affect the Go build output — Go sources, modules,
   # vendored deps, and directories used by //go:embed directives.
@@ -88,6 +90,18 @@ rec {
     toolName = "kratos";
     inherit src version;
     inherit (kratos) goModules;
+    # Same replace as the actual build, so the SBOM reports what's actually
+    # shipped instead of the pre-patch versions.
+    postPatch = goModPatchScript     # kratos embeds other Go modules as subdirectories (e.g. oryx/,
+    # pkg/client-go/, test/e2e/*), each with its own go.mod/go.sum. Only ./
+    # (the root module) is what actually gets built or should show up in the
+    # SBOM - remove the rest so tooling (go mod edit above, and later the
+    # SBOM's trivy scan) only ever sees one module boundary.
+    + ''
+
+      find . -mindepth 2 \( -name go.mod -o -name go.sum \) -delete
+    '';
+    extraNativeBuildInputs = [ go ];
     modulePurl = "pkg:golang/github.com/ory/kratos";
     binaries = [
       {
