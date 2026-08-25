@@ -159,7 +159,8 @@ func RiskCalculation(cve *models.CVE, env dtos.Environmental) (dtos.RiskMetrics,
 		if activelyExploited(*cve) {
 			cvss.Set("E", "H") // nolint:errcheck
 		}
-		setEnv(cvss, env)
+		applyRequirements(cvss, env)
+		applyExposure(cvss, env)
 		vector = cvss.Vector()
 		risk.WithEnvironment = getBaseAndEnvironmentalScore(cvss, "CVSS:3.0")
 		risk.WithThreatIntelligence = getBaseAndThreatIntelligenceScore(cvss, "CVSS:3.0")
@@ -184,11 +185,8 @@ func RiskCalculation(cve *models.CVE, env dtos.Environmental) (dtos.RiskMetrics,
 
 		oldE, _ := cvss.Get("E")
 		cvss.Set("E", "X") // nolint:errcheck
-		for key, value := range envMetrics(env) {
-			if value != "" {
-				cvss.Set(key, value) // nolint:errcheck
-			}
-		}
+		applyRequirements(cvss, env)
+		applyExposure(cvss, env)
 		environmentalScore := cvss.Score()
 		cvss.Set("E", oldE) // nolint:errcheck
 
@@ -248,7 +246,8 @@ func RiskCalculation(cve *models.CVE, env dtos.Environmental) (dtos.RiskMetrics,
 			cvss.Set("E", "H") // nolint:errcheck
 		}
 
-		setEnv(cvss, env)
+		applyRequirements(cvss, env)
+		applyExposure(cvss, env)
 		if env != (dtos.Environmental{}) {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
 		} else {
@@ -313,11 +312,28 @@ func getBaseAndEnvironmentalScore(cvss cvssInterface, version string) float64 {
 	return score
 }
 
-func envMetrics(env dtos.Environmental) map[string]string {
+// exposureMetric pairs a base CVSS metric with its "Modified" (exposure) counterpart and the
+// severity ranking (least to most severe) shared by both, so an exposure value can be compared
+// against the vulnerability's own base value for that metric.
+type exposureMetric struct {
+	baseKey string
+	modKey  string
+	order   map[string]int
+}
+
+var exposureMetrics = []exposureMetric{
+	{"AV", "MAV", map[string]int{"P": 0, "L": 1, "A": 2, "N": 3}},
+	{"AC", "MAC", map[string]int{"H": 0, "L": 1}},
+	{"PR", "MPR", map[string]int{"H": 0, "L": 1, "N": 2}},
+	{"UI", "MUU", map[string]int{"R": 0, "N": 1}},
+	{"S", "MS", map[string]int{"U": 0, "C": 1}},
+	{"C", "MC", map[string]int{"N": 0, "L": 1, "H": 2}},
+	{"I", "MI", map[string]int{"N": 0, "L": 1, "H": 2}},
+	{"A", "MA", map[string]int{"N": 0, "L": 1, "H": 2}},
+}
+
+func exposureValues(env dtos.Environmental) map[string]string {
 	return map[string]string{
-		"CR":  dtos.ToCVSS(env.ConfidentialityRequirement),
-		"IR":  dtos.ToCVSS(env.IntegrityRequirement),
-		"AR":  dtos.ToCVSS(env.AvailabilityRequirement),
 		"MAV": dtos.ToCVSS(env.ModifiedAttackVector),
 		"MAC": dtos.ToCVSS(env.ModifiedAttackComplexity),
 		"MPR": dtos.ToCVSS(env.ModifiedPrivilegesRequired),
@@ -329,10 +345,47 @@ func envMetrics(env dtos.Environmental) map[string]string {
 	}
 }
 
-func setEnv(cvss cvssInterface, env dtos.Environmental) {
-	for key, value := range envMetrics(env) {
-		if value != "" {
-			cvss.Set(key, value) // nolint:errcheck
+type cvssSetGetter interface {
+	Set(key, value string) error
+	Get(key string) (string, error)
+}
+
+
+func applyRequirements(cvss cvssSetGetter, env dtos.Environmental) {
+	cr := dtos.ToCVSS(env.ConfidentialityRequirement)
+	if cr != "" {
+		cvss.Set("CR", cr) // nolint:errcheck
+	}
+	ir := dtos.ToCVSS(env.IntegrityRequirement)
+	if ir != "" {
+		cvss.Set("IR", ir) // nolint:errcheck
+	}
+	ar := dtos.ToCVSS(env.AvailabilityRequirement)
+	if ar != "" {
+		cvss.Set("AR", ar) // nolint:errcheck
+	}
+}
+
+
+func applyExposure(cvss cvssSetGetter, env dtos.Environmental) {
+	exposure := exposureValues(env)
+	for _, m := range exposureMetrics {
+		modValue := exposure[m.modKey]
+		if modValue == "" {
+			continue
+		}
+		baseValue, err := cvss.Get(m.baseKey)
+		if err != nil {
+			continue
+		}
+		baseRank, baseOK := m.order[baseValue]
+		modRank, modOK := m.order[modValue]
+		if !baseOK || !modOK {
+			continue
+		}
+		// only apply the exposure value if it is strictly less severe than the base metric
+		if modRank < baseRank {
+			cvss.Set(m.modKey, modValue) // nolint:errcheck
 		}
 	}
 }

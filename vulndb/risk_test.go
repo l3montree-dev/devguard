@@ -742,3 +742,21 @@ func TestModifiedAttackComplexityLowersRisk(t *testing.T) {
 			baseline.Risk, scoped.Risk)
 	}
 }
+
+func TestModifiedAttackVectorNeverRaisesRisk(t *testing.T) {
+	cve := &models.CVE{
+		CVE:    "CVE-TEST-0003",
+		Vector: "CVSS:3.1/AV:P/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+		CVSS:   6.8,
+	}
+
+	baseline := RawRisk(cve, dtos.Environmental{}, 1)
+	scoped := RawRisk(cve, dtos.Environmental{
+		ModifiedAttackVector: "network",
+	}, 1)
+
+	if scoped.Risk > baseline.Risk {
+		t.Errorf("expected MAV=network to NOT raise risk above base AV:P: baseline=%.2f scoped=%.2f",
+			baseline.Risk, scoped.Risk)
+	}
+}
