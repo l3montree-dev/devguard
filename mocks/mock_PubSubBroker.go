@@ -107,7 +107,7 @@ type PubSubBroker_Publish_Call struct {
 // Publish is a helper method to define mock.On call
 //   - ctx context.Context
 //   - message shared.PubSubMessage
-func (_e *PubSubBroker_Expecter) Publish(ctx interface{}, message interface{}) *PubSubBroker_Publish_Call {
+func (_e *PubSubBroker_Expecter) Publish(ctx any, message any) *PubSubBroker_Publish_Call {
 	return &PubSubBroker_Publish_Call{Call: _e.mock.On("Publish", ctx, message)}
 }
 
@@ -174,7 +174,7 @@ type PubSubBroker_Subscribe_Call struct {
 
 // Subscribe is a helper method to define mock.On call
 //   - topic shared.PubSubChannel
-func (_e *PubSubBroker_Expecter) Subscribe(topic interface{}) *PubSubBroker_Subscribe_Call {
+func (_e *PubSubBroker_Expecter) Subscribe(topic any) *PubSubBroker_Subscribe_Call {
 	return &PubSubBroker_Subscribe_Call{Call: _e.mock.On("Subscribe", topic)}
 }
 

@@ -79,7 +79,7 @@ type VulnEventRepository_CountByVexRuleIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ruleIDs []string
-func (_e *VulnEventRepository_Expecter) CountByVexRuleIDs(ctx interface{}, tx interface{}, ruleIDs interface{}) *VulnEventRepository_CountByVexRuleIDs_Call {
+func (_e *VulnEventRepository_Expecter) CountByVexRuleIDs(ctx any, tx any, ruleIDs any) *VulnEventRepository_CountByVexRuleIDs_Call {
 	return &VulnEventRepository_CountByVexRuleIDs_Call{Call: _e.mock.On("CountByVexRuleIDs", ctx, tx, ruleIDs)}
 }
 
@@ -142,7 +142,7 @@ type VulnEventRepository_DeleteEventByID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - eventID string
-func (_e *VulnEventRepository_Expecter) DeleteEventByID(ctx interface{}, tx interface{}, eventID interface{}) *VulnEventRepository_DeleteEventByID_Call {
+func (_e *VulnEventRepository_Expecter) DeleteEventByID(ctx any, tx any, eventID any) *VulnEventRepository_DeleteEventByID_Call {
 	return &VulnEventRepository_DeleteEventByID_Call{Call: _e.mock.On("DeleteEventByID", ctx, tx, eventID)}
 }
 
@@ -215,7 +215,7 @@ type VulnEventRepository_GetLastEventBeforeTimestamp_Call struct {
 //   - tx shared.DB
 //   - vulnID uuid.UUID
 //   - time1 time.Time
-func (_e *VulnEventRepository_Expecter) GetLastEventBeforeTimestamp(ctx interface{}, tx interface{}, vulnID interface{}, time1 interface{}) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
+func (_e *VulnEventRepository_Expecter) GetLastEventBeforeTimestamp(ctx any, tx any, vulnID any, time1 any) *VulnEventRepository_GetLastEventBeforeTimestamp_Call {
 	return &VulnEventRepository_GetLastEventBeforeTimestamp_Call{Call: _e.mock.On("GetLastEventBeforeTimestamp", ctx, tx, vulnID, time1)}
 }
 
@@ -294,7 +294,7 @@ type VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vulnIDs []uuid.UUID
-func (_e *VulnEventRepository_Expecter) GetSecurityRelevantEventsForVulnIDs(ctx interface{}, tx interface{}, vulnIDs interface{}) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
+func (_e *VulnEventRepository_Expecter) GetSecurityRelevantEventsForVulnIDs(ctx any, tx any, vulnIDs any) *VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call {
 	return &VulnEventRepository_GetSecurityRelevantEventsForVulnIDs_Call{Call: _e.mock.On("GetSecurityRelevantEventsForVulnIDs", ctx, tx, vulnIDs)}
 }
 
@@ -367,7 +367,7 @@ type VulnEventRepository_HasAccessToEvent_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - eventID string
-func (_e *VulnEventRepository_Expecter) HasAccessToEvent(ctx interface{}, tx interface{}, assetID interface{}, eventID interface{}) *VulnEventRepository_HasAccessToEvent_Call {
+func (_e *VulnEventRepository_Expecter) HasAccessToEvent(ctx any, tx any, assetID any, eventID any) *VulnEventRepository_HasAccessToEvent_Call {
 	return &VulnEventRepository_HasAccessToEvent_Call{Call: _e.mock.On("HasAccessToEvent", ctx, tx, assetID, eventID)}
 }
 
@@ -447,7 +447,7 @@ type VulnEventRepository_ReadAssetEventsByVulnID_Call struct {
 //   - tx shared.DB
 //   - vulnID uuid.UUID
 //   - vulnType dtos.VulnType
-func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(ctx interface{}, tx interface{}, vulnID interface{}, vulnType interface{}) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(ctx any, tx any, vulnID any, vulnType any) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	return &VulnEventRepository_ReadAssetEventsByVulnID_Call{Call: _e.mock.On("ReadAssetEventsByVulnID", ctx, tx, vulnID, vulnType)}
 }
 
@@ -527,7 +527,7 @@ type VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call struct {
 //   - assetVersionName string
 //   - pageInfo shared.PageInfo
 //   - filter []shared.FilterQuery
-func (_e *VulnEventRepository_Expecter) ReadEventsByAssetIDAndAssetVersionName(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, pageInfo interface{}, filter interface{}) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_e *VulnEventRepository_Expecter) ReadEventsByAssetIDAndAssetVersionName(ctx any, tx any, assetID any, assetVersionName any, pageInfo any, filter any) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	return &VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("ReadEventsByAssetIDAndAssetVersionName", ctx, tx, assetID, assetVersionName, pageInfo, filter)}
 }
 
@@ -605,7 +605,7 @@ type VulnEventRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - event *models.VulnEvent
-func (_e *VulnEventRepository_Expecter) Save(ctx interface{}, tx interface{}, event interface{}) *VulnEventRepository_Save_Call {
+func (_e *VulnEventRepository_Expecter) Save(ctx any, tx any, event any) *VulnEventRepository_Save_Call {
 	return &VulnEventRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, event)}
 }
 
@@ -668,7 +668,7 @@ type VulnEventRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - events []models.VulnEvent
-func (_e *VulnEventRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, events interface{}) *VulnEventRepository_SaveBatch_Call {
+func (_e *VulnEventRepository_Expecter) SaveBatch(ctx any, tx any, events any) *VulnEventRepository_SaveBatch_Call {
 	return &VulnEventRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, events)}
 }
 
@@ -731,7 +731,7 @@ type VulnEventRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - events []models.VulnEvent
-func (_e *VulnEventRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, events interface{}) *VulnEventRepository_SaveBatchBestEffort_Call {
+func (_e *VulnEventRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, events any) *VulnEventRepository_SaveBatchBestEffort_Call {
 	return &VulnEventRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, events)}
 }
 

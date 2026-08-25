@@ -72,7 +72,7 @@ type RBACProvider_DomainsOfSession_Call struct {
 
 // DomainsOfSession is a helper method to define mock.On call
 //   - session shared.AuthSession
-func (_e *RBACProvider_Expecter) DomainsOfSession(session interface{}) *RBACProvider_DomainsOfSession_Call {
+func (_e *RBACProvider_Expecter) DomainsOfSession(session any) *RBACProvider_DomainsOfSession_Call {
 	return &RBACProvider_DomainsOfSession_Call{Call: _e.mock.On("DomainsOfSession", session)}
 }
 
@@ -180,7 +180,7 @@ type RBACProvider_GetDomainRBAC_Call struct {
 
 // GetDomainRBAC is a helper method to define mock.On call
 //   - domain string
-func (_e *RBACProvider_Expecter) GetDomainRBAC(domain interface{}) *RBACProvider_GetDomainRBAC_Call {
+func (_e *RBACProvider_Expecter) GetDomainRBAC(domain any) *RBACProvider_GetDomainRBAC_Call {
 	return &RBACProvider_GetDomainRBAC_Call{Call: _e.mock.On("GetDomainRBAC", domain)}
 }
 
@@ -242,7 +242,7 @@ type RBACProvider_GetOwnerDomainsOfUser_Call struct {
 
 // GetOwnerDomainsOfUser is a helper method to define mock.On call
 //   - user string
-func (_e *RBACProvider_Expecter) GetOwnerDomainsOfUser(user interface{}) *RBACProvider_GetOwnerDomainsOfUser_Call {
+func (_e *RBACProvider_Expecter) GetOwnerDomainsOfUser(user any) *RBACProvider_GetOwnerDomainsOfUser_Call {
 	return &RBACProvider_GetOwnerDomainsOfUser_Call{Call: _e.mock.On("GetOwnerDomainsOfUser", user)}
 }
 
@@ -293,7 +293,7 @@ type RBACProvider_RevokeAllRolesForDomain_Call struct {
 
 // RevokeAllRolesForDomain is a helper method to define mock.On call
 //   - domain uuid.UUID
-func (_e *RBACProvider_Expecter) RevokeAllRolesForDomain(domain interface{}) *RBACProvider_RevokeAllRolesForDomain_Call {
+func (_e *RBACProvider_Expecter) RevokeAllRolesForDomain(domain any) *RBACProvider_RevokeAllRolesForDomain_Call {
 	return &RBACProvider_RevokeAllRolesForDomain_Call{Call: _e.mock.On("RevokeAllRolesForDomain", domain)}
 }
 

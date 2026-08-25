@@ -168,6 +168,7 @@
             unstablePkgs.gotools
             unstablePkgs.gopls
             unstablePkgs.golangci-lint
+            unstablePkgs.go-mockery
             self.formatter.${system}
           ];
         };
