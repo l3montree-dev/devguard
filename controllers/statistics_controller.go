@@ -114,6 +114,19 @@ func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artif
 	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
+// @Summary Get risk history for an asset across all asset versions
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Param start query string true "Start date (YYYY-MM-DD)"
+// @Param end query string true "End date (YYYY-MM-DD)"
+// @Success 200 {array} dtos.RiskHistoryWithVersionDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/stats/risk-history/ [get]
 func (c *StatisticsController) GetAssetRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
 	start := ctx.QueryParam("start")
