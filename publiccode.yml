@@ -47,6 +47,7 @@ roadmap: "https://devguard.org"
 dependsOn:
   open:
     - name: "PostgreSQL"
+    - name: "Kratos"
 description:
   de:
     features:
