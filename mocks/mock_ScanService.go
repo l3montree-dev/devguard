@@ -92,7 +92,7 @@ type ScanService_FetchSbomsFromUpstream_Call struct {
 //   - artifactName string
 //   - ref string
 //   - upstreamURLs []string
-func (_e *ScanService_Expecter) FetchSbomsFromUpstream(ctx interface{}, artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchSbomsFromUpstream_Call {
+func (_e *ScanService_Expecter) FetchSbomsFromUpstream(ctx any, artifactName any, ref any, upstreamURLs any) *ScanService_FetchSbomsFromUpstream_Call {
 	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", ctx, artifactName, ref, upstreamURLs)}
 }
 
@@ -181,7 +181,7 @@ type ScanService_FetchVexFromUpstream_Call struct {
 //   - ctx context.Context
 //   - assetID uuid.UUID
 //   - upstreamURLs []string
-func (_e *ScanService_Expecter) FetchVexFromUpstream(ctx interface{}, assetID interface{}, upstreamURLs interface{}) *ScanService_FetchVexFromUpstream_Call {
+func (_e *ScanService_Expecter) FetchVexFromUpstream(ctx any, assetID any, upstreamURLs any) *ScanService_FetchVexFromUpstream_Call {
 	return &ScanService_FetchVexFromUpstream_Call{Call: _e.mock.On("FetchVexFromUpstream", ctx, assetID, upstreamURLs)}
 }
 
@@ -277,7 +277,7 @@ type ScanService_HandleFirstPartyVulnResult_Call struct {
 //   - scannerID string
 //   - userID string
 //   - userAgent *string
-func (_e *ScanService_Expecter) HandleFirstPartyVulnResult(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, sarifScan interface{}, scannerID interface{}, userID interface{}, userAgent interface{}) *ScanService_HandleFirstPartyVulnResult_Call {
+func (_e *ScanService_Expecter) HandleFirstPartyVulnResult(ctx any, org any, project any, asset any, assetVersion any, sarifScan any, scannerID any, userID any, userAgent any) *ScanService_HandleFirstPartyVulnResult_Call {
 	return &ScanService_HandleFirstPartyVulnResult_Call{Call: _e.mock.On("HandleFirstPartyVulnResult", ctx, org, project, asset, assetVersion, sarifScan, scannerID, userID, userAgent)}
 }
 
@@ -405,7 +405,7 @@ type ScanService_HandleScanResult_Call struct {
 //   - artifactName string
 //   - userID string
 //   - userAgent *string
-func (_e *ScanService_Expecter) HandleScanResult(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, sbom interface{}, vulns interface{}, artifactName interface{}, userID interface{}, userAgent interface{}) *ScanService_HandleScanResult_Call {
+func (_e *ScanService_Expecter) HandleScanResult(ctx any, tx any, org any, project any, asset any, assetVersion any, sbom any, vulns any, artifactName any, userID any, userAgent any) *ScanService_HandleScanResult_Call {
 	return &ScanService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)}
 }
 
@@ -542,7 +542,7 @@ type ScanService_ScanNormalizedSBOM_Call struct {
 //   - normalizedBom *normalize.SBOMGraph
 //   - userID string
 //   - userAgent *string
-func (_e *ScanService_Expecter) ScanNormalizedSBOM(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, normalizedBom interface{}, userID interface{}, userAgent interface{}) *ScanService_ScanNormalizedSBOM_Call {
+func (_e *ScanService_Expecter) ScanNormalizedSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifact any, normalizedBom any, userID any, userAgent any) *ScanService_ScanNormalizedSBOM_Call {
 	return &ScanService_ScanNormalizedSBOM_Call{Call: _e.mock.On("ScanNormalizedSBOM", ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)}
 }
 
@@ -648,7 +648,7 @@ type ScanService_ScanSBOMWithoutSaving_Call struct {
 // ScanSBOMWithoutSaving is a helper method to define mock.On call
 //   - ctx context.Context
 //   - bom *cyclonedx.BOM
-func (_e *ScanService_Expecter) ScanSBOMWithoutSaving(ctx interface{}, bom interface{}) *ScanService_ScanSBOMWithoutSaving_Call {
+func (_e *ScanService_Expecter) ScanSBOMWithoutSaving(ctx any, bom any) *ScanService_ScanSBOMWithoutSaving_Call {
 	return &ScanService_ScanSBOMWithoutSaving_Call{Call: _e.mock.On("ScanSBOMWithoutSaving", ctx, bom)}
 }
 
@@ -715,7 +715,7 @@ type ScanService_ScanSarifWithoutSaving_Call struct {
 //   - ctx context.Context
 //   - sarifScan sarif.SarifSchema210Json
 //   - scannerID string
-func (_e *ScanService_Expecter) ScanSarifWithoutSaving(ctx interface{}, sarifScan interface{}, scannerID interface{}) *ScanService_ScanSarifWithoutSaving_Call {
+func (_e *ScanService_Expecter) ScanSarifWithoutSaving(ctx any, sarifScan any, scannerID any) *ScanService_ScanSarifWithoutSaving_Call {
 	return &ScanService_ScanSarifWithoutSaving_Call{Call: _e.mock.On("ScanSarifWithoutSaving", ctx, sarifScan, scannerID)}
 }
 
@@ -803,7 +803,7 @@ type ScanService_SyncArtifactUpstreamSBOMSources_Call struct {
 //   - artifact models.Artifact
 //   - userID string
 //   - userAgent *string
-func (_e *ScanService_Expecter) SyncArtifactUpstreamSBOMSources(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, userID interface{}, userAgent interface{}) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
+func (_e *ScanService_Expecter) SyncArtifactUpstreamSBOMSources(ctx any, tx any, org any, project any, asset any, assetVersion any, artifact any, userID any, userAgent any) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
 	return &ScanService_SyncArtifactUpstreamSBOMSources_Call{Call: _e.mock.On("SyncArtifactUpstreamSBOMSources", ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)}
 }
 
@@ -912,7 +912,7 @@ type ScanService_VexRulesFromDocument_Call struct {
 // VexRulesFromDocument is a helper method to define mock.On call
 //   - bytes []byte
 //   - s string
-func (_e *ScanService_Expecter) VexRulesFromDocument(bytes interface{}, s interface{}) *ScanService_VexRulesFromDocument_Call {
+func (_e *ScanService_Expecter) VexRulesFromDocument(bytes any, s any) *ScanService_VexRulesFromDocument_Call {
 	return &ScanService_VexRulesFromDocument_Call{Call: _e.mock.On("VexRulesFromDocument", bytes, s)}
 }
 

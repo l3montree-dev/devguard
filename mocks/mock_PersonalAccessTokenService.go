@@ -75,7 +75,7 @@ type PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call struct {
 // CheckForValidTokenByFingerprint is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fingerprint string
-func (_e *PersonalAccessTokenService_Expecter) CheckForValidTokenByFingerprint(ctx interface{}, fingerprint interface{}) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
+func (_e *PersonalAccessTokenService_Expecter) CheckForValidTokenByFingerprint(ctx any, fingerprint any) *PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call {
 	return &PersonalAccessTokenService_CheckForValidTokenByFingerprint_Call{Call: _e.mock.On("CheckForValidTokenByFingerprint", ctx, fingerprint)}
 }
 
@@ -132,7 +132,7 @@ type PersonalAccessTokenService_RevokeByPrivateKey_Call struct {
 // RevokeByPrivateKey is a helper method to define mock.On call
 //   - ctx context.Context
 //   - privKey string
-func (_e *PersonalAccessTokenService_Expecter) RevokeByPrivateKey(ctx interface{}, privKey interface{}) *PersonalAccessTokenService_RevokeByPrivateKey_Call {
+func (_e *PersonalAccessTokenService_Expecter) RevokeByPrivateKey(ctx any, privKey any) *PersonalAccessTokenService_RevokeByPrivateKey_Call {
 	return &PersonalAccessTokenService_RevokeByPrivateKey_Call{Call: _e.mock.On("RevokeByPrivateKey", ctx, privKey)}
 }
 
@@ -205,7 +205,7 @@ type PersonalAccessTokenService_ToModel_Call struct {
 //   - ctx context.Context
 //   - request dtos.PatCreateRequest
 //   - owner dtos.TokenOwner
-func (_e *PersonalAccessTokenService_Expecter) ToModel(ctx interface{}, request interface{}, owner interface{}) *PersonalAccessTokenService_ToModel_Call {
+func (_e *PersonalAccessTokenService_Expecter) ToModel(ctx any, request any, owner any) *PersonalAccessTokenService_ToModel_Call {
 	return &PersonalAccessTokenService_ToModel_Call{Call: _e.mock.On("ToModel", ctx, request, owner)}
 }
 
@@ -278,7 +278,7 @@ type PersonalAccessTokenService_VerifyAPIToken_Call struct {
 // VerifyAPIToken is a helper method to define mock.On call
 //   - ctx context.Context
 //   - token string
-func (_e *PersonalAccessTokenService_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *PersonalAccessTokenService_VerifyAPIToken_Call {
+func (_e *PersonalAccessTokenService_Expecter) VerifyAPIToken(ctx any, token any) *PersonalAccessTokenService_VerifyAPIToken_Call {
 	return &PersonalAccessTokenService_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
 }
 
@@ -343,7 +343,7 @@ type PersonalAccessTokenService_VerifyAdminRequest_Call struct {
 
 // VerifyAdminRequest is a helper method to define mock.On call
 //   - req *http.Request
-func (_e *PersonalAccessTokenService_Expecter) VerifyAdminRequest(req interface{}) *PersonalAccessTokenService_VerifyAdminRequest_Call {
+func (_e *PersonalAccessTokenService_Expecter) VerifyAdminRequest(req any) *PersonalAccessTokenService_VerifyAdminRequest_Call {
 	return &PersonalAccessTokenService_VerifyAdminRequest_Call{Call: _e.mock.On("VerifyAdminRequest", req)}
 }
 
@@ -406,7 +406,7 @@ type PersonalAccessTokenService_VerifyRequestSignature_Call struct {
 // VerifyRequestSignature is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req *http.Request
-func (_e *PersonalAccessTokenService_Expecter) VerifyRequestSignature(ctx interface{}, req interface{}) *PersonalAccessTokenService_VerifyRequestSignature_Call {
+func (_e *PersonalAccessTokenService_Expecter) VerifyRequestSignature(ctx any, req any) *PersonalAccessTokenService_VerifyRequestSignature_Call {
 	return &PersonalAccessTokenService_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", ctx, req)}
 }
 
