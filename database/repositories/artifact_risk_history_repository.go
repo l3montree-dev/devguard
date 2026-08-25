@@ -25,24 +25,35 @@ func NewArtifactRiskHistoryRepository(db *gorm.DB) *artifactRiskHistoryRepositor
 	}
 }
 
-func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	var assetRisk = []models.ArtifactRiskHistory{}
-	db := r.GetDB(ctx, tx)
-
-	// base query
-	db = db.Where("asset_id = ?", assetID)
-
-	// optional asset version filter
-	if assetVersionName != nil {
-		db = db.Where("asset_version_name = ?", *assetVersionName)
-	}
-
-	// optional artifact filter
+func riskHistoryFilter(db *gorm.DB, artifactName *string, start, end time.Time) *gorm.DB {
 	if artifactName != nil {
-		db = db.Where("artifact_name = ?", *artifactName)
+		db = db.Where("artifact_risk_history.artifact_name = ?", *artifactName)
 	}
 
-	if err := db.Where("day >= ? AND day <= ?", start, end).Order("day ASC").Find(&assetRisk).Error; err != nil {
+	return db.Where("artifact_risk_history.day >= ? AND artifact_risk_history.day <= ?", start, end).
+		Order("artifact_risk_history.day ASC")
+}
+
+func (r *artifactRiskHistoryRepository) GetRiskHistory(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	var assetRisk = []models.ArtifactRiskHistory{}
+	db := r.GetDB(ctx, tx).Model(&models.ArtifactRiskHistory{}).
+		Where("artifact_risk_history.asset_id = ? AND artifact_risk_history.asset_version_name = ?", assetID, assetVersionName)
+
+	if err := riskHistoryFilter(db, artifactName, start, end).Find(&assetRisk).Error; err != nil {
+		return nil, err
+	}
+
+	return assetRisk, nil
+}
+
+func (r *artifactRiskHistoryRepository) GetRiskHistoryWithVersion(ctx context.Context, tx *gorm.DB, artifactName *string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error) {
+	var assetRisk = []models.ArtifactRiskHistoryWithVersion{}
+	db := r.GetDB(ctx, tx).Model(&models.ArtifactRiskHistory{}).
+		Joins(`INNER JOIN asset_versions av ON av.asset_id = artifact_risk_history.asset_id AND av.name = artifact_risk_history.asset_version_name`).
+		Select("artifact_risk_history.*, av.slug, av.default_branch, av.type").
+		Where("artifact_risk_history.asset_id = ?", assetID)
+
+	if err := riskHistoryFilter(db, artifactName, start, end).Find(&assetRisk).Error; err != nil {
 		return nil, err
 	}
 
