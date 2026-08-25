@@ -205,6 +205,7 @@ rec {
         Cmd = [ "/bin/kratos" ];
         User = "53111:53111";
         Env = [ "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt" ];
+        Entrypoint = [ "/bin/kratos" ];
       };
     };
 
