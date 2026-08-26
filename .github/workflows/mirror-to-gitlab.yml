@@ -3,7 +3,6 @@ name: Mirror to GitLab
 on:
   push:
     branches: ["**"]
-    tags: ["**"]
 
 permissions: read-all
 
