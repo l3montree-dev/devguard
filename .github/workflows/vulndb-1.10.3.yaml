@@ -1,4 +1,4 @@
-name: VulnDB Workflow v2 (DevGuard v1.7.3)
+name: VulnDB Workflow v2
 
 on:
   workflow_dispatch:
