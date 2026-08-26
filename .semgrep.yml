@@ -618,7 +618,7 @@ rules:
       include:
         - "*.go"
     patterns:
-      - pattern: $STATEMENT.Where("$WHERE_CLAUSEL",...)
+      - pattern: $STATEMENT.Where("$WHERE_CLAUSE",...)
       - metavariable-regex:
-          metavariable: $WHERE_CLAUSEL
+          metavariable: $WHERE_CLAUSE
           regex: (?i).*\bIN\s*\(?\s*\?
