@@ -197,7 +197,6 @@ func (publicClient PublicClientImplementation) GetIdentityFromCookie(ctx context
 			slog.Info("unsuccessful verification with cache", "reason", cachedSession.err)
 			return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", cachedSession.err)
 		}
-		slog.Info("successful verification with cache")
 		return cachedSession.identity, nil
 	}
 

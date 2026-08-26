@@ -168,12 +168,11 @@ rec {
     ];
 
     fakeRootCommands = ''
-      mkdir -p /tmp
-      chmod 1777 /tmp
+      mkdir -p tmp
+      chmod 1777 tmp
       # Ensure this path exists in all CI environments for stable layer output.
       mkdir -p nix/var/nix/builds
     '';
-    enableFakechroot = true;
 
     config = {
       Cmd = [ "/bin/devguard-scanner" ];
@@ -239,7 +238,6 @@ rec {
         # Ensure this path exists in all CI environments for stable layer output.
         mkdir -p nix/var/nix/builds
       '';
-      enableFakechroot = true;
 
       config = {
         Entrypoint = [ "/bin/docker-entrypoint.sh" ];
