@@ -111,6 +111,6 @@ func (g *gormPatRepository) GetByBearerTokenHash(ctx context.Context, tx *gorm.D
 
 func (g *gormPatRepository) FindByUserIDs(ctx context.Context, tx *gorm.DB, userIDs []uuid.UUID) ([]models.PAT, error) {
 	var pats []models.PAT
-	err := g.GetDB(ctx, tx).Where("user_id IN (?)", userIDs).Find(&pats).Error
+	err := g.GetDB(ctx, tx).Where("user_id = Any ?", userIDs).Find(&pats).Error
 	return pats, err
 }

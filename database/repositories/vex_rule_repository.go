@@ -37,7 +37,7 @@ var errStopIteration = errors.New("stop iteration")
 func (r *upstreamVEXRuleRepository) ByCveScopes(ctx context.Context, tx *gorm.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
 	return func(yield func([]models.UpstreamVEXRule, error) bool) {
 		var rules []models.UpstreamVEXRule
-		err := r.GetDB(ctx, tx).Where("cve_scope IN ?", cveIDs).FindInBatches(&rules, batchSize, func(_ *gorm.DB, _ int) error {
+		err := r.GetDB(ctx, tx).Where("cve_scope = Any ?", cveIDs).FindInBatches(&rules, batchSize, func(_ *gorm.DB, _ int) error {
 			if !yield(rules, nil) {
 				return errStopIteration
 			}
@@ -79,7 +79,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDs(ctx context.Co
 	err := r.GetDB(ctx, tx).
 		Preload("VEXRule").
 		Preload("UpstreamVEXRule").
-		Where("dependency_vuln_id IN ?", dependencyVulnIDs).
+		Where("dependency_vuln_id = Any ?", dependencyVulnIDs).
 		Find(&recommendations).Error
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (r *vexRuleRepository) FindByAssetIDs(ctx context.Context, tx *gorm.DB, ass
 		return nil, nil
 	}
 	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Where("asset_id IN (?)", assetIDs).Order("created_at DESC").Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = Any ?", assetIDs).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 

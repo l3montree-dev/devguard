@@ -83,13 +83,13 @@ func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id u
 
 	// fetch all releases (preload Project so Project.Avatar is available)
 	var releases []models.Release
-	if err := r.GetDB(ctx, tx).Where("id IN ?", releaseIDs).Find(&releases).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("id = Any ?", releaseIDs).Find(&releases).Error; err != nil {
 		return models.Release{}, err
 	}
 
 	// fetch all items belonging to these releases
 	var items []models.ReleaseItem
-	if err := r.GetDB(ctx, tx).Where("release_id IN ?", releaseIDs).Find(&items).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("release_id = Any ?", releaseIDs).Find(&items).Error; err != nil {
 		return models.Release{}, err
 	}
 
@@ -248,7 +248,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 		Joins("JOIN asset_versions av ON av.asset_id = artifacts.asset_id AND av.name = artifacts.asset_version_name").
 		Joins("JOIN assets ON assets.id = artifacts.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
-		Where("projects.id IN ?", projectIDs).
+		Where("projects.id = Any ?", projectIDs).
 		Find(&artifacts).Error; err != nil {
 		return nil, nil, err
 	}
@@ -285,9 +285,9 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 		}
 	}
 
-	q := r.GetDB(ctx, tx).Where("project_id IN ?", projectIDs)
+	q := r.GetDB(ctx, tx).Where("project_id = Any ?", projectIDs)
 	if len(excludedIDs) > 0 {
-		q = q.Where("id NOT IN ?", excludedIDs)
+		q = q.Where("id NOT = Any ?", excludedIDs)
 	}
 	if err := q.Find(&rels).Error; err != nil {
 		return artifacts, nil, err
@@ -302,7 +302,8 @@ func (r *releaseRepository) FindOrCreate(ctx context.Context, tx *gorm.DB, proje
 	if err == nil {
 		return rel, nil
 	}
-	if err != nil && err != gorm.ErrRecordNotFound {
+
+	if err != gorm.ErrRecordNotFound {
 		return models.Release{}, err
 	}
 

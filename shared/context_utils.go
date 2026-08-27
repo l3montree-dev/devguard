@@ -770,7 +770,7 @@ func (f FilterQuery) SQL() string {
 
 	switch f.Operator {
 	case "in":
-		return field + " IN (?)"
+		return field + " = Any ?"
 	case "is":
 		return field + " = ?"
 	case "is not":

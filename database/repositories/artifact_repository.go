@@ -36,7 +36,7 @@ func (r *artifactRepository) GetByAssetID(ctx context.Context, tx *gorm.DB, asse
 
 func (r *artifactRepository) GetByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
-	err := r.GetDB(ctx, tx).Where("asset_id IN ?", assetIDs).Find(&artifacts).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = Any ?", assetIDs).Find(&artifacts).Error
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (r *artifactRepository) GetByAssetIDAndAssetVersionName(ctx context.Context
 func (r *artifactRepository) GetByAssetVersions(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionNames []string) ([]models.Artifact, error) {
 	var artifacts []models.Artifact
 
-	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name IN ?", assetID, assetVersionNames).Find(&artifacts).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = Any ?", assetID, assetVersionNames).Find(&artifacts).Error
 
 	if err != nil {
 		return nil, err

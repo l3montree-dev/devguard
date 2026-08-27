@@ -26,15 +26,16 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 	}
 
 	err = runner.db.WithContext(ctx).Transaction(func(tx shared.DB) error {
+		// first we delete unusable vex rule recommendations to reduce the amount of work
 		if err := tx.Exec(`
 			DELETE FROM vex_rule_recommendations r
 			WHERE NOT EXISTS (SELECT 1 FROM dependency_vulns dv WHERE dv.signature = r.dependency_vuln_signature AND dv.state = 'open')
 		`).Error; err != nil {
 			return errors.Wrap(err, "failed to clean up stale VEX rule recommendations")
-		}
+		} // combine these 2 statements
 		if err := tx.Exec(`DELETE FROM vex_rule_recommendations WHERE vex_rule_id IS NOT NULL`).Error; err != nil {
 			return errors.Wrap(err, "failed to clear crowdsourced VEX rule recommendations")
-		}
+		} // why delete crowdsourced rules?
 
 		start := time.Now()
 		if err := runner.matchScopedUpstreamRules(ctx, tx, lastRun); err != nil {
@@ -136,7 +137,7 @@ func (runner *DaemonRunner) evalScopedUpstreamCandidates(ctx context.Context, tx
 	}
 
 	var rules []models.UpstreamVEXRule
-	if err := runner.upstreamVEXRuleRepository.GetDB(ctx, tx).Where("id IN ?", utils.Keys(ruleIDSet)).Find(&rules).Error; err != nil {
+	if err := runner.upstreamVEXRuleRepository.GetDB(ctx, tx).Where("id = ANY ?", utils.Keys(ruleIDSet)).Find(&rules).Error; err != nil {
 		return errors.Wrap(err, "failed to fetch scoped VEX rule candidates")
 	}
 
@@ -237,7 +238,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 	// work) - only the ones that did match need it, for the org/project
 	// lookups CrowdsourcedVexing does.
 	var rulesWithAsset []models.VEXRule
-	if err := runner.vexRuleRepository.GetDB(ctx, tx).Preload("Asset").Where("id IN ?", utils.Keys(matchedVEXRules)).Find(&rulesWithAsset).Error; err != nil {
+	if err := runner.vexRuleRepository.GetDB(ctx, tx).Preload("Asset").Where("id = ANY ?", utils.Keys(matchedVEXRules)).Find(&rulesWithAsset).Error; err != nil {
 		return errors.Wrap(err, "failed to load assets for soft-matched VEX rules")
 	}
 	for _, rule := range rulesWithAsset {

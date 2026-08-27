@@ -46,7 +46,7 @@ func (r *eventRepository) readFirstPartyVulnAssetEvents(ctx context.Context, tx 
 		Select("vuln_events.*, first_party_vulnerabilities.asset_version_name, first_party_vulnerabilities.asset_id, asset_versions.slug").
 		Joins("LEFT JOIN first_party_vulnerabilities ON vuln_events.first_party_vuln_id = first_party_vulnerabilities.id").
 		Joins("LEFT JOIN asset_versions ON first_party_vulnerabilities.asset_id = asset_versions.asset_id AND first_party_vulnerabilities.asset_version_name = asset_versions.name").
-		Where("vuln_events.first_party_vuln_id IN (?)",
+		Where("vuln_events.first_party_vuln_id = Any ?",
 			r.GetDB(ctx, tx).Table("first_party_vulnerabilities").
 				Select("id").
 				Where("asset_id = ? AND scanner_ids = ? AND rule_id = ? AND uri = ? ", t.AssetID, t.ScannerIDs, t.RuleID, t.URI),
@@ -76,7 +76,7 @@ func (r *eventRepository) readDependencyVulnAssetEvents(ctx context.Context, tx 
 		Select("vuln_events.*, dependency_vulns.asset_version_name, dependency_vulns.asset_id, asset_versions.slug").
 		Joins("LEFT JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id").
 		Joins("LEFT JOIN asset_versions ON dependency_vulns.asset_id = asset_versions.asset_id AND dependency_vulns.asset_version_name = asset_versions.name").
-		Where("vuln_events.dependency_vuln_id IN (?)",
+		Where("vuln_events.dependency_vuln_id = Any ?",
 			r.GetDB(ctx, tx).Table("dependency_vulns").
 				Select("id").
 				Where("asset_id = ? AND LOWER(cve_id) = LOWER(?) AND component_purl = ?", t.AssetID, t.CVEID, t.ComponentPurl),
@@ -109,7 +109,7 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 		Table("vuln_events AS e").
 		Joins("LEFT JOIN dependency_vulns dv ON e.dependency_vuln_id = dv.id").
 		Joins("LEFT JOIN first_party_vulnerabilities fv ON e.first_party_vuln_id = fv.id").
-		Where("(e.dependency_vuln_id IN (?) OR e.first_party_vuln_id IN (?))", dependencyVulnSubQuery, firstPartyVulnSubQuery).
+		Where("(e.dependency_vuln_id = Any ? OR e.first_party_vuln_id = Any ?)", dependencyVulnSubQuery, firstPartyVulnSubQuery).
 		Order("e.created_at DESC")
 
 	// apply filters
@@ -161,7 +161,7 @@ func (r *eventRepository) CountByVexRuleIDs(ctx context.Context, tx *gorm.DB, ru
 	var rows []row
 	err := r.Repository.GetDB(ctx, tx).Table("vuln_events").
 		Select("vex_rule_id, COUNT(DISTINCT dependency_vuln_id) AS count").
-		Where("vex_rule_id IN (?)", ruleIDs).
+		Where("vex_rule_id = Any ?", ruleIDs).
 		Group("vex_rule_id").
 		Scan(&rows).Error
 	if err != nil {
@@ -176,7 +176,7 @@ func (r *eventRepository) CountByVexRuleIDs(ctx context.Context, tx *gorm.DB, ru
 
 func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx *gorm.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
-	err := r.Repository.GetDB(ctx, tx).Raw("SELECT * FROM vuln_events WHERE (dependency_vuln_id IN (?) OR first_party_vuln_id IN (?) OR license_risk_id IN (?)) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs, vulnIDs, vulnIDs).Find(&events).Error
+	err := r.Repository.GetDB(ctx, tx).Raw("SELECT * FROM vuln_events WHERE (dependency_vuln_id = Any ? OR first_party_vuln_id = Any ? OR license_risk_id = Any ?) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", vulnIDs, vulnIDs, vulnIDs).Find(&events).Error
 	if err != nil {
 		return nil, err
 	}

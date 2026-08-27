@@ -50,7 +50,7 @@ func (g *cveRepository) GetAllCVEsID(ctx context.Context, tx *gorm.DB) ([]string
 
 func (g *cveRepository) FindAll(ctx context.Context, tx *gorm.DB, cveIDs []string) ([]models.CVE, error) {
 	var cves []models.CVE
-	err := g.GetDB(ctx, tx).Find(&cves, "LOWER(cve) IN ?", utils.ToLowerSlice(cveIDs)).Error
+	err := g.GetDB(ctx, tx).Find(&cves, "LOWER(cve) = Any ?", utils.ToLowerSlice(cveIDs)).Error
 	return cves, err
 }
 
@@ -197,7 +197,7 @@ func (g *cveRepository) FindCVE(ctx context.Context, tx *gorm.DB, cveID string) 
 // create your own method if you need preloading.
 func (g *cveRepository) FindCVEs(ctx context.Context, tx *gorm.DB, cveIds []string) ([]models.CVE, error) {
 	var cves []models.CVE
-	err := g.GetDB(ctx, tx).Where("LOWER(cve) IN ?", utils.ToLowerSlice(cveIds)).Preload("Exploits").Find(&cves).Error
+	err := g.GetDB(ctx, tx).Where("LOWER(cve) = Any ?", utils.ToLowerSlice(cveIds)).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
 

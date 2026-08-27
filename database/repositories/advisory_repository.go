@@ -99,7 +99,7 @@ func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx cont
 	err := advisoryRepository.GetDB(ctx, tx).
 		Preload("AffectedPackages").
 		Where("asset_id = ?", assetID).
-		Where("state IN ?", []dtos.VulnState{dtos.VulnStatePublished, dtos.VulnStateWithdrawn}).
+		Where("state = Any ?", []dtos.VulnState{dtos.VulnStatePublished, dtos.VulnStateWithdrawn}).
 		Find(&advisories).Error
 	return advisories, err
 
