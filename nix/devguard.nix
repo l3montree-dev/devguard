@@ -98,7 +98,8 @@ rec {
   # the api-server image - the two images don't share binaries, so bundling
   # all three together would ship each image SBOM data describing a binary
   # that isn't even present in it.
-  mkToolSBOM = import ./sbom-lib.nix { inherit lib runCommand jq; } { inherit trivy; };
+  sbomLib = import ./sbom-lib.nix { inherit lib runCommand jq; };
+  mkToolSBOM = sbomLib.mkToolSBOM { inherit trivy; };
 
   devguardScannerSBOM = mkToolSBOM {
     toolName = "devguard-scanner";

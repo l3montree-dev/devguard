@@ -79,6 +79,12 @@ rec {
   # (which considers every bundled component, not just direct children)
   # demotes each one's flat direct-root edge in this single merge, no matter
   # how deep it sits in the real tree.
+  # Reuses sbom-lib.nix purely for its shared normalization filter - this
+  # SBOM's own trivy-fs-scan-then-select shape doesn't fit mkToolSBOM (no Go
+  # module/versionedModule to retarget), but it hits the exact same
+  # non-determinism trivy's cyclonedx output has everywhere else in this repo.
+  sbomLib = import ./sbom-lib.nix { inherit lib runCommand jq; };
+
   sbom =
     runCommand "python-tools-sbom"
       {
@@ -107,6 +113,13 @@ rec {
               | .dependsOn = [(.dependsOn // [])[] | select(. as $d | $valid | index($d))]
             ]
           | .metadata.component = (.components[] | select(.name == "devguard-scanner-tools"))
-        ' raw.json > "$out/sboms/devguard-scanner-tools.json"
+        ' raw.json > selected.json
+
+        # See sbom-lib.nix / sbom-normalize.jq: trivy's cyclonedx output isn't
+        # reproducible byte-for-byte between runs of the same scan (random
+        # serialNumber/timestamp/bom-refs, unstable component order), which
+        # would otherwise make this SBOM - and the final image digest - differ
+        # between independent builds of the same commit.
+        jq -S -f ${sbomLib.sbomNormalizeJQ} selected.json > "$out/sboms/devguard-scanner-tools.json"
       '';
 }
