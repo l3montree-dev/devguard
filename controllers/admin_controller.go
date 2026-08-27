@@ -33,6 +33,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -384,16 +385,13 @@ func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) er
 	if err != nil {
 		return ctx.JSON(200, dtos.InstanceSettingsDTO{})
 	}
-	allGitlabOAuthConfigs := []dtos.GitlabOauth2ConfigDTO{}
+
+	gitlabOAuthConfigs := make([]dtos.GitlabOauth2ConfigDTO, 0, len(controller.gitlabOAuth2))
 	for _, config := range controller.gitlabOAuth2 {
-		allGitlabOAuthConfigs = append(allGitlabOAuthConfigs, dtos.GitlabOauth2ConfigDTO{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
+		gitlabOAuthConfigs = append(gitlabOAuthConfigs, dtos.GitlabOauth2ConfigDTO{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
 	}
-	allGitlabOAuthConfigs = append(allGitlabOAuthConfigs, dtos.GitlabOauth2ConfigDTO{ProviderID: "gitlab", GitlabBaseURL: "http://localhost/test"})
-	return ctx.JSON(200, dtos.InstanceSettingsDTO{
-		SingleOrganizationMode:  settings.SingleOrganizationMode,
-		BearerTokenAuthDisabled: settings.BearerTokenAuthDisabled,
-		GitlabOAuth2Config:      allGitlabOAuthConfigs,
-	})
+
+	return ctx.JSON(200, transformer.InstanceSettingsToDTO(settings, gitlabOAuthConfigs))
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an
