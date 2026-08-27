@@ -222,6 +222,7 @@ rec {
         postgresql.config
         pkgs.bash
         pkgs.coreutils
+        pkgs.gnutar
       ]
       ++ (if debug then [ pkgs.busybox ] else [ ]);
 
