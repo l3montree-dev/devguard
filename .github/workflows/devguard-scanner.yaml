@@ -60,12 +60,68 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Run unittests
-      run: nix develop . --command bash -c "go test -timeout 20m -p 8 \$(go list ./... | grep -v '/mocks') -coverprofile=coverage.out && go tool cover -func=coverage.out"
+      run: nix develop . --command bash -c "go test -timeout 20m -p 8 \$(go list ./... | grep -v '/mocks' | grep -v '^github.com/l3montree-dev/devguard/tests\$') -coverprofile=coverage.out && go tool cover -func=coverage.out"
     - name: Archive code coverage results
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 - https://github.com/actions/upload-artifact/releases/tag/v4.6.2
       with:
         name: code-coverage
         path: coverage.out
+
+  # The ./tests package alone (integration tests, each spinning up its own
+  # testcontainers-managed Postgres) dominates the "tests" job's wall-clock
+  # time - 119 top-level Test funcs, ~9 minutes serially. They're independent
+  # of each other and each already brings its own DB, so they parallelize
+  # cleanly across separate runners instead of one long sequential run.
+  integration-tests:
+    name: integration-tests (shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+    - name: Check out code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
+      with:
+        submodules: recursive
+        persist-credentials: false
+    - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+      with:
+        install_url: https://releases.nixos.org/nix/nix-2.34.4/install
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          substituters = https://cache.nixos.org https://nix.garage.l3montree.cloud
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+    - name: Cache Go modules and build cache
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v4.2.4 - https://github.com/actions/cache/releases/tag/v5.1.0
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Run this shard's integration tests
+      env:
+        SHARD: ${{ matrix.shard }}
+        SHARD_COUNT: 4
+      run: |
+        nix develop . --command bash -c '
+          set -euo pipefail
+          go test -list "^Test" ./tests/... | grep "^Test" > all_tests.txt
+          awk -v shard="$SHARD" -v total="$SHARD_COUNT" "NR % total == shard" all_tests.txt > shard_tests.txt
+          echo "Shard $SHARD/$SHARD_COUNT running $(wc -l < shard_tests.txt) of $(wc -l < all_tests.txt) tests:"
+          cat shard_tests.txt
+          pattern=$(paste -sd "|" shard_tests.txt)
+          go test -timeout 20m -run "^($pattern)\$" -coverprofile="coverage-shard-$SHARD.out" ./tests/...
+        '
+    - name: Archive shard coverage results
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 - https://github.com/actions/upload-artifact/releases/tag/v4.6.2
+      with:
+        name: code-coverage-integration-shard-${{ matrix.shard }}
+        path: coverage-shard-${{ matrix.shard }}.out
 
 
   code-scanning:
@@ -88,7 +144,7 @@ jobs:
   api-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
     uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
-    needs: [tests]
+    needs: [tests, integration-tests]
     permissions:
       contents: read
       packages: write
@@ -113,7 +169,7 @@ jobs:
 
   scanner-pipeline:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-    needs: [tests]
+    needs: [tests, integration-tests]
     uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
     permissions:
       contents: read
