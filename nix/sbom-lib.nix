@@ -142,6 +142,30 @@ runCommand "${toolName}-sbom"
         ]
     ' raw.json > versioned.json
 
+    # trivy's cyclonedx output is not reproducible byte-for-byte between runs:
+    # it stamps a random top-level serialNumber, the current wall-clock time
+    # into .metadata.timestamp, and a random UUID bom-ref onto the synthetic
+    # root component it scans (distinct from the deterministic ${versionedModule}
+    # and binary-path bom-refs we set ourselves above/below). Left in, these
+    # make the final OCI image layer - and therefore the image digest - differ
+    # between otherwise-identical builds (e.g. the same commit built on two
+    # different CI systems). Strip the non-deterministic top-level fields, and
+    # replace every random UUID bom-ref with one derived from the component's
+    # own purl/name, rewriting all references (component bom-ref,
+    # dependencies[].ref, dependencies[].dependsOn[]) consistently.
+    jq '
+      def isUUID: test("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+      (reduce (.components[]? // empty) as $c (
+        {};
+        if ($c."bom-ref" // "" | isUUID) then
+          . + {($c."bom-ref"): ("component:" + ($c.purl // $c.name // $c."bom-ref"))}
+        else . end
+      )) as $renames
+      | walk(if type == "string" and ($renames[.]? != null) then $renames[.] else . end)
+      | del(.serialNumber, .metadata.timestamp)
+    ' versioned.json > normalized.json
+    mv normalized.json versioned.json
+
     ${lib.concatMapStringsSep "\n" (
       { name, binPath }:
       let
