@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vexrules"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
 
@@ -137,7 +138,7 @@ func (runner *DaemonRunner) evalScopedUpstreamCandidates(ctx context.Context, tx
 	}
 
 	var rules []models.UpstreamVEXRule
-	if err := runner.upstreamVEXRuleRepository.GetDB(ctx, tx).Where("id = ANY ?", utils.Keys(ruleIDSet)).Find(&rules).Error; err != nil {
+	if err := runner.upstreamVEXRuleRepository.GetDB(ctx, tx).Where("id = ANY(?)", pq.Array(utils.Keys(ruleIDSet))).Find(&rules).Error; err != nil {
 		return errors.Wrap(err, "failed to fetch scoped VEX rule candidates")
 	}
 
@@ -238,7 +239,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 	// work) - only the ones that did match need it, for the org/project
 	// lookups CrowdsourcedVexing does.
 	var rulesWithAsset []models.VEXRule
-	if err := runner.vexRuleRepository.GetDB(ctx, tx).Preload("Asset").Where("id = ANY ?", utils.Keys(matchedVEXRules)).Find(&rulesWithAsset).Error; err != nil {
+	if err := runner.vexRuleRepository.GetDB(ctx, tx).Preload("Asset").Where("id = ANY(?)", pq.Array(utils.Keys(matchedVEXRules))).Find(&rulesWithAsset).Error; err != nil {
 		return errors.Wrap(err, "failed to load assets for soft-matched VEX rules")
 	}
 	for _, rule := range rulesWithAsset {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -118,7 +119,7 @@ WITH events AS (
 	FROM dependency_vulns
 	JOIN vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
 	LEFT JOIN cves c ON dependency_vulns.cve_id = c.cve
-	WHERE fe.type = Any ?
+	WHERE fe.type = ANY (?)
 	AND dependency_vulns.asset_version_name = ?
 	AND dependency_vulns.asset_id = ?
 )
@@ -133,7 +134,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type = Any ? AND prev_type = Any ?;`, append(remediationEvents, openEvents...), assetVersionName, assetID, remediationEvents, openEvents).Find(&results).Error
+WHERE type = ANY (?) AND prev_type = ANY (?);`, pq.Array(append(remediationEvents, openEvents...)), assetVersionName, assetID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	} else {
 		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
@@ -152,7 +153,7 @@ WITH events AS (
 		FROM artifact_dependency_vulns
 		WHERE artifact_artifact_name = ?
 	) AS adv ON dependency_vulns.id = adv.dependency_vuln_id
-	WHERE fe.type = Any ?
+	WHERE fe.type = ANY (?)
 	AND dependency_vulns.asset_version_name = ?
 	AND dependency_vulns.asset_id = ?
 )
@@ -167,7 +168,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type = Any ? AND prev_type = Any ?;`, artifactName, append(remediationEvents, openEvents...), assetVersionName, assetID, remediationEvents, openEvents).Find(&results).Error
+WHERE type = ANY (?) AND prev_type = ANY (?);`, artifactName, pq.Array(append(remediationEvents, openEvents...)), assetVersionName, assetID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	}
 
 	return results, err
@@ -193,7 +194,7 @@ events AS (
 	JOIN vuln_events fe ON dv.id = fe.dependency_vuln_id
 	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
 	LEFT JOIN cves c ON dv.cve_id = c.cve
-	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type = Any ?
+	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type = ANY (?)
 )
 SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 0  AND risk_assessment <  4)),0)  AS risk_avg_low,
@@ -206,7 +207,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type = Any ? AND prev_type = Any ?;`, releaseID, append(remediationEvents, openEvents...), remediationEvents, openEvents).Find(&results).Error
+WHERE type = ANY (?) AND prev_type = ANY (?);`, releaseID, pq.Array(append(remediationEvents, openEvents...)), pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	return results, err
 }
 
@@ -428,8 +429,8 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Cont
 	JOIN dependency_vulns dv ON dv.asset_id = a.id
 	JOIN vuln_events ve ON ve.dependency_vuln_id = dv.id
 	WHERE org.id = ?
-	AND ve.type = Any ?
-	GROUP BY ve.type, ow.weeks;`, orgID, orgID, remediationEvents).Find(&averageByType).Error
+	AND ve.type = ANY (?)
+	GROUP BY ve.type, ow.weeks;`, orgID, orgID, pq.Array(remediationEvents)).Find(&averageByType).Error
 	return averageByType, err
 }
 
@@ -549,10 +550,10 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.C
 		SELECT created_at
 		FROM vuln_events ve
 		WHERE ve.dependency_vuln_id = dv.id
-		AND ve.type = Any ?
+		AND ve.type = ANY (?)
 		ORDER BY created_at ASC			--only get the earliest remediation event
 		LIMIT 1
-	) sub ON TRUE;`, orgID, remediationEvents).Find(&averages).Error
+	) sub ON TRUE;`, orgID, pq.Array(remediationEvents)).Find(&averages).Error
 	return averages, err
 }
 
@@ -568,12 +569,12 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx conte
 	JOIN dependency_vulns dv ON dv.asset_id = a.id
 	JOIN LATERAL( 						-- lateral join the latest vuln event to each dependency vuln present in the org
 		SELECT ve.type FROM vuln_events ve 
-		WHERE ve.type = Any ?
+		WHERE ve.type = ANY (?)
 		AND ve.dependency_vuln_id = dv.id 
 		ORDER BY ve.created_at DESC  	-- order by created_at + limit 1 to only get the latest
 		LIMIT 1) as ve_filtered ON TRUE
 	WHERE p.organization_id = ?
-	GROUP BY ve_filtered.type;`, remediationEvents, orgID).Find(&rows).Error
+	GROUP BY ve_filtered.type;`, pq.Array(remediationEvents), orgID).Find(&rows).Error
 	return rows, err
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -110,12 +111,12 @@ func (r *trustedEntityRepository) ListAllTrustedEntities(ctx context.Context, tx
 
 func (r *trustedEntityRepository) GetTrustedEntitiesByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error) {
 	var trustedEntities []models.TrustedEntity
-	err := r.GetDB(ctx, tx).Model(&models.TrustedEntity{}).Where("project_id = Any ?", projectIDs).Find(&trustedEntities).Error
+	err := r.GetDB(ctx, tx).Model(&models.TrustedEntity{}).Where("project_id = ANY (?)", pq.Array(projectIDs)).Find(&trustedEntities).Error
 	return trustedEntities, err
 }
 
 func (r *trustedEntityRepository) GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx *gorm.DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error) {
 	var trustedEntities []models.TrustedEntity
-	err := r.GetDB(ctx, tx).Model(&models.TrustedEntity{}).Where("organization_id = Any ?", organizationIDs).Find(&trustedEntities).Error
+	err := r.GetDB(ctx, tx).Model(&models.TrustedEntity{}).Where("organization_id = ANY (?)", pq.Array(organizationIDs)).Find(&trustedEntities).Error
 	return trustedEntities, err
 }

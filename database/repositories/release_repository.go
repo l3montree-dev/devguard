@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -83,13 +84,13 @@ func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id u
 
 	// fetch all releases (preload Project so Project.Avatar is available)
 	var releases []models.Release
-	if err := r.GetDB(ctx, tx).Where("id = Any ?", releaseIDs).Find(&releases).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("id = ANY (?)", pq.Array(releaseIDs)).Find(&releases).Error; err != nil {
 		return models.Release{}, err
 	}
 
 	// fetch all items belonging to these releases
 	var items []models.ReleaseItem
-	if err := r.GetDB(ctx, tx).Where("release_id = Any ?", releaseIDs).Find(&items).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Where("release_id = ANY (?)", pq.Array(releaseIDs)).Find(&items).Error; err != nil {
 		return models.Release{}, err
 	}
 
@@ -248,7 +249,7 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 		Joins("JOIN asset_versions av ON av.asset_id = artifacts.asset_id AND av.name = artifacts.asset_version_name").
 		Joins("JOIN assets ON assets.id = artifacts.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
-		Where("projects.id = Any ?", projectIDs).
+		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
 		Find(&artifacts).Error; err != nil {
 		return nil, nil, err
 	}
@@ -285,9 +286,9 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 		}
 	}
 
-	q := r.GetDB(ctx, tx).Where("project_id = Any ?", projectIDs)
+	q := r.GetDB(ctx, tx).Where("project_id = ANY (?)", pq.Array(projectIDs))
 	if len(excludedIDs) > 0 {
-		q = q.Where("id NOT = Any ?", excludedIDs)
+		q = q.Where("id <> ALL (?)", pq.Array(excludedIDs))
 	}
 	if err := q.Find(&rels).Error; err != nil {
 		return artifacts, nil, err

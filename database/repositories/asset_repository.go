@@ -80,7 +80,7 @@ func (repository *assetRepository) ReadWithProject(ctx context.Context, tx *gorm
 
 func (repository *assetRepository) ReadWithProjects(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.Asset, error) {
 	var assets []models.Asset
-	db := repository.GetDB(ctx, tx).Preload("Project").Where("id = Any ?", ids)
+	db := repository.GetDB(ctx, tx).Preload("Project").Where("id = ANY (?)", pq.Array(ids))
 	if ownershipIDs, ok := shared.OwnershipScopeFromCtx(ctx); ok {
 		db = db.Scopes(autoOwnershipScope(models.Asset{}, ownershipIDs))
 	}
@@ -180,7 +180,7 @@ func (repository *assetRepository) FindByName(ctx context.Context, tx *gorm.DB, 
 
 func (repository *assetRepository) GetAllowedAssetsByProjectID(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	q := repository.GetDB(ctx, tx).Where("project_id = ? AND id = Any ?", projectID, allowedAssetIDs).Or("project_id = ? AND is_public = true", projectID).Find(&apps)
+	q := repository.GetDB(ctx, tx).Where("project_id = ? AND id = ANY (?)", projectID, pq.Array(allowedAssetIDs)).Or("project_id = ? AND is_public = true", projectID).Find(&apps)
 	if q.Error != nil {
 		return nil, q.Error
 	}
@@ -208,7 +208,7 @@ func (repository *assetRepository) GetByOrgID(ctx context.Context, tx *gorm.DB, 
 
 func (repository *assetRepository) GetByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := repository.GetDB(ctx, tx).Where("project_id = Any ?", projectIDs).Find(&apps).Error
+	err := repository.GetDB(ctx, tx).Where("project_id = ANY (?)", pq.Array(projectIDs)).Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (repository *assetRepository) GetByProjectIDs(ctx context.Context, tx *gorm
 
 func (repository *assetRepository) GetByProjectIDsWithProviderID(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, providerID string) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := repository.GetDB(ctx, tx).Where("project_id = Any ? AND external_entity_provider_id = ?", projectIDs, providerID).Find(&apps).Error
+	err := repository.GetDB(ctx, tx).Where("project_id = ANY (?) AND external_entity_provider_id = ?", pq.Array(projectIDs), providerID).Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func (repository *assetRepository) GetAssetsWithVulnSharingEnabled(ctx context.C
 
 func (repository *assetRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error) {
 	var existingAssets []models.Asset
-	err := repository.GetDB(ctx, tx).Where("external_entity_id = Any ? AND external_entity_provider_id = ?", utils.Map(assets, func(a *models.Asset) *string { return a.ExternalEntityID }), externalProviderID).Find(&existingAssets).Error
+	err := repository.GetDB(ctx, tx).Where("external_entity_id = ANY (?) AND external_entity_provider_id = ?", pq.Array(utils.Map(assets, func(a *models.Asset) *string { return a.ExternalEntityID })), externalProviderID).Find(&existingAssets).Error
 	if err != nil {
 		return nil, nil, err
 	}

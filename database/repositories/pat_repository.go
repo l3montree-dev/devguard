@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -111,6 +112,6 @@ func (g *gormPatRepository) GetByBearerTokenHash(ctx context.Context, tx *gorm.D
 
 func (g *gormPatRepository) FindByUserIDs(ctx context.Context, tx *gorm.DB, userIDs []uuid.UUID) ([]models.PAT, error) {
 	var pats []models.PAT
-	err := g.GetDB(ctx, tx).Where("user_id = Any ?", userIDs).Find(&pats).Error
+	err := g.GetDB(ctx, tx).Where("user_id = ANY (?)", pq.Array(userIDs)).Find(&pats).Error
 	return pats, err
 }

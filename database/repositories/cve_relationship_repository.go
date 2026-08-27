@@ -5,6 +5,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -22,7 +23,7 @@ func NewCveRelationshipRepository(db *gorm.DB) *cveRelationshipRepository {
 
 func (repository *cveRelationshipRepository) GetRelationshipsByTargetCVEBatch(ctx context.Context, tx *gorm.DB, targetCVEIDs []string) ([]models.CVERelationship, error) {
 	var relations []models.CVERelationship
-	err := repository.GetDB(ctx, tx).Where("LOWER(target_cve) = Any ?", utils.ToLowerSlice(targetCVEIDs)).Find(&relations).Error
+	err := repository.GetDB(ctx, tx).Where("LOWER(target_cve) = ANY (?)", pq.Array(utils.ToLowerSlice(targetCVEIDs))).Find(&relations).Error
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +61,9 @@ func (repository *cveRelationshipRepository) FindCrossRelationshipsBatch(
 
 		err := repository.GetDB(ctx, tx).
 			Where(
-				"LOWER(target_cve) = Any ? OR LOWER(source_cve) = Any ?",
-				chunk,
-				chunk,
+				"LOWER(target_cve) = ANY (?) OR LOWER(source_cve) = ANY (?)",
+				pq.Array(chunk),
+				pq.Array(chunk),
 			).
 			Find(&relationships).Error
 
