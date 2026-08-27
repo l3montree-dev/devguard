@@ -43,7 +43,14 @@ rec {
           overlay
         ]
       );
-  venv = pythonSet.mkVirtualEnv "devguard-scanner-tools" workspace.deps.default;
+ 
+  venv = (pythonSet.mkVirtualEnv "devguard-scanner-tools" workspace.deps.default).overrideAttrs (
+    old: {
+      env = (old.env or { }) // {
+        PYTHONHASHSEED = "0";
+      };
+    }
+  );
 
   # Trivy's *image* scan of the venv (installed site-packages) can only see a
   # flat list - pip installs carry no relationship metadata the way a lockfile
