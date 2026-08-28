@@ -270,7 +270,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 
 	// apply filters
 	for _, f := range filter {
-		q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 
 	if search != "" && len(search) > 2 {
@@ -292,7 +292,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 		Group("components.id").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 	// apply the same filters to the packageNameQuery
 	for _, f := range filter {
-		packageNameQuery = packageNameQuery.Where(f.SQL(), f.Value())
+		packageNameQuery = f.Where(packageNameQuery)
 	}
 
 	if search != "" && len(search) > 2 {
@@ -302,7 +302,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 	// apply sorting
 	if len(sort) > 0 {
 		for _, s := range sort {
-			packageNameQuery = packageNameQuery.Order(s.SQL())
+			packageNameQuery = s.Order(packageNameQuery)
 		}
 	} else {
 		packageNameQuery = packageNameQuery.Order("max_risk DESC")
@@ -386,7 +386,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsPaged(ctx context.
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 	if search != "" && len(search) > 2 {
 		q = q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
@@ -395,7 +395,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsPaged(ctx context.
 	// apply sorting
 	if len(sort) > 0 {
 		for _, s := range sort {
-			q = q.Order(s.SQL())
+			q = s.Order(q)
 		}
 	} else {
 		q = q.Order("dependency_vulns.cve_id DESC")

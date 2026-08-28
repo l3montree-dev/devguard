@@ -34,7 +34,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 
 	if search != "" && len(search) > 2 {

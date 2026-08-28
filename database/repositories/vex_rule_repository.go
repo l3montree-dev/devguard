@@ -147,7 +147,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPa
 
 	// Apply filter queries
 	for _, filter := range filterQuery {
-		query = query.Where(filter.SQL(), filter.Value())
+		query = filter.Where(query)
 	}
 
 	// Count total before pagination
@@ -158,7 +158,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPa
 	// Apply sorting
 	if len(sortQuery) > 0 {
 		for _, sort := range sortQuery {
-			query = query.Order(sort.SQL())
+			query = sort.Order(query)
 		}
 	} else {
 		query = query.Order("confidence DESC")
@@ -244,7 +244,7 @@ func (r *vexRuleRepository) FindByAssetIDPaged(ctx context.Context, tx *gorm.DB,
 
 	// Apply filter queries
 	for _, filter := range filterQuery {
-		query = query.Where(filter.SQL(), filter.Value())
+		query = filter.Where(query)
 	}
 
 	// Count total before pagination
@@ -255,7 +255,7 @@ func (r *vexRuleRepository) FindByAssetIDPaged(ctx context.Context, tx *gorm.DB,
 	// Apply sorting
 	if len(sortQuery) > 0 {
 		for _, sort := range sortQuery {
-			query = query.Order(sort.SQL())
+			query = sort.Order(query)
 		}
 	} else {
 		query = query.Order("created_at DESC")

@@ -66,7 +66,7 @@ func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx con
 
 	// Apply filter queries
 	for _, filter := range filterQuery {
-		query = query.Where(filter.SQL(), filter.Value())
+		query = filter.Where(query)
 	}
 
 	query = query.Group("external_references.asset_id, external_references.url")
@@ -81,7 +81,7 @@ func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx con
 	// Apply sorting
 	if len(sortQuery) > 0 {
 		for _, sort := range sortQuery {
-			query = query.Order(sort.SQL())
+			query = sort.Order(query)
 		}
 	} else {
 		query = query.Order("external_references.url ASC")

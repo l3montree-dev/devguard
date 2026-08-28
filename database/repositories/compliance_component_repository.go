@@ -65,7 +65,7 @@ func (r *ComplianceComponentRepository) ListAll(ctx context.Context, tx *gorm.DB
 	for _, f := range filter {
 		switch {
 		case f.Field == "frameworkControlId" && f.Operator == "is":
-			db = db.Where("uuid IN (SELECT compliance_component_id FROM compliance_component_implements_controls WHERE framework_control_id = ?)", f.Value())
+			db = db.Where("uuid IN (SELECT compliance_component_id FROM compliance_component_implements_controls WHERE framework_control_id = ?)", f.FieldValue)
 		}
 	}
 

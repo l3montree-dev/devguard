@@ -108,7 +108,7 @@ func (repository *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(ctx 
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 	if search != "" && len(search) > 2 {
 		q = q.Where("\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.uri ILIKE ? OR rule_description ILIKE ? OR first_party_vulnerabilities.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")

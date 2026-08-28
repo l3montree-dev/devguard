@@ -208,28 +208,28 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 		group := r.GetDB(ctx, tx)
 		switch {
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).Or("state IS NULL"))
+			subquery = subquery.Where(f.Where(group).Or("state IS NULL"))
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is not":
-			subquery = subquery.Where(f.SQL(), f.Value()).Where("state IS NOT NULL")
+			subquery = f.Where(subquery).Where("state IS NOT NULL")
 		case f.Field == "framework" && f.Operator == "is":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()))
+			subquery = subquery.Where(f.Where(group))
 		case f.Field == "framework" && f.Operator == "in":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()))
+			subquery = subquery.Where(f.Where(group))
 		case f.Field == "mapped_framework" && f.Operator == "ilike":
-			subquery = subquery.Where(group.Where("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework ILIKE ?)", "%"+fmt.Sprint(f.Value())+"%"))
+			subquery = subquery.Where(group.Where("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework ILIKE ?)", "%"+fmt.Sprint(f.FieldValue)+"%"))
 		case f.Field == "has_component_coverage" && f.Operator == "is":
-			if fmt.Sprint(f.Value()) == "true" {
+			if fmt.Sprint(f.FieldValue) == "true" {
 				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
 			} else {
 				subquery = subquery.Where("NOT EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
 			}
 		default:
-			subquery = subquery.Where(f.SQL(), f.Value())
+			subquery = f.Where(subquery)
 		}
 	}
 
 	for _, s := range sort {
-		subquery = subquery.Order(s.SQL())
+		subquery = s.Order(subquery)
 	}
 
 	if err := subquery.Count(&count).Error; err != nil {
@@ -303,28 +303,28 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 		group := r.GetDB(ctx, tx)
 		switch {
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).Or("state IS NULL"))
+			subquery = subquery.Where(f.Where(group).Or("state IS NULL"))
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is not":
-			subquery = subquery.Where(f.SQL(), f.Value()).Where("state IS NOT NULL")
+			subquery = f.Where(subquery).Where("state IS NOT NULL")
 		case f.Field == "framework" && f.Operator == "is":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.Value()))
+			subquery = subquery.Where(f.Where(group).
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.FieldValue))
 		case f.Field == "framework" && f.Operator == "in":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+			subquery = subquery.Where(f.Where(group).
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.FieldValue))
 		case f.Field == "has_component_coverage" && f.Operator == "is":
-			if fmt.Sprint(f.Value()) == "true" {
+			if fmt.Sprint(f.FieldValue) == "true" {
 				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
 			} else {
 				subquery = subquery.Where("NOT EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
 			}
 		default:
-			subquery = subquery.Where(f.SQL(), f.Value())
+			subquery = f.Where(subquery)
 		}
 	}
 
 	for _, s := range sort {
-		subquery = subquery.Order(s.SQL())
+		subquery = s.Order(subquery)
 	}
 
 	var rows []frameworkControlPostureRow
@@ -380,11 +380,11 @@ func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context
 		group := r.GetDB(ctx, tx)
 		switch {
 		case f.Field == "framework" && f.Operator == "is":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.Value()))
+			subquery = subquery.Where(f.Where(group).
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.FieldValue))
 		case f.Field == "framework" && f.Operator == "in":
-			subquery = subquery.Where(group.Where(f.SQL(), f.Value()).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.Value()))
+			subquery = subquery.Where(f.Where(group).
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework IN (?))", f.FieldValue))
 		}
 	}
 

@@ -36,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/singleflight"
+	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ory/client-go"
@@ -763,8 +764,7 @@ func sanitizeField(field string) string {
 	return quoteFields(field)
 }
 
-func (f FilterQuery) SQL() string {
-
+func (f FilterQuery) sql() string {
 	field := sanitizeField(f.Field)
 
 	switch f.Operator {
@@ -774,6 +774,10 @@ func (f FilterQuery) SQL() string {
 		return field + " = ?"
 	case "is not":
 		return field + " != ?"
+	case "is not null":
+		return field + " IS NOT NULL"
+	case "is null":
+		return field + " IS NULL"
 	case "is greater than":
 		return field + " > ?"
 	case "is less than":
@@ -792,12 +796,21 @@ func (f FilterQuery) SQL() string {
 		// default do an equals
 		return field + " = ?"
 	}
-
 }
 
-func (f FilterQuery) Value() any {
+func (f FilterQuery) Where(db *gorm.DB) *gorm.DB {
+	v := f.value()
+	if v == nil {
+		return db.Where(f.sql())
+	}
+	return db.Where(f.sql(), v)
+}
+
+func (f FilterQuery) value() any {
 	// convert the value to the correct type
 	switch f.Operator {
+	case "is not null", "is null":
+		return nil
 	default:
 		return f.FieldValue
 	}
@@ -826,6 +839,10 @@ func (s SortQuery) SQL() string {
 
 func (s SortQuery) GetField() string {
 	return sanitizeField(s.Field)
+}
+
+func (s SortQuery) Order(db *gorm.DB) *gorm.DB {
+	return db.Order(s.SQL())
 }
 
 func GetEnvironmental(ctx Context) dtos.Environmental {
