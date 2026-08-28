@@ -248,6 +248,7 @@ func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uui
 // @Param organization path string true "Organization slug"
 // @Param frameworkControlID path string true "Framework Control ID"
 // @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Param body body object{status=string,justification=string} true "Event data"
 // @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) OrgCreateEvent(ctx shared.Context) error {
 	return c.CreateEvent(ctx)
@@ -262,6 +263,7 @@ func (c *CompliancePostureController) OrgCreateEvent(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param frameworkControlID path string true "Framework Control ID"
 // @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Param body body object{status=string,justification=string} true "Event data"
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) ProjectCreateEvent(ctx shared.Context) error {
 	return c.CreateEvent(ctx)
@@ -278,6 +280,7 @@ func (c *CompliancePostureController) ProjectCreateEvent(ctx shared.Context) err
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param frameworkControlID path string true "Framework Control ID"
 // @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Param body body object{status=string,justification=string} true "Event data"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) AssetVersionCreateEvent(ctx shared.Context) error {
 	return c.CreateEvent(ctx)
