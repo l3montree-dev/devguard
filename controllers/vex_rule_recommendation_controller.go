@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -140,6 +141,14 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 			closedRules = append(closedRules, rule)
 		}
 	}
+
+	idFunc := func(rule models.VEXRule) string {
+		return rule.CELExpression
+	}
+
+	// dedup the session rules by cel expression
+	reopenRules = utils.DeduplicateSlice(reopenRules, idFunc)
+	closedRules = utils.DeduplicateSlice(closedRules, idFunc)
 
 	// closed rules (accept/false-positive) only make sense against open vulns, and
 	// reopen rules only make sense against already-accepted vulns - so match each
