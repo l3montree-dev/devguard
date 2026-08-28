@@ -335,7 +335,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(ctx context.Context, asset model
 
 func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectID int) (*CreateIssueResponse, error) {
 
-	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -676,7 +676,7 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 }
 
 func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
-	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 

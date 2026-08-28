@@ -1314,7 +1314,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 
 func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, orgSlug, projectSlug string, projectID int) error {
 
-	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 	componentTree := commonint.PathsToMermaid([][]string{dependencyVuln.VulnerabilityPath})
@@ -1463,7 +1463,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 }
 
 func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GitlabClientFacade, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*gitlab.Issue, error) {
-	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 

@@ -273,6 +273,14 @@ func (a *AssetController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, transformer.AssetModelToDetailsDTO(app, members))
 }
 
+func applyChange[T ~string](changes *[]string, label string, field *T, patch *T) {
+	if patch == nil || *patch == *field {
+		return
+	}
+	*changes = append(*changes, fmt.Sprintf("%s updated: %s -> %s", label, *field, *patch))
+	*field = *patch
+}
+
 // @Summary Update asset
 // @Tags Assets
 // @Security CookieAuth
@@ -303,31 +311,21 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	var justification = ""
-	if patchRequest.ConfidentialityRequirement != nil && *patchRequest.ConfidentialityRequirement != asset.ConfidentialityRequirement {
-		justification += "Confidentiality Requirement updated: " + string(asset.ConfidentialityRequirement) + " -> " + string(*patchRequest.ConfidentialityRequirement)
-		asset.ConfidentialityRequirement = *patchRequest.ConfidentialityRequirement
-	}
+	var changes []string
+	applyChange(&changes, "Confidentiality Requirement", &asset.ConfidentialityRequirement, patchRequest.ConfidentialityRequirement)
+	applyChange(&changes, "Integrity Requirement", &asset.IntegrityRequirement, patchRequest.IntegrityRequirement)
+	applyChange(&changes, "Availability Requirement", &asset.AvailabilityRequirement, patchRequest.AvailabilityRequirement)
+	applyChange(&changes, "Modified Attack Vector", &asset.ModifiedAttackVector, patchRequest.ModifiedAttackVector)
+	applyChange(&changes, "Modified Attack Complexity", &asset.ModifiedAttackComplexity, patchRequest.ModifiedAttackComplexity)
+	applyChange(&changes, "Modified Privileges Required", &asset.ModifiedPrivilegesRequired, patchRequest.ModifiedPrivilegesRequired)
+	applyChange(&changes, "Modified Scope", &asset.ModifiedScope, patchRequest.ModifiedScope)
+	applyChange(&changes, "Modified UserInteraction", &asset.ModifiedUserInteraction, patchRequest.ModifiedUserInteraction)
+	applyChange(&changes, "Modified Confidentiality", &asset.ModifiedConfidentiality, patchRequest.ModifiedConfidentiality)
+	applyChange(&changes, "Modified Integrity", &asset.ModifiedIntegrity, patchRequest.ModifiedIntegrity)
+	applyChange(&changes, "Modified Availability", &asset.ModifiedAvailability, patchRequest.ModifiedAvailability)
 
-	if patchRequest.IntegrityRequirement != nil && *patchRequest.IntegrityRequirement != asset.IntegrityRequirement {
-		if justification != "" {
-			justification += ", "
-		}
-		justification += "Integrity Requirement updated: " + string(asset.IntegrityRequirement) + " -> " + string(*patchRequest.IntegrityRequirement)
-		asset.IntegrityRequirement = *patchRequest.IntegrityRequirement
-	}
-
-	if patchRequest.AvailabilityRequirement != nil && *patchRequest.AvailabilityRequirement != asset.AvailabilityRequirement {
-		if justification != "" {
-			justification += ", "
-		}
-		justification += "Availability Requirement updated: " + string(asset.AvailabilityRequirement) + " -> " + string(*patchRequest.AvailabilityRequirement)
-		asset.AvailabilityRequirement = *patchRequest.AvailabilityRequirement
-	}
-
-	if justification != "" {
-		err = a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetActorName(), justification)
-		if err != nil {
+	if len(changes) > 0 {
+		if err := a.assetService.UpdateAssetRequirements(reqCtx, asset, shared.GetSession(ctx).GetActorName(), strings.Join(changes, ", ")); err != nil {
 			return fmt.Errorf("error updating requirements: %v", err)
 		}
 	}
@@ -380,7 +378,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	userAgent := ctx.Request().UserAgent()
-	if enableTicketRangeUpdated || justification != "" {
+	if enableTicketRangeUpdated || len(changes) > 0 {
 		//check if we have already created the labels in gitlab, if not create them
 		// do NOT update the asset in the database yet, we do this after the ticket sync
 		//we can't do this in the background task, because we need this before we save the asset

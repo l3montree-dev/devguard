@@ -920,7 +920,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 
 func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, orgSlug, projectSlug, owner, repo string) error {
 
-	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
@@ -1090,7 +1090,7 @@ func (githubIntegration *GithubIntegration) createLicenseRiskIssue(ctx context.C
 }
 
 func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client shared.GithubClientFacade, assetVersionSlug, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
-	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, shared.GetEnvironmentalFromAsset(asset))
+	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 

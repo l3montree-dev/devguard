@@ -30,8 +30,10 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -53,6 +55,8 @@ type AdminController struct {
 
 	daemonRunner  shared.DaemonRunner
 	configService shared.ConfigService
+
+	gitlabOAuth2 map[string]*gitlabint.GitlabOauth2Config
 }
 
 func NewAdminController(
@@ -62,6 +66,7 @@ func NewAdminController(
 	statisticsService shared.StatisticsService,
 	assetService shared.AssetService,
 	configService shared.ConfigService,
+	gitlabOAuth2 map[string]*gitlabint.GitlabOauth2Config,
 ) *AdminController {
 	return &AdminController{
 		daemonRunner:      daemonRunner,
@@ -378,9 +383,15 @@ func (controller *AdminController) GetInstanceSettings(ctx shared.Context) error
 func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) error {
 	settings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
 	if err != nil {
-		return ctx.JSON(200, shared.InstanceSettings{})
+		return ctx.JSON(200, dtos.InstanceSettingsDTO{})
 	}
-	return ctx.JSON(200, settings)
+
+	gitlabOAuthConfigs := make([]dtos.GitlabOauth2ConfigDTO, 0, len(controller.gitlabOAuth2))
+	for _, config := range controller.gitlabOAuth2 {
+		gitlabOAuthConfigs = append(gitlabOAuthConfigs, dtos.GitlabOauth2ConfigDTO{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
+	}
+
+	return ctx.JSON(200, transformer.InstanceSettingsToDTO(settings, gitlabOAuthConfigs))
 }
 
 // checkCooldown reads the config DB for the last trigger time and returns an

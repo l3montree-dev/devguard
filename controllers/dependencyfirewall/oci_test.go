@@ -19,8 +19,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -91,70 +89,44 @@ func TestOCIEcosystemParsePackage(t *testing.T) {
 	}
 }
 
-func TestOCIEcosystemIsCached(t *testing.T) {
+func TestOCIManifestFresh(t *testing.T) {
 	dir := t.TempDir()
+	d := &DependencyProxyController{cache: newCache(dir, 10)}
 
-	t.Run("missing file is not cached", func(t *testing.T) {
-		if ociEco.isCached(filepath.Join(dir, "nonexistent")) {
-			t.Fatal("expected false for missing file")
+	t.Run("missing entry is not fresh", func(t *testing.T) {
+		if d.ociManifestFresh("nginx-manifest", "/v2/docker.io/library/nginx/manifests/latest") {
+			t.Fatal("expected false for missing entry")
 		}
 	})
 
-	t.Run("blob is always cached once present", func(t *testing.T) {
-		p := filepath.Join(dir, "blobs", "sha256_abc")
-		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte("data"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		old := time.Now().Add(-48 * time.Hour)
-		_ = os.Chtimes(p, old, old)
-		if !ociEco.isCached(p) {
-			t.Fatal("expected blob to be cached regardless of age")
+	t.Run("digest-pinned manifest is always fresh", func(t *testing.T) {
+		if !d.ociManifestFresh("nginx-manifest-digest", "/v2/docker.io/library/nginx/manifests/sha256_deadbeef") {
+			t.Fatal("expected digest manifest to be fresh regardless of cache state")
 		}
 	})
 
-	t.Run("digest-pinned manifest is always cached", func(t *testing.T) {
-		p := filepath.Join(dir, "manifests", "sha256_deadbeef")
-		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+	t.Run("tag manifest within TTL is fresh", func(t *testing.T) {
+		key := "nginx-manifest-latest"
+		if err := d.cache.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(p, []byte("manifest"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		old := time.Now().Add(-48 * time.Hour)
-		_ = os.Chtimes(p, old, old)
-		if !ociEco.isCached(p) {
-			t.Fatal("expected digest manifest to be cached regardless of age")
+		if !d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/latest") {
+			t.Fatal("expected fresh tag manifest to be fresh")
 		}
 	})
 
-	t.Run("tag manifest within TTL is cached", func(t *testing.T) {
-		p := filepath.Join(dir, "manifests", "latest")
-		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+	t.Run("tag manifest past TTL is not fresh", func(t *testing.T) {
+		key := "nginx-manifest-old-tag"
+		if err := d.cache.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(p, []byte("manifest"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if !ociEco.isCached(p) {
-			t.Fatal("expected fresh tag manifest to be cached")
-		}
-	})
-
-	t.Run("tag manifest past TTL is not cached", func(t *testing.T) {
-		p := filepath.Join(dir, "manifests", "old-tag")
-		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte("manifest"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		old := time.Now().Add(-2 * time.Hour)
-		_ = os.Chtimes(p, old, old)
-		if ociEco.isCached(p) {
-			t.Fatal("expected stale tag manifest to not be cached")
+		d.cache.mu.Lock()
+		e := d.cache.cache[key]
+		e.storedAt = time.Now().Add(-2 * time.Hour)
+		d.cache.cache[key] = e
+		d.cache.mu.Unlock()
+		if d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/old-tag") {
+			t.Fatal("expected stale tag manifest to not be fresh")
 		}
 	})
 }

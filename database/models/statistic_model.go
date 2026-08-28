@@ -17,6 +17,13 @@ func (m ArtifactRiskHistory) TableName() string {
 	return "artifact_risk_history"
 }
 
+type ArtifactRiskHistoryWithVersion struct {
+	ArtifactRiskHistory
+	Slug             string           `json:"slug" gorm:"column:slug"`
+	DefaultBranch    bool             `json:"defaultBranch" gorm:"column:default_branch"`
+	AssetVersionType AssetVersionType `json:"type" gorm:"column:type"`
+}
+
 type Distribution struct {
 	Low      int `json:"low"`
 	High     int `json:"high"`

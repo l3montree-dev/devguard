@@ -82,7 +82,7 @@ type StatisticsService_GetArtifactRiskHistory_Call struct {
 //   - assetID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(ctx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *StatisticsService_GetArtifactRiskHistory_Call {
+func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(ctx any, artifactName any, assetVersionName any, assetID any, start any, end any) *StatisticsService_GetArtifactRiskHistory_Call {
 	return &StatisticsService_GetArtifactRiskHistory_Call{Call: _e.mock.On("GetArtifactRiskHistory", ctx, artifactName, assetVersionName, assetID, start, end)}
 }
 
@@ -134,6 +134,92 @@ func (_c *StatisticsService_GetArtifactRiskHistory_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// GetArtifactRiskHistoryWithVersion provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error) {
+	ret := _mock.Called(ctx, artifactName, assetID, start, end)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetArtifactRiskHistoryWithVersion")
+	}
+
+	var r0 []models.ArtifactRiskHistoryWithVersion
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)); ok {
+		return returnFunc(ctx, artifactName, assetID, start, end)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistoryWithVersion); ok {
+		r0 = returnFunc(ctx, artifactName, assetID, start, end)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ArtifactRiskHistoryWithVersion)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *string, uuid.UUID, time.Time, time.Time) error); ok {
+		r1 = returnFunc(ctx, artifactName, assetID, start, end)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsService_GetArtifactRiskHistoryWithVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArtifactRiskHistoryWithVersion'
+type StatisticsService_GetArtifactRiskHistoryWithVersion_Call struct {
+	*mock.Call
+}
+
+// GetArtifactRiskHistoryWithVersion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artifactName *string
+//   - assetID uuid.UUID
+//   - start time.Time
+//   - end time.Time
+func (_e *StatisticsService_Expecter) GetArtifactRiskHistoryWithVersion(ctx any, artifactName any, assetID any, start any, end any) *StatisticsService_GetArtifactRiskHistoryWithVersion_Call {
+	return &StatisticsService_GetArtifactRiskHistoryWithVersion_Call{Call: _e.mock.On("GetArtifactRiskHistoryWithVersion", ctx, artifactName, assetID, start, end)}
+}
+
+func (_c *StatisticsService_GetArtifactRiskHistoryWithVersion_Call) Run(run func(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetArtifactRiskHistoryWithVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *string
+		if args[1] != nil {
+			arg1 = args[1].(*string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		var arg4 time.Time
+		if args[4] != nil {
+			arg4 = args[4].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_GetArtifactRiskHistoryWithVersion_Call) Return(artifactRiskHistoryWithVersions []models.ArtifactRiskHistoryWithVersion, err error) *StatisticsService_GetArtifactRiskHistoryWithVersion_Call {
+	_c.Call.Return(artifactRiskHistoryWithVersions, err)
+	return _c
+}
+
+func (_c *StatisticsService_GetArtifactRiskHistoryWithVersion_Call) RunAndReturn(run func(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)) *StatisticsService_GetArtifactRiskHistoryWithVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetComponentRisk provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
 	ret := _mock.Called(ctx, artifactName, assetVersionName, assetID)
@@ -172,7 +258,7 @@ type StatisticsService_GetComponentRisk_Call struct {
 //   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsService_Expecter) GetComponentRisk(ctx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsService_GetComponentRisk_Call {
+func (_e *StatisticsService_Expecter) GetComponentRisk(ctx any, artifactName any, assetVersionName any, assetID any) *StatisticsService_GetComponentRisk_Call {
 	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", ctx, artifactName, assetVersionName, assetID)}
 }
 
@@ -252,7 +338,7 @@ type StatisticsService_GetOrgStatistics_Call struct {
 //   - topCVEsLimit int
 //   - topComponentsLimit int
 //   - forceRefresh bool
-func (_e *StatisticsService_Expecter) GetOrgStatistics(ctx interface{}, orgID interface{}, orgComponentsLimit interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, forceRefresh interface{}) *StatisticsService_GetOrgStatistics_Call {
+func (_e *StatisticsService_Expecter) GetOrgStatistics(ctx any, orgID any, orgComponentsLimit any, topCVEsLimit any, topComponentsLimit any, forceRefresh any) *StatisticsService_GetOrgStatistics_Call {
 	return &StatisticsService_GetOrgStatistics_Call{Call: _e.mock.On("GetOrgStatistics", ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)}
 }
 
@@ -342,7 +428,7 @@ type StatisticsService_GetReleaseRiskHistory_Call struct {
 //   - releaseID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) GetReleaseRiskHistory(ctx interface{}, releaseID interface{}, start interface{}, end interface{}) *StatisticsService_GetReleaseRiskHistory_Call {
+func (_e *StatisticsService_Expecter) GetReleaseRiskHistory(ctx any, releaseID any, start any, end any) *StatisticsService_GetReleaseRiskHistory_Call {
 	return &StatisticsService_GetReleaseRiskHistory_Call{Call: _e.mock.On("GetReleaseRiskHistory", ctx, releaseID, start, end)}
 }
 
@@ -418,7 +504,7 @@ type StatisticsService_GetRemediationTimeAveragesForRelease_Call struct {
 // GetRemediationTimeAveragesForRelease is a helper method to define mock.On call
 //   - ctx context.Context
 //   - releaseID uuid.UUID
-func (_e *StatisticsService_Expecter) GetRemediationTimeAveragesForRelease(ctx interface{}, releaseID interface{}) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
+func (_e *StatisticsService_Expecter) GetRemediationTimeAveragesForRelease(ctx any, releaseID any) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
 	return &StatisticsService_GetRemediationTimeAveragesForRelease_Call{Call: _e.mock.On("GetRemediationTimeAveragesForRelease", ctx, releaseID)}
 }
 
@@ -486,7 +572,7 @@ type StatisticsService_GetTopEcosystemsInOrg_Call struct {
 // GetTopEcosystemsInOrg is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx interface{}, orgID interface{}) *StatisticsService_GetTopEcosystemsInOrg_Call {
+func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx any, orgID any) *StatisticsService_GetTopEcosystemsInOrg_Call {
 	return &StatisticsService_GetTopEcosystemsInOrg_Call{Call: _e.mock.On("GetTopEcosystemsInOrg", ctx, orgID)}
 }
 
@@ -547,7 +633,7 @@ type StatisticsService_UpdateArtifactRiskAggregation_Call struct {
 //   - assetID uuid.UUID
 //   - begin time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx interface{}, tx interface{}, artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx any, tx any, artifact any, assetID any, begin any, end any) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, tx, artifact, assetID, begin, end)}
 }
 

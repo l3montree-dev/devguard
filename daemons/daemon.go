@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -75,35 +76,35 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	if err := runner.maybeRunAndMark(ctx, "vexrules.recommendations", func() error {
 		return runner.RunVEXRuleRecommendationDaemon(ctx)
 	}); err != nil {
-		slog.Error("could not build and save recommendations for all", "err", err)
+		monitoring.Alert("could not build and save recommendations", err)
 	}
 	if err := runner.maybeRunAndMark(ctx, "maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {
-		slog.Error("could not clean up orphaned records", "err", err)
+		monitoring.Alert("could not clean up orphaned records", err)
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.opensourceinsights", func() error {
 		return runner.UpdateOpenSourceInsightInformation(ctx)
 	}); err != nil {
-		slog.Error("could not update deps dev information", "err", err)
+		monitoring.Alert("could not update open source insight information", err)
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.vulndb", func() error {
 		return runner.UpdateVulnDB(ctx)
 	}); err != nil {
-		slog.Error("could not update vuln db", "err", err)
+		monitoring.Alert("could not update vulndb", err)
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.fixedVersions", func() error {
 		return runner.UpdateFixedVersions(ctx)
 	}); err != nil {
-		slog.Error("could not update fixed versions", "err", err)
+		monitoring.Alert("could not update fixed versions", err)
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.directDependencyFixedVersion", func() error {
 		return runner.RunResolveFixedVersionsPipeline(ctx, false)
 	}); err != nil {
-		slog.Error("could not resolve direct depend	ency fixed versions", "err", err)
+		monitoring.Alert("could not resolve direct dependency fixed versions", err)
 	}
 }

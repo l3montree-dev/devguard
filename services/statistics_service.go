@@ -100,6 +100,10 @@ func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifact
 	return s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, start, end)
 }
 
+func (s *statisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error) {
+	return s.artifactRiskHistoryRepository.GetRiskHistoryWithVersion(ctx, nil, artifactName, assetID, start, end)
+}
+
 // project-level aggregation via project_risk_history has been removed.
 // Previously this method aggregated per-project risk history from asset histories.
 // That behavior was intentionally removed to focus statistics on artifact histories only.

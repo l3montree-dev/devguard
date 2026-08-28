@@ -114,6 +114,54 @@ func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artif
 	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
 }
 
+// @Summary Get risk history for an asset across all asset versions
+// @Tags Statistics
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param artifactName query string false "Restrict results to a specific artifact"
+// @Param start query string true "Start date (YYYY-MM-DD)"
+// @Param end query string true "End date (YYYY-MM-DD)"
+// @Success 200 {array} dtos.RiskHistoryWithVersionDTO
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/stats/risk-history/ [get]
+func (c *StatisticsController) GetAssetRiskHistory(ctx shared.Context) error {
+	artifact := ctx.QueryParam("artifactName")
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+
+	asset := shared.GetAsset(ctx)
+
+	if start == "" || end == "" {
+		return ctx.JSON(400, nil)
+	}
+
+	beginTime, err := time.Parse(time.DateOnly, start)
+	if err != nil {
+		return ctx.JSON(400, nil)
+	}
+
+	endTime, err := time.Parse(time.DateOnly, end)
+	if err != nil {
+		return ctx.JSON(400, nil)
+	}
+
+	results, err := c.statisticsService.GetArtifactRiskHistoryWithVersion(ctx.Request().Context(), utils.EmptyThenNil(artifact), asset.ID, beginTime, endTime)
+	if err != nil {
+		slog.Error("Error getting asset risk history", "error", err)
+		return ctx.JSON(500, nil)
+	}
+
+	dtoResults := make([]dtos.RiskHistoryWithVersionDTO, 0, len(results))
+	for _, r := range results {
+		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryWithVersionToDTO(r))
+	}
+
+	return ctx.JSON(200, dtoResults)
+}
+
 // @Summary Get CVEs with known exploits for an asset
 // @Tags Statistics
 // @Security CookieAuth

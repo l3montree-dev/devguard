@@ -90,6 +90,78 @@
                 },
                 "type": "object"
             },
+            "controllers.webhookCreateData": {
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sbomEnabled": {
+                        "type": "boolean"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "vulnEnabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
+            "controllers.webhookTestData": {
+                "properties": {
+                    "payloadType": {
+                        "type": "string"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
+            "controllers.webhookUpdateData": {
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sbomEnabled": {
+                        "type": "boolean"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "vulnEnabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
             "cyclonedx.Advisory": {
                 "properties": {
                     "title": {
@@ -4772,23 +4844,13 @@
             "dtos.AssetCreateRequest": {
                 "properties": {
                     "availabilityRequirement": {
-                        "enum": [
-                            "low",
-                            "medium",
-                            "high"
-                        ],
-                        "type": "string"
+                        "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
                     "centralDependencyVulnManagement": {
                         "type": "boolean"
                     },
                     "confidentialityRequirement": {
-                        "enum": [
-                            "low",
-                            "medium",
-                            "high"
-                        ],
-                        "type": "string"
+                        "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
                     "cvssAutomaticTicketThreshold": {
                         "type": "number"
@@ -4803,18 +4865,34 @@
                         "type": "integer"
                     },
                     "integrityRequirement": {
-                        "enum": [
-                            "low",
-                            "medium",
-                            "high"
-                        ],
-                        "type": "string"
+                        "$ref": "#/components/schemas/dtos.RequirementLevel"
+                    },
+                    "modifiedAttackComplexity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
+                    },
+                    "modifiedAttackVector": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
+                    },
+                    "modifiedAvailability": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedConfidentiality": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedIntegrity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedPrivilegesRequired": {
+                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
+                    },
+                    "modifiedScope": {
+                        "$ref": "#/components/schemas/dtos.ModifiedScope"
+                    },
+                    "modifiedUserInteraction": {
+                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
                     },
                     "name": {
                         "type": "string"
-                    },
-                    "reachableFromInternet": {
-                        "type": "boolean"
                     },
                     "repositoryProvider": {
                         "description": "either null or github or gitlab, etc.",
@@ -4874,6 +4952,30 @@
                     "isPublic": {
                         "type": "boolean"
                     },
+                    "modifiedAttackComplexity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
+                    },
+                    "modifiedAttackVector": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
+                    },
+                    "modifiedAvailability": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedConfidentiality": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedIntegrity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedPrivilegesRequired": {
+                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
+                    },
+                    "modifiedScope": {
+                        "$ref": "#/components/schemas/dtos.ModifiedScope"
+                    },
+                    "modifiedUserInteraction": {
+                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -4888,9 +4990,6 @@
                     },
                     "projectId": {
                         "type": "string"
-                    },
-                    "reachableFromInternet": {
-                        "type": "boolean"
                     },
                     "refs": {
                         "items": {
@@ -4974,6 +5073,30 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "modifiedAttackComplexity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
+                    },
+                    "modifiedAttackVector": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
+                    },
+                    "modifiedAvailability": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedConfidentiality": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedIntegrity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedPrivilegesRequired": {
+                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
+                    },
+                    "modifiedScope": {
+                        "$ref": "#/components/schemas/dtos.ModifiedScope"
+                    },
+                    "modifiedUserInteraction": {
+                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -4988,9 +5111,6 @@
                     },
                     "projectId": {
                         "type": "string"
-                    },
-                    "reachableFromInternet": {
-                        "type": "boolean"
                     },
                     "refs": {
                         "items": {
@@ -5092,13 +5212,34 @@
                     "isPublic": {
                         "type": "boolean"
                     },
+                    "modifiedAttackComplexity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
+                    },
+                    "modifiedAttackVector": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
+                    },
+                    "modifiedAvailability": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedConfidentiality": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedIntegrity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedPrivilegesRequired": {
+                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
+                    },
+                    "modifiedScope": {
+                        "$ref": "#/components/schemas/dtos.ModifiedScope"
+                    },
+                    "modifiedUserInteraction": {
+                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
+                    },
                     "name": {
                         "type": "string"
                     },
                     "paranoidMode": {
-                        "type": "boolean"
-                    },
-                    "reachableFromInternet": {
                         "type": "boolean"
                     },
                     "repositoryId": {
@@ -5980,9 +6121,6 @@
                     "directDependencyFixedVersion": {
                         "type": "string"
                     },
-                    "effort": {
-                        "type": "integer"
-                    },
                     "exploits": {
                         "items": {
                             "$ref": "#/components/schemas/dtos.ExploitDTO"
@@ -5993,23 +6131,14 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "priority": {
-                        "type": "integer"
-                    },
-                    "rawRiskAssessment": {
-                        "type": "number"
-                    },
                     "riskAssessment": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "riskRecalculatedAt": {
                         "type": "string"
@@ -6066,9 +6195,6 @@
                     "directDependencyFixedVersion": {
                         "type": "string"
                     },
-                    "effort": {
-                        "type": "integer"
-                    },
                     "events": {
                         "items": {
                             "$ref": "#/components/schemas/dtos.VulnEventDTO"
@@ -6086,23 +6212,14 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "priority": {
-                        "type": "integer"
-                    },
-                    "rawRiskAssessment": {
-                        "type": "number"
-                    },
                     "riskAssessment": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "riskRecalculatedAt": {
                         "type": "string"
@@ -6248,9 +6365,6 @@
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
-                    },
-                    "message": {
-                        "type": "string"
                     },
                     "state": {
                         "$ref": "#/components/schemas/dtos.VulnState"
@@ -6812,6 +6926,152 @@
                     }
                 },
                 "type": "object"
+            },
+            "dtos.ModifiedAttackComplexity": {
+                "enum": [
+                    "low",
+                    "high",
+                    "X",
+                    "X",
+                    "low",
+                    "high",
+                    "X",
+                    "low",
+                    "high"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "MACLow",
+                    "MACHigh",
+                    "MACNotDefined"
+                ]
+            },
+            "dtos.ModifiedAttackVector": {
+                "enum": [
+                    "network",
+                    "adjacent",
+                    "local",
+                    "physical",
+                    "X",
+                    "X",
+                    "network",
+                    "adjacent",
+                    "local",
+                    "physical",
+                    "X",
+                    "network",
+                    "adjacent",
+                    "local",
+                    "physical"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "MAVNetwork",
+                    "MAVAdjacentNetwork",
+                    "MAVLocal",
+                    "MAVPhysical",
+                    "MAVNotDefined"
+                ]
+            },
+            "dtos.ModifiedPrivilegesRequired": {
+                "enum": [
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "MPRNone",
+                    "MPRLow",
+                    "MPRHigh",
+                    "MPRNotDefined"
+                ]
+            },
+            "dtos.ModifiedRequirementLevel": {
+                "enum": [
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "MRLNotDefined",
+                    "MRLNone",
+                    "MRLLow",
+                    "MRLHigh"
+                ]
+            },
+            "dtos.ModifiedScope": {
+                "enum": [
+                    "unchanged",
+                    "changed",
+                    "X",
+                    "X",
+                    "unchanged",
+                    "changed",
+                    "X",
+                    "unchanged",
+                    "changed"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "MSUnchanged",
+                    "MSChanged",
+                    "MSNotDefined"
+                ]
+            },
+            "dtos.ModifiedUserInteraction": {
+                "enum": [
+                    "X",
+                    "none",
+                    "required",
+                    "X",
+                    "none",
+                    "required",
+                    "X",
+                    "none",
+                    "required"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "MUINotDefined",
+                    "MUINone",
+                    "MUIRequired"
+                ]
             },
             "dtos.OrgChangeRoleRequest": {
                 "properties": {
@@ -8024,6 +8284,15 @@
                     "high",
                     "low",
                     "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
                     "high"
                 ],
                 "type": "string",
@@ -8688,14 +8957,11 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
-                    },
-                    "message": {
-                        "type": "string"
                     },
                     "severity": {
                         "type": "string"
@@ -9023,6 +9289,30 @@
                     "metadata": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB"
                     },
+                    "modifiedAttackComplexity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
+                    },
+                    "modifiedAttackVector": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
+                    },
+                    "modifiedAvailability": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedConfidentiality": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedIntegrity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedPrivilegesRequired": {
+                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
+                    },
+                    "modifiedScope": {
+                        "$ref": "#/components/schemas/dtos.ModifiedScope"
+                    },
+                    "modifiedUserInteraction": {
+                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -9040,9 +9330,6 @@
                     },
                     "projectId": {
                         "type": "string"
-                    },
-                    "reachableFromInternet": {
-                        "type": "boolean"
                     },
                     "refs": {
                         "items": {
@@ -9462,9 +9749,6 @@
                     "directDependencyFixedVersion": {
                         "type": "string"
                     },
-                    "effort": {
-                        "type": "integer"
-                    },
                     "events": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.VulnEvent"
@@ -9475,23 +9759,14 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "priority": {
-                        "type": "integer"
-                    },
-                    "rawRiskAssessment": {
-                        "type": "number"
-                    },
                     "riskAssessment": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "riskRecalculatedAt": {
                         "type": "string"
@@ -9769,14 +10044,11 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastDetected": {
+                    "lastStateChange": {
                         "type": "string"
                     },
                     "manualTicketCreation": {
                         "type": "boolean"
-                    },
-                    "message": {
-                        "type": "string"
                     },
                     "state": {
                         "$ref": "#/components/schemas/dtos.VulnState"
@@ -10427,8 +10699,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -10439,6 +10709,8 @@
                     1000,
                     1000000,
                     1000000000,
+                    60000000000,
+                    3600000000000,
                     1,
                     1000,
                     1000000,
@@ -10456,8 +10728,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -10468,6 +10738,8 @@
                     "Microsecond",
                     "Millisecond",
                     "Second",
+                    "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -13745,10 +14017,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookTestData",
+                                "summary": "body",
+                                "description": "Test webhook data"
                             }
                         }
                     },
@@ -13796,10 +14069,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookCreateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
@@ -13872,10 +14146,11 @@
             "put": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookUpdateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
@@ -23005,10 +23280,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookTestData",
+                                "summary": "body",
+                                "description": "Test webhook data"
                             }
                         }
                     },
@@ -23056,10 +23332,11 @@
             "post": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookCreateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },
@@ -23132,10 +23409,11 @@
             "put": {
                 "requestBody": {
                     "content": {
-                        "text/plain": {
+                        "application/json": {
                             "schema": {
-                                "title": "body",
-                                "type": "object"
+                                "$ref": "#/components/schemas/controllers.webhookUpdateData",
+                                "summary": "body",
+                                "description": "Webhook data"
                             }
                         }
                     },

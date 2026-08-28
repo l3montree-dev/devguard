@@ -23,7 +23,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -84,20 +83,14 @@ func (pypiEcosystem) packageIdentifier(packageName, version string) string {
 	return fmt.Sprintf("pkg:pypi/%s", packageName)
 }
 
-func (pypiEcosystem) isCached(cachePath string) bool {
-	info, err := os.Stat(cachePath)
-	if err != nil {
-		return false
+// pypiCacheTTL returns how long a cached PyPI package file stays fresh.
+// Package archives are effectively immutable once published, so they get a
+// long TTL; everything else gets a short one.
+func pypiCacheTTL(requestPath string) time.Duration {
+	if strings.HasSuffix(requestPath, ".whl") || strings.HasSuffix(requestPath, ".tar.gz") {
+		return 168 * time.Hour // 7 days
 	}
-
-	var maxAge time.Duration
-	if strings.HasSuffix(cachePath, ".whl") || strings.HasSuffix(cachePath, ".tar.gz") {
-		maxAge = 168 * time.Hour // 7 days
-	} else {
-		maxAge = 1 * time.Hour
-	}
-
-	return time.Since(info.ModTime()) < maxAge
+	return 1 * time.Hour
 }
 
 func (pypiEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
@@ -157,8 +150,8 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 
 	slog.Info("Proxy request", "proxy", "pypi", "type", "package", "method", c.Request().Method, "path", requestPath)
 
-	cachePath, err := d.getCachePath(pypi, requestPath)
-	if err != nil {
+	cacheKey := "pypi/" + requestPath
+	if err := d.cache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "pypi", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -172,38 +165,27 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	if blocked, reason := d.checkMaliciousPackage(ctx, pypi, requestPath); blocked {
 		slog.Warn("Blocked malicious package", "proxy", "pypi", "path", requestPath, "reason", reason)
-		if err := os.Remove(cachePath); err == nil {
-			slog.Info("Removed malicious package from cache", "path", cachePath)
-		}
+		d.cache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 	}
 
-	if pypi.isCached(cachePath) {
-		slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
-		data, err := os.ReadFile(cachePath)
-		if err == nil {
-			if d.VerifyCacheIntegrity(cachePath, data) {
-				if configs.MinReleaseAge > 0 {
-					if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-						if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
-							return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
-						}
-						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-						return pypi.writeResponse(c, data, requestPath, true)
+	if d.cache.Fresh(cacheKey, pypiCacheTTL(requestPath)) {
+		if entry, ok := d.cache.Get(cacheKey); ok {
+			slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
+			if configs.MinReleaseAge > 0 {
+				if !entry.releaseTime.IsZero() {
+					if time.Since(entry.releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+						return d.blockTooNewPackage(c, pypi, requestPath, entry.releaseTime, configs.MinReleaseAge)
 					}
-					// No cached release time — fall through to upstream to retrieve it.
-					slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "pypi", "path", requestPath)
-				} else {
 					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-					return pypi.writeResponse(c, data, requestPath, true)
+					return pypi.writeResponse(c, entry.data, requestPath, true)
 				}
+				// No cached release time — fall through to upstream to retrieve it.
+				slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "pypi", "path", requestPath)
 			} else {
-				slog.Warn("Cache integrity verification failed, refetching", "proxy", "pypi", "path", requestPath)
-				os.Remove(cachePath)
-				os.Remove(cachePath + ".sha256")
+				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+				return pypi.writeResponse(c, entry.data, requestPath, true)
 			}
-		} else {
-			slog.Warn("Cache read error", "proxy", "pypi", "error", err)
 		}
 	}
 
@@ -222,7 +204,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
+	if err := d.cache.Set(cacheKey, cacheValue{data: data}); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
 	}
 
@@ -274,12 +256,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 
 	slog.Info("Proxy request", "proxy", "pypi", "type", "simple", "method", c.Request().Method, "path", requestPath)
 
-	cachePath, err := d.getCachePath(pypi, requestPath)
-	if err != nil {
-		slog.Warn("Invalid cache path", "proxy", "pypi", "path", requestPath, "error", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
-	}
-
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, requestPath, c.Request().Header)
@@ -297,11 +273,8 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 
 	// Fetch the PyPI JSON API to resolve version and release time before checking rules —
 	// same pattern as npm metadata: check allowlist and malicious DB with the resolved version.
-	var pypiReleaseTime time.Time
 	resolvedVersion, releaseTime, ok := d.fetchPyPILatestVersionAndReleaseTime(ctx, pkgName)
 	if ok {
-		pypiReleaseTime = releaseTime
-
 		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, pypi, pkgName+"@"+resolvedVersion, configs)
 		if notAllowed {
 			slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
@@ -322,17 +295,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 			if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
 				return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
 			}
-		}
-	}
-
-	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
-		slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
-	}
-
-	// Store release time so MinReleaseAge can be enforced on future cache hits.
-	if !pypiReleaseTime.IsZero() {
-		if err := d.CacheReleaseTime(cachePath, pypiReleaseTime); err != nil {
-			slog.Warn("Failed to cache release time", "proxy", "pypi", "error", err)
 		}
 	}
 

@@ -178,7 +178,7 @@ func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx s
 	softMatchedSignatures := make(map[int64]struct{})
 
 	var allRules []models.VEXRule
-	if err := runner.vexRuleRepository.GetDB(ctx, tx).Find(&allRules).Error; err != nil {
+	if err := runner.vexRuleRepository.GetDB(ctx, tx).Where("event_type != ? AND cve_scope IS NOT NULL", dtos.EventTypeReopened).Find(&allRules).Error; err != nil {
 		return nil, nil, errors.Wrap(err, "failed to fetch crowdsourced VEX rules")
 	}
 	if len(allRules) == 0 {

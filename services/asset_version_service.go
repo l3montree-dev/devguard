@@ -280,7 +280,7 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 		cvss := math.Round(float64(cve.CVSS)*100) / 100
 
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
-		risk := vulndb.RawRisk(cve, shared.GetEnvironmentalFromAsset(asset), depth)
+		risk := vulndb.RawRisk(cve, asset.Environmental, depth)
 
 		vuln.Ratings = &[]cdx.VulnerabilityRating{
 			{

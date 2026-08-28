@@ -17,8 +17,6 @@ package dependencyfirewall
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,7 +24,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -57,8 +54,6 @@ type ecosystem interface {
 	// Most ecosystems use PURL format (pkg:<eco>/<name>@<version>).
 	// OCI uses plain image reference format (registry/image:tag).
 	packageIdentifier(packageName, version string) string
-	// isCached reports whether the local cache entry is still fresh enough to serve.
-	isCached(cachePath string) bool
 	// writeResponse writes the proxied payload to the HTTP response.
 	writeResponse(c shared.Context, data []byte, path string, cached bool) error
 }
@@ -75,6 +70,9 @@ func trimWithRegex(path string, re *regexp.Regexp) string {
 
 type DependencyProxyCache struct {
 	CacheDir string
+	// MaxSizeMB bounds the size of the in-memory-tracked, disk-backed package
+	// cache. Defaults to 1024 (1GB) if unset.
+	MaxSizeMB int
 }
 
 type DependencyProxyConfigs struct {
@@ -88,7 +86,7 @@ type DependencyProxyController struct {
 	orgRepository          shared.OrganizationRepository
 	dependencyProxyService shared.DependencyProxySecretService
 	maliciousChecker       shared.MaliciousPackageChecker
-	cacheDir               string
+	cache                  *cache
 	client                 *http.Client
 }
 
@@ -103,10 +101,11 @@ func NewDependencyProxyController(
 	if maliciousChecker == nil {
 		panic("maliciousChecker must not be nil: dependency proxy firewall would be silently disabled")
 	}
+
 	return &DependencyProxyController{
 		dependencyProxyService: dependencyProxyService,
 		maliciousChecker:       maliciousChecker,
-		cacheDir:               config.CacheDir,
+		cache:                  newCache(config.CacheDir, config.MaxSizeMB),
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
@@ -115,23 +114,6 @@ func NewDependencyProxyController(
 			Transport: utils.EgressTransport,
 		},
 	}
-}
-
-func (d *DependencyProxyController) getCachePath(eco ecosystem, requestPath string) (string, error) {
-	cleanPath := filepath.Clean("/" + requestPath)
-	cleanPath = strings.TrimPrefix(cleanPath, "/")
-
-	if cleanPath == "" || cleanPath == "." {
-		return "", fmt.Errorf("invalid cache path")
-	}
-
-	cacheRoot := filepath.Join(d.cacheDir, eco.name())
-	fullPath := filepath.Join(cacheRoot, cleanPath)
-	if rel, err := filepath.Rel(cacheRoot, fullPath); err != nil || strings.HasPrefix(rel, "..") {
-		return "", fmt.Errorf("cache path traversal detected")
-	}
-
-	return fullPath, nil
 }
 
 func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
@@ -187,32 +169,6 @@ func (d *DependencyProxyController) passthroughUpstreamResponse(c shared.Context
 	}
 
 	return c.Blob(statusCode, headers.Get("Content-Type"), data)
-}
-
-func (d *DependencyProxyController) cacheData(cachePath string, data []byte) error {
-	dir := filepath.Dir(cachePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	return os.WriteFile(cachePath, data, 0644)
-}
-
-// CacheDataWithIntegrity stores data and its SHA256 hash for integrity verification.
-func (d *DependencyProxyController) CacheDataWithIntegrity(cachePath string, data []byte) error {
-	if err := d.cacheData(cachePath, data); err != nil {
-		return err
-	}
-
-	hash := sha256.Sum256(data)
-	hashStr := hex.EncodeToString(hash[:])
-	hashPath := cachePath + ".sha256"
-
-	if err := os.WriteFile(hashPath, []byte(hashStr), 0644); err != nil {
-		slog.Warn("Failed to write integrity hash", "path", hashPath, "error", err)
-		return err
-	}
-
-	return nil
 }
 
 // @Summary Get dependency proxy URLs
@@ -346,56 +302,6 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 // parameter and delegates to LoadConfigsBySecret.
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
-}
-
-// CacheReleaseTime stores the release time for a cached entry to enable MinReleaseAge checks on cache hits.
-func (d *DependencyProxyController) CacheReleaseTime(cachePath string, releaseTime time.Time) error {
-	if releaseTime.IsZero() {
-		return nil
-	}
-	return os.WriteFile(cachePath+".releasetime", []byte(releaseTime.UTC().Format(time.RFC3339Nano)), 0644)
-}
-
-// ReadCachedReleaseTime reads the stored release time for a cached entry.
-func (d *DependencyProxyController) ReadCachedReleaseTime(cachePath string) (time.Time, bool) {
-	data, err := os.ReadFile(cachePath + ".releasetime")
-	if err != nil {
-		return time.Time{}, false
-	}
-	t, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(string(data)))
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t, true
-}
-
-// VerifyCacheIntegrity checks if the cached data matches its stored hash.
-func (d *DependencyProxyController) VerifyCacheIntegrity(cachePath string, data []byte) bool {
-	hashPath := cachePath + ".sha256"
-
-	storedHashBytes, err := os.ReadFile(hashPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			slog.Debug("No integrity hash found for cached file", "path", cachePath)
-			return true
-		}
-		slog.Warn("Failed to read integrity hash", "path", hashPath, "error", err)
-		return false
-	}
-
-	storedHash := string(storedHashBytes)
-	hash := sha256.Sum256(data)
-	currentHash := hex.EncodeToString(hash[:])
-
-	if currentHash != storedHash {
-		slog.Error("Cache integrity verification failed",
-			"path", cachePath,
-			"expected", storedHash,
-			"actual", currentHash)
-		return false
-	}
-
-	return true
 }
 
 // matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -60,6 +61,7 @@ type adminTestDeps struct {
 	statisticsService *mocks.StatisticsService
 	assetService      *mocks.AssetService
 	configService     *mocks.ConfigService
+	gitlabOAuth2      map[string]*gitlabint.GitlabOauth2Config
 }
 
 // newAdminController constructs an AdminController with the test dependencies.
@@ -71,6 +73,7 @@ func newAdminController(d adminTestDeps) *AdminController {
 		d.statisticsService,
 		d.assetService,
 		d.configService,
+		d.gitlabOAuth2,
 	)
 }
 

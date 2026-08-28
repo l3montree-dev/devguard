@@ -71,7 +71,7 @@ type DependencyVulnRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *DependencyVulnRepository_Activate_Call {
+func (_e *DependencyVulnRepository_Expecter) Activate(ctx any, tx any, id any) *DependencyVulnRepository_Activate_Call {
 	return &DependencyVulnRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -144,7 +144,7 @@ type DependencyVulnRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *DependencyVulnRepository_Expecter) All(ctx interface{}, tx interface{}) *DependencyVulnRepository_All_Call {
+func (_e *DependencyVulnRepository_Expecter) All(ctx any, tx any) *DependencyVulnRepository_All_Call {
 	return &DependencyVulnRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -203,7 +203,7 @@ type DependencyVulnRepository_ApplyAndSave_Call struct {
 //   - tx shared.DB
 //   - dependencyVuln *models.DependencyVuln
 //   - vulnEvent *models.VulnEvent
-func (_e *DependencyVulnRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *DependencyVulnRepository_ApplyAndSave_Call {
+func (_e *DependencyVulnRepository_Expecter) ApplyAndSave(ctx any, tx any, dependencyVuln any, vulnEvent any) *DependencyVulnRepository_ApplyAndSave_Call {
 	return &DependencyVulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, dependencyVuln, vulnEvent)}
 }
 
@@ -272,7 +272,7 @@ type DependencyVulnRepository_ApplyGroupEventAndSave_Call struct {
 //   - tx shared.DB
 //   - assetSignature int64
 //   - vulnEvent *models.VulnEvent
-func (_e *DependencyVulnRepository_Expecter) ApplyGroupEventAndSave(ctx interface{}, tx interface{}, assetSignature interface{}, vulnEvent interface{}) *DependencyVulnRepository_ApplyGroupEventAndSave_Call {
+func (_e *DependencyVulnRepository_Expecter) ApplyGroupEventAndSave(ctx any, tx any, assetSignature any, vulnEvent any) *DependencyVulnRepository_ApplyGroupEventAndSave_Call {
 	return &DependencyVulnRepository_ApplyGroupEventAndSave_Call{Call: _e.mock.On("ApplyGroupEventAndSave", ctx, tx, assetSignature, vulnEvent)}
 }
 
@@ -351,7 +351,7 @@ type DependencyVulnRepository_ApplyGroupEventsAndSave_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - events []models.VulnEvent
-func (_e *DependencyVulnRepository_Expecter) ApplyGroupEventsAndSave(ctx interface{}, tx interface{}, events interface{}) *DependencyVulnRepository_ApplyGroupEventsAndSave_Call {
+func (_e *DependencyVulnRepository_Expecter) ApplyGroupEventsAndSave(ctx any, tx any, events any) *DependencyVulnRepository_ApplyGroupEventsAndSave_Call {
 	return &DependencyVulnRepository_ApplyGroupEventsAndSave_Call{Call: _e.mock.On("ApplyGroupEventsAndSave", ctx, tx, events)}
 }
 
@@ -414,7 +414,7 @@ type DependencyVulnRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DependencyVulnRepository_Expecter) Begin(ctx interface{}) *DependencyVulnRepository_Begin_Call {
+func (_e *DependencyVulnRepository_Expecter) Begin(ctx any) *DependencyVulnRepository_Begin_Call {
 	return &DependencyVulnRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -465,7 +465,7 @@ type DependencyVulnRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DependencyVulnRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *DependencyVulnRepository_CleanupOrphanedRecords_Call {
+func (_e *DependencyVulnRepository_Expecter) CleanupOrphanedRecords(ctx any) *DependencyVulnRepository_CleanupOrphanedRecords_Call {
 	return &DependencyVulnRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -518,7 +518,7 @@ type DependencyVulnRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.DependencyVuln
-func (_e *DependencyVulnRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *DependencyVulnRepository_Create_Call {
+func (_e *DependencyVulnRepository_Expecter) Create(ctx any, tx any, t any) *DependencyVulnRepository_Create_Call {
 	return &DependencyVulnRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -581,7 +581,7 @@ type DependencyVulnRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.DependencyVuln
-func (_e *DependencyVulnRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *DependencyVulnRepository_CreateBatch_Call {
+func (_e *DependencyVulnRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *DependencyVulnRepository_CreateBatch_Call {
 	return &DependencyVulnRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -644,7 +644,7 @@ type DependencyVulnRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *DependencyVulnRepository_Delete_Call {
+func (_e *DependencyVulnRepository_Expecter) Delete(ctx any, tx any, id any) *DependencyVulnRepository_Delete_Call {
 	return &DependencyVulnRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -707,7 +707,7 @@ type DependencyVulnRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.DependencyVuln
-func (_e *DependencyVulnRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *DependencyVulnRepository_DeleteBatch_Call {
+func (_e *DependencyVulnRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *DependencyVulnRepository_DeleteBatch_Call {
 	return &DependencyVulnRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -783,7 +783,7 @@ type DependencyVulnRepository_FindByCVEAndComponentPurl_Call struct {
 //   - assetID uuid.UUID
 //   - cveID string
 //   - componentPurl string
-func (_e *DependencyVulnRepository_Expecter) FindByCVEAndComponentPurl(ctx interface{}, tx interface{}, assetID interface{}, cveID interface{}, componentPurl interface{}) *DependencyVulnRepository_FindByCVEAndComponentPurl_Call {
+func (_e *DependencyVulnRepository_Expecter) FindByCVEAndComponentPurl(ctx any, tx any, assetID any, cveID any, componentPurl any) *DependencyVulnRepository_FindByCVEAndComponentPurl_Call {
 	return &DependencyVulnRepository_FindByCVEAndComponentPurl_Call{Call: _e.mock.On("FindByCVEAndComponentPurl", ctx, tx, assetID, cveID, componentPurl)}
 }
 
@@ -869,7 +869,7 @@ type DependencyVulnRepository_GetAllByAssetIDAndState_Call struct {
 //   - assetID uuid.UUID
 //   - state dtos.VulnState
 //   - durationSinceStateChange time.Duration
-func (_e *DependencyVulnRepository_Expecter) GetAllByAssetIDAndState(ctx interface{}, tx interface{}, assetID interface{}, state interface{}, durationSinceStateChange interface{}) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllByAssetIDAndState(ctx any, tx any, assetID any, state any, durationSinceStateChange any) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
 	return &DependencyVulnRepository_GetAllByAssetIDAndState_Call{Call: _e.mock.On("GetAllByAssetIDAndState", ctx, tx, assetID, state, durationSinceStateChange)}
 }
 
@@ -945,7 +945,7 @@ type DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call struct {
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
 //   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetID(ctx interface{}, tx interface{}, assetID interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetID(ctx any, tx any, assetID any, batchSize any) *DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call {
 	return &DependencyVulnRepository_GetAllOpenVulnsByAssetID_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetID", ctx, tx, assetID, batchSize)}
 }
 
@@ -1016,7 +1016,7 @@ type DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call struct 
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
 //   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDWithoutEvents(ctx interface{}, tx interface{}, assetID interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetIDWithoutEvents(ctx any, tx any, assetID any, batchSize any) *DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call {
 	return &DependencyVulnRepository_GetAllOpenVulnsByAssetIDWithoutEvents_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetIDWithoutEvents", ctx, tx, assetID, batchSize)}
 }
 
@@ -1097,7 +1097,7 @@ type DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_Call s
 //   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx interface{}, tx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx any, tx any, artifactName any, assetVersionName any, assetID any) *DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_Call {
 	return &DependencyVulnRepository_GetAllOpenVulnsByAssetVersionNameAndAssetID_Call{Call: _e.mock.On("GetAllOpenVulnsByAssetVersionNameAndAssetID", ctx, tx, artifactName, assetVersionName, assetID)}
 }
 
@@ -1172,7 +1172,7 @@ type DependencyVulnRepository_GetAllOpenVulnsDistinctBySignature_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsDistinctBySignature(ctx interface{}, tx interface{}, batchSize interface{}) *DependencyVulnRepository_GetAllOpenVulnsDistinctBySignature_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllOpenVulnsDistinctBySignature(ctx any, tx any, batchSize any) *DependencyVulnRepository_GetAllOpenVulnsDistinctBySignature_Call {
 	return &DependencyVulnRepository_GetAllOpenVulnsDistinctBySignature_Call{Call: _e.mock.On("GetAllOpenVulnsDistinctBySignature", ctx, tx, batchSize)}
 }
 
@@ -1246,7 +1246,7 @@ type DependencyVulnRepository_GetAllVulnsByArtifact_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - artifact models.Artifact
-func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByArtifact(ctx interface{}, tx interface{}, artifact interface{}) *DependencyVulnRepository_GetAllVulnsByArtifact_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByArtifact(ctx any, tx any, artifact any) *DependencyVulnRepository_GetAllVulnsByArtifact_Call {
 	return &DependencyVulnRepository_GetAllVulnsByArtifact_Call{Call: _e.mock.On("GetAllVulnsByArtifact", ctx, tx, artifact)}
 }
 
@@ -1320,7 +1320,7 @@ type DependencyVulnRepository_GetAllVulnsByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetAllVulnsByAssetID_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByAssetID(ctx any, tx any, assetID any) *DependencyVulnRepository_GetAllVulnsByAssetID_Call {
 	return &DependencyVulnRepository_GetAllVulnsByAssetID_Call{Call: _e.mock.On("GetAllVulnsByAssetID", ctx, tx, assetID)}
 }
 
@@ -1394,7 +1394,7 @@ type DependencyVulnRepository_GetAllVulnsByAssetIDWithTicketIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByAssetIDWithTicketIDs(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetAllVulnsByAssetIDWithTicketIDs_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllVulnsByAssetIDWithTicketIDs(ctx any, tx any, assetID any) *DependencyVulnRepository_GetAllVulnsByAssetIDWithTicketIDs_Call {
 	return &DependencyVulnRepository_GetAllVulnsByAssetIDWithTicketIDs_Call{Call: _e.mock.On("GetAllVulnsByAssetIDWithTicketIDs", ctx, tx, assetID)}
 }
 
@@ -1469,7 +1469,7 @@ type DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call str
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - excludedStates []dtos.VulnState
-func (_e *DependencyVulnRepository_Expecter) GetAllVulnsForTagsAndDefaultBranchInAsset(ctx interface{}, tx interface{}, assetID interface{}, excludedStates interface{}) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
+func (_e *DependencyVulnRepository_Expecter) GetAllVulnsForTagsAndDefaultBranchInAsset(ctx any, tx any, assetID any, excludedStates any) *DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call {
 	return &DependencyVulnRepository_GetAllVulnsForTagsAndDefaultBranchInAsset_Call{Call: _e.mock.On("GetAllVulnsForTagsAndDefaultBranchInAsset", ctx, tx, assetID, excludedStates)}
 }
 
@@ -1548,7 +1548,7 @@ type DependencyVulnRepository_GetByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *DependencyVulnRepository_GetByAssetID_Call {
+func (_e *DependencyVulnRepository_Expecter) GetByAssetID(ctx any, tx any, assetID any) *DependencyVulnRepository_GetByAssetID_Call {
 	return &DependencyVulnRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
 }
 
@@ -1633,7 +1633,7 @@ type DependencyVulnRepository_GetByAssetVersionPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *DependencyVulnRepository_Expecter) GetByAssetVersionPaged(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *DependencyVulnRepository_GetByAssetVersionPaged_Call {
+func (_e *DependencyVulnRepository_Expecter) GetByAssetVersionPaged(ctx any, tx any, assetVersionName any, assetID any, pageInfo any, search any, filter any, sort any) *DependencyVulnRepository_GetByAssetVersionPaged_Call {
 	return &DependencyVulnRepository_GetByAssetVersionPaged_Call{Call: _e.mock.On("GetByAssetVersionPaged", ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)}
 }
 
@@ -1732,7 +1732,7 @@ type DependencyVulnRepository_GetByVexRuleID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vexRuleID string
-func (_e *DependencyVulnRepository_Expecter) GetByVexRuleID(ctx interface{}, tx interface{}, vexRuleID interface{}) *DependencyVulnRepository_GetByVexRuleID_Call {
+func (_e *DependencyVulnRepository_Expecter) GetByVexRuleID(ctx any, tx any, vexRuleID any) *DependencyVulnRepository_GetByVexRuleID_Call {
 	return &DependencyVulnRepository_GetByVexRuleID_Call{Call: _e.mock.On("GetByVexRuleID", ctx, tx, vexRuleID)}
 }
 
@@ -1796,7 +1796,7 @@ type DependencyVulnRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *DependencyVulnRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *DependencyVulnRepository_GetDB_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDB(ctx any, tx any) *DependencyVulnRepository_GetDB_Call {
 	return &DependencyVulnRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1867,7 +1867,7 @@ type DependencyVulnRepository_GetDefaultDependencyVulnsByOrgIDPaged_Call struct 
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *DependencyVulnRepository_Expecter) GetDefaultDependencyVulnsByOrgIDPaged(ctx interface{}, tx interface{}, userAllowedProjectIds interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *DependencyVulnRepository_GetDefaultDependencyVulnsByOrgIDPaged_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDefaultDependencyVulnsByOrgIDPaged(ctx any, tx any, userAllowedProjectIds any, pageInfo any, search any, filter any, sort any) *DependencyVulnRepository_GetDefaultDependencyVulnsByOrgIDPaged_Call {
 	return &DependencyVulnRepository_GetDefaultDependencyVulnsByOrgIDPaged_Call{Call: _e.mock.On("GetDefaultDependencyVulnsByOrgIDPaged", ctx, tx, userAllowedProjectIds, pageInfo, search, filter, sort)}
 }
 
@@ -1963,7 +1963,7 @@ type DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Call str
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *DependencyVulnRepository_Expecter) GetDefaultDependencyVulnsByProjectIDPaged(ctx interface{}, tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDefaultDependencyVulnsByProjectIDPaged(ctx any, tx any, projectID any, pageInfo any, search any, filter any, sort any) *DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Call {
 	return &DependencyVulnRepository_GetDefaultDependencyVulnsByProjectIDPaged_Call{Call: _e.mock.On("GetDefaultDependencyVulnsByProjectIDPaged", ctx, tx, projectID, pageInfo, search, filter, sort)}
 }
 
@@ -2058,7 +2058,7 @@ type DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call struct {
 //   - tx shared.DB
 //   - cveID string
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnByCVEIDAndAssetID(ctx interface{}, tx interface{}, cveID interface{}, assetID interface{}) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnByCVEIDAndAssetID(ctx any, tx any, cveID any, assetID any) *DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call {
 	return &DependencyVulnRepository_GetDependencyVulnByCVEIDAndAssetID_Call{Call: _e.mock.On("GetDependencyVulnByCVEIDAndAssetID", ctx, tx, cveID, assetID)}
 }
 
@@ -2139,7 +2139,7 @@ type DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - artifactName *string
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByAssetVersion(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByAssetVersion(ctx any, tx any, assetVersionName any, assetID any, artifactName any) *DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call {
 	return &DependencyVulnRepository_GetDependencyVulnsByAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByAssetVersion", ctx, tx, assetVersionName, assetID, artifactName)}
 }
 
@@ -2226,7 +2226,7 @@ type DependencyVulnRepository_GetDependencyVulnsByAssetVersionPagedAndFlat_Call 
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByAssetVersionPagedAndFlat(ctx interface{}, tx interface{}, assetVersionName interface{}, assetVersionID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *DependencyVulnRepository_GetDependencyVulnsByAssetVersionPagedAndFlat_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByAssetVersionPagedAndFlat(ctx any, tx any, assetVersionName any, assetVersionID any, pageInfo any, search any, filter any, sort any) *DependencyVulnRepository_GetDependencyVulnsByAssetVersionPagedAndFlat_Call {
 	return &DependencyVulnRepository_GetDependencyVulnsByAssetVersionPagedAndFlat_Call{Call: _e.mock.On("GetDependencyVulnsByAssetVersionPagedAndFlat", ctx, tx, assetVersionName, assetVersionID, pageInfo, search, filter, sort)}
 }
 
@@ -2326,7 +2326,7 @@ type DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call struc
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - artifactName *string
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByDefaultAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByDefaultAssetVersion(ctx any, tx any, assetID any, artifactName any) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
 	return &DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByDefaultAssetVersion", ctx, tx, assetID, artifactName)}
 }
 
@@ -2406,7 +2406,7 @@ type DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call struct
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByOtherAssetVersions(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByOtherAssetVersions(ctx any, tx any, assetVersionName any, assetID any) *DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call {
 	return &DependencyVulnRepository_GetDependencyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetDependencyVulnsByOtherAssetVersions", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -2485,7 +2485,7 @@ type DependencyVulnRepository_GetDependencyVulnsByPurl_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - purls []string
-func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByPurl(ctx interface{}, tx interface{}, purls interface{}) *DependencyVulnRepository_GetDependencyVulnsByPurl_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByPurl(ctx any, tx any, purls any) *DependencyVulnRepository_GetDependencyVulnsByPurl_Call {
 	return &DependencyVulnRepository_GetDependencyVulnsByPurl_Call{Call: _e.mock.On("GetDependencyVulnsByPurl", ctx, tx, purls)}
 }
 
@@ -2559,7 +2559,7 @@ type DependencyVulnRepository_GetDirectDependencyFixedVersionByPackageName_Call 
 //   - ctx context.Context
 //   - tx shared.DB
 //   - packageName string
-func (_e *DependencyVulnRepository_Expecter) GetDirectDependencyFixedVersionByPackageName(ctx interface{}, tx interface{}, packageName interface{}) *DependencyVulnRepository_GetDirectDependencyFixedVersionByPackageName_Call {
+func (_e *DependencyVulnRepository_Expecter) GetDirectDependencyFixedVersionByPackageName(ctx any, tx any, packageName any) *DependencyVulnRepository_GetDirectDependencyFixedVersionByPackageName_Call {
 	return &DependencyVulnRepository_GetDirectDependencyFixedVersionByPackageName_Call{Call: _e.mock.On("GetDirectDependencyFixedVersionByPackageName", ctx, tx, packageName)}
 }
 
@@ -2633,7 +2633,7 @@ type DependencyVulnRepository_GetHintsInOrganizationForVuln_Call struct {
 //   - orgID uuid.UUID
 //   - pURL string
 //   - cveID string
-func (_e *DependencyVulnRepository_Expecter) GetHintsInOrganizationForVuln(ctx interface{}, tx interface{}, orgID interface{}, pURL interface{}, cveID interface{}) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+func (_e *DependencyVulnRepository_Expecter) GetHintsInOrganizationForVuln(ctx any, tx any, orgID any, pURL any, cveID any) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
 	return &DependencyVulnRepository_GetHintsInOrganizationForVuln_Call{Call: _e.mock.On("GetHintsInOrganizationForVuln", ctx, tx, orgID, pURL, cveID)}
 }
 
@@ -2709,7 +2709,7 @@ type DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call struct 
 //   - tx *gorm.DB
 //   - signatures []int64
 //   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsBySignaturesWithoutEvents(ctx interface{}, tx interface{}, signatures interface{}, batchSize interface{}) *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call {
+func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsBySignaturesWithoutEvents(ctx any, tx any, signatures any, batchSize any) *DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call {
 	return &DependencyVulnRepository_GetOpenVulnsBySignaturesWithoutEvents_Call{Call: _e.mock.On("GetOpenVulnsBySignaturesWithoutEvents", ctx, tx, signatures, batchSize)}
 }
 
@@ -2788,7 +2788,7 @@ type DependencyVulnRepository_GetOpenVulnsDistinctBySignatureIn_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - signatures []int64
-func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsDistinctBySignatureIn(ctx interface{}, tx interface{}, signatures interface{}) *DependencyVulnRepository_GetOpenVulnsDistinctBySignatureIn_Call {
+func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsDistinctBySignatureIn(ctx any, tx any, signatures any) *DependencyVulnRepository_GetOpenVulnsDistinctBySignatureIn_Call {
 	return &DependencyVulnRepository_GetOpenVulnsDistinctBySignatureIn_Call{Call: _e.mock.On("GetOpenVulnsDistinctBySignatureIn", ctx, tx, signatures)}
 }
 
@@ -2853,7 +2853,7 @@ type DependencyVulnRepository_GetOpenVulnsDistinctBySignatureWithoutUpstreamReco
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx interface{}, tx interface{}, batchSize interface{}) *DependencyVulnRepository_GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation_Call {
+func (_e *DependencyVulnRepository_Expecter) GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx any, tx any, batchSize any) *DependencyVulnRepository_GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation_Call {
 	return &DependencyVulnRepository_GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation_Call{Call: _e.mock.On("GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation", ctx, tx, batchSize)}
 }
 
@@ -2927,7 +2927,7 @@ type DependencyVulnRepository_GetVulnsByAssetSignatures_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - assetSignatures []int64
-func (_e *DependencyVulnRepository_Expecter) GetVulnsByAssetSignatures(ctx interface{}, tx interface{}, assetSignatures interface{}) *DependencyVulnRepository_GetVulnsByAssetSignatures_Call {
+func (_e *DependencyVulnRepository_Expecter) GetVulnsByAssetSignatures(ctx any, tx any, assetSignatures any) *DependencyVulnRepository_GetVulnsByAssetSignatures_Call {
 	return &DependencyVulnRepository_GetVulnsByAssetSignatures_Call{Call: _e.mock.On("GetVulnsByAssetSignatures", ctx, tx, assetSignatures)}
 }
 
@@ -3002,7 +3002,7 @@ type DependencyVulnRepository_GetVulnsDistinctBySignature_Call struct {
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
 //   - state dtos.VulnState
-func (_e *DependencyVulnRepository_Expecter) GetVulnsDistinctBySignature(ctx interface{}, tx interface{}, assetID interface{}, state interface{}) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
+func (_e *DependencyVulnRepository_Expecter) GetVulnsDistinctBySignature(ctx any, tx any, assetID any, state any) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
 	return &DependencyVulnRepository_GetVulnsDistinctBySignature_Call{Call: _e.mock.On("GetVulnsDistinctBySignature", ctx, tx, assetID, state)}
 }
 
@@ -3072,7 +3072,7 @@ type DependencyVulnRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *DependencyVulnRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *DependencyVulnRepository_InBatches_Call {
+func (_e *DependencyVulnRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *DependencyVulnRepository_InBatches_Call {
 	return &DependencyVulnRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -3146,7 +3146,7 @@ type DependencyVulnRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *DependencyVulnRepository_List_Call {
+func (_e *DependencyVulnRepository_Expecter) List(ctx any, tx any, ids any) *DependencyVulnRepository_List_Call {
 	return &DependencyVulnRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -3221,7 +3221,7 @@ type DependencyVulnRepository_ListByAssetAndAssetVersion_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) ListByAssetAndAssetVersion(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *DependencyVulnRepository_ListByAssetAndAssetVersion_Call {
+func (_e *DependencyVulnRepository_Expecter) ListByAssetAndAssetVersion(ctx any, tx any, assetVersionName any, assetID any) *DependencyVulnRepository_ListByAssetAndAssetVersion_Call {
 	return &DependencyVulnRepository_ListByAssetAndAssetVersion_Call{Call: _e.mock.On("ListByAssetAndAssetVersion", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -3302,7 +3302,7 @@ type DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - artifactName *string
-func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersion(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
+func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersion(ctx any, tx any, assetVersionName any, assetID any, artifactName any) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call {
 	return &DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersion", ctx, tx, assetVersionName, assetID, artifactName)}
 }
 
@@ -3384,7 +3384,7 @@ type DependencyVulnRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *DependencyVulnRepository_Read_Call {
+func (_e *DependencyVulnRepository_Expecter) Read(ctx any, tx any, id any) *DependencyVulnRepository_Read_Call {
 	return &DependencyVulnRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -3447,7 +3447,7 @@ type DependencyVulnRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.DependencyVuln
-func (_e *DependencyVulnRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *DependencyVulnRepository_Save_Call {
+func (_e *DependencyVulnRepository_Expecter) Save(ctx any, tx any, t any) *DependencyVulnRepository_Save_Call {
 	return &DependencyVulnRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -3510,7 +3510,7 @@ type DependencyVulnRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.DependencyVuln
-func (_e *DependencyVulnRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *DependencyVulnRepository_SaveBatch_Call {
+func (_e *DependencyVulnRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *DependencyVulnRepository_SaveBatch_Call {
 	return &DependencyVulnRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -3573,7 +3573,7 @@ type DependencyVulnRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.DependencyVuln
-func (_e *DependencyVulnRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *DependencyVulnRepository_SaveBatchBestEffort_Call {
+func (_e *DependencyVulnRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *DependencyVulnRepository_SaveBatchBestEffort_Call {
 	return &DependencyVulnRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
@@ -3635,7 +3635,7 @@ type DependencyVulnRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *DependencyVulnRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *DependencyVulnRepository_Transaction_Call {
+func (_e *DependencyVulnRepository_Expecter) Transaction(ctx any, fn any) *DependencyVulnRepository_Transaction_Call {
 	return &DependencyVulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -3695,7 +3695,7 @@ type DependencyVulnRepository_Upsert_Call struct {
 //   - t *[]*models.DependencyVuln
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *DependencyVulnRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *DependencyVulnRepository_Upsert_Call {
+func (_e *DependencyVulnRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *DependencyVulnRepository_Upsert_Call {
 	return &DependencyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

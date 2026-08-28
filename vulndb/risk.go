@@ -12,20 +12,18 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/shared"
 
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
+func RawRisk(cve *models.CVE, env dtos.Environmental, affectedComponentDepth int) dtos.RiskCalculationReport {
 	if cve == nil {
 		return dtos.RiskCalculationReport{}
 	}
 	if affectedComponentDepth == 0 {
 		affectedComponentDepth = 1
 	}
-	e := shared.SanitizeEnv(env)
-	r, vector := RiskCalculation(cve, e)
+	r, vector := RiskCalculation(cve, env)
 	risk := r.WithEnvironmentAndThreatIntelligence
 	one := float64(1)
 	epss := float64(utils.OrDefault(cve.EPSS, 0))
@@ -53,15 +51,15 @@ func RawRisk(cve *models.CVE, env shared.Environmental, affectedComponentDepth i
 			},
 		),
 
-		ConfidentialityRequirement: e.ConfidentialityRequirements,
-		IntegrityRequirement:       e.IntegrityRequirements,
-		AvailabilityRequirement:    e.AvailabilityRequirements,
+		ConfidentialityRequirement: dtos.ToCVSS(env.ConfidentialityRequirement),
+		IntegrityRequirement:       dtos.ToCVSS(env.IntegrityRequirement),
+		AvailabilityRequirement:    dtos.ToCVSS(env.AvailabilityRequirement),
 
 		Vector: vector,
 	}
 }
 
-func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetrics, string) {
+func RiskCalculation(cve *models.CVE, env dtos.Environmental) (dtos.RiskMetrics, string) {
 	if cve == nil || cve.Vector == "" {
 		return dtos.RiskMetrics{}, ""
 	}
@@ -161,7 +159,8 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 		if activelyExploited(*cve) {
 			cvss.Set("E", "H") // nolint:errcheck
 		}
-		setEnv(cvss, env)
+		applyRequirements(cvss, env)
+		applyExposure(cvss, env)
 		vector = cvss.Vector()
 		risk.WithEnvironment = getBaseAndEnvironmentalScore(cvss, "CVSS:3.0")
 		risk.WithThreatIntelligence = getBaseAndThreatIntelligenceScore(cvss, "CVSS:3.0")
@@ -186,16 +185,8 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 
 		oldE, _ := cvss.Get("E")
 		cvss.Set("E", "X") // nolint:errcheck
-		// set the env manually
-		if env.ConfidentialityRequirements != "" {
-			cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
-		}
-		if env.IntegrityRequirements != "" {
-			cvss.Set("IR", env.IntegrityRequirements) // nolint:errcheck
-		}
-		if env.AvailabilityRequirements != "" {
-			cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
-		}
+		applyRequirements(cvss, env)
+		applyExposure(cvss, env)
 		environmentalScore := cvss.Score()
 		cvss.Set("E", oldE) // nolint:errcheck
 
@@ -255,8 +246,9 @@ func RiskCalculation(cve *models.CVE, env shared.Environmental) (dtos.RiskMetric
 			cvss.Set("E", "H") // nolint:errcheck
 		}
 
-		setEnv(cvss, env)
-		if env != (shared.Environmental{}) {
+		applyRequirements(cvss, env)
+		applyExposure(cvss, env)
+		if env != (dtos.Environmental{}) {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
 		} else {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
@@ -320,15 +312,81 @@ func getBaseAndEnvironmentalScore(cvss cvssInterface, version string) float64 {
 	return score
 }
 
-func setEnv(cvss cvssInterface, env shared.Environmental) {
-	if env.ConfidentialityRequirements != "" {
-		cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
+// exposureMetric pairs a base CVSS metric with its "Modified" (exposure) counterpart and the
+// severity ranking (least to most severe) shared by both, so an exposure value can be compared
+// against the vulnerability's own base value for that metric.
+type exposureMetric struct {
+	baseKey string
+	modKey  string
+	order   map[string]int
+}
+
+var exposureMetrics = []exposureMetric{
+	{"AV", "MAV", map[string]int{"P": 0, "L": 1, "A": 2, "N": 3}},
+	{"AC", "MAC", map[string]int{"H": 0, "L": 1}},
+	{"PR", "MPR", map[string]int{"H": 0, "L": 1, "N": 2}},
+	{"UI", "MUU", map[string]int{"R": 0, "N": 1}},
+	{"S", "MS", map[string]int{"U": 0, "C": 1}},
+	{"C", "MC", map[string]int{"N": 0, "L": 1, "H": 2}},
+	{"I", "MI", map[string]int{"N": 0, "L": 1, "H": 2}},
+	{"A", "MA", map[string]int{"N": 0, "L": 1, "H": 2}},
+}
+
+func exposureValues(env dtos.Environmental) map[string]string {
+	return map[string]string{
+		"MAV": dtos.ToCVSS(env.ModifiedAttackVector),
+		"MAC": dtos.ToCVSS(env.ModifiedAttackComplexity),
+		"MPR": dtos.ToCVSS(env.ModifiedPrivilegesRequired),
+		"MS":  dtos.ToCVSS(env.ModifiedScope),
+		"MUU": dtos.ToCVSS(env.ModifiedUserInteraction),
+		"MC":  dtos.ToCVSS(env.ModifiedConfidentiality),
+		"MI":  dtos.ToCVSS(env.ModifiedIntegrity),
+		"MA":  dtos.ToCVSS(env.ModifiedAvailability),
 	}
-	if env.IntegrityRequirements != "" {
-		cvss.Set("IR", env.IntegrityRequirements) // nolint:errcheck
+}
+
+type cvssSetGetter interface {
+	Set(key, value string) error
+	Get(key string) (string, error)
+}
+
+
+func applyRequirements(cvss cvssSetGetter, env dtos.Environmental) {
+	cr := dtos.ToCVSS(env.ConfidentialityRequirement)
+	if cr != "" {
+		cvss.Set("CR", cr) // nolint:errcheck
 	}
-	if env.AvailabilityRequirements != "" {
-		cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
+	ir := dtos.ToCVSS(env.IntegrityRequirement)
+	if ir != "" {
+		cvss.Set("IR", ir) // nolint:errcheck
+	}
+	ar := dtos.ToCVSS(env.AvailabilityRequirement)
+	if ar != "" {
+		cvss.Set("AR", ar) // nolint:errcheck
+	}
+}
+
+
+func applyExposure(cvss cvssSetGetter, env dtos.Environmental) {
+	exposure := exposureValues(env)
+	for _, m := range exposureMetrics {
+		modValue := exposure[m.modKey]
+		if modValue == "" {
+			continue
+		}
+		baseValue, err := cvss.Get(m.baseKey)
+		if err != nil {
+			continue
+		}
+		baseRank, baseOK := m.order[baseValue]
+		modRank, modOK := m.order[modValue]
+		if !baseOK || !modOK {
+			continue
+		}
+		// only apply the exposure value if it is strictly less severe than the base metric
+		if modRank < baseRank {
+			cvss.Set(m.modKey, modValue) // nolint:errcheck
+		}
 	}
 }
 

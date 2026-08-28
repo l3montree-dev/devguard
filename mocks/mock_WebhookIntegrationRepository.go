@@ -66,7 +66,7 @@ type WebhookIntegrationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *WebhookIntegrationRepository_Delete_Call {
+func (_e *WebhookIntegrationRepository_Expecter) Delete(ctx any, tx any, id any) *WebhookIntegrationRepository_Delete_Call {
 	return &WebhookIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - projectID uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) FindByOrgIDAndProjectID(ctx interface{}, tx interface{}, orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
+func (_e *WebhookIntegrationRepository_Expecter) FindByOrgIDAndProjectID(ctx any, tx any, orgID any, projectID any) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
 	return &WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call{Call: _e.mock.On("FindByOrgIDAndProjectID", ctx, tx, orgID, projectID)}
 }
 
@@ -218,7 +218,7 @@ type WebhookIntegrationRepository_GetClientByIntegrationID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - integrationID uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) GetClientByIntegrationID(ctx interface{}, tx interface{}, integrationID interface{}) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
+func (_e *WebhookIntegrationRepository_Expecter) GetClientByIntegrationID(ctx any, tx any, integrationID any) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
 	return &WebhookIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", ctx, tx, integrationID)}
 }
 
@@ -293,7 +293,7 @@ type WebhookIntegrationRepository_GetProjectWebhooks_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - projectID uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) GetProjectWebhooks(ctx interface{}, tx interface{}, orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
+func (_e *WebhookIntegrationRepository_Expecter) GetProjectWebhooks(ctx any, tx any, orgID any, projectID any) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
 	return &WebhookIntegrationRepository_GetProjectWebhooks_Call{Call: _e.mock.On("GetProjectWebhooks", ctx, tx, orgID, projectID)}
 }
 
@@ -370,7 +370,7 @@ type WebhookIntegrationRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *WebhookIntegrationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *WebhookIntegrationRepository_Read_Call {
+func (_e *WebhookIntegrationRepository_Expecter) Read(ctx any, tx any, id any) *WebhookIntegrationRepository_Read_Call {
 	return &WebhookIntegrationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -433,7 +433,7 @@ type WebhookIntegrationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.WebhookIntegration
-func (_e *WebhookIntegrationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *WebhookIntegrationRepository_Save_Call {
+func (_e *WebhookIntegrationRepository_Expecter) Save(ctx any, tx any, model any) *WebhookIntegrationRepository_Save_Call {
 	return &WebhookIntegrationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 

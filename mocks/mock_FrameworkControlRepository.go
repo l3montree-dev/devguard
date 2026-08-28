@@ -68,7 +68,7 @@ type FrameworkControlRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *FrameworkControlRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *FrameworkControlRepository_Activate_Call {
+func (_e *FrameworkControlRepository_Expecter) Activate(ctx any, tx any, id any) *FrameworkControlRepository_Activate_Call {
 	return &FrameworkControlRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type FrameworkControlRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *FrameworkControlRepository_Expecter) All(ctx interface{}, tx interface{}) *FrameworkControlRepository_All_Call {
+func (_e *FrameworkControlRepository_Expecter) All(ctx any, tx any) *FrameworkControlRepository_All_Call {
 	return &FrameworkControlRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type FrameworkControlRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *FrameworkControlRepository_Expecter) Begin(ctx interface{}) *FrameworkControlRepository_Begin_Call {
+func (_e *FrameworkControlRepository_Expecter) Begin(ctx any) *FrameworkControlRepository_Begin_Call {
 	return &FrameworkControlRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type FrameworkControlRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *FrameworkControlRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *FrameworkControlRepository_CleanupOrphanedRecords_Call {
+func (_e *FrameworkControlRepository_Expecter) CleanupOrphanedRecords(ctx any) *FrameworkControlRepository_CleanupOrphanedRecords_Call {
 	return &FrameworkControlRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type FrameworkControlRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.FrameworkControl
-func (_e *FrameworkControlRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *FrameworkControlRepository_Create_Call {
+func (_e *FrameworkControlRepository_Expecter) Create(ctx any, tx any, t any) *FrameworkControlRepository_Create_Call {
 	return &FrameworkControlRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type FrameworkControlRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.FrameworkControl
-func (_e *FrameworkControlRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *FrameworkControlRepository_CreateBatch_Call {
+func (_e *FrameworkControlRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *FrameworkControlRepository_CreateBatch_Call {
 	return &FrameworkControlRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type FrameworkControlRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *FrameworkControlRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *FrameworkControlRepository_Delete_Call {
+func (_e *FrameworkControlRepository_Expecter) Delete(ctx any, tx any, id any) *FrameworkControlRepository_Delete_Call {
 	return &FrameworkControlRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type FrameworkControlRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.FrameworkControl
-func (_e *FrameworkControlRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *FrameworkControlRepository_DeleteBatch_Call {
+func (_e *FrameworkControlRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *FrameworkControlRepository_DeleteBatch_Call {
 	return &FrameworkControlRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -566,7 +566,7 @@ type FrameworkControlRepository_GetAll_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - framework *string
-func (_e *FrameworkControlRepository_Expecter) GetAll(ctx interface{}, tx interface{}, framework interface{}) *FrameworkControlRepository_GetAll_Call {
+func (_e *FrameworkControlRepository_Expecter) GetAll(ctx any, tx any, framework any) *FrameworkControlRepository_GetAll_Call {
 	return &FrameworkControlRepository_GetAll_Call{Call: _e.mock.On("GetAll", ctx, tx, framework)}
 }
 
@@ -630,7 +630,7 @@ type FrameworkControlRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *FrameworkControlRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *FrameworkControlRepository_GetDB_Call {
+func (_e *FrameworkControlRepository_Expecter) GetDB(ctx any, tx any) *FrameworkControlRepository_GetDB_Call {
 	return &FrameworkControlRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -690,7 +690,7 @@ type FrameworkControlRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *FrameworkControlRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *FrameworkControlRepository_InBatches_Call {
+func (_e *FrameworkControlRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *FrameworkControlRepository_InBatches_Call {
 	return &FrameworkControlRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -764,7 +764,7 @@ type FrameworkControlRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *FrameworkControlRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *FrameworkControlRepository_List_Call {
+func (_e *FrameworkControlRepository_Expecter) List(ctx any, tx any, ids any) *FrameworkControlRepository_List_Call {
 	return &FrameworkControlRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -837,7 +837,7 @@ type FrameworkControlRepository_ListFrameworkControls_Call struct {
 // ListFrameworkControls is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *FrameworkControlRepository_Expecter) ListFrameworkControls(ctx interface{}, tx interface{}) *FrameworkControlRepository_ListFrameworkControls_Call {
+func (_e *FrameworkControlRepository_Expecter) ListFrameworkControls(ctx any, tx any) *FrameworkControlRepository_ListFrameworkControls_Call {
 	return &FrameworkControlRepository_ListFrameworkControls_Call{Call: _e.mock.On("ListFrameworkControls", ctx, tx)}
 }
 
@@ -904,7 +904,7 @@ type FrameworkControlRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *FrameworkControlRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *FrameworkControlRepository_Read_Call {
+func (_e *FrameworkControlRepository_Expecter) Read(ctx any, tx any, id any) *FrameworkControlRepository_Read_Call {
 	return &FrameworkControlRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -967,7 +967,7 @@ type FrameworkControlRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.FrameworkControl
-func (_e *FrameworkControlRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *FrameworkControlRepository_Save_Call {
+func (_e *FrameworkControlRepository_Expecter) Save(ctx any, tx any, t any) *FrameworkControlRepository_Save_Call {
 	return &FrameworkControlRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1030,7 +1030,7 @@ type FrameworkControlRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.FrameworkControl
-func (_e *FrameworkControlRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *FrameworkControlRepository_SaveBatch_Call {
+func (_e *FrameworkControlRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *FrameworkControlRepository_SaveBatch_Call {
 	return &FrameworkControlRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1093,7 +1093,7 @@ type FrameworkControlRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.FrameworkControl
-func (_e *FrameworkControlRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *FrameworkControlRepository_SaveBatchBestEffort_Call {
+func (_e *FrameworkControlRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *FrameworkControlRepository_SaveBatchBestEffort_Call {
 	return &FrameworkControlRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
@@ -1155,7 +1155,7 @@ type FrameworkControlRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *FrameworkControlRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *FrameworkControlRepository_Transaction_Call {
+func (_e *FrameworkControlRepository_Expecter) Transaction(ctx any, fn any) *FrameworkControlRepository_Transaction_Call {
 	return &FrameworkControlRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1215,7 +1215,7 @@ type FrameworkControlRepository_Upsert_Call struct {
 //   - t *[]*models.FrameworkControl
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *FrameworkControlRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *FrameworkControlRepository_Upsert_Call {
+func (_e *FrameworkControlRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *FrameworkControlRepository_Upsert_Call {
 	return &FrameworkControlRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

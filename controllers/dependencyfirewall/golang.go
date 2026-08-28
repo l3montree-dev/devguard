@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -84,20 +83,14 @@ func (goEcosystem) packageIdentifier(packageName, version string) string {
 	return fmt.Sprintf("pkg:go/%s", packageName)
 }
 
-func (goEcosystem) isCached(cachePath string) bool {
-	info, err := os.Stat(cachePath)
-	if err != nil {
-		return false
+// goCacheTTL returns how long a cached Go proxy response stays fresh.
+// Explicit-version files (.info/.mod/.zip under /@v/) are immutable once
+// published; everything else (e.g. @latest resolution) needs a shorter TTL.
+func goCacheTTL(requestPath string) time.Duration {
+	if strings.Contains(requestPath, "/@v/") {
+		return 168 * time.Hour // 7 days
 	}
-
-	var maxAge time.Duration
-	if strings.Contains(cachePath, "/@v/") {
-		maxAge = 168 * time.Hour // 7 days
-	} else {
-		maxAge = 1 * time.Hour
-	}
-
-	return time.Since(info.ModTime()) < maxAge
+	return 1 * time.Hour
 }
 
 func (goEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
@@ -166,8 +159,8 @@ func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 
 // proxyGoExplicitVersion handles Go proxy requests for a specific version (.info, .mod, .zip).
 func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath string) error {
-	cachePath, err := d.getCachePath(eco, requestPath)
-	if err != nil {
+	cacheKey := "go/" + requestPath
+	if err := d.cache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "go", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -181,38 +174,27 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	if blocked, reason := d.checkMaliciousPackage(ctx, eco, requestPath); blocked {
 		slog.Warn("Blocked malicious package", "proxy", "go", "path", requestPath, "reason", reason)
-		if err := os.Remove(cachePath); err == nil {
-			slog.Info("Removed malicious package from cache", "path", cachePath)
-		}
+		d.cache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 	}
 
-	if eco.isCached(cachePath) {
-		slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
-		data, err := os.ReadFile(cachePath)
-		if err == nil {
-			if d.VerifyCacheIntegrity(cachePath, data) {
-				if configs.MinReleaseAge > 0 {
-					if releaseTime, ok := d.ReadCachedReleaseTime(cachePath); ok {
-						if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
-							return d.blockTooNewPackage(c, eco, requestPath, releaseTime, configs.MinReleaseAge)
-						}
-						span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-						return eco.writeResponse(c, data, requestPath, true)
+	if d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
+		if entry, ok := d.cache.Get(cacheKey); ok {
+			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
+			if configs.MinReleaseAge > 0 {
+				if !entry.releaseTime.IsZero() {
+					if time.Since(entry.releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+						return d.blockTooNewPackage(c, eco, requestPath, entry.releaseTime, configs.MinReleaseAge)
 					}
-					// No cached release time — fall through to upstream to retrieve it.
-					slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "go", "path", requestPath)
-				} else {
 					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-					return eco.writeResponse(c, data, requestPath, true)
+					return eco.writeResponse(c, entry.data, requestPath, true)
 				}
+				// No cached release time — fall through to upstream to retrieve it.
+				slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "go", "path", requestPath)
 			} else {
-				slog.Warn("Cache integrity verification failed, refetching", "proxy", "go", "path", requestPath)
-				os.Remove(cachePath)
-				os.Remove(cachePath + ".sha256")
+				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+				return eco.writeResponse(c, entry.data, requestPath, true)
 			}
-		} else {
-			slog.Warn("Cache read error", "proxy", "go", "error", err)
 		}
 	}
 
@@ -240,15 +222,13 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		}
 	}
 
-	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
-		slog.Warn("Failed to cache response", "proxy", "go", "error", err)
-	}
-
 	// Store release time so MinReleaseAge can be enforced on future cache hits.
+	cv := cacheValue{data: data}
 	if hasReleaseTime && strings.HasSuffix(requestPath, ".info") {
-		if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
-			slog.Warn("Failed to cache release time", "proxy", "go", "error", err)
-		}
+		cv.releaseTime = releaseTime
+	}
+	if err := d.cache.Set(cacheKey, cv); err != nil {
+		slog.Warn("Failed to cache response", "proxy", "go", "error", err)
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
@@ -263,12 +243,6 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 
 // proxyGoLatest handles Go proxy requests for @latest and @v/list (version-resolution requests).
 func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath, packageName string) error {
-	cachePath, err := d.getCachePath(eco, requestPath)
-	if err != nil {
-		slog.Warn("Invalid cache path", "proxy", "go", "path", requestPath, "error", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
-	}
-
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	// Fetch from upstream — we need the response to resolve the version before we can check rules.
@@ -308,16 +282,6 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 	if configs.MinReleaseAge > 0 && hasReleaseTime && resolvedVersion != "" {
 		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, eco, requestPath, releaseTime, configs.MinReleaseAge)
-		}
-	}
-
-	if err := d.CacheDataWithIntegrity(cachePath, data); err != nil {
-		slog.Warn("Failed to cache response", "proxy", "go", "error", err)
-	}
-
-	if hasReleaseTime && resolvedVersion != "" {
-		if err := d.CacheReleaseTime(cachePath, releaseTime); err != nil {
-			slog.Warn("Failed to cache release time", "proxy", "go", "error", err)
 		}
 	}
 
