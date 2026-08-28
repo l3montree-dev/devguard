@@ -27,26 +27,6 @@ func NewWebhookController(webhookRepository shared.WebhookIntegrationRepository)
 	}
 }
 
-type WebhookSaveRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	URL         string `json:"url" validate:"required"`
-	Secret      string `json:"secret"`
-	SbomEnabled bool   `json:"sbomEnabled"`
-	VulnEnabled bool   `json:"vulnEnabled"`
-}
-
-type WebhookUpdateRequest struct {
-	ID string `json:"id"`
-	WebhookSaveRequest
-}
-
-type WebhookTestRequest struct {
-	URL         string `json:"url" validate:"required"`
-	Secret      string `json:"secret"`
-	PayloadType string `json:"payloadType"`
-}
-
 // @Summary Delete webhook integration (org)
 // @Tags Webhooks
 // @Security CookieAuth
@@ -109,7 +89,7 @@ func (w *WebhookController) GetExcessTicketIDs(ctx context.Context, asset models
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param id path string true "Webhook ID"
-// @Param body body controllers.WebhookUpdateRequest true "Webhook data"
+// @Param body body dtos.WebhookUpdateRequestDTO true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
 // @Router /organizations/{organization}/integrations/webhook/{id} [put]
 func (w *WebhookController) OrgUpdate(ctx shared.Context) error {
@@ -124,14 +104,14 @@ func (w *WebhookController) OrgUpdate(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param id path string true "Webhook ID"
-// @Param body body controllers.WebhookUpdateRequest true "Webhook data"
+// @Param body body dtos.WebhookUpdateRequestDTO true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/{id} [put]
 func (w *WebhookController) ProjectUpdate(ctx shared.Context) error {
 	return w.Update(ctx)
 }
 func (w *WebhookController) Update(ctx shared.Context) error {
-	var data WebhookUpdateRequest
+	var data dtos.WebhookUpdateRequestDTO
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
@@ -188,7 +168,7 @@ func (w *WebhookController) Update(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param body body controllers.WebhookSaveRequest true "Webhook data"
+// @Param body body dtos.WebhookCreateRequestDTO true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
 // @Router /organizations/{organization}/integrations/webhook/test-and-save [post]
 func (w *WebhookController) OrgSave(ctx shared.Context) error {
@@ -202,14 +182,14 @@ func (w *WebhookController) OrgSave(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Param body body controllers.WebhookSaveRequest true "Webhook data"
+// @Param body body dtos.WebhookCreateRequestDTO true "Webhook data"
 // @Success 200 {object} dtos.WebhookIntegrationDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test-and-save [post]
 func (w *WebhookController) ProjectSave(ctx shared.Context) error {
 	return w.Save(ctx)
 }
 func (w *WebhookController) Save(ctx shared.Context) error {
-	var data WebhookSaveRequest
+	var data dtos.WebhookCreateRequestDTO
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}
@@ -256,7 +236,7 @@ func (w *WebhookController) Save(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param body body controllers.WebhookTestRequest true "Test webhook data"
+// @Param body body dtos.WebhookTestRequestDTO true "Test webhook data"
 // @Success 200 {object} object{message=string,payloadType=string}
 // @Router /organizations/{organization}/integrations/webhook/test [post]
 func (w *WebhookController) OrgTest(ctx shared.Context) error {
@@ -270,14 +250,14 @@ func (w *WebhookController) OrgTest(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Param body body controllers.WebhookTestRequest true "Test webhook data"
+// @Param body body dtos.WebhookTestRequestDTO true "Test webhook data"
 // @Success 200 {object} object{message=string,payloadType=string}
 // @Router /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test [post]
 func (w *WebhookController) ProjectTest(ctx shared.Context) error {
 	return w.Test(ctx)
 }
 func (w *WebhookController) Test(ctx shared.Context) error {
-	var data WebhookTestRequest
+	var data dtos.WebhookTestRequestDTO
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(400, "invalid request data")
 	}

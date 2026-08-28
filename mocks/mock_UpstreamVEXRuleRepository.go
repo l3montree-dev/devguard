@@ -67,7 +67,7 @@ type UpstreamVEXRuleRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *UpstreamVEXRuleRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *UpstreamVEXRuleRepository_Activate_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Activate(ctx any, tx any, id any) *UpstreamVEXRuleRepository_Activate_Call {
 	return &UpstreamVEXRuleRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -140,7 +140,7 @@ type UpstreamVEXRuleRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *UpstreamVEXRuleRepository_Expecter) All(ctx interface{}, tx interface{}) *UpstreamVEXRuleRepository_All_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) All(ctx any, tx any) *UpstreamVEXRuleRepository_All_Call {
 	return &UpstreamVEXRuleRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -198,7 +198,7 @@ type UpstreamVEXRuleRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *UpstreamVEXRuleRepository_Expecter) Begin(ctx interface{}) *UpstreamVEXRuleRepository_Begin_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Begin(ctx any) *UpstreamVEXRuleRepository_Begin_Call {
 	return &UpstreamVEXRuleRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -254,7 +254,7 @@ type UpstreamVEXRuleRepository_ByCveScopes_Call struct {
 //   - tx shared.DB
 //   - cveIDs []string
 //   - batchSize int
-func (_e *UpstreamVEXRuleRepository_Expecter) ByCveScopes(ctx interface{}, tx interface{}, cveIDs interface{}, batchSize interface{}) *UpstreamVEXRuleRepository_ByCveScopes_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) ByCveScopes(ctx any, tx any, cveIDs any, batchSize any) *UpstreamVEXRuleRepository_ByCveScopes_Call {
 	return &UpstreamVEXRuleRepository_ByCveScopes_Call{Call: _e.mock.On("ByCveScopes", ctx, tx, cveIDs, batchSize)}
 }
 
@@ -320,7 +320,7 @@ type UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *UpstreamVEXRuleRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) CleanupOrphanedRecords(ctx any) *UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call {
 	return &UpstreamVEXRuleRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -373,7 +373,7 @@ type UpstreamVEXRuleRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *UpstreamVEXRuleRepository_Create_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Create(ctx any, tx any, t any) *UpstreamVEXRuleRepository_Create_Call {
 	return &UpstreamVEXRuleRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -436,7 +436,7 @@ type UpstreamVEXRuleRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *UpstreamVEXRuleRepository_CreateBatch_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *UpstreamVEXRuleRepository_CreateBatch_Call {
 	return &UpstreamVEXRuleRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -499,7 +499,7 @@ type UpstreamVEXRuleRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *UpstreamVEXRuleRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *UpstreamVEXRuleRepository_Delete_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Delete(ctx any, tx any, id any) *UpstreamVEXRuleRepository_Delete_Call {
 	return &UpstreamVEXRuleRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -562,7 +562,7 @@ type UpstreamVEXRuleRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *UpstreamVEXRuleRepository_DeleteBatch_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *UpstreamVEXRuleRepository_DeleteBatch_Call {
 	return &UpstreamVEXRuleRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -626,7 +626,7 @@ type UpstreamVEXRuleRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *UpstreamVEXRuleRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *UpstreamVEXRuleRepository_GetDB_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) GetDB(ctx any, tx any) *UpstreamVEXRuleRepository_GetDB_Call {
 	return &UpstreamVEXRuleRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -686,7 +686,7 @@ type UpstreamVEXRuleRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *UpstreamVEXRuleRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *UpstreamVEXRuleRepository_InBatches_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *UpstreamVEXRuleRepository_InBatches_Call {
 	return &UpstreamVEXRuleRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -760,7 +760,7 @@ type UpstreamVEXRuleRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *UpstreamVEXRuleRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *UpstreamVEXRuleRepository_List_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) List(ctx any, tx any, ids any) *UpstreamVEXRuleRepository_List_Call {
 	return &UpstreamVEXRuleRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -832,7 +832,7 @@ type UpstreamVEXRuleRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *UpstreamVEXRuleRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *UpstreamVEXRuleRepository_Read_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Read(ctx any, tx any, id any) *UpstreamVEXRuleRepository_Read_Call {
 	return &UpstreamVEXRuleRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -895,7 +895,7 @@ type UpstreamVEXRuleRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *UpstreamVEXRuleRepository_Save_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Save(ctx any, tx any, t any) *UpstreamVEXRuleRepository_Save_Call {
 	return &UpstreamVEXRuleRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -958,7 +958,7 @@ type UpstreamVEXRuleRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *UpstreamVEXRuleRepository_SaveBatch_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *UpstreamVEXRuleRepository_SaveBatch_Call {
 	return &UpstreamVEXRuleRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1021,7 +1021,7 @@ type UpstreamVEXRuleRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.UpstreamVEXRule
-func (_e *UpstreamVEXRuleRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *UpstreamVEXRuleRepository_SaveBatchBestEffort_Call {
 	return &UpstreamVEXRuleRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
@@ -1083,7 +1083,7 @@ type UpstreamVEXRuleRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *UpstreamVEXRuleRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *UpstreamVEXRuleRepository_Transaction_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Transaction(ctx any, fn any) *UpstreamVEXRuleRepository_Transaction_Call {
 	return &UpstreamVEXRuleRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1143,7 +1143,7 @@ type UpstreamVEXRuleRepository_Upsert_Call struct {
 //   - t *[]*models.UpstreamVEXRule
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *UpstreamVEXRuleRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *UpstreamVEXRuleRepository_Upsert_Call {
+func (_e *UpstreamVEXRuleRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *UpstreamVEXRuleRepository_Upsert_Call {
 	return &UpstreamVEXRuleRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

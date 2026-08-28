@@ -41,6 +41,7 @@ type OSV struct {
 	Summary   string     `json:"summary"`
 	Modified  time.Time  `json:"modified"`
 	Published time.Time  `json:"published"`
+	Withdrawn *time.Time `json:"withdrawn"`
 	Details   string     `json:"details"`
 	Related   []string   `json:"related"`
 	Aliases   []string   `json:"aliases"`
@@ -50,6 +51,12 @@ type OSV struct {
 		Type  string `json:"type"`
 		Score string `json:"score"`
 	} `json:"severity"`
+	DatabaseSpecific DatabaseSpecifics `json:"database_specific"` // specific additional information, not standardized
+}
+
+// can include a lot of custom attributes but we are only interested in the cwes field
+type DatabaseSpecifics struct {
+	CWEs []string `json:"cwe_ids"` // array of cwe ids associated with this vulnerability
 }
 
 type EPSS struct {

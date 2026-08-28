@@ -26,7 +26,7 @@ func main() {
 		commands.NewLicensesCommand(),
 	)
 
-	root.AddCommand(commands.LogsCmd, commands.DocsCmd, release)
+	root.AddCommand(commands.LogsCmd, commands.DocsCmd, commands.VerifyDigestsCmd, release)
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

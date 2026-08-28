@@ -76,7 +76,7 @@ type AssetVersionRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetVersionRepository_Expecter) All(ctx interface{}, tx interface{}) *AssetVersionRepository_All_Call {
+func (_e *AssetVersionRepository_Expecter) All(ctx any, tx any) *AssetVersionRepository_All_Call {
 	return &AssetVersionRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -134,7 +134,7 @@ type AssetVersionRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *AssetVersionRepository_Expecter) Begin(ctx interface{}) *AssetVersionRepository_Begin_Call {
+func (_e *AssetVersionRepository_Expecter) Begin(ctx any) *AssetVersionRepository_Begin_Call {
 	return &AssetVersionRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -187,7 +187,7 @@ type AssetVersionRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetVersion *models.AssetVersion
-func (_e *AssetVersionRepository_Expecter) Delete(ctx interface{}, tx interface{}, assetVersion interface{}) *AssetVersionRepository_Delete_Call {
+func (_e *AssetVersionRepository_Expecter) Delete(ctx any, tx any, assetVersion any) *AssetVersionRepository_Delete_Call {
 	return &AssetVersionRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, assetVersion)}
 }
 
@@ -259,7 +259,7 @@ type AssetVersionRepository_DeleteOldAssetVersions_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - day int
-func (_e *AssetVersionRepository_Expecter) DeleteOldAssetVersions(ctx interface{}, tx interface{}, day interface{}) *AssetVersionRepository_DeleteOldAssetVersions_Call {
+func (_e *AssetVersionRepository_Expecter) DeleteOldAssetVersions(ctx any, tx any, day any) *AssetVersionRepository_DeleteOldAssetVersions_Call {
 	return &AssetVersionRepository_DeleteOldAssetVersions_Call{Call: _e.mock.On("DeleteOldAssetVersions", ctx, tx, day)}
 }
 
@@ -332,7 +332,7 @@ type AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - day int
-func (_e *AssetVersionRepository_Expecter) DeleteOldAssetVersionsOfAsset(ctx interface{}, tx interface{}, assetID interface{}, day interface{}) *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call {
+func (_e *AssetVersionRepository_Expecter) DeleteOldAssetVersionsOfAsset(ctx any, tx any, assetID any, day any) *AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call {
 	return &AssetVersionRepository_DeleteOldAssetVersionsOfAsset_Call{Call: _e.mock.On("DeleteOldAssetVersionsOfAsset", ctx, tx, assetID, day)}
 }
 
@@ -412,7 +412,7 @@ type AssetVersionRepository_FindOrCreate_Call struct {
 //   - assetID uuid.UUID
 //   - tag bool
 //   - defaultBranchName *string
-func (_e *AssetVersionRepository_Expecter) FindOrCreate(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, tag interface{}, defaultBranchName interface{}) *AssetVersionRepository_FindOrCreate_Call {
+func (_e *AssetVersionRepository_Expecter) FindOrCreate(ctx any, tx any, assetVersionName any, assetID any, tag any, defaultBranchName any) *AssetVersionRepository_FindOrCreate_Call {
 	return &AssetVersionRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", ctx, tx, assetVersionName, assetID, tag, defaultBranchName)}
 }
 
@@ -500,7 +500,7 @@ type AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call stru
 // FindUpstreamVEXRuleApplicableAssetVersions is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetVersionRepository_Expecter) FindUpstreamVEXRuleApplicableAssetVersions(ctx interface{}, tx interface{}) *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call {
+func (_e *AssetVersionRepository_Expecter) FindUpstreamVEXRuleApplicableAssetVersions(ctx any, tx any) *AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call {
 	return &AssetVersionRepository_FindUpstreamVEXRuleApplicableAssetVersions_Call{Call: _e.mock.On("FindUpstreamVEXRuleApplicableAssetVersions", ctx, tx)}
 }
 
@@ -569,7 +569,7 @@ type AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetAllTagsAndDefaultBranchForAsset(ctx interface{}, tx interface{}, assetID interface{}) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
+func (_e *AssetVersionRepository_Expecter) GetAllTagsAndDefaultBranchForAsset(ctx any, tx any, assetID any) *AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call {
 	return &AssetVersionRepository_GetAllTagsAndDefaultBranchForAsset_Call{Call: _e.mock.On("GetAllTagsAndDefaultBranchForAsset", ctx, tx, assetID)}
 }
 
@@ -641,7 +641,7 @@ type AssetVersionRepository_GetAmountOfAssetVersionsInOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetAmountOfAssetVersionsInOrg(ctx interface{}, tx interface{}, orgID interface{}) *AssetVersionRepository_GetAmountOfAssetVersionsInOrg_Call {
+func (_e *AssetVersionRepository_Expecter) GetAmountOfAssetVersionsInOrg(ctx any, tx any, orgID any) *AssetVersionRepository_GetAmountOfAssetVersionsInOrg_Call {
 	return &AssetVersionRepository_GetAmountOfAssetVersionsInOrg_Call{Call: _e.mock.On("GetAmountOfAssetVersionsInOrg", ctx, tx, orgID)}
 }
 
@@ -715,7 +715,7 @@ type AssetVersionRepository_GetAssetVersionsByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
+func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetID(ctx any, tx any, assetID any) *AssetVersionRepository_GetAssetVersionsByAssetID_Call {
 	return &AssetVersionRepository_GetAssetVersionsByAssetID_Call{Call: _e.mock.On("GetAssetVersionsByAssetID", ctx, tx, assetID)}
 }
 
@@ -789,7 +789,7 @@ type AssetVersionRepository_GetAssetVersionsByAssetIDWithArtifacts_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetIDWithArtifacts(ctx interface{}, tx interface{}, assetID interface{}) *AssetVersionRepository_GetAssetVersionsByAssetIDWithArtifacts_Call {
+func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetIDWithArtifacts(ctx any, tx any, assetID any) *AssetVersionRepository_GetAssetVersionsByAssetIDWithArtifacts_Call {
 	return &AssetVersionRepository_GetAssetVersionsByAssetIDWithArtifacts_Call{Call: _e.mock.On("GetAssetVersionsByAssetIDWithArtifacts", ctx, tx, assetID)}
 }
 
@@ -863,7 +863,7 @@ type AssetVersionRepository_GetAssetVersionsByAssetIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetIDs []uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}) *AssetVersionRepository_GetAssetVersionsByAssetIDs_Call {
+func (_e *AssetVersionRepository_Expecter) GetAssetVersionsByAssetIDs(ctx any, tx any, assetIDs any) *AssetVersionRepository_GetAssetVersionsByAssetIDs_Call {
 	return &AssetVersionRepository_GetAssetVersionsByAssetIDs_Call{Call: _e.mock.On("GetAssetVersionsByAssetIDs", ctx, tx, assetIDs)}
 }
 
@@ -927,7 +927,7 @@ type AssetVersionRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetVersionRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *AssetVersionRepository_GetDB_Call {
+func (_e *AssetVersionRepository_Expecter) GetDB(ctx any, tx any) *AssetVersionRepository_GetDB_Call {
 	return &AssetVersionRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -994,7 +994,7 @@ type AssetVersionRepository_GetDefaultAssetVersion_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersion(ctx interface{}, tx interface{}, assetID interface{}) *AssetVersionRepository_GetDefaultAssetVersion_Call {
+func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersion(ctx any, tx any, assetID any) *AssetVersionRepository_GetDefaultAssetVersion_Call {
 	return &AssetVersionRepository_GetDefaultAssetVersion_Call{Call: _e.mock.On("GetDefaultAssetVersion", ctx, tx, assetID)}
 }
 
@@ -1068,7 +1068,7 @@ type AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersionsByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call {
+func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersionsByProjectID(ctx any, tx any, projectID any) *AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call {
 	return &AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call{Call: _e.mock.On("GetDefaultAssetVersionsByProjectID", ctx, tx, projectID)}
 }
 
@@ -1142,7 +1142,7 @@ type AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectIDs []uuid.UUID
-func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersionsByProjectIDs(ctx interface{}, tx interface{}, projectIDs interface{}) *AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call {
+func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersionsByProjectIDs(ctx any, tx any, projectIDs any) *AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call {
 	return &AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call{Call: _e.mock.On("GetDefaultAssetVersionsByProjectIDs", ctx, tx, projectIDs)}
 }
 
@@ -1215,7 +1215,7 @@ type AssetVersionRepository_Read_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) Read(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *AssetVersionRepository_Read_Call {
+func (_e *AssetVersionRepository_Expecter) Read(ctx any, tx any, assetVersionName any, assetID any) *AssetVersionRepository_Read_Call {
 	return &AssetVersionRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -1293,7 +1293,7 @@ type AssetVersionRepository_ReadBySlug_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - slug string
-func (_e *AssetVersionRepository_Expecter) ReadBySlug(ctx interface{}, tx interface{}, assetID interface{}, slug interface{}) *AssetVersionRepository_ReadBySlug_Call {
+func (_e *AssetVersionRepository_Expecter) ReadBySlug(ctx any, tx any, assetID any, slug any) *AssetVersionRepository_ReadBySlug_Call {
 	return &AssetVersionRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, tx, assetID, slug)}
 }
 
@@ -1361,7 +1361,7 @@ type AssetVersionRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetVersion *models.AssetVersion
-func (_e *AssetVersionRepository_Expecter) Save(ctx interface{}, tx interface{}, assetVersion interface{}) *AssetVersionRepository_Save_Call {
+func (_e *AssetVersionRepository_Expecter) Save(ctx any, tx any, assetVersion any) *AssetVersionRepository_Save_Call {
 	return &AssetVersionRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, assetVersion)}
 }
 
@@ -1425,7 +1425,7 @@ type AssetVersionRepository_UpdateAssetDefaultBranch_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - defaultBranch string
-func (_e *AssetVersionRepository_Expecter) UpdateAssetDefaultBranch(ctx interface{}, tx interface{}, assetID interface{}, defaultBranch interface{}) *AssetVersionRepository_UpdateAssetDefaultBranch_Call {
+func (_e *AssetVersionRepository_Expecter) UpdateAssetDefaultBranch(ctx any, tx any, assetID any, defaultBranch any) *AssetVersionRepository_UpdateAssetDefaultBranch_Call {
 	return &AssetVersionRepository_UpdateAssetDefaultBranch_Call{Call: _e.mock.On("UpdateAssetDefaultBranch", ctx, tx, assetID, defaultBranch)}
 }
 

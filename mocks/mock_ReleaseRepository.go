@@ -68,7 +68,7 @@ type ReleaseRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_Activate_Call {
+func (_e *ReleaseRepository_Expecter) Activate(ctx any, tx any, id any) *ReleaseRepository_Activate_Call {
 	return &ReleaseRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type ReleaseRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ReleaseRepository_Expecter) All(ctx interface{}, tx interface{}) *ReleaseRepository_All_Call {
+func (_e *ReleaseRepository_Expecter) All(ctx any, tx any) *ReleaseRepository_All_Call {
 	return &ReleaseRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type ReleaseRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ReleaseRepository_Expecter) Begin(ctx interface{}) *ReleaseRepository_Begin_Call {
+func (_e *ReleaseRepository_Expecter) Begin(ctx any) *ReleaseRepository_Begin_Call {
 	return &ReleaseRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type ReleaseRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ReleaseRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *ReleaseRepository_CleanupOrphanedRecords_Call {
+func (_e *ReleaseRepository_Expecter) CleanupOrphanedRecords(ctx any) *ReleaseRepository_CleanupOrphanedRecords_Call {
 	return &ReleaseRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type ReleaseRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Release
-func (_e *ReleaseRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *ReleaseRepository_Create_Call {
+func (_e *ReleaseRepository_Expecter) Create(ctx any, tx any, t any) *ReleaseRepository_Create_Call {
 	return &ReleaseRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type ReleaseRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Release
-func (_e *ReleaseRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *ReleaseRepository_CreateBatch_Call {
+func (_e *ReleaseRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *ReleaseRepository_CreateBatch_Call {
 	return &ReleaseRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type ReleaseRepository_CreateReleaseItem_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - item *models.ReleaseItem
-func (_e *ReleaseRepository_Expecter) CreateReleaseItem(ctx interface{}, tx interface{}, item interface{}) *ReleaseRepository_CreateReleaseItem_Call {
+func (_e *ReleaseRepository_Expecter) CreateReleaseItem(ctx any, tx any, item any) *ReleaseRepository_CreateReleaseItem_Call {
 	return &ReleaseRepository_CreateReleaseItem_Call{Call: _e.mock.On("CreateReleaseItem", ctx, tx, item)}
 }
 
@@ -492,7 +492,7 @@ type ReleaseRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_Delete_Call {
+func (_e *ReleaseRepository_Expecter) Delete(ctx any, tx any, id any) *ReleaseRepository_Delete_Call {
 	return &ReleaseRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -555,7 +555,7 @@ type ReleaseRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Release
-func (_e *ReleaseRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *ReleaseRepository_DeleteBatch_Call {
+func (_e *ReleaseRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *ReleaseRepository_DeleteBatch_Call {
 	return &ReleaseRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -618,7 +618,7 @@ type ReleaseRepository_DeleteReleaseItem_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) DeleteReleaseItem(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_DeleteReleaseItem_Call {
+func (_e *ReleaseRepository_Expecter) DeleteReleaseItem(ctx any, tx any, id any) *ReleaseRepository_DeleteReleaseItem_Call {
 	return &ReleaseRepository_DeleteReleaseItem_Call{Call: _e.mock.On("DeleteReleaseItem", ctx, tx, id)}
 }
 
@@ -691,7 +691,7 @@ type ReleaseRepository_FindOrCreate_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - name string
-func (_e *ReleaseRepository_Expecter) FindOrCreate(ctx interface{}, tx interface{}, projectID interface{}, name interface{}) *ReleaseRepository_FindOrCreate_Call {
+func (_e *ReleaseRepository_Expecter) FindOrCreate(ctx any, tx any, projectID any, name any) *ReleaseRepository_FindOrCreate_Call {
 	return &ReleaseRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", ctx, tx, projectID, name)}
 }
 
@@ -770,7 +770,7 @@ type ReleaseRepository_GetByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ReleaseRepository_Expecter) GetByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *ReleaseRepository_GetByProjectID_Call {
+func (_e *ReleaseRepository_Expecter) GetByProjectID(ctx any, tx any, projectID any) *ReleaseRepository_GetByProjectID_Call {
 	return &ReleaseRepository_GetByProjectID_Call{Call: _e.mock.On("GetByProjectID", ctx, tx, projectID)}
 }
 
@@ -846,7 +846,7 @@ type ReleaseRepository_GetByProjectIDPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ReleaseRepository_Expecter) GetByProjectIDPaged(ctx interface{}, tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseRepository_GetByProjectIDPaged_Call {
+func (_e *ReleaseRepository_Expecter) GetByProjectIDPaged(ctx any, tx any, projectID any, pageInfo any, search any, filter any, sort any) *ReleaseRepository_GetByProjectIDPaged_Call {
 	return &ReleaseRepository_GetByProjectIDPaged_Call{Call: _e.mock.On("GetByProjectIDPaged", ctx, tx, projectID, pageInfo, search, filter, sort)}
 }
 
@@ -949,7 +949,7 @@ type ReleaseRepository_GetCandidateItemsForRelease_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - releaseID *uuid.UUID
-func (_e *ReleaseRepository_Expecter) GetCandidateItemsForRelease(ctx interface{}, tx interface{}, projectID interface{}, releaseID interface{}) *ReleaseRepository_GetCandidateItemsForRelease_Call {
+func (_e *ReleaseRepository_Expecter) GetCandidateItemsForRelease(ctx any, tx any, projectID any, releaseID any) *ReleaseRepository_GetCandidateItemsForRelease_Call {
 	return &ReleaseRepository_GetCandidateItemsForRelease_Call{Call: _e.mock.On("GetCandidateItemsForRelease", ctx, tx, projectID, releaseID)}
 }
 
@@ -1018,7 +1018,7 @@ type ReleaseRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ReleaseRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ReleaseRepository_GetDB_Call {
+func (_e *ReleaseRepository_Expecter) GetDB(ctx any, tx any) *ReleaseRepository_GetDB_Call {
 	return &ReleaseRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1078,7 +1078,7 @@ type ReleaseRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *ReleaseRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *ReleaseRepository_InBatches_Call {
+func (_e *ReleaseRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *ReleaseRepository_InBatches_Call {
 	return &ReleaseRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1152,7 +1152,7 @@ type ReleaseRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *ReleaseRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *ReleaseRepository_List_Call {
+func (_e *ReleaseRepository_Expecter) List(ctx any, tx any, ids any) *ReleaseRepository_List_Call {
 	return &ReleaseRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1224,7 +1224,7 @@ type ReleaseRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_Read_Call {
+func (_e *ReleaseRepository_Expecter) Read(ctx any, tx any, id any) *ReleaseRepository_Read_Call {
 	return &ReleaseRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1296,7 +1296,7 @@ type ReleaseRepository_ReadRecursive_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) ReadRecursive(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_ReadRecursive_Call {
+func (_e *ReleaseRepository_Expecter) ReadRecursive(ctx any, tx any, id any) *ReleaseRepository_ReadRecursive_Call {
 	return &ReleaseRepository_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", ctx, tx, id)}
 }
 
@@ -1368,7 +1368,7 @@ type ReleaseRepository_ReadWithItems_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ReleaseRepository_Expecter) ReadWithItems(ctx interface{}, tx interface{}, id interface{}) *ReleaseRepository_ReadWithItems_Call {
+func (_e *ReleaseRepository_Expecter) ReadWithItems(ctx any, tx any, id any) *ReleaseRepository_ReadWithItems_Call {
 	return &ReleaseRepository_ReadWithItems_Call{Call: _e.mock.On("ReadWithItems", ctx, tx, id)}
 }
 
@@ -1431,7 +1431,7 @@ type ReleaseRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Release
-func (_e *ReleaseRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *ReleaseRepository_Save_Call {
+func (_e *ReleaseRepository_Expecter) Save(ctx any, tx any, t any) *ReleaseRepository_Save_Call {
 	return &ReleaseRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1494,7 +1494,7 @@ type ReleaseRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Release
-func (_e *ReleaseRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *ReleaseRepository_SaveBatch_Call {
+func (_e *ReleaseRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *ReleaseRepository_SaveBatch_Call {
 	return &ReleaseRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1557,7 +1557,7 @@ type ReleaseRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Release
-func (_e *ReleaseRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *ReleaseRepository_SaveBatchBestEffort_Call {
+func (_e *ReleaseRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *ReleaseRepository_SaveBatchBestEffort_Call {
 	return &ReleaseRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
@@ -1619,7 +1619,7 @@ type ReleaseRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *ReleaseRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *ReleaseRepository_Transaction_Call {
+func (_e *ReleaseRepository_Expecter) Transaction(ctx any, fn any) *ReleaseRepository_Transaction_Call {
 	return &ReleaseRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1679,7 +1679,7 @@ type ReleaseRepository_Upsert_Call struct {
 //   - t *[]*models.Release
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *ReleaseRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ReleaseRepository_Upsert_Call {
+func (_e *ReleaseRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *ReleaseRepository_Upsert_Call {
 	return &ReleaseRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

@@ -77,7 +77,7 @@ type CSAFService_GenerateCSAFReport_Call struct {
 //   - assetID uuid.UUID
 //   - assetName string
 //   - cveID string
-func (_e *CSAFService_Expecter) GenerateCSAFReport(ctx interface{}, orgName interface{}, assetID interface{}, assetName interface{}, cveID interface{}) *CSAFService_GenerateCSAFReport_Call {
+func (_e *CSAFService_Expecter) GenerateCSAFReport(ctx any, orgName any, assetID any, assetName any, cveID any) *CSAFService_GenerateCSAFReport_Call {
 	return &CSAFService_GenerateCSAFReport_Call{Call: _e.mock.On("GenerateCSAFReport", ctx, orgName, assetID, assetName, cveID)}
 }
 
@@ -161,7 +161,7 @@ type CSAFService_GenerateCSAFReportForAdvisory_Call struct {
 //   - orgName string
 //   - assetID uuid.UUID
 //   - assetName string
-func (_e *CSAFService_Expecter) GenerateCSAFReportForAdvisory(ctx interface{}, advisory interface{}, orgName interface{}, assetID interface{}, assetName interface{}) *CSAFService_GenerateCSAFReportForAdvisory_Call {
+func (_e *CSAFService_Expecter) GenerateCSAFReportForAdvisory(ctx any, advisory any, orgName any, assetID any, assetName any) *CSAFService_GenerateCSAFReportForAdvisory_Call {
 	return &CSAFService_GenerateCSAFReportForAdvisory_Call{Call: _e.mock.On("GenerateCSAFReportForAdvisory", ctx, advisory, orgName, assetID, assetName)}
 }
 
@@ -244,7 +244,7 @@ type CSAFService_GenerateCSAFReportForVulns_Call struct {
 //   - orgName string
 //   - title *string
 //   - vulns []models.DependencyVuln
-func (_e *CSAFService_Expecter) GenerateCSAFReportForVulns(ctx interface{}, orgName interface{}, title interface{}, vulns interface{}) *CSAFService_GenerateCSAFReportForVulns_Call {
+func (_e *CSAFService_Expecter) GenerateCSAFReportForVulns(ctx any, orgName any, title any, vulns any) *CSAFService_GenerateCSAFReportForVulns_Call {
 	return &CSAFService_GenerateCSAFReportForVulns_Call{Call: _e.mock.On("GenerateCSAFReportForVulns", ctx, orgName, title, vulns)}
 }
 
@@ -322,7 +322,7 @@ type CSAFService_GetAllAdvisories_Call struct {
 // GetAllAdvisories is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetID uuid.UUID
-func (_e *CSAFService_Expecter) GetAllAdvisories(ctx interface{}, assetID interface{}) *CSAFService_GetAllAdvisories_Call {
+func (_e *CSAFService_Expecter) GetAllAdvisories(ctx any, assetID any) *CSAFService_GetAllAdvisories_Call {
 	return &CSAFService_GetAllAdvisories_Call{Call: _e.mock.On("GetAllAdvisories", ctx, assetID)}
 }
 
@@ -390,7 +390,7 @@ type CSAFService_GetOldestVulnPerUniqueCVE_Call struct {
 // GetOldestVulnPerUniqueCVE is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetID uuid.UUID
-func (_e *CSAFService_Expecter) GetOldestVulnPerUniqueCVE(ctx interface{}, assetID interface{}) *CSAFService_GetOldestVulnPerUniqueCVE_Call {
+func (_e *CSAFService_Expecter) GetOldestVulnPerUniqueCVE(ctx any, assetID any) *CSAFService_GetOldestVulnPerUniqueCVE_Call {
 	return &CSAFService_GetOldestVulnPerUniqueCVE_Call{Call: _e.mock.On("GetOldestVulnPerUniqueCVE", ctx, assetID)}
 }
 
@@ -456,7 +456,7 @@ type CSAFService_GetVexFromCsafAdvisoryURL_Call struct {
 // GetVexFromCsafAdvisoryURL is a helper method to define mock.On call
 //   - ctx context.Context
 //   - url string
-func (_e *CSAFService_Expecter) GetVexFromCsafAdvisoryURL(ctx interface{}, url interface{}) *CSAFService_GetVexFromCsafAdvisoryURL_Call {
+func (_e *CSAFService_Expecter) GetVexFromCsafAdvisoryURL(ctx any, url any) *CSAFService_GetVexFromCsafAdvisoryURL_Call {
 	return &CSAFService_GetVexFromCsafAdvisoryURL_Call{Call: _e.mock.On("GetVexFromCsafAdvisoryURL", ctx, url)}
 }
 
@@ -524,7 +524,7 @@ type CSAFService_GetVexFromCsafProvider_Call struct {
 // GetVexFromCsafProvider is a helper method to define mock.On call
 //   - ctx context.Context
 //   - url string
-func (_e *CSAFService_Expecter) GetVexFromCsafProvider(ctx interface{}, url interface{}) *CSAFService_GetVexFromCsafProvider_Call {
+func (_e *CSAFService_Expecter) GetVexFromCsafProvider(ctx any, url any) *CSAFService_GetVexFromCsafProvider_Call {
 	return &CSAFService_GetVexFromCsafProvider_Call{Call: _e.mock.On("GetVexFromCsafProvider", ctx, url)}
 }
 

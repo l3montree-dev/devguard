@@ -141,7 +141,7 @@ func applyFilters(q *gorm.DB, filter []shared.FilterQuery) (*gorm.DB, bool) {
 			}
 			q = q.Where("affected_components.ecosystem ILIKE ?", f.FieldValue)
 		} else {
-			q = q.Where(f.SQL(), f.Value())
+			q = f.Where(q)
 		}
 	}
 	return q, hasEcosystemJoin
@@ -162,7 +162,7 @@ func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageI
 	// apply sorting
 	if len(sort) > 0 {
 		for _, s := range sort {
-			q = q.Order(s.SQL())
+			q = s.Order(q)
 		}
 	} else {
 		q = q.Order("date_last_modified desc")

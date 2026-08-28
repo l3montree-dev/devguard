@@ -68,7 +68,7 @@ type InTotoLinkRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *InTotoLinkRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *InTotoLinkRepository_Activate_Call {
+func (_e *InTotoLinkRepository_Expecter) Activate(ctx any, tx any, id any) *InTotoLinkRepository_Activate_Call {
 	return &InTotoLinkRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type InTotoLinkRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *InTotoLinkRepository_Expecter) All(ctx interface{}, tx interface{}) *InTotoLinkRepository_All_Call {
+func (_e *InTotoLinkRepository_Expecter) All(ctx any, tx any) *InTotoLinkRepository_All_Call {
 	return &InTotoLinkRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type InTotoLinkRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *InTotoLinkRepository_Expecter) Begin(ctx interface{}) *InTotoLinkRepository_Begin_Call {
+func (_e *InTotoLinkRepository_Expecter) Begin(ctx any) *InTotoLinkRepository_Begin_Call {
 	return &InTotoLinkRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type InTotoLinkRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *InTotoLinkRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *InTotoLinkRepository_CleanupOrphanedRecords_Call {
+func (_e *InTotoLinkRepository_Expecter) CleanupOrphanedRecords(ctx any) *InTotoLinkRepository_CleanupOrphanedRecords_Call {
 	return &InTotoLinkRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type InTotoLinkRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.InTotoLink
-func (_e *InTotoLinkRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *InTotoLinkRepository_Create_Call {
+func (_e *InTotoLinkRepository_Expecter) Create(ctx any, tx any, t any) *InTotoLinkRepository_Create_Call {
 	return &InTotoLinkRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type InTotoLinkRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.InTotoLink
-func (_e *InTotoLinkRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *InTotoLinkRepository_CreateBatch_Call {
+func (_e *InTotoLinkRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *InTotoLinkRepository_CreateBatch_Call {
 	return &InTotoLinkRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type InTotoLinkRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *InTotoLinkRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *InTotoLinkRepository_Delete_Call {
+func (_e *InTotoLinkRepository_Expecter) Delete(ctx any, tx any, id any) *InTotoLinkRepository_Delete_Call {
 	return &InTotoLinkRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type InTotoLinkRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.InTotoLink
-func (_e *InTotoLinkRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *InTotoLinkRepository_DeleteBatch_Call {
+func (_e *InTotoLinkRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *InTotoLinkRepository_DeleteBatch_Call {
 	return &InTotoLinkRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -567,7 +567,7 @@ type InTotoLinkRepository_FindByAssetAndSupplyChainID_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - supplyChainID string
-func (_e *InTotoLinkRepository_Expecter) FindByAssetAndSupplyChainID(ctx interface{}, tx interface{}, assetID interface{}, supplyChainID interface{}) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
+func (_e *InTotoLinkRepository_Expecter) FindByAssetAndSupplyChainID(ctx any, tx any, assetID any, supplyChainID any) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
 	return &InTotoLinkRepository_FindByAssetAndSupplyChainID_Call{Call: _e.mock.On("FindByAssetAndSupplyChainID", ctx, tx, assetID, supplyChainID)}
 }
 
@@ -646,7 +646,7 @@ type InTotoLinkRepository_FindBySupplyChainID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - supplyChainID string
-func (_e *InTotoLinkRepository_Expecter) FindBySupplyChainID(ctx interface{}, tx interface{}, supplyChainID interface{}) *InTotoLinkRepository_FindBySupplyChainID_Call {
+func (_e *InTotoLinkRepository_Expecter) FindBySupplyChainID(ctx any, tx any, supplyChainID any) *InTotoLinkRepository_FindBySupplyChainID_Call {
 	return &InTotoLinkRepository_FindBySupplyChainID_Call{Call: _e.mock.On("FindBySupplyChainID", ctx, tx, supplyChainID)}
 }
 
@@ -710,7 +710,7 @@ type InTotoLinkRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *InTotoLinkRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *InTotoLinkRepository_GetDB_Call {
+func (_e *InTotoLinkRepository_Expecter) GetDB(ctx any, tx any) *InTotoLinkRepository_GetDB_Call {
 	return &InTotoLinkRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -770,7 +770,7 @@ type InTotoLinkRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *InTotoLinkRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *InTotoLinkRepository_InBatches_Call {
+func (_e *InTotoLinkRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *InTotoLinkRepository_InBatches_Call {
 	return &InTotoLinkRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -844,7 +844,7 @@ type InTotoLinkRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *InTotoLinkRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *InTotoLinkRepository_List_Call {
+func (_e *InTotoLinkRepository_Expecter) List(ctx any, tx any, ids any) *InTotoLinkRepository_List_Call {
 	return &InTotoLinkRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -916,7 +916,7 @@ type InTotoLinkRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *InTotoLinkRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *InTotoLinkRepository_Read_Call {
+func (_e *InTotoLinkRepository_Expecter) Read(ctx any, tx any, id any) *InTotoLinkRepository_Read_Call {
 	return &InTotoLinkRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -979,7 +979,7 @@ type InTotoLinkRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.InTotoLink
-func (_e *InTotoLinkRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *InTotoLinkRepository_Save_Call {
+func (_e *InTotoLinkRepository_Expecter) Save(ctx any, tx any, t any) *InTotoLinkRepository_Save_Call {
 	return &InTotoLinkRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1042,7 +1042,7 @@ type InTotoLinkRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.InTotoLink
-func (_e *InTotoLinkRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *InTotoLinkRepository_SaveBatch_Call {
+func (_e *InTotoLinkRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *InTotoLinkRepository_SaveBatch_Call {
 	return &InTotoLinkRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1105,7 +1105,7 @@ type InTotoLinkRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.InTotoLink
-func (_e *InTotoLinkRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *InTotoLinkRepository_SaveBatchBestEffort_Call {
+func (_e *InTotoLinkRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *InTotoLinkRepository_SaveBatchBestEffort_Call {
 	return &InTotoLinkRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
@@ -1167,7 +1167,7 @@ type InTotoLinkRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *InTotoLinkRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *InTotoLinkRepository_Transaction_Call {
+func (_e *InTotoLinkRepository_Expecter) Transaction(ctx any, fn any) *InTotoLinkRepository_Transaction_Call {
 	return &InTotoLinkRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1227,7 +1227,7 @@ type InTotoLinkRepository_Upsert_Call struct {
 //   - t *[]*models.InTotoLink
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *InTotoLinkRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *InTotoLinkRepository_Upsert_Call {
+func (_e *InTotoLinkRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *InTotoLinkRepository_Upsert_Call {
 	return &InTotoLinkRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

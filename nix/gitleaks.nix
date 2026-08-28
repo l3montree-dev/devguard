@@ -52,7 +52,7 @@ let
     };
   };
 
-  mkToolSBOM = import ./sbom-lib.nix { inherit lib runCommand jq; } { inherit trivy; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit lib runCommand jq; }).mkToolSBOM { inherit trivy; };
 in
 {
   inherit package;

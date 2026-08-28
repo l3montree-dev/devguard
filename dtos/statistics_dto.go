@@ -125,6 +125,13 @@ type RiskHistoryDTO struct {
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
+type RiskHistoryWithVersionDTO struct {
+	RiskHistoryDTO
+	Slug             string `json:"slug"`
+	DefaultBranch    bool   `json:"defaultBranch"`
+	AssetVersionType string `json:"type"`
+}
+
 type OrgVulnAverage = RemediationTimeAverages
 
 type RemediationTimeAverages struct {

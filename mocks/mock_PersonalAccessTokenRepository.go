@@ -68,7 +68,7 @@ type PersonalAccessTokenRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_Activate_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Activate(ctx any, tx any, id any) *PersonalAccessTokenRepository_Activate_Call {
 	return &PersonalAccessTokenRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type PersonalAccessTokenRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *PersonalAccessTokenRepository_Expecter) All(ctx interface{}, tx interface{}) *PersonalAccessTokenRepository_All_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) All(ctx any, tx any) *PersonalAccessTokenRepository_All_Call {
 	return &PersonalAccessTokenRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type PersonalAccessTokenRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *PersonalAccessTokenRepository_Expecter) Begin(ctx interface{}) *PersonalAccessTokenRepository_Begin_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Begin(ctx any) *PersonalAccessTokenRepository_Begin_Call {
 	return &PersonalAccessTokenRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type PersonalAccessTokenRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *PersonalAccessTokenRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) CleanupOrphanedRecords(ctx any) *PersonalAccessTokenRepository_CleanupOrphanedRecords_Call {
 	return &PersonalAccessTokenRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type PersonalAccessTokenRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *PersonalAccessTokenRepository_Create_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Create(ctx any, tx any, t any) *PersonalAccessTokenRepository_Create_Call {
 	return &PersonalAccessTokenRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type PersonalAccessTokenRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *PersonalAccessTokenRepository_CreateBatch_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *PersonalAccessTokenRepository_CreateBatch_Call {
 	return &PersonalAccessTokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type PersonalAccessTokenRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_Delete_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Delete(ctx any, tx any, id any) *PersonalAccessTokenRepository_Delete_Call {
 	return &PersonalAccessTokenRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type PersonalAccessTokenRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *PersonalAccessTokenRepository_DeleteBatch_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	return &PersonalAccessTokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -555,7 +555,7 @@ type PersonalAccessTokenRepository_DeleteByFingerprint_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - fingerprint string
-func (_e *PersonalAccessTokenRepository_Expecter) DeleteByFingerprint(ctx interface{}, tx interface{}, fingerprint interface{}) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteByFingerprint(ctx any, tx any, fingerprint any) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
 	return &PersonalAccessTokenRepository_DeleteByFingerprint_Call{Call: _e.mock.On("DeleteByFingerprint", ctx, tx, fingerprint)}
 }
 
@@ -618,7 +618,7 @@ type PersonalAccessTokenRepository_DeleteUnscoped_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) DeleteUnscoped(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) DeleteUnscoped(ctx any, tx any, id any) *PersonalAccessTokenRepository_DeleteUnscoped_Call {
 	return &PersonalAccessTokenRepository_DeleteUnscoped_Call{Call: _e.mock.On("DeleteUnscoped", ctx, tx, id)}
 }
 
@@ -692,7 +692,7 @@ type PersonalAccessTokenRepository_FindByUserIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - userID []uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) FindByUserIDs(ctx interface{}, tx interface{}, userID interface{}) *PersonalAccessTokenRepository_FindByUserIDs_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) FindByUserIDs(ctx any, tx any, userID any) *PersonalAccessTokenRepository_FindByUserIDs_Call {
 	return &PersonalAccessTokenRepository_FindByUserIDs_Call{Call: _e.mock.On("FindByUserIDs", ctx, tx, userID)}
 }
 
@@ -764,7 +764,7 @@ type PersonalAccessTokenRepository_GetByBearerTokenHash_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - tokenHash string
-func (_e *PersonalAccessTokenRepository_Expecter) GetByBearerTokenHash(ctx interface{}, tx interface{}, tokenHash interface{}) *PersonalAccessTokenRepository_GetByBearerTokenHash_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) GetByBearerTokenHash(ctx any, tx any, tokenHash any) *PersonalAccessTokenRepository_GetByBearerTokenHash_Call {
 	return &PersonalAccessTokenRepository_GetByBearerTokenHash_Call{Call: _e.mock.On("GetByBearerTokenHash", ctx, tx, tokenHash)}
 }
 
@@ -836,7 +836,7 @@ type PersonalAccessTokenRepository_GetByFingerprint_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - fingerprint string
-func (_e *PersonalAccessTokenRepository_Expecter) GetByFingerprint(ctx interface{}, tx interface{}, fingerprint interface{}) *PersonalAccessTokenRepository_GetByFingerprint_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) GetByFingerprint(ctx any, tx any, fingerprint any) *PersonalAccessTokenRepository_GetByFingerprint_Call {
 	return &PersonalAccessTokenRepository_GetByFingerprint_Call{Call: _e.mock.On("GetByFingerprint", ctx, tx, fingerprint)}
 }
 
@@ -900,7 +900,7 @@ type PersonalAccessTokenRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *PersonalAccessTokenRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *PersonalAccessTokenRepository_GetDB_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) GetDB(ctx any, tx any) *PersonalAccessTokenRepository_GetDB_Call {
 	return &PersonalAccessTokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -960,7 +960,7 @@ type PersonalAccessTokenRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *PersonalAccessTokenRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *PersonalAccessTokenRepository_InBatches_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *PersonalAccessTokenRepository_InBatches_Call {
 	return &PersonalAccessTokenRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1034,7 +1034,7 @@ type PersonalAccessTokenRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *PersonalAccessTokenRepository_List_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) List(ctx any, tx any, ids any) *PersonalAccessTokenRepository_List_Call {
 	return &PersonalAccessTokenRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1108,7 +1108,7 @@ type PersonalAccessTokenRepository_ListByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ListByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *PersonalAccessTokenRepository_ListByAssetID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByAssetID(ctx any, tx any, assetID any) *PersonalAccessTokenRepository_ListByAssetID_Call {
 	return &PersonalAccessTokenRepository_ListByAssetID_Call{Call: _e.mock.On("ListByAssetID", ctx, tx, assetID)}
 }
 
@@ -1182,7 +1182,7 @@ type PersonalAccessTokenRepository_ListByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ListByOrgID(ctx interface{}, tx interface{}, orgID interface{}) *PersonalAccessTokenRepository_ListByOrgID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByOrgID(ctx any, tx any, orgID any) *PersonalAccessTokenRepository_ListByOrgID_Call {
 	return &PersonalAccessTokenRepository_ListByOrgID_Call{Call: _e.mock.On("ListByOrgID", ctx, tx, orgID)}
 }
 
@@ -1256,7 +1256,7 @@ type PersonalAccessTokenRepository_ListByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ListByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *PersonalAccessTokenRepository_ListByProjectID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByProjectID(ctx any, tx any, projectID any) *PersonalAccessTokenRepository_ListByProjectID_Call {
 	return &PersonalAccessTokenRepository_ListByProjectID_Call{Call: _e.mock.On("ListByProjectID", ctx, tx, projectID)}
 }
 
@@ -1330,7 +1330,7 @@ type PersonalAccessTokenRepository_ListByUserID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - userID string
-func (_e *PersonalAccessTokenRepository_Expecter) ListByUserID(ctx interface{}, tx interface{}, userID interface{}) *PersonalAccessTokenRepository_ListByUserID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ListByUserID(ctx any, tx any, userID any) *PersonalAccessTokenRepository_ListByUserID_Call {
 	return &PersonalAccessTokenRepository_ListByUserID_Call{Call: _e.mock.On("ListByUserID", ctx, tx, userID)}
 }
 
@@ -1393,7 +1393,7 @@ type PersonalAccessTokenRepository_MarkAsLastUsedNowByID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) MarkAsLastUsedNowByID(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_MarkAsLastUsedNowByID_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) MarkAsLastUsedNowByID(ctx any, tx any, id any) *PersonalAccessTokenRepository_MarkAsLastUsedNowByID_Call {
 	return &PersonalAccessTokenRepository_MarkAsLastUsedNowByID_Call{Call: _e.mock.On("MarkAsLastUsedNowByID", ctx, tx, id)}
 }
 
@@ -1465,7 +1465,7 @@ type PersonalAccessTokenRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_Read_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Read(ctx any, tx any, id any) *PersonalAccessTokenRepository_Read_Call {
 	return &PersonalAccessTokenRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1537,7 +1537,7 @@ type PersonalAccessTokenRepository_ReadUnscoped_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PersonalAccessTokenRepository_Expecter) ReadUnscoped(ctx interface{}, tx interface{}, id interface{}) *PersonalAccessTokenRepository_ReadUnscoped_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) ReadUnscoped(ctx any, tx any, id any) *PersonalAccessTokenRepository_ReadUnscoped_Call {
 	return &PersonalAccessTokenRepository_ReadUnscoped_Call{Call: _e.mock.On("ReadUnscoped", ctx, tx, id)}
 }
 
@@ -1600,7 +1600,7 @@ type PersonalAccessTokenRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *PersonalAccessTokenRepository_Save_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Save(ctx any, tx any, t any) *PersonalAccessTokenRepository_Save_Call {
 	return &PersonalAccessTokenRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1663,7 +1663,7 @@ type PersonalAccessTokenRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatch_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *PersonalAccessTokenRepository_SaveBatch_Call {
 	return &PersonalAccessTokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1726,7 +1726,7 @@ type PersonalAccessTokenRepository_SaveBatchBestEffort_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.PAT
-func (_e *PersonalAccessTokenRepository_Expecter) SaveBatchBestEffort(ctx interface{}, tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *PersonalAccessTokenRepository_SaveBatchBestEffort_Call {
 	return &PersonalAccessTokenRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
 }
 
@@ -1788,7 +1788,7 @@ type PersonalAccessTokenRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *PersonalAccessTokenRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *PersonalAccessTokenRepository_Transaction_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Transaction(ctx any, fn any) *PersonalAccessTokenRepository_Transaction_Call {
 	return &PersonalAccessTokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1848,7 +1848,7 @@ type PersonalAccessTokenRepository_Upsert_Call struct {
 //   - t *[]*models.PAT
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *PersonalAccessTokenRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PersonalAccessTokenRepository_Upsert_Call {
+func (_e *PersonalAccessTokenRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *PersonalAccessTokenRepository_Upsert_Call {
 	return &PersonalAccessTokenRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

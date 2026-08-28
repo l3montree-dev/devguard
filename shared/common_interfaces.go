@@ -384,7 +384,8 @@ type UpstreamVEXRuleRepository interface {
 
 type VEXRuleRecommendationRepository interface {
 	utils.Repository[string, models.VEXRuleRecommendation, DB]
-	FindByDependencyVulnIDs(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID) (map[uuid.UUID]models.VEXRuleRecommendation, error)
+	FindByDependencyVulnID(ctx context.Context, tx DB, dependencyVulnID uuid.UUID) (models.VEXRuleRecommendation, error)
+	FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx context.Context, tx DB, dependencyVulnIDs []uuid.UUID, vexRuleIDs []string, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRuleRecommendation], error)
 	DeleteAll(ctx context.Context, tx DB) error
 	CreateBatch(ctx context.Context, tx DB, recommendations []models.VEXRuleRecommendation) error
 }
@@ -416,6 +417,7 @@ type ExternalReferenceRepository interface {
 	SaveBatch(ctx context.Context, tx DB, ts []models.ExternalReference) error
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.ExternalReference, error)
 	DeleteByURL(ctx context.Context, tx DB, assetID uuid.UUID, url string) error
+	FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[dtos.ExternalReferenceDTO], error)
 }
 
 type ExternalEntityProviderService interface {
@@ -658,6 +660,7 @@ type StatisticsRepository interface {
 type ArtifactRiskHistoryRepository interface {
 	// artifactName if non-nil restricts the history to a single artifact (artifactName + assetVersionName + assetID)
 	GetRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	GetRiskHistoryWithVersion(ctx context.Context, tx DB, artifactName *string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)
 	// GetLatestRiskHistory returns the most recent snapshot row, or nil when none exists.
 	GetLatestRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error)
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
@@ -669,6 +672,7 @@ type ArtifactRiskHistoryRepository interface {
 type StatisticsService interface {
 	UpdateArtifactRiskAggregation(ctx context.Context, tx DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
 	GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
+	GetArtifactRiskHistoryWithVersion(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)
 	// Release scoped statistics
 	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)

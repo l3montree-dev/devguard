@@ -59,6 +59,8 @@ type CVEDTO struct {
 	Relationships         []RelationshipDTO      `json:"relationships"`
 	EUVDExploitAdd        *datatypes.Date        `json:"euvdExploitAdd" format:"date"`
 	AffectedComponents    []AffectedComponentDTO `json:"affectedComponents"`
+	Withdrawn             *datatypes.Date        `json:"withdrawn"`
+	CWEs                  []string               `json:"cwes"`
 }
 
 type VulnState string
@@ -114,6 +116,9 @@ type DependencyVulnDTO struct {
 	Exploits                     []ExploitDTO  `json:"exploits"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
+
+	Signature      int64 `json:"signature,string"`
+	AssetSignature int64 `json:"assetSignature,string"`
 }
 
 func (d DependencyVulnDTO) GetCVE() CVEDTO {

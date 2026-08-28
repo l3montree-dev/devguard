@@ -323,12 +323,12 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 
 	// Sorting
 	for _, s := range sort {
-		q = q.Order(s.SQL())
+		q = s.Order(q)
 	}
 
 	// Single query: window function avoids a separate COUNT(*) round trip.
@@ -386,13 +386,13 @@ func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectI
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 
 	// apply sorting
 	if len(sort) > 0 {
 		for _, s := range sort {
-			q = q.Order(s.SQL())
+			q = s.Order(q)
 		}
 	}
 

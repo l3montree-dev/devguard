@@ -99,12 +99,12 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 	query := c.GetDB(ctx, tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Joins("LEFT JOIN components as dependency ON dependency.id = dependency_id").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
-		query = query.Where(f.SQL(), f.Value())
+		query = f.Where(query)
 	}
 
 	if len(sort) > 0 {
 		for _, s := range sort {
-			query = query.Order(s.SQL())
+			query = s.Order(query)
 		}
 	}
 

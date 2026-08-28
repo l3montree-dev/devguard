@@ -77,3 +77,12 @@ func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHisto
 		AssetID:          history.AssetID,
 	}
 }
+
+func ArtifactRiskHistoryWithVersionToDTO(history models.ArtifactRiskHistoryWithVersion) dtos.RiskHistoryWithVersionDTO {
+	return dtos.RiskHistoryWithVersionDTO{
+		RiskHistoryDTO:   ArtifactRiskHistoryToDTO(history.ArtifactRiskHistory),
+		Slug:             history.Slug,
+		DefaultBranch:    history.DefaultBranch,
+		AssetVersionType: string(history.AssetVersionType),
+	}
+}

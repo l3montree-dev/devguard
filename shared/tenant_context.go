@@ -29,6 +29,11 @@ func WithOwnershipScope(ctx context.Context, scope models.OwnershipScope) contex
 	return context.WithValue(ctx, ownershipScopeKey{}, scope)
 }
 
+// WithoutOwnershipScope removes any OwnershipScope from ctx.
+func WithoutOwnershipScope(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ownershipScopeKey{}, nil)
+}
+
 // OwnershipScopeFromCtx retrieves an OwnershipScope from ctx.
 // Returns (scope, true) when present, (zero-value, false) otherwise.
 func OwnershipScopeFromCtx(ctx context.Context) (models.OwnershipScope, bool) {
