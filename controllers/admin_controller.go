@@ -378,7 +378,7 @@ func (controller *AdminController) GetInstanceSettings(ctx shared.Context) error
 // A missing setting is a valid, unconfigured state for a fresh instance, not an error.
 // @Summary Get public instance settings
 // @Tags Admin
-// @Success 200 {object} shared.InstanceSettings
+// @Success 200 {object} dtos.InstanceSettingsDTO
 // @Router /instance-settings [get]
 func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) error {
 	settings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())

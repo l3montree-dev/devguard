@@ -8774,6 +8774,21 @@
                 ],
                 "type": "object"
             },
+            "dtos.GitlabOauth2ConfigDTO": {
+                "properties": {
+                    "gitlabBaseURL": {
+                        "type": "string"
+                    },
+                    "providerID": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "gitlabBaseURL",
+                    "providerID"
+                ],
+                "type": "object"
+            },
             "dtos.InfoResponse": {
                 "properties": {
                     "build": {
@@ -8841,6 +8856,29 @@
                     "topCVEs",
                     "topComponents",
                     "topVulnerableProjects"
+                ],
+                "type": "object"
+            },
+            "dtos.InstanceSettingsDTO": {
+                "properties": {
+                    "bearerTokenAuthDisabled": {
+                        "type": "boolean"
+                    },
+                    "gitlabOAuth2Config": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.GitlabOauth2ConfigDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "singleOrganizationMode": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "bearerTokenAuthDisabled",
+                    "gitlabOAuth2Config",
+                    "singleOrganizationMode"
                 ],
                 "type": "object"
             },
@@ -14662,12 +14700,24 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14691,12 +14741,24 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -16710,7 +16772,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/shared.InstanceSettings"
+                                    "$ref": "#/components/schemas/dtos.InstanceSettingsDTO"
                                 }
                             }
                         },

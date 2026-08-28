@@ -6502,6 +6502,16 @@ components:
       - obfuscatedToken
       - url
       type: object
+    dtos.GitlabOauth2ConfigDTO:
+      properties:
+        gitlabBaseURL:
+          type: string
+        providerID:
+          type: string
+      required:
+      - gitlabBaseURL
+      - providerID
+      type: object
     dtos.InfoResponse:
       properties:
         build:
@@ -6551,6 +6561,22 @@ components:
       - topCVEs
       - topComponents
       - topVulnerableProjects
+      type: object
+    dtos.InstanceSettingsDTO:
+      properties:
+        bearerTokenAuthDisabled:
+          type: boolean
+        gitlabOAuth2Config:
+          items:
+            $ref: '#/components/schemas/dtos.GitlabOauth2ConfigDTO'
+          type: array
+          uniqueItems: false
+        singleOrganizationMode:
+          type: boolean
+      required:
+      - bearerTokenAuthDisabled
+      - gitlabOAuth2Config
+      - singleOrganizationMode
       type: object
     dtos.InstanceUsageStatistics:
       type: object
@@ -10860,12 +10886,24 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10888,12 +10926,24 @@ components:
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -12094,7 +12144,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/shared.InstanceSettings'
+                $ref: '#/components/schemas/dtos.InstanceSettingsDTO'
           description: OK
       summary: Get public instance settings
       tags:
