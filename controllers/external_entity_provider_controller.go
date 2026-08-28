@@ -31,7 +31,7 @@ func NewExternalEntityProviderController(service shared.ExternalEntityProviderSe
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200
+// @Success 200 {array} dtos.OrgDTO
 // @Router /trigger-sync [get]
 func (e *ExternalEntityProviderController) TriggerOrgSync(c shared.Context) error {
 	return e.service.TriggerOrgSync(c)
@@ -42,7 +42,8 @@ func (e *ExternalEntityProviderController) TriggerOrgSync(c shared.Context) erro
 // @Security CookieAuth
 // @Security PATAuth
 // @Param organization path string true "Organization slug"
-// @Success 200
+// @Success 204
+// @Failure 400 {string} string "organization is not an external entity provider"
 // @Router /organizations/{organization}/trigger-sync [get]
 func (e *ExternalEntityProviderController) TriggerSync(c shared.Context) error {
 	return e.service.TriggerSync(c)

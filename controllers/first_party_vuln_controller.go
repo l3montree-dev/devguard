@@ -100,7 +100,12 @@ func (c *FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error 
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param vulnID path string true "Vulnerability ID"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param firstPartyVulnID path string true "Vulnerability ID"
+// @Param body body object{justification=string} true "Request body"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/mitigate [post]
 func (c *FirstPartyVulnController) Mitigate(ctx shared.Context) error {
@@ -143,7 +148,11 @@ func (c *FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param vulnID path string true "Vulnerability ID"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param firstPartyVulnID path string true "Vulnerability ID"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID} [get]
 func (c *FirstPartyVulnController) Read(ctx shared.Context) error {
@@ -165,8 +174,12 @@ func (c *FirstPartyVulnController) Read(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param vulnID path string true "Vulnerability ID"
-// @Param body body object true "Event data"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param firstPartyVulnID path string true "Vulnerability ID"
+// @Param body body dtos.FirstPartyVulnStatus true "Event data"
 // @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID} [post]
 func (c *FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
@@ -396,6 +409,10 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body dtos.BatchFirstPartyVulnStatus true "Request body"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {array} dtos.DetailedFirstPartyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/batch [post]
 func (c *FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {

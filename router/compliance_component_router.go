@@ -50,9 +50,9 @@ func NewComplianceComponentStatementRouter(
 	complianceComponentController *controllers.ComplianceComponentController,
 ) ComplianceComponentStatementRouter {
 	compliancePostureRouter := assetVersionGroup.Group.Group("/compliance-postures")
-	compliancePostureRouter.POST("/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.CreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	compliancePostureRouter.PUT("/components/:statementID/", complianceComponentController.UpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	compliancePostureRouter.DELETE("/components/:statementID/", complianceComponentController.DeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.POST("/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.AssetVersionCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.PUT("/components/:statementID/", complianceComponentController.AssetVersionUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.DELETE("/components/:statementID/", complianceComponentController.AssetVersionDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	return ComplianceComponentStatementRouter{Group: compliancePostureRouter}
 }

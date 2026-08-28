@@ -36,6 +36,45 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - compliant
+      - description
+      - id
+      - opaqueId
+      - organization
+      - organizationId
+      - predicateType
+      - projects
+      - rawEvaluationResult
+      - rego
+      - title
+      - violations
+      type: object
+    controllers.ArtifactRequest:
+      properties:
+        artifactName:
+          type: string
+        informationSources:
+          items:
+            $ref: '#/components/schemas/controllers.informationSource'
+          type: array
+          uniqueItems: false
+      required:
+      - artifactName
+      - informationSources
+      type: object
+    controllers.ArtifactUpdateResponse:
+      properties:
+        artifact:
+          $ref: '#/components/schemas/dtos.ArtifactDTO'
+        invalidURLs:
+          items:
+            $ref: '#/components/schemas/dtos.ExternalReferenceError'
+          type: array
+          uniqueItems: false
+      required:
+      - artifact
+      - invalidURLs
       type: object
     controllers.LicenseRiskStatus:
       properties:
@@ -46,6 +85,112 @@ components:
           $ref: '#/components/schemas/dtos.MechanicalJustificationType'
         status:
           type: string
+      required:
+      - justification
+      - mechanicalJustification
+      - status
+      type: object
+    controllers.PURLInspectResponse:
+      properties:
+        affectedComponents:
+          items:
+            $ref: '#/components/schemas/dtos.AffectedComponentDTO'
+          type: array
+          uniqueItems: false
+        component:
+          $ref: '#/components/schemas/dtos.ComponentDTO'
+        maliciousPackage:
+          $ref: '#/components/schemas/dtos.OSV'
+        matchContext:
+          $ref: '#/components/schemas/normalize.PurlMatchContext'
+        purl:
+          type: string
+        vulns:
+          items:
+            $ref: '#/components/schemas/dtos.VulnInPackageDTO'
+          type: array
+          uniqueItems: false
+      required:
+      - affectedComponents
+      - component
+      - maliciousPackage
+      - matchContext
+      - purl
+      - vulns
+      type: object
+    controllers.WebhookSaveRequest:
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        sbomEnabled:
+          type: boolean
+        secret:
+          type: string
+        url:
+          type: string
+        vulnEnabled:
+          type: boolean
+      required:
+      - description
+      - name
+      - sbomEnabled
+      - secret
+      - url
+      - vulnEnabled
+      type: object
+    controllers.WebhookTestRequest:
+      properties:
+        payloadType:
+          type: string
+        secret:
+          type: string
+        url:
+          type: string
+      required:
+      - payloadType
+      - secret
+      - url
+      type: object
+    controllers.WebhookUpdateRequest:
+      properties:
+        description:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        sbomEnabled:
+          type: boolean
+        secret:
+          type: string
+        url:
+          type: string
+        vulnEnabled:
+          type: boolean
+      required:
+      - description
+      - id
+      - name
+      - sbomEnabled
+      - secret
+      - url
+      - vulnEnabled
+      type: object
+    controllers.informationSource:
+      properties:
+        purl:
+          type: string
+        type:
+          description: type can be "csaf", "vex", "sbom"
+          type: string
+        url:
+          type: string
+      required:
+      - purl
+      - type
+      - url
       type: object
     controllers.licenseResponse:
       properties:
@@ -53,6 +198,9 @@ components:
           type: integer
         license:
           $ref: '#/components/schemas/licenses.License'
+      required:
+      - count
+      - license
       type: object
     controllers.statementPayload:
       properties:
@@ -60,6 +208,9 @@ components:
           type: string
         implementationStatus:
           type: string
+      required:
+      - description
+      - implementationStatus
       type: object
     cyclonedx.Advisory:
       properties:
@@ -67,6 +218,9 @@ components:
           type: string
         url:
           type: string
+      required:
+      - title
+      - url
       type: object
     cyclonedx.AffectedVersions:
       properties:
@@ -76,6 +230,10 @@ components:
           $ref: '#/components/schemas/cyclonedx.VulnerabilityStatus'
         version:
           type: string
+      required:
+      - range
+      - status
+      - version
       type: object
     cyclonedx.Affects:
       properties:
@@ -86,6 +244,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.AffectedVersions'
           type: array
           uniqueItems: false
+      required:
+      - ref
+      - versions
       type: object
     cyclonedx.Affirmation:
       properties:
@@ -98,6 +259,10 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
         statement:
           type: string
+      required:
+      - signatories
+      - signature
+      - statement
       type: object
     cyclonedx.Annotation:
       properties:
@@ -116,6 +281,13 @@ components:
           type: string
         timestamp:
           type: string
+      required:
+      - annotator
+      - bom-ref
+      - signature
+      - subjects
+      - text
+      - timestamp
       type: object
     cyclonedx.Annotator:
       properties:
@@ -127,6 +299,11 @@ components:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         service:
           $ref: '#/components/schemas/cyclonedx.Service'
+      required:
+      - component
+      - individual
+      - organization
+      - service
       type: object
     cyclonedx.AsserterChoice:
       properties:
@@ -136,6 +313,10 @@ components:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         ref:
           type: string
+      required:
+      - individual
+      - organization
+      - ref
       type: object
     cyclonedx.Assessor:
       properties:
@@ -145,6 +326,10 @@ components:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         thirdParty:
           type: boolean
+      required:
+      - bom-ref
+      - organization
+      - thirdParty
       type: object
     cyclonedx.AttachedText:
       properties:
@@ -154,6 +339,10 @@ components:
           type: string
         encoding:
           type: string
+      required:
+      - content
+      - contentType
+      - encoding
       type: object
     cyclonedx.Attestation:
       properties:
@@ -168,6 +357,11 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
         summary:
           type: string
+      required:
+      - assessor
+      - map
+      - signature
+      - summary
       type: object
     cyclonedx.AttestationConfidence:
       properties:
@@ -175,6 +369,9 @@ components:
           type: string
         score:
           type: number
+      required:
+      - rationale
+      - score
       type: object
     cyclonedx.AttestationConformance:
       properties:
@@ -187,6 +384,10 @@ components:
           type: string
         score:
           type: number
+      required:
+      - mitigationStrategies
+      - rationale
+      - score
       type: object
     cyclonedx.AttestationMap:
       properties:
@@ -206,6 +407,12 @@ components:
           uniqueItems: false
         requirement:
           type: string
+      required:
+      - claims
+      - confidence
+      - conformance
+      - counterClaims
+      - requirement
       type: object
     cyclonedx.BOM:
       properties:
@@ -278,6 +485,26 @@ components:
             $ref: '#/components/schemas/cyclonedx.Vulnerability'
           type: array
           uniqueItems: false
+      required:
+      - $schema
+      - annotations
+      - bomFormat
+      - citations
+      - components
+      - compositions
+      - declarations
+      - definitions
+      - dependencies
+      - externalReferences
+      - formulation
+      - metadata
+      - properties
+      - serialNumber
+      - services
+      - signature
+      - specVersion
+      - version
+      - vulnerabilities
       type: object
     cyclonedx.Callstack:
       properties:
@@ -286,6 +513,8 @@ components:
             $ref: '#/components/schemas/cyclonedx.CallstackFrame'
           type: array
           uniqueItems: false
+      required:
+      - frames
       type: object
     cyclonedx.CallstackFrame:
       properties:
@@ -306,6 +535,14 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - column
+      - fullFilename
+      - function
+      - line
+      - module
+      - package
+      - parameters
       type: object
     cyclonedx.CertificateExtension:
       type: object
@@ -370,6 +607,26 @@ components:
         subjectPublicKeyRef:
           description: 'Deprecated in 1.7: use RelatedCryptographicAssets'
           type: string
+      required:
+      - activationDate
+      - certificateExtension
+      - certificateExtensions
+      - certificateFileExtension
+      - certificateFormat
+      - certificateState
+      - creationDate
+      - deactivationDate
+      - destructionDate
+      - fingerprint
+      - issuerName
+      - notValidAfter
+      - notValidBefore
+      - relatedCryptographicAssets
+      - revocationDate
+      - serialNumber
+      - signatureAlgorithmRef
+      - subjectName
+      - subjectPublicKeyRef
       type: object
     cyclonedx.CertificateState:
       type: object
@@ -397,6 +654,12 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - algorithms
+      - identifiers
+      - name
+      - tlsGroups
+      - tlsSignatureSchemes
       type: object
     cyclonedx.Citation:
       properties:
@@ -422,6 +685,15 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
         timestamp:
           type: string
+      required:
+      - attributedTo
+      - bom-ref
+      - expressions
+      - note
+      - pointers
+      - process
+      - signature
+      - timestamp
       type: object
     cyclonedx.Claim:
       properties:
@@ -455,6 +727,16 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
         target:
           type: string
+      required:
+      - bom-ref
+      - counterEvidence
+      - evidence
+      - externalReferences
+      - mitigationStrategies
+      - predicate
+      - reasoning
+      - signature
+      - target
       type: object
     cyclonedx.Commit:
       properties:
@@ -468,6 +750,12 @@ components:
           type: string
         url:
           type: string
+      required:
+      - author
+      - committer
+      - message
+      - uid
+      - url
       type: object
     cyclonedx.Component:
       properties:
@@ -577,6 +865,43 @@ components:
           type: string
         versionRange:
           type: string
+      required:
+      - author
+      - authors
+      - bom-ref
+      - components
+      - copyright
+      - cpe
+      - cryptoProperties
+      - data
+      - description
+      - evidence
+      - externalReferences
+      - group
+      - hashes
+      - isExternal
+      - licenses
+      - manufacturer
+      - mime-type
+      - modelCard
+      - modified
+      - name
+      - omniborId
+      - patentAssertions
+      - pedigree
+      - properties
+      - publisher
+      - purl
+      - releaseNotes
+      - scope
+      - signature
+      - supplier
+      - swhid
+      - swid
+      - tags
+      - type
+      - version
+      - versionRange
       type: object
     cyclonedx.ComponentData:
       properties:
@@ -601,6 +926,16 @@ components:
           uniqueItems: false
         type:
           $ref: '#/components/schemas/cyclonedx.ComponentDataType'
+      required:
+      - bom-ref
+      - classification
+      - contents
+      - description
+      - governance
+      - graphics
+      - name
+      - sensitiveData
+      - type
       type: object
     cyclonedx.ComponentDataContents:
       properties:
@@ -613,6 +948,10 @@ components:
           uniqueItems: false
         url:
           type: string
+      required:
+      - attachment
+      - properties
+      - url
       type: object
     cyclonedx.ComponentDataGovernanceResponsibleParty:
       properties:
@@ -620,6 +959,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
         organization:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+      required:
+      - contact
+      - organization
       type: object
     cyclonedx.ComponentDataGraphic:
       properties:
@@ -627,6 +969,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.AttachedText'
         name:
           type: string
+      required:
+      - image
+      - name
       type: object
     cyclonedx.ComponentDataGraphics:
       properties:
@@ -637,6 +982,9 @@ components:
           uniqueItems: false
         description:
           type: string
+      required:
+      - collection
+      - description
       type: object
     cyclonedx.ComponentDataType:
       enum:
@@ -705,6 +1053,13 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - aggregate
+      - assemblies
+      - bom-ref
+      - dependencies
+      - signature
+      - vulnerabilities
       type: object
     cyclonedx.CompositionAggregate:
       enum:
@@ -734,6 +1089,8 @@ components:
       properties:
         text:
           type: string
+      required:
+      - text
       type: object
     cyclonedx.Credits:
       properties:
@@ -747,6 +1104,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
           type: array
           uniqueItems: false
+      required:
+      - individuals
+      - organizations
       type: object
     cyclonedx.CryptoAlgorithmMode:
       enum:
@@ -805,6 +1165,20 @@ components:
           type: string
         primitive:
           $ref: '#/components/schemas/cyclonedx.CryptoPrimitive'
+      required:
+      - algorithmFamily
+      - certificationLevel
+      - classicalSecurityLevel
+      - cryptoFunctions
+      - curve
+      - ellipticCurve
+      - executionEnvironment
+      - implementationPlatform
+      - mode
+      - nistQuantumSecurityLevel
+      - padding
+      - parameterSetIdentifier
+      - primitive
       type: object
     cyclonedx.CryptoAssetType:
       enum:
@@ -1010,6 +1384,13 @@ components:
           $ref: '#/components/schemas/cyclonedx.CryptoProtocolProperties'
         relatedCryptoMaterialProperties:
           $ref: '#/components/schemas/cyclonedx.RelatedCryptoMaterialProperties'
+      required:
+      - algorithmProperties
+      - assetType
+      - certificateProperties
+      - oid
+      - protocolProperties
+      - relatedCryptoMaterialProperties
       type: object
     cyclonedx.CryptoProtocolProperties:
       properties:
@@ -1035,6 +1416,13 @@ components:
           $ref: '#/components/schemas/cyclonedx.CryptoProtocolType'
         version:
           type: string
+      required:
+      - cipherSuites
+      - cryptoRefArray
+      - ikev2TransformTypes
+      - relatedCryptographicAssets
+      - type
+      - version
       type: object
     cyclonedx.CryptoProtocolType:
       enum:
@@ -1090,6 +1478,14 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - classification
+      - description
+      - destination
+      - flow
+      - governance
+      - name
+      - source
       type: object
     cyclonedx.DataFlow:
       enum:
@@ -1120,6 +1516,10 @@ components:
             $ref: '#/components/schemas/cyclonedx.ComponentDataGovernanceResponsibleParty'
           type: array
           uniqueItems: false
+      required:
+      - custodians
+      - owners
+      - stewards
       type: object
     cyclonedx.DeclarationEvidence:
       properties:
@@ -1144,6 +1544,16 @@ components:
           $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
         signature:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
+      required:
+      - author
+      - bom-ref
+      - created
+      - data
+      - description
+      - expires
+      - propertyName
+      - reviewer
+      - signature
       type: object
     cyclonedx.Declarations:
       properties:
@@ -1173,6 +1583,14 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
         targets:
           $ref: '#/components/schemas/cyclonedx.Targets'
+      required:
+      - affirmation
+      - assessors
+      - attestations
+      - claims
+      - evidence
+      - signature
+      - targets
       type: object
     cyclonedx.Definitions:
       properties:
@@ -1186,6 +1604,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.StandardDefinition'
           type: array
           uniqueItems: false
+      required:
+      - patents
+      - standards
       type: object
     cyclonedx.Dependency:
       properties:
@@ -1201,6 +1622,10 @@ components:
           uniqueItems: false
         ref:
           type: string
+      required:
+      - dependsOn
+      - provides
+      - ref
       type: object
     cyclonedx.Diff:
       properties:
@@ -1208,11 +1633,16 @@ components:
           $ref: '#/components/schemas/cyclonedx.AttachedText'
         url:
           type: string
+      required:
+      - text
+      - url
       type: object
     cyclonedx.DistributionConstraints:
       properties:
         tlp:
           $ref: '#/components/schemas/cyclonedx.TLPClassification'
+      required:
+      - tlp
       type: object
     cyclonedx.EnvironmentVariableChoice:
       type: object
@@ -1235,6 +1665,14 @@ components:
           type: string
         uid:
           type: string
+      required:
+      - data
+      - description
+      - properties
+      - source
+      - target
+      - timeReceived
+      - uid
       type: object
     cyclonedx.Evidence:
       properties:
@@ -1257,6 +1695,12 @@ components:
             $ref: '#/components/schemas/cyclonedx.EvidenceOccurrence'
           type: array
           uniqueItems: false
+      required:
+      - callstack
+      - copyright
+      - identity
+      - licenses
+      - occurrences
       type: object
     cyclonedx.EvidenceData:
       properties:
@@ -1273,6 +1717,12 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - classification
+      - contents
+      - governance
+      - name
+      - sensitiveData
       type: object
     cyclonedx.EvidenceDataContents:
       properties:
@@ -1280,6 +1730,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.AttachedText'
         url:
           type: string
+      required:
+      - attachment
+      - url
       type: object
     cyclonedx.EvidenceIdentityChoice:
       type: object
@@ -1297,6 +1750,13 @@ components:
           type: integer
         symbol:
           type: string
+      required:
+      - additionalContext
+      - bom-ref
+      - line
+      - location
+      - offset
+      - symbol
       type: object
     cyclonedx.ExternalReference:
       properties:
@@ -1316,6 +1776,12 @@ components:
           $ref: '#/components/schemas/cyclonedx.ExternalReferenceType'
         url:
           type: string
+      required:
+      - comment
+      - hashes
+      - properties
+      - type
+      - url
       type: object
     cyclonedx.ExternalReferenceType:
       enum:
@@ -1439,6 +1905,12 @@ components:
             $ref: '#/components/schemas/cyclonedx.Workflow'
           type: array
           uniqueItems: false
+      required:
+      - bom-ref
+      - components
+      - properties
+      - services
+      - workflows
       type: object
     cyclonedx.Hash:
       description: New in 1.7
@@ -1447,6 +1919,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.HashAlgorithm'
         content:
           type: string
+      required:
+      - alg
+      - content
       type: object
     cyclonedx.HashAlgorithm:
       enum:
@@ -1486,6 +1961,9 @@ components:
           type: string
         name:
           type: string
+      required:
+      - algorithm
+      - name
       type: object
     cyclonedx.IKEv2Enc:
       properties:
@@ -1495,6 +1973,10 @@ components:
           type: integer
         name:
           type: string
+      required:
+      - algorithm
+      - keyLength
+      - name
       type: object
     cyclonedx.IKEv2Integ:
       properties:
@@ -1502,6 +1984,9 @@ components:
           type: string
         name:
           type: string
+      required:
+      - algorithm
+      - name
       type: object
     cyclonedx.IKEv2Ke:
       properties:
@@ -1509,6 +1994,9 @@ components:
           type: string
         group:
           type: integer
+      required:
+      - algorithm
+      - group
       type: object
     cyclonedx.IKEv2Prf:
       properties:
@@ -1516,6 +2004,9 @@ components:
           type: string
         name:
           type: string
+      required:
+      - algorithm
+      - name
       type: object
     cyclonedx.IKEv2TransformTypes:
       properties:
@@ -1546,6 +2037,13 @@ components:
             $ref: '#/components/schemas/cyclonedx.IKEv2Prf'
           type: array
           uniqueItems: false
+      required:
+      - auth
+      - encr
+      - esn
+      - integ
+      - ke
+      - prf
       type: object
     cyclonedx.IdentifiableAction:
       properties:
@@ -1555,6 +2053,10 @@ components:
           type: string
         timestamp:
           type: string
+      required:
+      - email
+      - name
+      - timestamp
       type: object
     cyclonedx.ImpactAnalysisJustification:
       enum:
@@ -1657,6 +2159,13 @@ components:
           $ref: '#/components/schemas/cyclonedx.Source'
         type:
           $ref: '#/components/schemas/cyclonedx.IssueType'
+      required:
+      - description
+      - id
+      - name
+      - references
+      - source
+      - type
       type: object
     cyclonedx.IssueType:
       enum:
@@ -1682,6 +2191,13 @@ components:
           type: string
         "y":
           type: string
+      required:
+      - crv
+      - e
+      - kty
+      - "n"
+      - x
+      - "y"
       type: object
     cyclonedx.JSFSignature:
       properties:
@@ -1695,6 +2211,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.JSFSigner'
           type: array
           uniqueItems: false
+      required:
+      - chain
+      - signers
       type: object
     cyclonedx.JSFSigner:
       properties:
@@ -1716,6 +2235,13 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFPublicKey'
         value:
           type: string
+      required:
+      - algorithm
+      - certificatePath
+      - excludes
+      - keyId
+      - publicKey
+      - value
       type: object
     cyclonedx.License:
       properties:
@@ -1738,6 +2264,15 @@ components:
           $ref: '#/components/schemas/cyclonedx.AttachedText'
         url:
           type: string
+      required:
+      - acknowledgement
+      - bom-ref
+      - id
+      - licensing
+      - name
+      - properties
+      - text
+      - url
       type: object
     cyclonedx.LicenseAcknowledgement:
       enum:
@@ -1769,6 +2304,14 @@ components:
             $ref: '#/components/schemas/cyclonedx.Property'
           type: array
           uniqueItems: false
+      required:
+      - acknowledgement
+      - bom-ref
+      - expression
+      - expressionDetails
+      - license
+      - licensing
+      - properties
       type: object
     cyclonedx.LicenseExpressionDetail:
       properties:
@@ -1780,6 +2323,11 @@ components:
           $ref: '#/components/schemas/cyclonedx.AttachedText'
         url:
           type: string
+      required:
+      - bom-ref
+      - licenseIdentifier
+      - text
+      - url
       type: object
     cyclonedx.LicenseType:
       enum:
@@ -1841,6 +2389,15 @@ components:
           type: string
         purchaser:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntityOrContact'
+      required:
+      - altIds
+      - expiration
+      - lastRenewal
+      - licenseTypes
+      - licensee
+      - licensor
+      - purchaseOrder
+      - purchaser
       type: object
     cyclonedx.Lifecycle:
       properties:
@@ -1850,6 +2407,10 @@ components:
           type: string
         phase:
           $ref: '#/components/schemas/cyclonedx.LifecyclePhase'
+      required:
+      - description
+      - name
+      - phase
       type: object
     cyclonedx.LifecyclePhase:
       enum:
@@ -1875,6 +2436,8 @@ components:
       properties:
         format:
           type: string
+      required:
+      - format
       type: object
     cyclonedx.MLModelCO2Measure:
       properties:
@@ -1882,6 +2445,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.MLModelCO2Unit'
         value:
           type: number
+      required:
+      - unit
+      - value
       type: object
     cyclonedx.MLModelCO2Unit:
       enum:
@@ -1899,6 +2465,11 @@ components:
           $ref: '#/components/schemas/cyclonedx.MLModelParameters'
         quantitativeAnalysis:
           $ref: '#/components/schemas/cyclonedx.MLQuantitativeAnalysis'
+      required:
+      - bom-ref
+      - considerations
+      - modelParameters
+      - quantitativeAnalysis
       type: object
     cyclonedx.MLModelCardConsiderations:
       properties:
@@ -1934,6 +2505,14 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - environmentalConsiderations
+      - ethicalConsiderations
+      - fairnessAssessments
+      - performanceTradeoffs
+      - technicalLimitations
+      - useCases
+      - users
       type: object
     cyclonedx.MLModelCardEnvironmentalConsiderations:
       properties:
@@ -1947,6 +2526,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.Property'
           type: array
           uniqueItems: false
+      required:
+      - energyConsumptions
+      - properties
       type: object
     cyclonedx.MLModelCardEthicalConsideration:
       properties:
@@ -1954,6 +2536,9 @@ components:
           type: string
         name:
           type: string
+      required:
+      - mitigationStrategy
+      - name
       type: object
     cyclonedx.MLModelCardFairnessAssessment:
       properties:
@@ -1965,6 +2550,11 @@ components:
           type: string
         mitigationStrategy:
           type: string
+      required:
+      - benefits
+      - groupAtRisk
+      - harms
+      - mitigationStrategy
       type: object
     cyclonedx.MLModelEnergyConsumption:
       properties:
@@ -1986,6 +2576,13 @@ components:
             $ref: '#/components/schemas/cyclonedx.Property'
           type: array
           uniqueItems: false
+      required:
+      - activity
+      - activityEnergyCost
+      - co2CostEquivalent
+      - co2CostOffset
+      - energyProviders
+      - properties
       type: object
     cyclonedx.MLModelEnergyConsumptionActivity:
       enum:
@@ -2015,6 +2612,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.MLModelEnergyUnit'
         value:
           type: number
+      required:
+      - unit
+      - value
       type: object
     cyclonedx.MLModelEnergyProvider:
       properties:
@@ -2033,6 +2633,13 @@ components:
           uniqueItems: false
         organization:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+      required:
+      - bom-ref
+      - description
+      - energyProvided
+      - energySource
+      - externalReferences
+      - organization
       type: object
     cyclonedx.MLModelEnergySource:
       enum:
@@ -2091,11 +2698,21 @@ components:
           uniqueItems: false
         task:
           type: string
+      required:
+      - approach
+      - architectureFamily
+      - datasets
+      - inputs
+      - modelArchitecture
+      - outputs
+      - task
       type: object
     cyclonedx.MLModelParametersApproach:
       properties:
         type:
           $ref: '#/components/schemas/cyclonedx.MLModelParametersApproachType'
+      required:
+      - type
       type: object
     cyclonedx.MLModelParametersApproachType:
       enum:
@@ -2121,6 +2738,11 @@ components:
           type: string
         value:
           type: string
+      required:
+      - confidenceInterval
+      - slice
+      - type
+      - value
       type: object
     cyclonedx.MLPerformanceMetricConfidenceInterval:
       properties:
@@ -2128,6 +2750,9 @@ components:
           type: string
         upperBound:
           type: string
+      required:
+      - lowerBound
+      - upperBound
       type: object
     cyclonedx.MLQuantitativeAnalysis:
       properties:
@@ -2138,6 +2763,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.MLPerformanceMetric'
           type: array
           uniqueItems: false
+      required:
+      - graphics
+      - performanceMetrics
       type: object
     cyclonedx.Metadata:
       properties:
@@ -2175,6 +2803,18 @@ components:
           type: string
         tools:
           $ref: '#/components/schemas/cyclonedx.ToolsChoice'
+      required:
+      - authors
+      - component
+      - distributionConstraints
+      - licenses
+      - lifecycles
+      - manufacture
+      - manufacturer
+      - properties
+      - supplier
+      - timestamp
+      - tools
       type: object
     cyclonedx.Note:
       properties:
@@ -2182,6 +2822,9 @@ components:
           type: string
         text:
           $ref: '#/components/schemas/cyclonedx.AttachedText'
+      required:
+      - locale
+      - text
       type: object
     cyclonedx.OrganizationalContact:
       properties:
@@ -2193,6 +2836,11 @@ components:
           type: string
         phone:
           type: string
+      required:
+      - bom-ref
+      - email
+      - name
+      - phone
       type: object
     cyclonedx.OrganizationalEntity:
       description: 'Deprecated: Use Component Manufacturer instead.'
@@ -2213,6 +2861,12 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - address
+      - bom-ref
+      - contact
+      - name
+      - url
       type: object
     cyclonedx.OrganizationalEntityOrContact:
       properties:
@@ -2220,6 +2874,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.OrganizationalContact'
         organization:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+      required:
+      - individual
+      - organization
       type: object
     cyclonedx.Parameter:
       properties:
@@ -2229,6 +2886,10 @@ components:
           type: string
         value:
           type: string
+      required:
+      - dataType
+      - name
+      - value
       type: object
     cyclonedx.Patch:
       properties:
@@ -2241,6 +2902,10 @@ components:
           uniqueItems: false
         type:
           $ref: '#/components/schemas/cyclonedx.PatchType'
+      required:
+      - diff
+      - resolves
+      - type
       type: object
     cyclonedx.PatchType:
       enum:
@@ -2269,6 +2934,12 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - asserter
+      - assertionType
+      - bom-ref
+      - notes
+      - patentRefs
       type: object
     cyclonedx.PatentAssertionType:
       enum:
@@ -2321,6 +2992,13 @@ components:
             $ref: '#/components/schemas/cyclonedx.Component'
           type: array
           uniqueItems: false
+      required:
+      - ancestors
+      - commits
+      - descendants
+      - notes
+      - patches
+      - variants
       type: object
     cyclonedx.PostalAddress:
       properties:
@@ -2338,6 +3016,14 @@ components:
           type: string
         streetAddress:
           type: string
+      required:
+      - bom-ref
+      - country
+      - locality
+      - postOfficeBoxNumber
+      - postalCode
+      - region
+      - streetAddress
       type: object
     cyclonedx.ProofOfConcept:
       properties:
@@ -2350,6 +3036,10 @@ components:
             $ref: '#/components/schemas/cyclonedx.AttachedText'
           type: array
           uniqueItems: false
+      required:
+      - environment
+      - reproductionSteps
+      - supportingMaterial
       type: object
     cyclonedx.Property:
       properties:
@@ -2357,6 +3047,9 @@ components:
           type: string
         value:
           type: string
+      required:
+      - name
+      - value
       type: object
     cyclonedx.RelatedCryptoMaterialProperties:
       properties:
@@ -2393,6 +3086,21 @@ components:
           type: string
         value:
           type: string
+      required:
+      - activationDate
+      - algorithmRef
+      - creationDate
+      - expirationDate
+      - fingerprint
+      - format
+      - id
+      - relatedCryptographicAssets
+      - securedBy
+      - size
+      - state
+      - type
+      - updateDate
+      - value
       type: object
     cyclonedx.RelatedCryptoMaterialType:
       enum:
@@ -2442,6 +3150,9 @@ components:
           type: string
         type:
           type: string
+      required:
+      - ref
+      - type
       type: object
     cyclonedx.ReleaseNotes:
       properties:
@@ -2482,6 +3193,18 @@ components:
           type: string
         type:
           type: string
+      required:
+      - aliases
+      - description
+      - featuredImage
+      - notes
+      - properties
+      - resolves
+      - socialImage
+      - tags
+      - timestamp
+      - title
+      - type
       type: object
     cyclonedx.ResourceReferenceChoice:
       properties:
@@ -2489,6 +3212,9 @@ components:
           $ref: '#/components/schemas/cyclonedx.ExternalReference'
         ref:
           type: string
+      required:
+      - externalReference
+      - ref
       type: object
     cyclonedx.SWID:
       properties:
@@ -2506,6 +3232,14 @@ components:
           type: string
         version:
           type: string
+      required:
+      - name
+      - patch
+      - tagId
+      - tagVersion
+      - text
+      - url
+      - version
       type: object
     cyclonedx.Scope:
       enum:
@@ -2541,6 +3275,9 @@ components:
           type: string
         mechanism:
           type: string
+      required:
+      - algorithmRef
+      - mechanism
       type: object
     cyclonedx.Service:
       properties:
@@ -2606,6 +3343,26 @@ components:
           type: string
         x-trust-boundary:
           type: boolean
+      required:
+      - authenticated
+      - bom-ref
+      - data
+      - description
+      - endpoints
+      - externalReferences
+      - group
+      - licenses
+      - name
+      - patentAssertions
+      - properties
+      - provider
+      - releaseNotes
+      - services
+      - signature
+      - tags
+      - trustZone
+      - version
+      - x-trust-boundary
       type: object
     cyclonedx.Severity:
       enum:
@@ -2637,6 +3394,12 @@ components:
           type: string
         signature:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
+      required:
+      - externalReference
+      - name
+      - organization
+      - role
+      - signature
       type: object
     cyclonedx.Source:
       properties:
@@ -2644,6 +3407,9 @@ components:
           type: string
         url:
           type: string
+      required:
+      - name
+      - url
       type: object
     cyclonedx.SpecVersion:
       enum:
@@ -2703,6 +3469,16 @@ components:
           $ref: '#/components/schemas/cyclonedx.JSFSignature'
         version:
           type: string
+      required:
+      - bom-ref
+      - description
+      - externalReferences
+      - levels
+      - name
+      - owner
+      - requirements
+      - signature
+      - version
       type: object
     cyclonedx.StandardLevel:
       properties:
@@ -2719,6 +3495,12 @@ components:
           uniqueItems: false
         title:
           type: string
+      required:
+      - bom-ref
+      - description
+      - identifier
+      - requirements
+      - title
       type: object
     cyclonedx.StandardRequirement:
       properties:
@@ -2752,6 +3534,16 @@ components:
           type: string
         title:
           type: string
+      required:
+      - bom-ref
+      - descriptions
+      - externalReferences
+      - identifier
+      - openCre
+      - parent
+      - properties
+      - text
+      - title
       type: object
     cyclonedx.TLPClassification:
       enum:
@@ -2784,6 +3576,10 @@ components:
             $ref: '#/components/schemas/cyclonedx.Service'
           type: array
           uniqueItems: false
+      required:
+      - components
+      - organizations
+      - services
       type: object
     cyclonedx.Task:
       properties:
@@ -2841,6 +3637,22 @@ components:
             $ref: '#/components/schemas/cyclonedx.TaskWorkspace'
           type: array
           uniqueItems: false
+      required:
+      - bom-ref
+      - description
+      - inputs
+      - name
+      - outputs
+      - properties
+      - resourceReferences
+      - runtimeTopology
+      - steps
+      - taskTypes
+      - timeEnd
+      - timeStart
+      - trigger
+      - uid
+      - workspaces
       type: object
     cyclonedx.TaskCommand:
       properties:
@@ -2851,6 +3663,9 @@ components:
             $ref: '#/components/schemas/cyclonedx.Property'
           type: array
           uniqueItems: false
+      required:
+      - executed
+      - properties
       type: object
     cyclonedx.TaskInput:
       properties:
@@ -2877,6 +3692,14 @@ components:
           $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
         target:
           $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
+      required:
+      - data
+      - environmentVars
+      - parameters
+      - properties
+      - resource
+      - source
+      - target
       type: object
     cyclonedx.TaskOutput:
       properties:
@@ -2905,6 +3728,15 @@ components:
           $ref: '#/components/schemas/cyclonedx.ResourceReferenceChoice'
         type:
           $ref: '#/components/schemas/cyclonedx.TaskOutputType'
+      required:
+      - data
+      - environmentVars
+      - parameters
+      - properties
+      - resource
+      - source
+      - target
+      - type
       type: object
     cyclonedx.TaskOutputType:
       enum:
@@ -2938,6 +3770,11 @@ components:
             $ref: '#/components/schemas/cyclonedx.Property'
           type: array
           uniqueItems: false
+      required:
+      - commands
+      - description
+      - name
+      - properties
       type: object
     cyclonedx.TaskTrigger:
       properties:
@@ -2980,6 +3817,19 @@ components:
           $ref: '#/components/schemas/cyclonedx.TaskTriggerType'
         uid:
           type: string
+      required:
+      - bom-ref
+      - conditions
+      - description
+      - event
+      - inputs
+      - name
+      - outputs
+      - properties
+      - resourceReferences
+      - timeActivated
+      - type
+      - uid
       type: object
     cyclonedx.TaskTriggerCondition:
       properties:
@@ -2992,6 +3842,10 @@ components:
             $ref: '#/components/schemas/cyclonedx.Property'
           type: array
           uniqueItems: false
+      required:
+      - description
+      - expression
+      - properties
       type: object
     cyclonedx.TaskTriggerType:
       enum:
@@ -3068,6 +3922,19 @@ components:
           $ref: '#/components/schemas/cyclonedx.Volume'
         volumeRequest:
           type: string
+      required:
+      - accessMode
+      - aliases
+      - bom-ref
+      - description
+      - managedDataType
+      - mountPath
+      - name
+      - properties
+      - resourceReferences
+      - uid
+      - volume
+      - volumeRequest
       type: object
     cyclonedx.TaskWorkspaceAccessMode:
       enum:
@@ -3106,6 +3973,15 @@ components:
           type: string
         uid:
           type: string
+      required:
+      - mode
+      - name
+      - path
+      - persistent
+      - properties
+      - remote
+      - sizeAllocated
+      - uid
       type: object
     cyclonedx.VolumeMode:
       enum:
@@ -3177,6 +4053,28 @@ components:
           type: string
         workaround:
           type: string
+      required:
+      - advisories
+      - affects
+      - analysis
+      - bom-ref
+      - created
+      - credits
+      - cwes
+      - description
+      - detail
+      - id
+      - proofOfConcept
+      - properties
+      - published
+      - ratings
+      - recommendation
+      - references
+      - rejected
+      - source
+      - tools
+      - updated
+      - workaround
       type: object
     cyclonedx.VulnerabilityAnalysis:
       properties:
@@ -3195,6 +4093,13 @@ components:
           uniqueItems: false
         state:
           $ref: '#/components/schemas/cyclonedx.ImpactAnalysisState'
+      required:
+      - detail
+      - firstIssued
+      - justification
+      - lastUpdated
+      - response
+      - state
       type: object
     cyclonedx.VulnerabilityRating:
       properties:
@@ -3210,6 +4115,13 @@ components:
           $ref: '#/components/schemas/cyclonedx.Source'
         vector:
           type: string
+      required:
+      - justification
+      - method
+      - score
+      - severity
+      - source
+      - vector
       type: object
     cyclonedx.VulnerabilityReference:
       properties:
@@ -3217,6 +4129,9 @@ components:
           type: string
         source:
           $ref: '#/components/schemas/cyclonedx.Source'
+      required:
+      - id
+      - source
       type: object
     cyclonedx.VulnerabilityStatus:
       enum:
@@ -3294,6 +4209,24 @@ components:
             $ref: '#/components/schemas/cyclonedx.TaskWorkspace'
           type: array
           uniqueItems: false
+      required:
+      - bom-ref
+      - description
+      - inputs
+      - name
+      - outputs
+      - properties
+      - resourceReferences
+      - runtimeTopology
+      - steps
+      - taskDependencies
+      - taskTypes
+      - tasks
+      - timeEnd
+      - timeStart
+      - trigger
+      - uid
+      - workspaces
       type: object
     dtos.AcceptInvitationRequest:
       properties:
@@ -3315,6 +4248,11 @@ components:
           type: string
         slug:
           type: string
+      required:
+      - admins
+      - id
+      - instance_id
+      - slug
       type: object
     dtos.AdvisoryCreate:
       properties:
@@ -3334,8 +4272,12 @@ components:
         vectorString:
           type: string
       required:
+      - affectedPackages
+      - assetID
       - description
+      - severity
       - title
+      - vectorString
       type: object
     dtos.AdvisoryUpdate:
       properties:
@@ -3354,6 +4296,35 @@ components:
           type: string
         vectorString:
           type: string
+      required:
+      - affectedPackages
+      - assetID
+      - description
+      - severity
+      - title
+      - vectorString
+      type: object
+    dtos.Affected:
+      properties:
+        ecosystem_specific:
+          $ref: '#/components/schemas/dtos.EcosystemSpecific'
+        package:
+          $ref: '#/components/schemas/dtos.Package'
+        ranges:
+          items:
+            $ref: '#/components/schemas/dtos.Range'
+          type: array
+          uniqueItems: false
+        versions:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - ecosystem_specific
+      - package
+      - ranges
+      - versions
       type: object
     dtos.AffectedComponentDTO:
       properties:
@@ -3378,6 +4349,16 @@ components:
           type: string
         versionIntroduced:
           type: string
+      required:
+      - cves
+      - ecosystem
+      - id
+      - purl
+      - semverEnd
+      - semverStart
+      - version
+      - versionFixed
+      - versionIntroduced
       type: object
     dtos.AffectedPackage:
       properties:
@@ -3391,6 +4372,12 @@ components:
           type: string
         versionStart:
           type: string
+      required:
+      - ecosystem
+      - id
+      - packageName
+      - versionEnd
+      - versionStart
       type: object
     dtos.ArtifactDTO:
       properties:
@@ -3400,6 +4387,10 @@ components:
           type: string
         assetVersionName:
           type: string
+      required:
+      - artifactName
+      - assetId
+      - assetVersionName
       type: object
     dtos.ArtifactVulnDistribution:
       properties:
@@ -3427,6 +4418,19 @@ components:
           type: string
         projectSlug:
           type: string
+      required:
+      - assetSlug
+      - assetVersionName
+      - critical
+      - criticalCvss
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - medium
+      - mediumCvss
+      - name
+      - projectSlug
       type: object
     dtos.AssetChangeRoleRequest:
       properties:
@@ -3484,9 +4488,24 @@ components:
           type: number
       required:
       - availabilityRequirement
+      - centralDependencyVulnManagement
       - confidentialityRequirement
+      - cvssAutomaticTicketThreshold
+      - description
+      - enableTicketRange
+      - importance
       - integrityRequirement
+      - modifiedAttackComplexity
+      - modifiedAttackVector
+      - modifiedAvailability
+      - modifiedConfidentiality
+      - modifiedIntegrity
+      - modifiedPrivilegesRequired
+      - modifiedScope
+      - modifiedUserInteraction
       - name
+      - repositoryProvider
+      - riskAutomaticTicketThreshold
       type: object
     dtos.AssetDTO:
       properties:
@@ -3563,6 +4582,42 @@ components:
           type: string
         vulnAutoReopenAfterDays:
           type: integer
+      required:
+      - availabilityRequirement
+      - avatar
+      - centralDependencyVulnManagement
+      - confidentialityRequirement
+      - cvssAutomaticTicketThreshold
+      - description
+      - enableTicketRange
+      - externalEntityId
+      - externalEntityProviderId
+      - id
+      - integrityRequirement
+      - isPublic
+      - modifiedAttackComplexity
+      - modifiedAttackVector
+      - modifiedAvailability
+      - modifiedConfidentiality
+      - modifiedIntegrity
+      - modifiedPrivilegesRequired
+      - modifiedScope
+      - modifiedUserInteraction
+      - name
+      - paranoidMode
+      - pipelineError
+      - pipelineLastRun
+      - projectId
+      - refs
+      - repositoryId
+      - repositoryName
+      - repositoryProvider
+      - riskAutomaticTicketThreshold
+      - sharesInformation
+      - signingPubKey
+      - slug
+      - state
+      - vulnAutoReopenAfterDays
       type: object
     dtos.AssetDetailsDTO:
       properties:
@@ -3644,6 +4699,164 @@ components:
           type: string
         vulnAutoReopenAfterDays:
           type: integer
+      required:
+      - availabilityRequirement
+      - avatar
+      - centralDependencyVulnManagement
+      - confidentialityRequirement
+      - cvssAutomaticTicketThreshold
+      - description
+      - enableTicketRange
+      - externalEntityId
+      - externalEntityProviderId
+      - id
+      - integrityRequirement
+      - isPublic
+      - members
+      - modifiedAttackComplexity
+      - modifiedAttackVector
+      - modifiedAvailability
+      - modifiedConfidentiality
+      - modifiedIntegrity
+      - modifiedPrivilegesRequired
+      - modifiedScope
+      - modifiedUserInteraction
+      - name
+      - paranoidMode
+      - pipelineError
+      - pipelineLastRun
+      - projectId
+      - refs
+      - repositoryId
+      - repositoryName
+      - repositoryProvider
+      - riskAutomaticTicketThreshold
+      - sharesInformation
+      - signingPubKey
+      - slug
+      - state
+      - vulnAutoReopenAfterDays
+      type: object
+    dtos.AssetDetailsWithSecretsDTO:
+      properties:
+        availabilityRequirement:
+          $ref: '#/components/schemas/dtos.RequirementLevel'
+        avatar:
+          type: string
+        centralDependencyVulnManagement:
+          type: boolean
+        confidentialityRequirement:
+          $ref: '#/components/schemas/dtos.RequirementLevel'
+        cvssAutomaticTicketThreshold:
+          type: number
+        description:
+          type: string
+        enableTicketRange:
+          type: boolean
+        externalEntityId:
+          type: string
+        externalEntityProviderId:
+          type: string
+        id:
+          type: string
+        integrityRequirement:
+          $ref: '#/components/schemas/dtos.RequirementLevel'
+        isPublic:
+          type: boolean
+        members:
+          items:
+            $ref: '#/components/schemas/dtos.UserDTO'
+          type: array
+          uniqueItems: false
+        modifiedAttackComplexity:
+          $ref: '#/components/schemas/dtos.ModifiedAttackComplexity'
+        modifiedAttackVector:
+          $ref: '#/components/schemas/dtos.ModifiedAttackVector'
+        modifiedAvailability:
+          $ref: '#/components/schemas/dtos.ModifiedRequirementLevel'
+        modifiedConfidentiality:
+          $ref: '#/components/schemas/dtos.ModifiedRequirementLevel'
+        modifiedIntegrity:
+          $ref: '#/components/schemas/dtos.ModifiedRequirementLevel'
+        modifiedPrivilegesRequired:
+          $ref: '#/components/schemas/dtos.ModifiedPrivilegesRequired'
+        modifiedScope:
+          $ref: '#/components/schemas/dtos.ModifiedScope'
+        modifiedUserInteraction:
+          $ref: '#/components/schemas/dtos.ModifiedUserInteraction'
+        name:
+          type: string
+        paranoidMode:
+          type: boolean
+        pipelineError:
+          type: string
+        pipelineLastRun:
+          type: string
+        projectId:
+          type: string
+        refs:
+          items:
+            $ref: '#/components/schemas/dtos.AssetVersionDTO'
+          type: array
+          uniqueItems: false
+        repositoryId:
+          type: string
+        repositoryName:
+          type: string
+        repositoryProvider:
+          type: string
+        riskAutomaticTicketThreshold:
+          type: number
+        sharesInformation:
+          type: boolean
+        signingPubKey:
+          type: string
+        slug:
+          type: string
+        state:
+          type: string
+        vulnAutoReopenAfterDays:
+          type: integer
+        webhookSecret:
+          type: string
+      required:
+      - availabilityRequirement
+      - avatar
+      - centralDependencyVulnManagement
+      - confidentialityRequirement
+      - cvssAutomaticTicketThreshold
+      - description
+      - enableTicketRange
+      - externalEntityId
+      - externalEntityProviderId
+      - id
+      - integrityRequirement
+      - isPublic
+      - members
+      - modifiedAttackComplexity
+      - modifiedAttackVector
+      - modifiedAvailability
+      - modifiedConfidentiality
+      - modifiedIntegrity
+      - modifiedPrivilegesRequired
+      - modifiedScope
+      - modifiedUserInteraction
+      - name
+      - paranoidMode
+      - pipelineError
+      - pipelineLastRun
+      - projectId
+      - refs
+      - repositoryId
+      - repositoryName
+      - repositoryProvider
+      - riskAutomaticTicketThreshold
+      - sharesInformation
+      - signingPubKey
+      - slug
+      - state
+      - vulnAutoReopenAfterDays
+      - webhookSecret
       type: object
     dtos.AssetEntryDTO:
       properties:
@@ -3656,6 +4869,10 @@ components:
             $ref: '#/components/schemas/dtos.AssetVersionEntryDTO'
           type: array
           uniqueItems: false
+      required:
+      - assetExternalEntityId
+      - assetName
+      - assetVersions
       type: object
     dtos.AssetInviteToAssetRequest:
       properties:
@@ -3726,6 +4943,33 @@ components:
           type: integer
         webhookSecret:
           type: string
+      required:
+      - availabilityRequirement
+      - centralDependencyVulnManagement
+      - confidentialityRequirement
+      - configFiles
+      - cvssAutomaticTicketThreshold
+      - description
+      - enableTicketRange
+      - integrityRequirement
+      - isPublic
+      - modifiedAttackComplexity
+      - modifiedAttackVector
+      - modifiedAvailability
+      - modifiedConfidentiality
+      - modifiedIntegrity
+      - modifiedPrivilegesRequired
+      - modifiedScope
+      - modifiedUserInteraction
+      - name
+      - paranoidMode
+      - repositoryId
+      - repositoryName
+      - repositoryProvider
+      - riskAutomaticTicketThreshold
+      - sharesInformation
+      - vulnAutoReopenAfterDays
+      - webhookSecret
       type: object
     dtos.AssetVersionDTO:
       properties:
@@ -3750,6 +4994,17 @@ components:
           type: string
         updatedAt:
           type: string
+      required:
+      - assetId
+      - createdAt
+      - defaultBranch
+      - lastAccessedAt
+      - metadata
+      - name
+      - signingPubKey
+      - slug
+      - type
+      - updatedAt
       type: object
     dtos.AssetVersionEntryDTO:
       properties:
@@ -3760,6 +5015,9 @@ components:
           uniqueItems: false
         assetVersionName:
           type: string
+      required:
+      - artifacts
+      - assetVersionName
       type: object
     dtos.AssetVulnDistribution:
       properties:
@@ -3785,6 +5043,18 @@ components:
           type: string
         slug:
           type: string
+      required:
+      - critical
+      - criticalCvss
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - medium
+      - mediumCvss
+      - name
+      - projectSlug
+      - slug
       type: object
     dtos.AverageRemediationTimes:
       properties:
@@ -3822,6 +5092,23 @@ components:
           type: number
         mediumRiskRemediated:
           type: number
+      required:
+      - criticalCVSSOpen
+      - criticalCVSSRemediated
+      - criticalRiskOpen
+      - criticalRiskRemediated
+      - highCVSSOpen
+      - highCVSSRemediated
+      - highRiskOpen
+      - highRiskRemediated
+      - lowCVSSOpen
+      - lowCVSSRemediated
+      - lowRiskOpen
+      - lowRiskRemediated
+      - mediumCVSSOpen
+      - mediumCVSSRemediated
+      - mediumRiskOpen
+      - mediumRiskRemediated
       type: object
     dtos.AverageVulnEventsPerWeek:
       properties:
@@ -3835,6 +5122,12 @@ components:
           type: number
         averageReopenedEvents:
           type: number
+      required:
+      - averageAcceptedEvents
+      - averageDetectedEvents
+      - averageFalsePositiveEvents
+      - averageFixedEvents
+      - averageReopenedEvents
       type: object
     dtos.BatchDependencyVulnStatus:
       properties:
@@ -3850,6 +5143,11 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - justification
+      - mechanicalJustification
+      - status
+      - vulnIds
       type: object
     dtos.BatchFirstPartyVulnStatus:
       properties:
@@ -3865,6 +5163,11 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - justification
+      - mechanicalJustification
+      - status
+      - vulnIds
       type: object
     dtos.BuildInfo:
       properties:
@@ -3876,6 +5179,11 @@ components:
           type: string
         version:
           type: string
+      required:
+      - branch
+      - buildDate
+      - commit
+      - version
       type: object
     dtos.CVEDTO:
       properties:
@@ -3931,6 +5239,27 @@ components:
           type: string
         vector:
           type: string
+      required:
+      - affectedComponents
+      - cisaActionDue
+      - cisaExploitAdd
+      - cisaRequiredAction
+      - cisaVulnerabilityName
+      - createdAt
+      - cve
+      - cvss
+      - dateLastModified
+      - datePublished
+      - description
+      - epss
+      - euvdExploitAdd
+      - exploits
+      - percentile
+      - references
+      - relationships
+      - risk
+      - updatedAt
+      - vector
       type: object
     dtos.CVEOccurrence:
       properties:
@@ -3940,6 +5269,10 @@ components:
           type: number
         totalAmount:
           type: integer
+      required:
+      - cveID
+      - cvss
+      - totalAmount
       type: object
     dtos.CandidatesResponseDTO:
       properties:
@@ -3953,6 +5286,44 @@ components:
             $ref: '#/components/schemas/dtos.ReleaseDTO'
           type: array
           uniqueItems: false
+      required:
+      - artifacts
+      - releases
+      type: object
+    dtos.ComplianceComponentDetailsDTO:
+      properties:
+        description:
+          type: string
+        implementedControls:
+          items:
+            $ref: '#/components/schemas/dtos.ComplianceComponentImplementsControlDTO'
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+        uuid:
+          type: string
+      required:
+      - description
+      - implementedControls
+      - title
+      - uuid
+      type: object
+    dtos.ComplianceComponentImplementsControlDTO:
+      properties:
+        complianceComponentId:
+          type: string
+        complianceComponentTitle:
+          type: string
+        description:
+          type: string
+        frameworkControlId:
+          type: string
+      required:
+      - complianceComponentId
+      - complianceComponentTitle
+      - description
+      - frameworkControlId
       type: object
     dtos.ComplianceComponentImplementsControlStatementDTO:
       properties:
@@ -3972,29 +5343,28 @@ components:
           type: string
         implementationStatus:
           type: string
+      required:
+      - complianceComponentDescription
+      - complianceComponentId
+      - complianceComponentTitle
+      - compliancePostureId
+      - description
+      - frameworkControlId
+      - id
+      - implementationStatus
       type: object
-    dtos.CompliancePostureDTO:
+    dtos.CompliancePostureStatsDTO:
       properties:
-        assetId:
-          type: string
-        controlDescription:
-          type: string
-        controlId:
-          type: string
-        controlTitle:
-          type: string
-        manualTicketCreation:
-          type: boolean
-        orgId:
-          type: string
-        projectId:
-          type: string
-        state:
-          type: string
-        ticketId:
-          type: string
-        ticketUrl:
-          type: string
+        implemented:
+          type: integer
+        notApplicable:
+          type: integer
+        open:
+          type: integer
+      required:
+      - implemented
+      - notApplicable
+      - open
       type: object
     dtos.CompliancePostureWithControlDTO:
       properties:
@@ -4039,6 +5409,102 @@ components:
           type: string
         title:
           type: string
+      required:
+      - additional
+      - assetId
+      - assetVersionName
+      - class
+      - compliancePostureId
+      - controlId
+      - description
+      - framework
+      - frameworkControlId
+      - importance
+      - mappedControls
+      - orgId
+      - parentFrameworkControlId
+      - projectId
+      - securityLevel
+      - state
+      - ticketId
+      - ticketUrl
+      - title
+      type: object
+    dtos.CompliancePostureWithDetailsDTO:
+      properties:
+        additional:
+          type: object
+        assetId:
+          type: string
+        assetVersionName:
+          type: string
+        byComponents:
+          items:
+            $ref: '#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO'
+          type: array
+          uniqueItems: false
+        class:
+          type: string
+        compliancePostureId:
+          type: string
+        controlId:
+          type: string
+        description:
+          type: string
+        events:
+          items:
+            $ref: '#/components/schemas/dtos.VulnEventDTO'
+          type: array
+          uniqueItems: false
+        framework:
+          type: string
+        frameworkControlId:
+          type: string
+        importance:
+          type: string
+        mappedControls:
+          items:
+            $ref: '#/components/schemas/dtos.MappedControlDTO'
+          type: array
+          uniqueItems: false
+        orgId:
+          type: string
+        parentFrameworkControlId:
+          type: string
+        projectId:
+          type: string
+        securityLevel:
+          type: string
+        state:
+          $ref: '#/components/schemas/dtos.VulnState'
+        ticketId:
+          type: string
+        ticketUrl:
+          type: string
+        title:
+          type: string
+      required:
+      - additional
+      - assetId
+      - assetVersionName
+      - byComponents
+      - class
+      - compliancePostureId
+      - controlId
+      - description
+      - events
+      - framework
+      - frameworkControlId
+      - importance
+      - mappedControls
+      - orgId
+      - parentFrameworkControlId
+      - projectId
+      - securityLevel
+      - state
+      - ticketId
+      - ticketUrl
+      - title
       type: object
     dtos.ComponentDTO:
       properties:
@@ -4064,6 +5530,16 @@ components:
           type: string
         version:
           type: string
+      required:
+      - componentType
+      - dependsOn
+      - isLicenseOverwritten
+      - license
+      - project
+      - projectId
+      - published
+      - purl
+      - version
       type: object
     dtos.ComponentDependencyDTO:
       properties:
@@ -4086,6 +5562,13 @@ components:
           type: string
         id:
           type: string
+      required:
+      - artifacts
+      - component
+      - componentPurl
+      - dependency
+      - dependencyPurl
+      - id
       type: object
     dtos.ComponentOccurrenceAcrossInstance:
       properties:
@@ -4095,6 +5578,10 @@ components:
           type: number
         totalAmount:
           type: integer
+      required:
+      - purl
+      - relativeAmount
+      - totalAmount
       type: object
     dtos.ComponentOccurrenceAcrossOrg:
       properties:
@@ -4102,6 +5589,9 @@ components:
           type: string
         totalAmount:
           type: integer
+      required:
+      - purl
+      - totalAmount
       type: object
     dtos.ComponentOccurrenceDTO:
       properties:
@@ -4135,6 +5625,22 @@ components:
           type: string
         projectSlug:
           type: string
+      required:
+      - artifactAssetVersion
+      - artifactName
+      - assetId
+      - assetName
+      - assetSlug
+      - assetVersionName
+      - componentDependencyId
+      - componentPurl
+      - componentVersion
+      - dependencyPurl
+      - organizationId
+      - organizationName
+      - projectId
+      - projectName
+      - projectSlug
       type: object
     dtos.ComponentProjectDTO:
       properties:
@@ -4160,6 +5666,17 @@ components:
           type: integer
         updatedAt:
           type: string
+      required:
+      - description
+      - forksCount
+      - homepage
+      - license
+      - openIssuesCount
+      - projectKey
+      - scoreCard
+      - scoreCardScore
+      - starsCount
+      - updatedAt
       type: object
     dtos.ComponentType:
       enum:
@@ -4198,6 +5715,10 @@ components:
           $ref: '#/components/schemas/dtos.MechanicalJustificationType'
         status:
           type: string
+      required:
+      - justification
+      - mechanicalJustification
+      - status
       type: object
     dtos.CreateExternalReferenceRequest:
       properties:
@@ -4209,6 +5730,7 @@ components:
         url:
           type: string
       required:
+      - csafPackageScope
       - type
       - url
       type: object
@@ -4229,6 +5751,7 @@ components:
       - payload
       - step
       - supplyChainId
+      - supplyChainOutputDigest
       type: object
     dtos.CreateVEXRuleRequest:
       properties:
@@ -4248,6 +5771,9 @@ components:
       - celExpression
       - eventType
       - justification
+      - mechanicalJustification
+      - title
+      - wasRecommended
       type: object
     dtos.DatabaseInfo:
       properties:
@@ -4283,6 +5809,23 @@ components:
           type: integer
         waitDuration:
           $ref: '#/components/schemas/time.Duration'
+      required:
+      - error
+      - idle
+      - inUse
+      - maxIdleClosed
+      - maxIdleTimeClosed
+      - maxLifetimeClosed
+      - maxOpenConnections
+      - migrationDirty
+      - migrationError
+      - migrationVersion
+      - openConnections
+      - pool
+      - status
+      - vulndbVersion
+      - waitCount
+      - waitDuration
       type: object
     dtos.DependencyVulnDTO:
       properties:
@@ -4333,6 +5876,26 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - artifacts
+      - assetId
+      - assetVersionId
+      - componentFixedVersion
+      - componentPurl
+      - createdAt
+      - cve
+      - cveID
+      - directDependencyFixedVersion
+      - exploits
+      - id
+      - lastStateChange
+      - manualTicketCreation
+      - riskAssessment
+      - riskRecalculatedAt
+      - state
+      - ticketId
+      - ticketUrl
+      - vulnerabilityPath
       type: object
     dtos.DetailedDependencyVulnDTO:
       properties:
@@ -4388,6 +5951,110 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - artifacts
+      - assetId
+      - assetVersionId
+      - componentFixedVersion
+      - componentPurl
+      - createdAt
+      - cve
+      - cveID
+      - directDependencyFixedVersion
+      - events
+      - exploits
+      - id
+      - lastStateChange
+      - manualTicketCreation
+      - riskAssessment
+      - riskRecalculatedAt
+      - state
+      - ticketId
+      - ticketUrl
+      - vulnerabilityPath
+      type: object
+    dtos.DetailedDependencyVulnWithRelationsDTO:
+      properties:
+        artifacts:
+          items:
+            $ref: '#/components/schemas/dtos.ArtifactDTO'
+          type: array
+          uniqueItems: false
+        assetId:
+          type: string
+        assetVersionId:
+          type: string
+        componentFixedVersion:
+          type: string
+        componentPurl:
+          type: string
+        createdAt:
+          type: string
+        cve:
+          $ref: '#/components/schemas/dtos.CVEDTO'
+        cveID:
+          type: string
+        directDependencyFixedVersion:
+          type: string
+        events:
+          items:
+            $ref: '#/components/schemas/dtos.VulnEventDTO'
+          type: array
+          uniqueItems: false
+        exploits:
+          items:
+            $ref: '#/components/schemas/dtos.ExploitDTO'
+          type: array
+          uniqueItems: false
+        id:
+          type: string
+        lastStateChange:
+          type: string
+        manualTicketCreation:
+          type: boolean
+        related:
+          additionalProperties:
+            items:
+              $ref: '#/components/schemas/dtos.CVEDTO'
+            type: array
+          type: object
+        riskAssessment:
+          type: number
+        riskRecalculatedAt:
+          type: string
+        state:
+          $ref: '#/components/schemas/dtos.VulnState'
+        ticketId:
+          type: string
+        ticketUrl:
+          type: string
+        vulnerabilityPath:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - artifacts
+      - assetId
+      - assetVersionId
+      - componentFixedVersion
+      - componentPurl
+      - createdAt
+      - cve
+      - cveID
+      - directDependencyFixedVersion
+      - events
+      - exploits
+      - id
+      - lastStateChange
+      - manualTicketCreation
+      - related
+      - riskAssessment
+      - riskRecalculatedAt
+      - state
+      - ticketId
+      - ticketUrl
+      - vulnerabilityPath
       type: object
     dtos.DetailedFirstPartyVulnDTO:
       properties:
@@ -4444,6 +6111,30 @@ components:
           type: string
         uri:
           type: string
+      required:
+      - assetId
+      - assetVersionName
+      - author
+      - commit
+      - createdAt
+      - date
+      - email
+      - events
+      - id
+      - manualTicketCreation
+      - message
+      - ruleDescription
+      - ruleHelp
+      - ruleHelpURI
+      - ruleId
+      - ruleName
+      - ruleProperties
+      - scannerIds
+      - snippetContents
+      - state
+      - ticketId
+      - ticketUrl
+      - uri
       type: object
     dtos.DetailedLicenseRiskDTO:
       properties:
@@ -4479,6 +6170,27 @@ components:
           type: string
         ticketUrl:
           type: string
+      required:
+      - artifacts
+      - assetId
+      - assetVersionName
+      - component
+      - componentPurl
+      - createdAt
+      - events
+      - finalLicenseDecision
+      - id
+      - manualTicketCreation
+      - state
+      - ticketId
+      - ticketUrl
+      type: object
+    dtos.EcosystemSpecific:
+      properties:
+        urgency:
+          type: string
+      required:
+      - urgency
       type: object
     dtos.EcosystemUsage:
       properties:
@@ -4488,6 +6200,10 @@ components:
           type: string
         relativeAmount:
           type: number
+      required:
+      - absoluteAmount
+      - ecosystem
+      - relativeAmount
       type: object
     dtos.ExploitDTO:
       properties:
@@ -4519,6 +6235,21 @@ components:
           type: boolean
         watchers:
           type: integer
+      required:
+      - author
+      - cveID
+      - description
+      - forks
+      - id
+      - pushed_at
+      - sourceURL
+      - stargazers_count
+      - subscribers_count
+      - tags
+      - type
+      - updated_at
+      - verified
+      - watchers
       type: object
     dtos.ExternalReferenceDTO:
       properties:
@@ -4531,6 +6262,21 @@ components:
           $ref: '#/components/schemas/dtos.ExternalReferenceType'
         url:
           type: string
+      required:
+      - assetId
+      - error
+      - type
+      - url
+      type: object
+    dtos.ExternalReferenceError:
+      properties:
+        reason:
+          type: string
+        url:
+          type: string
+      required:
+      - reason
+      - url
       type: object
     dtos.ExternalReferenceType:
       enum:
@@ -4582,8 +6328,18 @@ components:
           - delete
           type: string
       required:
+      - artifact
+      - assetDescription
       - assetExternalEntityId
+      - assetName
+      - assetVersionName
+      - projectDescription
       - projectExternalEntityId
+      - projectName
+      - sbom
+      - subProjectDescription
+      - subProjectExternalEntityId
+      - subProjectName
       - verb
       type: object
     dtos.FirstPartyScanResponse:
@@ -4597,6 +6353,10 @@ components:
             $ref: '#/components/schemas/dtos.FirstPartyVulnDTO'
           type: array
           uniqueItems: false
+      required:
+      - amountClosed
+      - amountOpened
+      - firstPartyVulns
       type: object
     dtos.FirstPartyVulnDTO:
       properties:
@@ -4648,6 +6408,71 @@ components:
           type: string
         uri:
           type: string
+      required:
+      - assetId
+      - assetVersionName
+      - author
+      - commit
+      - createdAt
+      - date
+      - email
+      - id
+      - manualTicketCreation
+      - message
+      - ruleDescription
+      - ruleHelp
+      - ruleHelpURI
+      - ruleId
+      - ruleName
+      - ruleProperties
+      - scannerIds
+      - snippetContents
+      - state
+      - ticketId
+      - ticketUrl
+      - uri
+      type: object
+    dtos.FirstPartyVulnStatus:
+      properties:
+        justification:
+          maxLength: 4000
+          type: string
+        mechanicalJustification:
+          $ref: '#/components/schemas/dtos.MechanicalJustificationType'
+        status:
+          type: string
+      required:
+      - justification
+      - mechanicalJustification
+      - status
+      type: object
+    dtos.GitRepository:
+      properties:
+        description:
+          type: string
+        gitProvider:
+          type: string
+        id:
+          type: string
+        image:
+          type: string
+        isDeveloper:
+          type: boolean
+        isMaintainer:
+          type: boolean
+        isOwner:
+          type: boolean
+        label:
+          type: string
+      required:
+      - description
+      - gitProvider
+      - id
+      - image
+      - isDeveloper
+      - isMaintainer
+      - isOwner
+      - label
       type: object
     dtos.GithubAppInstallationDTO:
       properties:
@@ -4665,6 +6490,13 @@ components:
           type: string
         targetType:
           type: string
+      required:
+      - installationCreatedWebhookReceivedTime
+      - installationId
+      - settingsUrl
+      - targetAvatarUrl
+      - targetLogin
+      - targetType
       type: object
     dtos.GitlabIntegrationDTO:
       properties:
@@ -4676,6 +6508,11 @@ components:
           type: string
         url:
           type: string
+      required:
+      - id
+      - name
+      - obfuscatedToken
+      - url
       type: object
     dtos.InfoResponse:
       properties:
@@ -4687,6 +6524,11 @@ components:
           $ref: '#/components/schemas/dtos.ProcessInfo'
         runtime:
           $ref: '#/components/schemas/dtos.RuntimeInfo'
+      required:
+      - build
+      - database
+      - process
+      - runtime
       type: object
     dtos.InstanceOverview:
       properties:
@@ -4714,6 +6556,13 @@ components:
             $ref: '#/components/schemas/dtos.ProjectVulnDistribution'
           type: array
           uniqueItems: false
+      required:
+      - averageOpenCodeRisks
+      - averageOpenVulnsPerOrg
+      - maliciousPackages
+      - topCVEs
+      - topComponents
+      - topVulnerableProjects
       type: object
     dtos.InstanceUsageStatistics:
       type: object
@@ -4742,6 +6591,11 @@ components:
           type: string
         invitationStatus:
           $ref: '#/components/schemas/dtos.InvitationStatus'
+      required:
+      - email
+      - expiryDate
+      - id
+      - invitationStatus
       type: object
     dtos.JiraIntegrationDTO:
       properties:
@@ -4755,6 +6609,12 @@ components:
           type: string
         userEmail:
           type: string
+      required:
+      - id
+      - name
+      - obfuscatedToken
+      - url
+      - userEmail
       type: object
     dtos.LicenseRiskArtifactDTO:
       properties:
@@ -4764,6 +6624,10 @@ components:
           type: string
         assetVersionName:
           type: string
+      required:
+      - artifactName
+      - assetId
+      - assetVersionName
       type: object
     dtos.LookupResponse:
       properties:
@@ -4775,6 +6639,11 @@ components:
           type: string
         project:
           type: string
+      required:
+      - asset
+      - link
+      - org
+      - project
       type: object
     dtos.MakeFinalLicenseDecisionRequest:
       properties:
@@ -4783,6 +6652,9 @@ components:
           type: string
         license:
           type: string
+      required:
+      - justification
+      - license
       type: object
     dtos.MaliciousPackage:
       properties:
@@ -4800,6 +6672,14 @@ components:
           type: string
         projectSlug:
           type: string
+      required:
+      - assetName
+      - assetSlug
+      - assetVersionName
+      - component
+      - maliciousPackageID
+      - orgSlug
+      - projectSlug
       type: object
     dtos.MaliciousPackageInOrg:
       properties:
@@ -4813,6 +6693,12 @@ components:
           type: string
         projectName:
           type: string
+      required:
+      - assetName
+      - assetVersionName
+      - component
+      - maliciousPackageID
+      - projectName
       type: object
     dtos.MappedControlDTO:
       properties:
@@ -4824,6 +6710,11 @@ components:
           type: string
         relationship:
           type: string
+      required:
+      - frameworkControlId
+      - relatedControlId
+      - relatedFramework
+      - relationship
       type: object
     dtos.MechanicalJustificationType:
       enum:
@@ -4849,6 +6740,11 @@ components:
           type: integer
         totalAlloc:
           type: integer
+      required:
+      - alloc
+      - heapAlloc
+      - sys
+      - totalAlloc
       type: object
     dtos.ModifiedAttackComplexity:
       enum:
@@ -4978,6 +6874,63 @@ components:
       - MUINotDefined
       - MUINone
       - MUIRequired
+    dtos.OSV:
+      properties:
+        affected:
+          items:
+            $ref: '#/components/schemas/dtos.Affected'
+          type: array
+          uniqueItems: false
+        aliases:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        details:
+          type: string
+        id:
+          type: string
+        modified:
+          type: string
+        published:
+          type: string
+        related:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        severity:
+          items:
+            properties:
+              score:
+                type: string
+              type:
+                type: string
+            required:
+            - score
+            - type
+            type: object
+          type: array
+          uniqueItems: false
+        summary:
+          type: string
+        upstream:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - affected
+      - aliases
+      - details
+      - id
+      - modified
+      - published
+      - related
+      - severity
+      - summary
+      - upstream
+      type: object
     dtos.OrgChangeRoleRequest:
       properties:
         role:
@@ -5013,7 +6966,103 @@ components:
         numberOfEmployees:
           type: integer
       required:
+      - contactPhoneNumber
+      - country
+      - criticalInfrastructure
+      - description
+      - grundschutz
+      - industry
+      - iso27001
+      - language
       - name
+      - nist
+      - numberOfEmployees
+      type: object
+    dtos.OrgDTO:
+      properties:
+        configFiles:
+          additionalProperties: {}
+          type: object
+        contactPhoneNumber:
+          type: string
+        country:
+          type: string
+        createdAt:
+          type: string
+        criticalInfrastructure:
+          type: boolean
+        description:
+          type: string
+        externalEntityProviderId:
+          type: string
+        gitLabIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.GitlabIntegrationDTO'
+          type: array
+          uniqueItems: false
+        githubAppInstallations:
+          items:
+            $ref: '#/components/schemas/dtos.GithubAppInstallationDTO'
+          type: array
+          uniqueItems: false
+        grundschutz:
+          type: boolean
+        id:
+          type: string
+        industry:
+          type: string
+        isPublic:
+          type: boolean
+        iso27001:
+          type: boolean
+        jiraIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.JiraIntegrationDTO'
+          type: array
+          uniqueItems: false
+        language:
+          type: string
+        name:
+          type: string
+        nist:
+          type: boolean
+        numberOfEmployees:
+          type: integer
+        projects:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectDTO'
+          type: array
+          uniqueItems: false
+        sharesVulnInformation:
+          type: boolean
+        slug:
+          type: string
+        updatedAt:
+          type: string
+      required:
+      - configFiles
+      - contactPhoneNumber
+      - country
+      - createdAt
+      - criticalInfrastructure
+      - description
+      - externalEntityProviderId
+      - gitLabIntegrations
+      - githubAppInstallations
+      - grundschutz
+      - id
+      - industry
+      - isPublic
+      - iso27001
+      - jiraIntegrations
+      - language
+      - name
+      - nist
+      - numberOfEmployees
+      - projects
+      - sharesVulnInformation
+      - slug
+      - updatedAt
       type: object
     dtos.OrgDetailsDTO:
       properties:
@@ -5086,11 +7135,39 @@ components:
           type: string
         updatedAt:
           type: string
+      required:
+      - configFiles
+      - contactPhoneNumber
+      - country
+      - createdAt
+      - criticalInfrastructure
+      - description
+      - externalEntityProviderId
+      - gitLabIntegrations
+      - githubAppInstallations
+      - grundschutz
+      - id
+      - industry
+      - invitedMembers
+      - isPublic
+      - iso27001
+      - jiraIntegrations
+      - language
+      - members
+      - name
+      - nist
+      - numberOfEmployees
+      - projects
+      - sharesVulnInformation
+      - slug
+      - updatedAt
       type: object
     dtos.OrgInformation:
       properties:
         owner_mail:
           type: string
+      required:
+      - owner_mail
       type: object
     dtos.OrgOverview:
       properties:
@@ -5148,6 +7225,22 @@ components:
           $ref: '#/components/schemas/dtos.VulnSeverityDistribution'
         vulnEventAverage:
           $ref: '#/components/schemas/dtos.AverageVulnEventsPerWeek'
+      required:
+      - averageAgeOfDependencies
+      - averageOpenCodeRisksPerProject
+      - averageRemediationTimes
+      - maliciousPackages
+      - orgRiskHistory
+      - remediationTypeDistribution
+      - structure
+      - topArtifacts
+      - topAssets
+      - topCVEs
+      - topComponents
+      - topEcosystems
+      - topProjects
+      - vulnDistribution
+      - vulnEventAverage
       type: object
     dtos.OrgPatchRequest:
       properties:
@@ -5180,6 +7273,21 @@ components:
           type: integer
         shareVulnInformation:
           type: boolean
+      required:
+      - configFiles
+      - contactPhoneNumber
+      - country
+      - criticalInfrastructure
+      - description
+      - grundschutz
+      - industry
+      - isPublic
+      - iso27001
+      - language
+      - name
+      - nist
+      - numberOfEmployees
+      - shareVulnInformation
       type: object
     dtos.OrgRiskHistory:
       properties:
@@ -5249,6 +7357,40 @@ components:
           type: integer
         mediumCvss:
           type: integer
+      required:
+      - critical
+      - criticalCvss
+      - cvePurlCritical
+      - cvePurlCriticalCvss
+      - cvePurlFixableCritical
+      - cvePurlFixableCriticalCvss
+      - cvePurlFixableHigh
+      - cvePurlFixableHighCvss
+      - cvePurlFixableLow
+      - cvePurlFixableLowCvss
+      - cvePurlFixableMedium
+      - cvePurlFixableMediumCvss
+      - cvePurlHigh
+      - cvePurlHighCvss
+      - cvePurlLow
+      - cvePurlLowCvss
+      - cvePurlMedium
+      - cvePurlMediumCvss
+      - day
+      - fixableCritical
+      - fixableCriticalCvss
+      - fixableHigh
+      - fixableHighCvss
+      - fixableLow
+      - fixableLowCvss
+      - fixableMedium
+      - fixableMediumCvss
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - medium
+      - mediumCvss
       type: object
     dtos.OrgSettingsDTO:
       properties:
@@ -5326,6 +7468,33 @@ components:
             $ref: '#/components/schemas/dtos.WebhookIntegrationDTO'
           type: array
           uniqueItems: false
+      required:
+      - configFiles
+      - contactPhoneNumber
+      - country
+      - createdAt
+      - criticalInfrastructure
+      - description
+      - externalEntityProviderId
+      - gitLabIntegrations
+      - githubAppInstallations
+      - grundschutz
+      - id
+      - industry
+      - invitedMembers
+      - isPublic
+      - iso27001
+      - jiraIntegrations
+      - language
+      - members
+      - name
+      - nist
+      - numberOfEmployees
+      - projects
+      - sharesVulnInformation
+      - slug
+      - updatedAt
+      - webhooks
       type: object
     dtos.OrgStructureDistribution:
       properties:
@@ -5335,6 +7504,10 @@ components:
           type: integer
         numProjects:
           type: integer
+      required:
+      - numArtifacts
+      - numAssets
+      - numProjects
       type: object
     dtos.OrgVulnAverage:
       properties:
@@ -5354,6 +7527,15 @@ components:
           type: number
         riskAvgMedium:
           type: number
+      required:
+      - cvssAvgCritical
+      - cvssAvgHigh
+      - cvssAvgLow
+      - cvssAvgMedium
+      - riskAvgCritical
+      - riskAvgHigh
+      - riskAvgLow
+      - riskAvgMedium
       type: object
     dtos.PATCreateResponseDTO:
       properties:
@@ -5373,6 +7555,15 @@ components:
           type: string
         scopes:
           type: string
+      required:
+      - bearerToken
+      - createdAt
+      - description
+      - expiryDateUnix
+      - fingerprint
+      - id
+      - lastUsedAt
+      - scopes
       type: object
     dtos.PATDTO:
       properties:
@@ -5390,6 +7581,27 @@ components:
           type: string
         scopes:
           type: string
+      required:
+      - createdAt
+      - description
+      - expiryDateUnix
+      - fingerprint
+      - id
+      - lastUsedAt
+      - scopes
+      type: object
+    dtos.Package:
+      properties:
+        ecosystem:
+          type: string
+        name:
+          type: string
+        purl:
+          type: string
+      required:
+      - ecosystem
+      - name
+      - purl
       type: object
     dtos.PatCreateRequest:
       properties:
@@ -5402,7 +7614,10 @@ components:
         scopes:
           type: string
       required:
+      - description
       - expiryDateUnix
+      - pubKey
+      - scopes
       type: object
     dtos.PolicyDTO:
       properties:
@@ -5417,7 +7632,9 @@ components:
         title:
           type: string
       required:
+      - description
       - predicateType
+      - priority
       - rego
       - title
       type: object
@@ -5439,6 +7656,15 @@ components:
           type: integer
         totalConns:
           type: integer
+      required:
+      - acquiredConns
+      - connMaxIdleTime
+      - connMaxLifetime
+      - dbName
+      - idleConns
+      - maxConns
+      - maxOpenConns
+      - totalConns
       type: object
     dtos.ProcessInfo:
       properties:
@@ -5448,6 +7674,10 @@ components:
           type: integer
         uptimeSeconds:
           type: integer
+      required:
+      - hostname
+      - pid
+      - uptimeSeconds
       type: object
     dtos.ProjectAssetDTO:
       properties:
@@ -5483,6 +7713,20 @@ components:
           uniqueItems: false
         updatedAt:
           type: string
+      required:
+      - avatar
+      - createdAt
+      - description
+      - id
+      - isPublic
+      - name
+      - parentId
+      - projectId
+      - resourceType
+      - slug
+      - state
+      - subGroupsAndAsset
+      - updatedAt
       type: object
     dtos.ProjectChangeRoleRequest:
       properties:
@@ -5506,7 +7750,10 @@ components:
         type:
           type: string
       required:
+      - description
       - name
+      - parentId
+      - type
       type: object
     dtos.ProjectDTO:
       properties:
@@ -5551,6 +7798,23 @@ components:
           uniqueItems: false
         type:
           type: string
+      required:
+      - assets
+      - avatar
+      - configFiles
+      - description
+      - externalEntityId
+      - externalEntityProviderId
+      - id
+      - isPublic
+      - name
+      - parent
+      - parentId
+      - repositoryId
+      - repositoryName
+      - slug
+      - subGroupsAndAsset
+      - type
       type: object
     dtos.ProjectDetailsDTO:
       properties:
@@ -5605,6 +7869,25 @@ components:
             $ref: '#/components/schemas/dtos.WebhookIntegrationDTO'
           type: array
           uniqueItems: false
+      required:
+      - assets
+      - avatar
+      - configFiles
+      - description
+      - externalEntityId
+      - externalEntityProviderId
+      - id
+      - isPublic
+      - members
+      - name
+      - parent
+      - parentId
+      - repositoryId
+      - repositoryName
+      - slug
+      - subGroupsAndAsset
+      - type
+      - webhooks
       type: object
     dtos.ProjectExternalEntityTree:
       properties:
@@ -5622,6 +7905,11 @@ components:
             $ref: '#/components/schemas/dtos.SubProjectEntryDTO'
           type: array
           uniqueItems: false
+      required:
+      - assets
+      - projectExternalEntityId
+      - projectName
+      - subProjects
       type: object
     dtos.ProjectInviteRequest:
       properties:
@@ -5650,6 +7938,14 @@ components:
           type: string
         type:
           type: string
+      required:
+      - configFiles
+      - description
+      - isPublic
+      - name
+      - repositoryId
+      - repositoryName
+      - type
       type: object
     dtos.ProjectVulnDistribution:
       properties:
@@ -5673,11 +7969,40 @@ components:
           type: string
         slug:
           type: string
+      required:
+      - critical
+      - criticalCvss
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - medium
+      - mediumCvss
+      - name
+      - slug
+      type: object
+    dtos.Range:
+      properties:
+        events:
+          items:
+            $ref: '#/components/schemas/dtos.SemverEvent'
+          type: array
+          uniqueItems: false
+        repo:
+          type: string
+        type:
+          type: string
+      required:
+      - events
+      - repo
+      - type
       type: object
     dtos.Recommendation:
       properties:
         recommendedVersion:
           type: string
+      required:
+      - recommendedVersion
       type: object
     dtos.RelationshipDTO:
       properties:
@@ -5685,6 +8010,9 @@ components:
           type: string
         targetCve:
           type: string
+      required:
+      - relationshipType
+      - targetCve
       type: object
     dtos.RelationshipType:
       enum:
@@ -5714,6 +8042,7 @@ components:
         name:
           type: string
       required:
+      - items
       - name
       type: object
     dtos.ReleaseDTO:
@@ -5733,6 +8062,13 @@ components:
           type: string
         updatedAt:
           type: string
+      required:
+      - createdAt
+      - id
+      - items
+      - name
+      - projectId
+      - updatedAt
       type: object
     dtos.ReleaseItemDTO:
       properties:
@@ -5750,6 +8086,14 @@ components:
           type: string
         releaseId:
           type: string
+      required:
+      - artifactName
+      - assetId
+      - assetVersionName
+      - childReleaseId
+      - childReleaseName
+      - id
+      - releaseId
       type: object
     dtos.ReleasePatchRequest:
       properties:
@@ -5758,6 +8102,8 @@ components:
             $ref: '#/components/schemas/dtos.ReleaseItemDTO'
           type: array
           uniqueItems: false
+      required:
+      - items
       type: object
     dtos.RemediationTimeAverages:
       properties:
@@ -5777,6 +8123,15 @@ components:
           type: number
         riskAvgMedium:
           type: number
+      required:
+      - cvssAvgCritical
+      - cvssAvgHigh
+      - cvssAvgLow
+      - cvssAvgMedium
+      - riskAvgCritical
+      - riskAvgHigh
+      - riskAvgLow
+      - riskAvgMedium
       type: object
     dtos.RemediationTypeDistribution:
       properties:
@@ -5786,6 +8141,10 @@ components:
           type: number
         fixedPercentage:
           type: number
+      required:
+      - acceptedPercentage
+      - falsePositivePercentage
+      - fixedPercentage
       type: object
     dtos.RequirementLevel:
       enum:
@@ -5917,6 +8276,53 @@ components:
           type: number
         sumOpenRisk:
           type: number
+      required:
+      - artifactName
+      - assetId
+      - assetVersionName
+      - averageClosedRisk
+      - averageOpenRisk
+      - critical
+      - criticalCvss
+      - cvePurlCritical
+      - cvePurlCriticalCvss
+      - cvePurlFixableCritical
+      - cvePurlFixableCriticalCvss
+      - cvePurlFixableHigh
+      - cvePurlFixableHighCvss
+      - cvePurlFixableLow
+      - cvePurlFixableLowCvss
+      - cvePurlFixableMedium
+      - cvePurlFixableMediumCvss
+      - cvePurlHigh
+      - cvePurlHighCvss
+      - cvePurlLow
+      - cvePurlLowCvss
+      - cvePurlMedium
+      - cvePurlMediumCvss
+      - day
+      - fixableCritical
+      - fixableCriticalCvss
+      - fixableHigh
+      - fixableHighCvss
+      - fixableLow
+      - fixableLowCvss
+      - fixableMedium
+      - fixableMediumCvss
+      - fixedDependencyVulns
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - maxClosedRisk
+      - maxOpenRisk
+      - medium
+      - mediumCvss
+      - minClosedRisk
+      - minOpenRisk
+      - openDependencyVulns
+      - sumClosedRisk
+      - sumOpenRisk
       type: object
     dtos.RiskMetrics:
       properties:
@@ -5928,6 +8334,11 @@ components:
           type: number
         withThreatIntelligence:
           type: number
+      required:
+      - baseScore
+      - withEnvironment
+      - withEnvironmentAndThreatIntelligence
+      - withThreatIntelligence
       type: object
     dtos.RuntimeInfo:
       properties:
@@ -5937,6 +8348,10 @@ components:
           $ref: '#/components/schemas/dtos.MemStats'
         numGoroutines:
           type: integer
+      required:
+      - goVersion
+      - mem
+      - numGoroutines
       type: object
     dtos.ScanResponse:
       properties:
@@ -5949,6 +8364,23 @@ components:
             $ref: '#/components/schemas/dtos.DependencyVulnDTO'
           type: array
           uniqueItems: false
+      required:
+      - amountClosed
+      - amountOpened
+      - dependencyVulns
+      type: object
+    dtos.SemverEvent:
+      properties:
+        fixed:
+          type: string
+        introduced:
+          type: string
+        last_affected:
+          type: string
+      required:
+      - fixed
+      - introduced
+      - last_affected
       type: object
     dtos.SnippetContent:
       properties:
@@ -5962,6 +8394,12 @@ components:
           type: integer
         startLine:
           type: integer
+      required:
+      - endColumn
+      - endLine
+      - snippet
+      - startColumn
+      - startLine
       type: object
     dtos.SubProjectEntryDTO:
       properties:
@@ -5976,6 +8414,11 @@ components:
           type: string
         subProjectName:
           type: string
+      required:
+      - assets
+      - subProjectDescription
+      - subProjectExternalEntityId
+      - subProjectName
       type: object
     dtos.TestVEXRulesRequest:
       properties:
@@ -6003,6 +8446,8 @@ components:
           description: pointer makes it nil-able so we can distinguish a missing/
             incorrectly parsed value (rather than the default value = false)
           type: boolean
+      required:
+      - disable_org_creation
       type: object
     dtos.UserDTO:
       properties:
@@ -6014,6 +8459,11 @@ components:
           type: string
         role:
           type: string
+      required:
+      - avatarUrl
+      - id
+      - name
+      - role
       type: object
     dtos.VEXRuleDTO:
       properties:
@@ -6050,6 +8500,20 @@ components:
           type: string
         vexSource:
           type: string
+      required:
+      - appliesToAmountOfDependencyVulns
+      - assetId
+      - celExpression
+      - createdAt
+      - createdById
+      - cveId
+      - eventType
+      - id
+      - justification
+      - mechanicalJustification
+      - pathPattern
+      - title
+      - vexSource
       type: object
     dtos.VexRuleRecommendation:
       properties:
@@ -6082,6 +8546,19 @@ components:
           $ref: '#/components/schemas/dtos.VexRuleRecommendationType'
         verifiedVotes:
           type: integer
+      required:
+      - assetSlug
+      - celExpression
+      - confidence
+      - eventType
+      - justification
+      - mechanicalJustification
+      - projectSlug
+      - source
+      - title
+      - totalVotes
+      - type
+      - verifiedVotes
       type: object
     dtos.VexRuleRecommendationType:
       enum:
@@ -6130,6 +8607,24 @@ components:
           $ref: '#/components/schemas/dtos.VulnType'
         vulnerabilityName:
           type: string
+      required:
+      - arbitraryJSONData
+      - createdAt
+      - createdByVexRule
+      - id
+      - justification
+      - mechanicalJustification
+      - originalAssetVersionName
+      - packageName
+      - type
+      - uri
+      - userAgent
+      - userId
+      - vexRule
+      - vexRuleId
+      - vulnId
+      - vulnType
+      - vulnerabilityName
       type: object
     dtos.VulnEventType:
       enum:
@@ -6175,6 +8670,16 @@ components:
       - EventTypeRemovedComplianceComponent
       - EventTypeDetected
       - EventTypeRawRiskAssessmentUpdated
+    dtos.VulnInPackageDTO:
+      properties:
+        cveId:
+          type: string
+        fixedVersion:
+          type: string
+      required:
+      - cveId
+      - fixedVersion
+      type: object
     dtos.VulnSeverityDistribution:
       properties:
         critical:
@@ -6193,6 +8698,15 @@ components:
           type: integer
         mediumCvss:
           type: integer
+      required:
+      - critical
+      - criticalCvss
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - medium
+      - mediumCvss
       type: object
     dtos.VulnState:
       enum:
@@ -6257,10 +8771,19 @@ components:
           type: string
         vulnEnabled:
           type: boolean
+      required:
+      - description
+      - id
+      - name
+      - sbomEnabled
+      - url
+      - vulnEnabled
       type: object
     echo.HTTPError:
       properties:
         message: {}
+      required:
+      - message
       type: object
     github_com_l3montree-dev_devguard_database_models.Advisory:
       properties:
@@ -6305,6 +8828,24 @@ components:
           type: string
         vulnAssetId:
           type: string
+      required:
+      - affectedPackages
+      - assetVersion
+      - assetVersionName
+      - createdAt
+      - description
+      - events
+      - id
+      - lastStateChange
+      - manualTicketCreation
+      - severity
+      - state
+      - ticketId
+      - ticketUrl
+      - title
+      - updatedAt
+      - vectorString
+      - vulnAssetId
       type: object
     github_com_l3montree-dev_devguard_database_models.AffectedComponent:
       properties:
@@ -6336,6 +8877,16 @@ components:
             be used for displaying. We might fake semver versions just for database
             querying and ordering
           type: string
+      required:
+      - cves
+      - ecosystem
+      - id
+      - purl
+      - semverEnd
+      - semverStart
+      - version
+      - versionFixed
+      - versionIntroduced
       type: object
     github_com_l3montree-dev_devguard_database_models.AffectedPackage:
       properties:
@@ -6353,6 +8904,14 @@ components:
           type: string
         versionStart:
           type: string
+      required:
+      - createdAt
+      - ecosystem
+      - id
+      - packageName
+      - updatedAt
+      - versionEnd
+      - versionStart
       type: object
     github_com_l3montree-dev_devguard_database_models.Artifact:
       description: 'Ensure foreign key field order matches Artifact primary key: ArtifactName,
@@ -6385,6 +8944,16 @@ components:
           uniqueItems: false
         vulnAssetId:
           type: string
+      required:
+      - artifactName
+      - assetVersion
+      - assetVersionName
+      - createdAt
+      - dependencyVulns
+      - lastHistoryUpdate
+      - licenseRisks
+      - riskHistories
+      - vulnAssetId
       type: object
     github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory:
       properties:
@@ -6481,6 +9050,53 @@ components:
           type: number
         sumOpenRisk:
           type: number
+      required:
+      - artifactName
+      - assetId
+      - assetVersionName
+      - averageClosedRisk
+      - averageOpenRisk
+      - critical
+      - criticalCvss
+      - cvePurlCritical
+      - cvePurlCriticalCvss
+      - cvePurlFixableCritical
+      - cvePurlFixableCriticalCvss
+      - cvePurlFixableHigh
+      - cvePurlFixableHighCvss
+      - cvePurlFixableLow
+      - cvePurlFixableLowCvss
+      - cvePurlFixableMedium
+      - cvePurlFixableMediumCvss
+      - cvePurlHigh
+      - cvePurlHighCvss
+      - cvePurlLow
+      - cvePurlLowCvss
+      - cvePurlMedium
+      - cvePurlMediumCvss
+      - day
+      - fixableCritical
+      - fixableCriticalCvss
+      - fixableHigh
+      - fixableHighCvss
+      - fixableLow
+      - fixableLowCvss
+      - fixableMedium
+      - fixableMediumCvss
+      - fixedDependencyVulns
+      - high
+      - highCvss
+      - low
+      - lowCvss
+      - maxClosedRisk
+      - maxOpenRisk
+      - medium
+      - mediumCvss
+      - minClosedRisk
+      - minOpenRisk
+      - openDependencyVulns
+      - sumClosedRisk
+      - sumOpenRisk
       type: object
     github_com_l3montree-dev_devguard_database_models.Asset:
       properties:
@@ -6573,6 +9189,48 @@ components:
           type: integer
         webhookSecret:
           type: string
+      required:
+      - availabilityRequirement
+      - avatar
+      - confidentialityRequirement
+      - configFiles
+      - createdAt
+      - cvssAutomaticTicketThreshold
+      - description
+      - externalEntityId
+      - externalEntityProviderId
+      - id
+      - importance
+      - integrityRequirement
+      - isPublic
+      - metadata
+      - modifiedAttackComplexity
+      - modifiedAttackVector
+      - modifiedAvailability
+      - modifiedConfidentiality
+      - modifiedIntegrity
+      - modifiedPrivilegesRequired
+      - modifiedScope
+      - modifiedUserInteraction
+      - name
+      - paranoidMode
+      - pipelineError
+      - pipelineLastRun
+      - project
+      - projectId
+      - refs
+      - repositoryId
+      - repositoryName
+      - repositoryProvider
+      - riskAutomaticTicketThreshold
+      - shareInformation
+      - signingPubKey
+      - slug
+      - state
+      - type
+      - updatedAt
+      - vulnAutoReopenAfterDays
+      - webhookSecret
       type: object
     github_com_l3montree-dev_devguard_database_models.AssetState:
       enum:
@@ -6636,6 +9294,22 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersionType'
         updatedAt:
           type: string
+      required:
+      - artifacts
+      - asset
+      - assetId
+      - components
+      - createdAt
+      - defaultBranch
+      - dependencyVulns
+      - lastAccessedAt
+      - metadata
+      - name
+      - signingPubKey
+      - slug
+      - supplyChains
+      - type
+      - updatedAt
       type: object
     github_com_l3montree-dev_devguard_database_models.AssetVersionType:
       enum:
@@ -6663,6 +9337,15 @@ components:
           type: string
         updatedAt:
           type: string
+      required:
+      - artifact
+      - artifactName
+      - assetId
+      - assetVersionName
+      - content
+      - createdAt
+      - predicateType
+      - updatedAt
       type: object
     github_com_l3montree-dev_devguard_database_models.CVE:
       properties:
@@ -6722,6 +9405,28 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Weakness'
           type: array
           uniqueItems: false
+      required:
+      - affectedComponents
+      - cisaActionDue
+      - cisaExploitAdd
+      - cisaRequiredAction
+      - cisaVulnerabilityName
+      - contentHash
+      - cve
+      - cvss
+      - dateLastModified
+      - datePublished
+      - description
+      - epss
+      - euvdExploitAdd
+      - exploits
+      - id
+      - percentile
+      - references
+      - relationships
+      - risk
+      - vector
+      - weaknesses
       type: object
     github_com_l3montree-dev_devguard_database_models.CVERelationship:
       properties:
@@ -6735,6 +9440,11 @@ components:
           type: string
         target_cve_data:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
+      required:
+      - relationship_type
+      - source_cve
+      - target_cve
+      - target_cve_data
       type: object
     github_com_l3montree-dev_devguard_database_models.Component:
       properties:
@@ -6759,6 +9469,15 @@ components:
           type: string
         published:
           type: string
+      required:
+      - componentType
+      - dependsOn
+      - id
+      - isLicenseOverwritten
+      - license
+      - project
+      - projectId
+      - published
       type: object
     github_com_l3montree-dev_devguard_database_models.ComponentDependency:
       properties:
@@ -6778,6 +9497,14 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
         dependencyPurl:
           type: string
+      required:
+      - assetId
+      - assetVersion
+      - assetVersionName
+      - component
+      - componentPurl
+      - dependency
+      - dependencyPurl
       type: object
     github_com_l3montree-dev_devguard_database_models.ComponentProject:
       properties:
@@ -6802,6 +9529,17 @@ components:
           type: integer
         updatedAt:
           type: string
+      required:
+      - description
+      - forksCount
+      - homepage
+      - license
+      - openIssuesCount
+      - projectKey
+      - scoreCard
+      - scoreCardScore
+      - starsCount
+      - updatedAt
       type: object
     github_com_l3montree-dev_devguard_database_models.DependencyVuln:
       properties:
@@ -6865,6 +9603,30 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - artifacts
+      - assetSignature
+      - assetVersion
+      - assetVersionName
+      - componentFixedVersion
+      - componentPurl
+      - createdAt
+      - cve
+      - cveId
+      - directDependencyFixedVersion
+      - events
+      - id
+      - lastStateChange
+      - manualTicketCreation
+      - riskAssessment
+      - riskRecalculatedAt
+      - signature
+      - state
+      - ticketId
+      - ticketUrl
+      - updatedAt
+      - vulnAssetId
+      - vulnerabilityPath
       type: object
     github_com_l3montree-dev_devguard_database_models.Exploit:
       properties:
@@ -6898,11 +9660,25 @@ components:
           type: boolean
         watchers:
           type: integer
+      required:
+      - author
+      - contentHash
+      - cveID
+      - description
+      - forks
+      - id
+      - pushed_at
+      - sourceURL
+      - stargazers_count
+      - subscribers_count
+      - tags
+      - type
+      - updated_at
+      - verified
+      - watchers
       type: object
     github_com_l3montree-dev_devguard_database_models.GitLabIntegration:
       properties:
-        accessToken:
-          type: string
         createdAt:
           type: string
         gitLabUrl:
@@ -6917,6 +9693,14 @@ components:
           type: string
         updatedAt:
           type: string
+      required:
+      - createdAt
+      - gitLabUrl
+      - id
+      - name
+      - org
+      - orgId
+      - updatedAt
       type: object
     github_com_l3montree-dev_devguard_database_models.GithubAppInstallation:
       properties:
@@ -6936,6 +9720,15 @@ components:
           type: string
         targetType:
           type: string
+      required:
+      - installationCreatedWebhookReceivedTime
+      - installationId
+      - org
+      - orgId
+      - settingsUrl
+      - targetAvatarUrl
+      - targetLogin
+      - targetType
       type: object
     github_com_l3montree-dev_devguard_database_models.InTotoLink:
       properties:
@@ -6961,6 +9754,16 @@ components:
             this is used to identify the link afterwards.
             for the post-commit link this is the commit hash
           type: string
+      required:
+      - assetId
+      - assetVersionName
+      - createdAt
+      - filename
+      - pat
+      - patId
+      - payload
+      - step
+      - supplyChainId
       type: object
     github_com_l3montree-dev_devguard_database_models.Invitation:
       properties:
@@ -6981,11 +9784,16 @@ components:
           type: string
         updatedAt:
           type: string
+      required:
+      - code
+      - createdAt
+      - email
+      - id
+      - organizationId
+      - updatedAt
       type: object
     github_com_l3montree-dev_devguard_database_models.JiraIntegration:
       properties:
-        accessToken:
-          type: string
         accountId:
           type: string
         createdAt:
@@ -7004,6 +9812,16 @@ components:
           type: string
         userEmail:
           type: string
+      required:
+      - accountId
+      - createdAt
+      - id
+      - name
+      - org
+      - orgId
+      - updatedAt
+      - url
+      - userEmail
       type: object
     github_com_l3montree-dev_devguard_database_models.LicenseRisk:
       properties:
@@ -7047,6 +9865,23 @@ components:
           type: string
         vulnAssetId:
           type: string
+      required:
+      - artifacts
+      - assetVersion
+      - assetVersionName
+      - component
+      - componentPurl
+      - createdAt
+      - events
+      - finalLicenseDecision
+      - id
+      - lastStateChange
+      - manualTicketCreation
+      - state
+      - ticketId
+      - ticketUrl
+      - updatedAt
+      - vulnAssetId
       type: object
     github_com_l3montree-dev_devguard_database_models.Org:
       properties:
@@ -7113,6 +9948,31 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.WebhookIntegration'
           type: array
           uniqueItems: false
+      required:
+      - configFiles
+      - contactPhoneNumber
+      - country
+      - createdAt
+      - criticalInfrastructure
+      - description
+      - externalEntityProviderId
+      - gitLabIntegrations
+      - githubAppInstallations
+      - grundschutz
+      - id
+      - industry
+      - isPublic
+      - iso27001
+      - jiraIntegrations
+      - language
+      - name
+      - nist
+      - numberOfEmployees
+      - projects
+      - sharesVulnInformation
+      - slug
+      - updatedAt
+      - webhooks
       type: object
     github_com_l3montree-dev_devguard_database_models.PAT:
       properties:
@@ -7140,6 +10000,19 @@ components:
           type: string
         userId:
           type: string
+      required:
+      - assetID
+      - createdAt
+      - description
+      - expiryDate
+      - fingerprint
+      - id
+      - lastUsedAt
+      - orgID
+      - projectID
+      - pubKey
+      - scopes
+      - userId
       type: object
     github_com_l3montree-dev_devguard_database_models.Policy:
       properties:
@@ -7167,6 +10040,16 @@ components:
           type: string
         title:
           type: string
+      required:
+      - description
+      - id
+      - opaqueId
+      - organization
+      - organizationId
+      - predicateType
+      - projects
+      - rego
+      - title
       type: object
     github_com_l3montree-dev_devguard_database_models.Project:
       properties:
@@ -7227,6 +10110,30 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.WebhookIntegration'
           type: array
           uniqueItems: false
+      required:
+      - assets
+      - avatar
+      - configFiles
+      - createdAt
+      - description
+      - enabledPolicies
+      - externalEntityId
+      - externalEntityProviderId
+      - externalEntityProviderParentId
+      - id
+      - isPublic
+      - name
+      - organization
+      - organizationId
+      - parent
+      - parentId
+      - repositoryId
+      - repositoryName
+      - slug
+      - state
+      - type
+      - updatedAt
+      - webhooks
       type: object
     github_com_l3montree-dev_devguard_database_models.ProjectState:
       enum:
@@ -7262,6 +10169,15 @@ components:
           type: string
         verified:
           type: boolean
+      required:
+      - assetId
+      - assetVersion
+      - assetVersionName
+      - createdAt
+      - supplyChainId
+      - supplyChainOutputDigest
+      - updatedAt
+      - verified
       type: object
     github_com_l3montree-dev_devguard_database_models.VEXRule:
       properties:
@@ -7303,6 +10219,21 @@ components:
           type: string
         vexSource:
           type: string
+      required:
+      - asset
+      - assetId
+      - celExpression
+      - createdAt
+      - createdById
+      - cveScope
+      - enabled
+      - eventType
+      - id
+      - justification
+      - mechanicalJustification
+      - recommendedRule
+      - title
+      - vexSource
       type: object
     github_com_l3montree-dev_devguard_database_models.VulnEvent:
       properties:
@@ -7345,6 +10276,25 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.VEXRule'
         vexRuleId:
           type: string
+      required:
+      - arbitraryJSONData
+      - assetSignature
+      - compliancePostureId
+      - createdAt
+      - createdByVexRule
+      - dependencyVulnId
+      - firstPartyVulnId
+      - id
+      - justification
+      - licenseRiskId
+      - mechanicalJustification
+      - originalAssetVersionName
+      - securityAdvisoryId
+      - type
+      - userAgent
+      - userId
+      - vexRule
+      - vexRuleId
       type: object
     github_com_l3montree-dev_devguard_database_models.Weakness:
       properties:
@@ -7356,6 +10306,11 @@ components:
           type: string
         type:
           type: string
+      required:
+      - cve
+      - cwe
+      - source
+      - type
       type: object
     github_com_l3montree-dev_devguard_database_models.WebhookIntegration:
       properties:
@@ -7385,6 +10340,20 @@ components:
           type: string
         vulnEnabled:
           type: boolean
+      required:
+      - createdAt
+      - description
+      - id
+      - name
+      - org
+      - orgId
+      - project
+      - projectId
+      - sbomEnabled
+      - secret
+      - updatedAt
+      - url
+      - vulnEnabled
       type: object
     github_com_l3montree-dev_devguard_database_types.JSONB:
       additionalProperties: {}
@@ -7402,6 +10371,11 @@ components:
           type: integer
         total:
           type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
       type: object
     github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependencyDTO:
       properties:
@@ -7416,6 +10390,11 @@ components:
           type: integer
         total:
           type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
       type: object
     github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO:
       properties:
@@ -7430,6 +10409,87 @@ components:
           type: integer
         total:
           type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
+    github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectAssetDTO'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
+    github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectDTO:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/dtos.ProjectDTO'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
+    github_com_l3montree-dev_devguard_shared.Paged-dtos_ReleaseDTO:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/dtos.ReleaseDTO'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
+    github_com_l3montree-dev_devguard_shared.Paged-dtos_VulnEventDTO:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/dtos.VulnEventDTO'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
       type: object
     github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Advisory:
       properties:
@@ -7444,6 +10504,30 @@ components:
           type: integer
         total:
           type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
+    github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Project:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
       type: object
     licenses.License:
       properties:
@@ -7466,6 +10550,74 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - detailsURL
+      - isDeprecatedLicenseId
+      - isOsiApproved
+      - licenseId
+      - name
+      - reference
+      - referenceNumber
+      - seeAlso
+      type: object
+    normalize.MinimalTree:
+      properties:
+        dependencies:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+        nodes:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - dependencies
+      - nodes
+      type: object
+    normalize.PurlMatchContext:
+      properties:
+        howToInterpretVersionString:
+          $ref: '#/components/schemas/normalize.VersionInterpretationType'
+        namespace:
+          type: string
+        normalizedVersion:
+          type: string
+        qualifiers:
+          items:
+            $ref: '#/components/schemas/packageurl.Qualifier'
+          type: array
+          uniqueItems: false
+        searchPurl:
+          description: purl without version and qualifiers, used for database matching
+          type: string
+      required:
+      - howToInterpretVersionString
+      - namespace
+      - normalizedVersion
+      - qualifiers
+      - searchPurl
+      type: object
+    normalize.VersionInterpretationType:
+      enum:
+      - exact
+      - semver_range
+      - empty_version
+      - ecosystem_specific
+      type: string
+      x-enum-varnames:
+      - ExactVersionString
+      - SemanticVersionString
+      - EmptyVersion
+      - EcosystemSpecificVersion
+    packageurl.Qualifier:
+      properties:
+        key:
+          type: string
+        value:
+          type: string
       type: object
     shared.InstanceSettings:
       properties:
@@ -7473,6 +10625,9 @@ components:
           type: boolean
         singleOrganizationMode:
           type: boolean
+      required:
+      - bearerTokenAuthDisabled
+      - singleOrganizationMode
       type: object
     time.Duration:
       enum:
@@ -7500,6 +10655,8 @@ components:
       - 1000
       - 1000000
       - 1000000000
+      - 60000000000
+      - 3600000000000
       - 1
       - 1000
       - 1000000
@@ -7532,6 +10689,8 @@ components:
       - Microsecond
       - Millisecond
       - Second
+      - Minute
+      - Hour
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -7603,6 +10762,10 @@ paths:
         required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.OrgDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -7969,6 +11132,13 @@ paths:
       - Admin
   /api/v2/sarif-scan:
     post:
+      parameters:
+      - description: Asset name as <organization>/<project>/<asset>
+        in: header
+        name: X-Asset-Name
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           text/plain:
@@ -8020,6 +11190,13 @@ paths:
       - Scanning
   /api/v2/scan:
     post:
+      parameters:
+      - description: Asset name as <organization>/<project>/<asset>
+        in: header
+        name: X-Asset-Name
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -8082,6 +11259,12 @@ paths:
         name: X-Predicate-Type
         schema:
           type: string
+      - description: Asset name as <organization>/<project>/<asset>
+        in: header
+        name: X-Asset-Name
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           text/plain:
@@ -8108,7 +11291,7 @@ paths:
             application/json:
               schema:
                 items:
-                  type: object
+                  $ref: '#/components/schemas/dtos.ComplianceComponentDetailsDTO'
                 type: array
           description: OK
       security:
@@ -8132,7 +11315,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/dtos.ComplianceComponentDetailsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -8715,14 +11898,14 @@ paths:
             application/json:
               schema:
                 items:
-                  type: object
+                  $ref: '#/components/schemas/dtos.GitRepository'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: List repositories from integrations
+      summary: List repositories from integrations for the session
       tags:
       - Integrations
   /lookup:
@@ -8900,6 +12083,13 @@ paths:
       - Organizations
   /organizations/{organization}/compliance-postures:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -8916,22 +12106,13 @@ paths:
       - Compliance Postures
   /organizations/{organization}/compliance-postures/{frameworkControlID}:
     get:
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.CompliancePostureDTO'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Get compliance posture for a framework control
-      tags:
-      - Compliance Postures
-    post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Framework Control ID
         in: path
         name: frameworkControlID
@@ -8943,7 +12124,35 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dtos.CompliancePostureDTO'
+                $ref: '#/components/schemas/dtos.CompliancePostureWithDetailsDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get compliance posture for a framework control
+      tags:
+      - Compliance Postures
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Framework Control ID
+        in: path
+        name: frameworkControlID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.CompliancePostureWithDetailsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -8955,6 +12164,12 @@ paths:
   /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/:
     post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Framework control ID
         in: path
         name: frameworkControlID
@@ -8993,6 +12208,12 @@ paths:
   /organizations/{organization}/compliance-postures/components/{statementID}/:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Statement ID
         in: path
         name: statementID
@@ -9015,6 +12236,12 @@ paths:
       - Compliance Components
     put:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Statement ID
         in: path
         name: statementID
@@ -9046,6 +12273,13 @@ paths:
       - Compliance Components
   /organizations/{organization}/compliance-postures/oscal:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -9062,12 +12296,19 @@ paths:
       - Compliance Postures
   /organizations/{organization}/compliance-postures/stats:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/dtos.CompliancePostureStatsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -9155,7 +12396,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                items:
+                  $ref: '#/components/schemas/dtos.ProjectDTO'
+                type: array
           description: OK
       security:
       - CookieAuth: []
@@ -9245,16 +12488,7 @@ paths:
       - description: organization slug
         in: path
         name: organization
-        schema:
-          type: string
-      - description: project slug
-        in: path
-        name: projectSlug
-        schema:
-          type: string
-      - description: asset slug
-        in: path
-        name: assetSlug
+        required: true
         schema:
           type: string
       responses:
@@ -9270,7 +12504,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get dependency proxy URLs
+      summary: Get organization dependency proxy URLs
       tags:
       - Dependency Firewall
   /organizations/{organization}/dependency-vulns:
@@ -9331,6 +12565,18 @@ paths:
       - Vulnerabilities
   /organizations/{organization}/integrations/finish-installation/:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Third party installation id
+        in: query
+        name: installationId
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -9348,6 +12594,12 @@ paths:
   /organizations/{organization}/integrations/gitlab/{gitlab_integration_id}/:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: GitLab integration ID
         in: path
         name: gitlab_integration_id
@@ -9366,8 +12618,34 @@ paths:
       - Integrations
   /organizations/{organization}/integrations/gitlab/test-and-save/:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                token:
+                  type: string
+                url:
+                  type: string
+              title: body
+              type: object
+        description: GitLab credentials
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.GitlabIntegrationDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -9379,6 +12657,12 @@ paths:
   /organizations/{organization}/integrations/jira/{jira_integration_id}/:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Jira integration ID
         in: path
         name: jira_integration_id
@@ -9397,8 +12681,36 @@ paths:
       - Integrations
   /organizations/{organization}/integrations/jira/test-and-save/:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                token:
+                  type: string
+                url:
+                  type: string
+                userEmail:
+                  type: string
+              title: body
+              type: object
+        description: Jira credentials
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.JiraIntegrationDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -9409,25 +12721,38 @@ paths:
       - Integrations
   /organizations/{organization}/integrations/repositories:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
                 items:
-                  type: object
+                  $ref: '#/components/schemas/dtos.GitRepository'
                 type: array
           description: OK
       security:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: List repositories from integrations
+      summary: List repositories from integrations for an organization
       tags:
       - Integrations
   /organizations/{organization}/integrations/webhook/{id}:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Webhook ID
         in: path
         name: id
@@ -9441,16 +12766,30 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Delete webhook integration
+      summary: Delete webhook integration (org)
       tags:
       - Webhooks
     put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.WebhookUpdateRequest'
+              description: Webhook data
+              summary: body
         description: Webhook data
         required: true
       responses:
@@ -9464,17 +12803,25 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Update webhook integration
+      summary: Update webhook integration (org)
       tags:
       - Webhooks
   /organizations/{organization}/integrations/webhook/test:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.WebhookTestRequest'
+              description: Test webhook data
+              summary: body
         description: Test webhook data
         required: true
       responses:
@@ -9493,17 +12840,25 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Test webhook integration
+      summary: Test webhook integration (org)
       tags:
       - Webhooks
   /organizations/{organization}/integrations/webhook/test-and-save:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.WebhookSaveRequest'
+              description: Webhook data
+              summary: body
         description: Webhook data
         required: true
       responses:
@@ -9517,7 +12872,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Create webhook integration
+      summary: Create webhook integration (org)
       tags:
       - Webhooks
   /organizations/{organization}/invitation/{ID}:
@@ -9768,6 +13123,13 @@ paths:
       - Authentication
   /organizations/{organization}/policies:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -9785,6 +13147,13 @@ paths:
       tags:
       - Policies
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -9811,6 +13180,12 @@ paths:
   /organizations/{organization}/policies/{policyID}:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Policy ID
         in: path
         name: policyID
@@ -9829,6 +13204,12 @@ paths:
       - Policies
     get:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Policy ID
         in: path
         name: policyID
@@ -9851,6 +13232,12 @@ paths:
       - Policies
     put:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
       - description: Policy ID
         in: path
         name: policyID
@@ -9889,14 +13276,27 @@ paths:
         required: true
         schema:
           type: string
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search query
+        in: query
+        name: search
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
-                type: array
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Project'
           description: OK
       security:
       - CookieAuth: []
@@ -10193,7 +13593,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dtos.AssetDetailsDTO'
+                $ref: '#/components/schemas/dtos.AssetDetailsWithSecretsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -10241,6 +13641,25 @@ paths:
       - Assets
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -10259,6 +13678,31 @@ paths:
       - Compliance
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy}:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Policy ID
+        in: path
+        name: policy
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -10270,11 +13714,35 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get policy compliance details
+      summary: Get policy compliance details for an asset
       tags:
       - Compliance
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/components/licenses:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: query
+        name: artifact
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -10288,7 +13756,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get license distribution for an asset version
+      summary: Get license distribution for an asset
       tags:
       - Components
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/config-files/{config-file}:
@@ -10610,16 +14078,19 @@ paths:
       - description: organization slug
         in: path
         name: organization
+        required: true
         schema:
           type: string
       - description: project slug
         in: path
         name: projectSlug
+        required: true
         schema:
           type: string
       - description: asset slug
         in: path
         name: assetSlug
+        required: true
         schema:
           type: string
       responses:
@@ -10635,7 +14106,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get dependency proxy URLs
+      summary: Get asset dependency proxy URLs
       tags:
       - Dependency Firewall
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references:
@@ -10788,6 +14259,25 @@ paths:
       - ExternalReferences
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/in-toto/:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -10813,6 +14303,25 @@ paths:
       - In-toto
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/in-toto/root.layout.json/:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -10829,6 +14338,25 @@ paths:
       - In-toto
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/integrations/gitlab/autosetup/:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           description: OK
@@ -11341,6 +14869,31 @@ paths:
       - Asset Versions
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -11356,6 +14909,31 @@ paths:
       tags:
       - Advisories
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -11378,6 +14956,30 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Advisory ID
         in: path
         name: id
@@ -11396,6 +14998,30 @@ paths:
       - Advisories
     get:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Advisory ID
         in: path
         name: id
@@ -11418,6 +15044,30 @@ paths:
       - Advisories
     patch:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Advisory ID
         in: path
         name: id
@@ -11446,6 +15096,30 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/events/:
     post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Advisory ID
         in: path
         name: id
@@ -11593,7 +15267,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
+                  $ref: '#/components/schemas/dtos.ArtifactDTO'
                 type: array
           description: OK
       security:
@@ -11631,10 +15305,11 @@ paths:
           type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.ArtifactRequest'
+              description: Artifact data
+              summary: body
         description: Artifact data
         required: true
       responses:
@@ -11642,7 +15317,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
+                $ref: '#/components/schemas/dtos.ArtifactDTO'
           description: Created
       security:
       - CookieAuth: []
@@ -11728,10 +15403,11 @@ paths:
           type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.ArtifactRequest'
+              description: Artifact data
+              summary: body
         description: Artifact data
         required: true
       responses:
@@ -11739,7 +15415,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/controllers.ArtifactUpdateResponse'
           description: OK
       security:
       - CookieAuth: []
@@ -12214,6 +15890,31 @@ paths:
       - Attestations
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -12227,11 +15928,36 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get asset compliance
+      summary: Get asset version compliance
       tags:
       - Compliance
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -12248,22 +15974,31 @@ paths:
       - Compliance Postures
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}
   : get:
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.CompliancePostureDTO'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Get compliance posture for a framework control
-      tags:
-      - Compliance Postures
-    post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Framework Control ID
         in: path
         name: frameworkControlID
@@ -12275,7 +16010,53 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dtos.CompliancePostureDTO'
+                $ref: '#/components/schemas/dtos.CompliancePostureWithDetailsDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get compliance posture for a framework control
+      tags:
+      - Compliance Postures
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Framework Control ID
+        in: path
+        name: frameworkControlID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.CompliancePostureWithDetailsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -12287,6 +16068,30 @@ paths:
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}
   : post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Framework control ID
         in: path
         name: frameworkControlID
@@ -12325,6 +16130,30 @@ paths:
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID}
   : delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Statement ID
         in: path
         name: statementID
@@ -12347,6 +16176,30 @@ paths:
       - Compliance Components
     put:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Statement ID
         in: path
         name: statementID
@@ -12378,6 +16231,31 @@ paths:
       - Compliance Components
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/oscal:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -12394,12 +16272,37 @@ paths:
       - Compliance Postures
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/stats:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/dtos.CompliancePostureStatsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -12410,6 +16313,37 @@ paths:
       - Compliance Postures
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance/{policy}:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Policy ID
+        in: path
+        name: policy
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -12421,11 +16355,36 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get policy compliance details
+      summary: Get policy compliance details for an asset version
       tags:
       - Compliance
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -12442,6 +16401,36 @@ paths:
       - Components
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: query
+        name: artifact
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -12546,7 +16535,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/normalize.MinimalTree'
           description: OK
       security:
       - CookieAuth: []
@@ -12644,7 +16633,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dtos.DetailedDependencyVulnDTO'
+                $ref: '#/components/schemas/dtos.DetailedDependencyVulnWithRelationsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -12687,14 +16676,19 @@ paths:
           type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/dtos.CreateEventRequest'
+              description: Request body
+              summary: body
         description: Request body
         required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.DetailedDependencyVulnDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -12834,8 +16828,11 @@ paths:
           type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
+              properties:
+                comment:
+                  type: string
               title: body
               type: object
         description: Request body
@@ -12982,14 +16979,22 @@ paths:
         required: true
         schema:
           type: string
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/dtos.VulnEventDTO'
-                type: array
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_VulnEventDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -13090,9 +17095,33 @@ paths:
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}
   : get:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Vulnerability ID
         in: path
-        name: vulnID
+        name: firstPartyVulnID
         required: true
         schema:
           type: string
@@ -13112,18 +17141,43 @@ paths:
       - Vulnerabilities
     post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Vulnerability ID
         in: path
-        name: vulnID
+        name: firstPartyVulnID
         required: true
         schema:
           type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/dtos.FirstPartyVulnStatus'
+              description: Event data
+              summary: body
         description: Event data
         required: true
       responses:
@@ -13192,12 +17246,47 @@ paths:
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/mitigate
   : post:
       parameters:
-      - description: Vulnerability ID
+      - description: Organization slug
         in: path
-        name: vulnID
+        name: organization
         required: true
         schema:
           type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Vulnerability ID
+        in: path
+        name: firstPartyVulnID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                justification:
+                  type: string
+              title: body
+              type: object
+        description: Request body
+        required: true
       responses:
         "200":
           content:
@@ -13214,6 +17303,31 @@ paths:
       - Vulnerabilities
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/batch:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -13242,6 +17356,30 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/in-toto/{supplyChainID}/:
     get:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
       - description: Supply chain ID
         in: path
         name: supplyChainID
@@ -13701,7 +17839,11 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                items:
+                  items:
+                    type: string
+                  type: array
+                type: array
           description: OK
       security:
       - CookieAuth: []
@@ -13991,6 +18133,24 @@ paths:
       - description: Origin
         in: header
         name: X-Origin
+        schema:
+          type: string
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
         schema:
           type: string
       requestBody:
@@ -14402,6 +18562,19 @@ paths:
       - VEXRules
   /organizations/{organization}/projects/{projectSlug}/compliance:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -14420,6 +18593,19 @@ paths:
       - Compliance
   /organizations/{organization}/projects/{projectSlug}/compliance-postures:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -14436,22 +18622,19 @@ paths:
       - Compliance Postures
   /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}:
     get:
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.CompliancePostureDTO'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Get compliance posture for a framework control
-      tags:
-      - Compliance Postures
-    post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Framework Control ID
         in: path
         name: frameworkControlID
@@ -14463,7 +18646,41 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dtos.CompliancePostureDTO'
+                $ref: '#/components/schemas/dtos.CompliancePostureWithDetailsDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get compliance posture for a framework control
+      tags:
+      - Compliance Postures
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Framework Control ID
+        in: path
+        name: frameworkControlID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.CompliancePostureWithDetailsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -14475,6 +18692,18 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}:
     post:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Framework control ID
         in: path
         name: frameworkControlID
@@ -14513,6 +18742,18 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID}:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Statement ID
         in: path
         name: statementID
@@ -14535,6 +18776,18 @@ paths:
       - Compliance Components
     put:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Statement ID
         in: path
         name: statementID
@@ -14566,6 +18819,19 @@ paths:
       - Compliance Components
   /organizations/{organization}/projects/{projectSlug}/compliance-postures/oscal:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -14582,12 +18848,25 @@ paths:
       - Compliance Postures
   /organizations/{organization}/projects/{projectSlug}/compliance-postures/stats:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/dtos.CompliancePostureStatsDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -14598,6 +18877,19 @@ paths:
       - Compliance Postures
   /organizations/{organization}/projects/{projectSlug}/components:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -14695,16 +18987,13 @@ paths:
       - description: organization slug
         in: path
         name: organization
+        required: true
         schema:
           type: string
       - description: project slug
         in: path
         name: projectSlug
-        schema:
-          type: string
-      - description: asset slug
-        in: path
-        name: assetSlug
+        required: true
         schema:
           type: string
       responses:
@@ -14720,7 +19009,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get dependency proxy URLs
+      summary: Get project dependency proxy URLs
       tags:
       - Dependency Firewall
   /organizations/{organization}/projects/{projectSlug}/dependency-vulns:
@@ -14845,6 +19134,18 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/integrations/webhook/{id}:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Webhook ID
         in: path
         name: id
@@ -14858,16 +19159,36 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Delete webhook integration
+      summary: Delete webhook integration (project)
       tags:
       - Webhooks
     put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.WebhookUpdateRequest'
+              description: Webhook data
+              summary: body
         description: Webhook data
         required: true
       responses:
@@ -14881,17 +19202,31 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Update webhook integration
+      summary: Update webhook integration (project)
       tags:
       - Webhooks
   /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.WebhookTestRequest'
+              description: Test webhook data
+              summary: body
         description: Test webhook data
         required: true
       responses:
@@ -14910,17 +19245,31 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Test webhook integration
+      summary: Test webhook integration (project)
       tags:
       - Webhooks
   /organizations/{organization}/projects/{projectSlug}/integrations/webhook/test-and-save:
     post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
-          text/plain:
+          application/json:
             schema:
-              title: body
-              type: object
+              $ref: '#/components/schemas/controllers.WebhookSaveRequest'
+              description: Webhook data
+              summary: body
         description: Webhook data
         required: true
       responses:
@@ -14934,7 +19283,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Create webhook integration
+      summary: Create webhook integration (project)
       tags:
       - Webhooks
   /organizations/{organization}/projects/{projectSlug}/members:
@@ -15172,6 +19521,19 @@ paths:
       - Authentication
   /organizations/{organization}/projects/{projectSlug}/policies:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       responses:
         "200":
           content:
@@ -15191,6 +19553,18 @@ paths:
   /organizations/{organization}/projects/{projectSlug}/policies/{policyID}:
     delete:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Policy ID
         in: path
         name: policyID
@@ -15209,6 +19583,18 @@ paths:
       - Policies
     put:
       parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
       - description: Policy ID
         in: path
         name: policyID
@@ -15250,7 +19636,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ReleaseDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -15440,6 +19826,25 @@ paths:
       - Releases
   /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/csaf.json:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        schema:
+          type: string
       responses: null
       summary: Get release VEX as CSAF
       tags:
@@ -15527,6 +19932,25 @@ paths:
       - Releases
   /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/openvex.json:
     get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        schema:
+          type: string
       responses: null
       summary: Get release VEX as OpenVEX
       tags:
@@ -15809,14 +20233,17 @@ paths:
         name: search
         schema:
           type: string
+      - description: Only list children of this project ID
+        in: query
+        name: parentId
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/dtos.ProjectAssetDTO'
-                type: array
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -15839,14 +20266,22 @@ paths:
         name: search
         schema:
           type: string
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
       responses:
         "200":
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/dtos.ProjectDTO'
-                type: array
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -15912,6 +20347,11 @@ paths:
         name: topEcosystemsLimit
         schema:
           type: integer
+      - description: Bypass the 15 minute statistics cache
+        in: query
+        name: forceRefresh
+        schema:
+          type: boolean
       responses:
         "200":
           content:
@@ -15932,8 +20372,14 @@ paths:
         schema:
           type: string
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: organization is not an external entity provider
       security:
       - CookieAuth: []
       - PATAuth: []
@@ -16271,6 +20717,12 @@ paths:
         required: true
         schema:
           type: string
+      - description: Asset name as <organization>/<project>/<asset>
+        in: header
+        name: X-Asset-Name
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           text/plain:
@@ -16356,6 +20808,12 @@ paths:
         name: X-Scanner
         schema:
           type: string
+      - description: Asset name as <organization>/<project>/<asset>
+        in: header
+        name: X-Asset-Name
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           text/plain:
@@ -16404,6 +20862,12 @@ paths:
     get:
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.OrgDTO'
+                type: array
           description: OK
       security:
       - CookieAuth: []
@@ -17511,6 +21975,12 @@ paths:
         name: X-Origin
         schema:
           type: string
+      - description: Asset name as <organization>/<project>/<asset>
+        in: header
+        name: X-Asset-Name
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           text/plain:
@@ -17714,7 +22184,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/controllers.PURLInspectResponse'
           description: Inspection result including PURL, match context, affected components,
             and vulnerabilities
         "400":

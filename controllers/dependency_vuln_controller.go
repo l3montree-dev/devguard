@@ -235,7 +235,7 @@ func (controller *DependencyVulnController) ListPaged(ctx shared.Context) error 
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
-// @Param body body object true "Request body"
+// @Param body body object{comment=string} true "Request body"
 // @Success 200 {object} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/mitigate [post]
 func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
@@ -289,7 +289,7 @@ func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
-// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Success 200 {object} dtos.DetailedDependencyVulnWithRelationsDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
 func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
@@ -443,8 +443,8 @@ func (controller *DependencyVulnController) SyncDependencyVulns(ctx shared.Conte
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
-// @Param body body object true "Request body"
-// @Success 200
+// @Param body body dtos.CreateEventRequest true "Request body"
+// @Success 200 {object} dtos.DetailedDependencyVulnDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [post]
 func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)

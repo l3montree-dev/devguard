@@ -54,7 +54,7 @@ func NewSessionRouter(
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
 	sessionRouter.GET("/whoami/", controllers.Whoami)
-	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
+	sessionRouter.GET("/integrations/repositories/", integrationController.SessionListRepositories)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, middlewares.NeededScope([]string{"manage"}))
 
 	/**

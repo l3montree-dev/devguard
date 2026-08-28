@@ -99,6 +99,9 @@ func (a *InToToController) VerifySupplyChain(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body dtos.CreateInTotoLinkRequest true "Request body"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
 // @Success 200 {object} models.InTotoLink
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/in-toto/ [post]
 func (a *InToToController) Create(ctx shared.Context) error {
@@ -218,6 +221,9 @@ func (a *InToToController) Create(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
 // @Success 200 {file} file
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/in-toto/root.layout.json/ [get]
 func (a *InToToController) RootLayout(ctx shared.Context) error {
@@ -360,6 +366,10 @@ func (a *InToToController) RootLayout(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Param supplyChainID path string true "Supply chain ID"
 // @Success 200 {file} file
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/in-toto/{supplyChainID}/ [get]

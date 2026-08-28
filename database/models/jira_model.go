@@ -12,7 +12,7 @@ type JiraIntegration struct {
 	Org   Org       `json:"org" gorm:"foreignKey:OrgID;constraint:OnDelete:CASCADE;"`
 	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`
 
-	AccessToken string `json:"accessToken"`
+	AccessToken string `json:"-"`
 	URL         string `json:"url" gorm:"type:text;not null"`
 	UserEmail   string `json:"userEmail" gorm:"column:user_email"`
 	AccountID   string `json:"accountId" gorm:"column:account_id"`

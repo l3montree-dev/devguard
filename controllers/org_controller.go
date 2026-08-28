@@ -169,7 +169,7 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {object} object
+// @Success 200 {array} dtos.ProjectDTO
 // @Router /organizations/{organization}/content-tree [get]
 func (controller *OrgController) ContentTree(ctx shared.Context) error {
 	// get the whole content tree of the organization
@@ -197,7 +197,7 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body dtos.AcceptInvitationRequest true "Request body"
-// @Success 200
+// @Success 200 {object} dtos.OrgDTO
 // @Router /accept-invitation [post]
 func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()

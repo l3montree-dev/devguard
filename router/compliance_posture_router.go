@@ -30,11 +30,11 @@ func NewCompliancePostureRouter(
 	compliancePostureController *controllers.CompliancePostureController,
 ) CompliancePostureRouter {
 	compliancePostureRouter := assetVersionGroup.Group.Group("/compliance-postures")
-	compliancePostureRouter.GET("/", compliancePostureController.ListPaged)
-	compliancePostureRouter.GET("/stats/", compliancePostureController.Stats)
-	compliancePostureRouter.GET("/:frameworkControlID/", compliancePostureController.Read)
-	compliancePostureRouter.POST("/:frameworkControlID/", compliancePostureController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	compliancePostureRouter.GET("/oscal/", compliancePostureController.GetOSCAL)
+	compliancePostureRouter.GET("/", compliancePostureController.AssetVersionListPaged)
+	compliancePostureRouter.GET("/stats/", compliancePostureController.AssetVersionStats)
+	compliancePostureRouter.GET("/:frameworkControlID/", compliancePostureController.AssetVersionRead)
+	compliancePostureRouter.POST("/:frameworkControlID/", compliancePostureController.AssetVersionCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.GET("/oscal/", compliancePostureController.AssetVersionGetOSCAL)
 
 	return CompliancePostureRouter{Group: compliancePostureRouter}
 }

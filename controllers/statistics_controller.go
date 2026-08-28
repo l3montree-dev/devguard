@@ -255,6 +255,7 @@ func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) e
 // @Param topCVEsLimit query int false "Max number of top CVEs to return (default: 5)"
 // @Param topComponentsLimit query int false "Max number of top components to return (default: 5)"
 // @Param topEcosystemsLimit query int false "Max number of top ecosystems to return (default: 5)"
+// @Param forceRefresh query bool false "Bypass the 15 minute statistics cache"
 // @Success 200 {object} dtos.OrgOverview
 // @Router /organizations/{organization}/stats/vuln-statistics/ [get]
 func (c *StatisticsController) GetOrgStatistics(ctx shared.Context) error {

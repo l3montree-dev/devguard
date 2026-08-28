@@ -171,18 +171,45 @@ func (d *DependencyProxyController) passthroughUpstreamResponse(c shared.Context
 	return c.Blob(statusCode, headers.Get("Content-Type"), data)
 }
 
-// @Summary Get dependency proxy URLs
+// @Summary Get organization dependency proxy URLs
 // @Tags Dependency Firewall
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param organization path string false "organization slug"
-// @Param projectSlug path string false "project slug"
-// @Param assetSlug path string false "asset slug"
+// @Param organization path string true "organization slug"
 // @Success 200 {object} map[string]string
 // @Router /organizations/{organization}/dependency-proxy-urls/ [get]
+func (d *DependencyProxyController) GetOrgDependencyProxyURLs(ctx shared.Context) error {
+	return d.GetDependencyProxyURLs(ctx)
+}
+
+// @Summary Get project dependency proxy URLs
+// @Tags Dependency Firewall
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "organization slug"
+// @Param projectSlug path string true "project slug"
+// @Success 200 {object} map[string]string
 // @Router /organizations/{organization}/projects/{projectSlug}/dependency-proxy-urls/ [get]
+func (d *DependencyProxyController) GetProjectDependencyProxyURLs(ctx shared.Context) error {
+	return d.GetDependencyProxyURLs(ctx)
+}
+
+// @Summary Get asset dependency proxy URLs
+// @Tags Dependency Firewall
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "organization slug"
+// @Param projectSlug path string true "project slug"
+// @Param assetSlug path string true "asset slug"
+// @Success 200 {object} map[string]string
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/dependency-proxy-urls/ [get]
+func (d *DependencyProxyController) GetAssetDependencyProxyURLs(ctx shared.Context) error {
+	return d.GetDependencyProxyURLs(ctx)
+}
+
 func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) error {
 	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
 	if registryURL == "" {

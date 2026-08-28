@@ -405,7 +405,8 @@ func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search query for filtering sub-projects and assets"
-// @Success 200 {array} dtos.ProjectAssetDTO
+// @Param parentId query string false "Only list children of this project ID"
+// @Success 200 {object} shared.Paged[dtos.ProjectAssetDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
 func (projectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
 
@@ -423,7 +424,10 @@ func (projectController *ProjectController) ListSubProjectsAndAssets(c shared.Co
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {array} models.Project
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param search query string false "Search query"
+// @Success 200 {object} shared.Paged[models.Project]
 // @Router /organizations/{organization}/projects [get]
 func (projectController *ProjectController) List(c shared.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
@@ -443,7 +447,9 @@ func (projectController *ProjectController) List(c shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param search query string false "Search query"
-// @Success 200 {array} dtos.ProjectDTO
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Success 200 {object} shared.Paged[dtos.ProjectDTO]
 // @Router /organizations/{organization}/projects/search/ [get]
 func (projectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
 

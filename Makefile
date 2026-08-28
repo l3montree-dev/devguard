@@ -40,7 +40,7 @@ devguard-scanner::
 	go build $(FLAGS) -o devguard-scanner cmd/devguard-scanner/main.go
 
 docs:: cli-docs
-	GOROOT=$$(go env GOROOT) swag init -g cmd/devguard/main.go -o docs --v3.1 --parseDependency --parseDepth 1
+	GOROOT=$$(go env GOROOT) swag init -g cmd/devguard/main.go -o docs --v3.1 --parseDependency --parseDepth 1 --requiredByDefault
 	@rm -f docs/docs.go
 	@echo "OpenAPI spec generated at docs/swagger.json and docs/swagger.yaml"
 
