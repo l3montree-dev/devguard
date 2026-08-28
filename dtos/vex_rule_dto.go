@@ -74,8 +74,10 @@ type VexRuleRecommendation struct {
 	// taken directly from a rule on an asset the requesting user already has
 	// access to, rather than from the crowd-voted recommendation across
 	// every matching rule. Lets the frontend link to that project/asset.
-	ProjectSlug *string `json:"projectSlug,omitempty"`
-	AssetSlug   *string `json:"assetSlug,omitempty"`
+	ProjectSlug             *string `json:"projectSlug,omitempty"`
+	AssetSlug               *string `json:"assetSlug,omitempty"`
+	AssetSignature          int64   `json:"assetSignature,omitempty,string"`
+	DependencyVulnSignature int64   `json:"dependencyVulnSignature,omitempty,string"`
 }
 
 type TestVEXRulesRequest struct {
