@@ -57,14 +57,37 @@ foundMatch:
 	return results, nil
 }
 
-// @Summary Get policy compliance details
+// @Summary Get policy compliance details for an asset
 // @Tags Compliance
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param policy path string true "Policy ID"
 // @Success 200 {object} compliance.PolicyEvaluation
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy} [get]
+func (c *ComplianceController) AssetDetails(ctx shared.Context) error {
+	return c.Details(ctx)
+}
+
+// @Summary Get policy compliance details for an asset version
+// @Tags Compliance
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param policy path string true "Policy ID"
+// @Success 200 {object} compliance.PolicyEvaluation
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance/{policy} [get]
+func (c *ComplianceController) AssetVersionDetails(ctx shared.Context) error {
+	return c.Details(ctx)
+}
+
 func (c *ComplianceController) Details(ctx shared.Context) error {
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 	if err != nil {
@@ -109,9 +132,30 @@ func (c *ComplianceController) Details(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
 // @Success 200 {array} compliance.PolicyEvaluation
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance [get]
+func (c *ComplianceController) AssetScopedCompliance(ctx shared.Context) error {
+	return c.AssetCompliance(ctx)
+}
+
+// @Summary Get asset version compliance
+// @Tags Compliance
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Success 200 {array} compliance.PolicyEvaluation
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance [get]
+func (c *ComplianceController) AssetVersionCompliance(ctx shared.Context) error {
+	return c.AssetCompliance(ctx)
+}
+
 func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -138,6 +182,8 @@ func (c *ComplianceController) AssetCompliance(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
 // @Success 200 {array} array{compliance.PolicyEvaluation}
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance [get]
 func (c *ComplianceController) ProjectCompliance(ctx shared.Context) error {

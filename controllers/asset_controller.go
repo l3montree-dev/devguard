@@ -290,7 +290,7 @@ func applyChange[T ~string](changes *[]string, label string, field *T, patch *T)
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param body body dtos.AssetPatchRequest true "Request body"
-// @Success 200 {object} dtos.AssetDetailsDTO
+// @Success 200 {object} dtos.AssetDetailsWithSecretsDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [patch]
 func (a *AssetController) Update(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()

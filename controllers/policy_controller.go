@@ -109,6 +109,7 @@ func (c *PolicyController) migratePolicies() error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Success 200 {array} models.Policy
 // @Router /organizations/{organization}/policies [get]
 func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
@@ -134,6 +135,8 @@ func (c *PolicyController) GetOrganizationPolicies(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
 // @Success 200 {array} models.Policy
 // @Router /organizations/{organization}/projects/{projectSlug}/policies [get]
 func (c *PolicyController) GetProjectPolicies(ctx shared.Context) error {
@@ -152,6 +155,7 @@ func (c *PolicyController) GetProjectPolicies(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param policyID path string true "Policy ID"
 // @Success 200 {object} models.Policy
 // @Router /organizations/{organization}/policies/{policyID} [get]
@@ -181,6 +185,7 @@ func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param body body dtos.PolicyDTO true "Request body"
 // @Success 201 {object} dtos.PolicyDTO
 // @Router /organizations/{organization}/policies [post]
@@ -218,6 +223,7 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param policyID path string true "Policy ID"
 // @Param body body dtos.PolicyDTO true "Request body"
 // @Success 200 {object} models.Policy
@@ -263,6 +269,7 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param policyID path string true "Policy ID"
 // @Success 204
 // @Router /organizations/{organization}/policies/{policyID} [delete]
@@ -291,6 +298,8 @@ func (c *PolicyController) DeletePolicy(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
 // @Param policyID path string true "Policy ID"
 // @Success 204
 // @Router /organizations/{organization}/projects/{projectSlug}/policies/{policyID} [put]
@@ -318,6 +327,8 @@ func (c *PolicyController) EnablePolicyForProject(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
 // @Param policyID path string true "Policy ID"
 // @Success 204
 // @Router /organizations/{organization}/projects/{projectSlug}/policies/{policyID} [delete]

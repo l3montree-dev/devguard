@@ -45,6 +45,10 @@ func NewAdvisoryController(advisoryService shared.AdvisoryService) *AdvisoryCont
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body dtos.AdvisoryCreate true "Request body"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/ [post]
 func (controller *AdvisoryController) Create(ctx shared.Context) error {
@@ -81,6 +85,10 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {object} shared.Paged[models.Advisory]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/ [get]
 func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
@@ -98,6 +106,10 @@ func (controller *AdvisoryController) ReadAll(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Param id path string true "Advisory ID"
 // @Success 200 {object} models.Advisory
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [get]
@@ -130,6 +142,10 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Param id path string true "Advisory ID"
 // @Param body body dtos.AdvisoryUpdate true "Request body"
 // @Success 200
@@ -175,6 +191,10 @@ func (controller *AdvisoryController) Update(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Param id path string true "Advisory ID"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [delete]
@@ -211,6 +231,10 @@ func (controller *AdvisoryController) Delete(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Param id path string true "Advisory ID"
 // @Param event body dtos.CreateEventRequest true "Event"
 // @Success 200

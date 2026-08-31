@@ -40,6 +40,9 @@ func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabint.Gitl
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/integrations/gitlab/autosetup/ [post]
 func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
@@ -52,14 +55,29 @@ func (c *IntegrationController) AutoSetup(ctx shared.Context) error {
 	return nil
 }
 
-// @Summary List repositories from integrations
+// @Summary List repositories from integrations for an organization
 // @Tags Integrations
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Success 200 {array} object
+// @Param organization path string true "Organization slug"
+// @Success 200 {array} dtos.GitRepository
 // @Router /organizations/{organization}/integrations/repositories [get]
+func (c *IntegrationController) OrgListRepositories(ctx shared.Context) error {
+	return c.ListRepositories(ctx)
+}
+
+// @Summary List repositories from integrations for the session
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Success 200 {array} dtos.GitRepository
 // @Router /integrations/repositories [get]
+func (c *IntegrationController) SessionListRepositories(ctx shared.Context) error {
+	return c.ListRepositories(ctx)
+}
+
 func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 
@@ -76,6 +94,8 @@ func (c *IntegrationController) ListRepositories(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param installationId query string false "Third party installation id"
 // @Success 200 {string} string
 // @Router /organizations/{organization}/integrations/finish-installation/ [get]
 func (c *IntegrationController) FinishInstallation(ctx shared.Context) error {
@@ -110,7 +130,9 @@ func (c *IntegrationController) HandleWebhook(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Success 200
+// @Param organization path string true "Organization slug"
+// @Param body body object{url=string,token=string,name=string} true "GitLab credentials"
+// @Success 200 {object} dtos.GitlabIntegrationDTO
 // @Router /organizations/{organization}/integrations/gitlab/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -132,7 +154,9 @@ func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context)
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Success 200
+// @Param organization path string true "Organization slug"
+// @Param body body object{url=string,token=string,name=string,userEmail=string} true "Jira credentials"
+// @Success 200 {object} dtos.JiraIntegrationDTO
 // @Router /organizations/{organization}/integrations/jira/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -202,6 +226,7 @@ func (c *IntegrationController) GitLabOauth2Login(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param gitlab_integration_id path string true "GitLab integration ID"
 // @Success 200
 // @Router /organizations/{organization}/integrations/gitlab/{gitlab_integration_id}/ [delete]
@@ -225,6 +250,7 @@ func (c *IntegrationController) DeleteGitLabAccessToken(ctx shared.Context) erro
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param jira_integration_id path string true "Jira integration ID"
 // @Success 200
 // @Router /organizations/{organization}/integrations/jira/{jira_integration_id}/ [delete]

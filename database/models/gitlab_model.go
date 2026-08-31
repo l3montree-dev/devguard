@@ -50,7 +50,7 @@ type GitLabIntegration struct {
 
 	Name string `json:"name"`
 
-	AccessToken string `json:"accessToken"`
+	AccessToken string `json:"-"`
 	GitLabURL   string `json:"gitLabUrl" gorm:"column:gitlab_url"`
 
 	Org   Org       `json:"org" gorm:"foreignKey:OrgID;constraint:OnDelete:CASCADE;"`

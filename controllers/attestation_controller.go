@@ -57,6 +57,7 @@ func (a *AttestationController) List(ctx shared.Context) error {
 // @Param X-Asset-Ref header string false "Asset version name"
 // @Param X-Artifact-Name header string false "Artifact name"
 // @Param X-Predicate-Type header string false "Predicate type"
+// @Param X-Asset-Name header string true "Asset name as <organization>/<project>/<asset>"
 // @Success 200
 // @Router /attestations [post]
 func (a *AttestationController) Create(ctx shared.Context) error {

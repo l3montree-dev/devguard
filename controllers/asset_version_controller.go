@@ -272,7 +272,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(ctx context.Con
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName query string false "Artifact name"
 // @Param origin query string false "Info source origin"
-// @Success 200 {object} object
+// @Success 200 {object} normalize.MinimalTree
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-graph/ [get]
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
@@ -317,7 +317,7 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param purl query string false "Component pURL"
 // @Param artifactName query string false "Artifact name"
-// @Success 200 {object} object
+// @Success 200 {array} normalize.Path
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/path-to-component/ [get]
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) error {
 
@@ -448,7 +448,7 @@ func escapeLatex(input string) string {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {array} models.Artifact
+// @Success 200 {array} dtos.ArtifactDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [get]
 func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 
@@ -461,7 +461,7 @@ func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
 	}
 
-	return ctx.JSON(200, artifacts)
+	return ctx.JSON(200, utils.Map(artifacts, transformer.ArtifactModelToDTO))
 }
 
 // @Summary Mark asset version as the default branch
