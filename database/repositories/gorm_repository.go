@@ -110,6 +110,10 @@ func (g *GormRepository[ID, T]) All(ctx context.Context, tx *gorm.DB) ([]T, erro
 }
 
 func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, m []T) error {
+	if len(m) == 0 {
+		return nil
+	}
+
 	err := g.GetDB(ctx, tx).Delete(m).Error
 	if err != nil {
 		return err
@@ -143,12 +147,7 @@ func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T
 	return db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
-// it does not save any associations, so it is the caller's responsibility to save them separately if needed
-func (g *GormRepository[ID, T]) SaveBatchBestEffort(
-	ctx context.Context,
-	tx *gorm.DB,
-	ts []T,
-) error {
+func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
 	if len(ts) == 0 {
 		return nil
 	}
@@ -165,25 +164,6 @@ func (g *GormRepository[ID, T]) SaveBatchBestEffort(
 		}
 	}
 	return nil
-}
-
-func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
-	if len(ts) == 0 {
-		return nil
-	}
-
-	err := g.GetDB(ctx, tx).Save(ts).Error
-	// check if "extended protocol limited to 65535 parameters" error
-	if err != nil && err.Error() == "extended protocol limited to 65535 parameters" {
-		// split the batch in half and try again
-		half := len(ts) / 2
-		err = g.SaveBatch(ctx, tx, ts[:half])
-		if err != nil {
-			return err
-		}
-		err = g.SaveBatch(ctx, tx, ts[half:])
-	}
-	return err
 }
 
 func (g *GormRepository[ID, T]) Transaction(ctx context.Context, f func(tx *gorm.DB) error) error {

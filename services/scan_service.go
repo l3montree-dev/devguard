@@ -165,10 +165,10 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		if updatedVulns, events, applyErr = ApplyVEXRulesToVulns(ctx, existingRules, newState); applyErr != nil {
 			slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
 		} else if len(updatedVulns) > 0 {
-			if err := s.dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
+			if err := s.dependencyVulnRepository.SaveBatch(ctx, tx, updatedVulns); err != nil {
 				slog.Error("could not save vulns updated by existing VEX rules", "err", err)
 			}
-			if err := s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
+			if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
 				slog.Error("could not save events from existing VEX rules", "err", err)
 			}
 		}

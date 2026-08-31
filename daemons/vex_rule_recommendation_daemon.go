@@ -165,7 +165,7 @@ func (runner *DaemonRunner) evalScopedUpstreamCandidates(ctx context.Context, tx
 		})
 	}
 
-	return runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels)
+	return runner.vexRuleRecommendationRepository.SaveBatch(ctx, tx, recModels)
 }
 
 // softMatchCrowdsourcedRules matches crowdsourced VEX rules against
@@ -280,7 +280,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 			return err
 		}
 
-		if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels); err != nil {
+		if err := runner.vexRuleRecommendationRepository.SaveBatch(ctx, tx, recModels); err != nil {
 			return errors.Wrap(err, "failed to save crowdsourced VEX rule recommendations")
 		}
 		createdRecommendationsCount += len(recModels)

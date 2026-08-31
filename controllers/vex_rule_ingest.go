@@ -76,10 +76,10 @@ func ingestVEXRules(
 		return nil
 	}
 
-	if err := dependencyVulnRepository.SaveBatchBestEffort(ctx, tx, updatedVulns); err != nil {
+	if err := dependencyVulnRepository.SaveBatch(ctx, tx, updatedVulns); err != nil {
 		return fmt.Errorf("failed to save updated vulns: %w", err)
 	}
-	if err := vulnEventRepository.SaveBatchBestEffort(ctx, tx, events); err != nil {
+	if err := vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
 		return fmt.Errorf("failed to save events: %w", err)
 	}
 

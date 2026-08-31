@@ -45,7 +45,6 @@ type BatchModelWriter[T Tabler, Tx any] interface {
 	CreateBatch(ctx context.Context, tx Tx, ts []T) error
 	SaveBatch(ctx context.Context, tx Tx, ts []T) error
 	DeleteBatch(ctx context.Context, tx Tx, ids []T) error
-	SaveBatchBestEffort(ctx context.Context, tx Tx, ts []T) error
 }
 
 type Transactioner[Tx any] interface {

@@ -87,12 +87,12 @@ func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBra
 		return el.EventsToCopy
 	})
 
-	err := s.firstPartyVulnRepository.SaveBatchBestEffort(ctx, tx, vulns)
+	err := s.firstPartyVulnRepository.SaveBatch(ctx, tx, vulns)
 	if err != nil {
 		return err
 	}
 
-	return s.vulnEventRepository.SaveBatchBestEffort(ctx, tx, utils.Flat(events))
+	return s.vulnEventRepository.SaveBatch(ctx, tx, utils.Flat(events))
 }
 
 func (s *firstPartyVulnService) UpdateFirstPartyVulnState(ctx context.Context, tx shared.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error) {
