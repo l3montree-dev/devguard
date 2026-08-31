@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -287,7 +288,7 @@ func (c *componentRepository) FetchInformationSources(ctx context.Context, tx *g
 
 func (c *componentRepository) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
 	artifactRoot := "artifact:" + artifact.ArtifactName
-	return c.GetDB(ctx, tx).Where("component_id = ? AND dependency_id IN (?) AND asset_version_name = ? AND asset_id = ?", artifactRoot, rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
+	return c.GetDB(ctx, tx).Where("component_id = ? AND dependency_id = ANY (?) AND asset_version_name = ? AND asset_id = ?", pq.Array(artifactRoot), rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
 }
 
 func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
@@ -300,7 +301,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_id = components.id").
-		Where("projects.id IN ?", projectIDs).
+		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
 		Where("component_dependencies.dependency_id ILIKE ?", "%"+search+"%").Where("component_dependencies.dependency_id LIKE ?", "pkg:%")
 
 	var total int64
@@ -330,7 +331,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_id = components.id").
-		Where("projects.id IN ?", projectIDs).
+		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
 		Where("component_dependencies.dependency_id ILIKE ?", "%"+search+"%").
 		Where("component_dependencies.dependency_id LIKE ?", "pkg:%").
 		Order("component_dependencies.dependency_id ASC, component_dependencies.asset_version_name ASC")

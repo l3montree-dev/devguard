@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/lib/pq"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
@@ -769,7 +771,7 @@ func (f FilterQuery) sql() string {
 
 	switch f.Operator {
 	case "in":
-		return field + " IN (?)"
+		return field + " = ANY (?)"
 	case "is":
 		return field + " = ?"
 	case "is not":
@@ -811,6 +813,13 @@ func (f FilterQuery) value() any {
 	switch f.Operator {
 	case "is not null", "is null":
 		return nil
+	case "in":
+		// "= ANY (?)" needs a single array parameter - gorm would otherwise
+		// expand a slice into one bind var per element
+		if v := reflect.ValueOf(f.FieldValue); v.IsValid() && v.Kind() == reflect.Slice {
+			return pq.Array(f.FieldValue)
+		}
+		return pq.Array([]any{f.FieldValue})
 	default:
 		return f.FieldValue
 	}

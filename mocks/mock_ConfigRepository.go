@@ -66,7 +66,7 @@ type ConfigRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ConfigRepository_Expecter) GetDB(ctx any, tx any) *ConfigRepository_GetDB_Call {
+func (_e *ConfigRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ConfigRepository_GetDB_Call {
 	return &ConfigRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -124,7 +124,7 @@ type ConfigRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - config *models.Config
-func (_e *ConfigRepository_Expecter) Save(ctx any, tx any, config any) *ConfigRepository_Save_Call {
+func (_e *ConfigRepository_Expecter) Save(ctx interface{}, tx interface{}, config interface{}) *ConfigRepository_Save_Call {
 	return &ConfigRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, config)}
 }
 

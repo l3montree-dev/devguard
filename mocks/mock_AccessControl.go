@@ -66,7 +66,7 @@ type AccessControl_AllowRole_Call struct {
 //   - role shared.Role
 //   - object shared.Object
 //   - action []shared.Action
-func (_e *AccessControl_Expecter) AllowRole(ctx any, role any, object any, action any) *AccessControl_AllowRole_Call {
+func (_e *AccessControl_Expecter) AllowRole(ctx interface{}, role interface{}, object interface{}, action interface{}) *AccessControl_AllowRole_Call {
 	return &AccessControl_AllowRole_Call{Call: _e.mock.On("AllowRole", ctx, role, object, action)}
 }
 
@@ -136,7 +136,7 @@ type AccessControl_AllowRoleInAsset_Call struct {
 //   - role shared.Role
 //   - object shared.Object
 //   - action []shared.Action
-func (_e *AccessControl_Expecter) AllowRoleInAsset(ctx any, asset any, role any, object any, action any) *AccessControl_AllowRoleInAsset_Call {
+func (_e *AccessControl_Expecter) AllowRoleInAsset(ctx interface{}, asset interface{}, role interface{}, object interface{}, action interface{}) *AccessControl_AllowRoleInAsset_Call {
 	return &AccessControl_AllowRoleInAsset_Call{Call: _e.mock.On("AllowRoleInAsset", ctx, asset, role, object, action)}
 }
 
@@ -211,7 +211,7 @@ type AccessControl_AllowRoleInProject_Call struct {
 //   - role shared.Role
 //   - object shared.Object
 //   - action []shared.Action
-func (_e *AccessControl_Expecter) AllowRoleInProject(ctx any, project any, role any, object any, action any) *AccessControl_AllowRoleInProject_Call {
+func (_e *AccessControl_Expecter) AllowRoleInProject(ctx interface{}, project interface{}, role interface{}, object interface{}, action interface{}) *AccessControl_AllowRoleInProject_Call {
 	return &AccessControl_AllowRoleInProject_Call{Call: _e.mock.On("AllowRoleInProject", ctx, project, role, object, action)}
 }
 
@@ -349,7 +349,7 @@ type AccessControl_GetAllAssetsForSession_Call struct {
 // GetAllAssetsForSession is a helper method to define mock.On call
 //   - ctx context.Context
 //   - session shared.AuthSession
-func (_e *AccessControl_Expecter) GetAllAssetsForSession(ctx any, session any) *AccessControl_GetAllAssetsForSession_Call {
+func (_e *AccessControl_Expecter) GetAllAssetsForSession(ctx interface{}, session interface{}) *AccessControl_GetAllAssetsForSession_Call {
 	return &AccessControl_GetAllAssetsForSession_Call{Call: _e.mock.On("GetAllAssetsForSession", ctx, session)}
 }
 
@@ -416,7 +416,7 @@ type AccessControl_GetAllMembersOfAsset_Call struct {
 
 // GetAllMembersOfAsset is a helper method to define mock.On call
 //   - projectID string
-func (_e *AccessControl_Expecter) GetAllMembersOfAsset(projectID any) *AccessControl_GetAllMembersOfAsset_Call {
+func (_e *AccessControl_Expecter) GetAllMembersOfAsset(projectID interface{}) *AccessControl_GetAllMembersOfAsset_Call {
 	return &AccessControl_GetAllMembersOfAsset_Call{Call: _e.mock.On("GetAllMembersOfAsset", projectID)}
 }
 
@@ -533,7 +533,7 @@ type AccessControl_GetAllMembersOfProject_Call struct {
 
 // GetAllMembersOfProject is a helper method to define mock.On call
 //   - projectID string
-func (_e *AccessControl_Expecter) GetAllMembersOfProject(projectID any) *AccessControl_GetAllMembersOfProject_Call {
+func (_e *AccessControl_Expecter) GetAllMembersOfProject(projectID interface{}) *AccessControl_GetAllMembersOfProject_Call {
 	return &AccessControl_GetAllMembersOfProject_Call{Call: _e.mock.On("GetAllMembersOfProject", projectID)}
 }
 
@@ -596,7 +596,7 @@ type AccessControl_GetAllProjectsForSession_Call struct {
 // GetAllProjectsForSession is a helper method to define mock.On call
 //   - ctx context.Context
 //   - session shared.AuthSession
-func (_e *AccessControl_Expecter) GetAllProjectsForSession(ctx any, session any) *AccessControl_GetAllProjectsForSession_Call {
+func (_e *AccessControl_Expecter) GetAllProjectsForSession(ctx interface{}, session interface{}) *AccessControl_GetAllProjectsForSession_Call {
 	return &AccessControl_GetAllProjectsForSession_Call{Call: _e.mock.On("GetAllProjectsForSession", ctx, session)}
 }
 
@@ -654,7 +654,7 @@ type AccessControl_GetAllRoles_Call struct {
 
 // GetAllRoles is a helper method to define mock.On call
 //   - user string
-func (_e *AccessControl_Expecter) GetAllRoles(user any) *AccessControl_GetAllRoles_Call {
+func (_e *AccessControl_Expecter) GetAllRoles(user interface{}) *AccessControl_GetAllRoles_Call {
 	return &AccessControl_GetAllRoles_Call{Call: _e.mock.On("GetAllRoles", user)}
 }
 
@@ -715,7 +715,7 @@ type AccessControl_GetAssetRole_Call struct {
 // GetAssetRole is a helper method to define mock.On call
 //   - user string
 //   - asset string
-func (_e *AccessControl_Expecter) GetAssetRole(user any, asset any) *AccessControl_GetAssetRole_Call {
+func (_e *AccessControl_Expecter) GetAssetRole(user interface{}, asset interface{}) *AccessControl_GetAssetRole_Call {
 	return &AccessControl_GetAssetRole_Call{Call: _e.mock.On("GetAssetRole", user, asset)}
 }
 
@@ -780,7 +780,7 @@ type AccessControl_GetDomainRole_Call struct {
 
 // GetDomainRole is a helper method to define mock.On call
 //   - user string
-func (_e *AccessControl_Expecter) GetDomainRole(user any) *AccessControl_GetDomainRole_Call {
+func (_e *AccessControl_Expecter) GetDomainRole(user interface{}) *AccessControl_GetDomainRole_Call {
 	return &AccessControl_GetDomainRole_Call{Call: _e.mock.On("GetDomainRole", user)}
 }
 
@@ -940,7 +940,7 @@ type AccessControl_GetProjectRole_Call struct {
 // GetProjectRole is a helper method to define mock.On call
 //   - user string
 //   - project string
-func (_e *AccessControl_Expecter) GetProjectRole(user any, project any) *AccessControl_GetProjectRole_Call {
+func (_e *AccessControl_Expecter) GetProjectRole(user interface{}, project interface{}) *AccessControl_GetProjectRole_Call {
 	return &AccessControl_GetProjectRole_Call{Call: _e.mock.On("GetProjectRole", user, project)}
 }
 
@@ -998,7 +998,7 @@ type AccessControl_GrantRole_Call struct {
 //   - ctx context.Context
 //   - session shared.AuthSession
 //   - role shared.Role
-func (_e *AccessControl_Expecter) GrantRole(ctx any, session any, role any) *AccessControl_GrantRole_Call {
+func (_e *AccessControl_Expecter) GrantRole(ctx interface{}, session interface{}, role interface{}) *AccessControl_GrantRole_Call {
 	return &AccessControl_GrantRole_Call{Call: _e.mock.On("GrantRole", ctx, session, role)}
 }
 
@@ -1062,7 +1062,7 @@ type AccessControl_GrantRoleInAsset_Call struct {
 //   - session shared.AuthSession
 //   - role shared.Role
 //   - asset string
-func (_e *AccessControl_Expecter) GrantRoleInAsset(ctx any, session any, role any, asset any) *AccessControl_GrantRoleInAsset_Call {
+func (_e *AccessControl_Expecter) GrantRoleInAsset(ctx interface{}, session interface{}, role interface{}, asset interface{}) *AccessControl_GrantRoleInAsset_Call {
 	return &AccessControl_GrantRoleInAsset_Call{Call: _e.mock.On("GrantRoleInAsset", ctx, session, role, asset)}
 }
 
@@ -1131,7 +1131,7 @@ type AccessControl_GrantRoleInProject_Call struct {
 //   - session shared.AuthSession
 //   - role shared.Role
 //   - project string
-func (_e *AccessControl_Expecter) GrantRoleInProject(ctx any, session any, role any, project any) *AccessControl_GrantRoleInProject_Call {
+func (_e *AccessControl_Expecter) GrantRoleInProject(ctx interface{}, session interface{}, role interface{}, project interface{}) *AccessControl_GrantRoleInProject_Call {
 	return &AccessControl_GrantRoleInProject_Call{Call: _e.mock.On("GrantRoleInProject", ctx, session, role, project)}
 }
 
@@ -1209,7 +1209,7 @@ type AccessControl_HasAccess_Call struct {
 //   - session shared.AuthSession
 //   - org *models.Org
 //   - actorScope shared.ActorScope
-func (_e *AccessControl_Expecter) HasAccess(ctx any, session any, org any, actorScope any) *AccessControl_HasAccess_Call {
+func (_e *AccessControl_Expecter) HasAccess(ctx interface{}, session interface{}, org interface{}, actorScope interface{}) *AccessControl_HasAccess_Call {
 	return &AccessControl_HasAccess_Call{Call: _e.mock.On("HasAccess", ctx, session, org, actorScope)}
 }
 
@@ -1278,7 +1278,7 @@ type AccessControl_InheritAssetRole_Call struct {
 //   - roleWhichGetsPermissions shared.Role
 //   - roleWhichProvidesPermissions shared.Role
 //   - asset string
-func (_e *AccessControl_Expecter) InheritAssetRole(ctx any, roleWhichGetsPermissions any, roleWhichProvidesPermissions any, asset any) *AccessControl_InheritAssetRole_Call {
+func (_e *AccessControl_Expecter) InheritAssetRole(ctx interface{}, roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}, asset interface{}) *AccessControl_InheritAssetRole_Call {
 	return &AccessControl_InheritAssetRole_Call{Call: _e.mock.On("InheritAssetRole", ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions, asset)}
 }
 
@@ -1347,7 +1347,7 @@ type AccessControl_InheritProjectRole_Call struct {
 //   - roleWhichGetsPermissions shared.Role
 //   - roleWhichProvidesPermissions shared.Role
 //   - project string
-func (_e *AccessControl_Expecter) InheritProjectRole(ctx any, roleWhichGetsPermissions any, roleWhichProvidesPermissions any, project any) *AccessControl_InheritProjectRole_Call {
+func (_e *AccessControl_Expecter) InheritProjectRole(ctx interface{}, roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}, project interface{}) *AccessControl_InheritProjectRole_Call {
 	return &AccessControl_InheritProjectRole_Call{Call: _e.mock.On("InheritProjectRole", ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions, project)}
 }
 
@@ -1415,7 +1415,7 @@ type AccessControl_InheritProjectRolesAcrossProjects_Call struct {
 //   - ctx context.Context
 //   - roleWhichGetsPermissions shared.ProjectRole
 //   - roleWhichProvidesPermissions shared.ProjectRole
-func (_e *AccessControl_Expecter) InheritProjectRolesAcrossProjects(ctx any, roleWhichGetsPermissions any, roleWhichProvidesPermissions any) *AccessControl_InheritProjectRolesAcrossProjects_Call {
+func (_e *AccessControl_Expecter) InheritProjectRolesAcrossProjects(ctx interface{}, roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}) *AccessControl_InheritProjectRolesAcrossProjects_Call {
 	return &AccessControl_InheritProjectRolesAcrossProjects_Call{Call: _e.mock.On("InheritProjectRolesAcrossProjects", ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions)}
 }
 
@@ -1478,7 +1478,7 @@ type AccessControl_InheritRole_Call struct {
 //   - ctx context.Context
 //   - roleWhichGetsPermissions shared.Role
 //   - roleWhichProvidesPermissions shared.Role
-func (_e *AccessControl_Expecter) InheritRole(ctx any, roleWhichGetsPermissions any, roleWhichProvidesPermissions any) *AccessControl_InheritRole_Call {
+func (_e *AccessControl_Expecter) InheritRole(ctx interface{}, roleWhichGetsPermissions interface{}, roleWhichProvidesPermissions interface{}) *AccessControl_InheritRole_Call {
 	return &AccessControl_InheritRole_Call{Call: _e.mock.On("InheritRole", ctx, roleWhichGetsPermissions, roleWhichProvidesPermissions)}
 }
 
@@ -1553,7 +1553,7 @@ type AccessControl_IsAllowed_Call struct {
 //   - object shared.Object
 //   - action shared.Action
 //   - actorScope shared.ActorScope
-func (_e *AccessControl_Expecter) IsAllowed(ctx any, session any, org any, object any, action any, actorScope any) *AccessControl_IsAllowed_Call {
+func (_e *AccessControl_Expecter) IsAllowed(ctx interface{}, session interface{}, org interface{}, object interface{}, action interface{}, actorScope interface{}) *AccessControl_IsAllowed_Call {
 	return &AccessControl_IsAllowed_Call{Call: _e.mock.On("IsAllowed", ctx, session, org, object, action, actorScope)}
 }
 
@@ -1642,7 +1642,7 @@ type AccessControl_IsAllowedInAsset_Call struct {
 //   - session shared.AuthSession
 //   - object shared.Object
 //   - action shared.Action
-func (_e *AccessControl_Expecter) IsAllowedInAsset(ctx any, asset any, session any, object any, action any) *AccessControl_IsAllowedInAsset_Call {
+func (_e *AccessControl_Expecter) IsAllowedInAsset(ctx interface{}, asset interface{}, session interface{}, object interface{}, action interface{}) *AccessControl_IsAllowedInAsset_Call {
 	return &AccessControl_IsAllowedInAsset_Call{Call: _e.mock.On("IsAllowedInAsset", ctx, asset, session, object, action)}
 }
 
@@ -1727,7 +1727,7 @@ type AccessControl_IsAllowedInProject_Call struct {
 //   - object shared.Object
 //   - action shared.Action
 //   - actorScope shared.ActorScope
-func (_e *AccessControl_Expecter) IsAllowedInProject(ctx any, project any, session any, object any, action any, actorScope any) *AccessControl_IsAllowedInProject_Call {
+func (_e *AccessControl_Expecter) IsAllowedInProject(ctx interface{}, project interface{}, session interface{}, object interface{}, action interface{}, actorScope interface{}) *AccessControl_IsAllowedInProject_Call {
 	return &AccessControl_IsAllowedInProject_Call{Call: _e.mock.On("IsAllowedInProject", ctx, project, session, object, action, actorScope)}
 }
 
@@ -1806,7 +1806,7 @@ type AccessControl_LinkDomainAndProjectRole_Call struct {
 //   - domainRoleWhichGetsPermission shared.Role
 //   - projectRoleWhichProvidesPermissions shared.Role
 //   - project string
-func (_e *AccessControl_Expecter) LinkDomainAndProjectRole(ctx any, domainRoleWhichGetsPermission any, projectRoleWhichProvidesPermissions any, project any) *AccessControl_LinkDomainAndProjectRole_Call {
+func (_e *AccessControl_Expecter) LinkDomainAndProjectRole(ctx interface{}, domainRoleWhichGetsPermission interface{}, projectRoleWhichProvidesPermissions interface{}, project interface{}) *AccessControl_LinkDomainAndProjectRole_Call {
 	return &AccessControl_LinkDomainAndProjectRole_Call{Call: _e.mock.On("LinkDomainAndProjectRole", ctx, domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)}
 }
 
@@ -1876,7 +1876,7 @@ type AccessControl_LinkProjectAndAssetRole_Call struct {
 //   - assetRoleWhichProvidesPermissions shared.Role
 //   - project string
 //   - asset string
-func (_e *AccessControl_Expecter) LinkProjectAndAssetRole(ctx any, projectRoleWhichGetsPermission any, assetRoleWhichProvidesPermissions any, project any, asset any) *AccessControl_LinkProjectAndAssetRole_Call {
+func (_e *AccessControl_Expecter) LinkProjectAndAssetRole(ctx interface{}, projectRoleWhichGetsPermission interface{}, assetRoleWhichProvidesPermissions interface{}, project interface{}, asset interface{}) *AccessControl_LinkProjectAndAssetRole_Call {
 	return &AccessControl_LinkProjectAndAssetRole_Call{Call: _e.mock.On("LinkProjectAndAssetRole", ctx, projectRoleWhichGetsPermission, assetRoleWhichProvidesPermissions, project, asset)}
 }
 
@@ -1948,7 +1948,7 @@ type AccessControl_RevokeAllRolesInAsset_Call struct {
 // RevokeAllRolesInAsset is a helper method to define mock.On call
 //   - ctx context.Context
 //   - asset string
-func (_e *AccessControl_Expecter) RevokeAllRolesInAsset(ctx any, asset any) *AccessControl_RevokeAllRolesInAsset_Call {
+func (_e *AccessControl_Expecter) RevokeAllRolesInAsset(ctx interface{}, asset interface{}) *AccessControl_RevokeAllRolesInAsset_Call {
 	return &AccessControl_RevokeAllRolesInAsset_Call{Call: _e.mock.On("RevokeAllRolesInAsset", ctx, asset)}
 }
 
@@ -2006,7 +2006,7 @@ type AccessControl_RevokeAllRolesInAssetForUser_Call struct {
 //   - ctx context.Context
 //   - user string
 //   - asset string
-func (_e *AccessControl_Expecter) RevokeAllRolesInAssetForUser(ctx any, user any, asset any) *AccessControl_RevokeAllRolesInAssetForUser_Call {
+func (_e *AccessControl_Expecter) RevokeAllRolesInAssetForUser(ctx interface{}, user interface{}, asset interface{}) *AccessControl_RevokeAllRolesInAssetForUser_Call {
 	return &AccessControl_RevokeAllRolesInAssetForUser_Call{Call: _e.mock.On("RevokeAllRolesInAssetForUser", ctx, user, asset)}
 }
 
@@ -2068,7 +2068,7 @@ type AccessControl_RevokeAllRolesInProject_Call struct {
 // RevokeAllRolesInProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - project string
-func (_e *AccessControl_Expecter) RevokeAllRolesInProject(ctx any, project any) *AccessControl_RevokeAllRolesInProject_Call {
+func (_e *AccessControl_Expecter) RevokeAllRolesInProject(ctx interface{}, project interface{}) *AccessControl_RevokeAllRolesInProject_Call {
 	return &AccessControl_RevokeAllRolesInProject_Call{Call: _e.mock.On("RevokeAllRolesInProject", ctx, project)}
 }
 
@@ -2126,7 +2126,7 @@ type AccessControl_RevokeAllRolesInProjectForUser_Call struct {
 //   - ctx context.Context
 //   - user string
 //   - project string
-func (_e *AccessControl_Expecter) RevokeAllRolesInProjectForUser(ctx any, user any, project any) *AccessControl_RevokeAllRolesInProjectForUser_Call {
+func (_e *AccessControl_Expecter) RevokeAllRolesInProjectForUser(ctx interface{}, user interface{}, project interface{}) *AccessControl_RevokeAllRolesInProjectForUser_Call {
 	return &AccessControl_RevokeAllRolesInProjectForUser_Call{Call: _e.mock.On("RevokeAllRolesInProjectForUser", ctx, user, project)}
 }
 
@@ -2189,7 +2189,7 @@ type AccessControl_RevokeRole_Call struct {
 //   - ctx context.Context
 //   - session shared.AuthSession
 //   - role shared.Role
-func (_e *AccessControl_Expecter) RevokeRole(ctx any, session any, role any) *AccessControl_RevokeRole_Call {
+func (_e *AccessControl_Expecter) RevokeRole(ctx interface{}, session interface{}, role interface{}) *AccessControl_RevokeRole_Call {
 	return &AccessControl_RevokeRole_Call{Call: _e.mock.On("RevokeRole", ctx, session, role)}
 }
 
@@ -2253,7 +2253,7 @@ type AccessControl_RevokeRoleInAsset_Call struct {
 //   - session shared.AuthSession
 //   - role shared.Role
 //   - asset string
-func (_e *AccessControl_Expecter) RevokeRoleInAsset(ctx any, session any, role any, asset any) *AccessControl_RevokeRoleInAsset_Call {
+func (_e *AccessControl_Expecter) RevokeRoleInAsset(ctx interface{}, session interface{}, role interface{}, asset interface{}) *AccessControl_RevokeRoleInAsset_Call {
 	return &AccessControl_RevokeRoleInAsset_Call{Call: _e.mock.On("RevokeRoleInAsset", ctx, session, role, asset)}
 }
 
@@ -2322,7 +2322,7 @@ type AccessControl_RevokeRoleInProject_Call struct {
 //   - session shared.AuthSession
 //   - role shared.Role
 //   - project string
-func (_e *AccessControl_Expecter) RevokeRoleInProject(ctx any, session any, role any, project any) *AccessControl_RevokeRoleInProject_Call {
+func (_e *AccessControl_Expecter) RevokeRoleInProject(ctx interface{}, session interface{}, role interface{}, project interface{}) *AccessControl_RevokeRoleInProject_Call {
 	return &AccessControl_RevokeRoleInProject_Call{Call: _e.mock.On("RevokeRoleInProject", ctx, session, role, project)}
 }
 

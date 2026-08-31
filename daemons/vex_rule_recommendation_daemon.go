@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vexrules"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
 
@@ -26,6 +27,7 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 	}
 
 	err = runner.db.WithContext(ctx).Transaction(func(tx shared.DB) error {
+		// first we delete unusable vex rule recommendations to reduce the amount of work
 		if err := tx.Exec(`
 			DELETE FROM vex_rule_recommendations r
 			WHERE NOT EXISTS (SELECT 1 FROM dependency_vulns dv WHERE dv.signature = r.dependency_vuln_signature AND dv.state = 'open')
@@ -136,7 +138,7 @@ func (runner *DaemonRunner) evalScopedUpstreamCandidates(ctx context.Context, tx
 	}
 
 	var rules []models.UpstreamVEXRule
-	if err := runner.upstreamVEXRuleRepository.GetDB(ctx, tx).Where("id IN ?", utils.Keys(ruleIDSet)).Find(&rules).Error; err != nil {
+	if err := runner.upstreamVEXRuleRepository.GetDB(ctx, tx).Where("id = ANY(?)", pq.Array(utils.Keys(ruleIDSet))).Find(&rules).Error; err != nil {
 		return errors.Wrap(err, "failed to fetch scoped VEX rule candidates")
 	}
 
@@ -163,7 +165,7 @@ func (runner *DaemonRunner) evalScopedUpstreamCandidates(ctx context.Context, tx
 		})
 	}
 
-	return runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels)
+	return runner.vexRuleRecommendationRepository.SaveBatch(ctx, tx, recModels)
 }
 
 // softMatchCrowdsourcedRules matches crowdsourced VEX rules against
@@ -237,7 +239,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 	// work) - only the ones that did match need it, for the org/project
 	// lookups CrowdsourcedVexing does.
 	var rulesWithAsset []models.VEXRule
-	if err := runner.vexRuleRepository.GetDB(ctx, tx).Preload("Asset").Where("id IN ?", utils.Keys(matchedVEXRules)).Find(&rulesWithAsset).Error; err != nil {
+	if err := runner.vexRuleRepository.GetDB(ctx, tx).Preload("Asset").Where("id = ANY(?)", pq.Array(utils.Keys(matchedVEXRules))).Find(&rulesWithAsset).Error; err != nil {
 		return errors.Wrap(err, "failed to load assets for soft-matched VEX rules")
 	}
 	for _, rule := range rulesWithAsset {
@@ -278,7 +280,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 			return err
 		}
 
-		if err := runner.vexRuleRecommendationRepository.SaveBatchBestEffort(ctx, tx, recModels); err != nil {
+		if err := runner.vexRuleRecommendationRepository.SaveBatch(ctx, tx, recModels); err != nil {
 			return errors.Wrap(err, "failed to save crowdsourced VEX rule recommendations")
 		}
 		createdRecommendationsCount += len(recModels)

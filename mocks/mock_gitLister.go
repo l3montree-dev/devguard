@@ -68,7 +68,7 @@ type GitLister_GetBranchName_Call struct {
 
 // GetBranchName is a helper method to define mock.On call
 //   - path string
-func (_e *GitLister_Expecter) GetBranchName(path any) *GitLister_GetBranchName_Call {
+func (_e *GitLister_Expecter) GetBranchName(path interface{}) *GitLister_GetBranchName_Call {
 	return &GitLister_GetBranchName_Call{Call: _e.mock.On("GetBranchName", path)}
 }
 
@@ -128,7 +128,7 @@ type GitLister_GetDefaultBranchName_Call struct {
 
 // GetDefaultBranchName is a helper method to define mock.On call
 //   - path string
-func (_e *GitLister_Expecter) GetDefaultBranchName(path any) *GitLister_GetDefaultBranchName_Call {
+func (_e *GitLister_Expecter) GetDefaultBranchName(path interface{}) *GitLister_GetDefaultBranchName_Call {
 	return &GitLister_GetDefaultBranchName_Call{Call: _e.mock.On("GetDefaultBranchName", path)}
 }
 
@@ -190,7 +190,7 @@ type GitLister_GetTags_Call struct {
 
 // GetTags is a helper method to define mock.On call
 //   - path string
-func (_e *GitLister_Expecter) GetTags(path any) *GitLister_GetTags_Call {
+func (_e *GitLister_Expecter) GetTags(path interface{}) *GitLister_GetTags_Call {
 	return &GitLister_GetTags_Call{Call: _e.mock.On("GetTags", path)}
 }
 
@@ -251,7 +251,7 @@ type GitLister_GitCommitCount_Call struct {
 // GitCommitCount is a helper method to define mock.On call
 //   - path string
 //   - tag *string
-func (_e *GitLister_Expecter) GitCommitCount(path any, tag any) *GitLister_GitCommitCount_Call {
+func (_e *GitLister_Expecter) GitCommitCount(path interface{}, tag interface{}) *GitLister_GitCommitCount_Call {
 	return &GitLister_GitCommitCount_Call{Call: _e.mock.On("GitCommitCount", path, tag)}
 }
 

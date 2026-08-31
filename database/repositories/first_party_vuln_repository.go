@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -157,7 +158,7 @@ func (repository firstPartyVulnerabilityRepository) Read(ctx context.Context, tx
 
 // TODO: change it
 func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx context.Context, tx *gorm.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
-	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
+	q := repository.Repository.GetDB(ctx, tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ANY (?) AND first_party_vulnerabilities.asset_id = ANY (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
 
 	type rowWithCount struct {
 		models.FirstPartyVuln
@@ -193,16 +194,16 @@ func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(ctx
 func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIDPaged(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
 	subQueryAssetIDs := repository.Repository.GetDB(ctx, tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
 
-	subQuery := repository.Repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
+	subQuery := repository.Repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id = ANY (?) AND default_branch = ?", subQueryAssetIDs, true)
 
 	return repository.GetFirstPartyVulnsPaged(ctx, tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
 func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIDPaged(ctx context.Context, tx *gorm.DB, userAllowedProjectIds []string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], error) {
 
-	subQueryAssetIDs := repository.Repository.GetDB(ctx, tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
+	subQueryAssetIDs := repository.Repository.GetDB(ctx, tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id = ANY (?)", pq.Array(userAllowedProjectIds))
 
-	subQuery1 := repository.Repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
+	subQuery1 := repository.Repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id = ANY (?) AND default_branch = ?", subQueryAssetIDs, true)
 
 	return repository.GetFirstPartyVulnsPaged(ctx, tx, subQuery1, subQueryAssetIDs, pageInfo, search, filter, sort)
 }

@@ -130,8 +130,9 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 		if _, err := tx.Exec(string(content)); err != nil {
 			return fmt.Errorf("migration %d (%s) failed, all pending migrations in this run were rolled back: %w", v, identifier, err)
 		}
-		slog.Info("applied migration", "version", v, "name", identifier)
 	}
+
+	slog.Info("finished applying migrations")
 
 	if _, err := tx.Exec("SET search_path TO public"); err != nil {
 		return fmt.Errorf("failed to restore search_path: %w", err)

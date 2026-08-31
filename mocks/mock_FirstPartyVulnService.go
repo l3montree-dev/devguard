@@ -70,7 +70,7 @@ type FirstPartyVulnService_SyncAllIssues_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - userAgent *string
-func (_e *FirstPartyVulnService_Expecter) SyncAllIssues(ctx any, org any, project any, asset any, assetVersion any, userAgent any) *FirstPartyVulnService_SyncAllIssues_Call {
+func (_e *FirstPartyVulnService_Expecter) SyncAllIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, userAgent interface{}) *FirstPartyVulnService_SyncAllIssues_Call {
 	return &FirstPartyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", ctx, org, project, asset, assetVersion, userAgent)}
 }
 
@@ -152,7 +152,7 @@ type FirstPartyVulnService_SyncIssues_Call struct {
 //   - assetVersion models.AssetVersion
 //   - vulnList []models.FirstPartyVuln
 //   - userAgent *string
-func (_e *FirstPartyVulnService_Expecter) SyncIssues(ctx any, org any, project any, asset any, assetVersion any, vulnList any, userAgent any) *FirstPartyVulnService_SyncIssues_Call {
+func (_e *FirstPartyVulnService_Expecter) SyncIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}, userAgent interface{}) *FirstPartyVulnService_SyncIssues_Call {
 	return &FirstPartyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", ctx, org, project, asset, assetVersion, vulnList, userAgent)}
 }
 
@@ -249,7 +249,7 @@ type FirstPartyVulnService_UpdateFirstPartyVulnState_Call struct {
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - userAgent *string
-func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(ctx any, tx any, userID any, firstPartyVuln any, statusType any, justification any, mechanicalJustification any, userAgent any) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(ctx interface{}, tx interface{}, userID interface{}, firstPartyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, userAgent interface{}) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	return &FirstPartyVulnService_UpdateFirstPartyVulnState_Call{Call: _e.mock.On("UpdateFirstPartyVulnState", ctx, tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification, userAgent)}
 }
 
@@ -340,7 +340,7 @@ type FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_C
 //   - firstPartyVulns []statemachine.BranchVulnMatch[*models.FirstPartyVuln]
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDifferentBranch(ctx any, tx any, scannerID any, firstPartyVulns any, assetVersion any, asset any) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDifferentBranch(ctx interface{}, tx interface{}, scannerID interface{}, firstPartyVulns interface{}, assetVersion interface{}, asset interface{}) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
 	return &FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingFirstPartyVulnOnDifferentBranch", ctx, tx, scannerID, firstPartyVulns, assetVersion, asset)}
 }
 
@@ -421,7 +421,7 @@ type FirstPartyVulnService_UserDetectedFirstPartyVulns_Call struct {
 //   - userAgent *string
 //   - scannerID string
 //   - firstPartyVulns []models.FirstPartyVuln
-func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(ctx any, tx any, userID any, userAgent any, scannerID any, firstPartyVulns any) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, scannerID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", ctx, tx, userID, userAgent, scannerID, firstPartyVulns)}
 }
 
@@ -501,7 +501,7 @@ type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
 //   - userID string
 //   - userAgent *string
 //   - firstPartyVulns []models.FirstPartyVuln
-func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(ctx any, tx any, userID any, userAgent any, firstPartyVulns any) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", ctx, tx, userID, userAgent, firstPartyVulns)}
 }
 

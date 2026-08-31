@@ -68,7 +68,7 @@ type FirstPartyVulnRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) Activate(ctx any, tx any, id any) *FirstPartyVulnRepository_Activate_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *FirstPartyVulnRepository_Activate_Call {
 	return &FirstPartyVulnRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type FirstPartyVulnRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *FirstPartyVulnRepository_Expecter) All(ctx any, tx any) *FirstPartyVulnRepository_All_Call {
+func (_e *FirstPartyVulnRepository_Expecter) All(ctx interface{}, tx interface{}) *FirstPartyVulnRepository_All_Call {
 	return &FirstPartyVulnRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -200,7 +200,7 @@ type FirstPartyVulnRepository_ApplyAndSave_Call struct {
 //   - tx shared.DB
 //   - dependencyVuln *models.FirstPartyVuln
 //   - vulnEvent *models.VulnEvent
-func (_e *FirstPartyVulnRepository_Expecter) ApplyAndSave(ctx any, tx any, dependencyVuln any, vulnEvent any) *FirstPartyVulnRepository_ApplyAndSave_Call {
+func (_e *FirstPartyVulnRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *FirstPartyVulnRepository_ApplyAndSave_Call {
 	return &FirstPartyVulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, dependencyVuln, vulnEvent)}
 }
 
@@ -268,7 +268,7 @@ type FirstPartyVulnRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *FirstPartyVulnRepository_Expecter) Begin(ctx any) *FirstPartyVulnRepository_Begin_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Begin(ctx interface{}) *FirstPartyVulnRepository_Begin_Call {
 	return &FirstPartyVulnRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -319,7 +319,7 @@ type FirstPartyVulnRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *FirstPartyVulnRepository_Expecter) CleanupOrphanedRecords(ctx any) *FirstPartyVulnRepository_CleanupOrphanedRecords_Call {
+func (_e *FirstPartyVulnRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *FirstPartyVulnRepository_CleanupOrphanedRecords_Call {
 	return &FirstPartyVulnRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -372,7 +372,7 @@ type FirstPartyVulnRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.FirstPartyVuln
-func (_e *FirstPartyVulnRepository_Expecter) Create(ctx any, tx any, t any) *FirstPartyVulnRepository_Create_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *FirstPartyVulnRepository_Create_Call {
 	return &FirstPartyVulnRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -435,7 +435,7 @@ type FirstPartyVulnRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.FirstPartyVuln
-func (_e *FirstPartyVulnRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *FirstPartyVulnRepository_CreateBatch_Call {
+func (_e *FirstPartyVulnRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *FirstPartyVulnRepository_CreateBatch_Call {
 	return &FirstPartyVulnRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -498,7 +498,7 @@ type FirstPartyVulnRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) Delete(ctx any, tx any, id any) *FirstPartyVulnRepository_Delete_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *FirstPartyVulnRepository_Delete_Call {
 	return &FirstPartyVulnRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -561,7 +561,7 @@ type FirstPartyVulnRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.FirstPartyVuln
-func (_e *FirstPartyVulnRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *FirstPartyVulnRepository_DeleteBatch_Call {
+func (_e *FirstPartyVulnRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *FirstPartyVulnRepository_DeleteBatch_Call {
 	return &FirstPartyVulnRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -635,7 +635,7 @@ type FirstPartyVulnRepository_GetByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) GetByAssetID(ctx any, tx any, assetID any) *FirstPartyVulnRepository_GetByAssetID_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetID_Call {
 	return &FirstPartyVulnRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
 }
 
@@ -710,7 +710,7 @@ type FirstPartyVulnRepository_GetByAssetVersion_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersion(ctx any, tx any, assetVersionName any, assetID any) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersion(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetVersion_Call {
 	return &FirstPartyVulnRepository_GetByAssetVersion_Call{Call: _e.mock.On("GetByAssetVersion", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -800,7 +800,7 @@ type FirstPartyVulnRepository_GetByAssetVersionPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersionPaged(ctx any, tx any, assetVersionName any, assetID any, pageInfo any, search any, filter any, sort any) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersionPaged(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	return &FirstPartyVulnRepository_GetByAssetVersionPaged_Call{Call: _e.mock.On("GetByAssetVersionPaged", ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)}
 }
 
@@ -889,7 +889,7 @@ type FirstPartyVulnRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *FirstPartyVulnRepository_Expecter) GetDB(ctx any, tx any) *FirstPartyVulnRepository_GetDB_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *FirstPartyVulnRepository_GetDB_Call {
 	return &FirstPartyVulnRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -960,7 +960,7 @@ type FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call struct 
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByOrgIDPaged(ctx any, tx any, userAllowedProjectIds any, pageInfo any, search any, filter any, sort any) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByOrgIDPaged(ctx interface{}, tx interface{}, userAllowedProjectIds interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
 	return &FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call{Call: _e.mock.On("GetDefaultFirstPartyVulnsByOrgIDPaged", ctx, tx, userAllowedProjectIds, pageInfo, search, filter, sort)}
 }
 
@@ -1056,7 +1056,7 @@ type FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call str
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByProjectIDPaged(ctx any, tx any, projectID any, pageInfo any, search any, filter any, sort any) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByProjectIDPaged(ctx interface{}, tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call {
 	return &FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call{Call: _e.mock.On("GetDefaultFirstPartyVulnsByProjectIDPaged", ctx, tx, projectID, pageInfo, search, filter, sort)}
 }
 
@@ -1152,7 +1152,7 @@ type FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call struct
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scannerID string
-func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByOtherAssetVersions(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByOtherAssetVersions(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
 	return &FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetFirstPartyVulnsByOtherAssetVersions", ctx, tx, assetVersionName, assetID, scannerID)}
 }
 
@@ -1237,7 +1237,7 @@ type FirstPartyVulnRepository_GetOpenByAssetVersion_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) GetOpenByAssetVersion(ctx any, tx any, assetVersionName any, assetID any) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+func (_e *FirstPartyVulnRepository_Expecter) GetOpenByAssetVersion(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
 	return &FirstPartyVulnRepository_GetOpenByAssetVersion_Call{Call: _e.mock.On("GetOpenByAssetVersion", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -1307,7 +1307,7 @@ type FirstPartyVulnRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *FirstPartyVulnRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *FirstPartyVulnRepository_InBatches_Call {
+func (_e *FirstPartyVulnRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *FirstPartyVulnRepository_InBatches_Call {
 	return &FirstPartyVulnRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1381,7 +1381,7 @@ type FirstPartyVulnRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) List(ctx any, tx any, ids any) *FirstPartyVulnRepository_List_Call {
+func (_e *FirstPartyVulnRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *FirstPartyVulnRepository_List_Call {
 	return &FirstPartyVulnRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1457,7 +1457,7 @@ type FirstPartyVulnRepository_ListByScanner_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scannerID string
-func (_e *FirstPartyVulnRepository_Expecter) ListByScanner(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *FirstPartyVulnRepository_ListByScanner_Call {
+func (_e *FirstPartyVulnRepository_Expecter) ListByScanner(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_ListByScanner_Call {
 	return &FirstPartyVulnRepository_ListByScanner_Call{Call: _e.mock.On("ListByScanner", ctx, tx, assetVersionName, assetID, scannerID)}
 }
 
@@ -1543,7 +1543,7 @@ type FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call s
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scannerID string
-func (_e *FirstPartyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScanner(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+func (_e *FirstPartyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScanner(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
 	return &FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndScanner", ctx, tx, assetVersionName, assetID, scannerID)}
 }
 
@@ -1625,7 +1625,7 @@ type FirstPartyVulnRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) Read(ctx any, tx any, id any) *FirstPartyVulnRepository_Read_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *FirstPartyVulnRepository_Read_Call {
 	return &FirstPartyVulnRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1688,7 +1688,7 @@ type FirstPartyVulnRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.FirstPartyVuln
-func (_e *FirstPartyVulnRepository_Expecter) Save(ctx any, tx any, t any) *FirstPartyVulnRepository_Save_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *FirstPartyVulnRepository_Save_Call {
 	return &FirstPartyVulnRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1751,7 +1751,7 @@ type FirstPartyVulnRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.FirstPartyVuln
-func (_e *FirstPartyVulnRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *FirstPartyVulnRepository_SaveBatch_Call {
+func (_e *FirstPartyVulnRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *FirstPartyVulnRepository_SaveBatch_Call {
 	return &FirstPartyVulnRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1788,69 +1788,6 @@ func (_c *FirstPartyVulnRepository_SaveBatch_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.FirstPartyVuln) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.FirstPartyVuln) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// FirstPartyVulnRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type FirstPartyVulnRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.FirstPartyVuln
-func (_e *FirstPartyVulnRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
-	return &FirstPartyVulnRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *FirstPartyVulnRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.FirstPartyVuln)) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.FirstPartyVuln
-		if args[2] != nil {
-			arg2 = args[2].([]models.FirstPartyVuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *FirstPartyVulnRepository_SaveBatchBestEffort_Call) Return(err error) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *FirstPartyVulnRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.FirstPartyVuln) error) *FirstPartyVulnRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type FirstPartyVulnRepository
 func (_mock *FirstPartyVulnRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1876,7 +1813,7 @@ type FirstPartyVulnRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *FirstPartyVulnRepository_Expecter) Transaction(ctx any, fn any) *FirstPartyVulnRepository_Transaction_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *FirstPartyVulnRepository_Transaction_Call {
 	return &FirstPartyVulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1936,7 +1873,7 @@ type FirstPartyVulnRepository_Upsert_Call struct {
 //   - t *[]*models.FirstPartyVuln
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *FirstPartyVulnRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *FirstPartyVulnRepository_Upsert_Call {
+func (_e *FirstPartyVulnRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *FirstPartyVulnRepository_Upsert_Call {
 	return &FirstPartyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

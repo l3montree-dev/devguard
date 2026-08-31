@@ -77,7 +77,7 @@ type ExternalUserRepository_FindByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *ExternalUserRepository_Expecter) FindByOrgID(ctx any, tx any, orgID any) *ExternalUserRepository_FindByOrgID_Call {
+func (_e *ExternalUserRepository_Expecter) FindByOrgID(ctx interface{}, tx interface{}, orgID interface{}) *ExternalUserRepository_FindByOrgID_Call {
 	return &ExternalUserRepository_FindByOrgID_Call{Call: _e.mock.On("FindByOrgID", ctx, tx, orgID)}
 }
 
@@ -141,7 +141,7 @@ type ExternalUserRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ExternalUserRepository_Expecter) GetDB(ctx any, tx any) *ExternalUserRepository_GetDB_Call {
+func (_e *ExternalUserRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ExternalUserRepository_GetDB_Call {
 	return &ExternalUserRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type ExternalUserRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - user *models.ExternalUser
-func (_e *ExternalUserRepository_Expecter) Save(ctx any, tx any, user any) *ExternalUserRepository_Save_Call {
+func (_e *ExternalUserRepository_Expecter) Save(ctx interface{}, tx interface{}, user interface{}) *ExternalUserRepository_Save_Call {
 	return &ExternalUserRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, user)}
 }
 

@@ -68,7 +68,7 @@ type ArtifactRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ArtifactRepository_Expecter) Activate(ctx any, tx any, id any) *ArtifactRepository_Activate_Call {
+func (_e *ArtifactRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *ArtifactRepository_Activate_Call {
 	return &ArtifactRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type ArtifactRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ArtifactRepository_Expecter) All(ctx any, tx any) *ArtifactRepository_All_Call {
+func (_e *ArtifactRepository_Expecter) All(ctx interface{}, tx interface{}) *ArtifactRepository_All_Call {
 	return &ArtifactRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type ArtifactRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ArtifactRepository_Expecter) Begin(ctx any) *ArtifactRepository_Begin_Call {
+func (_e *ArtifactRepository_Expecter) Begin(ctx interface{}) *ArtifactRepository_Begin_Call {
 	return &ArtifactRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type ArtifactRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ArtifactRepository_Expecter) CleanupOrphanedRecords(ctx any) *ArtifactRepository_CleanupOrphanedRecords_Call {
+func (_e *ArtifactRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *ArtifactRepository_CleanupOrphanedRecords_Call {
 	return &ArtifactRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type ArtifactRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Artifact
-func (_e *ArtifactRepository_Expecter) Create(ctx any, tx any, t any) *ArtifactRepository_Create_Call {
+func (_e *ArtifactRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *ArtifactRepository_Create_Call {
 	return &ArtifactRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type ArtifactRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Artifact
-func (_e *ArtifactRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *ArtifactRepository_CreateBatch_Call {
+func (_e *ArtifactRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *ArtifactRepository_CreateBatch_Call {
 	return &ArtifactRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type ArtifactRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ArtifactRepository_Expecter) Delete(ctx any, tx any, id any) *ArtifactRepository_Delete_Call {
+func (_e *ArtifactRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *ArtifactRepository_Delete_Call {
 	return &ArtifactRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -494,7 +494,7 @@ type ArtifactRepository_DeleteArtifact_Call struct {
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - artifactName string
-func (_e *ArtifactRepository_Expecter) DeleteArtifact(ctx any, tx any, assetID any, assetVersionName any, artifactName any) *ArtifactRepository_DeleteArtifact_Call {
+func (_e *ArtifactRepository_Expecter) DeleteArtifact(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactRepository_DeleteArtifact_Call {
 	return &ArtifactRepository_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", ctx, tx, assetID, assetVersionName, artifactName)}
 }
 
@@ -567,7 +567,7 @@ type ArtifactRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Artifact
-func (_e *ArtifactRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *ArtifactRepository_DeleteBatch_Call {
+func (_e *ArtifactRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *ArtifactRepository_DeleteBatch_Call {
 	return &ArtifactRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -641,7 +641,7 @@ type ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vulnID uuid.UUID
-func (_e *ArtifactRepository_Expecter) GetAllArtifactAffectedByDependencyVuln(ctx any, tx any, vulnID any) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
+func (_e *ArtifactRepository_Expecter) GetAllArtifactAffectedByDependencyVuln(ctx interface{}, tx interface{}, vulnID interface{}) *ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call {
 	return &ArtifactRepository_GetAllArtifactAffectedByDependencyVuln_Call{Call: _e.mock.On("GetAllArtifactAffectedByDependencyVuln", ctx, tx, vulnID)}
 }
 
@@ -715,7 +715,7 @@ type ArtifactRepository_GetByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *ArtifactRepository_Expecter) GetByAssetID(ctx any, tx any, assetID any) *ArtifactRepository_GetByAssetID_Call {
+func (_e *ArtifactRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *ArtifactRepository_GetByAssetID_Call {
 	return &ArtifactRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
 }
 
@@ -790,7 +790,7 @@ type ArtifactRepository_GetByAssetIDAndAssetVersionName_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
-func (_e *ArtifactRepository_Expecter) GetByAssetIDAndAssetVersionName(ctx any, tx any, assetID any, assetVersionName any) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
+func (_e *ArtifactRepository_Expecter) GetByAssetIDAndAssetVersionName(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *ArtifactRepository_GetByAssetIDAndAssetVersionName_Call {
 	return &ArtifactRepository_GetByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetByAssetIDAndAssetVersionName", ctx, tx, assetID, assetVersionName)}
 }
 
@@ -869,7 +869,7 @@ type ArtifactRepository_GetByAssetIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetIDs []uuid.UUID
-func (_e *ArtifactRepository_Expecter) GetByAssetIDs(ctx any, tx any, assetIDs any) *ArtifactRepository_GetByAssetIDs_Call {
+func (_e *ArtifactRepository_Expecter) GetByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}) *ArtifactRepository_GetByAssetIDs_Call {
 	return &ArtifactRepository_GetByAssetIDs_Call{Call: _e.mock.On("GetByAssetIDs", ctx, tx, assetIDs)}
 }
 
@@ -944,7 +944,7 @@ type ArtifactRepository_GetByAssetVersions_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionNames []string
-func (_e *ArtifactRepository_Expecter) GetByAssetVersions(ctx any, tx any, assetID any, assetVersionNames any) *ArtifactRepository_GetByAssetVersions_Call {
+func (_e *ArtifactRepository_Expecter) GetByAssetVersions(ctx interface{}, tx interface{}, assetID interface{}, assetVersionNames interface{}) *ArtifactRepository_GetByAssetVersions_Call {
 	return &ArtifactRepository_GetByAssetVersions_Call{Call: _e.mock.On("GetByAssetVersions", ctx, tx, assetID, assetVersionNames)}
 }
 
@@ -1013,7 +1013,7 @@ type ArtifactRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ArtifactRepository_Expecter) GetDB(ctx any, tx any) *ArtifactRepository_GetDB_Call {
+func (_e *ArtifactRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ArtifactRepository_GetDB_Call {
 	return &ArtifactRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1073,7 +1073,7 @@ type ArtifactRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *ArtifactRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *ArtifactRepository_InBatches_Call {
+func (_e *ArtifactRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *ArtifactRepository_InBatches_Call {
 	return &ArtifactRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1147,7 +1147,7 @@ type ArtifactRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *ArtifactRepository_Expecter) List(ctx any, tx any, ids any) *ArtifactRepository_List_Call {
+func (_e *ArtifactRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *ArtifactRepository_List_Call {
 	return &ArtifactRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1219,7 +1219,7 @@ type ArtifactRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ArtifactRepository_Expecter) Read(ctx any, tx any, id any) *ArtifactRepository_Read_Call {
+func (_e *ArtifactRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *ArtifactRepository_Read_Call {
 	return &ArtifactRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1293,7 +1293,7 @@ type ArtifactRepository_ReadArtifact_Call struct {
 //   - name string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *ArtifactRepository_Expecter) ReadArtifact(ctx any, tx any, name any, assetVersionName any, assetID any) *ArtifactRepository_ReadArtifact_Call {
+func (_e *ArtifactRepository_Expecter) ReadArtifact(ctx interface{}, tx interface{}, name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactRepository_ReadArtifact_Call {
 	return &ArtifactRepository_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", ctx, tx, name, assetVersionName, assetID)}
 }
 
@@ -1366,7 +1366,7 @@ type ArtifactRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Artifact
-func (_e *ArtifactRepository_Expecter) Save(ctx any, tx any, t any) *ArtifactRepository_Save_Call {
+func (_e *ArtifactRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *ArtifactRepository_Save_Call {
 	return &ArtifactRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1429,7 +1429,7 @@ type ArtifactRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Artifact
-func (_e *ArtifactRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *ArtifactRepository_SaveBatch_Call {
+func (_e *ArtifactRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *ArtifactRepository_SaveBatch_Call {
 	return &ArtifactRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1466,69 +1466,6 @@ func (_c *ArtifactRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type ArtifactRepository
-func (_mock *ArtifactRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Artifact) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Artifact) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ArtifactRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type ArtifactRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.Artifact
-func (_e *ArtifactRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *ArtifactRepository_SaveBatchBestEffort_Call {
-	return &ArtifactRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Artifact)) *ArtifactRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.Artifact
-		if args[2] != nil {
-			arg2 = args[2].([]models.Artifact)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRepository_SaveBatchBestEffort_Call) Return(err error) *ArtifactRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ArtifactRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Artifact) error) *ArtifactRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type ArtifactRepository
 func (_mock *ArtifactRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1554,7 +1491,7 @@ type ArtifactRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *ArtifactRepository_Expecter) Transaction(ctx any, fn any) *ArtifactRepository_Transaction_Call {
+func (_e *ArtifactRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *ArtifactRepository_Transaction_Call {
 	return &ArtifactRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1614,7 +1551,7 @@ type ArtifactRepository_Upsert_Call struct {
 //   - t *[]*models.Artifact
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *ArtifactRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *ArtifactRepository_Upsert_Call {
+func (_e *ArtifactRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ArtifactRepository_Upsert_Call {
 	return &ArtifactRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

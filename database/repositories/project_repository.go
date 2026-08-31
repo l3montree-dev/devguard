@@ -56,7 +56,7 @@ func (g *projectRepository) GetProjectByAssetID(ctx context.Context, tx *gorm.DB
 
 func (g *projectRepository) GetByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("ID IN ?", projectIDs).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("ID = ANY (?)", pq.Array(projectIDs)).Find(&projects).Error
 	return projects, err
 }
 
@@ -294,7 +294,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 		Where("project_id = ?", parentID)
 
 	if len(allowedAssetIDs) > 0 {
-		assetQuery = assetQuery.Where("id IN ? OR is_public = true", allowedAssetIDs)
+		assetQuery = assetQuery.Where("id = ANY (?) OR is_public = true", pq.Array(allowedAssetIDs))
 	} else {
 		assetQuery = assetQuery.Where("is_public = true")
 	}
@@ -304,7 +304,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 		Where("parent_id = ?", parentID)
 
 	if len(allowedProjectIDs) > 0 {
-		projectQuery = projectQuery.Where("id IN ? OR (organization_id = ? AND is_public = true)", allowedProjectIDs, orgID)
+		projectQuery = projectQuery.Where("id = ANY (?) OR (organization_id = ? AND is_public = true)", pq.Array(allowedProjectIDs), orgID)
 	} else {
 		projectQuery = projectQuery.Where("organization_id = ? AND is_public = true", orgID)
 	}
@@ -369,12 +369,12 @@ func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectI
 	var q *gorm.DB
 	if parentID != nil {
 		q = g.GetDB(ctx, tx).Model(&models.Project{}).Where(
-			g.GetDB(ctx, tx).Where("id IN ? AND parent_id = ?", projectIDs, parentID).
+			g.GetDB(ctx, tx).Where("id = ANY (?) AND parent_id = ?", pq.Array(projectIDs), parentID).
 				Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID),
 		)
 	} else {
 		q = g.GetDB(ctx, tx).Model(&models.Project{}).Where(
-			g.GetDB(ctx, tx).Where("id IN ? AND parent_id IS NULL", projectIDs).
+			g.GetDB(ctx, tx).Where("id = ANY (?) AND parent_id IS NULL", pq.Array(projectIDs)).
 				Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID),
 		)
 	}
@@ -429,10 +429,10 @@ func (g *projectRepository) ListPaged(ctx context.Context, tx *gorm.DB, projectI
 func (g *projectRepository) List(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	if parentID != nil {
-		err := g.GetDB(ctx, tx).Where("id IN ? AND parent_id = ?", projectIDs, parentID).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID).Find(&projects).Error
+		err := g.GetDB(ctx, tx).Where("id = ANY (?) AND parent_id = ?", pq.Array(projectIDs), parentID).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID).Find(&projects).Error
 		return projects, err
 	}
-	err := g.GetDB(ctx, tx).Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Where("id = ANY (?) AND parent_id IS NULL", pq.Array(projectIDs)).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
 	return projects, err
 }
 
@@ -467,7 +467,7 @@ func (g *projectRepository) GetDirectChildProjectsWithProviderID(ctx context.Con
 
 func (g *projectRepository) GetChildProjectsForParents(ctx context.Context, tx *gorm.DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.GetDB(ctx, tx).Where("parent_id IN ? AND external_entity_provider_id = ?", parentIDs, providerID).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Where("parent_id = ANY (?) AND external_entity_provider_id = ?", pq.Array(parentIDs), providerID).Find(&projects).Error
 	return projects, err
 }
 
@@ -510,7 +510,7 @@ func (g *projectRepository) Create(ctx context.Context, tx *gorm.DB, project *mo
 func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
 	var existingProjects []models.Project
-	err := g.GetDB(ctx, tx).Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error
+	err := g.GetDB(ctx, tx).Where("external_entity_id = ANY (?) AND external_entity_provider_id = ?", pq.Array(utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID })), externalProviderID).Find(&existingProjects).Error
 	if err != nil {
 		return nil, nil, err
 	}

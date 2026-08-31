@@ -75,7 +75,7 @@ type SBOMScanner_Scan_Call struct {
 // Scan is a helper method to define mock.On call
 //   - ctx context.Context
 //   - bom *normalize.SBOMGraph
-func (_e *SBOMScanner_Expecter) Scan(ctx any, bom any) *SBOMScanner_Scan_Call {
+func (_e *SBOMScanner_Expecter) Scan(ctx interface{}, bom interface{}) *SBOMScanner_Scan_Call {
 	return &SBOMScanner_Scan_Call{Call: _e.mock.On("Scan", ctx, bom)}
 }
 

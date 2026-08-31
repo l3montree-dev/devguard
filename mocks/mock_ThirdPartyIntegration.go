@@ -66,7 +66,7 @@ type ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call struct {
 //   - ctx context.Context
 //   - asset models.Asset
 //   - vulnsWithTickets []models.DependencyVuln
-func (_e *ThirdPartyIntegration_Expecter) CompareIssueStatesAndResolveDifferences(ctx any, asset any, vulnsWithTickets any) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
+func (_e *ThirdPartyIntegration_Expecter) CompareIssueStatesAndResolveDifferences(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call {
 	return &ThirdPartyIntegration_CompareIssueStatesAndResolveDifferences_Call{Call: _e.mock.On("CompareIssueStatesAndResolveDifferences", ctx, asset, vulnsWithTickets)}
 }
 
@@ -135,7 +135,7 @@ type ThirdPartyIntegration_CreateIssue_Call struct {
 //   - justification string
 //   - userID string
 //   - userAgent *string
-func (_e *ThirdPartyIntegration_Expecter) CreateIssue(ctx any, asset any, assetVersionName any, vuln any, projectSlug any, orgSlug any, justification any, userID any, userAgent any) *ThirdPartyIntegration_CreateIssue_Call {
+func (_e *ThirdPartyIntegration_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, vuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, userID interface{}, userAgent interface{}) *ThirdPartyIntegration_CreateIssue_Call {
 	return &ThirdPartyIntegration_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID, userAgent)}
 }
 
@@ -227,7 +227,7 @@ type ThirdPartyIntegration_CreateLabels_Call struct {
 // CreateLabels is a helper method to define mock.On call
 //   - ctx context.Context
 //   - asset models.Asset
-func (_e *ThirdPartyIntegration_Expecter) CreateLabels(ctx any, asset any) *ThirdPartyIntegration_CreateLabels_Call {
+func (_e *ThirdPartyIntegration_Expecter) CreateLabels(ctx interface{}, asset interface{}) *ThirdPartyIntegration_CreateLabels_Call {
 	return &ThirdPartyIntegration_CreateLabels_Call{Call: _e.mock.On("CreateLabels", ctx, asset)}
 }
 
@@ -296,7 +296,7 @@ type ThirdPartyIntegration_GetExcessTicketIDs_Call struct {
 //   - ctx context.Context
 //   - asset models.Asset
 //   - vulnsWithTickets []models.DependencyVuln
-func (_e *ThirdPartyIntegration_Expecter) GetExcessTicketIDs(ctx any, asset any, vulnsWithTickets any) *ThirdPartyIntegration_GetExcessTicketIDs_Call {
+func (_e *ThirdPartyIntegration_Expecter) GetExcessTicketIDs(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *ThirdPartyIntegration_GetExcessTicketIDs_Call {
 	return &ThirdPartyIntegration_GetExcessTicketIDs_Call{Call: _e.mock.On("GetExcessTicketIDs", ctx, asset, vulnsWithTickets)}
 }
 
@@ -403,7 +403,7 @@ type ThirdPartyIntegration_HandleEvent_Call struct {
 //   - ctx context.Context
 //   - event any
 //   - userAgent *string
-func (_e *ThirdPartyIntegration_Expecter) HandleEvent(ctx any, event any, userAgent any) *ThirdPartyIntegration_HandleEvent_Call {
+func (_e *ThirdPartyIntegration_Expecter) HandleEvent(ctx interface{}, event interface{}, userAgent interface{}) *ThirdPartyIntegration_HandleEvent_Call {
 	return &ThirdPartyIntegration_HandleEvent_Call{Call: _e.mock.On("HandleEvent", ctx, event, userAgent)}
 }
 
@@ -464,7 +464,7 @@ type ThirdPartyIntegration_HandleWebhook_Call struct {
 
 // HandleWebhook is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *ThirdPartyIntegration_Expecter) HandleWebhook(ctx any) *ThirdPartyIntegration_HandleWebhook_Call {
+func (_e *ThirdPartyIntegration_Expecter) HandleWebhook(ctx interface{}) *ThirdPartyIntegration_HandleWebhook_Call {
 	return &ThirdPartyIntegration_HandleWebhook_Call{Call: _e.mock.On("HandleWebhook", ctx)}
 }
 
@@ -536,7 +536,7 @@ type ThirdPartyIntegration_ListGroups_Call struct {
 //   - ctx context.Context
 //   - userID string
 //   - providerID string
-func (_e *ThirdPartyIntegration_Expecter) ListGroups(ctx any, userID any, providerID any) *ThirdPartyIntegration_ListGroups_Call {
+func (_e *ThirdPartyIntegration_Expecter) ListGroups(ctx interface{}, userID interface{}, providerID interface{}) *ThirdPartyIntegration_ListGroups_Call {
 	return &ThirdPartyIntegration_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, userID, providerID)}
 }
 
@@ -608,7 +608,7 @@ type ThirdPartyIntegration_ListOrgs_Call struct {
 
 // ListOrgs is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *ThirdPartyIntegration_Expecter) ListOrgs(ctx any) *ThirdPartyIntegration_ListOrgs_Call {
+func (_e *ThirdPartyIntegration_Expecter) ListOrgs(ctx interface{}) *ThirdPartyIntegration_ListOrgs_Call {
 	return &ThirdPartyIntegration_ListOrgs_Call{Call: _e.mock.On("ListOrgs", ctx)}
 }
 
@@ -681,7 +681,7 @@ type ThirdPartyIntegration_ListProjects_Call struct {
 //   - userID string
 //   - providerID string
 //   - groupID string
-func (_e *ThirdPartyIntegration_Expecter) ListProjects(ctx any, userID any, providerID any, groupID any) *ThirdPartyIntegration_ListProjects_Call {
+func (_e *ThirdPartyIntegration_Expecter) ListProjects(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *ThirdPartyIntegration_ListProjects_Call {
 	return &ThirdPartyIntegration_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, userID, providerID, groupID)}
 }
 
@@ -758,7 +758,7 @@ type ThirdPartyIntegration_ListRepositories_Call struct {
 
 // ListRepositories is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *ThirdPartyIntegration_Expecter) ListRepositories(ctx any) *ThirdPartyIntegration_ListRepositories_Call {
+func (_e *ThirdPartyIntegration_Expecter) ListRepositories(ctx interface{}) *ThirdPartyIntegration_ListRepositories_Call {
 	return &ThirdPartyIntegration_ListRepositories_Call{Call: _e.mock.On("ListRepositories", ctx)}
 }
 
@@ -813,7 +813,7 @@ type ThirdPartyIntegration_UpdateIssue_Call struct {
 //   - assetVersionSlug string
 //   - vuln models.Vuln
 //   - userAgent *string
-func (_e *ThirdPartyIntegration_Expecter) UpdateIssue(ctx any, asset any, assetVersionSlug any, vuln any, userAgent any) *ThirdPartyIntegration_UpdateIssue_Call {
+func (_e *ThirdPartyIntegration_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}, userAgent interface{}) *ThirdPartyIntegration_UpdateIssue_Call {
 	return &ThirdPartyIntegration_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln, userAgent)}
 }
 
@@ -884,7 +884,7 @@ type ThirdPartyIntegration_WantsToHandleWebhook_Call struct {
 
 // WantsToHandleWebhook is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *ThirdPartyIntegration_Expecter) WantsToHandleWebhook(ctx any) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
+func (_e *ThirdPartyIntegration_Expecter) WantsToHandleWebhook(ctx interface{}) *ThirdPartyIntegration_WantsToHandleWebhook_Call {
 	return &ThirdPartyIntegration_WantsToHandleWebhook_Call{Call: _e.mock.On("WantsToHandleWebhook", ctx)}
 }
 

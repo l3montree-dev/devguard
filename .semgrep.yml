@@ -1,15 +1,15 @@
 # Copyright (C) 2025 l3montree GmbH
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
 # published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -606,3 +606,20 @@ rules:
             withOwnershipScope(...)
             ...
           }
+  - id: sql-use-of-where-in
+    message: |
+      "WHERE <var> IN ?" with a slice expands into one bind parameter per element
+      ($1, $2, ...) and can hit the PostgreSQL protocol's 65535-parameter limit on
+      large inputs. Use "WHERE <var> = ANY(?)" instead — the slice is sent as a
+      single array parameter, avoiding the limit altogether. Note that you then 
+      have to convert the slice into an array using pq.Array(). Subqueries are fine.
+    languages: [go]
+    severity: ERROR
+    paths:
+      include:
+        - "*.go"
+    patterns:
+      - pattern: $STATEMENT.Where("$WHERE_CLAUSE",...)
+      - metavariable-regex:
+          metavariable: $WHERE_CLAUSE
+          regex: (?i).*\bIN\s*\(?\s*\?

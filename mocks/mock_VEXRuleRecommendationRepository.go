@@ -68,7 +68,7 @@ type VEXRuleRecommendationRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *VEXRuleRecommendationRepository_Expecter) Activate(ctx any, tx any, id any) *VEXRuleRecommendationRepository_Activate_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *VEXRuleRecommendationRepository_Activate_Call {
 	return &VEXRuleRecommendationRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type VEXRuleRecommendationRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *VEXRuleRecommendationRepository_Expecter) All(ctx any, tx any) *VEXRuleRecommendationRepository_All_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) All(ctx interface{}, tx interface{}) *VEXRuleRecommendationRepository_All_Call {
 	return &VEXRuleRecommendationRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type VEXRuleRecommendationRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *VEXRuleRecommendationRepository_Expecter) Begin(ctx any) *VEXRuleRecommendationRepository_Begin_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Begin(ctx interface{}) *VEXRuleRecommendationRepository_Begin_Call {
 	return &VEXRuleRecommendationRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type VEXRuleRecommendationRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *VEXRuleRecommendationRepository_Expecter) CleanupOrphanedRecords(ctx any) *VEXRuleRecommendationRepository_CleanupOrphanedRecords_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *VEXRuleRecommendationRepository_CleanupOrphanedRecords_Call {
 	return &VEXRuleRecommendationRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type VEXRuleRecommendationRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) Create(ctx any, tx any, t any) *VEXRuleRecommendationRepository_Create_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *VEXRuleRecommendationRepository_Create_Call {
 	return &VEXRuleRecommendationRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type VEXRuleRecommendationRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - recommendations []models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) CreateBatch(ctx any, tx any, recommendations any) *VEXRuleRecommendationRepository_CreateBatch_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, recommendations interface{}) *VEXRuleRecommendationRepository_CreateBatch_Call {
 	return &VEXRuleRecommendationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, recommendations)}
 }
 
@@ -429,7 +429,7 @@ type VEXRuleRecommendationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *VEXRuleRecommendationRepository_Expecter) Delete(ctx any, tx any, id any) *VEXRuleRecommendationRepository_Delete_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *VEXRuleRecommendationRepository_Delete_Call {
 	return &VEXRuleRecommendationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -491,7 +491,7 @@ type VEXRuleRecommendationRepository_DeleteAll_Call struct {
 // DeleteAll is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *VEXRuleRecommendationRepository_Expecter) DeleteAll(ctx any, tx any) *VEXRuleRecommendationRepository_DeleteAll_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) DeleteAll(ctx interface{}, tx interface{}) *VEXRuleRecommendationRepository_DeleteAll_Call {
 	return &VEXRuleRecommendationRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", ctx, tx)}
 }
 
@@ -549,7 +549,7 @@ type VEXRuleRecommendationRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *VEXRuleRecommendationRepository_DeleteBatch_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *VEXRuleRecommendationRepository_DeleteBatch_Call {
 	return &VEXRuleRecommendationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -621,7 +621,7 @@ type VEXRuleRecommendationRepository_FindByDependencyVulnID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - dependencyVulnID uuid.UUID
-func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnID(ctx any, tx any, dependencyVulnID any) *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnID(ctx interface{}, tx interface{}, dependencyVulnID interface{}) *VEXRuleRecommendationRepository_FindByDependencyVulnID_Call {
 	return &VEXRuleRecommendationRepository_FindByDependencyVulnID_Call{Call: _e.mock.On("FindByDependencyVulnID", ctx, tx, dependencyVulnID)}
 }
 
@@ -698,7 +698,7 @@ type VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_C
 //   - search string
 //   - filterQuery []shared.FilterQuery
 //   - sortQuery []shared.SortQuery
-func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx any, tx any, dependencyVulnIDs any, vexRuleIDs any, pageInfo any, search any, filterQuery any, sortQuery any) *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) FindByDependencyVulnIDsAndVexRuleIDsPaged(ctx interface{}, tx interface{}, dependencyVulnIDs interface{}, vexRuleIDs interface{}, pageInfo interface{}, search interface{}, filterQuery interface{}, sortQuery interface{}) *VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call {
 	return &VEXRuleRecommendationRepository_FindByDependencyVulnIDsAndVexRuleIDsPaged_Call{Call: _e.mock.On("FindByDependencyVulnIDsAndVexRuleIDsPaged", ctx, tx, dependencyVulnIDs, vexRuleIDs, pageInfo, search, filterQuery, sortQuery)}
 }
 
@@ -787,7 +787,7 @@ type VEXRuleRecommendationRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *VEXRuleRecommendationRepository_Expecter) GetDB(ctx any, tx any) *VEXRuleRecommendationRepository_GetDB_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *VEXRuleRecommendationRepository_GetDB_Call {
 	return &VEXRuleRecommendationRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -847,7 +847,7 @@ type VEXRuleRecommendationRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *VEXRuleRecommendationRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *VEXRuleRecommendationRepository_InBatches_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *VEXRuleRecommendationRepository_InBatches_Call {
 	return &VEXRuleRecommendationRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -921,7 +921,7 @@ type VEXRuleRecommendationRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *VEXRuleRecommendationRepository_Expecter) List(ctx any, tx any, ids any) *VEXRuleRecommendationRepository_List_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *VEXRuleRecommendationRepository_List_Call {
 	return &VEXRuleRecommendationRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -993,7 +993,7 @@ type VEXRuleRecommendationRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *VEXRuleRecommendationRepository_Expecter) Read(ctx any, tx any, id any) *VEXRuleRecommendationRepository_Read_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *VEXRuleRecommendationRepository_Read_Call {
 	return &VEXRuleRecommendationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1056,7 +1056,7 @@ type VEXRuleRecommendationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) Save(ctx any, tx any, t any) *VEXRuleRecommendationRepository_Save_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *VEXRuleRecommendationRepository_Save_Call {
 	return &VEXRuleRecommendationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1119,7 +1119,7 @@ type VEXRuleRecommendationRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *VEXRuleRecommendationRepository_SaveBatch_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *VEXRuleRecommendationRepository_SaveBatch_Call {
 	return &VEXRuleRecommendationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1156,69 +1156,6 @@ func (_c *VEXRuleRecommendationRepository_SaveBatch_Call) RunAndReturn(run func(
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type VEXRuleRecommendationRepository
-func (_mock *VEXRuleRecommendationRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.VEXRuleRecommendation) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.VEXRuleRecommendation) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// VEXRuleRecommendationRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type VEXRuleRecommendationRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.VEXRuleRecommendation
-func (_e *VEXRuleRecommendationRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call {
-	return &VEXRuleRecommendationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.VEXRuleRecommendation)) *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.VEXRuleRecommendation
-		if args[2] != nil {
-			arg2 = args[2].([]models.VEXRuleRecommendation)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call) Return(err error) *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.VEXRuleRecommendation) error) *VEXRuleRecommendationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type VEXRuleRecommendationRepository
 func (_mock *VEXRuleRecommendationRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1244,7 +1181,7 @@ type VEXRuleRecommendationRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *VEXRuleRecommendationRepository_Expecter) Transaction(ctx any, fn any) *VEXRuleRecommendationRepository_Transaction_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *VEXRuleRecommendationRepository_Transaction_Call {
 	return &VEXRuleRecommendationRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1304,7 +1241,7 @@ type VEXRuleRecommendationRepository_Upsert_Call struct {
 //   - t *[]*models.VEXRuleRecommendation
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *VEXRuleRecommendationRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *VEXRuleRecommendationRepository_Upsert_Call {
+func (_e *VEXRuleRecommendationRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *VEXRuleRecommendationRepository_Upsert_Call {
 	return &VEXRuleRecommendationRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

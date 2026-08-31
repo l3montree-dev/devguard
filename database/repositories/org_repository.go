@@ -23,6 +23,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -69,7 +70,7 @@ func (g *orgRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, slug string
 
 func (g *orgRepository) List(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.Org, error) {
 	var ts []models.Org
-	err := g.GetDB(ctx, tx).Model(models.Org{}).Preload("GithubAppInstallations").Where("id IN ?", ids).Find(&ts).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Preload("GithubAppInstallations").Where("id = ANY (?)", pq.Array(ids)).Find(&ts).Error
 	return ts, err
 }
 
@@ -80,7 +81,7 @@ func (g *orgRepository) Update(ctx context.Context, tx *gorm.DB, org *models.Org
 func (g *orgRepository) ContentTree(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projects []string) []any {
 	var projectModels []models.Project
 
-	g.GetDB(ctx, tx).Preload("Assets").Where(`projects.id IN (?) AND projects.organization_id = ?`, projects, orgID).Find(&projectModels)
+	g.GetDB(ctx, tx).Preload("Assets").Where(`projects.id = ANY (?) AND projects.organization_id = ?`, pq.Array(projects), orgID).Find(&projectModels)
 
 	result := make([]any, 0, len(projectModels))
 	for _, p := range projectModels {
@@ -97,7 +98,7 @@ func (g *orgRepository) GetOrgByID(ctx context.Context, tx *gorm.DB, id uuid.UUI
 
 func (g *orgRepository) GetOrgByIDs(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.Org, error) {
 	var orgs []models.Org
-	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id IN ?", ids).Find(&orgs).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id = ANY (?)", pq.Array(ids)).Find(&orgs).Error
 	return orgs, err
 }
 

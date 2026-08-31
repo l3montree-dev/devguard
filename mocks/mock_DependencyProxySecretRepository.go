@@ -68,7 +68,7 @@ type DependencyProxySecretRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) Activate(ctx any, tx any, id any) *DependencyProxySecretRepository_Activate_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *DependencyProxySecretRepository_Activate_Call {
 	return &DependencyProxySecretRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type DependencyProxySecretRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *DependencyProxySecretRepository_Expecter) All(ctx any, tx any) *DependencyProxySecretRepository_All_Call {
+func (_e *DependencyProxySecretRepository_Expecter) All(ctx interface{}, tx interface{}) *DependencyProxySecretRepository_All_Call {
 	return &DependencyProxySecretRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type DependencyProxySecretRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DependencyProxySecretRepository_Expecter) Begin(ctx any) *DependencyProxySecretRepository_Begin_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Begin(ctx interface{}) *DependencyProxySecretRepository_Begin_Call {
 	return &DependencyProxySecretRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type DependencyProxySecretRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DependencyProxySecretRepository_Expecter) CleanupOrphanedRecords(ctx any) *DependencyProxySecretRepository_CleanupOrphanedRecords_Call {
+func (_e *DependencyProxySecretRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *DependencyProxySecretRepository_CleanupOrphanedRecords_Call {
 	return &DependencyProxySecretRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type DependencyProxySecretRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) Create(ctx any, tx any, t any) *DependencyProxySecretRepository_Create_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *DependencyProxySecretRepository_Create_Call {
 	return &DependencyProxySecretRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type DependencyProxySecretRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *DependencyProxySecretRepository_CreateBatch_Call {
+func (_e *DependencyProxySecretRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *DependencyProxySecretRepository_CreateBatch_Call {
 	return &DependencyProxySecretRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type DependencyProxySecretRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) Delete(ctx any, tx any, id any) *DependencyProxySecretRepository_Delete_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *DependencyProxySecretRepository_Delete_Call {
 	return &DependencyProxySecretRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type DependencyProxySecretRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *DependencyProxySecretRepository_DeleteBatch_Call {
+func (_e *DependencyProxySecretRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *DependencyProxySecretRepository_DeleteBatch_Call {
 	return &DependencyProxySecretRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -564,7 +564,7 @@ type DependencyProxySecretRepository_GetBySecret_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - secret uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) GetBySecret(ctx any, tx any, secret any) *DependencyProxySecretRepository_GetBySecret_Call {
+func (_e *DependencyProxySecretRepository_Expecter) GetBySecret(ctx interface{}, tx interface{}, secret interface{}) *DependencyProxySecretRepository_GetBySecret_Call {
 	return &DependencyProxySecretRepository_GetBySecret_Call{Call: _e.mock.On("GetBySecret", ctx, tx, secret)}
 }
 
@@ -628,7 +628,7 @@ type DependencyProxySecretRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *DependencyProxySecretRepository_Expecter) GetDB(ctx any, tx any) *DependencyProxySecretRepository_GetDB_Call {
+func (_e *DependencyProxySecretRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *DependencyProxySecretRepository_GetDB_Call {
 	return &DependencyProxySecretRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -695,7 +695,7 @@ type DependencyProxySecretRepository_GetOrCreateByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) GetOrCreateByAssetID(ctx any, tx any, assetID any) *DependencyProxySecretRepository_GetOrCreateByAssetID_Call {
+func (_e *DependencyProxySecretRepository_Expecter) GetOrCreateByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *DependencyProxySecretRepository_GetOrCreateByAssetID_Call {
 	return &DependencyProxySecretRepository_GetOrCreateByAssetID_Call{Call: _e.mock.On("GetOrCreateByAssetID", ctx, tx, assetID)}
 }
 
@@ -767,7 +767,7 @@ type DependencyProxySecretRepository_GetOrCreateByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) GetOrCreateByOrgID(ctx any, tx any, orgID any) *DependencyProxySecretRepository_GetOrCreateByOrgID_Call {
+func (_e *DependencyProxySecretRepository_Expecter) GetOrCreateByOrgID(ctx interface{}, tx interface{}, orgID interface{}) *DependencyProxySecretRepository_GetOrCreateByOrgID_Call {
 	return &DependencyProxySecretRepository_GetOrCreateByOrgID_Call{Call: _e.mock.On("GetOrCreateByOrgID", ctx, tx, orgID)}
 }
 
@@ -839,7 +839,7 @@ type DependencyProxySecretRepository_GetOrCreateByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) GetOrCreateByProjectID(ctx any, tx any, projectID any) *DependencyProxySecretRepository_GetOrCreateByProjectID_Call {
+func (_e *DependencyProxySecretRepository_Expecter) GetOrCreateByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *DependencyProxySecretRepository_GetOrCreateByProjectID_Call {
 	return &DependencyProxySecretRepository_GetOrCreateByProjectID_Call{Call: _e.mock.On("GetOrCreateByProjectID", ctx, tx, projectID)}
 }
 
@@ -904,7 +904,7 @@ type DependencyProxySecretRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *DependencyProxySecretRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *DependencyProxySecretRepository_InBatches_Call {
+func (_e *DependencyProxySecretRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *DependencyProxySecretRepository_InBatches_Call {
 	return &DependencyProxySecretRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -978,7 +978,7 @@ type DependencyProxySecretRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) List(ctx any, tx any, ids any) *DependencyProxySecretRepository_List_Call {
+func (_e *DependencyProxySecretRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *DependencyProxySecretRepository_List_Call {
 	return &DependencyProxySecretRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1050,7 +1050,7 @@ type DependencyProxySecretRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) Read(ctx any, tx any, id any) *DependencyProxySecretRepository_Read_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *DependencyProxySecretRepository_Read_Call {
 	return &DependencyProxySecretRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1113,7 +1113,7 @@ type DependencyProxySecretRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) Save(ctx any, tx any, t any) *DependencyProxySecretRepository_Save_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *DependencyProxySecretRepository_Save_Call {
 	return &DependencyProxySecretRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1176,7 +1176,7 @@ type DependencyProxySecretRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *DependencyProxySecretRepository_SaveBatch_Call {
+func (_e *DependencyProxySecretRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *DependencyProxySecretRepository_SaveBatch_Call {
 	return &DependencyProxySecretRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1213,69 +1213,6 @@ func (_c *DependencyProxySecretRepository_SaveBatch_Call) RunAndReturn(run func(
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type DependencyProxySecretRepository
-func (_mock *DependencyProxySecretRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.DependencyProxySecret) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.DependencyProxySecret) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// DependencyProxySecretRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type DependencyProxySecretRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *DependencyProxySecretRepository_SaveBatchBestEffort_Call {
-	return &DependencyProxySecretRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *DependencyProxySecretRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.DependencyProxySecret)) *DependencyProxySecretRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.DependencyProxySecret
-		if args[2] != nil {
-			arg2 = args[2].([]models.DependencyProxySecret)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_SaveBatchBestEffort_Call) Return(err error) *DependencyProxySecretRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.DependencyProxySecret) error) *DependencyProxySecretRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type DependencyProxySecretRepository
 func (_mock *DependencyProxySecretRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1301,7 +1238,7 @@ type DependencyProxySecretRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *DependencyProxySecretRepository_Expecter) Transaction(ctx any, fn any) *DependencyProxySecretRepository_Transaction_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *DependencyProxySecretRepository_Transaction_Call {
 	return &DependencyProxySecretRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1368,7 +1305,7 @@ type DependencyProxySecretRepository_UpdateSecret_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - proxy models.DependencyProxySecret
-func (_e *DependencyProxySecretRepository_Expecter) UpdateSecret(ctx any, tx any, proxy any) *DependencyProxySecretRepository_UpdateSecret_Call {
+func (_e *DependencyProxySecretRepository_Expecter) UpdateSecret(ctx interface{}, tx interface{}, proxy interface{}) *DependencyProxySecretRepository_UpdateSecret_Call {
 	return &DependencyProxySecretRepository_UpdateSecret_Call{Call: _e.mock.On("UpdateSecret", ctx, tx, proxy)}
 }
 
@@ -1433,7 +1370,7 @@ type DependencyProxySecretRepository_Upsert_Call struct {
 //   - t *[]*models.DependencyProxySecret
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *DependencyProxySecretRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *DependencyProxySecretRepository_Upsert_Call {
+func (_e *DependencyProxySecretRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *DependencyProxySecretRepository_Upsert_Call {
 	return &DependencyProxySecretRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

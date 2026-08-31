@@ -68,7 +68,7 @@ type OrganizationRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) Activate(ctx any, tx any, id any) *OrganizationRepository_Activate_Call {
+func (_e *OrganizationRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_Activate_Call {
 	return &OrganizationRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type OrganizationRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *OrganizationRepository_Expecter) All(ctx any, tx any) *OrganizationRepository_All_Call {
+func (_e *OrganizationRepository_Expecter) All(ctx interface{}, tx interface{}) *OrganizationRepository_All_Call {
 	return &OrganizationRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type OrganizationRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *OrganizationRepository_Expecter) Begin(ctx any) *OrganizationRepository_Begin_Call {
+func (_e *OrganizationRepository_Expecter) Begin(ctx interface{}) *OrganizationRepository_Begin_Call {
 	return &OrganizationRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type OrganizationRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *OrganizationRepository_Expecter) CleanupOrphanedRecords(ctx any) *OrganizationRepository_CleanupOrphanedRecords_Call {
+func (_e *OrganizationRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *OrganizationRepository_CleanupOrphanedRecords_Call {
 	return &OrganizationRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -306,7 +306,7 @@ type OrganizationRepository_ContentTree_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - projects []string
-func (_e *OrganizationRepository_Expecter) ContentTree(ctx any, tx any, orgID any, projects any) *OrganizationRepository_ContentTree_Call {
+func (_e *OrganizationRepository_Expecter) ContentTree(ctx interface{}, tx interface{}, orgID interface{}, projects interface{}) *OrganizationRepository_ContentTree_Call {
 	return &OrganizationRepository_ContentTree_Call{Call: _e.mock.On("ContentTree", ctx, tx, orgID, projects)}
 }
 
@@ -374,7 +374,7 @@ type OrganizationRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Org
-func (_e *OrganizationRepository_Expecter) Create(ctx any, tx any, t any) *OrganizationRepository_Create_Call {
+func (_e *OrganizationRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *OrganizationRepository_Create_Call {
 	return &OrganizationRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -437,7 +437,7 @@ type OrganizationRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Org
-func (_e *OrganizationRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *OrganizationRepository_CreateBatch_Call {
+func (_e *OrganizationRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *OrganizationRepository_CreateBatch_Call {
 	return &OrganizationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -500,7 +500,7 @@ type OrganizationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) Delete(ctx any, tx any, id any) *OrganizationRepository_Delete_Call {
+func (_e *OrganizationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_Delete_Call {
 	return &OrganizationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -563,7 +563,7 @@ type OrganizationRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Org
-func (_e *OrganizationRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *OrganizationRepository_DeleteBatch_Call {
+func (_e *OrganizationRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *OrganizationRepository_DeleteBatch_Call {
 	return &OrganizationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -627,7 +627,7 @@ type OrganizationRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *OrganizationRepository_Expecter) GetDB(ctx any, tx any) *OrganizationRepository_GetDB_Call {
+func (_e *OrganizationRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *OrganizationRepository_GetDB_Call {
 	return &OrganizationRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -694,7 +694,7 @@ type OrganizationRepository_GetOrgByID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) GetOrgByID(ctx any, tx any, id any) *OrganizationRepository_GetOrgByID_Call {
+func (_e *OrganizationRepository_Expecter) GetOrgByID(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_GetOrgByID_Call {
 	return &OrganizationRepository_GetOrgByID_Call{Call: _e.mock.On("GetOrgByID", ctx, tx, id)}
 }
 
@@ -768,7 +768,7 @@ type OrganizationRepository_GetOrgByIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *OrganizationRepository_Expecter) GetOrgByIDs(ctx any, tx any, ids any) *OrganizationRepository_GetOrgByIDs_Call {
+func (_e *OrganizationRepository_Expecter) GetOrgByIDs(ctx interface{}, tx interface{}, ids interface{}) *OrganizationRepository_GetOrgByIDs_Call {
 	return &OrganizationRepository_GetOrgByIDs_Call{Call: _e.mock.On("GetOrgByIDs", ctx, tx, ids)}
 }
 
@@ -841,7 +841,7 @@ type OrganizationRepository_GetOrgsWithVulnSharingAssets_Call struct {
 // GetOrgsWithVulnSharingAssets is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *OrganizationRepository_Expecter) GetOrgsWithVulnSharingAssets(ctx any, tx any) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
+func (_e *OrganizationRepository_Expecter) GetOrgsWithVulnSharingAssets(ctx interface{}, tx interface{}) *OrganizationRepository_GetOrgsWithVulnSharingAssets_Call {
 	return &OrganizationRepository_GetOrgsWithVulnSharingAssets_Call{Call: _e.mock.On("GetOrgsWithVulnSharingAssets", ctx, tx)}
 }
 
@@ -901,7 +901,7 @@ type OrganizationRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *OrganizationRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *OrganizationRepository_InBatches_Call {
+func (_e *OrganizationRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *OrganizationRepository_InBatches_Call {
 	return &OrganizationRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -975,7 +975,7 @@ type OrganizationRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *OrganizationRepository_Expecter) List(ctx any, tx any, ids any) *OrganizationRepository_List_Call {
+func (_e *OrganizationRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *OrganizationRepository_List_Call {
 	return &OrganizationRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1047,7 +1047,7 @@ type OrganizationRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *OrganizationRepository_Expecter) Read(ctx any, tx any, id any) *OrganizationRepository_Read_Call {
+func (_e *OrganizationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *OrganizationRepository_Read_Call {
 	return &OrganizationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1119,7 +1119,7 @@ type OrganizationRepository_ReadBySlug_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - slug string
-func (_e *OrganizationRepository_Expecter) ReadBySlug(ctx any, tx any, slug any) *OrganizationRepository_ReadBySlug_Call {
+func (_e *OrganizationRepository_Expecter) ReadBySlug(ctx interface{}, tx interface{}, slug interface{}) *OrganizationRepository_ReadBySlug_Call {
 	return &OrganizationRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, tx, slug)}
 }
 
@@ -1182,7 +1182,7 @@ type OrganizationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Org
-func (_e *OrganizationRepository_Expecter) Save(ctx any, tx any, t any) *OrganizationRepository_Save_Call {
+func (_e *OrganizationRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *OrganizationRepository_Save_Call {
 	return &OrganizationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1245,7 +1245,7 @@ type OrganizationRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Org
-func (_e *OrganizationRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *OrganizationRepository_SaveBatch_Call {
+func (_e *OrganizationRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *OrganizationRepository_SaveBatch_Call {
 	return &OrganizationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1282,69 +1282,6 @@ func (_c *OrganizationRepository_SaveBatch_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.Org) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.Org) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// OrganizationRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type OrganizationRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.Org
-func (_e *OrganizationRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *OrganizationRepository_SaveBatchBestEffort_Call {
-	return &OrganizationRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.Org)) *OrganizationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.Org
-		if args[2] != nil {
-			arg2 = args[2].([]models.Org)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *OrganizationRepository_SaveBatchBestEffort_Call) Return(err error) *OrganizationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *OrganizationRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.Org) error) *OrganizationRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type OrganizationRepository
 func (_mock *OrganizationRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1370,7 +1307,7 @@ type OrganizationRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *OrganizationRepository_Expecter) Transaction(ctx any, fn any) *OrganizationRepository_Transaction_Call {
+func (_e *OrganizationRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *OrganizationRepository_Transaction_Call {
 	return &OrganizationRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1428,7 +1365,7 @@ type OrganizationRepository_Update_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organization *models.Org
-func (_e *OrganizationRepository_Expecter) Update(ctx any, tx any, organization any) *OrganizationRepository_Update_Call {
+func (_e *OrganizationRepository_Expecter) Update(ctx interface{}, tx interface{}, organization interface{}) *OrganizationRepository_Update_Call {
 	return &OrganizationRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, organization)}
 }
 
@@ -1493,7 +1430,7 @@ type OrganizationRepository_Upsert_Call struct {
 //   - t *[]*models.Org
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *OrganizationRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *OrganizationRepository_Upsert_Call {
+func (_e *OrganizationRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *OrganizationRepository_Upsert_Call {
 	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

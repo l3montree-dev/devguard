@@ -157,7 +157,7 @@ type GraphComponent_ToCdxComponent_Call struct {
 
 // ToCdxComponent is a helper method to define mock.On call
 //   - componentLicenseOverwrites map[string]string
-func (_e *GraphComponent_Expecter) ToCdxComponent(componentLicenseOverwrites any) *GraphComponent_ToCdxComponent_Call {
+func (_e *GraphComponent_Expecter) ToCdxComponent(componentLicenseOverwrites interface{}) *GraphComponent_ToCdxComponent_Call {
 	return &GraphComponent_ToCdxComponent_Call{Call: _e.mock.On("ToCdxComponent", componentLicenseOverwrites)}
 }
 

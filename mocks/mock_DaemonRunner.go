@@ -52,7 +52,7 @@ type DaemonRunner_RunAssetPipeline_Call struct {
 // RunAssetPipeline is a helper method to define mock.On call
 //   - ctx context.Context
 //   - forceAll bool
-func (_e *DaemonRunner_Expecter) RunAssetPipeline(ctx any, forceAll any) *DaemonRunner_RunAssetPipeline_Call {
+func (_e *DaemonRunner_Expecter) RunAssetPipeline(ctx interface{}, forceAll interface{}) *DaemonRunner_RunAssetPipeline_Call {
 	return &DaemonRunner_RunAssetPipeline_Call{Call: _e.mock.On("RunAssetPipeline", ctx, forceAll)}
 }
 
@@ -109,7 +109,7 @@ type DaemonRunner_RunDaemonPipelineForAsset_Call struct {
 // RunDaemonPipelineForAsset is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetID uuid.UUID
-func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(ctx any, assetID any) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(ctx interface{}, assetID interface{}) *DaemonRunner_RunDaemonPipelineForAsset_Call {
 	return &DaemonRunner_RunDaemonPipelineForAsset_Call{Call: _e.mock.On("RunDaemonPipelineForAsset", ctx, assetID)}
 }
 
@@ -165,7 +165,7 @@ type DaemonRunner_RunVEXRuleRecommendationDaemon_Call struct {
 
 // RunVEXRuleRecommendationDaemon is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) RunVEXRuleRecommendationDaemon(ctx any) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+func (_e *DaemonRunner_Expecter) RunVEXRuleRecommendationDaemon(ctx interface{}) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
 	return &DaemonRunner_RunVEXRuleRecommendationDaemon_Call{Call: _e.mock.On("RunVEXRuleRecommendationDaemon", ctx)}
 }
 
@@ -205,7 +205,7 @@ type DaemonRunner_Start_Call struct {
 
 // Start is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) Start(ctx any) *DaemonRunner_Start_Call {
+func (_e *DaemonRunner_Expecter) Start(ctx interface{}) *DaemonRunner_Start_Call {
 	return &DaemonRunner_Start_Call{Call: _e.mock.On("Start", ctx)}
 }
 
@@ -256,7 +256,7 @@ type DaemonRunner_UpdateFixedVersions_Call struct {
 
 // UpdateFixedVersions is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) UpdateFixedVersions(ctx any) *DaemonRunner_UpdateFixedVersions_Call {
+func (_e *DaemonRunner_Expecter) UpdateFixedVersions(ctx interface{}) *DaemonRunner_UpdateFixedVersions_Call {
 	return &DaemonRunner_UpdateFixedVersions_Call{Call: _e.mock.On("UpdateFixedVersions", ctx)}
 }
 
@@ -307,7 +307,7 @@ type DaemonRunner_UpdateOpenSourceInsightInformation_Call struct {
 
 // UpdateOpenSourceInsightInformation is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation(ctx any) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation(ctx interface{}) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
 	return &DaemonRunner_UpdateOpenSourceInsightInformation_Call{Call: _e.mock.On("UpdateOpenSourceInsightInformation", ctx)}
 }
 
@@ -358,7 +358,7 @@ type DaemonRunner_UpdateVulnDB_Call struct {
 
 // UpdateVulnDB is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) UpdateVulnDB(ctx any) *DaemonRunner_UpdateVulnDB_Call {
+func (_e *DaemonRunner_Expecter) UpdateVulnDB(ctx interface{}) *DaemonRunner_UpdateVulnDB_Call {
 	return &DaemonRunner_UpdateVulnDB_Call{Call: _e.mock.On("UpdateVulnDB", ctx)}
 }
 

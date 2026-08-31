@@ -66,7 +66,7 @@ type Repository_Activate_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *Repository_Expecter[ID, T, Tx]) Activate(ctx any, tx any, id any) *Repository_Activate_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Activate(ctx interface{}, tx interface{}, id interface{}) *Repository_Activate_Call[ID, T, Tx] {
 	return &Repository_Activate_Call[ID, T, Tx]{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -139,7 +139,7 @@ type Repository_All_Call[ID any, T utils.Tabler, Tx any] struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx Tx
-func (_e *Repository_Expecter[ID, T, Tx]) All(ctx any, tx any) *Repository_All_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) All(ctx interface{}, tx interface{}) *Repository_All_Call[ID, T, Tx] {
 	return &Repository_All_Call[ID, T, Tx]{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -197,7 +197,7 @@ type Repository_Begin_Call[ID any, T utils.Tabler, Tx any] struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *Repository_Expecter[ID, T, Tx]) Begin(ctx any) *Repository_Begin_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Begin(ctx interface{}) *Repository_Begin_Call[ID, T, Tx] {
 	return &Repository_Begin_Call[ID, T, Tx]{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -248,7 +248,7 @@ type Repository_CleanupOrphanedRecords_Call[ID any, T utils.Tabler, Tx any] stru
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *Repository_Expecter[ID, T, Tx]) CleanupOrphanedRecords(ctx any) *Repository_CleanupOrphanedRecords_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) CleanupOrphanedRecords(ctx interface{}) *Repository_CleanupOrphanedRecords_Call[ID, T, Tx] {
 	return &Repository_CleanupOrphanedRecords_Call[ID, T, Tx]{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -301,7 +301,7 @@ type Repository_Create_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *Repository_Expecter[ID, T, Tx]) Create(ctx any, tx any, t any) *Repository_Create_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Create(ctx interface{}, tx interface{}, t interface{}) *Repository_Create_Call[ID, T, Tx] {
 	return &Repository_Create_Call[ID, T, Tx]{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -364,7 +364,7 @@ type Repository_CreateBatch_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *Repository_Expecter[ID, T, Tx]) CreateBatch(ctx any, tx any, ts any) *Repository_CreateBatch_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *Repository_CreateBatch_Call[ID, T, Tx] {
 	return &Repository_CreateBatch_Call[ID, T, Tx]{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -427,7 +427,7 @@ type Repository_Delete_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *Repository_Expecter[ID, T, Tx]) Delete(ctx any, tx any, id any) *Repository_Delete_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Delete(ctx interface{}, tx interface{}, id interface{}) *Repository_Delete_Call[ID, T, Tx] {
 	return &Repository_Delete_Call[ID, T, Tx]{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -490,7 +490,7 @@ type Repository_DeleteBatch_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ids []T
-func (_e *Repository_Expecter[ID, T, Tx]) DeleteBatch(ctx any, tx any, ids any) *Repository_DeleteBatch_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *Repository_DeleteBatch_Call[ID, T, Tx] {
 	return &Repository_DeleteBatch_Call[ID, T, Tx]{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -554,7 +554,7 @@ type Repository_GetDB_Call[ID any, T utils.Tabler, Tx any] struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx Tx
-func (_e *Repository_Expecter[ID, T, Tx]) GetDB(ctx any, tx any) *Repository_GetDB_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) GetDB(ctx interface{}, tx interface{}) *Repository_GetDB_Call[ID, T, Tx] {
 	return &Repository_GetDB_Call[ID, T, Tx]{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -614,7 +614,7 @@ type Repository_InBatches_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - batchSize int
-func (_e *Repository_Expecter[ID, T, Tx]) InBatches(ctx any, tx any, batchSize any) *Repository_InBatches_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *Repository_InBatches_Call[ID, T, Tx] {
 	return &Repository_InBatches_Call[ID, T, Tx]{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -688,7 +688,7 @@ type Repository_List_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ids []ID
-func (_e *Repository_Expecter[ID, T, Tx]) List(ctx any, tx any, ids any) *Repository_List_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) List(ctx interface{}, tx interface{}, ids interface{}) *Repository_List_Call[ID, T, Tx] {
 	return &Repository_List_Call[ID, T, Tx]{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -762,7 +762,7 @@ type Repository_Read_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *Repository_Expecter[ID, T, Tx]) Read(ctx any, tx any, id any) *Repository_Read_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Read(ctx interface{}, tx interface{}, id interface{}) *Repository_Read_Call[ID, T, Tx] {
 	return &Repository_Read_Call[ID, T, Tx]{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -825,7 +825,7 @@ type Repository_Save_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *Repository_Expecter[ID, T, Tx]) Save(ctx any, tx any, t any) *Repository_Save_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Save(ctx interface{}, tx interface{}, t interface{}) *Repository_Save_Call[ID, T, Tx] {
 	return &Repository_Save_Call[ID, T, Tx]{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -888,7 +888,7 @@ type Repository_SaveBatch_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *Repository_Expecter[ID, T, Tx]) SaveBatch(ctx any, tx any, ts any) *Repository_SaveBatch_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *Repository_SaveBatch_Call[ID, T, Tx] {
 	return &Repository_SaveBatch_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -925,69 +925,6 @@ func (_c *Repository_SaveBatch_Call[ID, T, Tx]) RunAndReturn(run func(ctx contex
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type Repository
-func (_mock *Repository[ID, T, Tx]) SaveBatchBestEffort(ctx context.Context, tx Tx, ts []T) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, Tx, []T) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// Repository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type Repository_SaveBatchBestEffort_Call[ID any, T utils.Tabler, Tx any] struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx Tx
-//   - ts []T
-func (_e *Repository_Expecter[ID, T, Tx]) SaveBatchBestEffort(ctx any, tx any, ts any) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
-	return &Repository_SaveBatchBestEffort_Call[ID, T, Tx]{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Run(run func(ctx context.Context, tx Tx, ts []T)) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 Tx
-		if args[1] != nil {
-			arg1 = args[1].(Tx)
-		}
-		var arg2 []T
-		if args[2] != nil {
-			arg2 = args[2].([]T)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) Return(err error) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *Repository_SaveBatchBestEffort_Call[ID, T, Tx]) RunAndReturn(run func(ctx context.Context, tx Tx, ts []T) error) *Repository_SaveBatchBestEffort_Call[ID, T, Tx] {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type Repository
 func (_mock *Repository[ID, T, Tx]) Transaction(ctx context.Context, fn func(tx Tx) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1013,7 +950,7 @@ type Repository_Transaction_Call[ID any, T utils.Tabler, Tx any] struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx Tx) error
-func (_e *Repository_Expecter[ID, T, Tx]) Transaction(ctx any, fn any) *Repository_Transaction_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Transaction(ctx interface{}, fn interface{}) *Repository_Transaction_Call[ID, T, Tx] {
 	return &Repository_Transaction_Call[ID, T, Tx]{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1073,7 +1010,7 @@ type Repository_Upsert_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - t *[]*T
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *Repository_Expecter[ID, T, Tx]) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *Repository_Upsert_Call[ID, T, Tx] {
+func (_e *Repository_Expecter[ID, T, Tx]) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *Repository_Upsert_Call[ID, T, Tx] {
 	return &Repository_Upsert_Call[ID, T, Tx]{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

@@ -18,7 +18,10 @@ package repositories
 import (
 	"context"
 
+	"fmt"
 	"github.com/google/uuid"
+
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
@@ -45,18 +48,23 @@ func scopeStatementToTenant(ctx context.Context, db *gorm.DB) *gorm.DB {
 }
 
 type ComplianceComponentRepository struct {
-	db *gorm.DB
+	db              *gorm.DB
+	createBatchSize int
 }
 
 func NewComplianceComponentRepository(db *gorm.DB) *ComplianceComponentRepository {
-	return &ComplianceComponentRepository{db: db}
+	batchSize, err := database.CalcBatchSize(db, &models.ComplianceComponentImplementsControlStatement{})
+	if err != nil {
+		panic(fmt.Errorf("error calculating batch size: %w", err))
+	}
+	return &ComplianceComponentRepository{db: db, createBatchSize: batchSize}
 }
 
 func (r *ComplianceComponentRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
-	return r.db.WithContext(ctx)
+	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
 func (r *ComplianceComponentRepository) ListAll(ctx context.Context, tx *gorm.DB, filter []shared.FilterQuery) ([]models.ComplianceComponent, error) {

@@ -68,7 +68,7 @@ type CvssSetGetter_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - key string
-func (_e *CvssSetGetter_Expecter) Get(key any) *CvssSetGetter_Get_Call {
+func (_e *CvssSetGetter_Expecter) Get(key interface{}) *CvssSetGetter_Get_Call {
 	return &CvssSetGetter_Get_Call{Call: _e.mock.On("Get", key)}
 }
 
@@ -120,7 +120,7 @@ type CvssSetGetter_Set_Call struct {
 // Set is a helper method to define mock.On call
 //   - key string
 //   - value string
-func (_e *CvssSetGetter_Expecter) Set(key any, value any) *CvssSetGetter_Set_Call {
+func (_e *CvssSetGetter_Expecter) Set(key interface{}, value interface{}) *CvssSetGetter_Set_Call {
 	return &CvssSetGetter_Set_Call{Call: _e.mock.On("Set", key, value)}
 }
 

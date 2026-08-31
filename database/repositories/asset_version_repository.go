@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -192,7 +193,7 @@ func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(ct
 	err := repository.GetDB(ctx, tx).Joins("JOIN assets ON assets.id = asset_versions.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("default_branch = true").
-		Where("projects.id IN (?)", projectIDs).
+		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
 		Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -238,7 +239,7 @@ func (repository *assetVersionRepository) GetAssetVersionsByAssetID(ctx context.
 
 func (repository *assetVersionRepository) GetAssetVersionsByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
-	err := repository.GetDB(ctx, tx).Where("asset_id IN ?", assetIDs).Find(&assets).Error
+	err := repository.GetDB(ctx, tx).Where("asset_id = ANY (?)", pq.Array(assetIDs)).Find(&assets).Error
 	return assets, err
 }
 

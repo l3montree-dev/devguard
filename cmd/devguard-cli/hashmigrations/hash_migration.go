@@ -172,7 +172,7 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 				batch[i].AssetSignature = utils.HashToInt64(batch[i].CalculateAssetVersionIndependentHash())
 			}
 
-			if err := depVulnRepo.SaveBatchBestEffort(context.Background(), tx, batch); err != nil {
+			if err := depVulnRepo.SaveBatch(context.Background(), tx, batch); err != nil {
 				return fmt.Errorf("failed to update dependency_vuln signatures in batch: %w", err)
 			}
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -99,7 +100,7 @@ func (advisoryRepository *AdvisoryRepository) GetAllAdvisoriesByAssetID(ctx cont
 	err := advisoryRepository.GetDB(ctx, tx).
 		Preload("AffectedPackages").
 		Where("asset_id = ?", assetID).
-		Where("state IN ?", []dtos.VulnState{dtos.VulnStatePublished, dtos.VulnStateWithdrawn}).
+		Where("state = ANY (?)", pq.Array([]dtos.VulnState{dtos.VulnStatePublished, dtos.VulnStateWithdrawn})).
 		Find(&advisories).Error
 	return advisories, err
 

@@ -20,10 +20,15 @@ import (
 	"errors"
 	"iter"
 
+	"fmt"
+
 	"github.com/google/uuid"
+
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -37,7 +42,7 @@ var errStopIteration = errors.New("stop iteration")
 func (r *upstreamVEXRuleRepository) ByCveScopes(ctx context.Context, tx *gorm.DB, cveIDs []string, batchSize int) iter.Seq2[[]models.UpstreamVEXRule, error] {
 	return func(yield func([]models.UpstreamVEXRule, error) bool) {
 		var rules []models.UpstreamVEXRule
-		err := r.GetDB(ctx, tx).Where("cve_scope IN ?", cveIDs).FindInBatches(&rules, batchSize, func(_ *gorm.DB, _ int) error {
+		err := r.GetDB(ctx, tx).Where("cve_scope = ANY (?)", pq.Array(cveIDs)).FindInBatches(&rules, batchSize, func(_ *gorm.DB, _ int) error {
 			if !yield(rules, nil) {
 				return errStopIteration
 			}
@@ -111,7 +116,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPa
 			COALESCE(vex_rules.vex_source, upstream_vex_rules.vex_source) AS vex_source`).
 		Joins("LEFT JOIN vex_rules ON vex_rules.id = vex_rule_recommendations.vex_rule_id").
 		Joins("LEFT JOIN upstream_vex_rules ON upstream_vex_rules.id = vex_rule_recommendations.upstream_vex_rule_id").
-		Where("vex_rule_recommendations.dependency_vuln_id IN ?", dependencyVulnIDs)
+		Where("vex_rule_recommendations.dependency_vuln_id = ANY (?)", pq.Array(dependencyVulnIDs))
 
 	byRule := db.Table("vex_rules").
 		Select(`'00000000-0000-0000-0000-000000000000'::uuid AS dependency_vuln_id,
@@ -122,7 +127,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPa
 			1 AS confidence,
 			0 AS dependency_vuln_signature,
 			`+ruleColumns).
-		Where("id IN ?", vexRuleIDs)
+		Where("id = ANY (?)", pq.Array(vexRuleIDs))
 
 	var union *gorm.DB
 	switch {
@@ -186,12 +191,18 @@ func (r *vexRuleRecommendationRepository) CreateBatch(ctx context.Context, tx *g
 }
 
 type vexRuleRepository struct {
-	db *gorm.DB
+	db              *gorm.DB
+	createBatchSize int
 }
 
 func NewVEXRuleRepository(db *gorm.DB) *vexRuleRepository {
+	batchSize, err := database.CalcBatchSize(db, &models.VEXRule{})
+	if err != nil {
+		panic(fmt.Errorf("error calculating batch size: %w", err))
+	}
 	return &vexRuleRepository{
-		db: db,
+		db:              db,
+		createBatchSize: batchSize,
 	}
 }
 
@@ -199,9 +210,9 @@ var _ shared.VEXRuleRepository = (*vexRuleRepository)(nil)
 
 func (r *vexRuleRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
-	return r.db.WithContext(ctx)
+	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
 func (r *vexRuleRepository) Begin(ctx context.Context) shared.DB {
@@ -226,7 +237,7 @@ func (r *vexRuleRepository) FindByAssetIDs(ctx context.Context, tx *gorm.DB, ass
 		return nil, nil
 	}
 	var rules []models.VEXRule
-	err := r.GetDB(ctx, tx).Where("asset_id IN (?)", assetIDs).Order("created_at DESC").Find(&rules).Error
+	err := r.GetDB(ctx, tx).Where("asset_id = ANY (?)", pq.Array(assetIDs)).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 

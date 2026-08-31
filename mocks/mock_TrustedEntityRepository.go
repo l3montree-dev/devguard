@@ -68,7 +68,7 @@ type TrustedEntityRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) Activate(ctx any, tx any, id any) *TrustedEntityRepository_Activate_Call {
+func (_e *TrustedEntityRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *TrustedEntityRepository_Activate_Call {
 	return &TrustedEntityRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type TrustedEntityRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *TrustedEntityRepository_Expecter) All(ctx any, tx any) *TrustedEntityRepository_All_Call {
+func (_e *TrustedEntityRepository_Expecter) All(ctx interface{}, tx interface{}) *TrustedEntityRepository_All_Call {
 	return &TrustedEntityRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type TrustedEntityRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *TrustedEntityRepository_Expecter) Begin(ctx any) *TrustedEntityRepository_Begin_Call {
+func (_e *TrustedEntityRepository_Expecter) Begin(ctx interface{}) *TrustedEntityRepository_Begin_Call {
 	return &TrustedEntityRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type TrustedEntityRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *TrustedEntityRepository_Expecter) CleanupOrphanedRecords(ctx any) *TrustedEntityRepository_CleanupOrphanedRecords_Call {
+func (_e *TrustedEntityRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *TrustedEntityRepository_CleanupOrphanedRecords_Call {
 	return &TrustedEntityRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type TrustedEntityRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.TrustedEntity
-func (_e *TrustedEntityRepository_Expecter) Create(ctx any, tx any, t any) *TrustedEntityRepository_Create_Call {
+func (_e *TrustedEntityRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *TrustedEntityRepository_Create_Call {
 	return &TrustedEntityRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type TrustedEntityRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.TrustedEntity
-func (_e *TrustedEntityRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *TrustedEntityRepository_CreateBatch_Call {
+func (_e *TrustedEntityRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *TrustedEntityRepository_CreateBatch_Call {
 	return &TrustedEntityRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type TrustedEntityRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) Delete(ctx any, tx any, id any) *TrustedEntityRepository_Delete_Call {
+func (_e *TrustedEntityRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *TrustedEntityRepository_Delete_Call {
 	return &TrustedEntityRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type TrustedEntityRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.TrustedEntity
-func (_e *TrustedEntityRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *TrustedEntityRepository_DeleteBatch_Call {
+func (_e *TrustedEntityRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *TrustedEntityRepository_DeleteBatch_Call {
 	return &TrustedEntityRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -555,7 +555,7 @@ type TrustedEntityRepository_DeleteOrganizationTrust_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) DeleteOrganizationTrust(ctx any, tx any, organizationID any) *TrustedEntityRepository_DeleteOrganizationTrust_Call {
+func (_e *TrustedEntityRepository_Expecter) DeleteOrganizationTrust(ctx interface{}, tx interface{}, organizationID interface{}) *TrustedEntityRepository_DeleteOrganizationTrust_Call {
 	return &TrustedEntityRepository_DeleteOrganizationTrust_Call{Call: _e.mock.On("DeleteOrganizationTrust", ctx, tx, organizationID)}
 }
 
@@ -618,7 +618,7 @@ type TrustedEntityRepository_DeleteProjectTrust_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) DeleteProjectTrust(ctx any, tx any, projectID any) *TrustedEntityRepository_DeleteProjectTrust_Call {
+func (_e *TrustedEntityRepository_Expecter) DeleteProjectTrust(ctx interface{}, tx interface{}, projectID interface{}) *TrustedEntityRepository_DeleteProjectTrust_Call {
 	return &TrustedEntityRepository_DeleteProjectTrust_Call{Call: _e.mock.On("DeleteProjectTrust", ctx, tx, projectID)}
 }
 
@@ -682,7 +682,7 @@ type TrustedEntityRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *TrustedEntityRepository_Expecter) GetDB(ctx any, tx any) *TrustedEntityRepository_GetDB_Call {
+func (_e *TrustedEntityRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *TrustedEntityRepository_GetDB_Call {
 	return &TrustedEntityRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -751,7 +751,7 @@ type TrustedEntityRepository_GetOrganizationTrust_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) GetOrganizationTrust(ctx any, tx any, organizationID any) *TrustedEntityRepository_GetOrganizationTrust_Call {
+func (_e *TrustedEntityRepository_Expecter) GetOrganizationTrust(ctx interface{}, tx interface{}, organizationID interface{}) *TrustedEntityRepository_GetOrganizationTrust_Call {
 	return &TrustedEntityRepository_GetOrganizationTrust_Call{Call: _e.mock.On("GetOrganizationTrust", ctx, tx, organizationID)}
 }
 
@@ -825,7 +825,7 @@ type TrustedEntityRepository_GetProjectTrust_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) GetProjectTrust(ctx any, tx any, projectID any) *TrustedEntityRepository_GetProjectTrust_Call {
+func (_e *TrustedEntityRepository_Expecter) GetProjectTrust(ctx interface{}, tx interface{}, projectID interface{}) *TrustedEntityRepository_GetProjectTrust_Call {
 	return &TrustedEntityRepository_GetProjectTrust_Call{Call: _e.mock.On("GetProjectTrust", ctx, tx, projectID)}
 }
 
@@ -899,7 +899,7 @@ type TrustedEntityRepository_GetTrustedEntitiesByOrganizationIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationIDs []uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) GetTrustedEntitiesByOrganizationIDs(ctx any, tx any, organizationIDs any) *TrustedEntityRepository_GetTrustedEntitiesByOrganizationIDs_Call {
+func (_e *TrustedEntityRepository_Expecter) GetTrustedEntitiesByOrganizationIDs(ctx interface{}, tx interface{}, organizationIDs interface{}) *TrustedEntityRepository_GetTrustedEntitiesByOrganizationIDs_Call {
 	return &TrustedEntityRepository_GetTrustedEntitiesByOrganizationIDs_Call{Call: _e.mock.On("GetTrustedEntitiesByOrganizationIDs", ctx, tx, organizationIDs)}
 }
 
@@ -973,7 +973,7 @@ type TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectIDs []uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) GetTrustedEntitiesByProjectIDs(ctx any, tx any, projectIDs any) *TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call {
+func (_e *TrustedEntityRepository_Expecter) GetTrustedEntitiesByProjectIDs(ctx interface{}, tx interface{}, projectIDs interface{}) *TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call {
 	return &TrustedEntityRepository_GetTrustedEntitiesByProjectIDs_Call{Call: _e.mock.On("GetTrustedEntitiesByProjectIDs", ctx, tx, projectIDs)}
 }
 
@@ -1038,7 +1038,7 @@ type TrustedEntityRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *TrustedEntityRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *TrustedEntityRepository_InBatches_Call {
+func (_e *TrustedEntityRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *TrustedEntityRepository_InBatches_Call {
 	return &TrustedEntityRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1112,7 +1112,7 @@ type TrustedEntityRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) List(ctx any, tx any, ids any) *TrustedEntityRepository_List_Call {
+func (_e *TrustedEntityRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *TrustedEntityRepository_List_Call {
 	return &TrustedEntityRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1185,7 +1185,7 @@ type TrustedEntityRepository_ListAllTrustedEntities_Call struct {
 // ListAllTrustedEntities is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *TrustedEntityRepository_Expecter) ListAllTrustedEntities(ctx any, tx any) *TrustedEntityRepository_ListAllTrustedEntities_Call {
+func (_e *TrustedEntityRepository_Expecter) ListAllTrustedEntities(ctx interface{}, tx interface{}) *TrustedEntityRepository_ListAllTrustedEntities_Call {
 	return &TrustedEntityRepository_ListAllTrustedEntities_Call{Call: _e.mock.On("ListAllTrustedEntities", ctx, tx)}
 }
 
@@ -1252,7 +1252,7 @@ type TrustedEntityRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *TrustedEntityRepository_Expecter) Read(ctx any, tx any, id any) *TrustedEntityRepository_Read_Call {
+func (_e *TrustedEntityRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *TrustedEntityRepository_Read_Call {
 	return &TrustedEntityRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1315,7 +1315,7 @@ type TrustedEntityRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.TrustedEntity
-func (_e *TrustedEntityRepository_Expecter) Save(ctx any, tx any, t any) *TrustedEntityRepository_Save_Call {
+func (_e *TrustedEntityRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *TrustedEntityRepository_Save_Call {
 	return &TrustedEntityRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1378,7 +1378,7 @@ type TrustedEntityRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.TrustedEntity
-func (_e *TrustedEntityRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *TrustedEntityRepository_SaveBatch_Call {
+func (_e *TrustedEntityRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *TrustedEntityRepository_SaveBatch_Call {
 	return &TrustedEntityRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1415,69 +1415,6 @@ func (_c *TrustedEntityRepository_SaveBatch_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type TrustedEntityRepository
-func (_mock *TrustedEntityRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.TrustedEntity) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.TrustedEntity) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// TrustedEntityRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type TrustedEntityRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.TrustedEntity
-func (_e *TrustedEntityRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *TrustedEntityRepository_SaveBatchBestEffort_Call {
-	return &TrustedEntityRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *TrustedEntityRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.TrustedEntity)) *TrustedEntityRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.TrustedEntity
-		if args[2] != nil {
-			arg2 = args[2].([]models.TrustedEntity)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *TrustedEntityRepository_SaveBatchBestEffort_Call) Return(err error) *TrustedEntityRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *TrustedEntityRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.TrustedEntity) error) *TrustedEntityRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type TrustedEntityRepository
 func (_mock *TrustedEntityRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1503,7 +1440,7 @@ type TrustedEntityRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *TrustedEntityRepository_Expecter) Transaction(ctx any, fn any) *TrustedEntityRepository_Transaction_Call {
+func (_e *TrustedEntityRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *TrustedEntityRepository_Transaction_Call {
 	return &TrustedEntityRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1563,7 +1500,7 @@ type TrustedEntityRepository_Upsert_Call struct {
 //   - t *[]*models.TrustedEntity
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *TrustedEntityRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *TrustedEntityRepository_Upsert_Call {
+func (_e *TrustedEntityRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *TrustedEntityRepository_Upsert_Call {
 	return &TrustedEntityRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
@@ -1637,7 +1574,7 @@ type TrustedEntityRepository_UpsertOrganizationTrust_Call struct {
 //   - tx shared.DB
 //   - organizationID uuid.UUID
 //   - trustScore float64
-func (_e *TrustedEntityRepository_Expecter) UpsertOrganizationTrust(ctx any, tx any, organizationID any, trustScore any) *TrustedEntityRepository_UpsertOrganizationTrust_Call {
+func (_e *TrustedEntityRepository_Expecter) UpsertOrganizationTrust(ctx interface{}, tx interface{}, organizationID interface{}, trustScore interface{}) *TrustedEntityRepository_UpsertOrganizationTrust_Call {
 	return &TrustedEntityRepository_UpsertOrganizationTrust_Call{Call: _e.mock.On("UpsertOrganizationTrust", ctx, tx, organizationID, trustScore)}
 }
 
@@ -1706,7 +1643,7 @@ type TrustedEntityRepository_UpsertProjectTrust_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - trustScore float64
-func (_e *TrustedEntityRepository_Expecter) UpsertProjectTrust(ctx any, tx any, projectID any, trustScore any) *TrustedEntityRepository_UpsertProjectTrust_Call {
+func (_e *TrustedEntityRepository_Expecter) UpsertProjectTrust(ctx interface{}, tx interface{}, projectID interface{}, trustScore interface{}) *TrustedEntityRepository_UpsertProjectTrust_Call {
 	return &TrustedEntityRepository_UpsertProjectTrust_Call{Call: _e.mock.On("UpsertProjectTrust", ctx, tx, projectID, trustScore)}
 }
 

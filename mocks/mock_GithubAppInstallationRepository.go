@@ -66,7 +66,7 @@ type GithubAppInstallationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - installationID int
-func (_e *GithubAppInstallationRepository_Expecter) Delete(ctx any, tx any, installationID any) *GithubAppInstallationRepository_Delete_Call {
+func (_e *GithubAppInstallationRepository_Expecter) Delete(ctx interface{}, tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Delete_Call {
 	return &GithubAppInstallationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, installationID)}
 }
 
@@ -140,7 +140,7 @@ type GithubAppInstallationRepository_FindByOrganizationID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationID(ctx any, tx any, orgID any) *GithubAppInstallationRepository_FindByOrganizationID_Call {
+func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, orgID interface{}) *GithubAppInstallationRepository_FindByOrganizationID_Call {
 	return &GithubAppInstallationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, orgID)}
 }
 
@@ -212,7 +212,7 @@ type GithubAppInstallationRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - installationID int
-func (_e *GithubAppInstallationRepository_Expecter) Read(ctx any, tx any, installationID any) *GithubAppInstallationRepository_Read_Call {
+func (_e *GithubAppInstallationRepository_Expecter) Read(ctx interface{}, tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Read_Call {
 	return &GithubAppInstallationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, installationID)}
 }
 
@@ -275,7 +275,7 @@ type GithubAppInstallationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.GithubAppInstallation
-func (_e *GithubAppInstallationRepository_Expecter) Save(ctx any, tx any, model any) *GithubAppInstallationRepository_Save_Call {
+func (_e *GithubAppInstallationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *GithubAppInstallationRepository_Save_Call {
 	return &GithubAppInstallationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 

@@ -17,7 +17,6 @@ package repositories
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"iter"
 	"log/slog"
@@ -25,8 +24,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/in-toto/go-witness/log"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -35,15 +33,20 @@ import (
 )
 
 type GormRepository[ID comparable, T utils.Tabler] struct {
-	db *gorm.DB
+	db              *gorm.DB
+	createBatchSize int
 }
 
 func newGormRepository[ID comparable, T utils.Tabler](db *gorm.DB) *GormRepository[ID, T] {
+	batchSize, err := database.CalcBatchSize(db, new(T))
+	if err != nil {
+		panic(fmt.Errorf("error calculating batch size: %w", err))
+	}
 	return &GormRepository[ID, T]{
-		db: db,
+		db:              db,
+		createBatchSize: batchSize,
 	}
 }
-
 
 func (g *GormRepository[ID, T]) InBatches(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]T, error] {
 	return func(yield func([]T, error) bool) {
@@ -104,10 +107,20 @@ func (g *GormRepository[ID, T]) All(ctx context.Context, tx *gorm.DB) ([]T, erro
 	return ts, err
 }
 
-func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, m []T) error {
-	err := g.GetDB(ctx, tx).Delete(m).Error
-	if err != nil {
-		return err
+func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, entries []T) error {
+	return g.executeOperationInBatch(ctx, tx, entries, func(db *gorm.DB, batch []T) *gorm.DB {
+		return db.Delete(batch)
+	})
+}
+
+// execute a gorm function (currently delete or save) inside a batched for-loop
+// the batchSize gets determined dynamically on repository initialization
+func (g *GormRepository[ID, T]) executeOperationInBatch(ctx context.Context, tx *gorm.DB, entries []T, operation func(db *gorm.DB, batch []T) *gorm.DB) error {
+	for start := 0; start < len(entries); start += g.createBatchSize {
+		end := min(start+g.createBatchSize, len(entries))
+		if err := operation(g.GetDB(ctx, tx), entries[start:end]).Error; err != nil {
+			return fmt.Errorf("could not execute batch %d - %d: %w", start, end, err)
+		}
 	}
 	return nil
 }
@@ -138,67 +151,10 @@ func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T
 	return db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
-// it does not save any associations, so it is the caller's responsibility to save them separately if needed
-func (g *GormRepository[ID, T]) SaveBatchBestEffort(
-	ctx context.Context,
-	tx *gorm.DB,
-	ts []T,
-) error {
-	if len(ts) == 0 {
-		return nil
-	}
-
-	db := g.GetDB(ctx, tx)
-	sp := fmt.Sprintf("sp%s", strings.ReplaceAll(uuid.NewString(), "-", ""))
-	if err := db.SavePoint(sp).Error; err != nil {
-		return err
-	}
-
-	err := db.Omit(clause.Associations).Save(ts).Error
-	if err == nil {
-		return nil
-	}
-
-	// Roll back to savepoint so the transaction is still usable for retries.
-	if rbErr := db.RollbackTo(sp).Error; rbErr != nil {
-		// Preserve both the original save error and the rollback error for diagnostics.
-		return fmt.Errorf("failed to rollback to savepoint after SaveBatchBestEffort error: %w (rollback error: %v)", err, rbErr)
-	}
-
-	// Base case: single row
-	if len(ts) == 1 {
-		if isIgnorableUpsertError(err) {
-			log.Warn("dropping row during best-effort upsert", "row", ts[0], "err", err)
-			return nil
-		}
-		return err
-	}
-
-	// Split and retry
-	half := len(ts) / 2
-	if err := g.SaveBatchBestEffort(ctx, tx, ts[:half]); err != nil {
-		return err
-	}
-	return g.SaveBatchBestEffort(ctx, tx, ts[half:])
-}
-
 func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
-	if len(ts) == 0 {
-		return nil
-	}
-
-	err := g.GetDB(ctx, tx).Save(ts).Error
-	// check if "extended protocol limited to 65535 parameters" error
-	if err != nil && err.Error() == "extended protocol limited to 65535 parameters" {
-		// split the batch in half and try again
-		half := len(ts) / 2
-		err = g.SaveBatch(ctx, tx, ts[:half])
-		if err != nil {
-			return err
-		}
-		err = g.SaveBatch(ctx, tx, ts[half:])
-	}
-	return err
+	return g.executeOperationInBatch(ctx, tx, ts, func(db *gorm.DB, batch []T) *gorm.DB {
+		return db.Save(batch)
+	})
 }
 
 func (g *GormRepository[ID, T]) Transaction(ctx context.Context, f func(tx *gorm.DB) error) error {
@@ -218,9 +174,9 @@ func (g *GormRepository[ID, T]) Begin(ctx context.Context) *gorm.DB {
 
 func (g *GormRepository[ID, T]) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: g.createBatchSize})
 	}
-	return g.db.WithContext(ctx)
+	return g.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: g.createBatchSize})
 }
 
 func (g *GormRepository[ID, T]) Create(ctx context.Context, tx *gorm.DB, t *T) error {
@@ -345,19 +301,6 @@ func (g *GormRepository[ID, T]) CleanupOrphanedRecords(ctx context.Context) erro
 		return err
 	}
 	return nil
-}
-
-func isIgnorableUpsertError(err error) bool {
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-		switch pgErr.Code {
-		case "23503": // FK violation
-			return true
-		case "23505": // unique violation (optional)
-			return true
-		}
-	}
-
-	return false
 }
 
 var CleanupOrphanedRecordsSQL = `

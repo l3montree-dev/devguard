@@ -56,7 +56,7 @@ func (s *sentryLogger) alert(msg string, data ...any) {
 			if shared.IsNotFound(err) {
 				return
 			}
-			// SaveBatchBestEffort expects this error when a batch is too large for the
+			// SaveBatch expects this error when a batch is too large for the
 			if strings.Contains(err.Error(), "extended protocol limited to 65535 parameters") {
 				return
 			}
@@ -116,7 +116,7 @@ func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
 	gormDB, err := gorm.Open(postgres.New(postgres.Config{
 		Conn: db,
 	}), &gorm.Config{
-
+		CreateBatchSize: defaultCreateBatchSize,
 		Logger: &sentryLogger{
 			defaultLogger: logger.Discard,
 		},
@@ -135,4 +135,26 @@ func NewGormDB(existingPool *pgxpool.Pool) *gorm.DB {
 
 func IsDuplicateKeyError(err error) bool {
 	return strings.HasPrefix(err.Error(), "ERROR: duplicate key value violates unique constraint")
+}
+
+const maxPostgresParams = 65535
+
+const defaultCreateBatchSize = 1000
+
+// CalcBatchSize returns a safe batch size for CreateInBatches based on
+// the model's column count, with ~10% headroom for extra params
+// (e.g. ON CONFLICT clauses in upserts).
+func CalcBatchSize(db *gorm.DB, model any) (int, error) {
+	stmt := &gorm.Statement{DB: db}
+	if err := stmt.Parse(model); err != nil {
+		return 0, fmt.Errorf("parsing schema: %w", err)
+	}
+
+	numFields := len(stmt.Schema.DBNames)
+	if numFields == 0 {
+		return 0, fmt.Errorf("no db fields found for model %T", model)
+	}
+
+	size := max(int(float64(maxPostgresParams/numFields)*0.9), 1)
+	return size, nil
 }
