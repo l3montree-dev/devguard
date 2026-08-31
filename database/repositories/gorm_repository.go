@@ -113,9 +113,6 @@ func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, en
 	})
 }
 
-// the receiver is passed in instead of being bound by the caller so every batch runs on a
-// fresh session - a closure is needed because gorm's finishers differ in shape (Delete is
-// variadic, Save is often chained behind Omit), so no single method expression fits them all
 func (g *GormRepository[ID, T]) executeOperationInBatch(ctx context.Context, tx *gorm.DB, entries []T, operation func(db *gorm.DB, batch []T) *gorm.DB) error {
 	for start := 0; start < len(entries); start += g.createBatchSize {
 		end := min(start+g.createBatchSize, len(entries))
