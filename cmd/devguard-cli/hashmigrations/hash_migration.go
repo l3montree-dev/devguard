@@ -26,7 +26,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 5
+	CurrentHashVersion = 6
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -121,6 +121,25 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			}
 		}
 
+		if currentVersion < 6 {
+			// v5 replaced one_vuln_parent with
+			// vuln_events_dependency_vuln_id_or_asset_signature, but that
+			// constraint originally omitted security_advisory_id, so it
+			// rejected every advisory-created vuln event (which only sets
+			// SecurityAdvisoryID). Installations that already ran v5 are
+			// stuck with the broken constraint and never re-enter that
+			// branch, so fix it here explicitly.
+			if err := runVulnEventsSecurityAdvisoryConstraintFix(pool); err != nil {
+				return fmt.Errorf("failed to fix vuln_events security_advisory_id constraint (v6): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v6: %w", err)
+			}
+		}
+
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
 
@@ -181,6 +200,7 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 				OR license_risk_id IS NOT NULL
 				OR first_party_vuln_id IS NOT NULL
 				OR compliance_posture_id IS NOT NULL
+				OR security_advisory_id IS NOT NULL
 			) NOT VALID
 	`).Error; err != nil {
 			return fmt.Errorf("failed to add vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
@@ -194,6 +214,42 @@ func runDependencyVulnSignatureMigration(pool *pgxpool.Pool) error {
 		return nil
 	})
 
+}
+
+func runVulnEventsSecurityAdvisoryConstraintFix(pool *pgxpool.Pool) error {
+	start := time.Now()
+	defer func() {
+		slog.Info("vuln_events security_advisory_id constraint fix completed", "duration", time.Since(start))
+	}()
+	db := database.NewGormDB(pool)
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`
+			ALTER TABLE public.vuln_events DROP CONSTRAINT IF EXISTS vuln_events_dependency_vuln_id_or_asset_signature
+		`).Error; err != nil {
+			return fmt.Errorf("failed to drop vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
+		}
+		if err := tx.Exec(`
+			ALTER TABLE public.vuln_events
+				ADD CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+				CHECK (
+					dependency_vuln_id IS NOT NULL
+					OR asset_signature IS NOT NULL
+					OR license_risk_id IS NOT NULL
+					OR first_party_vuln_id IS NOT NULL
+					OR compliance_posture_id IS NOT NULL
+					OR security_advisory_id IS NOT NULL
+				) NOT VALID
+		`).Error; err != nil {
+			return fmt.Errorf("failed to add vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
+		}
+		if err := tx.Exec(`
+			ALTER TABLE public.vuln_events
+				VALIDATE CONSTRAINT vuln_events_dependency_vuln_id_or_asset_signature
+		`).Error; err != nil {
+			return fmt.Errorf("failed to validate vuln_events dependency_vuln_id_or_asset_signature constraint: %w", err)
+		}
+		return nil
+	})
 }
 
 // runVEXRuleCVEScopeBackfill computes cve_scope for every existing vex_rules
