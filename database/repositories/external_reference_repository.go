@@ -6,29 +6,39 @@ package repositories
 import (
 	"context"
 
+	"fmt"
+
 	"github.com/google/uuid"
+
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
 )
 
 type externalReferenceRepository struct {
-	db *gorm.DB
+	db              *gorm.DB
+	createBatchSize int
 }
 
 var _ shared.ExternalReferenceRepository = (*externalReferenceRepository)(nil)
 
 func NewExternalReferenceRepository(db *gorm.DB) shared.ExternalReferenceRepository {
+	batchSize, err := database.CalcBatchSize(db, &models.ExternalReference{})
+	if err != nil {
+		panic(fmt.Errorf("error calculating batch size: %w", err))
+	}
 	return &externalReferenceRepository{
-		db: db,
+		db:              db,
+		createBatchSize: batchSize,
 	}
 }
 
 func (r *externalReferenceRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
-	return r.db.WithContext(ctx)
+	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
 func (r *externalReferenceRepository) Create(ctx context.Context, tx *gorm.DB, t *models.ExternalReference) error {

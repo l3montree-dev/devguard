@@ -25,9 +25,10 @@ import (
 )
 
 type MaliciousPackageRepository struct {
-	db       *gorm.DB
-	pkgRepo  *GormRepository[string, models.MaliciousPackage]
-	compRepo *GormRepository[string, models.MaliciousAffectedComponent]
+	createBatchSize int
+	db              *gorm.DB
+	pkgRepo         *GormRepository[string, models.MaliciousPackage]
+	compRepo        *GormRepository[string, models.MaliciousAffectedComponent]
 }
 
 func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
@@ -40,9 +41,9 @@ func NewMaliciousPackageRepository(db *gorm.DB) *MaliciousPackageRepository {
 
 func (r *MaliciousPackageRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
-	return r.db.WithContext(ctx)
+	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
 // GetMaliciousAffectedComponents finds malicious packages for a given purl (similar to GetAffectedComponents)

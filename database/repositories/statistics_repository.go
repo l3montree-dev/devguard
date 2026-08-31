@@ -16,7 +16,8 @@ import (
 )
 
 type statisticsRepository struct {
-	db *gorm.DB
+	createBatchSize int
+	db              *gorm.DB
 }
 
 func NewStatisticsRepository(db *gorm.DB) *statisticsRepository {
@@ -29,9 +30,9 @@ var _ shared.StatisticsRepository = (*statisticsRepository)(nil)
 
 func (r *statisticsRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
-	return r.db.WithContext(ctx)
+	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
 // returns all dependencyVulns for the asset including the events, which were created before the given time

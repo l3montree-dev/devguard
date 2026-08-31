@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -89,20 +90,26 @@ func (r *gitlabIntegrationRepository) FindByOrganizationID(ctx context.Context, 
 type gitlabOauth2TokenRepository struct {
 	db                *gorm.DB
 	encryptionService shared.DBEncryptionService
+	createBatchSize   int
 }
 
 func NewGitlabOauth2TokenRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *gitlabOauth2TokenRepository {
+	batchSize, err := database.CalcBatchSize(db, &models.GitLabOauth2Token{})
+	if err != nil {
+		panic(fmt.Errorf("error calculating batch size: %w", err))
+	}
 	return &gitlabOauth2TokenRepository{
 		db:                db,
 		encryptionService: encryptionService,
+		createBatchSize:   batchSize,
 	}
 }
 
 func (r *gitlabOauth2TokenRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
-		return tx
+		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
-	return r.db.WithContext(ctx)
+	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
 func (r *gitlabOauth2TokenRepository) Save(ctx context.Context, tx *gorm.DB, token ...*models.GitLabOauth2Token) error {
