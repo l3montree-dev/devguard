@@ -56,7 +56,7 @@ func (s *sentryLogger) alert(msg string, data ...any) {
 			if shared.IsNotFound(err) {
 				return
 			}
-			// SaveBatchBestEffort expects this error when a batch is too large for the
+			// SaveBatch expects this error when a batch is too large for the
 			if strings.Contains(err.Error(), "extended protocol limited to 65535 parameters") {
 				return
 			}

@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -287,7 +288,7 @@ func (c *componentRepository) FetchInformationSources(ctx context.Context, tx *g
 
 func (c *componentRepository) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
 	artifactRoot := "artifact:" + artifact.ArtifactName
-	return c.GetDB(ctx, tx).Where("component_id = ? AND dependency_id IN (?) AND asset_version_name = ? AND asset_id = ?", artifactRoot, rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
+	return c.GetDB(ctx, tx).Where("component_id = ? AND dependency_id = ANY (?) AND asset_version_name = ? AND asset_id = ?", pq.Array(artifactRoot), rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
 }
 
 func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {

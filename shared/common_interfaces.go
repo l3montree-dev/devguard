@@ -549,7 +549,6 @@ type CVERelationshipService interface {
 
 type VulnEventRepository interface {
 	SaveBatch(ctx context.Context, tx DB, events []models.VulnEvent) error
-	SaveBatchBestEffort(ctx context.Context, tx DB, events []models.VulnEvent) error
 	Save(ctx context.Context, tx DB, event *models.VulnEvent) error
 	ReadAssetEventsByVulnID(ctx context.Context, tx DB, vulnID uuid.UUID, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
