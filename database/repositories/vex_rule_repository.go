@@ -116,7 +116,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPa
 			COALESCE(vex_rules.vex_source, upstream_vex_rules.vex_source) AS vex_source`).
 		Joins("LEFT JOIN vex_rules ON vex_rules.id = vex_rule_recommendations.vex_rule_id").
 		Joins("LEFT JOIN upstream_vex_rules ON upstream_vex_rules.id = vex_rule_recommendations.upstream_vex_rule_id").
-		Where("vex_rule_recommendations.dependency_vuln_id IN ?", dependencyVulnIDs)
+		Where("vex_rule_recommendations.dependency_vuln_id = ANY (?)", pq.Array(dependencyVulnIDs))
 
 	byRule := db.Table("vex_rules").
 		Select(`'00000000-0000-0000-0000-000000000000'::uuid AS dependency_vuln_id,
@@ -127,7 +127,7 @@ func (r *vexRuleRecommendationRepository) FindByDependencyVulnIDsAndVexRuleIDsPa
 			1 AS confidence,
 			0 AS dependency_vuln_signature,
 			`+ruleColumns).
-		Where("id IN ?", vexRuleIDs)
+		Where("id = ANY (?)", pq.Array(vexRuleIDs))
 
 	var union *gorm.DB
 	switch {

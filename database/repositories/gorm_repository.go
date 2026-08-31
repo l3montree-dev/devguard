@@ -113,6 +113,8 @@ func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, en
 	})
 }
 
+// execute a gorm function (currently delete or save) inside a batched for-loop
+// the batchSize gets determined dynamically on repository initialization
 func (g *GormRepository[ID, T]) executeOperationInBatch(ctx context.Context, tx *gorm.DB, entries []T, operation func(db *gorm.DB, batch []T) *gorm.DB) error {
 	for start := 0; start < len(entries); start += g.createBatchSize {
 		end := min(start+g.createBatchSize, len(entries))
@@ -151,7 +153,7 @@ func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T
 
 func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
 	return g.executeOperationInBatch(ctx, tx, ts, func(db *gorm.DB, batch []T) *gorm.DB {
-		return db.Omit(clause.Associations).Save(batch)
+		return db.Save(batch)
 	})
 }
 

@@ -301,7 +301,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_id = components.id").
-		Where("projects.id IN ?", projectIDs).
+		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
 		Where("component_dependencies.dependency_id ILIKE ?", "%"+search+"%").Where("component_dependencies.dependency_id LIKE ?", "pkg:%")
 
 	var total int64
@@ -331,7 +331,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("LEFT JOIN components ON component_dependencies.component_id = components.id").
-		Where("projects.id IN ?", projectIDs).
+		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
 		Where("component_dependencies.dependency_id ILIKE ?", "%"+search+"%").
 		Where("component_dependencies.dependency_id LIKE ?", "pkg:%").
 		Order("component_dependencies.dependency_id ASC, component_dependencies.asset_version_name ASC")
