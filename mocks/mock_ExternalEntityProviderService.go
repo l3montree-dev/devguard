@@ -63,7 +63,7 @@ type ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call st
 //   - ctx shared.Context
 //   - org models.Org
 //   - session shared.AuthSession
-func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx any, org any, session any) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, session interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, session)}
 }
 
@@ -135,7 +135,7 @@ type ExternalEntityProviderService_SyncOrgs_Call struct {
 
 // SyncOrgs is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c any) *ExternalEntityProviderService_SyncOrgs_Call {
+func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c interface{}) *ExternalEntityProviderService_SyncOrgs_Call {
 	return &ExternalEntityProviderService_SyncOrgs_Call{Call: _e.mock.On("SyncOrgs", c)}
 }
 
@@ -186,7 +186,7 @@ type ExternalEntityProviderService_TriggerOrgSync_Call struct {
 
 // TriggerOrgSync is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c any) *ExternalEntityProviderService_TriggerOrgSync_Call {
+func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c interface{}) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	return &ExternalEntityProviderService_TriggerOrgSync_Call{Call: _e.mock.On("TriggerOrgSync", c)}
 }
 
@@ -237,7 +237,7 @@ type ExternalEntityProviderService_TriggerSync_Call struct {
 
 // TriggerSync is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ExternalEntityProviderService_Expecter) TriggerSync(c any) *ExternalEntityProviderService_TriggerSync_Call {
+func (_e *ExternalEntityProviderService_Expecter) TriggerSync(c interface{}) *ExternalEntityProviderService_TriggerSync_Call {
 	return &ExternalEntityProviderService_TriggerSync_Call{Call: _e.mock.On("TriggerSync", c)}
 }
 

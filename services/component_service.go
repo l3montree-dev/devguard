@@ -212,7 +212,6 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 		}
 	}
 
-	//why are we only getting new licenses and not updating existing ones? - licenses shouldn't change after once they are set
 	slog.Info("getting license information for components", "amount", len(componentsWithoutLicense))
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {

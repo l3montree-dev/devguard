@@ -79,7 +79,7 @@ type StatisticsRepository_AverageFixingTimes_Call struct {
 //   - artifactNam *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx any, tx any, artifactNam any, assetVersionName any, assetID any) *StatisticsRepository_AverageFixingTimes_Call {
+func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx interface{}, tx interface{}, artifactNam interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsRepository_AverageFixingTimes_Call {
 	return &StatisticsRepository_AverageFixingTimes_Call{Call: _e.mock.On("AverageFixingTimes", ctx, tx, artifactNam, assetVersionName, assetID)}
 }
 
@@ -161,7 +161,7 @@ type StatisticsRepository_AverageRemediationTimesForRelease_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - releaseID uuid.UUID
-func (_e *StatisticsRepository_Expecter) AverageRemediationTimesForRelease(ctx any, tx any, releaseID any) *StatisticsRepository_AverageRemediationTimesForRelease_Call {
+func (_e *StatisticsRepository_Expecter) AverageRemediationTimesForRelease(ctx interface{}, tx interface{}, releaseID interface{}) *StatisticsRepository_AverageRemediationTimesForRelease_Call {
 	return &StatisticsRepository_AverageRemediationTimesForRelease_Call{Call: _e.mock.On("AverageRemediationTimesForRelease", ctx, tx, releaseID)}
 }
 
@@ -235,7 +235,7 @@ type StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
-func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(ctx any, tx any, assetVersion any) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(ctx interface{}, tx interface{}, assetVersion interface{}) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	return &StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call{Call: _e.mock.On("CVESWithKnownExploitsInAssetVersion", ctx, tx, assetVersion)}
 }
 
@@ -308,7 +308,7 @@ type StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call struct {
 // FindMaliciousPackagesAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesAcrossInstance(ctx any, tx any) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
+func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesAcrossInstance(ctx interface{}, tx interface{}) *StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call {
 	return &StatisticsRepository_FindMaliciousPackagesAcrossInstance_Call{Call: _e.mock.On("FindMaliciousPackagesAcrossInstance", ctx, tx)}
 }
 
@@ -377,7 +377,7 @@ type StatisticsRepository_FindMaliciousPackagesInOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesInOrg(ctx any, tx any, orgID any) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
+func (_e *StatisticsRepository_Expecter) FindMaliciousPackagesInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_FindMaliciousPackagesInOrg_Call {
 	return &StatisticsRepository_FindMaliciousPackagesInOrg_Call{Call: _e.mock.On("FindMaliciousPackagesInOrg", ctx, tx, orgID)}
 }
 
@@ -449,7 +449,7 @@ type StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAgeOfDependenciesAcrossOrg(ctx any, tx any, orgID any) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetAverageAgeOfDependenciesAcrossOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call {
 	return &StatisticsRepository_GetAverageAgeOfDependenciesAcrossOrg_Call{Call: _e.mock.On("GetAverageAgeOfDependenciesAcrossOrg", ctx, tx, orgID)}
 }
 
@@ -521,7 +521,7 @@ type StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call s
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx any, tx any, orgID any) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call {
 	return &StatisticsRepository_GetAverageAmountOfOpenCodeRisksForProjectsInOrg_Call{Call: _e.mock.On("GetAverageAmountOfOpenCodeRisksForProjectsInOrg", ctx, tx, orgID)}
 }
 
@@ -592,7 +592,7 @@ type StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call struct {
 // GetAverageOpenVulnsPerOrgAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *StatisticsRepository_Expecter) GetAverageOpenVulnsPerOrgAcrossInstance(ctx any, tx any) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+func (_e *StatisticsRepository_Expecter) GetAverageOpenVulnsPerOrgAcrossInstance(ctx interface{}, tx interface{}) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
 	return &StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call{Call: _e.mock.On("GetAverageOpenVulnsPerOrgAcrossInstance", ctx, tx)}
 }
 
@@ -659,7 +659,7 @@ type StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetAverageRemediationTimesAcrossOrg(ctx any, tx any, orgID any) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetAverageRemediationTimesAcrossOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call {
 	return &StatisticsRepository_GetAverageRemediationTimesAcrossOrg_Call{Call: _e.mock.On("GetAverageRemediationTimesAcrossOrg", ctx, tx, orgID)}
 }
 
@@ -730,7 +730,7 @@ type StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call struct {
 // GetAvgOpenCodeRisksAcrossInstance is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *StatisticsRepository_Expecter) GetAvgOpenCodeRisksAcrossInstance(ctx any, tx any) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
+func (_e *StatisticsRepository_Expecter) GetAvgOpenCodeRisksAcrossInstance(ctx interface{}, tx interface{}) *StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call {
 	return &StatisticsRepository_GetAvgOpenCodeRisksAcrossInstance_Call{Call: _e.mock.On("GetAvgOpenCodeRisksAcrossInstance", ctx, tx)}
 }
 
@@ -799,7 +799,7 @@ type StatisticsRepository_GetEcosystemDistributionInOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetEcosystemDistributionInOrg(ctx any, tx any, orgID any) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetEcosystemDistributionInOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetEcosystemDistributionInOrg_Call {
 	return &StatisticsRepository_GetEcosystemDistributionInOrg_Call{Call: _e.mock.On("GetEcosystemDistributionInOrg", ctx, tx, orgID)}
 }
 
@@ -870,7 +870,7 @@ type StatisticsRepository_GetInstanceUsageStatistics_Call struct {
 // GetInstanceUsageStatistics is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *StatisticsRepository_Expecter) GetInstanceUsageStatistics(ctx any, tx any) *StatisticsRepository_GetInstanceUsageStatistics_Call {
+func (_e *StatisticsRepository_Expecter) GetInstanceUsageStatistics(ctx interface{}, tx interface{}) *StatisticsRepository_GetInstanceUsageStatistics_Call {
 	return &StatisticsRepository_GetInstanceUsageStatistics_Call{Call: _e.mock.On("GetInstanceUsageStatistics", ctx, tx)}
 }
 
@@ -940,7 +940,7 @@ type StatisticsRepository_GetMostCommonCVEsInOrg_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostCommonCVEsInOrg(ctx any, tx any, orgID any, limit any) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetMostCommonCVEsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostCommonCVEsInOrg_Call {
 	return &StatisticsRepository_GetMostCommonCVEsInOrg_Call{Call: _e.mock.On("GetMostCommonCVEsInOrg", ctx, tx, orgID, limit)}
 }
 
@@ -1020,7 +1020,7 @@ type StatisticsRepository_GetMostUsedComponentsInOrg_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostUsedComponentsInOrg(ctx any, tx any, orgID any, limit any) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetMostUsedComponentsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostUsedComponentsInOrg_Call {
 	return &StatisticsRepository_GetMostUsedComponentsInOrg_Call{Call: _e.mock.On("GetMostUsedComponentsInOrg", ctx, tx, orgID, limit)}
 }
 
@@ -1100,7 +1100,7 @@ type StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableArtifactsInOrg(ctx any, tx any, orgID any, limit any) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableArtifactsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call {
 	return &StatisticsRepository_GetMostVulnerableArtifactsInOrg_Call{Call: _e.mock.On("GetMostVulnerableArtifactsInOrg", ctx, tx, orgID, limit)}
 }
 
@@ -1180,7 +1180,7 @@ type StatisticsRepository_GetMostVulnerableAssetsInOrg_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableAssetsInOrg(ctx any, tx any, orgID any, limit any) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableAssetsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableAssetsInOrg_Call {
 	return &StatisticsRepository_GetMostVulnerableAssetsInOrg_Call{Call: _e.mock.On("GetMostVulnerableAssetsInOrg", ctx, tx, orgID, limit)}
 }
 
@@ -1259,7 +1259,7 @@ type StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsAcrossInstance(ctx any, tx any, limit any) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsAcrossInstance(ctx interface{}, tx interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call {
 	return &StatisticsRepository_GetMostVulnerableProjectsAcrossInstance_Call{Call: _e.mock.On("GetMostVulnerableProjectsAcrossInstance", ctx, tx, limit)}
 }
 
@@ -1334,7 +1334,7 @@ type StatisticsRepository_GetMostVulnerableProjectsInOrg_Call struct {
 //   - tx shared.DB
 //   - orgID uuid.UUID
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsInOrg(ctx any, tx any, orgID any, limit any) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetMostVulnerableProjectsInOrg(ctx interface{}, tx interface{}, orgID interface{}, limit interface{}) *StatisticsRepository_GetMostVulnerableProjectsInOrg_Call {
 	return &StatisticsRepository_GetMostVulnerableProjectsInOrg_Call{Call: _e.mock.On("GetMostVulnerableProjectsInOrg", ctx, tx, orgID, limit)}
 }
 
@@ -1411,7 +1411,7 @@ type StatisticsRepository_GetOrgStructureDistribution_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetOrgStructureDistribution(ctx any, tx any, orgID any) *StatisticsRepository_GetOrgStructureDistribution_Call {
+func (_e *StatisticsRepository_Expecter) GetOrgStructureDistribution(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetOrgStructureDistribution_Call {
 	return &StatisticsRepository_GetOrgStructureDistribution_Call{Call: _e.mock.On("GetOrgStructureDistribution", ctx, tx, orgID)}
 }
 
@@ -1485,7 +1485,7 @@ type StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetRemediationTypeDistributionAcrossOrg(ctx any, tx any, orgID any) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
+func (_e *StatisticsRepository_Expecter) GetRemediationTypeDistributionAcrossOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call {
 	return &StatisticsRepository_GetRemediationTypeDistributionAcrossOrg_Call{Call: _e.mock.On("GetRemediationTypeDistributionAcrossOrg", ctx, tx, orgID)}
 }
 
@@ -1559,7 +1559,7 @@ type StatisticsRepository_GetTopCVEsAcrossInstance_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetTopCVEsAcrossInstance(ctx any, tx any, limit any) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
+func (_e *StatisticsRepository_Expecter) GetTopCVEsAcrossInstance(ctx interface{}, tx interface{}, limit interface{}) *StatisticsRepository_GetTopCVEsAcrossInstance_Call {
 	return &StatisticsRepository_GetTopCVEsAcrossInstance_Call{Call: _e.mock.On("GetTopCVEsAcrossInstance", ctx, tx, limit)}
 }
 
@@ -1633,7 +1633,7 @@ type StatisticsRepository_GetTopComponentsAcrossInstance_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - limit int
-func (_e *StatisticsRepository_Expecter) GetTopComponentsAcrossInstance(ctx any, tx any, limit any) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
+func (_e *StatisticsRepository_Expecter) GetTopComponentsAcrossInstance(ctx interface{}, tx interface{}, limit interface{}) *StatisticsRepository_GetTopComponentsAcrossInstance_Call {
 	return &StatisticsRepository_GetTopComponentsAcrossInstance_Call{Call: _e.mock.On("GetTopComponentsAcrossInstance", ctx, tx, limit)}
 }
 
@@ -1707,7 +1707,7 @@ type StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetWeeklyAveragePerVulnEventType(ctx any, tx any, orgID any) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
+func (_e *StatisticsRepository_Expecter) GetWeeklyAveragePerVulnEventType(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call {
 	return &StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call{Call: _e.mock.On("GetWeeklyAveragePerVulnEventType", ctx, tx, orgID)}
 }
 
@@ -1784,7 +1784,7 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 //   - assetVersionName *string
 //   - assetID uuid.UUID
 //   - time1 time.Time
-func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(ctx any, tx any, artifactName any, assetVersionName any, assetID any, time1 any) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(ctx interface{}, tx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", ctx, tx, artifactName, assetVersionName, assetID, time1)}
 }
 
@@ -1871,7 +1871,7 @@ type StatisticsRepository_VulnClassificationByOrg_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *StatisticsRepository_Expecter) VulnClassificationByOrg(ctx any, tx any, orgID any) *StatisticsRepository_VulnClassificationByOrg_Call {
+func (_e *StatisticsRepository_Expecter) VulnClassificationByOrg(ctx interface{}, tx interface{}, orgID interface{}) *StatisticsRepository_VulnClassificationByOrg_Call {
 	return &StatisticsRepository_VulnClassificationByOrg_Call{Call: _e.mock.On("VulnClassificationByOrg", ctx, tx, orgID)}
 }
 

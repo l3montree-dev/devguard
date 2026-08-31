@@ -73,7 +73,7 @@ type OpenSourceInsightService_GetProject_Call struct {
 // GetProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID string
-func (_e *OpenSourceInsightService_Expecter) GetProject(ctx any, projectID any) *OpenSourceInsightService_GetProject_Call {
+func (_e *OpenSourceInsightService_Expecter) GetProject(ctx interface{}, projectID interface{}) *OpenSourceInsightService_GetProject_Call {
 	return &OpenSourceInsightService_GetProject_Call{Call: _e.mock.On("GetProject", ctx, projectID)}
 }
 
@@ -139,7 +139,7 @@ type OpenSourceInsightService_GetVersion_Call struct {
 // GetVersion is a helper method to define mock.On call
 //   - ctx context.Context
 //   - purl packageurl.PackageURL
-func (_e *OpenSourceInsightService_Expecter) GetVersion(ctx any, purl any) *OpenSourceInsightService_GetVersion_Call {
+func (_e *OpenSourceInsightService_Expecter) GetVersion(ctx interface{}, purl interface{}) *OpenSourceInsightService_GetVersion_Call {
 	return &OpenSourceInsightService_GetVersion_Call{Call: _e.mock.On("GetVersion", ctx, purl)}
 }
 

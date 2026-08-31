@@ -66,7 +66,7 @@ type JiraIntegrationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) Delete(ctx any, tx any, id any) *JiraIntegrationRepository_Delete_Call {
+func (_e *JiraIntegrationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *JiraIntegrationRepository_Delete_Call {
 	return &JiraIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -140,7 +140,7 @@ type JiraIntegrationRepository_FindByOrganizationID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) FindByOrganizationID(ctx any, tx any, orgID any) *JiraIntegrationRepository_FindByOrganizationID_Call {
+func (_e *JiraIntegrationRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, orgID interface{}) *JiraIntegrationRepository_FindByOrganizationID_Call {
 	return &JiraIntegrationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, orgID)}
 }
 
@@ -212,7 +212,7 @@ type JiraIntegrationRepository_GetClientByIntegrationID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - integrationID uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) GetClientByIntegrationID(ctx any, tx any, integrationID any) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
+func (_e *JiraIntegrationRepository_Expecter) GetClientByIntegrationID(ctx interface{}, tx interface{}, integrationID interface{}) *JiraIntegrationRepository_GetClientByIntegrationID_Call {
 	return &JiraIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", ctx, tx, integrationID)}
 }
 
@@ -284,7 +284,7 @@ type JiraIntegrationRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *JiraIntegrationRepository_Expecter) Read(ctx any, tx any, id any) *JiraIntegrationRepository_Read_Call {
+func (_e *JiraIntegrationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *JiraIntegrationRepository_Read_Call {
 	return &JiraIntegrationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -347,7 +347,7 @@ type JiraIntegrationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.JiraIntegration
-func (_e *JiraIntegrationRepository_Expecter) Save(ctx any, tx any, model any) *JiraIntegrationRepository_Save_Call {
+func (_e *JiraIntegrationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *JiraIntegrationRepository_Save_Call {
 	return &JiraIntegrationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 

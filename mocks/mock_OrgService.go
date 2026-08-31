@@ -64,7 +64,7 @@ type OrgService_CreateOrganization_Call struct {
 // CreateOrganization is a helper method to define mock.On call
 //   - ctx shared.Context
 //   - organization *models.Org
-func (_e *OrgService_Expecter) CreateOrganization(ctx any, organization any) *OrgService_CreateOrganization_Call {
+func (_e *OrgService_Expecter) CreateOrganization(ctx interface{}, organization interface{}) *OrgService_CreateOrganization_Call {
 	return &OrgService_CreateOrganization_Call{Call: _e.mock.On("CreateOrganization", ctx, organization)}
 }
 
@@ -132,7 +132,7 @@ type OrgService_ReadBySlug_Call struct {
 // ReadBySlug is a helper method to define mock.On call
 //   - ctx context.Context
 //   - slug string
-func (_e *OrgService_Expecter) ReadBySlug(ctx any, slug any) *OrgService_ReadBySlug_Call {
+func (_e *OrgService_Expecter) ReadBySlug(ctx interface{}, slug interface{}) *OrgService_ReadBySlug_Call {
 	return &OrgService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, slug)}
 }
 

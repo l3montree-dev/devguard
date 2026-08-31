@@ -62,7 +62,7 @@ type VulnDBService_ExportRC_Call struct {
 
 // ExportRC is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *VulnDBService_Expecter) ExportRC(ctx any) *VulnDBService_ExportRC_Call {
+func (_e *VulnDBService_Expecter) ExportRC(ctx interface{}) *VulnDBService_ExportRC_Call {
 	return &VulnDBService_ExportRC_Call{Call: _e.mock.On("ExportRC", ctx)}
 }
 
@@ -114,7 +114,7 @@ type VulnDBService_ExportRCWithDiff_Call struct {
 // ExportRCWithDiff is a helper method to define mock.On call
 //   - ctx context.Context
 //   - localArchive bool
-func (_e *VulnDBService_Expecter) ExportRCWithDiff(ctx any, localArchive any) *VulnDBService_ExportRCWithDiff_Call {
+func (_e *VulnDBService_Expecter) ExportRCWithDiff(ctx interface{}, localArchive interface{}) *VulnDBService_ExportRCWithDiff_Call {
 	return &VulnDBService_ExportRCWithDiff_Call{Call: _e.mock.On("ExportRCWithDiff", ctx, localArchive)}
 }
 
@@ -171,7 +171,7 @@ type VulnDBService_ImportRC_Call struct {
 // ImportRC is a helper method to define mock.On call
 //   - ctx context.Context
 //   - opts shared.ImportOptions
-func (_e *VulnDBService_Expecter) ImportRC(ctx any, opts any) *VulnDBService_ImportRC_Call {
+func (_e *VulnDBService_Expecter) ImportRC(ctx interface{}, opts interface{}) *VulnDBService_ImportRC_Call {
 	return &VulnDBService_ImportRC_Call{Call: _e.mock.On("ImportRC", ctx, opts)}
 }
 

@@ -67,7 +67,7 @@ type AffectedComponentRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AffectedComponentRepository_Expecter) Activate(ctx any, tx any, id any) *AffectedComponentRepository_Activate_Call {
+func (_e *AffectedComponentRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *AffectedComponentRepository_Activate_Call {
 	return &AffectedComponentRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -140,7 +140,7 @@ type AffectedComponentRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AffectedComponentRepository_Expecter) All(ctx any, tx any) *AffectedComponentRepository_All_Call {
+func (_e *AffectedComponentRepository_Expecter) All(ctx interface{}, tx interface{}) *AffectedComponentRepository_All_Call {
 	return &AffectedComponentRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -198,7 +198,7 @@ type AffectedComponentRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *AffectedComponentRepository_Expecter) Begin(ctx any) *AffectedComponentRepository_Begin_Call {
+func (_e *AffectedComponentRepository_Expecter) Begin(ctx interface{}) *AffectedComponentRepository_Begin_Call {
 	return &AffectedComponentRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -249,7 +249,7 @@ type AffectedComponentRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *AffectedComponentRepository_Expecter) CleanupOrphanedRecords(ctx any) *AffectedComponentRepository_CleanupOrphanedRecords_Call {
+func (_e *AffectedComponentRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *AffectedComponentRepository_CleanupOrphanedRecords_Call {
 	return &AffectedComponentRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -302,7 +302,7 @@ type AffectedComponentRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) Create(ctx any, tx any, t any) *AffectedComponentRepository_Create_Call {
+func (_e *AffectedComponentRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *AffectedComponentRepository_Create_Call {
 	return &AffectedComponentRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -365,7 +365,7 @@ type AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call struct
 //   - ctx context.Context
 //   - tx shared.DB
 //   - components []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) CreateAffectedComponentsUsingUnnest(ctx any, tx any, components any) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
+func (_e *AffectedComponentRepository_Expecter) CreateAffectedComponentsUsingUnnest(ctx interface{}, tx interface{}, components interface{}) *AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call {
 	return &AffectedComponentRepository_CreateAffectedComponentsUsingUnnest_Call{Call: _e.mock.On("CreateAffectedComponentsUsingUnnest", ctx, tx, components)}
 }
 
@@ -428,7 +428,7 @@ type AffectedComponentRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *AffectedComponentRepository_CreateBatch_Call {
+func (_e *AffectedComponentRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *AffectedComponentRepository_CreateBatch_Call {
 	return &AffectedComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -491,7 +491,7 @@ type AffectedComponentRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AffectedComponentRepository_Expecter) Delete(ctx any, tx any, id any) *AffectedComponentRepository_Delete_Call {
+func (_e *AffectedComponentRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AffectedComponentRepository_Delete_Call {
 	return &AffectedComponentRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -554,7 +554,7 @@ type AffectedComponentRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *AffectedComponentRepository_DeleteBatch_Call {
+func (_e *AffectedComponentRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *AffectedComponentRepository_DeleteBatch_Call {
 	return &AffectedComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -618,7 +618,7 @@ type AffectedComponentRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AffectedComponentRepository_Expecter) GetDB(ctx any, tx any) *AffectedComponentRepository_GetDB_Call {
+func (_e *AffectedComponentRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *AffectedComponentRepository_GetDB_Call {
 	return &AffectedComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -678,7 +678,7 @@ type AffectedComponentRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *AffectedComponentRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *AffectedComponentRepository_InBatches_Call {
+func (_e *AffectedComponentRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *AffectedComponentRepository_InBatches_Call {
 	return &AffectedComponentRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -752,7 +752,7 @@ type AffectedComponentRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *AffectedComponentRepository_Expecter) List(ctx any, tx any, ids any) *AffectedComponentRepository_List_Call {
+func (_e *AffectedComponentRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *AffectedComponentRepository_List_Call {
 	return &AffectedComponentRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -824,7 +824,7 @@ type AffectedComponentRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *AffectedComponentRepository_Expecter) Read(ctx any, tx any, id any) *AffectedComponentRepository_Read_Call {
+func (_e *AffectedComponentRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *AffectedComponentRepository_Read_Call {
 	return &AffectedComponentRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -887,7 +887,7 @@ type AffectedComponentRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) Save(ctx any, tx any, t any) *AffectedComponentRepository_Save_Call {
+func (_e *AffectedComponentRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *AffectedComponentRepository_Save_Call {
 	return &AffectedComponentRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -950,7 +950,7 @@ type AffectedComponentRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *AffectedComponentRepository_SaveBatch_Call {
+func (_e *AffectedComponentRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *AffectedComponentRepository_SaveBatch_Call {
 	return &AffectedComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -987,69 +987,6 @@ func (_c *AffectedComponentRepository_SaveBatch_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type AffectedComponentRepository
-func (_mock *AffectedComponentRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.AffectedComponent) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// AffectedComponentRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type AffectedComponentRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.AffectedComponent
-func (_e *AffectedComponentRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	return &AffectedComponentRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent)) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.AffectedComponent
-		if args[2] != nil {
-			arg2 = args[2].([]models.AffectedComponent)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) Return(err error) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *AffectedComponentRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.AffectedComponent) error) *AffectedComponentRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type AffectedComponentRepository
 func (_mock *AffectedComponentRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1075,7 +1012,7 @@ type AffectedComponentRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *AffectedComponentRepository_Expecter) Transaction(ctx any, fn any) *AffectedComponentRepository_Transaction_Call {
+func (_e *AffectedComponentRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *AffectedComponentRepository_Transaction_Call {
 	return &AffectedComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1135,7 +1072,7 @@ type AffectedComponentRepository_Upsert_Call struct {
 //   - t *[]*models.AffectedComponent
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *AffectedComponentRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *AffectedComponentRepository_Upsert_Call {
+func (_e *AffectedComponentRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AffectedComponentRepository_Upsert_Call {
 	return &AffectedComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

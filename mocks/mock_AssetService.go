@@ -66,7 +66,7 @@ type AssetService_BootstrapAsset_Call struct {
 //   - ctx context.Context
 //   - rbac shared.AccessControl
 //   - asset *models.Asset
-func (_e *AssetService_Expecter) BootstrapAsset(ctx any, rbac any, asset any) *AssetService_BootstrapAsset_Call {
+func (_e *AssetService_Expecter) BootstrapAsset(ctx interface{}, rbac interface{}, asset interface{}) *AssetService_BootstrapAsset_Call {
 	return &AssetService_BootstrapAsset_Call{Call: _e.mock.On("BootstrapAsset", ctx, rbac, asset)}
 }
 
@@ -141,7 +141,7 @@ type AssetService_CreateAsset_Call struct {
 //   - rbac shared.AccessControl
 //   - session shared.AuthSession
 //   - asset models.Asset
-func (_e *AssetService_Expecter) CreateAsset(ctx any, rbac any, session any, asset any) *AssetService_CreateAsset_Call {
+func (_e *AssetService_Expecter) CreateAsset(ctx interface{}, rbac interface{}, session interface{}, asset interface{}) *AssetService_CreateAsset_Call {
 	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", ctx, rbac, session, asset)}
 }
 
@@ -226,7 +226,7 @@ type AssetService_FindOrCreateAsset_Call struct {
 //   - externalEntityID string
 //   - currentUser string
 //   - description string
-func (_e *AssetService_Expecter) FindOrCreateAsset(ctx any, rbac any, providerID any, orgID any, projectID any, name any, externalEntityID any, currentUser any, description any) *AssetService_FindOrCreateAsset_Call {
+func (_e *AssetService_Expecter) FindOrCreateAsset(ctx interface{}, rbac interface{}, providerID interface{}, orgID interface{}, projectID interface{}, name interface{}, externalEntityID interface{}, currentUser interface{}, description interface{}) *AssetService_FindOrCreateAsset_Call {
 	return &AssetService_FindOrCreateAsset_Call{Call: _e.mock.On("FindOrCreateAsset", ctx, rbac, providerID, orgID, projectID, name, externalEntityID, currentUser, description)}
 }
 
@@ -318,7 +318,7 @@ type AssetService_GetCVSSBadgeSVG_Call struct {
 // GetCVSSBadgeSVG is a helper method to define mock.On call
 //   - ctx context.Context
 //   - latest *models.ArtifactRiskHistory
-func (_e *AssetService_Expecter) GetCVSSBadgeSVG(ctx any, latest any) *AssetService_GetCVSSBadgeSVG_Call {
+func (_e *AssetService_Expecter) GetCVSSBadgeSVG(ctx interface{}, latest interface{}) *AssetService_GetCVSSBadgeSVG_Call {
 	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", ctx, latest)}
 }
 
@@ -377,7 +377,7 @@ type AssetService_UpdateAssetRequirements_Call struct {
 //   - asset models.Asset
 //   - responsible string
 //   - justification string
-func (_e *AssetService_Expecter) UpdateAssetRequirements(ctx any, asset any, responsible any, justification any) *AssetService_UpdateAssetRequirements_Call {
+func (_e *AssetService_Expecter) UpdateAssetRequirements(ctx interface{}, asset interface{}, responsible interface{}, justification interface{}) *AssetService_UpdateAssetRequirements_Call {
 	return &AssetService_UpdateAssetRequirements_Call{Call: _e.mock.On("UpdateAssetRequirements", ctx, asset, responsible, justification)}
 }
 
@@ -445,7 +445,7 @@ type AssetService_UpdateAssetSlug_Call struct {
 //   - ctx context.Context
 //   - assetID uuid.UUID
 //   - newSlug string
-func (_e *AssetService_Expecter) UpdateAssetSlug(ctx any, assetID any, newSlug any) *AssetService_UpdateAssetSlug_Call {
+func (_e *AssetService_Expecter) UpdateAssetSlug(ctx interface{}, assetID interface{}, newSlug interface{}) *AssetService_UpdateAssetSlug_Call {
 	return &AssetService_UpdateAssetSlug_Call{Call: _e.mock.On("UpdateAssetSlug", ctx, assetID, newSlug)}
 }
 

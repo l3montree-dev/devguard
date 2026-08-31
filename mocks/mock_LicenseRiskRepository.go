@@ -69,7 +69,7 @@ type LicenseRiskRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) Activate(ctx any, tx any, id any) *LicenseRiskRepository_Activate_Call {
+func (_e *LicenseRiskRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *LicenseRiskRepository_Activate_Call {
 	return &LicenseRiskRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -142,7 +142,7 @@ type LicenseRiskRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *LicenseRiskRepository_Expecter) All(ctx any, tx any) *LicenseRiskRepository_All_Call {
+func (_e *LicenseRiskRepository_Expecter) All(ctx interface{}, tx interface{}) *LicenseRiskRepository_All_Call {
 	return &LicenseRiskRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -201,7 +201,7 @@ type LicenseRiskRepository_ApplyAndSave_Call struct {
 //   - tx shared.DB
 //   - licenseRisk *models.LicenseRisk
 //   - vulnEvent *models.VulnEvent
-func (_e *LicenseRiskRepository_Expecter) ApplyAndSave(ctx any, tx any, licenseRisk any, vulnEvent any) *LicenseRiskRepository_ApplyAndSave_Call {
+func (_e *LicenseRiskRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, licenseRisk interface{}, vulnEvent interface{}) *LicenseRiskRepository_ApplyAndSave_Call {
 	return &LicenseRiskRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, licenseRisk, vulnEvent)}
 }
 
@@ -269,7 +269,7 @@ type LicenseRiskRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *LicenseRiskRepository_Expecter) Begin(ctx any) *LicenseRiskRepository_Begin_Call {
+func (_e *LicenseRiskRepository_Expecter) Begin(ctx interface{}) *LicenseRiskRepository_Begin_Call {
 	return &LicenseRiskRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -320,7 +320,7 @@ type LicenseRiskRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *LicenseRiskRepository_Expecter) CleanupOrphanedRecords(ctx any) *LicenseRiskRepository_CleanupOrphanedRecords_Call {
+func (_e *LicenseRiskRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *LicenseRiskRepository_CleanupOrphanedRecords_Call {
 	return &LicenseRiskRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -373,7 +373,7 @@ type LicenseRiskRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) Create(ctx any, tx any, t any) *LicenseRiskRepository_Create_Call {
+func (_e *LicenseRiskRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *LicenseRiskRepository_Create_Call {
 	return &LicenseRiskRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -436,7 +436,7 @@ type LicenseRiskRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *LicenseRiskRepository_CreateBatch_Call {
+func (_e *LicenseRiskRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *LicenseRiskRepository_CreateBatch_Call {
 	return &LicenseRiskRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -499,7 +499,7 @@ type LicenseRiskRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) Delete(ctx any, tx any, id any) *LicenseRiskRepository_Delete_Call {
+func (_e *LicenseRiskRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *LicenseRiskRepository_Delete_Call {
 	return &LicenseRiskRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -562,7 +562,7 @@ type LicenseRiskRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *LicenseRiskRepository_DeleteBatch_Call {
+func (_e *LicenseRiskRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *LicenseRiskRepository_DeleteBatch_Call {
 	return &LicenseRiskRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -627,7 +627,7 @@ type LicenseRiskRepository_DeleteByComponentPurl_Call struct {
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - purl packageurl.PackageURL
-func (_e *LicenseRiskRepository_Expecter) DeleteByComponentPurl(ctx any, tx any, assetID any, assetVersionName any, purl any) *LicenseRiskRepository_DeleteByComponentPurl_Call {
+func (_e *LicenseRiskRepository_Expecter) DeleteByComponentPurl(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, purl interface{}) *LicenseRiskRepository_DeleteByComponentPurl_Call {
 	return &LicenseRiskRepository_DeleteByComponentPurl_Call{Call: _e.mock.On("DeleteByComponentPurl", ctx, tx, assetID, assetVersionName, purl)}
 }
 
@@ -712,7 +712,7 @@ type LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
-func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersion(ctx any, tx any, assetID any, assetVersionName any) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
+func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call {
 	return &LicenseRiskRepository_GetAllLicenseRisksForAssetVersion_Call{Call: _e.mock.On("GetAllLicenseRisksForAssetVersion", ctx, tx, assetID, assetVersionName)}
 }
 
@@ -794,7 +794,7 @@ type LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersionPaged(ctx any, tx any, assetID any, assetVersionName any, pageInfo any, search any, filter any, sort any) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
+func (_e *LicenseRiskRepository_Expecter) GetAllLicenseRisksForAssetVersionPaged(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call {
 	return &LicenseRiskRepository_GetAllLicenseRisksForAssetVersionPaged_Call{Call: _e.mock.On("GetAllLicenseRisksForAssetVersionPaged", ctx, tx, assetID, assetVersionName, pageInfo, search, filter, sort)}
 }
 
@@ -894,7 +894,7 @@ type LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call struct 
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
-func (_e *LicenseRiskRepository_Expecter) GetAllOverwrittenLicensesForAssetVersion(ctx any, tx any, assetID any, assetVersionName any) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
+func (_e *LicenseRiskRepository_Expecter) GetAllOverwrittenLicensesForAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call {
 	return &LicenseRiskRepository_GetAllOverwrittenLicensesForAssetVersion_Call{Call: _e.mock.On("GetAllOverwrittenLicensesForAssetVersion", ctx, tx, assetID, assetVersionName)}
 }
 
@@ -973,7 +973,7 @@ type LicenseRiskRepository_GetByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) GetByAssetID(ctx any, tx any, assetID any) *LicenseRiskRepository_GetByAssetID_Call {
+func (_e *LicenseRiskRepository_Expecter) GetByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *LicenseRiskRepository_GetByAssetID_Call {
 	return &LicenseRiskRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", ctx, tx, assetID)}
 }
 
@@ -1037,7 +1037,7 @@ type LicenseRiskRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *LicenseRiskRepository_Expecter) GetDB(ctx any, tx any) *LicenseRiskRepository_GetDB_Call {
+func (_e *LicenseRiskRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *LicenseRiskRepository_GetDB_Call {
 	return &LicenseRiskRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1107,7 +1107,7 @@ type LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) GetLicenseRisksByOtherAssetVersions(ctx any, tx any, assetVersionName any, assetID any) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
+func (_e *LicenseRiskRepository_Expecter) GetLicenseRisksByOtherAssetVersions(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call {
 	return &LicenseRiskRepository_GetLicenseRisksByOtherAssetVersions_Call{Call: _e.mock.On("GetLicenseRisksByOtherAssetVersions", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -1177,7 +1177,7 @@ type LicenseRiskRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *LicenseRiskRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *LicenseRiskRepository_InBatches_Call {
+func (_e *LicenseRiskRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *LicenseRiskRepository_InBatches_Call {
 	return &LicenseRiskRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1251,7 +1251,7 @@ type LicenseRiskRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) List(ctx any, tx any, ids any) *LicenseRiskRepository_List_Call {
+func (_e *LicenseRiskRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *LicenseRiskRepository_List_Call {
 	return &LicenseRiskRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1327,7 +1327,7 @@ type LicenseRiskRepository_ListByArtifactName_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scannerID string
-func (_e *LicenseRiskRepository_Expecter) ListByArtifactName(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *LicenseRiskRepository_ListByArtifactName_Call {
+func (_e *LicenseRiskRepository_Expecter) ListByArtifactName(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *LicenseRiskRepository_ListByArtifactName_Call {
 	return &LicenseRiskRepository_ListByArtifactName_Call{Call: _e.mock.On("ListByArtifactName", ctx, tx, assetVersionName, assetID, scannerID)}
 }
 
@@ -1411,7 +1411,7 @@ type LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call struct {
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - pURL packageurl.PackageURL
-func (_e *LicenseRiskRepository_Expecter) MaybeGetLicenseOverwriteForComponent(ctx any, tx any, assetID any, assetVersionName any, pURL any) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
+func (_e *LicenseRiskRepository_Expecter) MaybeGetLicenseOverwriteForComponent(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, pURL interface{}) *LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call {
 	return &LicenseRiskRepository_MaybeGetLicenseOverwriteForComponent_Call{Call: _e.mock.On("MaybeGetLicenseOverwriteForComponent", ctx, tx, assetID, assetVersionName, pURL)}
 }
 
@@ -1493,7 +1493,7 @@ type LicenseRiskRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *LicenseRiskRepository_Expecter) Read(ctx any, tx any, id any) *LicenseRiskRepository_Read_Call {
+func (_e *LicenseRiskRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *LicenseRiskRepository_Read_Call {
 	return &LicenseRiskRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1556,7 +1556,7 @@ type LicenseRiskRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) Save(ctx any, tx any, t any) *LicenseRiskRepository_Save_Call {
+func (_e *LicenseRiskRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *LicenseRiskRepository_Save_Call {
 	return &LicenseRiskRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1619,7 +1619,7 @@ type LicenseRiskRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *LicenseRiskRepository_SaveBatch_Call {
+func (_e *LicenseRiskRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *LicenseRiskRepository_SaveBatch_Call {
 	return &LicenseRiskRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1656,69 +1656,6 @@ func (_c *LicenseRiskRepository_SaveBatch_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
-// SaveBatchBestEffort provides a mock function for the type LicenseRiskRepository
-func (_mock *LicenseRiskRepository) SaveBatchBestEffort(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error {
-	ret := _mock.Called(ctx, tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatchBestEffort")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk) error); ok {
-		r0 = returnFunc(ctx, tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// LicenseRiskRepository_SaveBatchBestEffort_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatchBestEffort'
-type LicenseRiskRepository_SaveBatchBestEffort_Call struct {
-	*mock.Call
-}
-
-// SaveBatchBestEffort is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - ts []models.LicenseRisk
-func (_e *LicenseRiskRepository_Expecter) SaveBatchBestEffort(ctx any, tx any, ts any) *LicenseRiskRepository_SaveBatchBestEffort_Call {
-	return &LicenseRiskRepository_SaveBatchBestEffort_Call{Call: _e.mock.On("SaveBatchBestEffort", ctx, tx, ts)}
-}
-
-func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) Run(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk)) *LicenseRiskRepository_SaveBatchBestEffort_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 []models.LicenseRisk
-		if args[2] != nil {
-			arg2 = args[2].([]models.LicenseRisk)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) Return(err error) *LicenseRiskRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *LicenseRiskRepository_SaveBatchBestEffort_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.LicenseRisk) error) *LicenseRiskRepository_SaveBatchBestEffort_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type LicenseRiskRepository
 func (_mock *LicenseRiskRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1744,7 +1681,7 @@ type LicenseRiskRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *LicenseRiskRepository_Expecter) Transaction(ctx any, fn any) *LicenseRiskRepository_Transaction_Call {
+func (_e *LicenseRiskRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *LicenseRiskRepository_Transaction_Call {
 	return &LicenseRiskRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1804,7 +1741,7 @@ type LicenseRiskRepository_Upsert_Call struct {
 //   - t *[]*models.LicenseRisk
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *LicenseRiskRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *LicenseRiskRepository_Upsert_Call {
+func (_e *LicenseRiskRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *LicenseRiskRepository_Upsert_Call {
 	return &LicenseRiskRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

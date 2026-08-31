@@ -33,10 +33,10 @@ func (runner *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) 
 			WHERE NOT EXISTS (SELECT 1 FROM dependency_vulns dv WHERE dv.signature = r.dependency_vuln_signature AND dv.state = 'open')
 		`).Error; err != nil {
 			return errors.Wrap(err, "failed to clean up stale VEX rule recommendations")
-		} // combine these 2 statements
+		}
 		if err := tx.Exec(`DELETE FROM vex_rule_recommendations WHERE vex_rule_id IS NOT NULL`).Error; err != nil {
 			return errors.Wrap(err, "failed to clear crowdsourced VEX rule recommendations")
-		} // why delete crowdsourced rules?
+		}
 
 		start := time.Now()
 		if err := runner.matchScopedUpstreamRules(ctx, tx, lastRun); err != nil {

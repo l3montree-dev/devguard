@@ -68,7 +68,7 @@ type DBEncryptionService_EncryptAndWrapData_Call struct {
 
 // EncryptAndWrapData is a helper method to define mock.On call
 //   - data string
-func (_e *DBEncryptionService_Expecter) EncryptAndWrapData(data any) *DBEncryptionService_EncryptAndWrapData_Call {
+func (_e *DBEncryptionService_Expecter) EncryptAndWrapData(data interface{}) *DBEncryptionService_EncryptAndWrapData_Call {
 	return &DBEncryptionService_EncryptAndWrapData_Call{Call: _e.mock.On("EncryptAndWrapData", data)}
 }
 
@@ -161,7 +161,7 @@ type DBEncryptionService_MaybeDecryptData_Call struct {
 
 // MaybeDecryptData is a helper method to define mock.On call
 //   - data string
-func (_e *DBEncryptionService_Expecter) MaybeDecryptData(data any) *DBEncryptionService_MaybeDecryptData_Call {
+func (_e *DBEncryptionService_Expecter) MaybeDecryptData(data interface{}) *DBEncryptionService_MaybeDecryptData_Call {
 	return &DBEncryptionService_MaybeDecryptData_Call{Call: _e.mock.On("MaybeDecryptData", data)}
 }
 

@@ -81,7 +81,7 @@ type DependencyProxySecretService_GetModelBySecret_Call struct {
 // GetModelBySecret is a helper method to define mock.On call
 //   - ctx context.Context
 //   - secret uuid.UUID
-func (_e *DependencyProxySecretService_Expecter) GetModelBySecret(ctx any, secret any) *DependencyProxySecretService_GetModelBySecret_Call {
+func (_e *DependencyProxySecretService_Expecter) GetModelBySecret(ctx interface{}, secret interface{}) *DependencyProxySecretService_GetModelBySecret_Call {
 	return &DependencyProxySecretService_GetModelBySecret_Call{Call: _e.mock.On("GetModelBySecret", ctx, secret)}
 }
 
@@ -147,7 +147,7 @@ type DependencyProxySecretService_GetOrCreateByAssetID_Call struct {
 // GetOrCreateByAssetID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetID uuid.UUID
-func (_e *DependencyProxySecretService_Expecter) GetOrCreateByAssetID(ctx any, assetID any) *DependencyProxySecretService_GetOrCreateByAssetID_Call {
+func (_e *DependencyProxySecretService_Expecter) GetOrCreateByAssetID(ctx interface{}, assetID interface{}) *DependencyProxySecretService_GetOrCreateByAssetID_Call {
 	return &DependencyProxySecretService_GetOrCreateByAssetID_Call{Call: _e.mock.On("GetOrCreateByAssetID", ctx, assetID)}
 }
 
@@ -213,7 +213,7 @@ type DependencyProxySecretService_GetOrCreateByOrgID_Call struct {
 // GetOrCreateByOrgID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-func (_e *DependencyProxySecretService_Expecter) GetOrCreateByOrgID(ctx any, orgID any) *DependencyProxySecretService_GetOrCreateByOrgID_Call {
+func (_e *DependencyProxySecretService_Expecter) GetOrCreateByOrgID(ctx interface{}, orgID interface{}) *DependencyProxySecretService_GetOrCreateByOrgID_Call {
 	return &DependencyProxySecretService_GetOrCreateByOrgID_Call{Call: _e.mock.On("GetOrCreateByOrgID", ctx, orgID)}
 }
 
@@ -279,7 +279,7 @@ type DependencyProxySecretService_GetOrCreateByProjectID_Call struct {
 // GetOrCreateByProjectID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *DependencyProxySecretService_Expecter) GetOrCreateByProjectID(ctx any, projectID any) *DependencyProxySecretService_GetOrCreateByProjectID_Call {
+func (_e *DependencyProxySecretService_Expecter) GetOrCreateByProjectID(ctx interface{}, projectID interface{}) *DependencyProxySecretService_GetOrCreateByProjectID_Call {
 	return &DependencyProxySecretService_GetOrCreateByProjectID_Call{Call: _e.mock.On("GetOrCreateByProjectID", ctx, projectID)}
 }
 
@@ -345,7 +345,7 @@ type DependencyProxySecretService_UpdateSecret_Call struct {
 // UpdateSecret is a helper method to define mock.On call
 //   - ctx context.Context
 //   - proxy models.DependencyProxySecret
-func (_e *DependencyProxySecretService_Expecter) UpdateSecret(ctx any, proxy any) *DependencyProxySecretService_UpdateSecret_Call {
+func (_e *DependencyProxySecretService_Expecter) UpdateSecret(ctx interface{}, proxy interface{}) *DependencyProxySecretService_UpdateSecret_Call {
 	return &DependencyProxySecretService_UpdateSecret_Call{Call: _e.mock.On("UpdateSecret", ctx, proxy)}
 }
 

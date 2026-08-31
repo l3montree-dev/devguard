@@ -17,7 +17,6 @@ package repositories
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"iter"
 	"log/slog"
@@ -25,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -304,20 +302,6 @@ func (g *GormRepository[ID, T]) CleanupOrphanedRecords(ctx context.Context) erro
 		return err
 	}
 	return nil
-}
-
-// delete if unused
-func isIgnorableUpsertError(err error) bool {
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-		switch pgErr.Code {
-		case "23503": // FK violation
-			return true
-		case "23505": // unique violation (optional)
-			return true
-		}
-	}
-
-	return false
 }
 
 var CleanupOrphanedRecordsSQL = `
