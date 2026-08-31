@@ -202,7 +202,7 @@ jobs:
       packages: write
       security-events: write
     with:
-      upstream_version: "26.2.0"
+      upstream-version: "26.2.0"
       nix-target-amd64: kratos-amd64
       nix-target-arm64: kratos-arm64
       nix-version: '2.34.4'
@@ -228,7 +228,7 @@ jobs:
       packages: write
       security-events: write
     with:
-      upstream_version: "16.15"
+      upstream-version: "16.15"
       nix-target-amd64: postgresql-amd64
       nix-target-arm64: postgresql-arm64
       nix-version: '2.34.4'
