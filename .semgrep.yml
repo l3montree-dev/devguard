@@ -611,7 +611,8 @@ rules:
       "WHERE <var> IN ?" with a slice expands into one bind parameter per element
       ($1, $2, ...) and can hit the PostgreSQL protocol's 65535-parameter limit on
       large inputs. Use "WHERE <var> = ANY(?)" instead — the slice is sent as a
-      single array parameter, avoiding the limit altogether.
+      single array parameter, avoiding the limit altogether. Note that you then 
+      have to convert the slice into an array using pq.Array(). Subqueries are fine.
     languages: [go]
     severity: ERROR
     paths:

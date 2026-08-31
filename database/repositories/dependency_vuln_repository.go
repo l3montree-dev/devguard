@@ -753,6 +753,7 @@ func (repository *dependencyVulnRepository) GetVulnsWithCveAndArtifacts(ctx cont
 				DependencyVulnID uuid.UUID
 			}
 			var rows []artifactRow
+			// nosemgrep: sql-use-of-where-in
 			if err := db.Table("artifact_dependency_vulns AS adv").
 				Select("artifacts.*, adv.dependency_vuln_id").
 				Joins("JOIN artifacts ON adv.artifact_artifact_name = artifacts.artifact_name AND adv.artifact_asset_version_name = artifacts.asset_version_name AND adv.artifact_asset_id = artifacts.asset_id").
