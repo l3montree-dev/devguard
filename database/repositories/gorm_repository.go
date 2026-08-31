@@ -109,14 +109,21 @@ func (g *GormRepository[ID, T]) All(ctx context.Context, tx *gorm.DB) ([]T, erro
 	return ts, err
 }
 
-func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, m []T) error {
-	if len(m) == 0 {
-		return nil
-	}
+func (g *GormRepository[ID, T]) DeleteBatch(ctx context.Context, tx *gorm.DB, entries []T) error {
+	return g.executeOperationInBatch(ctx, tx, entries, func(db *gorm.DB, batch []T) *gorm.DB {
+		return db.Delete(batch)
+	})
+}
 
-	err := g.GetDB(ctx, tx).Delete(m).Error
-	if err != nil {
-		return err
+// the receiver is passed in instead of being bound by the caller so every batch runs on a
+// fresh session - a closure is needed because gorm's finishers differ in shape (Delete is
+// variadic, Save is often chained behind Omit), so no single method expression fits them all
+func (g *GormRepository[ID, T]) executeOperationInBatch(ctx context.Context, tx *gorm.DB, entries []T, operation func(db *gorm.DB, batch []T) *gorm.DB) error {
+	for start := 0; start < len(entries); start += g.createBatchSize {
+		end := min(start+g.createBatchSize, len(entries))
+		if err := operation(g.GetDB(ctx, tx), entries[start:end]).Error; err != nil {
+			return fmt.Errorf("could not execute batch %d - %d: %w", start, end, err)
+		}
 	}
 	return nil
 }
@@ -148,22 +155,9 @@ func (g *GormRepository[ID, T]) Upsert(ctx context.Context, tx *gorm.DB, t *[]*T
 }
 
 func (g *GormRepository[ID, T]) SaveBatch(ctx context.Context, tx *gorm.DB, ts []T) error {
-	if len(ts) == 0 {
-		return nil
-	}
-
-	batchSize, err := database.CalcBatchSize(g.GetDB(ctx, tx), new(T))
-	if err != nil {
-		return fmt.Errorf("could not calculate batch size: %w", err)
-	}
-
-	for start := 0; start < len(ts); start += batchSize {
-		end := min(start+batchSize, len(ts))
-		if err := g.GetDB(ctx, tx).Omit(clause.Associations).Save(ts[start:end]).Error; err != nil {
-			return fmt.Errorf("could not save batch %d - %d: %w", start, end, err)
-		}
-	}
-	return nil
+	return g.executeOperationInBatch(ctx, tx, ts, func(db *gorm.DB, batch []T) *gorm.DB {
+		return db.Omit(clause.Associations).Save(batch)
+	})
 }
 
 func (g *GormRepository[ID, T]) Transaction(ctx context.Context, f func(tx *gorm.DB) error) error {
