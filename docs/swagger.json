@@ -90,78 +90,6 @@
                 },
                 "type": "object"
             },
-            "controllers.webhookCreateData": {
-                "properties": {
-                    "description": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "sbomEnabled": {
-                        "type": "boolean"
-                    },
-                    "secret": {
-                        "type": "string"
-                    },
-                    "url": {
-                        "type": "string"
-                    },
-                    "vulnEnabled": {
-                        "type": "boolean"
-                    }
-                },
-                "required": [
-                    "url"
-                ],
-                "type": "object"
-            },
-            "controllers.webhookTestData": {
-                "properties": {
-                    "payloadType": {
-                        "type": "string"
-                    },
-                    "secret": {
-                        "type": "string"
-                    },
-                    "url": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "url"
-                ],
-                "type": "object"
-            },
-            "controllers.webhookUpdateData": {
-                "properties": {
-                    "description": {
-                        "type": "string"
-                    },
-                    "id": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "sbomEnabled": {
-                        "type": "boolean"
-                    },
-                    "secret": {
-                        "type": "string"
-                    },
-                    "url": {
-                        "type": "string"
-                    },
-                    "vulnEnabled": {
-                        "type": "boolean"
-                    }
-                },
-                "required": [
-                    "url"
-                ],
-                "type": "object"
-            },
             "cyclonedx.Advisory": {
                 "properties": {
                     "title": {
@@ -5528,6 +5456,13 @@
                     "cvss": {
                         "type": "number"
                     },
+                    "cwes": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "dateLastModified": {
                         "type": "string"
                     },
@@ -5571,6 +5506,9 @@
                         "type": "string"
                     },
                     "vector": {
+                        "type": "string"
+                    },
+                    "withdrawn": {
                         "type": "string"
                     }
                 },
@@ -6100,6 +6038,10 @@
                     "assetId": {
                         "type": "string"
                     },
+                    "assetSignature": {
+                        "example": "0",
+                        "type": "string"
+                    },
                     "assetVersionId": {
                         "type": "string"
                     },
@@ -6143,6 +6085,10 @@
                     "riskRecalculatedAt": {
                         "type": "string"
                     },
+                    "signature": {
+                        "example": "0",
+                        "type": "string"
+                    },
                     "state": {
                         "$ref": "#/components/schemas/dtos.VulnState"
                     },
@@ -6172,6 +6118,10 @@
                         "uniqueItems": false
                     },
                     "assetId": {
+                        "type": "string"
+                    },
+                    "assetSignature": {
+                        "example": "0",
                         "type": "string"
                     },
                     "assetVersionId": {
@@ -6222,6 +6172,10 @@
                         "type": "number"
                     },
                     "riskRecalculatedAt": {
+                        "type": "string"
+                    },
+                    "signature": {
+                        "example": "0",
                         "type": "string"
                     },
                     "state": {
@@ -6453,6 +6407,9 @@
                     },
                     "url": {
                         "type": "string"
+                    },
+                    "vexRuleCount": {
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -8457,6 +8414,159 @@
                 },
                 "type": "object"
             },
+            "dtos.RiskHistoryWithVersionDTO": {
+                "properties": {
+                    "artifactName": {
+                        "type": "string"
+                    },
+                    "assetId": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "averageClosedRisk": {
+                        "type": "number"
+                    },
+                    "averageOpenRisk": {
+                        "type": "number"
+                    },
+                    "critical": {
+                        "type": "integer"
+                    },
+                    "criticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "day": {
+                        "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
+                        "type": "string"
+                    },
+                    "defaultBranch": {
+                        "type": "boolean"
+                    },
+                    "fixableCritical": {
+                        "type": "integer"
+                    },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
+                        "type": "integer"
+                    },
+                    "fixableLow": {
+                        "type": "integer"
+                    },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
+                    "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
+                        "type": "integer"
+                    },
+                    "fixedDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "high": {
+                        "type": "integer"
+                    },
+                    "highCvss": {
+                        "type": "integer"
+                    },
+                    "low": {
+                        "type": "integer"
+                    },
+                    "lowCvss": {
+                        "type": "integer"
+                    },
+                    "maxClosedRisk": {
+                        "type": "number"
+                    },
+                    "maxOpenRisk": {
+                        "type": "number"
+                    },
+                    "medium": {
+                        "type": "integer"
+                    },
+                    "mediumCvss": {
+                        "type": "integer"
+                    },
+                    "minClosedRisk": {
+                        "type": "number"
+                    },
+                    "minOpenRisk": {
+                        "type": "number"
+                    },
+                    "openDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "sumClosedRisk": {
+                        "type": "number"
+                    },
+                    "sumOpenRisk": {
+                        "type": "number"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "dtos.RiskMetrics": {
                 "properties": {
                     "baseScore": {
@@ -8657,6 +8767,10 @@
             },
             "dtos.VexRuleRecommendation": {
                 "properties": {
+                    "assetSignature": {
+                        "example": "0",
+                        "type": "string"
+                    },
                     "assetSlug": {
                         "type": "string"
                     },
@@ -8665,6 +8779,10 @@
                     },
                     "confidence": {
                         "type": "number"
+                    },
+                    "dependencyVulnSignature": {
+                        "example": "0",
+                        "type": "string"
                     },
                     "eventType": {
                         "$ref": "#/components/schemas/dtos.VulnEventType"
@@ -8897,6 +9015,32 @@
                     "VulnTypeSecurityAdvisory"
                 ]
             },
+            "dtos.WebhookCreateRequestDTO": {
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sbomEnabled": {
+                        "type": "boolean"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "vulnEnabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
             "dtos.WebhookIntegrationDTO": {
                 "properties": {
                     "description": {
@@ -8918,6 +9062,52 @@
                         "type": "boolean"
                     }
                 },
+                "type": "object"
+            },
+            "dtos.WebhookTestRequestDTO": {
+                "properties": {
+                    "payloadType": {
+                        "type": "string"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
+                "type": "object"
+            },
+            "dtos.WebhookUpdateRequestDTO": {
+                "properties": {
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sbomEnabled": {
+                        "type": "boolean"
+                    },
+                    "secret": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "vulnEnabled": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "url"
+                ],
                 "type": "object"
             },
             "echo.HTTPError": {
@@ -9538,6 +9728,10 @@
                     "cve": {
                         "type": "string"
                     },
+                    "cves": {
+                        "description": "comma separated list of associated cwe ids",
+                        "type": "string"
+                    },
                     "cvss": {
                         "type": "number"
                     },
@@ -9591,6 +9785,9 @@
                         },
                         "type": "array",
                         "uniqueItems": false
+                    },
+                    "withdrawn": {
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -10699,18 +10896,16 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -10728,18 +10923,16 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -14019,7 +14212,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.webhookTestData",
+                                "$ref": "#/components/schemas/dtos.WebhookTestRequestDTO",
                                 "summary": "body",
                                 "description": "Test webhook data"
                             }
@@ -14071,7 +14264,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.webhookCreateData",
+                                "$ref": "#/components/schemas/dtos.WebhookCreateRequestDTO",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -14148,7 +14341,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.webhookUpdateData",
+                                "$ref": "#/components/schemas/dtos.WebhookUpdateRequestDTO",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -21995,6 +22188,95 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/stats/risk-history/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Restrict results to a specific artifact",
+                        "in": "query",
+                        "name": "artifactName",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Start date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "start",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "End date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "end",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.RiskHistoryWithVersionDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get risk history for an asset across all asset versions",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules": {
             "get": {
                 "parameters": [
@@ -23282,7 +23564,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.webhookTestData",
+                                "$ref": "#/components/schemas/dtos.WebhookTestRequestDTO",
                                 "summary": "body",
                                 "description": "Test webhook data"
                             }
@@ -23334,7 +23616,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.webhookCreateData",
+                                "$ref": "#/components/schemas/dtos.WebhookCreateRequestDTO",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -23411,7 +23693,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/controllers.webhookUpdateData",
+                                "$ref": "#/components/schemas/dtos.WebhookUpdateRequestDTO",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
