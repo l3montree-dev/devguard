@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.2] - 2026-08-31
+
+### Fixed
+
+- **Advisory creation failing with a check-constraint error** — hash migration v5 replaced the `vuln_events` constraint without including `security_advisory_id`, so every advisory-created event was rejected (`vuln_events_dependency_vuln_id_or_asset_signature`, SQLSTATE 23514); a new hash migration v6 repairs the constraint on installations that already ran v5
+- `devguard-maint`'s Helm release command now updates the `KRATOS_TAG` image variable and includes kratos in its generated changelog entries, matching DevGuard's own Kratos image
+
 ## [v1.13.1] - 2026-08-31
 
 ### Added
