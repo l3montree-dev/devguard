@@ -66,12 +66,21 @@ Bumps `package.json`, commits, tags, and pushes **devguard-web** only. Fails if 
 devguard-maint release web v1.8.0
 ```
 
-### `release helm-chart <tag>`
+### `release docker-deployment <tag>`
 
-Updates `Chart.yaml`, `values.yaml`, and `devguard-docker-deployment/.env.example` with the latest detected `devguard` and `devguard-web` patch tags for the same minor version, then commits, pushes, and tags `devguard-helm-chart` (and pushes the `devguard-docker-deployment` changes, if any). Fails if:
-- `devguard-helm-chart/CHANGELOG.md` has no entry for `<tag>`
+Updates `devguard-docker-deployment/.env.example` with the latest detected `devguard` and `devguard-web` patch tags for the same minor version (`devguard`/`postgresql`/`kratos` all track the `devguard` tag), then commits and pushes `devguard-docker-deployment`. Not tagged — this repo has no version tags of its own. Fails if:
 - `devguard-docker-deployment/CHANGELOG.md` has no entry for `<tag>` (you will be offered to auto-generate one documenting just the image bumps)
 - No `devguard` or `devguard-web` release exists with the same minor version
+
+```bash
+devguard-maint release docker-deployment v1.8.1
+```
+
+### `release helm-chart <tag>`
+
+Regenerates `Chart.yaml` and `values.yaml` from the schema with the latest detected `devguard`, `devguard-web`, and `devguard-ci-components` patch tags for the same minor version (`postgresql`/`kratos` track the `devguard` tag), then commits, pushes, and tags `devguard-helm-chart`. Fails if:
+- `devguard-helm-chart/CHANGELOG.md` has no entry for `<tag>`
+- No `devguard`, `devguard-web`, or `devguard-ci-components` release exists with the same minor version
 
 ```bash
 devguard-maint release helm-chart v1.8.1
@@ -199,5 +208,6 @@ anchor undated logs explicitly.
 1. Update all CHANGELOGs with the new version entry
 2. `release devguard <tag>` — backend
 3. `release web <tag>` — frontend (can be skipped for backend-only patches)
-4. `release helm-chart <tag>` — Helm chart (auto-detects latest backend/web tags)
-5. `release ci-components <tag>` — CI templates (auto-detects latest scanner tag)
+4. `release ci-components <tag>` — CI templates (auto-detects latest scanner tag)
+5. `release docker-deployment <tag>` — Docker Compose deployment (auto-detects latest backend/web tags)
+6. `release helm-chart <tag>` — Helm chart (auto-detects latest backend/web/ci-components tags)

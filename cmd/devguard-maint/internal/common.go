@@ -224,7 +224,7 @@ func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTa
 	}
 
 	entry := fmt.Sprintf(
-		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`\n\n---\n\n",
+		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` / `kratos` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`\n\n---\n\n",
 		tag, time.Now().Format("2006-01-02"), apiTag, webTag, ciComponentsTag,
 	)
 
@@ -267,7 +267,7 @@ func EnsureDockerDeploymentChangelogEntry(changelogPath, tag, apiTag, webTag str
 	}
 
 	entry := fmt.Sprintf(
-		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` to `%s`, `devguard-web` to `%s`\n\n---\n\n",
+		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` / `kratos` to `%s`, `devguard-web` to `%s`\n\n---\n\n",
 		tag, time.Now().Format("2006-01-02"), apiTag, webTag,
 	)
 

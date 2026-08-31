@@ -62,7 +62,9 @@ func (c *VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error 
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {array} dtos.VulnEventDTO
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Success 200 {object} shared.Paged[dtos.VulnEventDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events [get]
 func (c *VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
 

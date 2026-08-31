@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-cli/hashmigrations"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -211,6 +212,71 @@ func TestAdvisoryUpdateRemovesDroppedAffectedPackage(t *testing.T) {
 		var orphanCount int64
 		assert.Nil(t, f.DB.Table("affected_packages").Where("package_name = ?", "pkg:csaf-validator-b").Count(&orphanCount).Error)
 		assert.Equal(t, int64(0), orphanCount, "the removed affected package row itself must be deleted, not just unlinked")
+	})
+}
+
+// TestHashMigrationV5BreaksAdvisoryCreation reproduces:
+//
+//	ERROR: new row for relation "vuln_events" violates check constraint
+//	"vuln_events_dependency_vuln_id_or_asset_signature" (SQLSTATE 23514)
+//
+// Hash migration v5 (runDependencyVulnSignatureMigration in
+// cmd/devguard-cli/hashmigrations/hash_migration.go) drops the correct
+// "one_vuln_parent" constraint - which was updated to include
+// security_advisory_id by the add_advisory_table schema migration - and
+// used to replace it with a stale copy that only knew about
+// dependency_vuln_id/asset_signature/license_risk_id/first_party_vuln_id/
+// compliance_posture_id, so installations that ran this hash migration could
+// no longer create advisories (the "created" vuln event only sets
+// SecurityAdvisoryID, see models.NewCreatedSecurityAdvisoryEvent). Guards
+// against that constraint regressing again.
+func TestHashMigrationV5DoesNotBreakAdvisoryCreation(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		// Pretend this installation is on hash migration version 4, so that
+		// RunHashMigrationsIfNeeded performs exactly the v5 step that swaps
+		// the vuln_events constraint - the same step every real installation
+		// upgrading through v5 goes through.
+		assert.Nil(t, f.DB.Exec(`
+			INSERT INTO config (key, val) VALUES ('hash_migration_version', '4')
+			ON CONFLICT (key) DO UPDATE SET val = '4'
+		`).Error)
+
+		err := hashmigrations.RunHashMigrationsIfNeeded(f.Pool, nil, nil, nil)
+		assert.Nil(t, err, "hash migration v5 itself must succeed")
+
+		controller := f.App.AdvisoryController
+		app := echo.New()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		createReq := httptest.NewRequest("POST", "/advisory/", bytes.NewBufferString(`{
+			"title": "Test 4",
+			"description": "Test 4",
+			"severity": "None",
+			"vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N",
+			"affectedPackages": [
+				{
+					"ecosystem": "cargo",
+					"packageName": "pkg:csaf-validator",
+					"semverStart": "0.5.0",
+					"semverEnd": "0.5.2"
+				}
+			],
+			"visibility": "draft"
+		}`))
+		createReq.Header.Set("Content-Type", "application/json")
+		createRecorder := httptest.NewRecorder()
+		createCtx := app.NewContext(createReq, createRecorder)
+		authSession := NewUserSession(t, "abc")
+		shared.SetAsset(createCtx, asset)
+		shared.SetAssetVersion(createCtx, assetVersion)
+		shared.SetProject(createCtx, project)
+		shared.SetOrg(createCtx, org)
+		shared.SetSession(createCtx, authSession)
+
+		createErr := controller.Create(createCtx)
+		assert.Nil(t, createErr, "creating an advisory must not fail creating its vuln event after hash migration v5")
+		assert.Equal(t, 200, createRecorder.Code)
 	})
 }
 

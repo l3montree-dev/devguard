@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.2] - 2026-08-31
+
+### Fixed
+
+- **Advisory creation failing with a check-constraint error** — hash migration v5 replaced the `vuln_events` constraint without including `security_advisory_id`, so every advisory-created event was rejected (`vuln_events_dependency_vuln_id_or_asset_signature`, SQLSTATE 23514); a new hash migration v6 repairs the constraint on installations that already ran v5
+- `devguard-maint`'s Helm release command now updates the `KRATOS_TAG` image variable and includes kratos in its generated changelog entries, matching DevGuard's own Kratos image
+
+## [v1.13.1] - 2026-08-31
+
+### Added
+
+- **Per-branch risk history** — a new endpoint exposes risk history scoped to each branch/asset version instead of only the asset as a whole (#2907)
+- **Richer OSV import** — CWE/weakness information and the `withdrawn` state are now imported from and exported to OSV, with new DTO/migration support so the frontend can surface withdrawn vulnerabilities (#2890)
+- **Instance-configurable base URL** — external issue provider base URLs (`providerIdToBaseUrl`) are now served through a dedicated instance settings endpoint instead of being hardcoded (#2929)
+- External references now support pagination, search and sorting, and include their VEX rule count (#2907)
+- Dependency vulnerability and VEX rule signatures are now exposed in DTOs
+- Added `publiccode.yml` so DevGuard is listed on openCode (#2919)
+- Improved API reference documentation for custom webhooks (#2909)
+
+### Changed
+
+- **VEX rule recommendations reworked** — recommendations are now paginated and deduplicated at the database layer, reads no longer apply an unintended ownership scope, and searching now matches on `cve_scope`/title instead of `cve_id` (#2901)
+- DevGuard now runs its own vexed Kratos image, built and published via a dedicated Nix pipeline, instead of the upstream Kratos image (#2916)
+- SBOMs are now normalized (via a `jq` filter) before comparison so builds on different machines produce byte-identical output
+- CI now caches Go build artifacts and shards integration test execution to reduce pipeline runtime
+- The PostgreSQL OCI image now bundles the `tar` binary and no longer enables `fakechroot` (#2928)
+
+### Fixed
+
+- **Duplicate VEX rule recommendations from concurrent sessions** — recommendation generation is now deduplicated per session
+- Dependency vulnerability filters now support an `IS NOT NULL` condition
+- Webhook types were moved out of the asset controller into their own DTO package, and related asset DTO/transformer/controller code was cleaned up
+
 ## [v1.13.0] - 2026-08-24
 
 ### Added

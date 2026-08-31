@@ -21,12 +21,13 @@ func main() {
 		commands.ReleaseDevguardCmd,
 		commands.ReleaseWebCmd,
 		commands.ReleaseCICmd,
-		commands.ReleaseHelmCmd,
+		commands.ReleaseDockerDeploymentCmd,
+		commands.ReleaseHelmChartCmd,
 		commands.ReleaseK8sIntegrationCmd,
 		commands.NewLicensesCommand(),
 	)
 
-	root.AddCommand(commands.LogsCmd, commands.DocsCmd, release)
+	root.AddCommand(commands.LogsCmd, commands.DocsCmd, commands.VerifyDigestsCmd, release)
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)

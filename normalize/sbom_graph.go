@@ -1134,12 +1134,12 @@ type BOMMetadata struct {
 // EXPORT
 // =============================================================================
 
-type minimalTree struct {
+type MinimalTree struct {
 	Nodes        []string            `json:"nodes"`
 	Dependencies map[string][]string `json:"dependencies"`
 }
 
-func (g *SBOMGraph) ToMinimalTree() minimalTree {
+func (g *SBOMGraph) ToMinimalTree() MinimalTree {
 	reachable := g.reachableNodes()
 	nodes := make([]string, 0, len(reachable))
 	dependencies := make(map[string][]string)
@@ -1181,7 +1181,7 @@ func (g *SBOMGraph) ToMinimalTree() minimalTree {
 		}
 		dependencies[parentPURL] = deps
 	}
-	return minimalTree{
+	return MinimalTree{
 		Nodes:        nodes,
 		Dependencies: dependencies,
 	}
@@ -1191,7 +1191,7 @@ func (g *SBOMGraph) ToMinimalTree() minimalTree {
 // of nodes that lead to the specified PURL. This collects all ancestor nodes
 // without enumerating individual paths, avoiding combinatorial explosion.
 // The maxDepth parameter limits how far back we traverse (0 = unlimited).
-func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
+func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) MinimalTree {
 	// Find the target node ID
 	var targetID string
 	for node := range g.Components() {
@@ -1202,7 +1202,7 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 	}
 
 	if targetID == "" {
-		return minimalTree{Nodes: []string{}, Dependencies: map[string][]string{}}
+		return MinimalTree{Nodes: []string{}, Dependencies: map[string][]string{}}
 	}
 
 	// Build reverse edge map (child -> parents)
@@ -1271,7 +1271,7 @@ func (g *SBOMGraph) MinimalTreeToPURL(purl string, maxDepth int) minimalTree {
 		slices.Sort(dependencies[k])
 	}
 
-	return minimalTree{
+	return MinimalTree{
 		Nodes:        nodes,
 		Dependencies: dependencies,
 	}

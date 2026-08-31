@@ -133,12 +133,21 @@ func (c *VulnDBController) Read(ctx shared.Context) error {
 	return ctx.JSON(200, dtos.CVEWithRelationsDTO{CVEDTO: transformer.CVEToDTO(cve), Related: relatedDTOs})
 }
 
+type PURLInspectResponse struct {
+	PURL               string                      `json:"purl"`
+	MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
+	Component          *dtos.ComponentDTO          `json:"component"`
+	AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
+	Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
+	MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
+}
+
 // @Summary Inspect a package URL (PURL) for vulnerabilities
 // @Description Analyze a given PURL, determine its match context, and return affected components and related vulnerabilities
 // @Tags VulnDB
 // @Produce json
 // @Param purl path string true "Package URL (PURL) to inspect"
-// @Success 200 {object} object "Inspection result including PURL, match context, affected components, and vulnerabilities"
+// @Success 200 {object} controllers.PURLInspectResponse "Inspection result including PURL, match context, affected components, and vulnerabilities"
 // @Failure 400 {object} object{message=string} "Invalid PURL provided"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb/purl-inspect/{purl} [get]
@@ -217,14 +226,7 @@ func (c *VulnDBController) PURLInspect(ctx shared.Context) error {
 		componentDTO = &dto
 	}
 
-	return ctx.JSON(200, struct {
-		PURL               string                      `json:"purl"`
-		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
-		Component          *dtos.ComponentDTO          `json:"component"`
-		AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
-		Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
-		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
-	}{
+	return ctx.JSON(200, PURLInspectResponse{
 		PURL:               purl.ToString(),
 		MatchContext:       matchCtx,
 		Component:          componentDTO,

@@ -175,13 +175,13 @@ func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB
 
 	// apply filter queries
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 
 	// apply sort
 	if len(sort) > 0 {
 		for _, s := range sort {
-			q = q.Order(s.SQL())
+			q = s.Order(q)
 		}
 	} else {
 		q = q.Order("created_at desc")

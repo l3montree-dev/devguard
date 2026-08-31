@@ -38,14 +38,37 @@ type licenseResponse struct {
 	Count   int              `json:"count"`
 }
 
+// @Summary Get license distribution for an asset
+// @Tags Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param artifact query string false "Artifact name"
+// @Success 200 {array} licenseResponse
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/components/licenses [get]
+func (componentController *ComponentController) AssetLicenseDistribution(ctx shared.Context) error {
+	return componentController.LicenseDistribution(ctx)
+}
+
 // @Summary Get license distribution for an asset version
 // @Tags Components
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifact query string false "Artifact name"
 // @Success 200 {array} licenseResponse
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/components/licenses [get]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses [get]
+func (componentController *ComponentController) AssetVersionLicenseDistribution(ctx shared.Context) error {
+	return componentController.LicenseDistribution(ctx)
+}
+
 func (componentController *ComponentController) LicenseDistribution(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	assetVersion, err := shared.MaybeGetAssetVersion(ctx)
@@ -107,6 +130,10 @@ func (componentController *ComponentController) LicenseDistribution(ctx shared.C
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
 // @Success 200 {object} shared.Paged[dtos.ComponentDependencyDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components [get]
 func (componentController *ComponentController) ListPaged(ctx shared.Context) error {
@@ -205,6 +232,8 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
 // @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/components [get]
 func (componentController *ComponentController) SearchComponentOccurrences(ctx shared.Context) error {

@@ -46,7 +46,7 @@ func NewComplianceComponentController(complianceComponentRepository shared.Compl
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Success 200 {array} object
+// @Success 200 {array} dtos.ComplianceComponentDetailsDTO
 // @Router /compliance-components/ [get]
 func (c *ComplianceComponentController) List(ctx shared.Context) error {
 	filter := shared.GetFilterQuery(ctx)
@@ -70,7 +70,7 @@ func (c *ComplianceComponentController) List(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param complianceComponentID path string true "Compliance component ID"
-// @Success 200 {object} object
+// @Success 200 {object} dtos.ComplianceComponentDetailsDTO
 // @Router /compliance-components/{complianceComponentID}/ [get]
 func (c *ComplianceComponentController) Details(ctx shared.Context) error {
 	id, err := uuid.Parse(ctx.Param("complianceComponentID"))
@@ -99,13 +99,50 @@ type statementPayload struct {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param frameworkControlID path string true "Framework control ID"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
 // @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/ [post]
+func (c *ComplianceComponentController) OrgCreateStatement(ctx shared.Context) error {
+	return c.CreateStatement(ctx)
+}
+
+// @Summary Create a compliance statement for a component
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param frameworkControlID path string true "Framework control ID"
+// @Param complianceComponentID path string true "Compliance component ID"
+// @Param body body statementPayload true "Request body"
+// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
+func (c *ComplianceComponentController) ProjectCreateStatement(ctx shared.Context) error {
+	return c.CreateStatement(ctx)
+}
+
+// @Summary Create a compliance statement for a component
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param frameworkControlID path string true "Framework control ID"
+// @Param complianceComponentID path string true "Compliance component ID"
+// @Param body body statementPayload true "Request body"
+// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
+func (c *ComplianceComponentController) AssetVersionCreateStatement(ctx shared.Context) error {
+	return c.CreateStatement(ctx)
+}
+
 func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) error {
 	frameworkControlID := ctx.Param("frameworkControlID")
 	if frameworkControlID == "" {
@@ -174,12 +211,47 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param statementID path string true "Statement ID"
 // @Param body body statementPayload true "Request body"
 // @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [put]
+func (c *ComplianceComponentController) OrgUpdateStatement(ctx shared.Context) error {
+	return c.UpdateStatement(ctx)
+}
+
+// @Summary Update a compliance statement
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param statementID path string true "Statement ID"
+// @Param body body statementPayload true "Request body"
+// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID} [put]
+func (c *ComplianceComponentController) ProjectUpdateStatement(ctx shared.Context) error {
+	return c.UpdateStatement(ctx)
+}
+
+// @Summary Update a compliance statement
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param statementID path string true "Statement ID"
+// @Param body body statementPayload true "Request body"
+// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID} [put]
+func (c *ComplianceComponentController) AssetVersionUpdateStatement(ctx shared.Context) error {
+	return c.UpdateStatement(ctx)
+}
+
 func (c *ComplianceComponentController) UpdateStatement(ctx shared.Context) error {
 	statementID, err := uuid.Parse(ctx.Param("statementID"))
 	if err != nil {
@@ -204,11 +276,44 @@ func (c *ComplianceComponentController) UpdateStatement(ctx shared.Context) erro
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param statementID path string true "Statement ID"
 // @Success 200 {object} object
 // @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [delete]
+func (c *ComplianceComponentController) OrgDeleteStatement(ctx shared.Context) error {
+	return c.DeleteStatement(ctx)
+}
+
+// @Summary Delete a compliance statement
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param statementID path string true "Statement ID"
+// @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID} [delete]
+func (c *ComplianceComponentController) ProjectDeleteStatement(ctx shared.Context) error {
+	return c.DeleteStatement(ctx)
+}
+
+// @Summary Delete a compliance statement
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param statementID path string true "Statement ID"
+// @Success 200 {object} object
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID} [delete]
+func (c *ComplianceComponentController) AssetVersionDeleteStatement(ctx shared.Context) error {
+	return c.DeleteStatement(ctx)
+}
+
 func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) error {
 	statementID, err := uuid.Parse(ctx.Param("statementID"))
 	if err != nil {

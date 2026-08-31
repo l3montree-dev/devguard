@@ -86,6 +86,7 @@ func NewScanController(scanService shared.ScanService, assetVersionRepository sh
 // @Param X-Asset-Default-Branch header string false "Default branch"
 // @Param X-Origin header string false "Origin"
 // @Success 200
+// @Param X-Asset-Name header string true "Asset name as <organization>/<project>/<asset>"
 // @Router /vex [post]
 // vexFormat identifies the serialization of an uploaded VEX document.
 func (s *ScanController) UploadVEX(ctx shared.Context) error {
@@ -392,6 +393,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 // @Param X-Asset-Default-Branch header string false "Default branch"
 // @Param X-Scanner header string true "Scanner ID"
 // @Success 200 {object} dtos.FirstPartyScanResponse
+// @Param X-Asset-Name header string true "Asset name as <organization>/<project>/<asset>"
 // @Router /sarif-scan [post]
 func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "ScanController.FirstPartyVulnScan")
@@ -503,6 +505,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 // @Param X-Origin header string false "Origin"
 // @Param X-Scanner header string false "Scanner ID"
 // @Success 200 {object} dtos.ScanResponse
+// @Param X-Asset-Name header string true "Asset name as <organization>/<project>/<asset>"
 // @Router /scan [post]
 func (s *ScanController) ScanDependencyVulnFromProject(c shared.Context) error {
 	_, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanDependencyVulnFromProject")
@@ -714,6 +717,9 @@ func (s *ScanController) SarifScanUnauthenticated(c echo.Context) error {
 // @Security BearerAuth
 // @Param file formData file true "SBOM file"
 // @Param X-Origin header string false "Origin"
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
 // @Success 200 {object} dtos.ScanResponse
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file [post]
 func (s *ScanController) ScanSbomFile(c shared.Context) error {
@@ -773,6 +779,7 @@ func (s *ScanController) ScanSbomFile(c shared.Context) error {
 // @Param body body cdx.BOM true "CycloneDX SBOM"
 // @Produce application/json
 // @Success 200 {object} cdx.BOM "CycloneDX VEX JSON"
+// @Param X-Asset-Name header string true "Asset name as <organization>/<project>/<asset>"
 // @Router /api/v2/scan [post]
 func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 	_, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanSbomFileVex")
@@ -812,6 +819,7 @@ func (s *ScanController) ScanSbomFileVex(c shared.Context) error {
 // @Param body body object true "SARIF scan result"
 // @Produce application/json
 // @Success 200 {object} object "Enriched SARIF JSON"
+// @Param X-Asset-Name header string true "Asset name as <organization>/<project>/<asset>"
 // @Router /api/v2/sarif-scan [post]
 func (s *ScanController) ScanSarifFile(c shared.Context) error {
 	_, span := controllersTracer.Start(c.Request().Context(), "ScanController.ScanSarifFile")

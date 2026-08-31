@@ -73,6 +73,16 @@ type informationSource struct {
 	Type string `json:"type,omitempty"`
 }
 
+type ArtifactRequest struct {
+	ArtifactName       string              `json:"artifactName" validate:"required"`
+	InformationSources []informationSource `json:"informationSources"`
+}
+
+type ArtifactUpdateResponse struct {
+	Artifact    dtos.ArtifactDTO              `json:"artifact"`
+	InvalidURLs []dtos.ExternalReferenceError `json:"invalidURLs"`
+}
+
 func informationSourceToString(source informationSource) string {
 	r := source.URL
 	if source.Purl != nil && *source.Purl != "" {
@@ -93,8 +103,8 @@ func informationSourceToString(source informationSource) string {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param body body object true "Artifact data"
-// @Success 201 {object} models.Artifact
+// @Param body body controllers.ArtifactRequest true "Artifact data"
+// @Success 201 {object} dtos.ArtifactDTO
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [post]
 func (c *ArtifactController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -104,12 +114,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	project := shared.GetProject(ctx)
 
-	type requestBody struct {
-		ArtifactName       string              `json:"artifactName" validate:"required"`
-		InformationSources []informationSource `json:"informationSources"`
-	}
-
-	var body requestBody
+	var body ArtifactRequest
 
 	userAgent := ctx.Request().UserAgent()
 
@@ -297,8 +302,8 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
-// @Param body body object true "Artifact data"
-// @Success 200 {object} object
+// @Param body body controllers.ArtifactRequest true "Artifact data"
+// @Success 200 {object} controllers.ArtifactUpdateResponse
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/ [put]
 func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
@@ -319,12 +324,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return err
 	}
 
-	type requestBody struct {
-		ArtifactName       string              `json:"artifactName"`
-		InformationSources []informationSource `json:"informationSources"`
-	}
-
-	var body requestBody
+	var body ArtifactRequest
 
 	if err := ctx.Bind(&body); err != nil { // nosemgrep: bind-without-validate -- requestBody has no constrained fields (InformationSources may legitimately be empty)
 		return err
@@ -431,12 +431,8 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		}
 	})
 
-	type responseBody struct {
-		Artifact    models.Artifact               `json:"artifact"`
-		InvalidURLs []dtos.ExternalReferenceError `json:"invalidURLs"`
-	}
-	response := responseBody{
-		Artifact:    artifact,
+	response := ArtifactUpdateResponse{
+		Artifact:    transformer.ArtifactModelToDTO(artifact),
 		InvalidURLs: invalidURLs,
 	}
 	return ctx.JSON(200, response)

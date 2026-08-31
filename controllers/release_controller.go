@@ -40,7 +40,7 @@ func NewReleaseController(service shared.ReleaseService, avService shared.AssetV
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
-// @Success 200 {object} object
+// @Success 200 {object} shared.Paged[dtos.ReleaseDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/releases [get]
 func (h *ReleaseController) List(c shared.Context) error {
 	project := shared.GetProject(c)
@@ -187,6 +187,9 @@ func (h *ReleaseController) CycloneDXVexXML(c shared.Context) error {
 
 // @Summary Get release VEX as CSAF
 // @Tags Releases
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/csaf.json [get]
 func (h *ReleaseController) CSAFJSON(c shared.Context) error {
 	rel, err := h.readRelease(c)
@@ -202,6 +205,9 @@ func (h *ReleaseController) CSAFJSON(c shared.Context) error {
 
 // @Summary Get release VEX as OpenVEX
 // @Tags Releases
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param releaseID path string true "Release ID"
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/openvex.json [get]
 func (h *ReleaseController) OpenCycloneDXVexJSON(c shared.Context) error {
 	rel, err := h.readRelease(c)

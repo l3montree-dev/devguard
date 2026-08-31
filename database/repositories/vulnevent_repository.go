@@ -115,7 +115,7 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q = f.Where(q)
 	}
 
 	type rowWithCount struct {

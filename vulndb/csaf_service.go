@@ -225,8 +225,8 @@ func importCSAFAdvisories(ctx context.Context, tx pgx.Tx, advisories []models.CV
 	}
 
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO cves (id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add)
-		SELECT id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add
+		INSERT INTO cves (id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add,withdrawn,cwes)
+		SELECT id, content_hash, cve, date_published, date_last_modified, description, cvss, "references", cisa_exploit_add, cisa_action_due, cisa_required_action, cisa_vulnerability_name, epss, percentile, vector, euvd_exploit_add, withdrawn, cwes
 		FROM csaf_cves_stage
 		ON CONFLICT (id) DO NOTHING`); err != nil {
 		return fmt.Errorf("could not flush advisory cves: %w", err)

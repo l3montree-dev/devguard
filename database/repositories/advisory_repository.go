@@ -41,7 +41,7 @@ func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *g
 	query := db.Model(&models.Advisory{}).Preload("AffectedPackages").Where("asset_id = ?", assetID)
 
 	for _, f := range filter {
-		query = query.Where(f.SQL(), f.Value())
+		query = f.Where(query)
 	}
 
 	var count int64
