@@ -59,10 +59,12 @@ rec {
   dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {
     inherit (pkgs)
+      lib
       postgresql_16
       fetchurl
       stdenv
       runCommand
+      jq
       ;
   };
   pythonTools = import ./python-tools.nix {
@@ -220,6 +222,7 @@ rec {
         postgresql.psql
         postgresql.entrypoint
         postgresql.config
+        postgresql.sbom
         pkgs.bash
         pkgs.coreutils
         pkgs.gnutar
