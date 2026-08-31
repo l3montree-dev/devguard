@@ -21,7 +21,8 @@ func main() {
 		commands.ReleaseDevguardCmd,
 		commands.ReleaseWebCmd,
 		commands.ReleaseCICmd,
-		commands.ReleaseHelmCmd,
+		commands.ReleaseDockerDeploymentCmd,
+		commands.ReleaseHelmChartCmd,
 		commands.ReleaseK8sIntegrationCmd,
 		commands.NewLicensesCommand(),
 	)

@@ -19,7 +19,7 @@ func TestUpdateDockerDeployment(t *testing.T) {
 	env := `DEVGUARD_API_TAG=v1.0.0
 DEVGUARD_WEB_TAG=v1.0.0
 POSTGRESQL_TAG=v1.0.0
-ORY_KRATOS_TAG=v26.2.0-distroless@sha256:481bfc3022e5427ffb94570eef84480b99c9f8158388378c57df8c1a4a104b3d
+KRATOS_TAG=v1.0.0
 TRAEFIK_TAG=v3.7
 `
 	envFile := filepath.Join(deploymentDir, ".env.example")
@@ -48,6 +48,7 @@ TRAEFIK_TAG=v3.7
 	for _, want := range []string{
 		"DEVGUARD_API_TAG=v2.0.1",
 		"POSTGRESQL_TAG=v2.0.1",
+		"KRATOS_TAG=v2.0.1",
 		"DEVGUARD_WEB_TAG=v2.0.3",
 	} {
 		if !strings.Contains(content, want) {
