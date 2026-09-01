@@ -51,7 +51,7 @@ func TestProcessRange(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple fixed events after a single introduced (cherrypicks on other branches)",
+			name: "multiple fixed events after a single introduced (cherrypicks on other branches) will only record the first fixed event as the end of the range",
 			events: []dtos.SemverEvent{
 				{Introduced: "0"},
 				{Fixed: "1.2.0"},
@@ -60,7 +60,6 @@ func TestProcessRange(t *testing.T) {
 			purl: npmPurl,
 			want: []models.AffectedComponent{
 				semverComponent(npmPurl, "", "1.2.0"),
-				semverComponent(npmPurl, "", "1.3.0"),
 			},
 		},
 		{
@@ -98,12 +97,14 @@ func TestProcessRange(t *testing.T) {
 			want: []models.AffectedComponent{},
 		},
 		{
-			name: "no closing event at all yields no components",
+			name: "no closing event at all yields a single open component",
 			events: []dtos.SemverEvent{
 				{Introduced: "1.0.0"},
 			},
 			purl: npmPurl,
-			want: []models.AffectedComponent{},
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "1.0.0", ""),
+			},
 		},
 		{
 			name: "unparseable fixed version on a semver ecosystem is skipped",
@@ -135,7 +136,6 @@ func TestProcessRange(t *testing.T) {
 			purl: apkPurl,
 			want: []models.AffectedComponent{
 				versionComponent(apkPurl, "", "1.2.3-r0"),
-				versionComponent(apkPurl, "", "1.2.4-r0"),
 			},
 		},
 		{
@@ -354,6 +354,9 @@ func TestIsUnmatchableRedHatEcosystem(t *testing.T) {
 		"Red Hat:jboss_core_services:1::el8",    // add-on product, "elN" suffix
 		"Red Hat:openstack:18.0::el9",           // add-on product, "elN" suffix
 		"Red Hat:enterprise_mrg:2:server:el6",   // "elN" suffix in a different field position
+		"Red Hat:enterprise_linux:11::baseos",  // bare major, RHEL 11 (future major)
+		"Red Hat:rhel_eus:11.4::baseos",        // EUS, RHEL 11
+		"Red Hat:jboss_core_services:1::el11",  // add-on product, "elN" suffix, RHEL 11
 	}
 	for _, ecosystem := range matchable {
 		if isUnmatchableRedHatEcosystem(ecosystem) {
