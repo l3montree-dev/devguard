@@ -246,13 +246,38 @@ jobs:
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
+  verify-digests:
+    name: Verify cross-registry digests
+    runs-on: ubuntu-latest
+    # Only real tags publish images under that tag on both registries; the
+    # test-release branch escape hatch below has nothing to compare.
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.34.4/install
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            substituters = https://cache.nixos.org https://nix.garage.l3montree.cloud
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      - name: Verify ghcr.io and registry.opencode.de digests match
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          nix run .#devguardCLI -- verify-digests --tag "$TAG"
+
   release:
     name: Build and Release Binaries
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    # needs: [golangci, tests, sign-scanner, devguard]
-    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
+    needs: [verify-digests]
+    if: always() && (needs.verify-digests.result == 'success' || needs.verify-digests.result == 'skipped') && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release')
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:

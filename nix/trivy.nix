@@ -11,14 +11,14 @@
 
 let
   pname = "trivy";
-  version = "0.72.0";
+  version = "0.74.0";
   modulePurl = "pkg:golang/github.com/aquasecurity/trivy";
 
   src = fetchFromGitHub {
     owner = "aquasecurity";
     repo = "trivy";
     rev = "v${version}";
-    hash = "sha256-wlvG8iGPBbHV66SOT0zek2VN1QawksVQwM9LSEItzh4=";
+    hash = "sha256-OXOT8qwqh8Gy+IJcvBza5nai5bvNMcAMeeT+b2zuWDg=";
   };
 
   package = buildGoModule {
@@ -27,7 +27,7 @@ let
     # vendor hash differs across Linux and Darwin builds — bypass the source
     # vendor dir entirely and fetch modules via the Go module proxy.
     proxyVendor = true;
-    vendorHash = "sha256-n5eWyKpG47LuXPzMO+/tzhFs4F+grWQAThCoGEMQ2S8=";
+    vendorHash = "sha256-ajXgC6CCw0IaS/e3k0wGNIUOs9mTBIEuV21ZnwZj7SQ=";
 
     subPackages = [ "cmd/trivy" ];
 
