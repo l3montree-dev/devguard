@@ -5,8 +5,202 @@ import (
 	"os"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/package-url/packageurl-go"
 )
+
+// TestProcessRange exercises processRange against the OSV range/events spec:
+// https://ossf.github.io/osv-schema/#requirements
+func TestProcessRange(t *testing.T) {
+	npmPurl, err := packageurl.FromString("pkg:npm/example-lib")
+	if err != nil {
+		t.Fatalf("failed to build npm purl: %v", err)
+	}
+	apkPurl, err := packageurl.FromString("pkg:apk/alpine/example-lib")
+	if err != nil {
+		t.Fatalf("failed to build apk purl: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		events []dtos.SemverEvent
+		purl   packageurl.PackageURL
+		want   []models.AffectedComponent
+	}{
+		{
+			name: "simple introduced/fixed pair",
+			events: []dtos.SemverEvent{
+				{Introduced: "1.0.0"},
+				{Fixed: "1.2.0"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "1.0.0", "1.2.0"),
+			},
+		},
+		{
+			name: "introduced 0 means unbounded start - no lower bound recorded",
+			events: []dtos.SemverEvent{
+				{Introduced: "0"},
+				{Fixed: "1.2.0"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "", "1.2.0"),
+			},
+		},
+		{
+			name: "multiple fixed events after a single introduced (cherrypicks on other branches)",
+			events: []dtos.SemverEvent{
+				{Introduced: "0"},
+				{Fixed: "1.2.0"},
+				{Fixed: "1.3.0"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "", "1.2.0"),
+				semverComponent(npmPurl, "", "1.3.0"),
+			},
+		},
+		{
+			name: "two independent introduced/fixed ranges",
+			events: []dtos.SemverEvent{
+				{Introduced: "1.0.0"},
+				{Fixed: "1.2.0"},
+				{Introduced: "2.0.0"},
+				{Fixed: "2.5.0"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "1.0.0", "1.2.0"),
+				semverComponent(npmPurl, "2.0.0", "2.5.0"),
+			},
+		},
+		{
+			name: "last_affected with a semver-incrementable patch version",
+			events: []dtos.SemverEvent{
+				{Introduced: "1.0.0"},
+				{LastAffected: "1.1.5"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "1.0.0", "1.1.6"),
+			},
+		},
+		{
+			name: "last_affected that cannot be parsed as semver is skipped",
+			events: []dtos.SemverEvent{
+				{Introduced: "1.0.0"},
+				{LastAffected: "not-a-version"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{},
+		},
+		{
+			name: "no closing event at all yields no components",
+			events: []dtos.SemverEvent{
+				{Introduced: "1.0.0"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{},
+		},
+		{
+			name: "unparseable fixed version on a semver ecosystem is skipped",
+			events: []dtos.SemverEvent{
+				{Introduced: "1.0.0"},
+				{Fixed: "not-a-version"},
+			},
+			purl: npmPurl,
+			want: []models.AffectedComponent{},
+		},
+		{
+			name: "apk/deb/rpm ecosystems keep plain version strings instead of semver",
+			events: []dtos.SemverEvent{
+				{Introduced: "0"},
+				{Fixed: "1.2.3-r0"},
+			},
+			purl: apkPurl,
+			want: []models.AffectedComponent{
+				versionComponent(apkPurl, "", "1.2.3-r0"),
+			},
+		},
+		{
+			name: "apk ecosystem also supports multiple fixed events for one introduced",
+			events: []dtos.SemverEvent{
+				{Introduced: "0"},
+				{Fixed: "1.2.3-r0"},
+				{Fixed: "1.2.4-r0"},
+			},
+			purl: apkPurl,
+			want: []models.AffectedComponent{
+				versionComponent(apkPurl, "", "1.2.3-r0"),
+				versionComponent(apkPurl, "", "1.2.4-r0"),
+			},
+		},
+		{
+			name:   "no events at all",
+			events: []dtos.SemverEvent{},
+			purl:   npmPurl,
+			want:   []models.AffectedComponent{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := dtos.Range{Type: "ECOSYSTEM", Events: tt.events}
+			got := processRange(r, "test-ecosystem", tt.purl)
+
+			if len(got) != len(tt.want) {
+				t.Fatalf("expected %d components, got %d: %+v", len(tt.want), len(got), got)
+			}
+			for i := range got {
+				if !componentsEqual(got[i], tt.want[i]) {
+					t.Errorf("component %d mismatch:\n got:  %+v\n want: %+v", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func semverComponent(purl packageurl.PackageURL, introduced, fixed string) models.AffectedComponent {
+	var semverIntroduced, semverFixed *string
+	if introduced != "" {
+		semverIntroduced = &introduced
+	}
+	if fixed != "" {
+		semverFixed = &fixed
+	}
+	return newAffectedComponent("test-ecosystem", purl, semverIntroduced, semverFixed, nil, nil, nil)
+}
+
+func versionComponent(purl packageurl.PackageURL, introduced, fixed string) models.AffectedComponent {
+	var versionIntroduced, versionFixed *string
+	if introduced != "" {
+		versionIntroduced = &introduced
+	}
+	if fixed != "" {
+		versionFixed = &fixed
+	}
+	return newAffectedComponent("test-ecosystem", purl, nil, nil, nil, versionIntroduced, versionFixed)
+}
+
+func strPtrEqual(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+func componentsEqual(a, b models.AffectedComponent) bool {
+	return a.PurlWithoutVersion == b.PurlWithoutVersion &&
+		a.Ecosystem == b.Ecosystem &&
+		strPtrEqual(a.Version, b.Version) &&
+		strPtrEqual(a.SemverIntroduced, b.SemverIntroduced) &&
+		strPtrEqual(a.SemverFixed, b.SemverFixed) &&
+		strPtrEqual(a.VersionIntroduced, b.VersionIntroduced) &&
+		strPtrEqual(a.VersionFixed, b.VersionFixed)
+}
 
 func TestNonSemverLastAffectedFallsBackToVersions(t *testing.T) {
 	osv := &dtos.OSV{
@@ -43,6 +237,37 @@ func TestNonSemverLastAffectedFallsBackToVersions(t *testing.T) {
 		}
 		if c.SemverIntroduced != nil || c.SemverFixed != nil {
 			t.Errorf("expected no semver range on fallback component")
+		}
+	}
+}
+
+func TestAlpineCVE2026_2006Transformation(t *testing.T) {
+	b, err := os.ReadFile("testdata/alpine-cve-2026-2006.json")
+	if err != nil {
+		t.Fatalf("failed to read test data: %v", err)
+	}
+
+	var osv dtos.OSV
+	if err := json.Unmarshal(b, &osv); err != nil {
+		t.Fatalf("failed to unmarshal test data: %v", err)
+	}
+
+	components := AffectedComponentsFromOSV(&osv)
+
+	// postgresql16 / Alpine:v3.22 has two "fixed" events after one "introduced"
+	// event (16.12-r0, 16.13-r0) - every resulting component must carry a fixed version.
+	var v322 []models.AffectedComponent
+	for _, c := range components {
+		if c.PurlWithoutVersion == "pkg:apk/alpine/postgresql16" && c.Ecosystem == "Alpine:v3.22" {
+			v322 = append(v322, c)
+		}
+	}
+	if len(v322) == 0 {
+		t.Fatalf("expected components for postgresql16 / Alpine:v3.22")
+	}
+	for _, c := range v322 {
+		if c.VersionFixed == nil {
+			t.Errorf("postgresql16 / Alpine:v3.22 component has no fixed version set: %+v", c)
 		}
 	}
 }

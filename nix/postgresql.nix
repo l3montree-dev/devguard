@@ -36,6 +36,6 @@ rec {
     name = "postgresql16";
     inherit version;
     # we just use the alpine postgresql purl - there are CVEs tracked against this package under that identity, and we want to match them
-    purl = "pkg:apk/alpine/postgresql16@${version}?arch=source";
+    purl = "pkg:apk/alpine/postgresql16@${version}?arch=source&distro=3.22.2";
   };
 }
