@@ -208,7 +208,7 @@ jobs:
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/kratos
       artifact-name-suffix: kratos
-      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/kratos
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
@@ -234,7 +234,7 @@ jobs:
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/postgresql
       artifact-name-suffix: postgresql
-      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
