@@ -30,7 +30,6 @@ rec {
     install -D -m 0644 ${./postgresql.conf} $out/etc/postgresql/postgresql.conf
   '';
 
-
   version = "16.15-r0";
   sbom = (import ./sbom-lib.nix { inherit lib runCommand jq; }).mkHandwrittenSBOM {
     name = "postgresql16";
