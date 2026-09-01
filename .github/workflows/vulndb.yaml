@@ -1,4 +1,4 @@
-name: VulnDB Workflow v4
+name: VulnDB Workflow v4.1
 
 on:
   workflow_dispatch:
