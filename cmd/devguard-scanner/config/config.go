@@ -63,14 +63,15 @@ type baseConfig struct {
 	Password string `json:"password" mapstructure:"password"`
 	Registry string `json:"registry" mapstructure:"registry"`
 
-	ScannerID     string `json:"scannerId" mapstructure:"scannerID"`
-	Ref           string `json:"ref" mapstructure:"ref"`
-	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
-	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
-	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
-	Origin        string `json:"origin" mapstructure:"origin"`
-	OutputPath    string `json:"outputPath" mapstructure:"outputPath"`
-	Format        string `json:"format" mapstructure:"format"`
+	ScannerID          string `json:"scannerId" mapstructure:"scannerID"`
+	Ref                string `json:"ref" mapstructure:"ref"`
+	RecentCommitHashes []string
+	DefaultBranch      string `json:"defaultRef" mapstructure:"defaultRef"`
+	IsTag              bool   `json:"isTag" mapstructure:"isTag"`
+	ArtifactName       string `json:"artifactName" mapstructure:"artifactName"`
+	Origin             string `json:"origin" mapstructure:"origin"`
+	OutputPath         string `json:"outputPath" mapstructure:"outputPath"`
+	Format             string `json:"format" mapstructure:"format"`
 
 	Timeout                    int  `json:"timeout" mapstructure:"timeout"`
 	IgnoreExternalReferences   bool `json:"ignoreExternalReferences" mapstructure:"ignoreExternalReferences"`
@@ -158,6 +159,13 @@ func ParseBaseConfig(runningCMD string) {
 			}
 		}
 	}
+
+	hashes, err := utils.GitLister.GetRecentCommitHashes(RuntimeBaseConfig.Path)
+	if err != nil {
+		slog.Debug("could not get recent commit hashes - the api will fall back to the default branch", "err", err)
+		hashes = nil
+	}
+	RuntimeBaseConfig.RecentCommitHashes = hashes
 
 	if RuntimeBaseConfig.AssetName != "" {
 		// normalize the asset name. We allow two different formats.
@@ -263,6 +271,10 @@ func SetXAssetHeaders(req *http.Request) {
 
 	if RuntimeBaseConfig.DefaultBranch != "" {
 		req.Header.Set("X-Asset-Default-Branch", RuntimeBaseConfig.DefaultBranch)
+	}
+
+	if len(RuntimeBaseConfig.RecentCommitHashes) > 0 {
+		req.Header.Set("X-Recent-Commit-Hashes", strings.Join(RuntimeBaseConfig.RecentCommitHashes, ","))
 	}
 }
 

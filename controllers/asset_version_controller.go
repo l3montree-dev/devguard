@@ -109,7 +109,7 @@ func (a *AssetVersionController) Create(ctx shared.Context) error {
 		defaultBranch = &body.Name
 	}
 
-	assetVersion, err := a.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, body.Name, asset.ID, body.Tag, defaultBranch)
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(ctx.Request().Context(), nil, body.Name, asset.ID, body.Tag, defaultBranch, nil)
 	if err != nil {
 		return err
 	}

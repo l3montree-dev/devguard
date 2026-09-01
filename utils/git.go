@@ -89,6 +89,7 @@ type gitLister interface {
 	GitCommitCount(path string, tag *string) (int, error)
 	GetBranchName(path string) (string, error)
 	GetDefaultBranchName(path string) (string, error)
+	GetRecentCommitHashes(path string) ([]string, error)
 }
 
 type commandLineGitLister struct {
@@ -131,6 +132,58 @@ func (g commandLineGitLister) GetBranchName(path string) (string, error) {
 	}
 
 	return strings.TrimSpace(out.String()), nil
+}
+
+func (g commandLineGitLister) GetRecentCommitHashes(path string) ([]string, error) {
+	const ShortCommitHashLength = 7
+	const limit = 250
+
+	cmd := exec.Command("git", "log", "-n", strconv.Itoa(limit), "--format=%H") // nolint: gosec
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	if err := cmd.Run(); err != nil {
+		slog.Debug("could not get recent commit hashes", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return nil, err
+	}
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	hashes := make([]string, 0, len(lines))
+	for _, line := range lines {
+		hash := strings.TrimSpace(line)
+		if hash == "" {
+			continue
+		}
+		if len(hash) > ShortCommitHashLength {
+			hash = hash[:ShortCommitHashLength]
+		}
+		hashes = append(hashes, hash)
+	}
+
+	return hashes, nil
+}
+
+func ParseRecentCommitHashes(hashesStr string) []string {
+	if hashesStr == "" {
+		return nil
+	}
+
+	parts := strings.Split(hashesStr, ",")
+	hashes := make([]string, 0, len(parts))
+	for _, part := range parts {
+		hash := strings.TrimSpace(part)
+		if hash == "" {
+			continue
+		}
+		hashes = append(hashes, hash)
+	}
+
+	if len(hashes) == 0 {
+		return nil
+	}
+	return hashes
 }
 
 func (g commandLineGitLister) MarkAllPathsAsSafe() error {
