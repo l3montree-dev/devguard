@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"net/url"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/compliance"
@@ -85,9 +86,9 @@ func (c *CompliancePostureController) AssetVersionRead(ctx shared.Context) error
 }
 
 func (c *CompliancePostureController) Read(ctx shared.Context) error {
-	frameworkControlID := ctx.Param("frameworkControlID")
-	if frameworkControlID == "" {
-		return echo.NewHTTPError(400, "frameworkControlID is required")
+	frameworkControlID, err := getFrameworkControlIDFromCtx(ctx)
+	if err != nil {
+		return err
 	}
 
 	orgID := shared.GetOrg(ctx).ID
@@ -240,6 +241,14 @@ func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uui
 	return projectID, assetID, assetVersionName
 }
 
+func getFrameworkControlIDFromCtx(ctx shared.Context) (string, error) {
+	frameworkControlID, err := url.PathUnescape(ctx.Param("frameworkControlID"))
+	if err != nil || frameworkControlID == "" {
+		return "", echo.NewHTTPError(400, "frameworkControlID is required")
+	}
+	return frameworkControlID, nil
+}
+
 // @Summary Create a compliance posture event
 // @Tags Compliance Postures
 // @Security CookieAuth
@@ -288,9 +297,9 @@ func (c *CompliancePostureController) AssetVersionCreateEvent(ctx shared.Context
 
 func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 
-	frameworkControlID := ctx.Param("frameworkControlID")
-	if frameworkControlID == "" {
-		return echo.NewHTTPError(400, "frameworkControlID is required")
+	frameworkControlID, err := getFrameworkControlIDFromCtx(ctx)
+	if err != nil {
+		return err
 	}
 
 	ownerID := shared.GetSession(ctx).GetActorName()
@@ -299,7 +308,6 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 
 	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
-	var err error
 
 	var state struct {
 		Status        string  `json:"status"`
