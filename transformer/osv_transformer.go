@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
@@ -16,6 +17,21 @@ import (
 	gocvss40 "github.com/pandatix/go-cvss/40"
 	"gorm.io/datatypes"
 )
+
+// redHatEcosystemHasRHELMajor matches Red Hat OSV ecosystem strings that carry a
+// recognizable RHEL major version, either directly after a colon
+// ("Red Hat:enterprise_linux:9::baseos", "Red Hat:rhel_eus:9.4::baseos") or as an
+// "elN" suffix used by add-on products ("Red Hat:jboss_core_services:1::el8").
+// repositories.QualifierEcosystemPattern can only ever narrow a purl's distro
+// qualifier down to one of these two shapes, so an ecosystem matching neither
+// (year-versioned products, legacy pre-RHEL-3 releases, standalone product lines
+// like Red Hat Hardened Images/hummingbird, ...) can never be reached by a
+// distro-qualified rpm lookup - keeping such rows around only wastes space.
+var redHatEcosystemHasRHELMajor = regexp.MustCompile(`^Red Hat:.*(:|el)(3|4|5|6|7|8|9|10)([^0-9]|$)`)
+
+func isUnmatchableRedHatEcosystem(ecosystem string) bool {
+	return strings.HasPrefix(ecosystem, "Red Hat:") && !redHatEcosystemHasRHELMajor.MatchString(ecosystem)
+}
 
 // need Optimus Prime here
 func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationship {
@@ -121,6 +137,13 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 				// continue
 			}
 		}*/
+
+		// exception to the append-only rule above: these rows are dead on arrival,
+		// not merely withdrawn - no rpm lookup can ever reach them, see
+		// isUnmatchableRedHatEcosystem.
+		if isUnmatchableRedHatEcosystem(affected.Package.Ecosystem) {
+			continue
+		}
 
 		if affected.Package.Purl != "" {
 			affectedComponents = append(affectedComponents, affectedComponentsFromAffected(affected)...)

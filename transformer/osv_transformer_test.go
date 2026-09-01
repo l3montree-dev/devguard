@@ -321,3 +321,51 @@ outer:
 		}
 	}
 }
+
+func TestIsUnmatchableRedHatEcosystem(t *testing.T) {
+	unmatchable := []string{
+		"Red Hat:hummingbird:1",            // Red Hat Hardened Images - no RHEL major at all
+		"Red Hat:enterprise_linux:2.1::as", // pre-RHEL-3 legacy release
+		"Red Hat:enterprise_linux:2.1::ws",
+		"Red Hat:enterprise_linux:2.1::es",
+		"Red Hat:enterprise_linux:2.1::aw",
+		"Red Hat:rhel_application_stack:1", // standalone product version, no RHEL major
+		"Red Hat:rhel_application_stack:2",
+		"Red Hat:devtools:2020", // year-versioned product
+		"Red Hat:devtools:2021",
+		"Red Hat:hpc_solution:1.0",
+		"Red Hat:rhel_application_server:2",
+		"Red Hat:rhivos:1.0",
+		"Red Hat:enterprise_ipa:1.0",
+		"Red Hat:service_mesh:0",
+	}
+	for _, ecosystem := range unmatchable {
+		if !isUnmatchableRedHatEcosystem(ecosystem) {
+			t.Errorf("expected %q to be unmatchable", ecosystem)
+		}
+	}
+
+	matchable := []string{
+		"Red Hat:enterprise_linux:9::baseos",    // bare major, RHEL 9
+		"Red Hat:enterprise_linux:8::appstream", // bare major, RHEL 8
+		"Red Hat:enterprise_linux:10.2",         // bare major, RHEL 10 (unified minor versioning)
+		"Red Hat:rhel_eus:9.4::baseos",          // EUS, minor-versioned
+		"Red Hat:rhel_aus:8.4::appstream",       // AUS, minor-versioned
+		"Red Hat:jboss_core_services:1::el8",    // add-on product, "elN" suffix
+		"Red Hat:openstack:18.0::el9",           // add-on product, "elN" suffix
+		"Red Hat:enterprise_mrg:2:server:el6",   // "elN" suffix in a different field position
+	}
+	for _, ecosystem := range matchable {
+		if isUnmatchableRedHatEcosystem(ecosystem) {
+			t.Errorf("expected %q to be matchable", ecosystem)
+		}
+	}
+
+	// non-Red-Hat ecosystems are never touched by this filter
+	other := []string{"Debian:13", "Alpine:v3.22", "npm"}
+	for _, ecosystem := range other {
+		if isUnmatchableRedHatEcosystem(ecosystem) {
+			t.Errorf("expected %q (non-Red-Hat ecosystem) to be left alone", ecosystem)
+		}
+	}
+}
