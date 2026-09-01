@@ -51,7 +51,7 @@ func TestProcessRange(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple fixed events after a single introduced (cherrypicks on other branches)",
+			name: "multiple fixed events after a single introduced (cherrypicks on other branches) will only record the first fixed event as the end of the range",
 			events: []dtos.SemverEvent{
 				{Introduced: "0"},
 				{Fixed: "1.2.0"},
@@ -60,7 +60,6 @@ func TestProcessRange(t *testing.T) {
 			purl: npmPurl,
 			want: []models.AffectedComponent{
 				semverComponent(npmPurl, "", "1.2.0"),
-				semverComponent(npmPurl, "", "1.3.0"),
 			},
 		},
 		{
@@ -98,12 +97,14 @@ func TestProcessRange(t *testing.T) {
 			want: []models.AffectedComponent{},
 		},
 		{
-			name: "no closing event at all yields no components",
+			name: "no closing event at all yields a single open component",
 			events: []dtos.SemverEvent{
 				{Introduced: "1.0.0"},
 			},
 			purl: npmPurl,
-			want: []models.AffectedComponent{},
+			want: []models.AffectedComponent{
+				semverComponent(npmPurl, "1.0.0", ""),
+			},
 		},
 		{
 			name: "unparseable fixed version on a semver ecosystem is skipped",
@@ -135,7 +136,6 @@ func TestProcessRange(t *testing.T) {
 			purl: apkPurl,
 			want: []models.AffectedComponent{
 				versionComponent(apkPurl, "", "1.2.3-r0"),
-				versionComponent(apkPurl, "", "1.2.4-r0"),
 			},
 		},
 		{
@@ -318,6 +318,57 @@ outer:
 				}
 			}
 			t.Errorf("unexpected semver range: %s - %s", *c.SemverIntroduced, *c.SemverFixed)
+		}
+	}
+}
+
+func TestIsUnmatchableRedHatEcosystem(t *testing.T) {
+	unmatchable := []string{
+		"Red Hat:hummingbird:1",            // Red Hat Hardened Images - no RHEL major at all
+		"Red Hat:enterprise_linux:2.1::as", // pre-RHEL-3 legacy release
+		"Red Hat:enterprise_linux:2.1::ws",
+		"Red Hat:enterprise_linux:2.1::es",
+		"Red Hat:enterprise_linux:2.1::aw",
+		"Red Hat:rhel_application_stack:1", // standalone product version, no RHEL major
+		"Red Hat:rhel_application_stack:2",
+		"Red Hat:devtools:2020", // year-versioned product
+		"Red Hat:devtools:2021",
+		"Red Hat:hpc_solution:1.0",
+		"Red Hat:rhel_application_server:2",
+		"Red Hat:rhivos:1.0",
+		"Red Hat:enterprise_ipa:1.0",
+		"Red Hat:service_mesh:0",
+	}
+	for _, ecosystem := range unmatchable {
+		if !isUnmatchableRedHatEcosystem(ecosystem) {
+			t.Errorf("expected %q to be unmatchable", ecosystem)
+		}
+	}
+
+	matchable := []string{
+		"Red Hat:enterprise_linux:9::baseos",    // bare major, RHEL 9
+		"Red Hat:enterprise_linux:8::appstream", // bare major, RHEL 8
+		"Red Hat:enterprise_linux:10.2",         // bare major, RHEL 10 (unified minor versioning)
+		"Red Hat:rhel_eus:9.4::baseos",          // EUS, minor-versioned
+		"Red Hat:rhel_aus:8.4::appstream",       // AUS, minor-versioned
+		"Red Hat:jboss_core_services:1::el8",    // add-on product, "elN" suffix
+		"Red Hat:openstack:18.0::el9",           // add-on product, "elN" suffix
+		"Red Hat:enterprise_mrg:2:server:el6",   // "elN" suffix in a different field position
+		"Red Hat:enterprise_linux:11::baseos",  // bare major, RHEL 11 (future major)
+		"Red Hat:rhel_eus:11.4::baseos",        // EUS, RHEL 11
+		"Red Hat:jboss_core_services:1::el11",  // add-on product, "elN" suffix, RHEL 11
+	}
+	for _, ecosystem := range matchable {
+		if isUnmatchableRedHatEcosystem(ecosystem) {
+			t.Errorf("expected %q to be matchable", ecosystem)
+		}
+	}
+
+	// non-Red-Hat ecosystems are never touched by this filter
+	other := []string{"Debian:13", "Alpine:v3.22", "npm"}
+	for _, ecosystem := range other {
+		if isUnmatchableRedHatEcosystem(ecosystem) {
+			t.Errorf("expected %q (non-Red-Hat ecosystem) to be left alone", ecosystem)
 		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
@@ -16,6 +17,21 @@ import (
 	gocvss40 "github.com/pandatix/go-cvss/40"
 	"gorm.io/datatypes"
 )
+
+// redHatEcosystemHasRHELMajor matches Red Hat OSV ecosystem strings that carry a
+// recognizable RHEL major version, either directly after a colon
+// ("Red Hat:enterprise_linux:9::baseos", "Red Hat:rhel_eus:9.4::baseos") or as an
+// "elN" suffix used by add-on products ("Red Hat:jboss_core_services:1::el8").
+// repositories.QualifierEcosystemPattern can only ever narrow a purl's distro
+// qualifier down to one of these two shapes, so an ecosystem matching neither
+// (year-versioned products, legacy pre-RHEL-3 releases, standalone product lines
+// like Red Hat Hardened Images/hummingbird, ...) can never be reached by a
+// distro-qualified rpm lookup - keeping such rows around only wastes space.
+var redHatEcosystemHasRHELMajor = regexp.MustCompile(`^Red Hat:.*(:|el)([3-9]|[1-9][0-9])([^0-9]|$)`)
+
+func isUnmatchableRedHatEcosystem(ecosystem string) bool {
+	return strings.HasPrefix(ecosystem, "Red Hat:") && !redHatEcosystemHasRHELMajor.MatchString(ecosystem)
+}
 
 // need Optimus Prime here
 func OSVToCVERelationships(osv *dtos.OSV) []models.CVERelationship {
@@ -122,6 +138,13 @@ func AffectedComponentsFromOSV(osv *dtos.OSV) []models.AffectedComponent {
 			}
 		}*/
 
+		// exception to the append-only rule above: these rows are dead on arrival,
+		// not merely withdrawn - no rpm lookup can ever reach them, see
+		// isUnmatchableRedHatEcosystem.
+		if isUnmatchableRedHatEcosystem(affected.Package.Ecosystem) {
+			continue
+		}
+
 		if affected.Package.Purl != "" {
 			affectedComponents = append(affectedComponents, affectedComponentsFromAffected(affected)...)
 		} else {
@@ -208,9 +231,22 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 	components := make([]models.AffectedComponent, 0, len(r.Events))
 
 	introduced := ""
+	closed := true // no pending introduced event to close yet
 	for _, event := range r.Events {
 		if event.Introduced != "" {
+			if !closed {
+				// no closing event was found for the previous introduced — record it as open-ended
+				component, _ := buildRangeComponent(ecosystem, purl, introduced, "")
+				components = append(components, component)
+			}
 			introduced = event.Introduced
+			closed = false
+			continue
+		}
+
+		if closed {
+			// extra fixed/last_affected events (e.g. cherrypicks on other branches) after
+			// the range was already closed only record the first one as the end of the range
 			continue
 		}
 
@@ -218,45 +254,63 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 		if fixed == "" && event.LastAffected != "" {
 			incremented, err := incrementPatchVersion(event.LastAffected)
 			if err != nil {
-				// non-semver last_affected — skip this closing event so the
+				// non-semver last_affected — skip this closing event entirely so the
 				// versions slice fallback in affectedComponentsFromAffected takes over
+				closed = true
 				continue
 			}
 			fixed = incremented
 		}
-		if fixed == "" {
+
+		component, ok := buildRangeComponent(ecosystem, purl, introduced, fixed)
+		if !ok {
+			// unparseable fixed version — skip this closing event entirely
+			closed = true
 			continue
 		}
+		components = append(components, component)
+		closed = true
+	}
 
-		var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string
-		if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
-			if introduced != "0" && introduced != "" {
-				versionIntroduced = &introduced
-			}
-			if fixed != "" {
-				versionFixed = &fixed
-			}
-		} else {
-			if introduced != "0" && introduced != "" {
-				semverInt, err := normalize.ConvertToSemver(introduced)
-				if err != nil {
-					continue
-				}
-				semverIntroduced = &semverInt
-			}
-			if fixed != "" {
-				converted, err := normalize.ConvertToSemver(fixed)
-				if err != nil {
-					continue
-				}
-				semverFixed = &converted
-			}
-		}
-
-		components = append(components, newAffectedComponent(ecosystem, purl, semverIntroduced, semverFixed, nil, versionIntroduced, versionFixed))
+	if !closed {
+		// no closing event was found at all — record it as open-ended
+		component, _ := buildRangeComponent(ecosystem, purl, introduced, "")
+		components = append(components, component)
 	}
 
 	return components
+}
+
+// buildRangeComponent builds the component for an introduced/fixed pair. It returns
+// ok=false when fixed is set but cannot be parsed, in which case the range should be
+// dropped entirely by the caller.
+func buildRangeComponent(ecosystem string, purl packageurl.PackageURL, introduced, fixed string) (models.AffectedComponent, bool) {
+	var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string
+	if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
+		if introduced != "0" && introduced != "" {
+			versionIntroduced = &introduced
+		}
+		if fixed != "" {
+			versionFixed = &fixed
+		}
+	} else {
+		if introduced != "0" && introduced != "" {
+			semverInt, err := normalize.ConvertToSemver(introduced)
+			if err != nil {
+				return models.AffectedComponent{}, false
+			}
+			semverIntroduced = &semverInt
+		}
+		if fixed != "" {
+			converted, err := normalize.ConvertToSemver(fixed)
+			if err != nil {
+				return models.AffectedComponent{}, false
+			}
+			semverFixed = &converted
+		}
+	}
+
+	return newAffectedComponent(ecosystem, purl, semverIntroduced, semverFixed, nil, versionIntroduced, versionFixed), true
 }
 
 func processVersions(versions []string, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponent {

@@ -133,23 +133,23 @@ func ConvertToSemver(originalVersion string) (string, error) {
 	return semver, nil
 }
 
-func CheckVersion(exactVersion, introduced, fixed *string, lookingForVersion, affectedComponentType string) (bool, error) {
+func CheckVersionInRange(exactVersion, introduced, fixed *string, lookingForVersion, affectedComponentType string) (bool, error) {
 	switch affectedComponentType {
 	case "deb":
-		return checkDebVersion(exactVersion, introduced, fixed, lookingForVersion)
+		return checkDebVersionInRange(exactVersion, introduced, fixed, lookingForVersion)
 	case "rpm":
-		return checkRpmVersion(exactVersion, introduced, fixed, lookingForVersion)
+		return checkRpmVersionInRange(exactVersion, introduced, fixed, lookingForVersion)
 	case "apk":
-		return checkApkVersion(exactVersion, introduced, fixed, lookingForVersion)
+		return checkApkVersionInRange(exactVersion, introduced, fixed, lookingForVersion)
 	default:
 		return false, fmt.Errorf("unsupported affected component type: %s", affectedComponentType)
 	}
 }
 
-// checkVersionWithComparator is a generic helper function that implements the common
+// checkVersionInRangeWithComparator is a generic helper function that implements the common
 // version checking logic. It uses generics to provide type safety and eliminate type assertions.
 // V is the version type used by the specific version parsing library (APK, DEB, RPM).
-func checkVersionWithComparator[V any](
+func checkVersionInRangeWithComparator[V any](
 	version, introduced, fixed *string,
 	lookingForVersion string,
 	newVersion func(string) (V, error),
@@ -200,8 +200,8 @@ func checkVersionWithComparator[V any](
 	return (less && greater) || (introduced == nil && less) || (fixed == nil && greater), nil
 }
 
-func checkApkVersion(version, introduced, fixed *string, lookingForVersion string) (bool, error) {
-	return checkVersionWithComparator(
+func checkApkVersionInRange(version, introduced, fixed *string, lookingForVersion string) (bool, error) {
+	return checkVersionInRangeWithComparator(
 		version, introduced, fixed, lookingForVersion,
 		apk.NewVersion,
 		func(a, b apk.Version) bool { return a.Equal(b) },
@@ -210,8 +210,8 @@ func checkApkVersion(version, introduced, fixed *string, lookingForVersion strin
 	)
 }
 
-func checkDebVersion(version, introduced, fixed *string, lookingForVersion string) (bool, error) {
-	return checkVersionWithComparator(
+func checkDebVersionInRange(version, introduced, fixed *string, lookingForVersion string) (bool, error) {
+	return checkVersionInRangeWithComparator(
 		version, introduced, fixed, lookingForVersion,
 		deb.NewVersion,
 		func(a, b deb.Version) bool { return a.Equal(b) },
@@ -220,8 +220,8 @@ func checkDebVersion(version, introduced, fixed *string, lookingForVersion strin
 	)
 }
 
-func checkRpmVersion(version, introduced, fixed *string, lookingForVersion string) (bool, error) {
-	return checkVersionWithComparator(
+func checkRpmVersionInRange(version, introduced, fixed *string, lookingForVersion string) (bool, error) {
+	return checkVersionInRangeWithComparator(
 		version, introduced, fixed, lookingForVersion,
 		func(v string) (rpm.Version, error) { return rpm.NewVersion(v), nil },
 		func(a, b rpm.Version) bool { return a.Equal(b) },
