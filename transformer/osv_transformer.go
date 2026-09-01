@@ -203,23 +203,29 @@ func incrementPatchVersion(version string) (string, error) {
 	return v.String(), nil
 }
 
+// ref: https://ossf.github.io/osv-schema/#requirements
 func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []models.AffectedComponent {
-	components := make([]models.AffectedComponent, 0, len(r.Events)/2+1)
+	components := make([]models.AffectedComponent, 0, len(r.Events))
 
-	for i := 0; i < len(r.Events); i += 2 {
-		introduced := r.Events[i].Introduced
-		fixed := ""
-		if i+1 < len(r.Events) {
-			fixed = r.Events[i+1].Fixed
-			if fixed == "" && r.Events[i+1].LastAffected != "" {
-				incremented, err := incrementPatchVersion(r.Events[i+1].LastAffected)
-				if err != nil {
-					// non-semver last_affected — skip this range entry so the
-					// versions slice fallback in affectedComponentsFromAffected takes over
-					continue
-				}
-				fixed = incremented
+	introduced := ""
+	for _, event := range r.Events {
+		if event.Introduced != "" {
+			introduced = event.Introduced
+			continue
+		}
+
+		fixed := event.Fixed
+		if fixed == "" && event.LastAffected != "" {
+			incremented, err := incrementPatchVersion(event.LastAffected)
+			if err != nil {
+				// non-semver last_affected — skip this closing event so the
+				// versions slice fallback in affectedComponentsFromAffected takes over
+				continue
 			}
+			fixed = incremented
+		}
+		if fixed == "" {
+			continue
 		}
 
 		var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string

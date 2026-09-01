@@ -48,6 +48,50 @@
   # filter). See sbom-normalize.jq for what it fixes and why.
   sbomNormalizeJQ = ./sbom-normalize.jq;
 
+  # A minimal, hand-written CycloneDX descriptor (just identity + version)
+  # for a component with no derivable dependency tree to scan - e.g. a
+  # prebuilt binary bundled inside another package (oci.nix's semgrepSBOM,
+  # for the OCaml semgrep-core binary), or a package built from a different
+  # origin than the identity it should be matched under for vulnerability
+  # purposes (postgresql.nix, which deliberately claims an alpine apk purl
+  # for a nixpkgs-built binary, since that's the identity upstream
+  # advisories are tracked under). Piped through sbomNormalizeJQ purely for
+  # output consistency with every other SBOM in this repo, even though a
+  # hand-written document has no actual non-determinism to fix.
+  mkHandwrittenSBOM =
+    {
+      name,
+      fileName ? name,
+      version,
+      purl ? null,
+      extra ? { },
+    }:
+    let
+      component = {
+        type = "application";
+        "bom-ref" = if purl != null then purl else name;
+        inherit name version;
+      }
+      // (if purl != null then { inherit purl; } else { })
+      // extra;
+      doc = {
+        bomFormat = "CycloneDX";
+        specVersion = "1.7";
+        metadata.component = component;
+        dependencies = [
+          {
+            ref = component."bom-ref";
+            dependsOn = [ ];
+          }
+        ];
+      };
+      json = builtins.toJSON doc;
+    in
+    runCommand "${fileName}-sbom" { nativeBuildInputs = [ jq ]; } ''
+      mkdir -p $out/sboms
+      echo '${json}' | jq -S -f ${./sbom-normalize.jq} > $out/sboms/${fileName}.json
+    '';
+
   mkToolSBOM =
     { trivy }:
 

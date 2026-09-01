@@ -95,11 +95,11 @@ func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace strin
 func BatchedVersionPredicate(interpretation normalize.VersionInterpretationType) string {
 	switch interpretation {
 	case normalize.ExactVersionString:
-		return `ac.version = q.version`
+		return `(ac.version = q.version OR ac.version = q.original_version)`
 	case normalize.EmptyVersion:
 		return `ac.version IS NULL AND ac.semver_introduced IS NULL AND ac.semver_fixed IS NULL AND ac.version_introduced IS NULL AND ac.version_fixed IS NULL`
 	case normalize.SemanticVersionString:
-		return `(ac.version = q.version
+		return `(ac.version = q.version OR ac.version = q.original_version
 			OR (ac.semver_introduced IS NULL AND ac.semver_fixed > q.version::semver)
 			OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed IS NULL)
 			OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed > q.version::semver))`
