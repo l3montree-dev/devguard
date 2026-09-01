@@ -281,13 +281,15 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	// size and postgres can reuse the plan.
 	searchPurls := make([]string, len(candidates))
 	versions := make([]string, len(candidates))
+	originalVersions := make([]string, len(candidates))
 	for i, c := range candidates {
 		searchPurls[i] = c.matchCtx.SearchPurl
 		versions[i] = c.matchCtx.NormalizedVersion
+		originalVersions[i] = c.matchCtx.OriginalVersion
 	}
 
 	var conditions []string
-	args := []any{searchPurls, versions}
+	args := []any{searchPurls, versions, originalVersions}
 
 	if predicate := repositories.BatchedVersionPredicate(shape.interpretation); predicate != "" {
 		conditions = append(conditions, predicate)
@@ -309,7 +311,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 			ac.version_fixed AS component_version_fixed
 		FROM affected_components ac
 		JOIN (
-			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version
+			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version, unnest($3::text[]) AS original_version
 		) q ON ac.purl = q.purl`
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
