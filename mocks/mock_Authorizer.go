@@ -75,7 +75,7 @@ type Authorizer_VerifyAPIToken_Call struct {
 // VerifyAPIToken is a helper method to define mock.On call
 //   - ctx context.Context
 //   - token string
-func (_e *Authorizer_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *Authorizer_VerifyAPIToken_Call {
+func (_e *Authorizer_Expecter) VerifyAPIToken(ctx any, token any) *Authorizer_VerifyAPIToken_Call {
 	return &Authorizer_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
 }
 
@@ -140,7 +140,7 @@ type Authorizer_VerifyAdminRequest_Call struct {
 
 // VerifyAdminRequest is a helper method to define mock.On call
 //   - req *http.Request
-func (_e *Authorizer_Expecter) VerifyAdminRequest(req interface{}) *Authorizer_VerifyAdminRequest_Call {
+func (_e *Authorizer_Expecter) VerifyAdminRequest(req any) *Authorizer_VerifyAdminRequest_Call {
 	return &Authorizer_VerifyAdminRequest_Call{Call: _e.mock.On("VerifyAdminRequest", req)}
 }
 
@@ -203,7 +203,7 @@ type Authorizer_VerifyRequestSignature_Call struct {
 // VerifyRequestSignature is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req *http.Request
-func (_e *Authorizer_Expecter) VerifyRequestSignature(ctx interface{}, req interface{}) *Authorizer_VerifyRequestSignature_Call {
+func (_e *Authorizer_Expecter) VerifyRequestSignature(ctx any, req any) *Authorizer_VerifyRequestSignature_Call {
 	return &Authorizer_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", ctx, req)}
 }
 

@@ -19,7 +19,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/openvex/go-vex/pkg/vex"
@@ -77,88 +76,6 @@ func VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule,
 	default:
 		return nil, format, fmt.Errorf("unsupported VEX document format")
 	}
-}
-
-func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
-
-	//check if the upstream urls are valid urls
-	for _, url := range upstreamURLs {
-		url = normalize.SanitizeExternalReferencesURL(url)
-		// skip CSAF URLs - they're handled separately
-		if strings.HasSuffix(url, "/provider-metadata.json") {
-			continue
-		}
-		//check if the file is a valid url
-		if url == "" || !strings.HasPrefix(url, "http") {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: "invalid url, no http prefix found",
-			})
-			continue
-		}
-
-		var bom cyclonedx.BOM
-		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-		defer cancel()
-		// fetch the file from the url
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not create request for url: %v", err),
-			})
-			continue
-		}
-
-		resp, err := utils.EgressClient.Do(req)
-		if err != nil || resp.StatusCode != 200 {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not fetch url or non 200 status code: %v", err),
-			})
-			continue
-		}
-		defer resp.Body.Close()
-
-		// download the url and check if it is a valid sbom
-		file, err := io.ReadAll(resp.Body)
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not read response body: %v", err),
-			})
-			continue
-		}
-
-		err = json.Unmarshal(file, &bom)
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not unmarshal response body into cyclonedx bom: %v", err),
-			})
-			continue
-		}
-
-		// Only process SBOMs (not VEX)
-		if normalize.BomIsSBOM(&bom) {
-			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url)
-			if err != nil {
-				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
-				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-					URL:    url,
-					Reason: fmt.Sprintf("could not normalize sbom: %v", err),
-				})
-				continue
-			}
-
-			validURLs = append(validURLs, url)
-			// add the sbom prefix
-			boms = append(boms, normalizedBOM)
-		}
-	}
-
-	return boms, validURLs, invalidURLs
 }
 
 // FetchVexFromUpstream downloads VEX from the given external references and converts it into

@@ -65,7 +65,7 @@ type ReleaseService_AddItem_Call struct {
 // AddItem is a helper method to define mock.On call
 //   - ctx context.Context
 //   - item *models.ReleaseItem
-func (_e *ReleaseService_Expecter) AddItem(ctx interface{}, item interface{}) *ReleaseService_AddItem_Call {
+func (_e *ReleaseService_Expecter) AddItem(ctx any, item any) *ReleaseService_AddItem_Call {
 	return &ReleaseService_AddItem_Call{Call: _e.mock.On("AddItem", ctx, item)}
 }
 
@@ -122,7 +122,7 @@ type ReleaseService_Create_Call struct {
 // Create is a helper method to define mock.On call
 //   - ctx context.Context
 //   - r *models.Release
-func (_e *ReleaseService_Expecter) Create(ctx interface{}, r interface{}) *ReleaseService_Create_Call {
+func (_e *ReleaseService_Expecter) Create(ctx any, r any) *ReleaseService_Create_Call {
 	return &ReleaseService_Create_Call{Call: _e.mock.On("Create", ctx, r)}
 }
 
@@ -179,7 +179,7 @@ type ReleaseService_Delete_Call struct {
 // Delete is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) Delete(ctx interface{}, id interface{}) *ReleaseService_Delete_Call {
+func (_e *ReleaseService_Expecter) Delete(ctx any, id any) *ReleaseService_Delete_Call {
 	return &ReleaseService_Delete_Call{Call: _e.mock.On("Delete", ctx, id)}
 }
 
@@ -246,7 +246,7 @@ type ReleaseService_FindOrCreate_Call struct {
 //   - ctx context.Context
 //   - projectID uuid.UUID
 //   - name string
-func (_e *ReleaseService_Expecter) FindOrCreate(ctx interface{}, projectID interface{}, name interface{}) *ReleaseService_FindOrCreate_Call {
+func (_e *ReleaseService_Expecter) FindOrCreate(ctx any, projectID any, name any) *ReleaseService_FindOrCreate_Call {
 	return &ReleaseService_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", ctx, projectID, name)}
 }
 
@@ -319,7 +319,7 @@ type ReleaseService_ListByProject_Call struct {
 // ListByProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *ReleaseService_Expecter) ListByProject(ctx interface{}, projectID interface{}) *ReleaseService_ListByProject_Call {
+func (_e *ReleaseService_Expecter) ListByProject(ctx any, projectID any) *ReleaseService_ListByProject_Call {
 	return &ReleaseService_ListByProject_Call{Call: _e.mock.On("ListByProject", ctx, projectID)}
 }
 
@@ -389,7 +389,7 @@ type ReleaseService_ListByProjectPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ReleaseService_Expecter) ListByProjectPaged(ctx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ReleaseService_ListByProjectPaged_Call {
+func (_e *ReleaseService_Expecter) ListByProjectPaged(ctx any, projectID any, pageInfo any, search any, filter any, sort any) *ReleaseService_ListByProjectPaged_Call {
 	return &ReleaseService_ListByProjectPaged_Call{Call: _e.mock.On("ListByProjectPaged", ctx, projectID, pageInfo, search, filter, sort)}
 }
 
@@ -486,7 +486,7 @@ type ReleaseService_ListCandidates_Call struct {
 //   - ctx context.Context
 //   - projectID uuid.UUID
 //   - releaseID *uuid.UUID
-func (_e *ReleaseService_Expecter) ListCandidates(ctx interface{}, projectID interface{}, releaseID interface{}) *ReleaseService_ListCandidates_Call {
+func (_e *ReleaseService_Expecter) ListCandidates(ctx any, projectID any, releaseID any) *ReleaseService_ListCandidates_Call {
 	return &ReleaseService_ListCandidates_Call{Call: _e.mock.On("ListCandidates", ctx, projectID, releaseID)}
 }
 
@@ -557,7 +557,7 @@ type ReleaseService_Read_Call struct {
 // Read is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) Read(ctx interface{}, id interface{}) *ReleaseService_Read_Call {
+func (_e *ReleaseService_Expecter) Read(ctx any, id any) *ReleaseService_Read_Call {
 	return &ReleaseService_Read_Call{Call: _e.mock.On("Read", ctx, id)}
 }
 
@@ -623,7 +623,7 @@ type ReleaseService_ReadRecursive_Call struct {
 // ReadRecursive is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) ReadRecursive(ctx interface{}, id interface{}) *ReleaseService_ReadRecursive_Call {
+func (_e *ReleaseService_Expecter) ReadRecursive(ctx any, id any) *ReleaseService_ReadRecursive_Call {
 	return &ReleaseService_ReadRecursive_Call{Call: _e.mock.On("ReadRecursive", ctx, id)}
 }
 
@@ -680,7 +680,7 @@ type ReleaseService_RemoveItem_Call struct {
 // RemoveItem is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *ReleaseService_Expecter) RemoveItem(ctx interface{}, id interface{}) *ReleaseService_RemoveItem_Call {
+func (_e *ReleaseService_Expecter) RemoveItem(ctx any, id any) *ReleaseService_RemoveItem_Call {
 	return &ReleaseService_RemoveItem_Call{Call: _e.mock.On("RemoveItem", ctx, id)}
 }
 
@@ -737,7 +737,7 @@ type ReleaseService_Update_Call struct {
 // Update is a helper method to define mock.On call
 //   - ctx context.Context
 //   - r *models.Release
-func (_e *ReleaseService_Expecter) Update(ctx interface{}, r interface{}) *ReleaseService_Update_Call {
+func (_e *ReleaseService_Expecter) Update(ctx any, r any) *ReleaseService_Update_Call {
 	return &ReleaseService_Update_Call{Call: _e.mock.On("Update", ctx, r)}
 }
 

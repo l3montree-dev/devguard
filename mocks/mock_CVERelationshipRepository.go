@@ -67,7 +67,7 @@ type CVERelationshipRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CVERelationshipRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *CVERelationshipRepository_Activate_Call {
+func (_e *CVERelationshipRepository_Expecter) Activate(ctx any, tx any, id any) *CVERelationshipRepository_Activate_Call {
 	return &CVERelationshipRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -140,7 +140,7 @@ type CVERelationshipRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CVERelationshipRepository_Expecter) All(ctx interface{}, tx interface{}) *CVERelationshipRepository_All_Call {
+func (_e *CVERelationshipRepository_Expecter) All(ctx any, tx any) *CVERelationshipRepository_All_Call {
 	return &CVERelationshipRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -198,7 +198,7 @@ type CVERelationshipRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CVERelationshipRepository_Expecter) Begin(ctx interface{}) *CVERelationshipRepository_Begin_Call {
+func (_e *CVERelationshipRepository_Expecter) Begin(ctx any) *CVERelationshipRepository_Begin_Call {
 	return &CVERelationshipRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -249,7 +249,7 @@ type CVERelationshipRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CVERelationshipRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *CVERelationshipRepository_CleanupOrphanedRecords_Call {
+func (_e *CVERelationshipRepository_Expecter) CleanupOrphanedRecords(ctx any) *CVERelationshipRepository_CleanupOrphanedRecords_Call {
 	return &CVERelationshipRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -302,7 +302,7 @@ type CVERelationshipRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *CVERelationshipRepository_Create_Call {
+func (_e *CVERelationshipRepository_Expecter) Create(ctx any, tx any, t any) *CVERelationshipRepository_Create_Call {
 	return &CVERelationshipRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -365,7 +365,7 @@ type CVERelationshipRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *CVERelationshipRepository_CreateBatch_Call {
+func (_e *CVERelationshipRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *CVERelationshipRepository_CreateBatch_Call {
 	return &CVERelationshipRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -428,7 +428,7 @@ type CVERelationshipRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CVERelationshipRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *CVERelationshipRepository_Delete_Call {
+func (_e *CVERelationshipRepository_Expecter) Delete(ctx any, tx any, id any) *CVERelationshipRepository_Delete_Call {
 	return &CVERelationshipRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -491,7 +491,7 @@ type CVERelationshipRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *CVERelationshipRepository_DeleteBatch_Call {
+func (_e *CVERelationshipRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *CVERelationshipRepository_DeleteBatch_Call {
 	return &CVERelationshipRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -565,7 +565,7 @@ type CVERelationshipRepository_FindCrossRelationshipsBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assiciatedCVEIDs []string
-func (_e *CVERelationshipRepository_Expecter) FindCrossRelationshipsBatch(ctx interface{}, tx interface{}, assiciatedCVEIDs interface{}) *CVERelationshipRepository_FindCrossRelationshipsBatch_Call {
+func (_e *CVERelationshipRepository_Expecter) FindCrossRelationshipsBatch(ctx any, tx any, assiciatedCVEIDs any) *CVERelationshipRepository_FindCrossRelationshipsBatch_Call {
 	return &CVERelationshipRepository_FindCrossRelationshipsBatch_Call{Call: _e.mock.On("FindCrossRelationshipsBatch", ctx, tx, assiciatedCVEIDs)}
 }
 
@@ -629,7 +629,7 @@ type CVERelationshipRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CVERelationshipRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *CVERelationshipRepository_GetDB_Call {
+func (_e *CVERelationshipRepository_Expecter) GetDB(ctx any, tx any) *CVERelationshipRepository_GetDB_Call {
 	return &CVERelationshipRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -698,7 +698,7 @@ type CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - targetCVEIDs []string
-func (_e *CVERelationshipRepository_Expecter) GetRelationshipsByTargetCVEBatch(ctx interface{}, tx interface{}, targetCVEIDs interface{}) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
+func (_e *CVERelationshipRepository_Expecter) GetRelationshipsByTargetCVEBatch(ctx any, tx any, targetCVEIDs any) *CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call {
 	return &CVERelationshipRepository_GetRelationshipsByTargetCVEBatch_Call{Call: _e.mock.On("GetRelationshipsByTargetCVEBatch", ctx, tx, targetCVEIDs)}
 }
 
@@ -763,7 +763,7 @@ type CVERelationshipRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *CVERelationshipRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *CVERelationshipRepository_InBatches_Call {
+func (_e *CVERelationshipRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *CVERelationshipRepository_InBatches_Call {
 	return &CVERelationshipRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -837,7 +837,7 @@ type CVERelationshipRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *CVERelationshipRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *CVERelationshipRepository_List_Call {
+func (_e *CVERelationshipRepository_Expecter) List(ctx any, tx any, ids any) *CVERelationshipRepository_List_Call {
 	return &CVERelationshipRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -909,7 +909,7 @@ type CVERelationshipRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CVERelationshipRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *CVERelationshipRepository_Read_Call {
+func (_e *CVERelationshipRepository_Expecter) Read(ctx any, tx any, id any) *CVERelationshipRepository_Read_Call {
 	return &CVERelationshipRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -972,7 +972,7 @@ type CVERelationshipRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *CVERelationshipRepository_Save_Call {
+func (_e *CVERelationshipRepository_Expecter) Save(ctx any, tx any, t any) *CVERelationshipRepository_Save_Call {
 	return &CVERelationshipRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1035,7 +1035,7 @@ type CVERelationshipRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CVERelationship
-func (_e *CVERelationshipRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *CVERelationshipRepository_SaveBatch_Call {
+func (_e *CVERelationshipRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *CVERelationshipRepository_SaveBatch_Call {
 	return &CVERelationshipRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1097,7 +1097,7 @@ type CVERelationshipRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *CVERelationshipRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *CVERelationshipRepository_Transaction_Call {
+func (_e *CVERelationshipRepository_Expecter) Transaction(ctx any, fn any) *CVERelationshipRepository_Transaction_Call {
 	return &CVERelationshipRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1157,7 +1157,7 @@ type CVERelationshipRepository_Upsert_Call struct {
 //   - t *[]*models.CVERelationship
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *CVERelationshipRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *CVERelationshipRepository_Upsert_Call {
+func (_e *CVERelationshipRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *CVERelationshipRepository_Upsert_Call {
 	return &CVERelationshipRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

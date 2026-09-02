@@ -75,7 +75,7 @@ type MaliciousPackageChecker_GetMaliciousComponents_Call struct {
 //   - ctx context.Context
 //   - ecosystem string
 //   - packageName string
-func (_e *MaliciousPackageChecker_Expecter) GetMaliciousComponents(ctx interface{}, ecosystem interface{}, packageName interface{}) *MaliciousPackageChecker_GetMaliciousComponents_Call {
+func (_e *MaliciousPackageChecker_Expecter) GetMaliciousComponents(ctx any, ecosystem any, packageName any) *MaliciousPackageChecker_GetMaliciousComponents_Call {
 	return &MaliciousPackageChecker_GetMaliciousComponents_Call{Call: _e.mock.On("GetMaliciousComponents", ctx, ecosystem, packageName)}
 }
 
@@ -146,7 +146,7 @@ type MaliciousPackageChecker_GetMaliciousPackage_Call struct {
 // GetMaliciousPackage is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id string
-func (_e *MaliciousPackageChecker_Expecter) GetMaliciousPackage(ctx interface{}, id interface{}) *MaliciousPackageChecker_GetMaliciousPackage_Call {
+func (_e *MaliciousPackageChecker_Expecter) GetMaliciousPackage(ctx any, id any) *MaliciousPackageChecker_GetMaliciousPackage_Call {
 	return &MaliciousPackageChecker_GetMaliciousPackage_Call{Call: _e.mock.On("GetMaliciousPackage", ctx, id)}
 }
 

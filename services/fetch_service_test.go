@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +46,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := FetchSbomsFromUpstream(context.Background(), artifactName, ref, []string{sbomURL})
+		boms, validURLs, invalidURLs := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, []string{sbomURL})
 
 		// Verify the SBOM was processed successfully with the correct URL
 		assert.Equal(t, 1, len(boms), "should have fetched 1 SBOM")
@@ -68,7 +69,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLsList := FetchSbomsFromUpstream(context.Background(), artifactName, ref, invalidURLs)
+		boms, validURLs, invalidURLsList := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, invalidURLs)
 
 		assert.Equal(t, 0, len(boms))
 		assert.Equal(t, 0, len(validURLs))
@@ -86,7 +87,7 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := FetchSbomsFromUpstream(context.Background(), artifactName, ref, []string{sbomURL})
+		boms, validURLs, invalidURLs := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, []string{sbomURL})
 
 		// HTTP errors should result in invalid URLs
 		assert.Equal(t, 0, len(boms))

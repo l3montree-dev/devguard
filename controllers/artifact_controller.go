@@ -143,7 +143,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalid := services.FetchSbomsFromUpstream(ctx.Request().Context(), artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, _, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), tx, asset, artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
 	if len(invalid) > 0 {
 		tx.Rollback()
 		return ctx.JSON(400, invalid)
@@ -353,17 +353,17 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return u
 	})
 
+	tx := c.artifactRepository.Begin(reqCtx)
+	defer tx.Rollback()
+
 	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := services.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls)
+	boms, _, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, tx, asset, artifactName, artifact.AssetVersionName, toAddUrls)
 	var vulns []models.DependencyVuln
 
 	graph := normalize.NewSBOMGraph()
 	for _, bom := range boms {
 		graph.MergeGraph(bom)
 	}
-
-	tx := c.artifactRepository.Begin(reqCtx)
-	defer tx.Rollback()
 
 	// make sure that we at least update the sbom once if there were deletions
 	// updating with nil, will just renormalize the sbom and remove all components which are not

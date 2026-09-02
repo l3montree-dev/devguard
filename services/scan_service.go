@@ -610,7 +610,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -681,6 +681,10 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 					Reason: fmt.Sprintf("could not normalize sbom: %v", err),
 				})
 				continue
+			}
+
+			if err := s.IngestVexFromExternalReferences(ctx, tx, &bom, asset); err != nil {
+				slog.Error("could not ingest vex from external references", "err", err)
 			}
 
 			validURLs = append(validURLs, url)
@@ -851,7 +855,7 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	})
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
+	boms, _, _ := s.FetchSbomsFromUpstream(ctx, tx, asset, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
 
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
@@ -974,4 +978,31 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		AmountOpened:    len(vulnDTOs),
 		DependencyVulns: vulnDTOs,
 	}, nil
+}
+
+func (s *scanService) IngestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset) error {
+	externalURLs := []string{}
+	if bom.ExternalReferences != nil {
+		for _, ref := range *bom.ExternalReferences {
+			if ref.Type == cyclonedx.ERTypeExploitabilityStatement {
+				externalURLs = append(externalURLs, ref.URL)
+			}
+		}
+	}
+
+	if len(externalURLs) == 0 {
+		return nil
+	}
+
+	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, externalURLs)
+
+	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
+		slog.Error("could not store vex external reference", "err", err)
+	}
+
+	if len(rules) == 0 {
+		return nil
+	}
+
+	return s.IngestVEXRules(ctx, tx, asset, rules)
 }
