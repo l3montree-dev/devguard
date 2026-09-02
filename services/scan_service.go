@@ -610,7 +610,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -654,13 +654,12 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, 
 				slog.Error("could not ingest vex from external references", "err", err)
 			}
 
-			validURLs = append(validURLs, url)
 			// add the sbom prefix
 			boms = append(boms, normalizedBOM)
 		}
 	}
 
-	return boms, validURLs, invalidURLs
+	return boms, invalidURLs
 }
 
 // fetches url inside a function to properly cancel ctx and close the response body
@@ -851,7 +850,7 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	})
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(ctx, tx, asset, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
+	boms, _ := s.FetchSbomsFromUpstream(ctx, tx, asset, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
 
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
