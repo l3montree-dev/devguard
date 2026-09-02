@@ -1,4 +1,4 @@
-name: VulnDB Workflow v4.1
+name: VulnDB Workflow v4
 
 on:
   workflow_dispatch:
@@ -45,11 +45,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
         with:
+          ref: v1.13.2
           persist-credentials: false
       - name: Install Golang
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0 - https://github.com/actions/setup-go/releases/tag/v5.5.0
         with:
-          go-version: "1.26"
+          go-version: "1.25"
       - name: Export the vulnerability database archive
         run: |
           # writes the database snapshot files and bundles them into a single tar.zst archive
@@ -80,9 +81,9 @@ jobs:
 
       - name: Push the database archive to GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v4.1:latest \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v4:latest \
             vulndb.tar.zst
       - name: Push the archive signature to the GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v4.1:latest.sig \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v4:latest.sig \
             vulndb.tar.zst.sig
