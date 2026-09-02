@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -14,20 +15,23 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/errgroup"
 )
 
 // minVerifyTag is the earliest release tag checked; images published before
 // this version were not built reproducibly across GitHub and GitLab.
 const minVerifyTag = "v1.4.0"
 
-// imageRepoPairs lists, for every image DevGuard publishes, the GitHub
-// (ghcr.io) and GitLab (registry.opencode.de) repository that build and push
-// it independently. Their digests must match bit-for-bit.
-var imageRepoPairs = []struct {
+// imagePair is, for one image DevGuard publishes, the GitHub (ghcr.io) and
+// GitLab (registry.opencode.de) repository that build and push it
+// independently. Their digests must match bit-for-bit.
+type imagePair struct {
 	name   string
 	ghcr   string
 	gitlab string
-}{
+}
+
+var imageRepoPairs = []imagePair{
 	{"devguard", "ghcr.io/l3montree-dev/devguard", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard"},
 	{"scanner", "ghcr.io/l3montree-dev/devguard/scanner", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/scanner"},
 	{"kratos", "ghcr.io/l3montree-dev/devguard/kratos", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/kratos"},
@@ -95,37 +99,27 @@ both registries (the two release pipelines build independently and race)`)
 }
 
 func runVerifyDigests(cmd *cobra.Command, ctx context.Context) error {
-	type imageResult struct {
-		image    string
-		mismatch []mismatch
-		checked  int
-		err      error
-	}
-
-	results := make([]imageResult, len(imageRepoPairs))
-	var wg sync.WaitGroup
-	for i, pair := range imageRepoPairs {
-		wg.Add(1)
-		go func(i int, pair struct {
-			name   string
-			ghcr   string
-			gitlab string
-		}) {
-			defer wg.Done()
-			mismatches, checked, err := verifyImagePair(ctx, pair.name, pair.ghcr, pair.gitlab)
-			results[i] = imageResult{image: pair.name, mismatch: mismatches, checked: checked, err: err}
-		}(i, pair)
-	}
-	wg.Wait()
+	out := cmd.ErrOrStderr()
+	fmt.Fprintf(out, "verifying digests for %d images...\n", len(imageRepoPairs))
 
 	var all []mismatch
 	var totalChecked int
-	for _, r := range results {
-		if r.err != nil {
-			return fmt.Errorf("%s: %w", r.image, r.err)
-		}
-		totalChecked += r.checked
-		all = append(all, r.mismatch...)
+
+	g, ctx := errgroup.WithContext(ctx)
+	for _, pair := range imageRepoPairs {
+		g.Go(func() error {
+			mismatches, checked, err := verifyImagePair(ctx, out, pair)
+			if err != nil {
+				return fmt.Errorf("%s: %w", pair.name, err)
+			}
+			fmt.Fprintf(out, "[%s] done: %d tag(s) checked, %d mismatch(es)\n", pair.name, checked, len(mismatches))
+			all = append(all, mismatches...)
+			totalChecked += checked
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	sort.Slice(all, func(i, j int) bool {
@@ -141,115 +135,109 @@ func runVerifyDigests(cmd *cobra.Command, ctx context.Context) error {
 	}
 
 	fmt.Printf("Checked %d tags, %d mismatched or missing:\n\n", totalChecked, len(all))
-	t := table.NewWriter()
-	t.SetOutputMirror(cmd.OutOrStdout())
-	t.SetStyle(table.StyleLight)
-	t.AppendHeader(table.Row{"Image", "Tag", "Reason"})
-	for _, m := range all {
-		t.AppendRow(table.Row{m.image, m.tag, m.reason})
-	}
-	t.Render()
-
+	printMismatchTable(cmd, all)
 	return fmt.Errorf("digest verification failed for %d tag(s)", len(all))
 }
 
 // verifyImagePair compares digests for the "main" tag and all "v*" tags
-// between two repositories publishing the same image. It returns the tags
+// between the two repositories publishing pair's image. It returns the tags
 // that mismatched or were missing, and the total number of tags checked.
-func verifyImagePair(ctx context.Context, imageName, repoAName, repoBName string) ([]mismatch, int, error) {
-	repoA, err := name.NewRepository(repoAName)
+func verifyImagePair(ctx context.Context, out io.Writer, pair imagePair) ([]mismatch, int, error) {
+	repoA, err := name.NewRepository(pair.ghcr)
 	if err != nil {
-		return nil, 0, fmt.Errorf("invalid repository %q: %w", repoAName, err)
+		return nil, 0, fmt.Errorf("invalid repository %q: %w", pair.ghcr, err)
 	}
 
 	tagsA, err := listTags(ctx, repoA)
 	if err != nil {
-		return nil, 0, fmt.Errorf("listing tags for %s: %w", repoAName, err)
+		return nil, 0, fmt.Errorf("listing tags for %s: %w", pair.ghcr, err)
 	}
 
 	relevant := filterRelevantTags(tagsA)
 	if len(relevant) == 0 {
-		return nil, 0, fmt.Errorf("no matching tags (main or v*) found in %s", repoAName)
+		return nil, 0, fmt.Errorf("no matching tags (main or v*) found in %s", pair.ghcr)
 	}
 	sort.Strings(relevant)
-
-	type tagResult struct {
-		tag string
-		m   *mismatch
-		err error
-	}
-	tagResults := make([]tagResult, len(relevant))
-	var wg sync.WaitGroup
-	for i, tag := range relevant {
-		wg.Add(1)
-		go func(i int, tag string) {
-			defer wg.Done()
-
-			digestA, err := digestFor(ctx, repoAName, tag)
-			if err != nil {
-				tagResults[i] = tagResult{tag: tag, err: fmt.Errorf("fetching digest for %s:%s: %w", repoAName, tag, err)}
-				return
-			}
-
-			digestB, err := digestFor(ctx, repoBName, tag)
-			if err != nil {
-				tagResults[i] = tagResult{tag: tag, m: &mismatch{image: imageName, tag: tag, reason: fmt.Sprintf("missing from %s", repoBName)}}
-				return
-			}
-
-			if digestA != digestB {
-				tagResults[i] = tagResult{tag: tag, m: &mismatch{image: imageName, tag: tag, reason: fmt.Sprintf("%s != %s", digestA, digestB)}}
-			}
-		}(i, tag)
-	}
-	wg.Wait()
+	fmt.Fprintf(out, "[%s] checking %d tag(s): %s\n", pair.name, len(relevant), strings.Join(relevant, ", "))
 
 	var mismatches []mismatch
-	for _, r := range tagResults {
-		if r.err != nil {
-			return nil, 0, r.err
-		}
-		if r.m != nil {
-			mismatches = append(mismatches, *r.m)
-		}
+	var mu sync.Mutex
+	done := 0
+
+	g, ctx := errgroup.WithContext(ctx)
+	for _, t := range relevant {
+		g.Go(func() error {
+			m, err := compareDigest(ctx, pair, t)
+			if err != nil {
+				return err
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			if m != nil {
+				mismatches = append(mismatches, *m)
+			}
+			done++
+			fmt.Fprintf(out, "[%s] %d/%d checked (%s)\n", pair.name, done, len(relevant), t)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, 0, err
 	}
 	return mismatches, len(relevant), nil
+}
+
+// compareDigest fetches tag's digest from both registries in pair and
+// reports a mismatch if it differs or is missing on the GitLab side. An
+// error is only returned when the GitHub (reference) side can't be read.
+func compareDigest(ctx context.Context, pair imagePair, tag string) (*mismatch, error) {
+	digestA, err := digestFor(ctx, pair.ghcr, tag)
+	if err != nil {
+		return nil, fmt.Errorf("fetching digest for %s:%s: %w", pair.ghcr, tag, err)
+	}
+
+	digestB, err := digestFor(ctx, pair.gitlab, tag)
+	if err != nil {
+		return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from %s", pair.gitlab)}, nil
+	}
+	if digestA != digestB {
+		return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
+	}
+	return nil, nil
 }
 
 // runVerifyDigestsSingleTag checks only the given tag across every image,
 // retrying while it hasn't yet appeared on both registries - the GitHub and
 // GitLab release pipelines build independently and race each other.
 func runVerifyDigestsSingleTag(cmd *cobra.Command, ctx context.Context, tag string, wait, interval time.Duration) error {
-	type imageResult struct {
-		image string
-		m     *mismatch
-		err   error
-	}
-
-	results := make([]imageResult, len(imageRepoPairs))
-	var wg sync.WaitGroup
-	for i, pair := range imageRepoPairs {
-		wg.Add(1)
-		go func(i int, pair struct {
-			name   string
-			ghcr   string
-			gitlab string
-		}) {
-			defer wg.Done()
-			m, err := waitForMatchingDigest(ctx, pair.name, pair.ghcr, pair.gitlab, tag, wait, interval)
-			results[i] = imageResult{image: pair.name, m: m, err: err}
-		}(i, pair)
-	}
-	wg.Wait()
+	out := cmd.ErrOrStderr()
+	fmt.Fprintf(out, "verifying tag %s across %d images (waiting up to %s)...\n", tag, len(imageRepoPairs), wait)
 
 	var all []mismatch
-	for _, r := range results {
-		if r.err != nil {
-			return fmt.Errorf("%s: %w", r.image, r.err)
-		}
-		if r.m != nil {
-			all = append(all, *r.m)
-		}
+	var mu sync.Mutex
+
+	g, ctx := errgroup.WithContext(ctx)
+	for _, pair := range imageRepoPairs {
+		g.Go(func() error {
+			m, err := waitForMatchingDigest(ctx, out, pair, tag, wait, interval)
+			if err != nil {
+				return fmt.Errorf("%s: %w", pair.name, err)
+			}
+			switch {
+			case m != nil:
+				fmt.Fprintf(out, "[%s] mismatch: %s\n", pair.name, m.reason)
+				mu.Lock()
+				all = append(all, *m)
+				mu.Unlock()
+			default:
+				fmt.Fprintf(out, "[%s] matches\n", pair.name)
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	if len(all) == 0 {
@@ -257,41 +245,34 @@ func runVerifyDigestsSingleTag(cmd *cobra.Command, ctx context.Context, tag stri
 		return nil
 	}
 
-	t := table.NewWriter()
-	t.SetOutputMirror(cmd.OutOrStdout())
-	t.SetStyle(table.StyleLight)
-	t.AppendHeader(table.Row{"Image", "Tag", "Reason"})
-	for _, m := range all {
-		t.AppendRow(table.Row{m.image, m.tag, m.reason})
-	}
-	t.Render()
-
+	printMismatchTable(cmd, all)
 	return fmt.Errorf("digest verification failed for tag %s on %d image(s)", tag, len(all))
 }
 
 // waitForMatchingDigest polls both registries for tag until it has appeared
 // on both and can be compared, or wait elapses - whichever comes first.
-func waitForMatchingDigest(ctx context.Context, imageName, repoAName, repoBName, tag string, wait, interval time.Duration) (*mismatch, error) {
+func waitForMatchingDigest(ctx context.Context, out io.Writer, pair imagePair, tag string, wait, interval time.Duration) (*mismatch, error) {
 	deadline := time.Now().Add(wait)
-	for {
-		digestA, errA := digestFor(ctx, repoAName, tag)
-		digestB, errB := digestFor(ctx, repoBName, tag)
+	for attempt := 1; ; attempt++ {
+		digestA, errA := digestFor(ctx, pair.ghcr, tag)
+		digestB, errB := digestFor(ctx, pair.gitlab, tag)
 
 		if errA == nil && errB == nil {
 			if digestA == digestB {
 				return nil, nil
 			}
-			return &mismatch{image: imageName, tag: tag, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
+			return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
 		}
+		fmt.Fprintf(out, "[%s] attempt %d: tag %s not yet on both registries, retrying...\n", pair.name, attempt, tag)
 
 		if time.Now().After(deadline) {
 			switch {
 			case errA != nil && errB != nil:
-				return &mismatch{image: imageName, tag: tag, reason: fmt.Sprintf("missing from both registries after %s", wait)}, nil
+				return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from both registries after %s", wait)}, nil
 			case errA != nil:
-				return &mismatch{image: imageName, tag: tag, reason: fmt.Sprintf("missing from %s after %s", repoAName, wait)}, nil
+				return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from %s after %s", pair.ghcr, wait)}, nil
 			default:
-				return &mismatch{image: imageName, tag: tag, reason: fmt.Sprintf("missing from %s after %s", repoBName, wait)}, nil
+				return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from %s after %s", pair.gitlab, wait)}, nil
 			}
 		}
 
@@ -301,6 +282,17 @@ func waitForMatchingDigest(ctx context.Context, imageName, repoAName, repoBName,
 		case <-time.After(interval):
 		}
 	}
+}
+
+func printMismatchTable(cmd *cobra.Command, mismatches []mismatch) {
+	t := table.NewWriter()
+	t.SetOutputMirror(cmd.OutOrStdout())
+	t.SetStyle(table.StyleLight)
+	t.AppendHeader(table.Row{"Image", "Tag", "Reason"})
+	for _, m := range mismatches {
+		t.AppendRow(table.Row{m.image, m.tag, m.reason})
+	}
+	t.Render()
 }
 
 func listTags(ctx context.Context, repo name.Repository) ([]string, error) {
