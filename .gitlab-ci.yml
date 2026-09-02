@@ -65,6 +65,7 @@ include:
       nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
+      upstream_version: "16.15"
     rules:
       - if: $CI_COMMIT_BRANCH == "main"
       - if: $CI_COMMIT_TAG
@@ -78,6 +79,7 @@ include:
       nix_target_arm64: "kratos-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":kratos"
+      upstream_version: "v26.2.0"
     rules:
       - if: $CI_COMMIT_BRANCH == "main"
       - if: $CI_COMMIT_TAG
@@ -89,6 +91,7 @@ verify-digests:
     entrypoint:
       - /bin/sh
       - -c
+  dependencies: []
   before_script:
     - mkdir -p /etc/nix
     - |-

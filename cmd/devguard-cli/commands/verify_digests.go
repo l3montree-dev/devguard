@@ -24,18 +24,36 @@ const minVerifyTag = "v1.4.0"
 
 // imagePair is, for one image DevGuard publishes, the GitHub (ghcr.io) and
 // GitLab (registry.opencode.de) repository that build and push it
-// independently. Their digests must match bit-for-bit.
+// independently under the same tag. Their digests must match bit-for-bit.
 type imagePair struct {
 	name   string
 	ghcr   string
 	gitlab string
+
+	// upstreamVersion is the vendored upstream version (e.g. "v26.2.0" for
+	// kratos) passed as --upstream-version / upstream_version to
+	// generate-tag on both sides (.github/workflows/devguard-scanner.yaml
+	// and .gitlab-ci.yml - keep those two values and this one in sync),
+	// which prepends it to every tag as "<upstreamVersion>-<ref>". Empty
+	// for images with no upstream version (devguard, scanner), whose tag
+	// is just the plain ref.
+	upstreamVersion string
+}
+
+// tagFor returns the tag this pair's image actually carries on both
+// registries for the given ref (e.g. "v1.13.1" or "main").
+func (p imagePair) tagFor(ref string) string {
+	if p.upstreamVersion == "" {
+		return ref
+	}
+	return p.upstreamVersion
 }
 
 var imageRepoPairs = []imagePair{
-	{"devguard", "ghcr.io/l3montree-dev/devguard", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard"},
-	{"scanner", "ghcr.io/l3montree-dev/devguard/scanner", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/scanner"},
-	{"kratos", "ghcr.io/l3montree-dev/devguard/kratos", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/kratos"},
-	{"postgresql", "ghcr.io/l3montree-dev/devguard/postgresql", "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/postgresql"},
+	{name: "devguard", ghcr: "ghcr.io/l3montree-dev/devguard", gitlab: "registry.opencode.de/oci-community/images/l3montree/devguard/devguard"},
+	{name: "scanner", ghcr: "ghcr.io/l3montree-dev/devguard/scanner", gitlab: "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/scanner"},
+	{name: "kratos", ghcr: "ghcr.io/l3montree-dev/devguard/kratos", gitlab: "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/kratos", upstreamVersion: "v26.2.0"},
+	{name: "postgresql", ghcr: "ghcr.io/l3montree-dev/devguard/postgresql", gitlab: "registry.opencode.de/oci-community/images/l3montree/devguard/devguard/postgresql", upstreamVersion: "16.15"},
 }
 
 // mismatch describes one tag whose digest didn't match (or was missing)
@@ -153,7 +171,7 @@ func verifyImagePair(ctx context.Context, out io.Writer, pair imagePair) ([]mism
 		return nil, 0, fmt.Errorf("listing tags for %s: %w", pair.ghcr, err)
 	}
 
-	relevant := filterRelevantTags(tagsA)
+	relevant := filterRelevantTags(stripUpstreamVersion(tagsA, pair.upstreamVersion))
 	if len(relevant) == 0 {
 		return nil, 0, fmt.Errorf("no matching tags (main or v*) found in %s", pair.ghcr)
 	}
@@ -188,10 +206,13 @@ func verifyImagePair(ctx context.Context, out io.Writer, pair imagePair) ([]mism
 	return mismatches, len(relevant), nil
 }
 
-// compareDigest fetches tag's digest from both registries in pair and
+// compareDigest fetches ref's digest from both registries in pair - via
+// pair.tagFor(ref), which accounts for the upstream-version tag prefix - and
 // reports a mismatch if it differs or is missing on the GitLab side. An
 // error is only returned when the GitHub (reference) side can't be read.
-func compareDigest(ctx context.Context, pair imagePair, tag string) (*mismatch, error) {
+func compareDigest(ctx context.Context, pair imagePair, ref string) (*mismatch, error) {
+	tag := pair.tagFor(ref)
+
 	digestA, err := digestFor(ctx, pair.ghcr, tag)
 	if err != nil {
 		return nil, fmt.Errorf("fetching digest for %s:%s: %w", pair.ghcr, tag, err)
@@ -199,10 +220,10 @@ func compareDigest(ctx context.Context, pair imagePair, tag string) (*mismatch, 
 
 	digestB, err := digestFor(ctx, pair.gitlab, tag)
 	if err != nil {
-		return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from %s", pair.gitlab)}, nil
+		return &mismatch{image: pair.name, tag: ref, reason: fmt.Sprintf("missing from %s", pair.gitlab)}, nil
 	}
 	if digestA != digestB {
-		return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
+		return &mismatch{image: pair.name, tag: ref, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
 	}
 	return nil, nil
 }
@@ -249,9 +270,11 @@ func runVerifyDigestsSingleTag(cmd *cobra.Command, ctx context.Context, tag stri
 	return fmt.Errorf("digest verification failed for tag %s on %d image(s)", tag, len(all))
 }
 
-// waitForMatchingDigest polls both registries for tag until it has appeared
+// waitForMatchingDigest polls both registries for ref (via pair.tagFor(ref),
+// which accounts for the upstream-version tag prefix) until it has appeared
 // on both and can be compared, or wait elapses - whichever comes first.
-func waitForMatchingDigest(ctx context.Context, out io.Writer, pair imagePair, tag string, wait, interval time.Duration) (*mismatch, error) {
+func waitForMatchingDigest(ctx context.Context, out io.Writer, pair imagePair, ref string, wait, interval time.Duration) (*mismatch, error) {
+	tag := pair.tagFor(ref)
 	deadline := time.Now().Add(wait)
 	for attempt := 1; ; attempt++ {
 		digestA, errA := digestFor(ctx, pair.ghcr, tag)
@@ -261,18 +284,18 @@ func waitForMatchingDigest(ctx context.Context, out io.Writer, pair imagePair, t
 			if digestA == digestB {
 				return nil, nil
 			}
-			return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
+			return &mismatch{image: pair.name, tag: ref, reason: fmt.Sprintf("%s != %s", digestA, digestB)}, nil
 		}
 		fmt.Fprintf(out, "[%s] attempt %d: tag %s not yet on both registries, retrying...\n", pair.name, attempt, tag)
 
 		if time.Now().After(deadline) {
 			switch {
 			case errA != nil && errB != nil:
-				return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from both registries after %s", wait)}, nil
+				return &mismatch{image: pair.name, tag: ref, reason: fmt.Sprintf("missing from both registries after %s", wait)}, nil
 			case errA != nil:
-				return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from %s after %s", pair.ghcr, wait)}, nil
+				return &mismatch{image: pair.name, tag: ref, reason: fmt.Sprintf("missing from %s after %s", pair.ghcr, wait)}, nil
 			default:
-				return &mismatch{image: pair.name, tag: tag, reason: fmt.Sprintf("missing from %s after %s", pair.gitlab, wait)}, nil
+				return &mismatch{image: pair.name, tag: ref, reason: fmt.Sprintf("missing from %s after %s", pair.gitlab, wait)}, nil
 			}
 		}
 
@@ -309,6 +332,24 @@ func digestFor(ctx context.Context, repo, tag string) (string, error) {
 		return "", err
 	}
 	return desc.Digest.String(), nil
+}
+
+// stripUpstreamVersion strips the "<upstreamVersion>-" prefix from each tag
+// that carries it, discarding tags that don't (a leftover from before the
+// upstream version was added, or unrelated tags). A no-op when
+// upstreamVersion is empty.
+func stripUpstreamVersion(tags []string, upstreamVersion string) []string {
+	if upstreamVersion == "" {
+		return tags
+	}
+	prefix := upstreamVersion + "-"
+	var out []string
+	for _, t := range tags {
+		if ref, ok := strings.CutPrefix(t, prefix); ok {
+			out = append(out, ref)
+		}
+	}
+	return out
 }
 
 func filterRelevantTags(tags []string) []string {

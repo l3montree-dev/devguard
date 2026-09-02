@@ -202,7 +202,7 @@ jobs:
       packages: write
       security-events: write
     with:
-      upstream-version: "26.2.0"
+      upstream-version: "v26.2.0"
       nix-target-amd64: kratos-amd64
       nix-target-arm64: kratos-arm64
       nix-version: '2.34.4'
