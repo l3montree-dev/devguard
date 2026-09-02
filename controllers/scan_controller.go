@@ -216,7 +216,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
 	}
-	artifactName := c.Request().Header.Get("X-Artifact-Name")
+	artifactName := normalize.ArtifactName(c.Request().Header.Get("X-Artifact-Name"))
 	origin := c.Request().Header.Get("X-Origin")
 
 	// Generate default artifact name BEFORE creating the SBOM graph

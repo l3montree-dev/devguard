@@ -8,6 +8,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -72,7 +73,7 @@ func (a *AttestationController) Create(ctx shared.Context) error {
 		assetVersionName = "main"
 	}
 
-	artifactName := ctx.Request().Header.Get("X-Artifact-Name")
+	artifactName := normalize.ArtifactName(ctx.Request().Header.Get("X-Artifact-Name"))
 	if artifactName == "" {
 		artifactName = "default"
 	}

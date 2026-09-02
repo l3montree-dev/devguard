@@ -682,7 +682,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     probe.Artifact,
+		ArtifactName:     normalize.ArtifactName(probe.Artifact),
 		AssetVersionName: assetVersion.Name,
 		AssetID:          asset.ID,
 	}

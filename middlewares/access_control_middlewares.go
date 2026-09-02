@@ -375,7 +375,7 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 			}
 
 			// resolve artifact from path param
-			artifactName, err := shared.GetURLDecodedParam(ctx, "artifactName")
+			artifactName, err := shared.GetArtifactName(ctx)
 			if err != nil {
 				slog.Error("could not get artifactName from url", "err", err)
 				return echo.NewHTTPError(400, "invalid artifactName")

@@ -35,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/lib/pq"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/singleflight"
@@ -486,13 +487,8 @@ func GetArtifactName(ctx Context) (string, error) {
 	if artifactName == "" {
 		return "", fmt.Errorf("could not get artifact name")
 	}
-	// urldecode the artifact name
-	artifactName, err := url.PathUnescape(artifactName)
 
-	if err != nil {
-		return "", fmt.Errorf("could not url decode artifact name: %w", err)
-	}
-	return artifactName, nil
+	return normalize.ArtifactName(artifactName), nil
 }
 
 func GetAssetSlug(ctx Context) (string, error) {
