@@ -107,7 +107,7 @@ login" / a populated docker config) for the GitLab registry.`,
 	cmd.Flags().StringVar(&tag, "tag", "",
 		`check only this single tag (e.g. "v1.13.1") instead of the full "main" + v*
 history. Intended for release pipelines gating on the tag being published.`)
-	cmd.Flags().DurationVar(&wait, "wait", 30*time.Minute,
+	cmd.Flags().DurationVar(&wait, "wait", 60*time.Minute,
 		`with --tag, how long to keep retrying while the tag hasn't appeared yet on
 both registries (the two release pipelines build independently and race)`)
 	cmd.Flags().DurationVar(&interval, "interval", 15*time.Second,
