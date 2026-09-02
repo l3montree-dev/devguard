@@ -81,7 +81,7 @@ func VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule,
 // FetchVexFromUpstream downloads VEX from the given external references and converts it into
 // VEX rules scoped to the given asset version. CSAF, OpenVEX and CycloneDX are parsed to rules by
 // their respective transformers; the returned rules carry their VexSource (the reference URL).
-func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
+func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
 	rules := make([]models.VEXRule, 0)
 	valid := make([]models.ExternalReference, 0, len(upstreamURLs))
 	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
@@ -93,6 +93,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			if err != nil {
 				mut.Lock()
+				defer mut.Unlock()
 				invalid = append(invalid, models.ExternalReference{
 					AssetID: assetID,
 					URL:     url,
@@ -105,6 +106,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 			resp, err := utils.EgressClient.Do(req)
 			if err != nil {
 				mut.Lock()
+				defer mut.Unlock()
 				invalid = append(invalid, models.ExternalReference{})
 				return
 			}
@@ -113,6 +115,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				mut.Lock()
+				defer mut.Unlock()
 				invalid = append(invalid, models.ExternalReference{
 					AssetID: assetID,
 					URL:     url,
@@ -124,6 +127,7 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 			vexRules, format, err := VexRulesFromDocument(body, url)
 			if err != nil {
 				mut.Lock()
+				defer mut.Unlock()
 				invalid = append(invalid, models.ExternalReference{
 					Type:    format,
 					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
@@ -136,12 +140,12 @@ func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, string, upstre
 				rules = append(rules, transformer.UpstreamVEXRuleToVEXRule(vexRules[i], "system", assetID))
 			}
 			mut.Lock()
+			defer mut.Unlock()
 			valid = append(valid, models.ExternalReference{
 				URL:     url,
 				AssetID: assetID,
 				Type:    format,
 			})
-			mut.Unlock()
 		})
 	}
 	wg.Wait()
