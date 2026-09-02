@@ -629,10 +629,10 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, 
 		}
 
 		var bom cyclonedx.BOM
-		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+		reqCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 		defer cancel()
 		// fetch the file from the url
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
 
 		if err != nil {
 			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
