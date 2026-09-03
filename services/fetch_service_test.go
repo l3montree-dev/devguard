@@ -46,17 +46,11 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, []string{sbomURL})
+		boms, invalidURLs := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, []string{sbomURL})
 
 		// Verify the SBOM was processed successfully with the correct URL
 		assert.Equal(t, 1, len(boms), "should have fetched 1 SBOM")
-		assert.Equal(t, 1, len(validURLs), "should have 1 valid URL")
 		assert.Equal(t, 0, len(invalidURLs), "should have 0 invalid URLs")
-
-		// Verify the URL was added to validURLs list (not the ref)
-		assert.Contains(t, validURLs, sbomURL)
-		// Ref should not appear anywhere since URL is passed instead
-		assert.NotContains(t, validURLs, ref)
 	})
 
 	t.Run("should reject invalid URLs", func(t *testing.T) {
@@ -69,10 +63,9 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLsList := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, invalidURLs)
+		boms, invalidURLsList := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, invalidURLs)
 
 		assert.Equal(t, 0, len(boms))
-		assert.Equal(t, 0, len(validURLs))
 		assert.Equal(t, 3, len(invalidURLsList))
 	})
 
@@ -87,11 +80,10 @@ func TestFetchSbomsFromUpstream_PassesURLNotRef(t *testing.T) {
 		artifactName := "test-artifact"
 		ref := "main"
 
-		boms, validURLs, invalidURLs := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, []string{sbomURL})
+		boms, invalidURLs := (&scanService{}).FetchSbomsFromUpstream(context.Background(), nil, models.Asset{}, artifactName, ref, []string{sbomURL})
 
 		// HTTP errors should result in invalid URLs
 		assert.Equal(t, 0, len(boms))
-		assert.Equal(t, 0, len(validURLs))
 		assert.Equal(t, 1, len(invalidURLs))
 		assert.Equal(t, sbomURL, invalidURLs[0].URL)
 	})
