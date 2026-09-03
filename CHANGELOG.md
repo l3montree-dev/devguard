@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.3] - 2026-09-02
+
+### Added
+
+- `devguard-maint`'s Helm and Docker deployment releases are now separate commands (`release_helm_chart` / `release_docker_deployment`) instead of one combined release path, each with its own changelog generation
+- `verify_digests` now supports `upstream_version`, matching GitLab pipelines the same way GitHub Actions already did, and prints progress while verifying
+- Dynamic batch sizing for GORM's DB-wide create/delete-batch operations, replacing the old best-effort batching heuristic
+- RHEL vulnerability matching now filters by ecosystem using the `distro` query parameter, and unmatchable RHEL product lines are excluded from purl matching
+
+### Changed
+
+- vulndb bumped to v4.1
+- `aiohttp` dependency updated
+
+### Fixed
+
+- **Artifact names containing special characters were stored URL-encoded, making them unreachable** — the write path now normalizes artifact names consistently, `X-Artifact-Name` is normalized on read in the attestation controller too, and a new migration deletes artifacts left unreachable in the database from the old encoding (#2579)
+- **Compliance posture and component requirement endpoints failed to look up path-escaped identifiers** — inputs are now path-unescaped before lookup
+- Purl matching now also considers the original (non-normalized) version when comparing versions, fixing missed matches (#2941)
+- GitHub Actions asset names corrected in the DevGuard scanner workflow
+
 ## [v1.13.2] - 2026-08-31
 
 ### Fixed

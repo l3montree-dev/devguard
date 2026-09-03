@@ -54,6 +54,7 @@ func init() {
 	commands.GetRootCmd().AddCommand(commands.NewTrustScoreCommand())
 	commands.GetRootCmd().AddCommand(commands.NewEncryptionCommand())
 	commands.GetRootCmd().AddCommand(commands.NewGenAdminKeyCommand())
+	commands.GetRootCmd().AddCommand(commands.NewVerifyDigestsCommand())
 }
 
 func main() {

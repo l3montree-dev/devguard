@@ -164,7 +164,7 @@ func TestConvertToSemverVariousFormats(t *testing.T) {
 
 func TestCheckVersion(t *testing.T) {
 	t.Run("unsupported package type", func(t *testing.T) {
-		result, err := normalize.CheckVersion(nil, nil, nil, "1.2.3", "unsupported")
+		result, err := normalize.CheckVersionInRange(nil, nil, nil, "1.2.3", "unsupported")
 		assert.Error(t, err)
 		assert.False(t, result)
 		assert.Contains(t, err.Error(), "unsupported affected component type")
@@ -172,20 +172,20 @@ func TestCheckVersion(t *testing.T) {
 
 	t.Run("error handling", func(t *testing.T) {
 		t.Run("deb - empty version constraints", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, nil, "", "deb")
+			result, err := normalize.CheckVersionInRange(nil, nil, nil, "", "deb")
 			assert.Nil(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("deb - malformed target version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(new("1.0.0"), nil, nil, "not-a-valid-version!", "deb")
+			result, err := normalize.CheckVersionInRange(new("1.0.0"), nil, nil, "not-a-valid-version!", "deb")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("deb - malformed exact version", func(t *testing.T) {
 			version := "invalid!@#"
-			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3", "deb")
+			result, err := normalize.CheckVersionInRange(&version, nil, nil, "1.2.3", "deb")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
@@ -193,7 +193,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("deb - malformed introduced version", func(t *testing.T) {
 			introduced := "bad-version!!"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0", "deb")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
@@ -201,14 +201,14 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("deb - malformed fixed version", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "invalid@@"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0", "deb")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("apk - malformed exact version", func(t *testing.T) {
 			version := "not@valid"
-			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3", "apk")
+			result, err := normalize.CheckVersionInRange(&version, nil, nil, "1.2.3", "apk")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
@@ -216,7 +216,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("apk - malformed introduced version", func(t *testing.T) {
 			introduced := "bad!version"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0", "apk")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
@@ -224,17 +224,17 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("apk - malformed fixed version", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "invalid@@version"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0", "apk")
 			assert.Error(t, err)
 			assert.False(t, result)
 		})
 		t.Run("apk - should work with empty introduced version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, new("2.0.0"), "1.5.0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, nil, new("2.0.0"), "1.5.0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 		t.Run("apk - should work with empty fixed version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, new("1.0.0"), nil, "1.5.0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, new("1.0.0"), nil, "1.5.0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -243,7 +243,7 @@ func TestCheckVersion(t *testing.T) {
 	t.Run("deb package type", func(t *testing.T) {
 		t.Run("exact version match", func(t *testing.T) {
 			version := "1.2.3-1"
-			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3-1", "deb")
+			result, err := normalize.CheckVersionInRange(&version, nil, nil, "1.2.3-1", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -251,14 +251,14 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("should work with curl version", func(t *testing.T) {
 			lookingForVersion := "7.88.1-10+deb12u12"
 
-			result, err := normalize.CheckVersion(nil, nil, new("7.88.1-10+deb12u1"), lookingForVersion, "deb")
+			result, err := normalize.CheckVersionInRange(nil, nil, new("7.88.1-10+deb12u1"), lookingForVersion, "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("exact version no match", func(t *testing.T) {
 			version := "1.2.3-1"
-			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3-2", "deb")
+			result, err := normalize.CheckVersionInRange(&version, nil, nil, "1.2.3-2", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -266,7 +266,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target between introduced and fixed", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -274,7 +274,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target equals introduced", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.0.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.0.0", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -282,7 +282,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target equals fixed", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "2.0.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "2.0.0", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -290,7 +290,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target below introduced", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "0.9.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "0.9.0", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -298,35 +298,35 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target above fixed", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "2.1.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "2.1.0", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("only introduced provided - target greater", func(t *testing.T) {
 			introduced := "1.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, nil, "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, nil, "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("only introduced provided - target smaller", func(t *testing.T) {
 			introduced := "1.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, nil, "0.9.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, nil, "0.9.0", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("only fixed provided - target less", func(t *testing.T) {
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, nil, &fixed, "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, nil, &fixed, "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("only fixed provided - target greater", func(t *testing.T) {
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, nil, &fixed, "2.1.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, nil, &fixed, "2.1.0", "deb")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -334,19 +334,19 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("complex debian versions", func(t *testing.T) {
 			introduced := "2.4.37-5.el8"
 			fixed := "2.4.37-10.el8"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "2.4.37-7.el8", "deb")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "2.4.37-7.el8", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("should work with empty introduced version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, new("2.0.0"), "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, nil, new("2.0.0"), "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("should work with empty fixed version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, new("1.0.0"), nil, "1.5.0", "deb")
+			result, err := normalize.CheckVersionInRange(nil, new("1.0.0"), nil, "1.5.0", "deb")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -355,7 +355,7 @@ func TestCheckVersion(t *testing.T) {
 	t.Run("rpm package type", func(t *testing.T) {
 		t.Run("exact version match", func(t *testing.T) {
 			version := "1.2.3-1.el9"
-			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3-1.el9", "rpm")
+			result, err := normalize.CheckVersionInRange(&version, nil, nil, "1.2.3-1.el9", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -363,7 +363,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target between introduced and fixed", func(t *testing.T) {
 			introduced := "1.0.0-1.el9"
 			fixed := "2.0.0-1.el9"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0-1.el9", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0-1.el9", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -371,7 +371,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target below introduced", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "0.9.0", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "0.9.0", "rpm")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -379,21 +379,21 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target above fixed", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "2.1.0", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "2.1.0", "rpm")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("only introduced provided", func(t *testing.T) {
 			introduced := "1.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, nil, "1.5.0", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, nil, "1.5.0", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("only fixed provided", func(t *testing.T) {
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, nil, &fixed, "1.5.0", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, nil, &fixed, "1.5.0", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -401,19 +401,19 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("rpm with epoch", func(t *testing.T) {
 			introduced := "0:1.2.3-1.el9"
 			fixed := "0:1.2.3-10.el9"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "0:1.2.3-5.el9", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "0:1.2.3-5.el9", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("should work with empty introduced version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, nil, new("2.0.0"), "1.5.0", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, nil, new("2.0.0"), "1.5.0", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("should work with empty fixed version", func(t *testing.T) {
-			result, err := normalize.CheckVersion(nil, new("1.0.0"), nil, "1.5.0", "rpm")
+			result, err := normalize.CheckVersionInRange(nil, new("1.0.0"), nil, "1.5.0", "rpm")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -422,7 +422,7 @@ func TestCheckVersion(t *testing.T) {
 	t.Run("apk package type", func(t *testing.T) {
 		t.Run("exact version match", func(t *testing.T) {
 			version := "1.2.3-r0"
-			result, err := normalize.CheckVersion(&version, nil, nil, "1.2.3-r0", "apk")
+			result, err := normalize.CheckVersionInRange(&version, nil, nil, "1.2.3-r0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -430,7 +430,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target between introduced and fixed", func(t *testing.T) {
 			introduced := "1.0.0-r0"
 			fixed := "2.0.0-r0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.5.0-r0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.5.0-r0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -438,7 +438,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target below introduced", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "0.9.0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "0.9.0", "apk")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
@@ -446,21 +446,21 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("target above fixed", func(t *testing.T) {
 			introduced := "1.0.0"
 			fixed := "2.0.0"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "2.1.0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "2.1.0", "apk")
 			assert.NoError(t, err)
 			assert.False(t, result)
 		})
 
 		t.Run("only introduced provided", func(t *testing.T) {
 			introduced := "1.0.0-r0"
-			result, err := normalize.CheckVersion(nil, &introduced, nil, "1.5.0-r0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, nil, "1.5.0-r0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
 
 		t.Run("only fixed provided", func(t *testing.T) {
 			fixed := "2.0.0-r0"
-			result, err := normalize.CheckVersion(nil, nil, &fixed, "1.5.0-r0", "apk")
+			result, err := normalize.CheckVersionInRange(nil, nil, &fixed, "1.5.0-r0", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
@@ -468,7 +468,7 @@ func TestCheckVersion(t *testing.T) {
 		t.Run("apk revision numbers", func(t *testing.T) {
 			introduced := "1.2.3-r5"
 			fixed := "1.2.3-r10"
-			result, err := normalize.CheckVersion(nil, &introduced, &fixed, "1.2.3-r7", "apk")
+			result, err := normalize.CheckVersionInRange(nil, &introduced, &fixed, "1.2.3-r7", "apk")
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})

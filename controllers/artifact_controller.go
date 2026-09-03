@@ -126,7 +126,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     body.ArtifactName,
+		ArtifactName:     normalize.ArtifactName(body.ArtifactName),
 		AssetVersionName: assetVersion.Name,
 		AssetID:          asset.ID,
 	}

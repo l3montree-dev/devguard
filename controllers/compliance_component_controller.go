@@ -144,9 +144,9 @@ func (c *ComplianceComponentController) AssetVersionCreateStatement(ctx shared.C
 }
 
 func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) error {
-	frameworkControlID := ctx.Param("frameworkControlID")
-	if frameworkControlID == "" {
-		return echo.NewHTTPError(400, "frameworkControlID is required")
+	frameworkControlID, err := getFrameworkControlIDFromCtx(ctx)
+	if err != nil {
+		return err
 	}
 	complianceComponentID, err := uuid.Parse(ctx.Param("complianceComponentID"))
 	if err != nil {

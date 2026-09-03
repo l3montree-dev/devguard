@@ -72,6 +72,7 @@ type APIStats struct {
 	OrgCount     *int64
 	ProjectCount *int64
 	AssetCount   *int64
+	Ecosystems   map[string]int64
 }
 
 type APIStatsCollector interface {
@@ -117,7 +118,38 @@ func (c GormAPIStatsCollector) CollectAPIStartupStats(ctx context.Context) APISt
 		OrgCount:     c.count(ctx, "organization", &models.Org{}),
 		ProjectCount: c.count(ctx, "project", &models.Project{}),
 		AssetCount:   c.count(ctx, "asset", &models.Asset{}),
+		Ecosystems:   c.ecosystems(ctx),
 	}
+}
+
+func (c GormAPIStatsCollector) ecosystems(ctx context.Context) map[string]int64 {
+	if c.db == nil {
+		slog.Warn("could not collect DevGuard startup telemetry ecosystems because database is unavailable")
+		return nil
+	}
+
+	var rows []struct {
+		Ecosystem string
+		Count     int64
+	}
+	err := c.db.WithContext(ctx).
+		Model(&models.Component{}).
+		Select("substring(id from 'pkg:([a-zA-Z0-9.+-]+)/') AS ecosystem, count(*) AS count").
+		Group("ecosystem").
+		Scan(&rows).Error
+	if err != nil {
+		slog.Warn("could not collect DevGuard startup telemetry ecosystems", "err", err)
+		return nil
+	}
+
+	ecosystems := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		if row.Ecosystem == "" {
+			continue
+		}
+		ecosystems[row.Ecosystem] = row.Count
+	}
+	return ecosystems
 }
 
 func (c GormAPIStatsCollector) count(ctx context.Context, label string, model any) *int64 {
@@ -142,6 +174,9 @@ func APIStartupEvent(version, frontendURL, postgresHost, postgresDB string, stat
 	addOptionalCount(data, "orgCount", stats.OrgCount)
 	addOptionalCount(data, "projectCount", stats.ProjectCount)
 	addOptionalCount(data, "assetCount", stats.AssetCount)
+	if len(stats.Ecosystems) > 0 {
+		data["ecosystems"] = stats.Ecosystems
+	}
 
 	return StartupEvent{
 		Component:  ComponentAPI,

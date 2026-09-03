@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
     - name: Check out code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
@@ -202,12 +202,13 @@ jobs:
       packages: write
       security-events: write
     with:
+      upstream-version: "v26.2.0"
       nix-target-amd64: kratos-amd64
       nix-target-arm64: kratos-arm64
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/kratos
       artifact-name-suffix: kratos
-      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/kratos
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
@@ -227,12 +228,13 @@ jobs:
       packages: write
       security-events: write
     with:
+      upstream-version: "16.15"
       nix-target-amd64: postgresql-amd64
       nix-target-arm64: postgresql-arm64
       nix-version: '2.34.4'
       image-name: ghcr.io/${{ github.repository }}/postgresql
       artifact-name-suffix: postgresql
-      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       devguard-api-url: https://api.main.devguard.org
       devguard-web-ui: https://main.devguard.org
       fail-on-cvss: high
@@ -244,13 +246,38 @@ jobs:
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
+  verify-digests:
+    name: Verify cross-registry digests
+    runs-on: ubuntu-latest
+    # Only real tags publish images under that tag on both registries; the
+    # test-release branch escape hatch below has nothing to compare.
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.34.4/install
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            substituters = https://cache.nixos.org https://nix.garage.l3montree.cloud
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      - name: Verify ghcr.io and registry.opencode.de digests match
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          nix run .#devguardCLI -- verify-digests --tag "$TAG"
+
   release:
     name: Build and Release Binaries
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    # needs: [golangci, tests, sign-scanner, devguard]
-    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release'
+    needs: [verify-digests]
+    if: always() && (needs.verify-digests.result == 'success' || needs.verify-digests.result == 'skipped') && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/test-release')
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:

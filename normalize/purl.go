@@ -22,6 +22,7 @@ const (
 type PurlMatchContext struct {
 	SearchPurl                  string                    `json:"searchPurl"` // purl without version and qualifiers, used for database matching
 	NormalizedVersion           string                    `json:"normalizedVersion"`
+	OriginalVersion             string                    `json:"originalVersion"`
 	HowToInterpretVersionString VersionInterpretationType `json:"howToInterpretVersionString"`
 	Qualifiers                  packageurl.Qualifiers     `json:"qualifiers"`
 	Namespace                   string                    `json:"namespace"`
@@ -34,7 +35,7 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 
 	var normalizedVersion string
 	var versionInterpretation VersionInterpretationType
-
+	originalVersion := purl.Version
 	// Try to normalize the version to semantic versioning format
 	if purl.Version == "" {
 		versionInterpretation = EmptyVersion
@@ -76,6 +77,7 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 		Qualifiers:                  qualifier,
 		Namespace:                   purl.Namespace,
 		HowToInterpretVersionString: versionInterpretation,
+		OriginalVersion:             originalVersion,
 	}
 }
 

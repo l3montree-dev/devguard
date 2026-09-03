@@ -12,14 +12,14 @@
 
 let
   pname = "crane";
-  version = "0.21.5";
+  version = "0.22.0";
   modulePurl = "pkg:golang/github.com/google/go-containerregistry";
 
   src = fetchFromGitHub {
     owner = "google";
     repo = "go-containerregistry";
     rev = "v${version}";
-    hash = "sha256-2cC2fZe22K8mPIXa8YI1MgUlEn6p1z7RBEQhFjYNsxA=";
+    hash = "sha256-RA+LfxVI5vVspCQTlLSgFxxfp9JnGCFBQlY6A9DSkH4=";
   };
 
   package = buildGoModule {
@@ -33,7 +33,7 @@ let
     # mkToolSBOM - which requires deleting the committed vendor/ dir first.
     deleteVendor = true;
     proxyVendor = true;
-    vendorHash = "sha256-OWYMRoC+rgGykbSgseszgUfZbkbZeXRXfx+q5oKA5xA=";
+    vendorHash = "sha256-5g3AyDEqPxkjjsPjQzaKV8AVLgPuhdLgrHYhcYsvj58=";
 
     subPackages = [ "cmd/crane" ];
 

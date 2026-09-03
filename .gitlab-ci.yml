@@ -12,6 +12,7 @@ stages:
   - build
   - oci-image
   - attestation
+  - verify
   - release
 
 default:
@@ -64,8 +65,8 @@ include:
       nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
+      upstream_version: "16.15"
     rules:
-      - if: $CI_COMMIT_BRANCH == "main"
       - if: $CI_COMMIT_TAG
 
   # --- kratos pipeline ---
@@ -77,9 +78,32 @@ include:
       nix_target_arm64: "kratos-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":kratos"
+      upstream_version: "v26.2.0"
     rules:
-      - if: $CI_COMMIT_BRANCH == "main"
       - if: $CI_COMMIT_TAG
+
+verify-digests:
+  stage: verify
+  image:
+    name: nixos/nix@sha256:0b1530edf840d9af519c7f3970cafbbed68d9d9554a83cc9adc04099753117e1
+    entrypoint:
+      - /bin/sh
+      - -c
+  dependencies: []
+  before_script:
+    - mkdir -p /etc/nix
+    - |-
+      cat > /etc/nix/nix.conf << EOF
+      sandbox = false
+      filter-syscalls = false
+      experimental-features = nix-command flakes
+      substituters = https://cache.nixos.org https://nix.garage.l3montree.cloud
+      trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix.garage.l3montree.cloud:MGlzfPQKA91/zxw91CN+GP7NpjAAwmKvWXlDYgeeI8k=
+      EOF
+  script:
+    - nix run .#devguardCLI -- verify-digests --tag "$CI_COMMIT_TAG"
+  rules:
+    - if: $CI_COMMIT_TAG
 
 create-gitlab-release:
   stage: release

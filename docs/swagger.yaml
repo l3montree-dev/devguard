@@ -10832,6 +10832,8 @@ components:
           type: string
         normalizedVersion:
           type: string
+        originalVersion:
+          type: string
         qualifiers:
           items:
             $ref: '#/components/schemas/packageurl.Qualifier'
@@ -10844,6 +10846,7 @@ components:
       - howToInterpretVersionString
       - namespace
       - normalizedVersion
+      - originalVersion
       - qualifiers
       - searchPurl
       type: object
@@ -10902,11 +10905,8 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10918,11 +10918,7 @@ components:
       - 1000000
       - 1000000000
       - 60000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
+      - 3600000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -10949,11 +10945,8 @@ components:
       - Second
       - Minute
       - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -10965,11 +10958,7 @@ components:
       - Millisecond
       - Second
       - Minute
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
+      - Hour
   securitySchemes:
     AdminSignedAuth:
       description: Instance admin authentication using ECDSA P-256 HTTP message signing.

@@ -99,14 +99,20 @@ func (c *candidate) lookupKey() string {
 
 // builds the key for the cache from a candidate
 func (c *candidate) cacheKey() string {
-	return c.lookupKey() + "|" + string(c.shape.interpretation) + "|" + c.shape.ecosystemPattern
+	return c.lookupKey() + "|" + string(c.shape.interpretation) + "|" + strings.Join(c.shape.ecosystemPattern, ",")
 }
 
 // queryShape identifies a set of candidates that can be matched by a single
 // query: everything except the package and version itself is constant.
 type queryShape struct {
 	interpretation   normalize.VersionInterpretationType
-	ecosystemPattern string
+	ecosystemPattern []string
+}
+
+// key groups shapes for the byShape map: queryShape itself isn't comparable
+// since it carries a slice.
+func (s queryShape) key() string {
+	return string(s.interpretation) + "|" + strings.Join(s.ecosystemPattern, ",")
 }
 
 // GetAffectedComponents finds the affected components for a single software
@@ -230,7 +236,11 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 		return candidates, nil
 	}
 
-	byShape := make(map[queryShape][]*candidate)
+	type shapeGroup struct {
+		shape      queryShape
+		candidates []*candidate
+	}
+	byShape := make(map[string]*shapeGroup)
 	cacheUsage := 0
 
 	// get the current generation of the cache to ensure consistency
@@ -250,17 +260,23 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 
 		candidates = append(candidates, c)
 		if !ok {
-			byShape[c.shape] = append(byShape[c.shape], c)
+			key := c.shape.key()
+			group, exists := byShape[key]
+			if !exists {
+				group = &shapeGroup{shape: c.shape}
+				byShape[key] = group
+			}
+			group.candidates = append(group.candidates, c)
 		}
 	}
 
 	// only non cached purls are now in the byShape map (if all were cached we skip the loop)
-	for shape, shapeCandidates := range byShape {
-		componentsByKey, err := comparer.matchAffectedComponents(ctx, shape, shapeCandidates)
+	for _, group := range byShape {
+		componentsByKey, err := comparer.matchAffectedComponents(ctx, group.shape, group.candidates)
 		if err != nil {
 			return nil, err
 		}
-		for _, c := range shapeCandidates {
+		for _, c := range group.candidates {
 			c.Components = componentsByKey[c.lookupKey()]
 		}
 	}
@@ -281,22 +297,24 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	// size and postgres can reuse the plan.
 	searchPurls := make([]string, len(candidates))
 	versions := make([]string, len(candidates))
+	originalVersions := make([]string, len(candidates))
 	for i, c := range candidates {
 		searchPurls[i] = c.matchCtx.SearchPurl
 		versions[i] = c.matchCtx.NormalizedVersion
+		originalVersions[i] = c.matchCtx.OriginalVersion
 	}
 
 	var conditions []string
-	args := []any{searchPurls, versions}
+	args := []any{searchPurls, versions, originalVersions}
 
 	if predicate := repositories.BatchedVersionPredicate(shape.interpretation); predicate != "" {
 		conditions = append(conditions, predicate)
 	}
-	if shape.ecosystemPattern != "" {
+	if len(shape.ecosystemPattern) > 0 {
 		// numbered placeholder, so that GORM passes the arrays above through
 		// verbatim instead of expanding the slices into one placeholder per element
-		conditions = append(conditions, fmt.Sprintf("ac.ecosystem LIKE $%d", len(args)+1))
-		args = append(args, shape.ecosystemPattern)
+		conditions = append(conditions, fmt.Sprintf("ac.ecosystem LIKE ANY($%d)", len(args)+1))
+		args = append(args, pq.Array(shape.ecosystemPattern))
 	}
 
 	// Selecting the ids plus the columns the ecosystem specific version check
@@ -309,7 +327,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 			ac.version_fixed AS component_version_fixed
 		FROM affected_components ac
 		JOIN (
-			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version
+			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version, unnest($3::text[]) AS original_version
 		) q ON ac.purl = q.purl`
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
@@ -335,7 +353,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	if shape.interpretation == normalize.EcosystemSpecificVersion {
 		narrowed := matches[:0]
 		for _, match := range matches {
-			if matchesEcosystemVersion(match.ComponentPurl, match.ComponentVersion, match.ComponentVersionIntroduced, match.ComponentVersionFixed, match.Version) {
+			if matchesEcosystemVersionRange(match.ComponentPurl, match.ComponentVersion, match.ComponentVersionIntroduced, match.ComponentVersionFixed, match.Version) {
 				narrowed = append(narrowed, match)
 			}
 		}
@@ -481,13 +499,13 @@ func deduplicateByAlias(vulns []models.VulnInPackage) []models.VulnInPackage {
 }
 
 // apply ecosystem specific filter to an individual affected component
-func matchesEcosystemVersion(purlWithoutVersion string, version, versionIntroduced, versionFixed *string, lookingForVersion string) bool {
+func matchesEcosystemVersionRange(purlWithoutVersion string, version, versionIntroduced, versionFixed *string, lookingForVersion string) bool {
 	purl, err := packageurl.FromString(purlWithoutVersion)
 	if err != nil {
 		slog.Warn("invalid purl, skipping affected component")
 		return false
 	}
-	match, err := normalize.CheckVersion(version, versionIntroduced, versionFixed, lookingForVersion, purl.Type)
+	match, err := normalize.CheckVersionInRange(version, versionIntroduced, versionFixed, lookingForVersion, purl.Type)
 	if err != nil {
 		slog.Warn("could not check version for affected component", "error", err, "lookingForVersion", lookingForVersion, "purl", purlWithoutVersion, "introduced", utils.OrDefault(versionIntroduced, "<nil>"), "fixed", utils.OrDefault(versionFixed, "<nil>"))
 		return false

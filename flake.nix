@@ -85,15 +85,97 @@
         };
 
         amd64Dependencies = [
-          ociImagesAmd64.craneFromSource.package
-          ociImagesAmd64.gitleaksFromSource.package
-          ociImagesAmd64.trivyFromSource.package
+          {
+            name = "crane";
+            path = ociImagesAmd64.craneFromSource.package;
+          }
+          {
+            name = "gitleaks";
+            path = ociImagesAmd64.gitleaksFromSource.package;
+          }
+          {
+            name = "trivy";
+            path = ociImagesAmd64.trivyFromSource.package;
+          }
+          {
+            name = "kratos-oci";
+            path = ociImagesAmd64.kratosOCI { debug = false; };
+          }
+          {
+            name = "kratos-oci-debug";
+            path = ociImagesAmd64.kratosOCI { debug = true; };
+          }
+          {
+            name = "postgresql-oci";
+            path = ociImagesAmd64.postgresqlOCI { debug = false; };
+          }
+          {
+            name = "postgresql-oci-debug";
+            path = ociImagesAmd64.postgresqlOCI { debug = true; };
+          }
+          {
+            name = "devguard-oci";
+            path = ociImagesAmd64.devguardOCI { debug = false; };
+          }
+          {
+            name = "devguard-oci-debug";
+            path = ociImagesAmd64.devguardOCI { debug = true; };
+          }
+          {
+            name = "devguard-scanner-oci";
+            path = ociImagesAmd64.devguardScannerOCI;
+          }
+          {
+            name = "python-venv";
+            path = ociImagesAmd64.pythonTools.venv;
+          }
         ];
 
         arm64Dependencies = [
-          ociImagesArm64.craneFromSource.package
-          ociImagesArm64.gitleaksFromSource.package
-          ociImagesArm64.trivyFromSource.package
+          {
+            name = "crane";
+            path = ociImagesArm64.craneFromSource.package;
+          }
+          {
+            name = "gitleaks";
+            path = ociImagesArm64.gitleaksFromSource.package;
+          }
+          {
+            name = "trivy";
+            path = ociImagesArm64.trivyFromSource.package;
+          }
+          {
+            name = "kratos-oci";
+            path = ociImagesArm64.kratosOCI { debug = false; };
+          }
+          {
+            name = "kratos-oci-debug";
+            path = ociImagesArm64.kratosOCI { debug = true; };
+          }
+          {
+            name = "postgresql-oci";
+            path = ociImagesArm64.postgresqlOCI { debug = false; };
+          }
+          {
+            name = "postgresql-oci-debug";
+            path = ociImagesArm64.postgresqlOCI { debug = true; };
+          }
+          {
+            name = "devguard-oci";
+            path = ociImagesArm64.devguardOCI { debug = false; };
+          }
+          {
+            name = "devguard-oci-debug";
+            path = ociImagesArm64.devguardOCI { debug = true; };
+          }
+          {
+            name = "devguard-scanner-oci";
+            path = ociImagesArm64.devguardScannerOCI;
+          }
+          {
+            name = "python-venv";
+            path = ociImagesArm64.pythonTools.venv;
+          }
         ];
 
         # Built for the evaluating system, so these are the only outputs that
@@ -129,10 +211,7 @@
           kratos-arm64 = ociImagesArm64.kratosOCI { debug = false; };
           kratos-debug-arm64 = ociImagesArm64.kratosOCI { debug = true; };
 
-          deps-arm64 = hostPkgs.symlinkJoin {
-            name = "devguard-deps-arm64";
-            paths = arm64Dependencies ++ [ ociImagesArm64.pythonTools.venv ];
-          };
+          deps-arm64 = hostPkgs.linkFarm "devguard-deps-arm64" arm64Dependencies;
         };
 
         amd64Packages = {
@@ -145,10 +224,7 @@
           kratos-amd64 = ociImagesAmd64.kratosOCI { debug = false; };
           kratos-debug-amd64 = ociImagesAmd64.kratosOCI { debug = true; };
 
-          deps-amd64 = hostPkgs.symlinkJoin {
-            name = "devguard-deps-amd64";
-            paths = amd64Dependencies ++ [ ociImagesAmd64.pythonTools.venv ];
-          };
+          deps-amd64 = hostPkgs.linkFarm "devguard-deps-amd64" amd64Dependencies;
         };
 
       in
