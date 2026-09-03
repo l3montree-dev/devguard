@@ -11,12 +11,10 @@ import (
 	"net/url"
 	"path"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -76,80 +74,6 @@ func VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule,
 	default:
 		return nil, format, fmt.Errorf("unsupported VEX document format")
 	}
-}
-
-// FetchVexFromUpstream downloads VEX from the given external references and converts it into
-// VEX rules scoped to the given asset version. CSAF, OpenVEX and CycloneDX are parsed to rules by
-// their respective transformers; the returned rules carry their VexSource (the reference URL).
-func FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference) {
-	rules := make([]models.VEXRule, 0)
-	valid := make([]models.ExternalReference, 0, len(upstreamURLs))
-	invalid := make([]models.ExternalReference, 0, len(upstreamURLs))
-	mut := sync.Mutex{}
-	wg := sync.WaitGroup{}
-	for _, url := range upstreamURLs {
-		// fetch the url and sniff the type
-		wg.Go(func() {
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-			if err != nil {
-				mut.Lock()
-				defer mut.Unlock()
-				invalid = append(invalid, models.ExternalReference{
-					AssetID: assetID,
-					URL:     url,
-					Type:    dtos.ExternalReferenceTypeUnknown,
-					Error:   new(fmt.Sprintf("could not create request for url: %v", err)),
-				})
-				return
-			}
-
-			resp, err := utils.EgressClient.Do(req)
-			if err != nil {
-				mut.Lock()
-				defer mut.Unlock()
-				invalid = append(invalid, models.ExternalReference{})
-				return
-			}
-
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				mut.Lock()
-				defer mut.Unlock()
-				invalid = append(invalid, models.ExternalReference{
-					AssetID: assetID,
-					URL:     url,
-					Type:    dtos.ExternalReferenceTypeUnknown,
-					Error:   new(fmt.Sprintf("could not read response body: %v", err)),
-				})
-				return
-			}
-			vexRules, format, err := VexRulesFromDocument(body, url)
-			if err != nil {
-				mut.Lock()
-				defer mut.Unlock()
-				invalid = append(invalid, models.ExternalReference{
-					Type:    format,
-					Error:   new(fmt.Sprintf("could not parse vex file from url: %v", err)),
-					AssetID: assetID,
-					URL:     url,
-				})
-				return
-			}
-			for i := range vexRules {
-				rules = append(rules, transformer.UpstreamVEXRuleToVEXRule(vexRules[i], "system", assetID))
-			}
-			mut.Lock()
-			defer mut.Unlock()
-			valid = append(valid, models.ExternalReference{
-				URL:     url,
-				AssetID: assetID,
-				Type:    format,
-			})
-		})
-	}
-	wg.Wait()
-	return rules, valid, invalid
 }
 
 func downloadGithubRepoAsZip(ctx context.Context, baseURL, owner, repo, branch string) (*zip.Reader, error) {

@@ -656,6 +656,11 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, 
 
 			// add the sbom prefix
 			boms = append(boms, normalizedBOM)
+		} else {
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: "referenced document is not a valid SBOM",
+			})
 		}
 	}
 
@@ -993,6 +998,7 @@ func (s *scanService) IngestVexFromExternalReferences(ctx context.Context, tx sh
 
 	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
 		slog.Error("could not store vex external reference", "err", err)
+		return err
 	}
 
 	if len(rules) == 0 {
