@@ -66,7 +66,7 @@ type Context_Attachment_Call struct {
 // Attachment is a helper method to define mock.On call
 //   - file string
 //   - name string
-func (_e *Context_Expecter) Attachment(file interface{}, name interface{}) *Context_Attachment_Call {
+func (_e *Context_Expecter) Attachment(file any, name any) *Context_Attachment_Call {
 	return &Context_Attachment_Call{Call: _e.mock.On("Attachment", file, name)}
 }
 
@@ -122,7 +122,7 @@ type Context_Bind_Call struct {
 
 // Bind is a helper method to define mock.On call
 //   - i any
-func (_e *Context_Expecter) Bind(i interface{}) *Context_Bind_Call {
+func (_e *Context_Expecter) Bind(i any) *Context_Bind_Call {
 	return &Context_Bind_Call{Call: _e.mock.On("Bind", i)}
 }
 
@@ -175,7 +175,7 @@ type Context_Blob_Call struct {
 //   - code int
 //   - contentType string
 //   - b []byte
-func (_e *Context_Expecter) Blob(code interface{}, contentType interface{}, b interface{}) *Context_Blob_Call {
+func (_e *Context_Expecter) Blob(code any, contentType any, b any) *Context_Blob_Call {
 	return &Context_Blob_Call{Call: _e.mock.On("Blob", code, contentType, b)}
 }
 
@@ -247,7 +247,7 @@ type Context_Cookie_Call struct {
 
 // Cookie is a helper method to define mock.On call
 //   - name string
-func (_e *Context_Expecter) Cookie(name interface{}) *Context_Cookie_Call {
+func (_e *Context_Expecter) Cookie(name any) *Context_Cookie_Call {
 	return &Context_Cookie_Call{Call: _e.mock.On("Cookie", name)}
 }
 
@@ -379,7 +379,7 @@ type Context_Error_Call struct {
 
 // Error is a helper method to define mock.On call
 //   - err error
-func (_e *Context_Expecter) Error(err interface{}) *Context_Error_Call {
+func (_e *Context_Expecter) Error(err any) *Context_Error_Call {
 	return &Context_Error_Call{Call: _e.mock.On("Error", err)}
 }
 
@@ -430,7 +430,7 @@ type Context_File_Call struct {
 
 // File is a helper method to define mock.On call
 //   - file string
-func (_e *Context_Expecter) File(file interface{}) *Context_File_Call {
+func (_e *Context_Expecter) File(file any) *Context_File_Call {
 	return &Context_File_Call{Call: _e.mock.On("File", file)}
 }
 
@@ -492,7 +492,7 @@ type Context_FormFile_Call struct {
 
 // FormFile is a helper method to define mock.On call
 //   - name string
-func (_e *Context_Expecter) FormFile(name interface{}) *Context_FormFile_Call {
+func (_e *Context_Expecter) FormFile(name any) *Context_FormFile_Call {
 	return &Context_FormFile_Call{Call: _e.mock.On("FormFile", name)}
 }
 
@@ -598,7 +598,7 @@ type Context_FormValue_Call struct {
 
 // FormValue is a helper method to define mock.On call
 //   - name string
-func (_e *Context_Expecter) FormValue(name interface{}) *Context_FormValue_Call {
+func (_e *Context_Expecter) FormValue(name any) *Context_FormValue_Call {
 	return &Context_FormValue_Call{Call: _e.mock.On("FormValue", name)}
 }
 
@@ -651,7 +651,7 @@ type Context_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - key string
-func (_e *Context_Expecter) Get(key interface{}) *Context_Get_Call {
+func (_e *Context_Expecter) Get(key any) *Context_Get_Call {
 	return &Context_Get_Call{Call: _e.mock.On("Get", key)}
 }
 
@@ -703,7 +703,7 @@ type Context_HTML_Call struct {
 // HTML is a helper method to define mock.On call
 //   - code int
 //   - html string
-func (_e *Context_Expecter) HTML(code interface{}, html interface{}) *Context_HTML_Call {
+func (_e *Context_Expecter) HTML(code any, html any) *Context_HTML_Call {
 	return &Context_HTML_Call{Call: _e.mock.On("HTML", code, html)}
 }
 
@@ -760,7 +760,7 @@ type Context_HTMLBlob_Call struct {
 // HTMLBlob is a helper method to define mock.On call
 //   - code int
 //   - b []byte
-func (_e *Context_Expecter) HTMLBlob(code interface{}, b interface{}) *Context_HTMLBlob_Call {
+func (_e *Context_Expecter) HTMLBlob(code any, b any) *Context_HTMLBlob_Call {
 	return &Context_HTMLBlob_Call{Call: _e.mock.On("HTMLBlob", code, b)}
 }
 
@@ -863,7 +863,7 @@ type Context_Inline_Call struct {
 // Inline is a helper method to define mock.On call
 //   - file string
 //   - name string
-func (_e *Context_Expecter) Inline(file interface{}, name interface{}) *Context_Inline_Call {
+func (_e *Context_Expecter) Inline(file any, name any) *Context_Inline_Call {
 	return &Context_Inline_Call{Call: _e.mock.On("Inline", file, name)}
 }
 
@@ -1008,7 +1008,7 @@ type Context_JSON_Call struct {
 // JSON is a helper method to define mock.On call
 //   - code int
 //   - i any
-func (_e *Context_Expecter) JSON(code interface{}, i interface{}) *Context_JSON_Call {
+func (_e *Context_Expecter) JSON(code any, i any) *Context_JSON_Call {
 	return &Context_JSON_Call{Call: _e.mock.On("JSON", code, i)}
 }
 
@@ -1065,7 +1065,7 @@ type Context_JSONBlob_Call struct {
 // JSONBlob is a helper method to define mock.On call
 //   - code int
 //   - b []byte
-func (_e *Context_Expecter) JSONBlob(code interface{}, b interface{}) *Context_JSONBlob_Call {
+func (_e *Context_Expecter) JSONBlob(code any, b any) *Context_JSONBlob_Call {
 	return &Context_JSONBlob_Call{Call: _e.mock.On("JSONBlob", code, b)}
 }
 
@@ -1123,7 +1123,7 @@ type Context_JSONP_Call struct {
 //   - code int
 //   - callback string
 //   - i any
-func (_e *Context_Expecter) JSONP(code interface{}, callback interface{}, i interface{}) *Context_JSONP_Call {
+func (_e *Context_Expecter) JSONP(code any, callback any, i any) *Context_JSONP_Call {
 	return &Context_JSONP_Call{Call: _e.mock.On("JSONP", code, callback, i)}
 }
 
@@ -1186,7 +1186,7 @@ type Context_JSONPBlob_Call struct {
 //   - code int
 //   - callback string
 //   - b []byte
-func (_e *Context_Expecter) JSONPBlob(code interface{}, callback interface{}, b interface{}) *Context_JSONPBlob_Call {
+func (_e *Context_Expecter) JSONPBlob(code any, callback any, b any) *Context_JSONPBlob_Call {
 	return &Context_JSONPBlob_Call{Call: _e.mock.On("JSONPBlob", code, callback, b)}
 }
 
@@ -1249,7 +1249,7 @@ type Context_JSONPretty_Call struct {
 //   - code int
 //   - i any
 //   - indent string
-func (_e *Context_Expecter) JSONPretty(code interface{}, i interface{}, indent interface{}) *Context_JSONPretty_Call {
+func (_e *Context_Expecter) JSONPretty(code any, i any, indent any) *Context_JSONPretty_Call {
 	return &Context_JSONPretty_Call{Call: _e.mock.On("JSONPretty", code, i, indent)}
 }
 
@@ -1411,7 +1411,7 @@ type Context_NoContent_Call struct {
 
 // NoContent is a helper method to define mock.On call
 //   - code int
-func (_e *Context_Expecter) NoContent(code interface{}) *Context_NoContent_Call {
+func (_e *Context_Expecter) NoContent(code any) *Context_NoContent_Call {
 	return &Context_NoContent_Call{Call: _e.mock.On("NoContent", code)}
 }
 
@@ -1462,7 +1462,7 @@ type Context_Param_Call struct {
 
 // Param is a helper method to define mock.On call
 //   - name string
-func (_e *Context_Expecter) Param(name interface{}) *Context_Param_Call {
+func (_e *Context_Expecter) Param(name any) *Context_Param_Call {
 	return &Context_Param_Call{Call: _e.mock.On("Param", name)}
 }
 
@@ -1649,7 +1649,7 @@ type Context_QueryParam_Call struct {
 
 // QueryParam is a helper method to define mock.On call
 //   - name string
-func (_e *Context_Expecter) QueryParam(name interface{}) *Context_QueryParam_Call {
+func (_e *Context_Expecter) QueryParam(name any) *Context_QueryParam_Call {
 	return &Context_QueryParam_Call{Call: _e.mock.On("QueryParam", name)}
 }
 
@@ -1835,7 +1835,7 @@ type Context_Redirect_Call struct {
 // Redirect is a helper method to define mock.On call
 //   - code int
 //   - url1 string
-func (_e *Context_Expecter) Redirect(code interface{}, url1 interface{}) *Context_Redirect_Call {
+func (_e *Context_Expecter) Redirect(code any, url1 any) *Context_Redirect_Call {
 	return &Context_Redirect_Call{Call: _e.mock.On("Redirect", code, url1)}
 }
 
@@ -1893,7 +1893,7 @@ type Context_Render_Call struct {
 //   - code int
 //   - name string
 //   - data any
-func (_e *Context_Expecter) Render(code interface{}, name interface{}, data interface{}) *Context_Render_Call {
+func (_e *Context_Expecter) Render(code any, name any, data any) *Context_Render_Call {
 	return &Context_Render_Call{Call: _e.mock.On("Render", code, name, data)}
 }
 
@@ -1990,7 +1990,7 @@ type Context_Reset_Call struct {
 // Reset is a helper method to define mock.On call
 //   - r *http.Request
 //   - w http.ResponseWriter
-func (_e *Context_Expecter) Reset(r interface{}, w interface{}) *Context_Reset_Call {
+func (_e *Context_Expecter) Reset(r any, w any) *Context_Reset_Call {
 	return &Context_Reset_Call{Call: _e.mock.On("Reset", r, w)}
 }
 
@@ -2126,7 +2126,7 @@ type Context_Set_Call struct {
 // Set is a helper method to define mock.On call
 //   - key string
 //   - val any
-func (_e *Context_Expecter) Set(key interface{}, val interface{}) *Context_Set_Call {
+func (_e *Context_Expecter) Set(key any, val any) *Context_Set_Call {
 	return &Context_Set_Call{Call: _e.mock.On("Set", key, val)}
 }
 
@@ -2171,7 +2171,7 @@ type Context_SetCookie_Call struct {
 
 // SetCookie is a helper method to define mock.On call
 //   - cookie *http.Cookie
-func (_e *Context_Expecter) SetCookie(cookie interface{}) *Context_SetCookie_Call {
+func (_e *Context_Expecter) SetCookie(cookie any) *Context_SetCookie_Call {
 	return &Context_SetCookie_Call{Call: _e.mock.On("SetCookie", cookie)}
 }
 
@@ -2211,7 +2211,7 @@ type Context_SetHandler_Call struct {
 
 // SetHandler is a helper method to define mock.On call
 //   - h echo.HandlerFunc
-func (_e *Context_Expecter) SetHandler(h interface{}) *Context_SetHandler_Call {
+func (_e *Context_Expecter) SetHandler(h any) *Context_SetHandler_Call {
 	return &Context_SetHandler_Call{Call: _e.mock.On("SetHandler", h)}
 }
 
@@ -2251,7 +2251,7 @@ type Context_SetLogger_Call struct {
 
 // SetLogger is a helper method to define mock.On call
 //   - l echo.Logger
-func (_e *Context_Expecter) SetLogger(l interface{}) *Context_SetLogger_Call {
+func (_e *Context_Expecter) SetLogger(l any) *Context_SetLogger_Call {
 	return &Context_SetLogger_Call{Call: _e.mock.On("SetLogger", l)}
 }
 
@@ -2296,9 +2296,9 @@ type Context_SetParamNames_Call struct {
 
 // SetParamNames is a helper method to define mock.On call
 //   - names ...string
-func (_e *Context_Expecter) SetParamNames(names ...interface{}) *Context_SetParamNames_Call {
+func (_e *Context_Expecter) SetParamNames(names ...any) *Context_SetParamNames_Call {
 	return &Context_SetParamNames_Call{Call: _e.mock.On("SetParamNames",
-		append([]interface{}{}, names...)...)}
+		append([]any{}, names...)...)}
 }
 
 func (_c *Context_SetParamNames_Call) Run(run func(names ...string)) *Context_SetParamNames_Call {
@@ -2344,9 +2344,9 @@ type Context_SetParamValues_Call struct {
 
 // SetParamValues is a helper method to define mock.On call
 //   - values ...string
-func (_e *Context_Expecter) SetParamValues(values ...interface{}) *Context_SetParamValues_Call {
+func (_e *Context_Expecter) SetParamValues(values ...any) *Context_SetParamValues_Call {
 	return &Context_SetParamValues_Call{Call: _e.mock.On("SetParamValues",
-		append([]interface{}{}, values...)...)}
+		append([]any{}, values...)...)}
 }
 
 func (_c *Context_SetParamValues_Call) Run(run func(values ...string)) *Context_SetParamValues_Call {
@@ -2387,7 +2387,7 @@ type Context_SetPath_Call struct {
 
 // SetPath is a helper method to define mock.On call
 //   - p string
-func (_e *Context_Expecter) SetPath(p interface{}) *Context_SetPath_Call {
+func (_e *Context_Expecter) SetPath(p any) *Context_SetPath_Call {
 	return &Context_SetPath_Call{Call: _e.mock.On("SetPath", p)}
 }
 
@@ -2427,7 +2427,7 @@ type Context_SetRequest_Call struct {
 
 // SetRequest is a helper method to define mock.On call
 //   - r *http.Request
-func (_e *Context_Expecter) SetRequest(r interface{}) *Context_SetRequest_Call {
+func (_e *Context_Expecter) SetRequest(r any) *Context_SetRequest_Call {
 	return &Context_SetRequest_Call{Call: _e.mock.On("SetRequest", r)}
 }
 
@@ -2467,7 +2467,7 @@ type Context_SetResponse_Call struct {
 
 // SetResponse is a helper method to define mock.On call
 //   - r *echo.Response
-func (_e *Context_Expecter) SetResponse(r interface{}) *Context_SetResponse_Call {
+func (_e *Context_Expecter) SetResponse(r any) *Context_SetResponse_Call {
 	return &Context_SetResponse_Call{Call: _e.mock.On("SetResponse", r)}
 }
 
@@ -2520,7 +2520,7 @@ type Context_Stream_Call struct {
 //   - code int
 //   - contentType string
 //   - r io.Reader
-func (_e *Context_Expecter) Stream(code interface{}, contentType interface{}, r interface{}) *Context_Stream_Call {
+func (_e *Context_Expecter) Stream(code any, contentType any, r any) *Context_Stream_Call {
 	return &Context_Stream_Call{Call: _e.mock.On("Stream", code, contentType, r)}
 }
 
@@ -2582,7 +2582,7 @@ type Context_String_Call struct {
 // String is a helper method to define mock.On call
 //   - code int
 //   - s string
-func (_e *Context_Expecter) String(code interface{}, s interface{}) *Context_String_Call {
+func (_e *Context_Expecter) String(code any, s any) *Context_String_Call {
 	return &Context_String_Call{Call: _e.mock.On("String", code, s)}
 }
 
@@ -2638,7 +2638,7 @@ type Context_Validate_Call struct {
 
 // Validate is a helper method to define mock.On call
 //   - i any
-func (_e *Context_Expecter) Validate(i interface{}) *Context_Validate_Call {
+func (_e *Context_Expecter) Validate(i any) *Context_Validate_Call {
 	return &Context_Validate_Call{Call: _e.mock.On("Validate", i)}
 }
 
@@ -2690,7 +2690,7 @@ type Context_XML_Call struct {
 // XML is a helper method to define mock.On call
 //   - code int
 //   - i any
-func (_e *Context_Expecter) XML(code interface{}, i interface{}) *Context_XML_Call {
+func (_e *Context_Expecter) XML(code any, i any) *Context_XML_Call {
 	return &Context_XML_Call{Call: _e.mock.On("XML", code, i)}
 }
 
@@ -2747,7 +2747,7 @@ type Context_XMLBlob_Call struct {
 // XMLBlob is a helper method to define mock.On call
 //   - code int
 //   - b []byte
-func (_e *Context_Expecter) XMLBlob(code interface{}, b interface{}) *Context_XMLBlob_Call {
+func (_e *Context_Expecter) XMLBlob(code any, b any) *Context_XMLBlob_Call {
 	return &Context_XMLBlob_Call{Call: _e.mock.On("XMLBlob", code, b)}
 }
 
@@ -2805,7 +2805,7 @@ type Context_XMLPretty_Call struct {
 //   - code int
 //   - i any
 //   - indent string
-func (_e *Context_Expecter) XMLPretty(code interface{}, i interface{}, indent interface{}) *Context_XMLPretty_Call {
+func (_e *Context_Expecter) XMLPretty(code any, i any, indent any) *Context_XMLPretty_Call {
 	return &Context_XMLPretty_Call{Call: _e.mock.On("XMLPretty", code, i, indent)}
 }
 

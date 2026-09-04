@@ -69,7 +69,7 @@ type ComponentRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ComponentRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *ComponentRepository_Activate_Call {
+func (_e *ComponentRepository_Expecter) Activate(ctx any, tx any, id any) *ComponentRepository_Activate_Call {
 	return &ComponentRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -142,7 +142,7 @@ type ComponentRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ComponentRepository_Expecter) All(ctx interface{}, tx interface{}) *ComponentRepository_All_Call {
+func (_e *ComponentRepository_Expecter) All(ctx any, tx any) *ComponentRepository_All_Call {
 	return &ComponentRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -200,7 +200,7 @@ type ComponentRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ComponentRepository_Expecter) Begin(ctx interface{}) *ComponentRepository_Begin_Call {
+func (_e *ComponentRepository_Expecter) Begin(ctx any) *ComponentRepository_Begin_Call {
 	return &ComponentRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -251,7 +251,7 @@ type ComponentRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ComponentRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *ComponentRepository_CleanupOrphanedRecords_Call {
+func (_e *ComponentRepository_Expecter) CleanupOrphanedRecords(ctx any) *ComponentRepository_CleanupOrphanedRecords_Call {
 	return &ComponentRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -304,7 +304,7 @@ type ComponentRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Component
-func (_e *ComponentRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *ComponentRepository_Create_Call {
+func (_e *ComponentRepository_Expecter) Create(ctx any, tx any, t any) *ComponentRepository_Create_Call {
 	return &ComponentRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -367,7 +367,7 @@ type ComponentRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Component
-func (_e *ComponentRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *ComponentRepository_CreateBatch_Call {
+func (_e *ComponentRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *ComponentRepository_CreateBatch_Call {
 	return &ComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -430,7 +430,7 @@ type ComponentRepository_CreateComponents_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - components []models.ComponentDependency
-func (_e *ComponentRepository_Expecter) CreateComponents(ctx interface{}, tx interface{}, components interface{}) *ComponentRepository_CreateComponents_Call {
+func (_e *ComponentRepository_Expecter) CreateComponents(ctx any, tx any, components any) *ComponentRepository_CreateComponents_Call {
 	return &ComponentRepository_CreateComponents_Call{Call: _e.mock.On("CreateComponents", ctx, tx, components)}
 }
 
@@ -493,7 +493,7 @@ type ComponentRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ComponentRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *ComponentRepository_Delete_Call {
+func (_e *ComponentRepository_Expecter) Delete(ctx any, tx any, id any) *ComponentRepository_Delete_Call {
 	return &ComponentRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -556,7 +556,7 @@ type ComponentRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Component
-func (_e *ComponentRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *ComponentRepository_DeleteBatch_Call {
+func (_e *ComponentRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *ComponentRepository_DeleteBatch_Call {
 	return &ComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -630,7 +630,7 @@ type ComponentRepository_FetchInformationSources_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - artifact *models.Artifact
-func (_e *ComponentRepository_Expecter) FetchInformationSources(ctx interface{}, tx interface{}, artifact interface{}) *ComponentRepository_FetchInformationSources_Call {
+func (_e *ComponentRepository_Expecter) FetchInformationSources(ctx any, tx any, artifact any) *ComponentRepository_FetchInformationSources_Call {
 	return &ComponentRepository_FetchInformationSources_Call{Call: _e.mock.On("FetchInformationSources", ctx, tx, artifact)}
 }
 
@@ -702,7 +702,7 @@ type ComponentRepository_FindByPurl_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - purl string
-func (_e *ComponentRepository_Expecter) FindByPurl(ctx interface{}, tx interface{}, purl interface{}) *ComponentRepository_FindByPurl_Call {
+func (_e *ComponentRepository_Expecter) FindByPurl(ctx any, tx any, purl any) *ComponentRepository_FindByPurl_Call {
 	return &ComponentRepository_FindByPurl_Call{Call: _e.mock.On("FindByPurl", ctx, tx, purl)}
 }
 
@@ -766,7 +766,7 @@ type ComponentRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ComponentRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *ComponentRepository_GetDB_Call {
+func (_e *ComponentRepository_Expecter) GetDB(ctx any, tx any) *ComponentRepository_GetDB_Call {
 	return &ComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -826,7 +826,7 @@ type ComponentRepository_HandleStateDiff_Call struct {
 //   - assetVersion models.AssetVersion
 //   - wholeAssetGraph *normalize.SBOMGraph
 //   - diff normalize.GraphDiff
-func (_e *ComponentRepository_Expecter) HandleStateDiff(ctx interface{}, tx interface{}, assetVersion interface{}, wholeAssetGraph interface{}, diff interface{}) *ComponentRepository_HandleStateDiff_Call {
+func (_e *ComponentRepository_Expecter) HandleStateDiff(ctx any, tx any, assetVersion any, wholeAssetGraph any, diff any) *ComponentRepository_HandleStateDiff_Call {
 	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", ctx, tx, assetVersion, wholeAssetGraph, diff)}
 }
 
@@ -901,7 +901,7 @@ type ComponentRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *ComponentRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *ComponentRepository_InBatches_Call {
+func (_e *ComponentRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *ComponentRepository_InBatches_Call {
 	return &ComponentRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -975,7 +975,7 @@ type ComponentRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *ComponentRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *ComponentRepository_List_Call {
+func (_e *ComponentRepository_Expecter) List(ctx any, tx any, ids any) *ComponentRepository_List_Call {
 	return &ComponentRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1050,7 +1050,7 @@ type ComponentRepository_LoadComponents_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *ComponentRepository_Expecter) LoadComponents(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *ComponentRepository_LoadComponents_Call {
+func (_e *ComponentRepository_Expecter) LoadComponents(ctx any, tx any, assetVersionName any, assetID any) *ComponentRepository_LoadComponents_Call {
 	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -1133,7 +1133,7 @@ type ComponentRepository_LoadComponentsWithProject_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(ctx interface{}, tx interface{}, overwrittenLicenses interface{}, assetVersionName interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(ctx any, tx any, overwrittenLicenses any, assetVersionName any, assetID any, pageInfo any, search any, filter any, sort any) *ComponentRepository_LoadComponentsWithProject_Call {
 	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", ctx, tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)}
 }
 
@@ -1235,7 +1235,7 @@ type ComponentRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *ComponentRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *ComponentRepository_Read_Call {
+func (_e *ComponentRepository_Expecter) Read(ctx any, tx any, id any) *ComponentRepository_Read_Call {
 	return &ComponentRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1299,7 +1299,7 @@ type ComponentRepository_RemoveInformationSources_Call struct {
 //   - tx shared.DB
 //   - artifact *models.Artifact
 //   - rootNodePurls []string
-func (_e *ComponentRepository_Expecter) RemoveInformationSources(ctx interface{}, tx interface{}, artifact interface{}, rootNodePurls interface{}) *ComponentRepository_RemoveInformationSources_Call {
+func (_e *ComponentRepository_Expecter) RemoveInformationSources(ctx any, tx any, artifact any, rootNodePurls any) *ComponentRepository_RemoveInformationSources_Call {
 	return &ComponentRepository_RemoveInformationSources_Call{Call: _e.mock.On("RemoveInformationSources", ctx, tx, artifact, rootNodePurls)}
 }
 
@@ -1367,7 +1367,7 @@ type ComponentRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Component
-func (_e *ComponentRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *ComponentRepository_Save_Call {
+func (_e *ComponentRepository_Expecter) Save(ctx any, tx any, t any) *ComponentRepository_Save_Call {
 	return &ComponentRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1430,7 +1430,7 @@ type ComponentRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Component
-func (_e *ComponentRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *ComponentRepository_SaveBatch_Call {
+func (_e *ComponentRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *ComponentRepository_SaveBatch_Call {
 	return &ComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1504,7 +1504,7 @@ type ComponentRepository_SearchComponentOccurrencesByProject_Call struct {
 //   - projectIDs []uuid.UUID
 //   - pageInfo shared.PageInfo
 //   - search string
-func (_e *ComponentRepository_Expecter) SearchComponentOccurrencesByProject(ctx interface{}, tx interface{}, projectIDs interface{}, pageInfo interface{}, search interface{}) *ComponentRepository_SearchComponentOccurrencesByProject_Call {
+func (_e *ComponentRepository_Expecter) SearchComponentOccurrencesByProject(ctx any, tx any, projectIDs any, pageInfo any, search any) *ComponentRepository_SearchComponentOccurrencesByProject_Call {
 	return &ComponentRepository_SearchComponentOccurrencesByProject_Call{Call: _e.mock.On("SearchComponentOccurrencesByProject", ctx, tx, projectIDs, pageInfo, search)}
 }
 
@@ -1576,7 +1576,7 @@ type ComponentRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *ComponentRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *ComponentRepository_Transaction_Call {
+func (_e *ComponentRepository_Expecter) Transaction(ctx any, fn any) *ComponentRepository_Transaction_Call {
 	return &ComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1636,7 +1636,7 @@ type ComponentRepository_Upsert_Call struct {
 //   - t *[]*models.Component
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *ComponentRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ComponentRepository_Upsert_Call {
+func (_e *ComponentRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *ComponentRepository_Upsert_Call {
 	return &ComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

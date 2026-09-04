@@ -68,7 +68,7 @@ type ProjectRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ProjectRepository_Expecter) Activate(ctx interface{}, tx interface{}, projectID interface{}) *ProjectRepository_Activate_Call {
+func (_e *ProjectRepository_Expecter) Activate(ctx any, tx any, projectID any) *ProjectRepository_Activate_Call {
 	return &ProjectRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, projectID)}
 }
 
@@ -141,7 +141,7 @@ type ProjectRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *ProjectRepository_Expecter) All(ctx interface{}, tx interface{}) *ProjectRepository_All_Call {
+func (_e *ProjectRepository_Expecter) All(ctx any, tx any) *ProjectRepository_All_Call {
 	return &ProjectRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -204,7 +204,7 @@ type ProjectRepository_CleanupExternalProjectAssetVersion_Call struct {
 //   - assetExternalEntityID string
 //   - assetVersionName string
 //   - artifactName string
-func (_e *ProjectRepository_Expecter) CleanupExternalProjectAssetVersion(ctx interface{}, tx interface{}, organizationID interface{}, providerID interface{}, projectExternalEntityID interface{}, assetExternalEntityID interface{}, assetVersionName interface{}, artifactName interface{}) *ProjectRepository_CleanupExternalProjectAssetVersion_Call {
+func (_e *ProjectRepository_Expecter) CleanupExternalProjectAssetVersion(ctx any, tx any, organizationID any, providerID any, projectExternalEntityID any, assetExternalEntityID any, assetVersionName any, artifactName any) *ProjectRepository_CleanupExternalProjectAssetVersion_Call {
 	return &ProjectRepository_CleanupExternalProjectAssetVersion_Call{Call: _e.mock.On("CleanupExternalProjectAssetVersion", ctx, tx, organizationID, providerID, projectExternalEntityID, assetExternalEntityID, assetVersionName, artifactName)}
 }
 
@@ -292,7 +292,7 @@ type ProjectRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - project *models.Project
-func (_e *ProjectRepository_Expecter) Create(ctx interface{}, tx interface{}, project interface{}) *ProjectRepository_Create_Call {
+func (_e *ProjectRepository_Expecter) Create(ctx any, tx any, project any) *ProjectRepository_Create_Call {
 	return &ProjectRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, project)}
 }
 
@@ -355,7 +355,7 @@ type ProjectRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ProjectRepository_Expecter) Delete(ctx interface{}, tx interface{}, projectID interface{}) *ProjectRepository_Delete_Call {
+func (_e *ProjectRepository_Expecter) Delete(ctx any, tx any, projectID any) *ProjectRepository_Delete_Call {
 	return &ProjectRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, projectID)}
 }
 
@@ -419,7 +419,7 @@ type ProjectRepository_DisablePolicyForProject_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - policyID uuid.UUID
-func (_e *ProjectRepository_Expecter) DisablePolicyForProject(ctx interface{}, tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_DisablePolicyForProject_Call {
+func (_e *ProjectRepository_Expecter) DisablePolicyForProject(ctx any, tx any, projectID any, policyID any) *ProjectRepository_DisablePolicyForProject_Call {
 	return &ProjectRepository_DisablePolicyForProject_Call{Call: _e.mock.On("DisablePolicyForProject", ctx, tx, projectID, policyID)}
 }
 
@@ -487,7 +487,7 @@ type ProjectRepository_EnableCommunityManagedPolicies_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ProjectRepository_Expecter) EnableCommunityManagedPolicies(ctx interface{}, tx interface{}, projectID interface{}) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+func (_e *ProjectRepository_Expecter) EnableCommunityManagedPolicies(ctx any, tx any, projectID any) *ProjectRepository_EnableCommunityManagedPolicies_Call {
 	return &ProjectRepository_EnableCommunityManagedPolicies_Call{Call: _e.mock.On("EnableCommunityManagedPolicies", ctx, tx, projectID)}
 }
 
@@ -551,7 +551,7 @@ type ProjectRepository_EnablePolicyForProject_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - policyID uuid.UUID
-func (_e *ProjectRepository_Expecter) EnablePolicyForProject(ctx interface{}, tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_EnablePolicyForProject_Call {
+func (_e *ProjectRepository_Expecter) EnablePolicyForProject(ctx any, tx any, projectID any, policyID any) *ProjectRepository_EnablePolicyForProject_Call {
 	return &ProjectRepository_EnablePolicyForProject_Call{Call: _e.mock.On("EnablePolicyForProject", ctx, tx, projectID, policyID)}
 }
 
@@ -630,7 +630,7 @@ type ProjectRepository_GetByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
-func (_e *ProjectRepository_Expecter) GetByOrgID(ctx interface{}, tx interface{}, organizationID interface{}) *ProjectRepository_GetByOrgID_Call {
+func (_e *ProjectRepository_Expecter) GetByOrgID(ctx any, tx any, organizationID any) *ProjectRepository_GetByOrgID_Call {
 	return &ProjectRepository_GetByOrgID_Call{Call: _e.mock.On("GetByOrgID", ctx, tx, organizationID)}
 }
 
@@ -704,7 +704,7 @@ type ProjectRepository_GetByProjectIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectIDs []uuid.UUID
-func (_e *ProjectRepository_Expecter) GetByProjectIDs(ctx interface{}, tx interface{}, projectIDs interface{}) *ProjectRepository_GetByProjectIDs_Call {
+func (_e *ProjectRepository_Expecter) GetByProjectIDs(ctx any, tx any, projectIDs any) *ProjectRepository_GetByProjectIDs_Call {
 	return &ProjectRepository_GetByProjectIDs_Call{Call: _e.mock.On("GetByProjectIDs", ctx, tx, projectIDs)}
 }
 
@@ -779,7 +779,7 @@ type ProjectRepository_GetChildProjectsForParents_Call struct {
 //   - tx shared.DB
 //   - parentIDs []uuid.UUID
 //   - providerID string
-func (_e *ProjectRepository_Expecter) GetChildProjectsForParents(ctx interface{}, tx interface{}, parentIDs interface{}, providerID interface{}) *ProjectRepository_GetChildProjectsForParents_Call {
+func (_e *ProjectRepository_Expecter) GetChildProjectsForParents(ctx any, tx any, parentIDs any, providerID any) *ProjectRepository_GetChildProjectsForParents_Call {
 	return &ProjectRepository_GetChildProjectsForParents_Call{Call: _e.mock.On("GetChildProjectsForParents", ctx, tx, parentIDs, providerID)}
 }
 
@@ -858,7 +858,7 @@ type ProjectRepository_GetDirectChildProjects_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ProjectRepository_Expecter) GetDirectChildProjects(ctx interface{}, tx interface{}, projectID interface{}) *ProjectRepository_GetDirectChildProjects_Call {
+func (_e *ProjectRepository_Expecter) GetDirectChildProjects(ctx any, tx any, projectID any) *ProjectRepository_GetDirectChildProjects_Call {
 	return &ProjectRepository_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", ctx, tx, projectID)}
 }
 
@@ -933,7 +933,7 @@ type ProjectRepository_GetDirectChildProjectsWithProviderID_Call struct {
 //   - tx shared.DB
 //   - parentID uuid.UUID
 //   - providerID string
-func (_e *ProjectRepository_Expecter) GetDirectChildProjectsWithProviderID(ctx interface{}, tx interface{}, parentID interface{}, providerID interface{}) *ProjectRepository_GetDirectChildProjectsWithProviderID_Call {
+func (_e *ProjectRepository_Expecter) GetDirectChildProjectsWithProviderID(ctx any, tx any, parentID any, providerID any) *ProjectRepository_GetDirectChildProjectsWithProviderID_Call {
 	return &ProjectRepository_GetDirectChildProjectsWithProviderID_Call{Call: _e.mock.On("GetDirectChildProjectsWithProviderID", ctx, tx, parentID, providerID)}
 }
 
@@ -1010,7 +1010,7 @@ type ProjectRepository_GetProjectByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *ProjectRepository_Expecter) GetProjectByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *ProjectRepository_GetProjectByAssetID_Call {
+func (_e *ProjectRepository_Expecter) GetProjectByAssetID(ctx any, tx any, assetID any) *ProjectRepository_GetProjectByAssetID_Call {
 	return &ProjectRepository_GetProjectByAssetID_Call{Call: _e.mock.On("GetProjectByAssetID", ctx, tx, assetID)}
 }
 
@@ -1086,7 +1086,7 @@ type ProjectRepository_List_Call struct {
 //   - idSlice []uuid.UUID
 //   - parentID *uuid.UUID
 //   - organizationID uuid.UUID
-func (_e *ProjectRepository_Expecter) List(ctx interface{}, tx interface{}, idSlice interface{}, parentID interface{}, organizationID interface{}) *ProjectRepository_List_Call {
+func (_e *ProjectRepository_Expecter) List(ctx any, tx any, idSlice any, parentID any, organizationID any) *ProjectRepository_List_Call {
 	return &ProjectRepository_List_Call{Call: _e.mock.On("List", ctx, tx, idSlice, parentID, organizationID)}
 }
 
@@ -1174,7 +1174,7 @@ type ProjectRepository_ListPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ProjectRepository_Expecter) ListPaged(ctx interface{}, tx interface{}, projectIDs interface{}, parentID interface{}, orgID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ProjectRepository_ListPaged_Call {
+func (_e *ProjectRepository_Expecter) ListPaged(ctx any, tx any, projectIDs any, parentID any, orgID any, pageInfo any, search any, filter any, sort any) *ProjectRepository_ListPaged_Call {
 	return &ProjectRepository_ListPaged_Call{Call: _e.mock.On("ListPaged", ctx, tx, projectIDs, parentID, orgID, pageInfo, search, filter, sort)}
 }
 
@@ -1283,7 +1283,7 @@ type ProjectRepository_ListSubProjectsAndAssets_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ProjectRepository_Expecter) ListSubProjectsAndAssets(ctx interface{}, tx interface{}, allowedAssetIDs interface{}, allowedProjectIDs interface{}, parentID interface{}, orgID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ProjectRepository_ListSubProjectsAndAssets_Call {
+func (_e *ProjectRepository_Expecter) ListSubProjectsAndAssets(ctx any, tx any, allowedAssetIDs any, allowedProjectIDs any, parentID any, orgID any, pageInfo any, search any, filter any, sort any) *ProjectRepository_ListSubProjectsAndAssets_Call {
 	return &ProjectRepository_ListSubProjectsAndAssets_Call{Call: _e.mock.On("ListSubProjectsAndAssets", ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)}
 }
 
@@ -1390,7 +1390,7 @@ type ProjectRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ProjectRepository_Expecter) Read(ctx interface{}, tx interface{}, projectID interface{}) *ProjectRepository_Read_Call {
+func (_e *ProjectRepository_Expecter) Read(ctx any, tx any, projectID any) *ProjectRepository_Read_Call {
 	return &ProjectRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, projectID)}
 }
 
@@ -1463,7 +1463,7 @@ type ProjectRepository_ReadBySlug_Call struct {
 //   - tx shared.DB
 //   - organizationID uuid.UUID
 //   - slug string
-func (_e *ProjectRepository_Expecter) ReadBySlug(ctx interface{}, tx interface{}, organizationID interface{}, slug interface{}) *ProjectRepository_ReadBySlug_Call {
+func (_e *ProjectRepository_Expecter) ReadBySlug(ctx any, tx any, organizationID any, slug any) *ProjectRepository_ReadBySlug_Call {
 	return &ProjectRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, tx, organizationID, slug)}
 }
 
@@ -1541,7 +1541,7 @@ type ProjectRepository_ReadBySlugUnscoped_Call struct {
 //   - tx shared.DB
 //   - organizationID uuid.UUID
 //   - slug string
-func (_e *ProjectRepository_Expecter) ReadBySlugUnscoped(ctx interface{}, tx interface{}, organizationID interface{}, slug interface{}) *ProjectRepository_ReadBySlugUnscoped_Call {
+func (_e *ProjectRepository_Expecter) ReadBySlugUnscoped(ctx any, tx any, organizationID any, slug any) *ProjectRepository_ReadBySlugUnscoped_Call {
 	return &ProjectRepository_ReadBySlugUnscoped_Call{Call: _e.mock.On("ReadBySlugUnscoped", ctx, tx, organizationID, slug)}
 }
 
@@ -1620,7 +1620,7 @@ type ProjectRepository_RecursivelyGetChildProjects_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *ProjectRepository_Expecter) RecursivelyGetChildProjects(ctx interface{}, tx interface{}, projectID interface{}) *ProjectRepository_RecursivelyGetChildProjects_Call {
+func (_e *ProjectRepository_Expecter) RecursivelyGetChildProjects(ctx any, tx any, projectID any) *ProjectRepository_RecursivelyGetChildProjects_Call {
 	return &ProjectRepository_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", ctx, tx, projectID)}
 }
 
@@ -1699,7 +1699,7 @@ type ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ProjectRepository_Expecter) SearchProjectsWithSubProjectsAndAssetsPaged(ctx interface{}, tx interface{}, allowedAssetIDs interface{}, allowedProjectIDs interface{}, parentID interface{}, orgID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+func (_e *ProjectRepository_Expecter) SearchProjectsWithSubProjectsAndAssetsPaged(ctx any, tx any, allowedAssetIDs any, allowedProjectIDs any, parentID any, orgID any, pageInfo any, search any, filter any, sort any) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
 	return &ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("SearchProjectsWithSubProjectsAndAssetsPaged", ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)}
 }
 
@@ -1797,7 +1797,7 @@ type ProjectRepository_Update_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - project *models.Project
-func (_e *ProjectRepository_Expecter) Update(ctx interface{}, tx interface{}, project interface{}) *ProjectRepository_Update_Call {
+func (_e *ProjectRepository_Expecter) Update(ctx any, tx any, project any) *ProjectRepository_Update_Call {
 	return &ProjectRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, project)}
 }
 
@@ -1862,7 +1862,7 @@ type ProjectRepository_Upsert_Call struct {
 //   - projects *[]*models.Project
 //   - conflictingColumns []clause.Column
 //   - toUpdate []string
-func (_e *ProjectRepository_Expecter) Upsert(ctx interface{}, tx interface{}, projects interface{}, conflictingColumns interface{}, toUpdate interface{}) *ProjectRepository_Upsert_Call {
+func (_e *ProjectRepository_Expecter) Upsert(ctx any, tx any, projects any, conflictingColumns any, toUpdate any) *ProjectRepository_Upsert_Call {
 	return &ProjectRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, projects, conflictingColumns, toUpdate)}
 }
 
@@ -1955,7 +1955,7 @@ type ProjectRepository_UpsertSplit_Call struct {
 //   - tx shared.DB
 //   - externalProviderID string
 //   - projects []*models.Project
-func (_e *ProjectRepository_Expecter) UpsertSplit(ctx interface{}, tx interface{}, externalProviderID interface{}, projects interface{}) *ProjectRepository_UpsertSplit_Call {
+func (_e *ProjectRepository_Expecter) UpsertSplit(ctx any, tx any, externalProviderID any, projects any) *ProjectRepository_UpsertSplit_Call {
 	return &ProjectRepository_UpsertSplit_Call{Call: _e.mock.On("UpsertSplit", ctx, tx, externalProviderID, projects)}
 }
 

@@ -72,7 +72,7 @@ type AssetVersionService_BuildOpenVeX_Call struct {
 //   - assetVersion models.AssetVersion
 //   - organizationSlug string
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildOpenVeX(ctx interface{}, tx interface{}, asset interface{}, assetVersion interface{}, organizationSlug interface{}, dependencyVulns interface{}) *AssetVersionService_BuildOpenVeX_Call {
+func (_e *AssetVersionService_Expecter) BuildOpenVeX(ctx any, tx any, asset any, assetVersion any, organizationSlug any, dependencyVulns any) *AssetVersionService_BuildOpenVeX_Call {
 	return &AssetVersionService_BuildOpenVeX_Call{Call: _e.mock.On("BuildOpenVeX", ctx, tx, asset, assetVersion, organizationSlug, dependencyVulns)}
 }
 
@@ -155,7 +155,7 @@ type AssetVersionService_BuildVeX_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildVeX(ctx interface{}, tx interface{}, metadata interface{}, asset interface{}, assetVersion interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
+func (_e *AssetVersionService_Expecter) BuildVeX(ctx any, tx any, metadata any, asset any, assetVersion any, dependencyVulns any) *AssetVersionService_BuildVeX_Call {
 	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", ctx, tx, metadata, asset, assetVersion, dependencyVulns)}
 }
 
@@ -244,7 +244,7 @@ type AssetVersionService_GetAssetVersionsByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionService_Expecter) GetAssetVersionsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AssetVersionService_GetAssetVersionsByAssetID_Call {
+func (_e *AssetVersionService_Expecter) GetAssetVersionsByAssetID(ctx any, tx any, assetID any) *AssetVersionService_GetAssetVersionsByAssetID_Call {
 	return &AssetVersionService_GetAssetVersionsByAssetID_Call{Call: _e.mock.On("GetAssetVersionsByAssetID", ctx, tx, assetID)}
 }
 
@@ -318,7 +318,7 @@ type AssetVersionService_LoadFullSBOMGraph_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
-func (_e *AssetVersionService_Expecter) LoadFullSBOMGraph(ctx interface{}, tx interface{}, assetVersion interface{}) *AssetVersionService_LoadFullSBOMGraph_Call {
+func (_e *AssetVersionService_Expecter) LoadFullSBOMGraph(ctx any, tx any, assetVersion any) *AssetVersionService_LoadFullSBOMGraph_Call {
 	return &AssetVersionService_LoadFullSBOMGraph_Call{Call: _e.mock.On("LoadFullSBOMGraph", ctx, tx, assetVersion)}
 }
 
@@ -397,7 +397,7 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName string
 //   - sbom *normalize.SBOMGraph
-func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, sbom interface{}) *AssetVersionService_UpdateSBOM_Call {
+func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifactName any, sbom any) *AssetVersionService_UpdateSBOM_Call {
 	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", ctx, tx, org, project, asset, assetVersion, artifactName, sbom)}
 }
 

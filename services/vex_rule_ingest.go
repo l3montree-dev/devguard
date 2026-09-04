@@ -13,41 +13,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package controllers
+package services
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
-func ingestVEXRules(
-	ctx context.Context,
-	tx shared.DB,
-	vexRuleRepository shared.VEXRuleRepository,
-	dependencyVulnRepository shared.DependencyVulnRepository,
-	vulnEventRepository shared.VulnEventRepository,
-	asset models.Asset,
-	rules []models.VEXRule,
-) error {
+func (s *scanService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
 	if len(rules) == 0 {
 		return nil
 	}
 
-	services.SetVEXRulesEnabledFromParanoidMode(rules, asset.ParanoidMode)
+	SetVEXRulesEnabledFromParanoidMode(rules, asset.ParanoidMode)
 
-	existingRules, err := vexRuleRepository.FindByAssetID(ctx, tx, asset.ID)
+	existingRules, err := s.vexRuleRepository.FindByAssetID(ctx, tx, asset.ID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch existing VEX rules: %w", err)
 	}
 
-	rulesToAdd, rulesToRemove := services.DiffVEXRules(rules, existingRules)
+	rulesToAdd, rulesToRemove := DiffVEXRules(rules, existingRules)
 
 	if len(rulesToRemove) > 0 {
-		if err := vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {
+		if err := s.vexRuleRepository.DeleteBatch(ctx, tx, rulesToRemove); err != nil {
 			return fmt.Errorf("failed to remove old VEX rules: %w", err)
 		}
 	}
@@ -56,19 +47,19 @@ func ingestVEXRules(
 		return nil
 	}
 
-	if err := vexRuleRepository.UpsertBatch(ctx, tx, rulesToAdd); err != nil {
+	if err := s.vexRuleRepository.UpsertBatch(ctx, tx, rulesToAdd); err != nil {
 		return fmt.Errorf("failed to add new VEX rules: %w", err)
 	}
 
 	var vulns []models.DependencyVuln
-	for batch, err := range dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID, 1000) {
+	for batch, err := range s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(ctx, tx, asset.ID, 1000) {
 		if err != nil {
 			return fmt.Errorf("failed to fetch existing vulns for asset: %w", err)
 		}
 		vulns = append(vulns, batch...)
 	}
 
-	updatedVulns, events, err := services.ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)
+	updatedVulns, events, err := ApplyVEXRulesToVulns(ctx, rulesToAdd, vulns)
 	if err != nil {
 		return fmt.Errorf("failed to apply VEX rules to vulns: %w", err)
 	}
@@ -76,10 +67,10 @@ func ingestVEXRules(
 		return nil
 	}
 
-	if err := dependencyVulnRepository.SaveBatch(ctx, tx, updatedVulns); err != nil {
+	if err := s.dependencyVulnRepository.SaveBatch(ctx, tx, updatedVulns); err != nil {
 		return fmt.Errorf("failed to save updated vulns: %w", err)
 	}
-	if err := vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
+	if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
 		return fmt.Errorf("failed to save events: %w", err)
 	}
 
