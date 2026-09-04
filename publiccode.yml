@@ -15,25 +15,24 @@ platforms:
   - "web"
   - "linux"
 developmentStatus: "stable"
-softwareVersion: "1.13.0"
+softwareVersion: "1.13.2"
 releaseDate: "2026-08-24"
 softwareType: "standalone/web"
-url: "https://github.com/l3montree-dev/devguard"
+url: "https://devguard.org/"
 landingURL: "https://devguard.org"
-logo: "docs/logo_inverse_horizontal.svg"
+logo: "logo.svg"
 maintenance:
   type: "internal"
 
   contacts:
-    - name: "L3montree Cybersecurity"
+    - name: "L3montree GmbH"
       email: "info@l3montree.com"
-      website: "https://l3montree.com/"
-      affiliation: "L3montree Cybersecurity GmbH"
+      affiliation: "L3montree GmbH"
 
 legal:
   license: "AGPL-3.0-or-later"
   mainCopyrightOwner: >-
-    2023-2026 L3montree Cybersecurity GmbH
+    2023-2026 L3montree GmbH
 intendedAudience:
   scope:
     - "manufacturing"
@@ -50,6 +49,13 @@ dependsOn:
     - name: "Kratos"
 description:
   de:
+    screenshots:
+      - "docs/screenshots/dependency-risks.png"
+      - "docs/screenshots/vex-rules.png"
+      - "docs/screenshots/dependency-insights.png"
+      - "docs/screenshots/code-risks.png"
+      - "docs/screenshots/org-overview.png"
+      - "docs/screenshots/compliance-posture.png"
     features:
       - "Automatische SBOM- und VEX-Generierung"
       - "Software Composition Analysis (SCA)"
@@ -104,7 +110,7 @@ description:
       L3montree Cybersecurity GmbH mit Sitz in Bonn.
     shortDescription: >
       Open-Source-Plattform für Schwachstellenmanagement und
-      Lieferkettensicherheit – mit risikobasierter Priorisierung, integriert in
+      Lieferkettensicherheit - mit risikobasierter Priorisierung, integriert in
       GitLab und GitHub.
     documentation: "https://docs.devguard.org"
   en:
