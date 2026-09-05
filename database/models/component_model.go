@@ -80,10 +80,22 @@ type ComponentDependency struct {
 }
 
 type SBOMMerkleEdge struct {
-	SubtreeHash                 string    `json:"subtreeHash" gorm:"column:subtree_hash;primaryKey"`
-	Component                   Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
-	ComponentID                 string    `json:"componentPurl" gorm:"column:component_id;index:component_idx;primaryKey"` // will be ROOT for root nodes - basically SBOM root nodes, which are not really components, but just the root of the dependency tree representing the artifact itself. Edges of ROOT -> Di are direct dependencies of the original artifact.
-	DirectDependencySubtreeHash string    `json:"directDependencySubtreeHash" gorm:"column:direct_dependency_subtree_hash;primaryKey"`
+	SubtreeHash                 string  `json:"subtreeHash" gorm:"column:subtree_hash;primaryKey"`
+	ComponentID                 string  `json:"componentPurl" gorm:"column:component_id;index:component_idx;primaryKey"`
+	DirectDependencySubtreeHash *string `json:"directDependencySubtreeHash" gorm:"column:direct_dependency_subtree_hash;primaryKey"`
+
+	Component Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
+}
+
+type SBOM struct {
+	RootSubtreeHash  string    `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;primaryKey;"`
+	ArtifactName     string    `json:"artifactName" gorm:"column:artifact_name;primaryKey"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;primaryKey"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;primaryKey;type:uuid;"`
+	Origin           string    `json:"origin" gorm:"column:origin;primaryKey"`
+
+	AssetVersion AssetVersion   `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	Tree         SBOMMerkleEdge `json:"tree"`
 }
 
 const Root string = "root"
