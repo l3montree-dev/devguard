@@ -25,66 +25,53 @@ import (
 	"strings"
 )
 
-// MerkleTree is the content-addressed representation of one SBOM.
+// MerkleTree is one SBOM, keyed by subtree hash rather than by component id.
 //
-// It is keyed by subtree hash rather than by component id, which is the whole
-// point: hash(component_id, sorted child hashes) covers a component's entire
-// child set, so two SBOMs that disagree about a shared component's transitive
-// dependencies get different hashes and both descriptions survive. The
-// purl-keyed graph could not represent that - one node held one child set, so
-// the most recent scan overwrote what every other artifact saw.
+// hash(component_id, sorted child hashes) covers a component's entire child
+// set, so SBOMs that disagree about a shared component get different hashes and
+// both descriptions survive. The purl-keyed graph could not represent that: one
+// node held one child set, so the newest scan overwrote everyone else's view.
 //
-// A MerkleTree is always exactly one SBOM - one row of the sboms table. There
-// are no synthetic `artifact:` or `sbom:` nodes: the artifact name and the
-// origin live in that row, and every ComponentID in the tree is a real
-// component identity.
-//
-// The in-memory shape and the stored shape are the same thing: Edges returns
-// the rows to persist, MerkleTreeFromEdges reads them back.
+// One tree is one row of the sboms table. The artifact name and origin live in
+// that row, so there are no synthetic `artifact:`/`sbom:` nodes and every
+// ComponentID here is a real component.
 type MerkleTree struct {
-	// Root is the subtree hash of the SBOM as a whole and identifies it by
-	// content: two identical SBOMs anywhere on the instance share this hash.
+	// Root identifies the SBOM by content: identical SBOMs share this hash.
 	Root  string
 	nodes map[string]*MerkleNode
 }
 
-// MerkleNode is one component together with the exact child set its hash covers.
+// MerkleNode is one component with the exact child set its hash covers.
 type MerkleNode struct {
 	SubtreeHash string
 	ComponentID string
-	// Children holds child subtree hashes, sorted, so iteration is
-	// deterministic however the tree was built or loaded.
+	// sorted, so iteration is deterministic however the tree was built
 	Children []string
 }
 
-// IsLeaf reports whether this component has no dependencies in this SBOM. The
-// same component may have children in a different SBOM, under a different
-// subtree hash.
+// IsLeaf reports whether this component has no dependencies in this SBOM. It
+// may still have children in another SBOM, under a different subtree hash.
 func (n *MerkleNode) IsLeaf() bool {
 	return len(n.Children) == 0
 }
 
 // MerkleEdge is one persisted edge. A component with n children yields n edges
-// sharing one SubtreeHash; a leaf yields a single edge with a nil
-// DirectDependencySubtreeHash, which is what keeps a leaf's component id
-// resolvable - a leaf has no outgoing edge to carry it otherwise.
+// sharing a SubtreeHash; a leaf yields one edge with a nil child, which is what
+// keeps its component id resolvable.
 type MerkleEdge struct {
 	SubtreeHash                 string
 	ComponentID                 string
 	DirectDependencySubtreeHash *string
 }
 
-// merkleCycleMarker stands in for a node already on the recursion stack while
-// hashing. Dependency graphs can contain cycles and a cycle has no well-defined
-// bottom-up hash, so the edge closing the cycle is dropped: recording it would
-// make the stored tree cyclic and every downward walk non-terminating.
+// merkleCycleMarker stands in for a node already on the recursion stack. A
+// cycle has no bottom-up hash, so the edge closing it is dropped - storing it
+// would make every downward walk non-terminating.
 const merkleCycleMarker = "CYCLE"
 
-// HashSubtree computes the hash covering componentID and its children.
-//
-// The child set is unordered, so it is sorted first: the same subtree ingested
-// twice, in any order, must produce the same hash or deduplication silently
-// stops working.
+// HashSubtree computes the hash covering componentID and its children. Children
+// are sorted first: the same subtree ingested in any order must hash the same,
+// or deduplication silently stops working.
 func HashSubtree(componentID string, childSubtreeHashes []string) string {
 	sorted := slices.Clone(childSubtreeHashes)
 	slices.Sort(sorted)
@@ -94,57 +81,57 @@ func HashSubtree(componentID string, childSubtreeHashes []string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Adjacency is the minimal input needed to hash a document bottom-up: which
-// nodes depend on which, and what component identity each node carries.
+// Adjacency is the minimal input needed to hash a document bottom-up. Refs are
+// whatever handle the document uses to cross-reference components (a CycloneDX
+// bom-ref, say); they are a parsing detail and never reach the database.
 //
-// It is deliberately not a graph type. Parsing a document into this and hashing
-// it is the whole ingest path, so there is no second in-memory representation
-// of an SBOM to keep in step with the stored one.
+// Deliberately not a graph type: parsing into this and hashing it is the whole
+// ingest path, so there is no second in-memory SBOM representation to keep in
+// step with the stored one.
 type Adjacency struct {
-	// Children maps a node id to the node ids it depends on directly.
+	// Children maps a ref to the refs it depends on directly.
 	Children map[string][]string
-	// ComponentIDs maps a node id to its component identity (a purl). A node
-	// missing here contributes its own id, which is what happens for documents
-	// that identify components by something other than a purl.
+	// ComponentIDs maps a ref to its component identity (a purl). A ref missing
+	// here contributes itself, as happens for documents that identify
+	// components by something other than a purl.
 	ComponentIDs map[string]string
 }
 
-func (a Adjacency) componentID(nodeID string) string {
-	if id, ok := a.ComponentIDs[nodeID]; ok && id != "" {
+func (a Adjacency) componentID(ref string) string {
+	if id, ok := a.ComponentIDs[ref]; ok && id != "" {
 		return id
 	}
-	return nodeID
+	return ref
 }
 
-// BuildMerkleTree converts the subtree below rootID into a content-addressed
+// BuildMerkleTree converts the document below rootRef into a content-addressed
 // tree.
 //
-// rootComponentID is the identity the root is hashed under. It exists because
-// the root of a parsed document is a synthetic parse artifact rather than a
-// real component; passing the artifact's purl (or its name, when it has none)
-// keeps every component id in the tree a real component identity.
-func BuildMerkleTree(adj Adjacency, rootID, rootComponentID string) *MerkleTree {
+// rootComponentID is the identity the root is hashed under. A document's root
+// is a parse artifact, not a real component, so passing the artifact's purl (or
+// its name, when it has none) keeps every stored component id a real one.
+func BuildMerkleTree(adj Adjacency, rootRef, rootComponentID string) *MerkleTree {
 	t := &MerkleTree{nodes: make(map[string]*MerkleNode, len(adj.Children))}
 	hashes := make(map[string]string, len(adj.Children))
 	onStack := make(map[string]bool)
-	t.Root = t.build(adj, rootID, rootComponentID, hashes, onStack)
+	t.Root = t.build(adj, rootRef, rootComponentID, hashes, onStack)
 	return t
 }
 
-func (t *MerkleTree) build(adj Adjacency, nodeID, componentID string, hashes map[string]string, onStack map[string]bool) string {
-	if hash, done := hashes[nodeID]; done {
+func (t *MerkleTree) build(adj Adjacency, ref, rootComponentID string, hashes map[string]string, onStack map[string]bool) string {
+	if hash, done := hashes[ref]; done {
 		return hash
 	}
-	if onStack[nodeID] {
+	if onStack[ref] {
 		return merkleCycleMarker
 	}
-	onStack[nodeID] = true
-	defer delete(onStack, nodeID)
+	onStack[ref] = true
+	defer delete(onStack, ref)
 
 	// sorted so the recursion order does not depend on input ordering
 	var childHashes []string
-	for _, childID := range slices.Sorted(slices.Values(adj.Children[nodeID])) {
-		childHash := t.build(adj, childID, adj.componentID(childID), hashes, onStack)
+	for _, childRef := range slices.Sorted(slices.Values(adj.Children[ref])) {
+		childHash := t.build(adj, childRef, adj.componentID(childRef), hashes, onStack)
 		if childHash == merkleCycleMarker {
 			continue
 		}
@@ -155,13 +142,12 @@ func (t *MerkleTree) build(adj Adjacency, nodeID, componentID string, hashes map
 	}
 	slices.Sort(childHashes)
 
-	hash := HashSubtree(componentID, childHashes)
-	// An identical subtree reached from two different parents resolves to the
-	// same hash and the same node - that is the deduplication.
+	hash := HashSubtree(rootComponentID, childHashes)
+	// the same subtree reached from two parents resolves to a single node
 	if _, exists := t.nodes[hash]; !exists {
-		t.nodes[hash] = &MerkleNode{SubtreeHash: hash, ComponentID: componentID, Children: childHashes}
+		t.nodes[hash] = &MerkleNode{SubtreeHash: hash, ComponentID: rootComponentID, Children: childHashes}
 	}
-	hashes[nodeID] = hash
+	hashes[ref] = hash
 	return hash
 }
 
