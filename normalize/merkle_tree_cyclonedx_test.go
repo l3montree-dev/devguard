@@ -10,10 +10,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Reproduces container-scanning silently dropping all components: the
-// artifact name is a real purl, and Trivy's root component purl matches it
-// on type/namespace/name, so isArtifactRootComponent wrongly treats it as
-// self-referential and skips linking it - orphaning its children.
+// buildTree assembles a tree the way the parser would, with the SBOM's direct
+// dependencies hanging off the parse root.
+func buildTree(children map[string][]string, artifactName string) *MerkleTree {
+	return BuildMerkleTree(Adjacency{Children: children}, merkleParseRoot, artifactName)
+}
+
+func findDependency(bom *cdx.BOM, ref string) *cdx.Dependency {
+	for i := range *bom.Dependencies {
+		if (*bom.Dependencies)[i].Ref == ref {
+			return &(*bom.Dependencies)[i]
+		}
+	}
+	return nil
+}
+
 func TestContainerScanRootComponentSharesArtifactPurlStaysReachable(t *testing.T) {
 	artifactName := "pkg:oci/my-image"
 
@@ -40,32 +51,25 @@ func TestContainerScanRootComponentSharesArtifactPurlStaysReachable(t *testing.T
 		},
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, artifactName, "container-scanning")
+	parsed, err := MerkleTreeFromCycloneDX(bom, artifactName)
 	assert.NoError(t, err)
 
-	err = g.ScopeToArtifact(artifactName)
-	assert.NoError(t, err)
-
-	var ids []string
-	for c := range g.Components() {
-		ids = append(ids, c.BOMRef)
-	}
-	assert.Contains(t, ids, "pkg:npm/vulnerable-lib@1.0.0", "the scanned image's real component must stay reachable from the artifact node")
+	assert.Contains(t, parsed.Tree.ComponentIDs(), "pkg:npm/vulnerable-lib@1.0.0",
+		"the scanned image's real component must stay reachable from the artifact")
 }
 
-func TestStackOverflowSBOMGraphToCycloneDX(t *testing.T) {
+func TestStackOverflowSBOMToMerkleTree(t *testing.T) {
 	// read the testdata/stack-overflow-sbom.json to reproduce the issue
 	b, _ := os.ReadFile("testdata/stack-overflow-sbom.json")
 	var bom cdx.BOM
 	err := json.Unmarshal(b, &bom)
 	assert.NoError(t, err, "Should unmarshal the test SBOM without error")
 
-	// Create a graph from the BOM and then export it back to CycloneDX
-	_, err = SBOMGraphFromCycloneDX(&bom, "", "")
-	assert.NoError(t, err, "Should create graph from CycloneDX BOM without error")
+	_, err = MerkleTreeFromCycloneDX(&bom, "")
+	assert.NoError(t, err, "Should build a merkle tree from the CycloneDX BOM without error")
 }
 
-func TestSBOMGraphFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T) {
+func TestMerkleTreeFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T) {
 	deps := []cdx.Dependency{
 		{Ref: "root", Dependencies: &[]string{"pkg:npm/a@1.0.0"}},
 		{Ref: "pkg:npm/a@1.0.0", Dependencies: &[]string{"invalid-node"}},
@@ -102,21 +106,14 @@ func TestSBOMGraphFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T
 		Dependencies: &deps,
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, "", "")
+	parsed, err := MerkleTreeFromCycloneDX(bom, "")
 	assert.NoError(t, err)
 
-	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
+	exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
 	assert.NotNil(t, exported.Dependencies)
 
-	var rootDeps, aDeps *cdx.Dependency
-	for i := range *exported.Dependencies {
-		switch (*exported.Dependencies)[i].Ref {
-		case "root":
-			rootDeps = &(*exported.Dependencies)[i]
-		case "pkg:npm/a@1.0.0":
-			aDeps = &(*exported.Dependencies)[i]
-		}
-	}
+	rootDeps := findDependency(exported, "root")
+	aDeps := findDependency(exported, "pkg:npm/a@1.0.0")
 
 	assert.NotNil(t, rootDeps)
 	assert.NotNil(t, rootDeps.Dependencies)
@@ -129,7 +126,7 @@ func TestSBOMGraphFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.T
 	assert.NotContains(t, *aDeps.Dependencies, "invalid-node")
 }
 
-func TestSBOMGraphFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *testing.T) {
+func TestMerkleTreeFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *testing.T) {
 	deps := []cdx.Dependency{
 		{Ref: "root", Dependencies: &[]string{"pkg:npm/a@1.0.0"}},
 		{Ref: "pkg:npm/a@1.0.0", Dependencies: &[]string{"invalid-node-1"}},
@@ -167,21 +164,14 @@ func TestSBOMGraphFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *
 		Dependencies: &deps,
 	}
 
-	g, err := SBOMGraphFromCycloneDX(bom, "", "")
+	parsed, err := MerkleTreeFromCycloneDX(bom, "")
 	assert.NoError(t, err)
 
-	exported := g.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"})
+	exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
 	assert.NotNil(t, exported.Dependencies)
 
-	var rootDeps, aDeps *cdx.Dependency
-	for i := range *exported.Dependencies {
-		switch (*exported.Dependencies)[i].Ref {
-		case "root":
-			rootDeps = &(*exported.Dependencies)[i]
-		case "pkg:npm/a@1.0.0":
-			aDeps = &(*exported.Dependencies)[i]
-		}
-	}
+	rootDeps := findDependency(exported, "root")
+	aDeps := findDependency(exported, "pkg:npm/a@1.0.0")
 
 	assert.NotNil(t, rootDeps)
 	assert.NotNil(t, rootDeps.Dependencies)
@@ -196,71 +186,24 @@ func TestSBOMGraphFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t *
 
 func TestToCycloneDX(t *testing.T) {
 	t.Run("transitive dependencies should not be direct children of root", func(t *testing.T) {
-		// Create a graph with: root -> A -> B -> C
-		// Only A should be a direct dependency of root
-		// B should be a dependency of A
-		// C should be a dependency of B
-		g := NewSBOMGraph()
+		// root -> A -> B -> C: only A is a direct dependency of root
+		tree := buildTree(map[string][]string{
+			merkleParseRoot:   {"pkg:npm/a@1.0.0"},
+			"pkg:npm/a@1.0.0": {"pkg:npm/b@2.0.0"},
+			"pkg:npm/b@2.0.0": {"pkg:npm/c@3.0.0"},
+		}, "my-app")
 
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
-
-		// Add components A, B, C
-		compA := cdx.Component{
-			BOMRef:     "pkg:npm/a@1.0.0",
-			Name:       "a",
-			Version:    "1.0.0",
-			PackageURL: "pkg:npm/a@1.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compB := cdx.Component{
-			BOMRef:     "pkg:npm/b@2.0.0",
-			Name:       "b",
-			Version:    "2.0.0",
-			PackageURL: "pkg:npm/b@2.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compC := cdx.Component{
-			BOMRef:     "pkg:npm/c@3.0.0",
-			Name:       "c",
-			Version:    "3.0.0",
-			PackageURL: "pkg:npm/c@3.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-
-		idA := g.AddComponent(compA)
-		idB := g.AddComponent(compB)
-		idC := g.AddComponent(compC)
-
-		// Build the dependency chain
-		g.AddEdge(infoSourceID, idA) // info source -> A
-		g.AddEdge(idA, idB)          // A -> B
-		g.AddEdge(idB, idC)          // B -> C
-
-		// Export to CycloneDX
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
-		})
+		}, nil)
 
-		// Verify the dependencies array structure
 		assert.NotNil(t, bom.Dependencies)
-		deps := *bom.Dependencies
 
-		// Find each dependency entry
-		var rootDeps, aDeps, bDeps, cDeps *cdx.Dependency
-		for i := range deps {
-			switch deps[i].Ref {
-			case "my-app":
-				rootDeps = &deps[i]
-			case "pkg:npm/a@1.0.0":
-				aDeps = &deps[i]
-			case "pkg:npm/b@2.0.0":
-				bDeps = &deps[i]
-			case "pkg:npm/c@3.0.0":
-				cDeps = &deps[i]
-			}
-		}
+		rootDeps := findDependency(bom, "my-app")
+		aDeps := findDependency(bom, "pkg:npm/a@1.0.0")
+		bDeps := findDependency(bom, "pkg:npm/b@2.0.0")
+		cDeps := findDependency(bom, "pkg:npm/c@3.0.0")
 
 		// Verify root has only A as direct dependency, not B or C
 		assert.NotNil(t, rootDeps, "Root dependency entry should exist")
@@ -290,49 +233,18 @@ func TestToCycloneDX(t *testing.T) {
 	})
 
 	t.Run("multiple direct dependencies from root", func(t *testing.T) {
-		// Create a graph with: root -> A, root -> B
-		// Both A and B should be direct dependencies of root
-		g := NewSBOMGraph()
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0"},
+		}, "my-app")
 
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
-
-		compA := cdx.Component{
-			BOMRef:     "pkg:npm/a@1.0.0",
-			Name:       "a",
-			Version:    "1.0.0",
-			PackageURL: "pkg:npm/a@1.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compB := cdx.Component{
-			BOMRef:     "pkg:npm/b@2.0.0",
-			Name:       "b",
-			Version:    "2.0.0",
-			PackageURL: "pkg:npm/b@2.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-
-		idA := g.AddComponent(compA)
-		idB := g.AddComponent(compB)
-
-		g.AddEdge(infoSourceID, idA) // info source -> A
-		g.AddEdge(infoSourceID, idB) // info source -> B
-
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
-		})
+		}, nil)
 
 		assert.NotNil(t, bom.Dependencies)
-		deps := *bom.Dependencies
 
-		var rootDeps *cdx.Dependency
-		for i := range deps {
-			if deps[i].Ref == "my-app" {
-				rootDeps = &deps[i]
-				break
-			}
-		}
+		rootDeps := findDependency(bom, "my-app")
 
 		assert.NotNil(t, rootDeps)
 		assert.NotNil(t, rootDeps.Dependencies)
@@ -342,64 +254,23 @@ func TestToCycloneDX(t *testing.T) {
 	})
 
 	t.Run("diamond dependency pattern", func(t *testing.T) {
-		// Create a diamond: root -> A, root -> B, A -> C, B -> C
-		// Root should have A and B as direct deps
-		// C should not be a direct dependency of root
-		g := NewSBOMGraph()
+		// root -> A, root -> B, A -> C, B -> C
+		tree := buildTree(map[string][]string{
+			merkleParseRoot:   {"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0"},
+			"pkg:npm/a@1.0.0": {"pkg:npm/c@3.0.0"},
+			"pkg:npm/b@2.0.0": {"pkg:npm/c@3.0.0"},
+		}, "my-app")
 
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
-
-		compA := cdx.Component{
-			BOMRef:     "pkg:npm/a@1.0.0",
-			Name:       "a",
-			Version:    "1.0.0",
-			PackageURL: "pkg:npm/a@1.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compB := cdx.Component{
-			BOMRef:     "pkg:npm/b@2.0.0",
-			Name:       "b",
-			Version:    "2.0.0",
-			PackageURL: "pkg:npm/b@2.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compC := cdx.Component{
-			BOMRef:     "pkg:npm/c@3.0.0",
-			Name:       "c",
-			Version:    "3.0.0",
-			PackageURL: "pkg:npm/c@3.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-
-		idA := g.AddComponent(compA)
-		idB := g.AddComponent(compB)
-		idC := g.AddComponent(compC)
-
-		g.AddEdge(infoSourceID, idA) // info source -> A
-		g.AddEdge(infoSourceID, idB) // info source -> B
-		g.AddEdge(idA, idC)          // A -> C
-		g.AddEdge(idB, idC)          // B -> C
-
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
-		})
+		}, nil)
 
 		assert.NotNil(t, bom.Dependencies)
-		deps := *bom.Dependencies
 
-		var rootDeps, aDeps, bDeps *cdx.Dependency
-		for i := range deps {
-			switch deps[i].Ref {
-			case "my-app":
-				rootDeps = &deps[i]
-			case "pkg:npm/a@1.0.0":
-				aDeps = &deps[i]
-			case "pkg:npm/b@2.0.0":
-				bDeps = &deps[i]
-			}
-		}
+		rootDeps := findDependency(bom, "my-app")
+		aDeps := findDependency(bom, "pkg:npm/a@1.0.0")
+		bDeps := findDependency(bom, "pkg:npm/b@2.0.0")
 
 		// Root should have only A and B, not C
 		assert.NotNil(t, rootDeps)
@@ -420,14 +291,12 @@ func TestToCycloneDX(t *testing.T) {
 
 func TestToCycloneDXRootComponent(t *testing.T) {
 	t.Run("root component should include version from AssetVersionName", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{}, "my-app")
 
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			ArtifactName:     "my-app",
 			AssetVersionName: "1.2.3",
-		})
+		}, nil)
 
 		// Find root component by BOMRef (name@version format)
 		var rootComp *cdx.Component
@@ -444,16 +313,13 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 	})
 
 	t.Run("root component should not have version when AssetVersionName is empty", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{}, "my-app")
 
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
-		})
+		}, nil)
 
-		// Find root component
 		var rootComp *cdx.Component
 		for i := range *bom.Components {
 			if (*bom.Components)[i].Name == "my-app" {
@@ -467,33 +333,16 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 	})
 
 	t.Run("dependencies should reference root with version", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/lodash@4.17.21"},
+		}, "my-app")
 
-		comp := cdx.Component{
-			BOMRef:     "pkg:npm/lodash@4.17.21",
-			Name:       "lodash",
-			Version:    "4.17.21",
-			PackageURL: "pkg:npm/lodash@4.17.21",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
-
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			ArtifactName:     "my-app",
 			AssetVersionName: "2.0.0",
-		})
+		}, nil)
 
-		// Find root dependency entry
-		var rootDeps *cdx.Dependency
-		for i := range *bom.Dependencies {
-			if (*bom.Dependencies)[i].Ref == "my-app@2.0.0" {
-				rootDeps = &(*bom.Dependencies)[i]
-				break
-			}
-		}
+		rootDeps := findDependency(bom, "my-app@2.0.0")
 
 		assert.NotNil(t, rootDeps, "Root dependency entry should exist with version")
 		assert.Contains(t, *rootDeps.Dependencies, "pkg:npm/lodash@4.17.21", "Root should depend on lodash")
@@ -617,14 +466,12 @@ func TestToCycloneDXRootPURLWithQualifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := NewSBOMGraph()
-			artifactID := g.AddArtifact(tt.artifactName)
-			g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+			tree := buildTree(map[string][]string{}, tt.artifactName)
 
-			bom := g.ToCycloneDX(BOMMetadata{
+			bom := tree.ToCycloneDX(BOMMetadata{
 				ArtifactName:     tt.artifactName,
 				AssetVersionName: tt.assetVersionName,
-			})
+			}, nil)
 
 			// Find the root component
 			var rootComp *cdx.Component
