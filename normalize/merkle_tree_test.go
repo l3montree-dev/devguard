@@ -14,6 +14,14 @@ func adjacency(children map[string][]string) Adjacency {
 	return Adjacency{Children: children, ComponentIDs: map[string]string{}}
 }
 
+// merkleParseRoot mirrors the synthetic root ref the CycloneDX parser uses, so
+// these tests build trees the same shape the real ingest path produces.
+const merkleParseRoot = "\x00sbom-root"
+
+func buildTree(children map[string][]string, artifactName string) *MerkleTree {
+	return BuildMerkleTree(Adjacency{Children: children}, merkleParseRoot, artifactName)
+}
+
 func edgeKey(e MerkleEdge) [3]string {
 	child := "NULL"
 	if e.DirectDependencySubtreeHash != nil {

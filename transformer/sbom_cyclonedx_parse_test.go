@@ -1,6 +1,7 @@
-package normalize
+package transformer
 
 import (
+	"github.com/l3montree-dev/devguard/normalize"
 	"os"
 	"testing"
 
@@ -368,7 +369,7 @@ func TestReuploadIdempotency(t *testing.T) {
 		parsed, err := MerkleTreeFromCycloneDX(original, artifactName)
 		require.NoError(t, err)
 
-		exported := parsed.Tree.ToCycloneDX(BOMMetadata{ArtifactName: artifactName, AssetVersionName: "1.0.0"}, parsed.Components)
+		exported := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{ArtifactName: artifactName, AssetVersionName: "1.0.0"}, parsed.Components)
 
 		// Re-import the exported BOM under the same artifact name, simulating a
 		// download-then-reupload round trip.
@@ -488,7 +489,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 			t.Run(tc.description, func(t *testing.T) {
 				tree := buildTree(map[string][]string{}, tc.artifactName)
 
-				metadata := BOMMetadata{
+				metadata := normalize.BOMMetadata{
 					ArtifactName:          tc.artifactName,
 					AssetVersionName:      "main",
 					AssetVersionSlug:      "main",
@@ -501,7 +502,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 				}
 				t.Setenv("API_URL", "http://localhost:8080")
 
-				bom := tree.ToCycloneDX(metadata, nil)
+				bom := TreeToCycloneDX(tree, metadata, nil)
 
 				require.NotNil(t, bom.ExternalReferences)
 				assert.GreaterOrEqual(t, len(*bom.ExternalReferences), 2, "should have at least VEX and SBOM URLs")
@@ -530,7 +531,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 	t.Run("external reference URLs should contain correct ref paths based on metadata", func(t *testing.T) {
 		tree := buildTree(map[string][]string{}, "my-app")
 
-		metadata := BOMMetadata{
+		metadata := normalize.BOMMetadata{
 			ArtifactName:          "my-app",
 			AssetVersionName:      "dev-branch",
 			AssetVersionSlug:      "dev-branch",
@@ -543,7 +544,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 		}
 		t.Setenv("API_URL", "http://localhost:8080")
 
-		bom := tree.ToCycloneDX(metadata, nil)
+		bom := TreeToCycloneDX(tree, metadata, nil)
 
 		require.NotNil(t, bom.ExternalReferences)
 		assert.GreaterOrEqual(t, len(*bom.ExternalReferences), 3)
@@ -563,7 +564,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 	t.Run("all external reference URLs should be present exactly once", func(t *testing.T) {
 		tree := buildTree(map[string][]string{}, "my-app")
 
-		metadata := BOMMetadata{
+		metadata := normalize.BOMMetadata{
 			ArtifactName:          "my-app",
 			AssetVersionName:      "main",
 			AssetVersionSlug:      "main",
@@ -576,7 +577,7 @@ func TestToCycloneDXExternalReferencesArtifactEncoding(t *testing.T) {
 		}
 		t.Setenv("API_URL", "http://localhost:8080")
 
-		bom := tree.ToCycloneDX(metadata, nil)
+		bom := TreeToCycloneDX(tree, metadata, nil)
 
 		require.NotNil(t, bom.ExternalReferences)
 		typeCount := make(map[cdx.ExternalReferenceType]int)
@@ -618,4 +619,39 @@ func TestDependencyGraphDirectDeps(t *testing.T) {
 	// sanitizeCycloneDXComponent, unlike the old graph's raw BOMRef keys
 	assert.Contains(t, directDeps, "pkg:npm/@l3montree/service-app@1.0.0")
 	assert.Contains(t, directDeps, "pkg:npm/express@4.22.1")
+}
+
+func TestPathIncludesRootWithNonPURLBOMRef(t *testing.T) {
+	// Regression: when the root component's BOMRef is not a PURL (e.g. "my-app"),
+	// but its PackageURL IS a valid PURL, the root should still appear in the
+	// vulnerability path.
+	bom := &cdx.BOM{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cdx.SpecVersion1_6,
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef:     "my-app", // NOT a PURL
+				Name:       "my-app",
+				Version:    "1.0.0",
+				PackageURL: "pkg:npm/my-app@1.0.0",
+				Type:       cdx.ComponentTypeApplication,
+			},
+		},
+		Components: &[]cdx.Component{
+			{BOMRef: "pkg:npm/express@4.18.0", Name: "express", Version: "4.18.0", PackageURL: "pkg:npm/express@4.18.0", Type: cdx.ComponentTypeLibrary},
+			{BOMRef: "pkg:npm/qs@6.5.0", Name: "qs", Version: "6.5.0", PackageURL: "pkg:npm/qs@6.5.0", Type: cdx.ComponentTypeLibrary},
+		},
+		Dependencies: &[]cdx.Dependency{
+			{Ref: "my-app", Dependencies: &[]string{"pkg:npm/express@4.18.0"}},
+			{Ref: "pkg:npm/express@4.18.0", Dependencies: &[]string{"pkg:npm/qs@6.5.0"}},
+		},
+	}
+
+	parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
+	require.NoError(t, err)
+
+	paths := parsed.Tree.PathsToPURL("pkg:npm/qs@6.5.0", 0)
+	require.Len(t, paths, 1, "should find exactly one path")
+	assert.Equal(t, "pkg:npm/my-app@1.0.0,pkg:npm/express@4.18.0,pkg:npm/qs@6.5.0", paths[0].String(),
+		"root component with non-PURL BOMRef must still appear in the vulnerability path, keyed by its PackageURL")
 }

@@ -1,7 +1,8 @@
-package normalize
+package transformer
 
 import (
 	"encoding/json"
+	"github.com/l3montree-dev/devguard/normalize"
 	"os"
 	"testing"
 
@@ -12,8 +13,8 @@ import (
 
 // buildTree assembles a tree the way the parser would, with the SBOM's direct
 // dependencies hanging off the parse root.
-func buildTree(children map[string][]string, artifactName string) *MerkleTree {
-	return BuildMerkleTree(Adjacency{Children: children}, merkleParseRoot, artifactName)
+func buildTree(children map[string][]string, artifactName string) *normalize.MerkleTree {
+	return normalize.BuildMerkleTree(normalize.Adjacency{Children: children}, merkleParseRoot, artifactName)
 }
 
 func findDependency(bom *cdx.BOM, ref string) *cdx.Dependency {
@@ -109,7 +110,7 @@ func TestMerkleTreeFromCycloneDXShortCircuitsInvalidIntermediaryNode(t *testing.
 	parsed, err := MerkleTreeFromCycloneDX(bom, "")
 	assert.NoError(t, err)
 
-	exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
+	exported := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
 	assert.NotNil(t, exported.Dependencies)
 
 	rootDeps := findDependency(exported, "root")
@@ -167,7 +168,7 @@ func TestMerkleTreeFromCycloneDXShortCircuitsMultipleInvalidIntermediaryNodes(t 
 	parsed, err := MerkleTreeFromCycloneDX(bom, "")
 	assert.NoError(t, err)
 
-	exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
+	exported := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
 	assert.NotNil(t, exported.Dependencies)
 
 	rootDeps := findDependency(exported, "root")
@@ -193,7 +194,7 @@ func TestToCycloneDX(t *testing.T) {
 			"pkg:npm/b@2.0.0": {"pkg:npm/c@3.0.0"},
 		}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		}, nil)
@@ -237,7 +238,7 @@ func TestToCycloneDX(t *testing.T) {
 			merkleParseRoot: {"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0"},
 		}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		}, nil)
@@ -261,7 +262,7 @@ func TestToCycloneDX(t *testing.T) {
 			"pkg:npm/b@2.0.0": {"pkg:npm/c@3.0.0"},
 		}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		}, nil)
@@ -293,7 +294,7 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 	t.Run("root component should include version from AssetVersionName", func(t *testing.T) {
 		tree := buildTree(map[string][]string{}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			ArtifactName:     "my-app",
 			AssetVersionName: "1.2.3",
 		}, nil)
@@ -315,7 +316,7 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 	t.Run("root component should not have version when AssetVersionName is empty", func(t *testing.T) {
 		tree := buildTree(map[string][]string{}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		}, nil)
@@ -337,7 +338,7 @@ func TestToCycloneDXRootComponent(t *testing.T) {
 			merkleParseRoot: {"pkg:npm/lodash@4.17.21"},
 		}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			ArtifactName:     "my-app",
 			AssetVersionName: "2.0.0",
 		}, nil)
@@ -383,7 +384,7 @@ func TestCycloneDXVEXFromVulnerabilities(t *testing.T) {
 			},
 		}
 
-		bom := CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities(vulns, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -417,7 +418,7 @@ func TestCycloneDXVEXFromVulnerabilities(t *testing.T) {
 			},
 		}
 
-		bom := CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities(vulns, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -468,7 +469,7 @@ func TestToCycloneDXRootPURLWithQualifiers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tree := buildTree(map[string][]string{}, tt.artifactName)
 
-			bom := tree.ToCycloneDX(BOMMetadata{
+			bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 				ArtifactName:     tt.artifactName,
 				AssetVersionName: tt.assetVersionName,
 			}, nil)

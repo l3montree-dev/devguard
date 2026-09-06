@@ -142,7 +142,7 @@ func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			parsed, err := normalize.MerkleTreeFromCycloneDX(&bom, artifactName)
+			parsed, err := transformer.MerkleTreeFromCycloneDX(&bom, artifactName)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{

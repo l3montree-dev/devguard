@@ -1,7 +1,8 @@
-package normalize
+package transformer
 
 import (
 	"bytes"
+	"github.com/l3montree-dev/devguard/normalize"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -42,7 +43,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 		}), "my-app")
 		require.NoError(t, err)
 
-		bom := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
+		bom := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
 
 		validateBOMAgainstSchema(t, bom, schema)
 
@@ -64,7 +65,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 		}), "my-app")
 		require.NoError(t, err)
 
-		bom := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
+		bom := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
 
 		validateBOMAgainstSchema(t, bom, schema)
 
@@ -103,7 +104,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 				}), "my-app")
 				require.NoError(t, err)
 
-				bom := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
+				bom := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
 
 				validateBOMAgainstSchema(t, bom, schema)
 			})
@@ -129,7 +130,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 		parsed, err := MerkleTreeFromCycloneDX(bom, "my-app")
 		require.NoError(t, err)
 
-		exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
+		exported := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, parsed.Components)
 
 		validateBOMAgainstSchema(t, exported, schema)
 
@@ -179,7 +180,7 @@ func TestInvalidComponentTypeValidation(t *testing.T) {
 		parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
 		require.NoError(t, err)
 
-		exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "test-artifact", ArtifactName: "test-artifact"}, parsed.Components)
+		exported := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "test-artifact", ArtifactName: "test-artifact"}, parsed.Components)
 
 		validateBOMAgainstSchema(t, exported, schema)
 
@@ -259,7 +260,7 @@ func TestSchemaBreakers(t *testing.T) {
 		parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
 		require.NoError(t, err, "Should successfully parse even with invalid hashes")
 
-		exported := parsed.Tree.ToCycloneDX(BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
+		exported := TreeToCycloneDX(parsed.Tree, normalize.BOMMetadata{RootName: "root", ArtifactName: "root"}, parsed.Components)
 		var buf bytes.Buffer
 		encoder := cdx.NewBOMEncoder(&buf, cdx.BOMFileFormatJSON)
 		assert.NoError(t, encoder.Encode(exported))

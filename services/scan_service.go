@@ -660,7 +660,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			parsed, err := normalize.MerkleTreeFromCycloneDX(&bom, artifactName)
+			parsed, err := transformer.MerkleTreeFromCycloneDX(&bom, artifactName)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
@@ -935,7 +935,7 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 }
 
 func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
-	parsed, err := normalize.MerkleTreeFromCycloneDX(bom, "scan")
+	parsed, err := transformer.MerkleTreeFromCycloneDX(bom, "scan")
 	if err != nil {
 		return dtos.ScanResponse{}, fmt.Errorf("invalid SBOM: %w", err)
 	}

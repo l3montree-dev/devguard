@@ -28,6 +28,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/package-url/packageurl-go"
 	"github.com/spf13/cobra"
 )
@@ -105,7 +106,7 @@ func renderSBOM(inputFile, outputFile, format, layout, fromPURL string, maxDepth
 	}
 
 	// Convert to a content-addressed merkle tree
-	parsed, err := normalize.MerkleTreeFromCycloneDX(&bom, inputFile)
+	parsed, err := transformer.MerkleTreeFromCycloneDX(&bom, inputFile)
 	if err != nil {
 		return fmt.Errorf("failed to convert SBOM to merkle tree: %w", err)
 	}

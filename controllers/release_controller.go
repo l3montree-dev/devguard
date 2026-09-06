@@ -242,7 +242,7 @@ func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Rel
 		return nil, err
 	}
 
-	return merged.ToCycloneDX(normalize.BOMMetadata{
+	return transformer.ForestToCycloneDX(merged, normalize.BOMMetadata{
 		RootName: release.Name,
 	}, metadata), nil
 }
@@ -259,7 +259,7 @@ func (h *ReleaseController) buildMergedVEX(c shared.Context, release models.Rele
 			boms = append(boms, bom)
 		}
 	}
-	return normalize.MergeCycloneDXVEX(boms, release.Name), nil
+	return transformer.MergeCycloneDXVEX(boms, release.Name), nil
 }
 
 // buildMergedOpenVeX builds per-item OpenVEX and merges their statements into one document.

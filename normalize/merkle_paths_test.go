@@ -3,7 +3,6 @@ package normalize
 import (
 	"testing"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,41 +129,6 @@ func TestPathsToPURL(t *testing.T) {
 		assert.Equal(t, []string{"pkg:npm/withTarget@1.0.0,pkg:npm/b@1.0.0,pkg:npm/target@1.0.0"},
 			pathStrings(paths))
 	})
-}
-
-func TestPathIncludesRootWithNonPURLBOMRef(t *testing.T) {
-	// Regression: when the root component's BOMRef is not a PURL (e.g. "my-app"),
-	// but its PackageURL IS a valid PURL, the root should still appear in the
-	// vulnerability path.
-	bom := &cdx.BOM{
-		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_6,
-		Metadata: &cdx.Metadata{
-			Component: &cdx.Component{
-				BOMRef:     "my-app", // NOT a PURL
-				Name:       "my-app",
-				Version:    "1.0.0",
-				PackageURL: "pkg:npm/my-app@1.0.0",
-				Type:       cdx.ComponentTypeApplication,
-			},
-		},
-		Components: &[]cdx.Component{
-			{BOMRef: "pkg:npm/express@4.18.0", Name: "express", Version: "4.18.0", PackageURL: "pkg:npm/express@4.18.0", Type: cdx.ComponentTypeLibrary},
-			{BOMRef: "pkg:npm/qs@6.5.0", Name: "qs", Version: "6.5.0", PackageURL: "pkg:npm/qs@6.5.0", Type: cdx.ComponentTypeLibrary},
-		},
-		Dependencies: &[]cdx.Dependency{
-			{Ref: "my-app", Dependencies: &[]string{"pkg:npm/express@4.18.0"}},
-			{Ref: "pkg:npm/express@4.18.0", Dependencies: &[]string{"pkg:npm/qs@6.5.0"}},
-		},
-	}
-
-	parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
-	require.NoError(t, err)
-
-	paths := parsed.Tree.PathsToPURL("pkg:npm/qs@6.5.0", 0)
-	require.Len(t, paths, 1, "should find exactly one path")
-	assert.Equal(t, "pkg:npm/my-app@1.0.0,pkg:npm/express@4.18.0,pkg:npm/qs@6.5.0", paths[0].String(),
-		"root component with non-PURL BOMRef must still appear in the vulnerability path, keyed by its PackageURL")
 }
 
 // TestPathsIsolatedAcrossArtifacts pins that isolation between artifacts is

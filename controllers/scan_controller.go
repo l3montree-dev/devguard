@@ -233,7 +233,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	)
 
 	sbomOrigin := utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT")
-	normalized, normErr := normalize.MerkleTreeFromCycloneDX(bom, artifactName)
+	normalized, normErr := transformer.MerkleTreeFromCycloneDX(bom, artifactName)
 	if normErr != nil {
 		span.RecordError(normErr)
 		span.SetStatus(codes.Error, normErr.Error())
@@ -348,7 +348,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 					slog.Error("could not load component metadata for sbom event", "err", metaErr)
 					return
 				}
-				exportedBOM := wholeSBOM.ToCycloneDX(normalize.BOMMetadata{
+				exportedBOM := transformer.ForestToCycloneDX(wholeSBOM, normalize.BOMMetadata{
 					RootName: artifactName,
 				}, metadata)
 				if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{

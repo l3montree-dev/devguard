@@ -1,6 +1,7 @@
-package normalize
+package transformer
 
 import (
+	"github.com/l3montree-dev/devguard/normalize"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,7 @@ func TestToMinimalTree(t *testing.T) {
 			merkleParseRoot: {"pkg:npm/lodash@4.17.21", "pkg:npm/express@4.18.2"},
 		}, "my-app")
 
-		mt := MerkleForest{tree}.ToMinimalTree()
+		mt := ToMinimalTree(normalize.MerkleForest{tree})
 
 		assert.Contains(t, mt.Nodes, "pkg:npm/lodash@4.17.21")
 		assert.Contains(t, mt.Nodes, "pkg:npm/express@4.18.2")
@@ -27,7 +28,7 @@ func TestToMinimalTree(t *testing.T) {
 			"pkg:npm/b@1.0.0": {"pkg:npm/c@1.0.0"},
 		}, "my-app")
 
-		mt := MerkleForest{tree}.ToMinimalTree()
+		mt := ToMinimalTree(normalize.MerkleForest{tree})
 
 		assert.Contains(t, mt.Nodes, "pkg:npm/a@1.0.0")
 		assert.Contains(t, mt.Nodes, "pkg:npm/b@1.0.0")
@@ -50,7 +51,7 @@ func TestToMinimalTree(t *testing.T) {
 			"pkg:npm/c@1.0.0": {"pkg:npm/a@1.0.0"}, // back edge
 		}, "my-app")
 
-		mt := MerkleForest{tree}.ToMinimalTree()
+		mt := ToMinimalTree(normalize.MerkleForest{tree})
 
 		assert.Contains(t, mt.Nodes, "pkg:npm/a@1.0.0")
 		assert.Contains(t, mt.Nodes, "pkg:npm/b@1.0.0")
@@ -64,7 +65,7 @@ func TestToMinimalTree(t *testing.T) {
 	t.Run("the artifact itself is the empty string", func(t *testing.T) {
 		tree := buildTree(map[string][]string{}, "my-app")
 
-		mt := MerkleForest{tree}.ToMinimalTree()
+		mt := ToMinimalTree(normalize.MerkleForest{tree})
 
 		assert.Contains(t, mt.Nodes, "")
 		assert.Empty(t, mt.Dependencies[""])
@@ -78,7 +79,7 @@ func TestToMinimalTree(t *testing.T) {
 			merkleParseRoot: {"pkg:golang/x@1.0.0"},
 		}, "my-app")
 
-		mt := MerkleForest{npm, golang}.ToMinimalTree()
+		mt := ToMinimalTree(normalize.MerkleForest{npm, golang})
 
 		assert.Contains(t, mt.Dependencies[""], "pkg:npm/a@1.0.0")
 		assert.Contains(t, mt.Dependencies[""], "pkg:golang/x@1.0.0")
@@ -86,14 +87,14 @@ func TestToMinimalTree(t *testing.T) {
 }
 
 func TestMinimalTreeToPURL(t *testing.T) {
-	forest := MerkleForest{buildTree(map[string][]string{
+	forest := normalize.MerkleForest{buildTree(map[string][]string{
 		merkleParseRoot:   {"pkg:npm/a@1.0.0", "pkg:npm/unrelated@1.0.0"},
 		"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 		"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
 	}, "my-app")}
 
 	t.Run("keeps only the components leading to the target", func(t *testing.T) {
-		mt := forest.MinimalTreeToPURL("pkg:npm/target@1.0.0", 0)
+		mt := MinimalTreeToPURL(forest, "pkg:npm/target@1.0.0", 0)
 
 		assert.Contains(t, mt.Nodes, "pkg:npm/target@1.0.0")
 		assert.Contains(t, mt.Nodes, "pkg:npm/b@1.0.0")
@@ -102,7 +103,7 @@ func TestMinimalTreeToPURL(t *testing.T) {
 	})
 
 	t.Run("the ancestor chain is reported as dependency edges", func(t *testing.T) {
-		mt := forest.MinimalTreeToPURL("pkg:npm/target@1.0.0", 0)
+		mt := MinimalTreeToPURL(forest, "pkg:npm/target@1.0.0", 0)
 
 		assert.Contains(t, mt.Dependencies["pkg:npm/b@1.0.0"], "pkg:npm/target@1.0.0")
 		assert.Contains(t, mt.Dependencies["pkg:npm/a@1.0.0"], "pkg:npm/b@1.0.0")
@@ -110,7 +111,7 @@ func TestMinimalTreeToPURL(t *testing.T) {
 	})
 
 	t.Run("maxDepth counts hops back from the target", func(t *testing.T) {
-		mt := forest.MinimalTreeToPURL("pkg:npm/target@1.0.0", 1)
+		mt := MinimalTreeToPURL(forest, "pkg:npm/target@1.0.0", 1)
 
 		assert.Contains(t, mt.Nodes, "pkg:npm/b@1.0.0")
 		assert.NotContains(t, mt.Nodes, "pkg:npm/a@1.0.0",
@@ -118,7 +119,7 @@ func TestMinimalTreeToPURL(t *testing.T) {
 	})
 
 	t.Run("a component absent from the forest yields nothing", func(t *testing.T) {
-		mt := forest.MinimalTreeToPURL("pkg:npm/absent@1.0.0", 0)
+		mt := MinimalTreeToPURL(forest, "pkg:npm/absent@1.0.0", 0)
 
 		assert.Empty(t, mt.Nodes)
 		assert.Empty(t, mt.Dependencies)

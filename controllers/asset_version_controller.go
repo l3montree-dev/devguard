@@ -191,7 +191,7 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
+	return encoder.Encode(transformer.ForestToCycloneDX(sbom, ctxToBOMMetadata(ctx), componentMetadata))
 }
 
 // @Summary Get VEX as CycloneDX JSON
@@ -273,7 +273,7 @@ func (a *AssetVersionController) getDependencyVulns(ctx context.Context, assetVe
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName query string false "Artifact name"
 // @Param origin query string false "Info source origin"
-// @Success 200 {object} normalize.MinimalTree
+// @Success 200 {object} transformer.MinimalTree
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-graph/ [get]
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
@@ -308,7 +308,7 @@ func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 		}
 	}
 
-	minimalTree := sbom.ToMinimalTree()
+	minimalTree := transformer.ToMinimalTree(sbom)
 
 	return ctx.JSON(200, minimalTree)
 }

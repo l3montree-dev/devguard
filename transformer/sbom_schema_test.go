@@ -1,8 +1,9 @@
-package normalize
+package transformer
 
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/l3montree-dev/devguard/normalize"
 	"net/http"
 	"sync"
 	"testing"
@@ -93,7 +94,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 	t.Run("empty tree produces valid CycloneDX", func(t *testing.T) {
 		tree := buildTree(map[string][]string{}, "my-app")
 
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, nil)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, nil)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -111,7 +112,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Type:       cdx.ComponentTypeLibrary,
 		})
 
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -129,7 +130,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			cdx.Component{BOMRef: "pkg:npm/bytes@3.1.2", Name: "bytes", Version: "3.1.2", PackageURL: "pkg:npm/bytes@3.1.2", Type: cdx.ComponentTypeLibrary},
 		)
 
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -147,7 +148,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			cdx.Component{BOMRef: "pkg:npm/c@3.0.0", Name: "c", Version: "3.0.0", PackageURL: "pkg:npm/c@3.0.0", Type: cdx.ComponentTypeLibrary},
 		)
 
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -167,7 +168,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Licenses:   &licenses,
 		})
 
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -189,7 +190,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Hashes:     &hashes,
 		})
 
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -202,7 +203,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Affects: &affects,
 		}
 
-		bom := CycloneDXVEXFromVulnerabilities([]cdx.Vulnerability{vuln}, BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities([]cdx.Vulnerability{vuln}, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -228,7 +229,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Ratings: &ratings,
 		}
 
-		bom := CycloneDXVEXFromVulnerabilities([]cdx.Vulnerability{vuln}, BOMMetadata{
+		bom := CycloneDXVEXFromVulnerabilities([]cdx.Vulnerability{vuln}, normalize.BOMMetadata{
 			RootName:     "my-app",
 			ArtifactName: "my-app",
 		})
@@ -249,7 +250,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			Type:       cdx.ComponentTypeLibrary,
 		})
 
-		bom := tree.ToCycloneDX(BOMMetadata{
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{
 			RootName:     "pkg:devguard/org/project/asset@main",
 			ArtifactName: "pkg:devguard/org/project/asset@main",
 		}, comps)
@@ -272,7 +273,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			cdx.Component{BOMRef: "pkg:golang/github.com/gin-gonic/gin@v1.9.1", Name: "github.com/gin-gonic/gin", Version: "v1.9.1", PackageURL: "pkg:golang/github.com/gin-gonic/gin@v1.9.1", Type: cdx.ComponentTypeLibrary},
 		)
 
-		bom := MerkleForest{frontend, backend}.ToCycloneDX(BOMMetadata{
+		bom := ForestToCycloneDX(normalize.MerkleForest{frontend, backend}, normalize.BOMMetadata{
 			RootName:     "my-monorepo",
 			ArtifactName: "my-monorepo",
 		}, comps)
@@ -294,7 +295,7 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 		})
 
 		// Generate BOM
-		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
+		bom := TreeToCycloneDX(tree, normalize.BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		// Encode to JSON
 		var buf bytes.Buffer

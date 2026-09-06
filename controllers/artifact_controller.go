@@ -196,7 +196,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 				slog.Error("could not load component metadata for sbom event", "err", metaErr)
 				return
 			}
-			exportedBOM := bom.ToCycloneDX(normalize.BOMMetadata{
+			exportedBOM := transformer.ForestToCycloneDX(bom, normalize.BOMMetadata{
 				RootName: artifact.ArtifactName,
 			}, metadata)
 			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
@@ -407,7 +407,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 				slog.Error("could not load component metadata for sbom event", "err", metaErr)
 				return
 			}
-			exportedBOM := sbom.ToCycloneDX(normalize.BOMMetadata{
+			exportedBOM := transformer.ForestToCycloneDX(sbom, normalize.BOMMetadata{
 				RootName: artifactName,
 			}, metadata)
 			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
@@ -481,7 +481,7 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
+	return encoder.Encode(transformer.ForestToCycloneDX(sbom, ctxToBOMMetadata(ctx), componentMetadata))
 }
 
 // @Summary Get SBOM in XML format
@@ -510,7 +510,7 @@ func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	}
 	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
+	return encoder.Encode(transformer.ForestToCycloneDX(sbom, ctxToBOMMetadata(ctx), componentMetadata))
 }
 
 // @Summary Get VEX in XML format
@@ -895,7 +895,7 @@ func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = services.MarkdownTableFromSBOM(&markdownFile, sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
+	err = services.MarkdownTableFromSBOM(&markdownFile, transformer.ForestToCycloneDX(sbom, ctxToBOMMetadata(ctx), componentMetadata))
 	if err != nil {
 		return err
 	}

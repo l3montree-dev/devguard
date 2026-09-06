@@ -13,9 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package normalize
+package transformer
 
 import (
+	"github.com/l3montree-dev/devguard/normalize"
 	"slices"
 
 	"github.com/google/uuid"
@@ -31,7 +32,7 @@ type MinimalTree struct {
 // ToMinimalTree flattens the forest for display. Components are keyed by purl,
 // so where two SBOMs report different children for one component the display
 // shows the union - a rendering choice, not how it is stored.
-func (f MerkleForest) ToMinimalTree() MinimalTree {
+func ToMinimalTree(f normalize.MerkleForest) MinimalTree {
 	nodes := map[string]struct{}{"": {}}
 	dependencies := map[string][]string{}
 
@@ -63,7 +64,7 @@ func (f MerkleForest) ToMinimalTree() MinimalTree {
 // MinimalTreeToPURL returns only the part of the forest leading to purl: every
 // ancestor, without enumerating individual paths, so a component reachable many
 // ways does not blow up combinatorially. maxDepth of 0 is unlimited.
-func (f MerkleForest) MinimalTreeToPURL(purl string, maxDepth int) MinimalTree {
+func MinimalTreeToPURL(f normalize.MerkleForest, purl string, maxDepth int) MinimalTree {
 	nodes := map[string]struct{}{}
 	dependencies := map[string][]string{}
 

@@ -710,7 +710,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return ctx.JSON(500, map[string]string{"error": "could not add release item"})
 	}
 
-	normalized, err := normalize.MerkleTreeFromCycloneDX(bom, probe.Artifact)
+	normalized, err := transformer.MerkleTreeFromCycloneDX(bom, probe.Artifact)
 	if err != nil {
 		slog.Error("trivy operator: failed to normalize BOM", "err", err)
 		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})

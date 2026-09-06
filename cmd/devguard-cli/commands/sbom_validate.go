@@ -22,7 +22,7 @@ import (
 	"os"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +64,7 @@ Pass a file path, '-' to read from stdin, or omit the argument to read from stdi
 				return fmt.Errorf("failed to parse CycloneDX SBOM: %w", err)
 			}
 
-			if _, err := normalize.MerkleTreeFromCycloneDX(&bom, "stdin"); err != nil {
+			if _, err := transformer.MerkleTreeFromCycloneDX(&bom, "stdin"); err != nil {
 				return fmt.Errorf("failed to build SBOM: %w", err)
 			}
 

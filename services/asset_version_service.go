@@ -364,7 +364,7 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
-	return normalize.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
+	return transformer.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

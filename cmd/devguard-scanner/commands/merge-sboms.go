@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/spf13/cobra"
 )
 
@@ -134,7 +134,7 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 	}
 
 	// validate that the merged document still parses
-	if _, err := normalize.MerkleTreeFromCycloneDX(result, ""); err != nil {
+	if _, err := transformer.MerkleTreeFromCycloneDX(result, ""); err != nil {
 		return err
 	}
 	// print the sbom to stdout
