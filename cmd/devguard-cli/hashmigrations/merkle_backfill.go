@@ -18,6 +18,8 @@ package hashmigrations
 import (
 	"context"
 	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -26,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -82,6 +85,14 @@ func reconstructSBOMs(edges []legacyEdge) []legacySBOM {
 		// separately now, and components attached straight to the artifact have
 		// no source to name them - both are left behind deliberately, and a
 		// rescan repopulates them.
+		//
+		// Source ids exist in two formats, "sbom:<source>" and the later
+		// "sbom:<source>@<artifact>". An artifact written across that change
+		// carries both, and they name the same logical source once the suffix is
+		// dropped. Only one can be stored, so pick deterministically - two SBOMs
+		// sharing a source would otherwise overwrite each other on save, leaving
+		// the loser's subtrees orphaned.
+		chosen := map[string]string{} // source -> the node id to build it from
 		for _, sourceNode := range children[artifactNode] {
 			if !strings.HasPrefix(sourceNode, legacyInfoSourcePfx) {
 				continue
@@ -93,6 +104,24 @@ func reconstructSBOMs(edges []legacyEdge) []legacySBOM {
 				source = source[:at]
 			}
 
+			previous, clash := chosen[source]
+			if !clash {
+				chosen[source] = sourceNode
+				continue
+			}
+			// keep the suffixed id: it is the newer format, so it is the one the
+			// artifact was last written with
+			keep, drop := sourceNode, previous
+			if len(previous) > len(sourceNode) {
+				keep, drop = previous, sourceNode
+			}
+			slog.Warn("legacy artifact names one source twice, keeping the newer id",
+				"artifact", artifactName, "source", source, "kept", keep, "dropped", drop)
+			chosen[source] = keep
+		}
+
+		for _, source := range slices.Sorted(maps.Keys(chosen)) {
+			sourceNode := chosen[source]
 			sboms = append(sboms, legacySBOM{
 				ArtifactName: artifactName,
 				Source:       source,
@@ -173,8 +202,13 @@ func runMerkleBackfill(pool *pgxpool.Pool) error {
 	slog.Info("backfilling merkle sboms from component_dependencies", "assetVersions", len(assetVersions))
 
 	sbomRepository := repositories.NewSBOMRepository(db)
-	for i, key := range assetVersions {
-		if err := db.Transaction(func(tx *gorm.DB) error {
+
+	// One transaction for the whole migration, including the drop: a partial
+	// backfill followed by a dropped source table would be unrecoverable, so
+	// either every asset version is migrated and the table goes, or nothing
+	// changes at all.
+	return db.Transaction(func(tx *gorm.DB) error {
+		for i, key := range assetVersions {
 			var edges []legacyEdge
 			if err := tx.Raw(`
 				SELECT asset_id, asset_version_name, component_id, dependency_id
@@ -194,16 +228,23 @@ func runMerkleBackfill(pool *pgxpool.Pool) error {
 					return err
 				}
 			}
-			return nil
-		}); err != nil {
-			return err
+
+			if (i+1)%50 == 0 {
+				slog.Info("merkle backfill progress", "done", i+1, "total", len(assetVersions))
+			}
 		}
 
-		if (i+1)%50 == 0 {
-			slog.Info("merkle backfill progress", "done", i+1, "total", len(assetVersions))
-		}
-	}
+		slog.Info("merkle backfill complete", "assetVersions", len(assetVersions))
 
-	slog.Info("merkle backfill complete", "assetVersions", len(assetVersions))
-	return nil
+		// The legacy table has served its purpose. Dropping it here rather than
+		// in a schema migration is deliberate: schema migrations run at startup,
+		// before this backfill, so a migration would destroy the source before it
+		// could be read.
+		if err := tx.Exec("DROP TABLE IF EXISTS component_dependencies").Error; err != nil {
+			return errors.Wrap(err, "could not drop component_dependencies")
+		}
+		slog.Info("dropped legacy component_dependencies table")
+
+		return nil
+	})
 }

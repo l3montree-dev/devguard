@@ -64,6 +64,26 @@ func (runner *DaemonRunner) maybeRunAndMark(ctx context.Context, key string, fn 
 	return nil
 }
 
+// CollectSBOMGarbage removes subtrees no SBOM can reach any more.
+//
+// Content addressing never updates or deletes an edge in place, so every
+// superseded revision of an SBOM leaves its old spine behind. Only reachability
+// from the sboms table distinguishes those from subtrees another SBOM still
+// shares, which is why this is a mark and sweep rather than reference counting.
+//
+// The sweep is safe to run alongside ingest: SaveTree writes a tree and the row
+// referencing it in one transaction, so a tree is never visible here without
+// the row that keeps it alive.
+func (runner *DaemonRunner) CollectSBOMGarbage(ctx context.Context) error {
+	deleted, err := runner.sbomRepository.CollectGarbage(ctx, nil)
+	if err != nil {
+		slog.Error("failed to collect sbom garbage", "error", err)
+		return err
+	}
+	slog.Info("collected sbom garbage", "deletedEdges", deleted)
+	return nil
+}
+
 func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	if err := runner.artifactRepository.CleanupOrphanedRecords(ctx); err != nil {
 		slog.Error("failed to clean up orphaned records", "error", err)
@@ -82,6 +102,12 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {
 		monitoring.Alert("could not clean up orphaned records", err)
+	}
+
+	if err := runner.maybeRunAndMark(ctx, "maintain.sbomGarbageCollection", func() error {
+		return runner.CollectSBOMGarbage(ctx)
+	}); err != nil {
+		monitoring.Alert("could not collect sbom garbage", err)
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.opensourceinsights", func() error {

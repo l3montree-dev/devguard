@@ -716,14 +716,17 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return ctx.JSON(400, map[string]string{"error": "could not normalize SBOM"})
 	}
 
-	wholeSBOM, err := projectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), nil, organization, *project, *asset, assetVersion, probe.Artifact, "operator", normalized)
+	// one transaction for the store and the scan: the subtrees and the row
+	// pointing at them must become visible together, or the garbage collector
+	// can sweep the tree before the row references it
+	tx := projectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
+	defer tx.Rollback()
+
+	wholeSBOM, err := projectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, probe.Artifact, "operator", normalized)
 	if err != nil {
 		slog.Error("trivy operator: could not update SBOM", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not update SBOM"})
 	}
-
-	tx := projectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
-	defer tx.Rollback()
 
 	userAgent := ctx.Request().UserAgent()
 	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)

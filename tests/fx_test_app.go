@@ -85,6 +85,7 @@ type TestApp struct {
 	AssetRepository                 shared.AssetRepository
 	AssetVersionRepository          shared.AssetVersionRepository
 	ComponentRepository             shared.ComponentRepository
+	SBOMRepository                  shared.SBOMRepository
 	DependencyVulnRepository        shared.DependencyVulnRepository
 	FirstPartyVulnRepository        shared.FirstPartyVulnRepository
 	CveRepository                   shared.CveRepository
