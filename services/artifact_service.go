@@ -17,6 +17,7 @@ type ArtifactService struct {
 	artifactRepository       shared.ArtifactRepository
 	cveRepository            shared.CveRepository
 	componentRepository      shared.ComponentRepository
+	sbomRepository           shared.SBOMRepository
 	assetVersionRepository   shared.AssetVersionRepository
 	assetVersionService      shared.AssetVersionService
 	dependencyVulnService    shared.DependencyVulnService
@@ -29,12 +30,13 @@ var _ shared.ArtifactService = (*ArtifactService)(nil) // Ensure ArtifactService
 
 func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	csafService shared.CSAFService,
-	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, dependencyVulnRepository shared.DependencyVulnRepository, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactService {
+	cveRepository shared.CveRepository, componentRepository shared.ComponentRepository, sbomRepository shared.SBOMRepository, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, dependencyVulnRepository shared.DependencyVulnRepository, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer) *ArtifactService {
 	return &ArtifactService{
 		csafService:              csafService,
 		artifactRepository:       artifactRepository,
 		cveRepository:            cveRepository,
 		componentRepository:      componentRepository,
+		sbomRepository:           sbomRepository,
 		assetVersionRepository:   assetVersionRepository,
 		assetVersionService:      assetVersionService,
 		dependencyVulnService:    dependencyVulnService,
@@ -58,31 +60,17 @@ func (s *ArtifactService) SaveArtifact(ctx context.Context, tx shared.DB, artifa
 }
 
 func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	assetVersion := models.AssetVersion{
-		AssetID: assetID,
-		Name:    assetVersionName,
-	}
-
 	// Execute deletion in a transaction
 	if err := s.componentRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
-		// Load the full SBOM graph before deletion
-		wholeAssetGraph, err := s.assetVersionService.LoadFullSBOMGraph(ctx, tx, assetVersion)
-		if err != nil {
-			slog.Error("failed to load full SBOM for artifact deletion", "assetID", assetID, "assetVersionName", assetVersionName, "error", err)
-			return err
-		}
-
-		// Delete the artifact and its subtree from the graph
-		diff := wholeAssetGraph.DeleteArtifactFromGraph(artifactName)
-
-		// Use HandleStateDiff to properly delete component dependencies
-		if err := s.componentRepository.HandleStateDiff(ctx, tx, assetVersion, wholeAssetGraph, diff); err != nil {
-			slog.Error("failed to handle state diff for artifact deletion", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+		// Drop this artifact's SBOMs. Only the pointers go: the subtrees stay
+		// for the garbage collector, since other artifacts may share them.
+		if err := s.sbomRepository.DeleteByArtifact(ctx, tx, assetID, assetVersionName, artifactName); err != nil {
+			slog.Error("failed to delete sboms for artifact", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
 			return err
 		}
 
 		// Delete the artifact record itself
-		err = s.artifactRepository.DeleteArtifact(ctx, tx, assetID, assetVersionName, artifactName)
+		err := s.artifactRepository.DeleteArtifact(ctx, tx, assetID, assetVersionName, artifactName)
 		if err != nil {
 			slog.Error("failed to delete artifact record", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
 			return err

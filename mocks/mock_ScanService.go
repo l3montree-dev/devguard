@@ -45,24 +45,24 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 }
 
 // FetchSbomsFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError) {
+func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []string, []dtos.ExternalReferenceError) {
 	ret := _mock.Called(ctx, artifactName, ref, upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchSbomsFromUpstream")
 	}
 
-	var r0 []*normalize.SBOMGraph
+	var r0 []normalize.SBOMSource
 	var r1 []string
 	var r2 []dtos.ExternalReferenceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) ([]normalize.SBOMSource, []string, []dtos.ExternalReferenceError)); ok {
 		return returnFunc(ctx, artifactName, ref, upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) []*normalize.SBOMGraph); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) []normalize.SBOMSource); ok {
 		r0 = returnFunc(ctx, artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*normalize.SBOMGraph)
+			r0 = ret.Get(0).([]normalize.SBOMSource)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, []string) []string); ok {
@@ -124,12 +124,12 @@ func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, externalReferenceErrors []dtos.ExternalReferenceError) *ScanService_FetchSbomsFromUpstream_Call {
-	_c.Call.Return(sBOMGraphs, strings, externalReferenceErrors)
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMSources []normalize.SBOMSource, strings []string, externalReferenceErrors []dtos.ExternalReferenceError) *ScanService_FetchSbomsFromUpstream_Call {
+	_c.Call.Return(sBOMSources, strings, externalReferenceErrors)
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []string, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -345,8 +345,8 @@ func (_c *ScanService_HandleFirstPartyVulnResult_Call) RunAndReturn(run func(ctx
 }
 
 // HandleScanResult provides a mock function for the type ScanService
-func (_mock *ScanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)
+func (_mock *ScanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleScanResult")
@@ -356,32 +356,32 @@ func (_mock *ScanService) HandleScanResult(ctx context.Context, tx shared.DB, or
 	var r1 []models.DependencyVuln
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, normalize.MerkleForest, []models.VulnInPackage, string, string, *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, *string) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, normalize.MerkleForest, []models.VulnInPackage, string, string, *string) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, *string) []models.DependencyVuln); ok {
-		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, normalize.MerkleForest, []models.VulnInPackage, string, string, *string) []models.DependencyVuln); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, *string) []models.DependencyVuln); ok {
-		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, normalize.MerkleForest, []models.VulnInPackage, string, string, *string) []models.DependencyVuln); ok {
+		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, *normalize.SBOMGraph, []models.VulnInPackage, string, string, *string) error); ok {
-		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)
+	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, *models.AssetVersion, normalize.MerkleForest, []models.VulnInPackage, string, string, *string) error); ok {
+		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -400,16 +400,16 @@ type ScanService_HandleScanResult_Call struct {
 //   - project models.Project
 //   - asset models.Asset
 //   - assetVersion *models.AssetVersion
-//   - sbom *normalize.SBOMGraph
+//   - forest normalize.MerkleForest
 //   - vulns []models.VulnInPackage
 //   - artifactName string
 //   - userID string
 //   - userAgent *string
-func (_e *ScanService_Expecter) HandleScanResult(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, sbom interface{}, vulns interface{}, artifactName interface{}, userID interface{}, userAgent interface{}) *ScanService_HandleScanResult_Call {
-	return &ScanService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", ctx, tx, org, project, asset, assetVersion, sbom, vulns, artifactName, userID, userAgent)}
+func (_e *ScanService_Expecter) HandleScanResult(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, forest interface{}, vulns interface{}, artifactName interface{}, userID interface{}, userAgent interface{}) *ScanService_HandleScanResult_Call {
+	return &ScanService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", ctx, tx, org, project, asset, assetVersion, forest, vulns, artifactName, userID, userAgent)}
 }
 
-func (_c *ScanService_HandleScanResult_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string)) *ScanService_HandleScanResult_Call {
+func (_c *ScanService_HandleScanResult_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string)) *ScanService_HandleScanResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -435,9 +435,9 @@ func (_c *ScanService_HandleScanResult_Call) Run(run func(ctx context.Context, t
 		if args[5] != nil {
 			arg5 = args[5].(*models.AssetVersion)
 		}
-		var arg6 *normalize.SBOMGraph
+		var arg6 normalize.MerkleForest
 		if args[6] != nil {
-			arg6 = args[6].(*normalize.SBOMGraph)
+			arg6 = args[6].(normalize.MerkleForest)
 		}
 		var arg7 []models.VulnInPackage
 		if args[7] != nil {
@@ -477,14 +477,14 @@ func (_c *ScanService_HandleScanResult_Call) Return(opened []models.DependencyVu
 	return _c
 }
 
-func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResult_Call {
+func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResult_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ScanNormalizedSBOM provides a mock function for the type ScanService
-func (_mock *ScanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+func (_mock *ScanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ScanNormalizedSBOM")
@@ -494,32 +494,32 @@ func (_mock *ScanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, 
 	var r1 []models.DependencyVuln
 	var r2 []models.DependencyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string, *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, normalize.MerkleForest, string, *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string, *string) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, normalize.MerkleForest, string, *string) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string, *string) []models.DependencyVuln); ok {
-		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, normalize.MerkleForest, string, *string) []models.DependencyVuln); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string, *string) []models.DependencyVuln); ok {
-		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, normalize.MerkleForest, string, *string) []models.DependencyVuln); ok {
+		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, *normalize.SBOMGraph, string, *string) error); ok {
-		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, normalize.MerkleForest, string, *string) error); ok {
+		r3 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -539,14 +539,14 @@ type ScanService_ScanNormalizedSBOM_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - artifact models.Artifact
-//   - normalizedBom *normalize.SBOMGraph
+//   - forest normalize.MerkleForest
 //   - userID string
 //   - userAgent *string
-func (_e *ScanService_Expecter) ScanNormalizedSBOM(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, normalizedBom interface{}, userID interface{}, userAgent interface{}) *ScanService_ScanNormalizedSBOM_Call {
-	return &ScanService_ScanNormalizedSBOM_Call{Call: _e.mock.On("ScanNormalizedSBOM", ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)}
+func (_e *ScanService_Expecter) ScanNormalizedSBOM(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifact interface{}, forest interface{}, userID interface{}, userAgent interface{}) *ScanService_ScanNormalizedSBOM_Call {
+	return &ScanService_ScanNormalizedSBOM_Call{Call: _e.mock.On("ScanNormalizedSBOM", ctx, tx, org, project, asset, assetVersion, artifact, forest, userID, userAgent)}
 }
 
-func (_c *ScanService_ScanNormalizedSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string)) *ScanService_ScanNormalizedSBOM_Call {
+func (_c *ScanService_ScanNormalizedSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string)) *ScanService_ScanNormalizedSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -576,9 +576,9 @@ func (_c *ScanService_ScanNormalizedSBOM_Call) Run(run func(ctx context.Context,
 		if args[6] != nil {
 			arg6 = args[6].(models.Artifact)
 		}
-		var arg7 *normalize.SBOMGraph
+		var arg7 normalize.MerkleForest
 		if args[7] != nil {
-			arg7 = args[7].(*normalize.SBOMGraph)
+			arg7 = args[7].(normalize.MerkleForest)
 		}
 		var arg8 string
 		if args[8] != nil {
@@ -609,7 +609,7 @@ func (_c *ScanService_ScanNormalizedSBOM_Call) Return(dependencyVulns []models.D
 	return _c
 }
 
-func (_c *ScanService_ScanNormalizedSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOM_Call {
+func (_c *ScanService_ScanNormalizedSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_ScanNormalizedSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -753,24 +753,24 @@ func (_c *ScanService_ScanSarifWithoutSaving_Call) RunAndReturn(run func(ctx con
 }
 
 // SyncArtifactUpstreamSBOMSources provides a mock function for the type ScanService
-func (_mock *ScanService) SyncArtifactUpstreamSBOMSources(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.DependencyVuln, error) {
+func (_mock *ScanService) SyncArtifactUpstreamSBOMSources(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SyncArtifactUpstreamSBOMSources")
 	}
 
-	var r0 *normalize.SBOMGraph
+	var r0 normalize.MerkleForest
 	var r1 []models.DependencyVuln
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (*normalize.SBOMGraph, []models.DependencyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (normalize.MerkleForest, []models.DependencyVuln, error)); ok {
 		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) *normalize.SBOMGraph); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) normalize.MerkleForest); ok {
 		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*normalize.SBOMGraph)
+			r0 = ret.Get(0).(normalize.MerkleForest)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) []models.DependencyVuln); ok {
@@ -860,12 +860,12 @@ func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) Run(run func(ctx con
 	return _c
 }
 
-func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) Return(sBOMGraph *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, err error) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
-	_c.Call.Return(sBOMGraph, dependencyVulns, err)
+func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) Return(merkleForest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, err error) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
+	_c.Call.Return(merkleForest, dependencyVulns, err)
 	return _c
 }
 
-func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.DependencyVuln, error)) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
+func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
 	_c.Call.Return(run)
 	return _c
 }

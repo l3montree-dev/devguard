@@ -3,6 +3,7 @@ package normalize
 import (
 	"testing"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -129,4 +130,67 @@ func TestPathsToPURL(t *testing.T) {
 		assert.Equal(t, []string{"pkg:npm/withTarget@1.0.0,pkg:npm/b@1.0.0,pkg:npm/target@1.0.0"},
 			pathStrings(paths))
 	})
+}
+
+func TestPathIncludesRootWithNonPURLBOMRef(t *testing.T) {
+	// Regression: when the root component's BOMRef is not a PURL (e.g. "my-app"),
+	// but its PackageURL IS a valid PURL, the root should still appear in the
+	// vulnerability path.
+	bom := &cdx.BOM{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cdx.SpecVersion1_6,
+		Metadata: &cdx.Metadata{
+			Component: &cdx.Component{
+				BOMRef:     "my-app", // NOT a PURL
+				Name:       "my-app",
+				Version:    "1.0.0",
+				PackageURL: "pkg:npm/my-app@1.0.0",
+				Type:       cdx.ComponentTypeApplication,
+			},
+		},
+		Components: &[]cdx.Component{
+			{BOMRef: "pkg:npm/express@4.18.0", Name: "express", Version: "4.18.0", PackageURL: "pkg:npm/express@4.18.0", Type: cdx.ComponentTypeLibrary},
+			{BOMRef: "pkg:npm/qs@6.5.0", Name: "qs", Version: "6.5.0", PackageURL: "pkg:npm/qs@6.5.0", Type: cdx.ComponentTypeLibrary},
+		},
+		Dependencies: &[]cdx.Dependency{
+			{Ref: "my-app", Dependencies: &[]string{"pkg:npm/express@4.18.0"}},
+			{Ref: "pkg:npm/express@4.18.0", Dependencies: &[]string{"pkg:npm/qs@6.5.0"}},
+		},
+	}
+
+	parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
+	require.NoError(t, err)
+
+	paths := parsed.Tree.PathsToPURL("pkg:npm/qs@6.5.0", 0)
+	require.Len(t, paths, 1, "should find exactly one path")
+	assert.Equal(t, "pkg:npm/my-app@1.0.0,pkg:npm/express@4.18.0,pkg:npm/qs@6.5.0", paths[0].String(),
+		"root component with non-PURL BOMRef must still appear in the vulnerability path, keyed by its PackageURL")
+}
+
+// TestPathsIsolatedAcrossArtifacts pins that isolation between artifacts is
+// structural: every artifact's SBOM is its own tree, so one artifact's paths
+// cannot leak into another's without anything having to be scoped.
+func TestPathsIsolatedAcrossArtifacts(t *testing.T) {
+	// app1: direct edge to lodash
+	app1 := buildTree(map[string][]string{
+		merkleParseRoot: {"pkg:npm/lodash@4.17.20"},
+	}, "app1")
+
+	// app2: edge through an intermediate dep
+	app2 := buildTree(map[string][]string{
+		merkleParseRoot:          {"pkg:npm/some-dep@1.0.0"},
+		"pkg:npm/some-dep@1.0.0": {"pkg:npm/lodash@4.17.20"},
+	}, "app2")
+
+	paths1 := app1.PathsToPURL("pkg:npm/lodash@4.17.20", 0)
+	require.Len(t, paths1, 1)
+	assert.Equal(t, "pkg:npm/lodash@4.17.20", paths1[0].String())
+
+	paths2 := app2.PathsToPURL("pkg:npm/lodash@4.17.20", 0)
+	require.Len(t, paths2, 1)
+	assert.Equal(t, "pkg:npm/some-dep@1.0.0,pkg:npm/lodash@4.17.20", paths2[0].String())
+
+	// Querying the forest still reports both, since neither source should be lost.
+	forest := MerkleForest{app1, app2}
+	assert.Len(t, forest.PathsToPURL("pkg:npm/lodash@4.17.20", 0), 2)
 }

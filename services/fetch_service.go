@@ -79,7 +79,7 @@ func VexRulesFromDocument(body []byte, source string) ([]models.UpstreamVEXRule,
 	}
 }
 
-func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []normalize.SBOMSource, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -142,7 +142,7 @@ func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url)
+			parsed, err := normalize.MerkleTreeFromCycloneDX(&bom, artifactName)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
@@ -153,8 +153,7 @@ func FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string
 			}
 
 			validURLs = append(validURLs, url)
-			// add the sbom prefix
-			boms = append(boms, normalizedBOM)
+			boms = append(boms, normalize.SBOMSource{Source: url, SBOM: parsed})
 		}
 	}
 

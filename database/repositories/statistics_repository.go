@@ -382,15 +382,24 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 func (r *statisticsRepository) GetMostUsedComponentsInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, limit int) ([]dtos.ComponentOccurrenceAcrossOrg, error) {
 	components := []dtos.ComponentOccurrenceAcrossOrg{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT a.dependency_id as purl, 
-	COUNT(DISTINCT (a.asset_id)) AS total_amount
-	FROM component_dependencies a
-	JOIN assets b ON a.asset_id = b.id
-	JOIN projects c ON b.project_id = c.id
-	WHERE c.organization_id = ?
-	AND a.dependency_id LIKE 'pkg:%' 	--filter out non components like ROOT
-	GROUP BY a.dependency_id
-	ORDER BY total_amount DESC, a.dependency_id ASC
+	WITH RECURSIVE walk AS (
+		SELECT s.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM sboms s
+		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+		JOIN assets b ON b.id = s.asset_id
+		JOIN projects c ON b.project_id = c.id
+		WHERE c.organization_id = ?
+		UNION
+		SELECT w.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM walk w
+		JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+	)
+	SELECT w.component_id as purl,
+	COUNT(DISTINCT (w.asset_id)) AS total_amount
+	FROM walk w
+	WHERE w.component_id LIKE 'pkg:%' 	--filter out non components like the artifact root
+	GROUP BY w.component_id
+	ORDER BY total_amount DESC, w.component_id ASC
 	LIMIT ?;`, orgID, limit).Find(&components).Error
 	return components, err
 }
@@ -462,14 +471,23 @@ func (r *statisticsRepository) GetAverageAmountOfOpenCodeRisksForProjectsInOrg(c
 func (r *statisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
 	distribution := []dtos.EcosystemUsage{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT ecosystem, COUNT(*) as absolute, COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage
-	FROM (
-		SELECT split_part(split_part(cd.dependency_id, ':', 2), '/', 1) AS ecosystem 	-- extract the ecosystem from the pURL
-		FROM component_dependencies cd
-		JOIN assets a ON cd.asset_id = a.id
+	WITH RECURSIVE walk AS (
+		SELECT s.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM sboms s
+		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+		JOIN assets a ON a.id = s.asset_id
 		JOIN projects p ON a.project_id = p.id
 		WHERE p.organization_id = ?
-		AND cd.dependency_id LIKE 'pkg:%'	-- pre filter only for valid purls
+		UNION
+		SELECT w.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM walk w
+		JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+	)
+	SELECT ecosystem, COUNT(*) as absolute, COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage
+	FROM (
+		SELECT split_part(split_part(w.component_id, ':', 2), '/', 1) AS ecosystem 	-- extract the ecosystem from the pURL
+		FROM walk w
+		WHERE w.component_id LIKE 'pkg:%'	-- pre filter only for valid purls
 	) sub
 	WHERE ecosystem ~ '^[a-z][a-z0-9+-\.]+$' 	-- lastly filter out any invalid ecosystems (using the official regex)
 	GROUP BY ecosystem
@@ -480,22 +498,34 @@ func (r *statisticsRepository) GetEcosystemDistributionInOrg(ctx context.Context
 func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]dtos.MaliciousPackageInOrg, error) {
 	packages := []dtos.MaliciousPackageInOrg{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
+	WITH RECURSIVE walk AS (
+		SELECT s.asset_id, s.asset_version_name, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM sboms s
+		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+		JOIN assets c ON c.id = s.asset_id
+		JOIN projects d ON c.project_id = d.id
+		WHERE d.organization_id = ?
+		UNION
+		SELECT w.asset_id, w.asset_version_name, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM walk w
+		JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+	)
+	SELECT DISTINCT
 		a.malicious_package_id,
-		b.dependency_id as component,
+		w.component_id as component,
 		d.name as project_name,
 		c.name as asset_name,
-		b.asset_version_name
-	FROM 
+		w.asset_version_name
+	FROM
 		malicious_affected_components a
-	JOIN 
-		component_dependencies b ON b.dependency_id = a.purl
-	JOIN 
-		assets c ON b.asset_id = c.id
-	JOIN 
+	JOIN
+		walk w ON w.component_id = a.purl
+	JOIN
+		assets c ON w.asset_id = c.id
+	JOIN
 		projects d ON c.project_id = d.id
-	WHERE 
-		d.organization_id = ?`, orgID).Find(&packages).Error
+	WHERE
+		d.organization_id = ?`, orgID, orgID).Find(&packages).Error
 
 	return packages, err
 }
@@ -503,14 +533,25 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, t
 func (r *statisticsRepository) GetAverageAgeOfDependenciesAcrossOrg(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (time.Duration, error) {
 	var seconds float64
 	err := r.GetDB(ctx, tx).Raw(`
+	WITH RECURSIVE walk AS (
+		SELECT s.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM sboms s
+		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+		JOIN assets a ON a.id = s.asset_id
+		JOIN projects p ON a.project_id = p.id
+		WHERE p.organization_id = ?
+		UNION
+		SELECT w.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM walk w
+		JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+	)
 	SELECT COALESCE(EXTRACT(EPOCH FROM AVG(NOW() - published)), 0)
 	FROM components JOIN (
-		SELECT DISTINCT cd.dependency_id FROM projects p
-		JOIN assets a ON a.project_id = p.id
-		JOIN component_dependencies cd ON cd.asset_id = a.id
-		WHERE p.organization_id = ?) as dep
-	ON dep.dependency_id = components.id;`, orgID).Find(&seconds).Error
-	return time.Duration(seconds), err
+		SELECT DISTINCT w.component_id FROM walk w) as dep
+	ON dep.component_id = components.id;`, orgID).Find(&seconds).Error
+	// the query yields seconds; time.Duration counts nanoseconds, so scaling is
+	// required - without it 48h was reported as 172.8µs
+	return time.Duration(seconds * float64(time.Second)), err
 }
 
 // calculate the average time between the time the vuln was created and the first remediation event
@@ -618,13 +659,22 @@ func (r *statisticsRepository) GetTopCVEsAcrossInstance(ctx context.Context, tx 
 func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Context, tx *gorm.DB, limit int) ([]dtos.ComponentOccurrenceAcrossInstance, error) {
 	components := make([]dtos.ComponentOccurrenceAcrossInstance, 0, limit)
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT cd.dependency_id as purl,
-	COUNT(DISTINCT (cd.asset_id)) AS total_amount,
-  	COALESCE(1.0 * COUNT(DISTINCT (cd.asset_id)) / NULLIF((SELECT COUNT(*) FROM assets), 0), 0) as relative_amount
-	FROM component_dependencies cd
-	WHERE cd.dependency_id LIKE 'pkg:%'   -- filter out non components like ROOT
-	GROUP BY cd.dependency_id
-	ORDER BY total_amount DESC, cd.dependency_id ASC
+	WITH RECURSIVE walk AS (
+		SELECT s.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM sboms s
+		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+		UNION
+		SELECT w.asset_id, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM walk w
+		JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+	)
+	SELECT w.component_id as purl,
+	COUNT(DISTINCT (w.asset_id)) AS total_amount,
+  	COALESCE(1.0 * COUNT(DISTINCT (w.asset_id)) / NULLIF((SELECT COUNT(*) FROM assets), 0), 0) as relative_amount
+	FROM walk w
+	WHERE w.component_id LIKE 'pkg:%'   -- filter out non components like the artifact root
+	GROUP BY w.component_id
+	ORDER BY total_amount DESC, w.component_id ASC
 	LIMIT ?;`, limit).Find(&components).Error
 	return components, err
 }
@@ -632,21 +682,30 @@ func (r *statisticsRepository) GetTopComponentsAcrossInstance(ctx context.Contex
 func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.Context, tx *gorm.DB) ([]dtos.MaliciousPackage, error) {
 	packages := []dtos.MaliciousPackage{}
 	err := r.GetDB(ctx, tx).Raw(`
-	SELECT 
+	WITH RECURSIVE walk AS (
+		SELECT s.asset_id, s.asset_version_name, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM sboms s
+		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+		UNION
+		SELECT w.asset_id, w.asset_version_name, e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+		FROM walk w
+		JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+	)
+	SELECT DISTINCT
 		mac.malicious_package_id,
-		cd.dependency_id as component,
+		w.component_id as component,
 		o.slug as org_slug,
 		p.slug as project_slug,
 		a.slug as asset_slug,
 		a.name as asset_name,
-		cd.asset_version_name as asset_version_name
-	FROM 
+		w.asset_version_name as asset_version_name
+	FROM
 		malicious_affected_components mac
-	JOIN 
-		component_dependencies cd ON cd.dependency_id = mac.purl
-	JOIN 
-		assets a ON cd.asset_id = a.id
-	JOIN 
+	JOIN
+		walk w ON w.component_id = mac.purl
+	JOIN
+		assets a ON w.asset_id = a.id
+	JOIN
 		projects p ON a.project_id = p.id
 	JOIN
 		organizations o ON p.organization_id = o.id;`).Find(&packages).Error

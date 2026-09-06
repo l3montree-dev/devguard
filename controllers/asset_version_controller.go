@@ -172,7 +172,7 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) e
 func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
+	sbom, err := a.assetVersionService.LoadAssetVersionSBOMs(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 	}
@@ -181,11 +181,17 @@ func (a *AssetVersionController) SBOMJSON(ctx shared.Context) error {
 	if frontendURL == "" {
 		return echo.NewHTTPError(500, "FRONTEND_URL not set in environment variables")
 	}
+
+	componentMetadata, err := a.assetVersionService.LoadComponentMetadata(ctx.Request().Context(), nil, assetVersion, sbom)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not load component metadata").WithInternal(err)
+	}
+
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
 }
 
 // @Summary Get VEX as CycloneDX JSON
@@ -238,7 +244,7 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	artifactName := ctx.QueryParam("artifactName")
 
 	assetVersion := shared.GetAssetVersion(ctx)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifactName))
+	dependencyVulns, err := a.getDependencyVulns(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifactName))
 	if err != nil {
 		return err
 	}
@@ -248,17 +254,12 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	}))
 }
 
-func (a *AssetVersionController) getComponentsAndDependencyVulns(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(ctx, nil, assetVersion.Name, assetVersion.AssetID)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func (a *AssetVersionController) getDependencyVulns(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
 	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return components, dependencyVulns, nil
+	return dependencyVulns, nil
 }
 
 // @Summary Get minimal dependency graph tree
@@ -277,26 +278,33 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(ctx context.Con
 func (a *AssetVersionController) DependencyGraph(ctx shared.Context) error {
 	app := shared.GetAssetVersion(ctx)
 
-	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, app)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
-	}
-
 	artifactName := ctx.QueryParam("artifactName")
 	if artifactName != "" {
-		artifactName, _ := url.PathUnescape(artifactName)
-		err = sbom.ScopeToArtifact(artifactName)
-		if err != nil {
-			return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
-		}
+		artifactName, _ = url.PathUnescape(artifactName)
 	}
 
 	origin := ctx.QueryParam("origin")
 	if origin != "" {
 		origin, _ = url.PathUnescape(origin)
-		err = sbom.ScopeToInfoSource(origin, normalize.InfoSourceSBOM)
+	}
+
+	var sbom normalize.MerkleForest
+	var err error
+	switch {
+	case artifactName != "" && origin != "":
+		sbom, err = a.assetVersionService.LoadSBOM(ctx.Request().Context(), nil, app, artifactName, origin)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not scope sbom to origin").WithInternal(err)
+		}
+	case artifactName != "":
+		sbom, err = a.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, app, artifactName)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+		}
+	default:
+		sbom, err = a.assetVersionService.LoadAssetVersionSBOMs(ctx.Request().Context(), nil, app)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not build sbom").WithInternal(err)
 		}
 	}
 
@@ -326,22 +334,23 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx shared.Context) e
 	pURL := ctx.QueryParam("purl")
 	artifactName := ctx.QueryParam("artifactName")
 
-	// Load the full SBOM and find paths using in-memory tree traversal
-	sbom, err := a.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
-	}
-
-	// If artifact name is specified, extract just that artifact's subtree
+	// Load the SBOM(s) and find paths using in-memory tree traversal
+	var sbom normalize.MerkleForest
+	var err error
 	if artifactName != "" {
-		err = sbom.ScopeToArtifact(artifactName)
+		sbom, err = a.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, assetVersion, artifactName)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+		}
+	} else {
+		sbom, err = a.assetVersionService.LoadAssetVersionSBOMs(ctx.Request().Context(), nil, assetVersion)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
 		}
 	}
 
 	// Return minimal tree structure with only paths leading to the target PURL
-	return ctx.JSON(200, sbom.FindAllComponentOnlyPathsToPURL(pURL, 12))
+	return ctx.JSON(200, sbom.PathsToPURL(pURL, 12))
 }
 
 // @Summary Get asset version metrics
@@ -534,15 +543,15 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	errgroup := utils.ErrGroup[map[string][]dtos.InformationSourceDTO](10)
 	for _, artifact := range artifacts {
 		errgroup.Go(func() (map[string][]dtos.InformationSourceDTO, error) {
-			rootNodes, err := a.componentService.FetchInformationSources(reqCtx, nil, &artifact)
+			sboms, err := a.assetVersionService.ListSBOMs(reqCtx, nil, assetVersion, artifact.ArtifactName)
 			if err != nil {
 				return nil, err
 			}
 			return map[string][]dtos.InformationSourceDTO{
-				artifact.ArtifactName: utils.UniqBy(utils.Map(rootNodes, func(
-					el models.ComponentDependency,
+				artifact.ArtifactName: utils.UniqBy(utils.Map(sboms, func(
+					s models.SBOM,
 				) dtos.InformationSourceDTO {
-					return extractInformationSourceFromPurl(el.DependencyID)
+					return extractInformationSourceFromPurl(s.Source)
 				}), func(s dtos.InformationSourceDTO) dtos.InformationSourceDTO {
 					return s
 				}),

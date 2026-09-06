@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 
@@ -236,14 +237,14 @@ func (h *ReleaseController) readRelease(c shared.Context) (models.Release, error
 
 // buildMergedSBOM builds per-artifact SBOMs and merges them into a single CycloneDX BOM.
 func (h *ReleaseController) buildMergedSBOM(c shared.Context, release models.Release, orgName, orgSlug, projectSlug string, frontendURL string) (*cdx.BOM, error) {
-	merged, err := h.mergeReleaseSBOM(c.Request().Context(), release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
+	merged, metadata, err := h.mergeReleaseSBOM(c.Request().Context(), release, orgName, orgSlug, projectSlug, frontendURL, map[uuid.UUID]struct{}{})
 	if err != nil {
 		return nil, err
 	}
 
 	return merged.ToCycloneDX(normalize.BOMMetadata{
 		RootName: release.Name,
-	}), nil
+	}, metadata), nil
 }
 
 // buildMergedVEX builds per-item CycloneDX VeX and merges them into one release BOM.
@@ -301,14 +302,15 @@ type releaseItemVulns struct {
 // mergeReleaseSBOM loops over release items, resolving each item either as an artifact
 // reference (by asset ID, asset version name, or artifact name) or as a child release
 // reference with no asset fields, and guards against bugs such as nil-pointer access.
-func (h *ReleaseController) mergeReleaseSBOM(ctx context.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (*normalize.SBOMGraph, error) {
+func (h *ReleaseController) mergeReleaseSBOM(ctx context.Context, release models.Release, orgName, orgSlug, projectSlug, frontendURL string, visiting map[uuid.UUID]struct{}) (normalize.MerkleForest, map[string]cdx.Component, error) {
 	if _, ok := visiting[release.ID]; ok {
-		return nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
+		return nil, nil, fmt.Errorf("cycle detected in release items for %s", release.ID)
 	}
 	visiting[release.ID] = struct{}{}
 	defer delete(visiting, release.ID)
 
-	var boms []*normalize.SBOMGraph
+	var result normalize.MerkleForest
+	metadata := map[string]cdx.Component{}
 
 	for _, item := range release.Items {
 		if item.ChildRelease != nil || item.ChildReleaseID != nil {
@@ -316,46 +318,43 @@ func (h *ReleaseController) mergeReleaseSBOM(ctx context.Context, release models
 			if child == nil && item.ChildReleaseID != nil {
 				rel, err := h.service.ReadRecursive(ctx, *item.ChildReleaseID)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				child = &rel
 			}
 			if child == nil {
-				return nil, fmt.Errorf("release item %s is missing child release data", item.ID)
+				return nil, nil, fmt.Errorf("release item %s is missing child release data", item.ID)
 			}
-			childBom, err := h.mergeReleaseSBOM(ctx, *child, orgName, orgSlug, projectSlug, frontendURL, visiting)
+			childBom, childMetadata, err := h.mergeReleaseSBOM(ctx, *child, orgName, orgSlug, projectSlug, frontendURL, visiting)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			if childBom != nil {
-				boms = append(boms, childBom)
-			}
+			result = append(result, childBom...)
+			maps.Copy(metadata, childMetadata)
 			continue
 		}
 
 		if item.AssetID == nil || item.AssetVersionName == nil || item.ArtifactName == nil {
-			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
+			return nil, nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
 		}
 
-		bom, err := h.assetVersionService.LoadFullSBOMGraph(ctx, nil, models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName})
+		assetVersion := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
+
+		bom, err := h.assetVersionService.LoadArtifactSBOMs(ctx, nil, assetVersion, *item.ArtifactName)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		err = bom.ScopeToArtifact(*item.ArtifactName)
+		itemMetadata, err := h.assetVersionService.LoadComponentMetadata(ctx, nil, assetVersion, bom)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		// scope to artifact
-		boms = append(boms, bom)
+
+		result = append(result, bom...)
+		maps.Copy(metadata, itemMetadata)
 	}
 
-	result := normalize.NewSBOMGraph()
-	for _, b := range boms {
-		result.MergeGraph(b)
-	}
-
-	return result, nil
+	return result, metadata, nil
 }
 
 // gatherReleaseVulns resolves every release item (recursing into child releases) into its

@@ -19,25 +19,27 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
-// reverseEdges maps a subtree hash to the hashes of the subtrees that depend on
-// it directly. Parents are sorted by component id (then by hash, to break ties
+// Parents maps a subtree hash to the hashes of the subtrees that depend on it
+// directly. Parents are sorted by component id (then by hash, to break ties
 // between two different child sets of the same component) so traversal order is
 // deterministic and independent of map iteration.
-func (t *MerkleTree) reverseEdges() map[string][]string {
-	reverse := make(map[string][]string, len(t.nodes))
+func (t *MerkleTree) Parents() map[uuid.UUID][]uuid.UUID {
+	reverse := make(map[uuid.UUID][]uuid.UUID, len(t.nodes))
 	for _, node := range t.nodes {
 		for _, child := range node.Children {
 			reverse[child] = append(reverse[child], node.SubtreeHash)
 		}
 	}
 	for child := range reverse {
-		slices.SortFunc(reverse[child], func(a, b string) int {
+		slices.SortFunc(reverse[child], func(a, b uuid.UUID) int {
 			if c := strings.Compare(t.nodes[a].ComponentID, t.nodes[b].ComponentID); c != 0 {
 				return c
 			}
-			return strings.Compare(a, b)
+			return compareHashes(a, b)
 		})
 	}
 	return reverse
@@ -48,34 +50,32 @@ func (t *MerkleTree) reverseEdges() map[string][]string {
 //
 // Paths are found breadth-first, so shorter paths come first and a limit keeps
 // the most direct ones. The root is not part of a path: a path starts at the
-// direct dependency that pulls the component in, matching what the old
-// info-source-terminated walk produced.
+// direct dependency that pulls the component in.
 //
-// Because the tree is keyed by subtree hash, a component that appears with two
-// different child sets is two distinct nodes here, so paths that the purl-keyed
-// graph would have conflated stay separate.
+// Because the tree is keyed by subtree hash, a component appearing with two
+// different child sets is two distinct nodes, so their paths stay separate.
 func (t *MerkleTree) PathsToPURL(purl string, limit int) []Path {
-	targets := t.subtreesFor(purl)
+	targets := t.SubtreesFor(purl)
 	if len(targets) == 0 {
 		return nil
 	}
 
-	reverse := t.reverseEdges()
+	reverse := t.Parents()
 
 	var paths []Path
 	seen := make(map[string]bool)
 
 	type queueItem struct {
 		// path holds subtree hashes in reverse: target first, growing rootward
-		path   []string
-		onPath map[string]bool
+		path   []uuid.UUID
+		onPath map[uuid.UUID]bool
 	}
 
 	queue := make([]queueItem, 0, len(targets))
 	for _, target := range targets {
 		queue = append(queue, queueItem{
-			path:   []string{target},
-			onPath: map[string]bool{target: true},
+			path:   []uuid.UUID{target},
+			onPath: map[uuid.UUID]bool{target: true},
 		})
 	}
 
@@ -113,10 +113,10 @@ func (t *MerkleTree) PathsToPURL(purl string, limit int) []Path {
 
 			// Keep extending even after completing a path: a component can be
 			// both a direct dependency and reachable transitively.
-			next := make([]string, len(current.path)+1)
+			next := make([]uuid.UUID, len(current.path)+1)
 			copy(next, current.path)
 			next[len(current.path)] = parent
-			onPath := make(map[string]bool, len(current.onPath)+1)
+			onPath := make(map[uuid.UUID]bool, len(current.onPath)+1)
 			maps.Copy(onPath, current.onPath)
 			onPath[parent] = true
 			queue = append(queue, queueItem{path: next, onPath: onPath})
@@ -126,11 +126,11 @@ func (t *MerkleTree) PathsToPURL(purl string, limit int) []Path {
 	return paths
 }
 
-// subtreesFor returns the subtree hashes whose component matches purl, sorted
+// SubtreesFor returns the subtree hashes whose component matches purl, sorted
 // so results do not depend on map iteration order. A component can match more
 // than one subtree when different SBOM positions give it different child sets.
-func (t *MerkleTree) subtreesFor(purl string) []string {
-	var targets []string
+func (t *MerkleTree) SubtreesFor(purl string) []uuid.UUID {
+	var targets []uuid.UUID
 	for hash, node := range t.nodes {
 		if hash == t.Root {
 			continue
@@ -139,13 +139,13 @@ func (t *MerkleTree) subtreesFor(purl string) []string {
 			targets = append(targets, hash)
 		}
 	}
-	slices.Sort(targets)
+	sortHashes(targets)
 	return targets
 }
 
 // materializePath turns a rootward list of subtree hashes into a root-to-target
 // list of component ids.
-func (t *MerkleTree) materializePath(reversed []string) Path {
+func (t *MerkleTree) materializePath(reversed []uuid.UUID) Path {
 	path := make(Path, 0, len(reversed))
 	for i := len(reversed) - 1; i >= 0; i-- {
 		node := t.nodes[reversed[i]]

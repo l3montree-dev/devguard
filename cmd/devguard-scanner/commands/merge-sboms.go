@@ -133,8 +133,8 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 		return err
 	}
 
-	// validate against sbom_graph.go
-	if _, err := normalize.SBOMGraphFromCycloneDX(result, "", ""); err != nil {
+	// validate that the merged document still parses
+	if _, err := normalize.MerkleTreeFromCycloneDX(result, ""); err != nil {
 		return err
 	}
 	// print the sbom to stdout

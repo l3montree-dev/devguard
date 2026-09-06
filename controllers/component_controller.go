@@ -84,22 +84,27 @@ func (componentController *ComponentController) LicenseDistribution(ctx shared.C
 		}
 	}
 
-	// Load the full SBOM
-	sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
-	}
-
-	// If artifact name is specified, extract just that artifact's subtree
+	// Load the SBOM(s), scoped to the artifact if one was requested
+	var forest normalize.MerkleForest
 	if artifactName != "" {
-		err := sbom.ScopeToArtifact(artifactName)
+		forest, err = componentController.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, assetVersion, artifactName)
 		if err != nil {
 			return ctx.JSON(200, []licenseResponse{})
 		}
+	} else {
+		forest, err = componentController.assetVersionService.LoadAssetVersionSBOMs(ctx.Request().Context(), nil, assetVersion)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
+		}
+	}
+
+	componentMetadata, err := componentController.assetVersionService.LoadComponentMetadata(ctx.Request().Context(), nil, assetVersion, forest)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not load component metadata").WithInternal(err)
 	}
 
 	// Get license distribution from the SBOM
-	fetchedLicenses := sbom.LicenseDistribution()
+	fetchedLicenses := transformer.LicenseDistribution(componentMetadata, forest.ComponentIDs())
 
 	var res = make([]licenseResponse, 0, len(fetchedLicenses))
 	for id, count := range fetchedLicenses {
@@ -162,35 +167,25 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 		Operator:   "like",
 	})
 
-	// If artifact is specified, we need to filter using the SBOM graph
+	// If artifact is specified, we need to filter using the SBOM
 	if artifactName != "" {
-		// Load the full SBOM to determine which components belong to this artifact
-		sbom, err := componentController.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
-		if err != nil {
-			return echo.NewHTTPError(500, "could not load sbom").WithInternal(err)
-		}
-
-		err = sbom.ScopeToArtifact(artifactName)
-		if err != nil {
-			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
-		}
-
+		var forest normalize.MerkleForest
 		origin := ctx.QueryParam("origin")
 		if origin != "" {
 			origin, _ = url.PathUnescape(origin)
-			err = sbom.ScopeToInfoSource(origin, normalize.InfoSourceSBOM)
+			forest, err = componentController.assetVersionService.LoadSBOM(ctx.Request().Context(), nil, assetVersion, artifactName, origin)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not scope sbom to origin").WithInternal(err)
+			}
+		} else {
+			forest, err = componentController.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, assetVersion, artifactName)
+			if err != nil {
+				return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
 			}
 		}
 
 		// Get all component IDs in this artifact
-		componentIDs := make([]string, 0)
-		for node := range sbom.Components() {
-			if node.Component != nil && node.Component.PackageURL != "" {
-				componentIDs = append(componentIDs, node.Component.PackageURL)
-			}
-		}
+		componentIDs := forest.ComponentIDs()
 
 		if len(componentIDs) == 0 {
 			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))

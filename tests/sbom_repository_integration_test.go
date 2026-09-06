@@ -47,12 +47,12 @@ func countEdges(t *testing.T, db shared.DB) int64 {
 	return n
 }
 
-func sbomFor(assetVersion models.AssetVersion, artifactName, origin string) models.SBOM {
+func sbomFor(assetVersion models.AssetVersion, artifactName, source string) models.SBOM {
 	return models.SBOM{
 		AssetID:          assetVersion.AssetID,
 		AssetVersionName: assetVersion.Name,
 		ArtifactName:     artifactName,
-		Origin:           origin,
+		Source:           source,
 	}
 }
 
@@ -71,7 +71,7 @@ func TestSBOMRepositoryStoresAndReloadsTrees(t *testing.T) {
 			"pkg:npm/b@1.0.0": {"pkg:npm/leaf@1.0.0"},
 		}, "round-trip-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "round-trip-app", "sbom:lock.json"), original))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "round-trip-app", "sbom:lock.json"), original))
 
 		loaded, err := repo.LoadTree(ctx, nil, original.Root)
 		require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestSBOMRepositoryStoresAndReloadsTrees(t *testing.T) {
 			"root-ref": {"pkg:npm/only-leaf@1.0.0"},
 		}, "leaf-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "leaf-app", "sbom:lock.json"), original))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "leaf-app", "sbom:lock.json"), original))
 
 		loaded, err := repo.LoadTree(ctx, nil, original.Root)
 		require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestSBOMRepositoryStoresAndReloadsTrees(t *testing.T) {
 			"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
 		}, "path-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "path-app", "sbom:lock.json"), original))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "path-app", "sbom:lock.json"), original))
 
 		loaded, err := repo.LoadTree(ctx, nil, original.Root)
 		require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestSBOMRepositoryStoresAndReloadsTrees(t *testing.T) {
 		}
 		deep := tree(children, "deep-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "deep-app", "sbom:lock.json"), deep))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "deep-app", "sbom:lock.json"), deep))
 
 		loaded, err := repo.LoadTree(ctx, nil, deep.Root)
 		require.NoError(t, err)
@@ -144,10 +144,10 @@ func TestSBOMRepositoryDeduplicatesSubtrees(t *testing.T) {
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 		}, "stable-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "stable-app", "sbom:lock.json"), unchanged))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "stable-app", "sbom:lock.json"), unchanged))
 		afterFirst := countEdges(t, db)
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "stable-app", "sbom:lock.json"), unchanged))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "stable-app", "sbom:lock.json"), unchanged))
 
 		assert.Equal(t, afterFirst, countEdges(t, db), "an unchanged rescan must be a no-op")
 	})
@@ -156,8 +156,8 @@ func TestSBOMRepositoryDeduplicatesSubtrees(t *testing.T) {
 		first := tree(map[string][]string{"root-ref": {"pkg:npm/v@1.0.0"}}, "moving-app")
 		second := tree(map[string][]string{"root-ref": {"pkg:npm/v@2.0.0"}}, "moving-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "moving-app", "sbom:lock.json"), first))
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "moving-app", "sbom:lock.json"), second))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "moving-app", "sbom:lock.json"), first))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "moving-app", "sbom:lock.json"), second))
 
 		sboms, err := repo.FindByArtifact(ctx, nil, assetVersion.AssetID, assetVersion.Name, "moving-app")
 		require.NoError(t, err)
@@ -177,11 +177,11 @@ func TestSBOMRepositoryDeduplicatesSubtrees(t *testing.T) {
 		}
 
 		first := tree(firstChildren, "sharing-app-one")
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "sharing-app-one", "sbom:lock.json"), first))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "sharing-app-one", "sbom:lock.json"), first))
 		afterFirst := countEdges(t, db)
 
 		second := tree(secondChildren, "sharing-app-two")
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "sharing-app-two", "sbom:lock.json"), second))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "sharing-app-two", "sbom:lock.json"), second))
 		afterSecond := countEdges(t, db)
 
 		// only the second artifact's own root rows are new; the shared circl
@@ -201,8 +201,8 @@ func TestSBOMRepositoryDeduplicatesSubtrees(t *testing.T) {
 			"pkg:golang/circl@9.9.9": {"pkg:golang/sys@0.2.0"},
 		}, "disagree-two")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "disagree-one", "sbom:lock.json"), first))
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "disagree-two", "sbom:lock.json"), second))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "disagree-one", "sbom:lock.json"), first))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "disagree-two", "sbom:lock.json"), second))
 
 		loadedFirst, err := repo.LoadTree(ctx, nil, first.Root)
 		require.NoError(t, err)
@@ -234,8 +234,8 @@ func TestSBOMRepositoryFindsAffectedSBOMs(t *testing.T) {
 		"root-ref": {"pkg:npm/safe@1.0.0"},
 	}, "unaffected-app")
 
-	require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "affected-app", "sbom:lock.json"), affected))
-	require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "unaffected-app", "sbom:lock.json"), unaffected))
+	require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "affected-app", "sbom:lock.json"), affected))
+	require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "unaffected-app", "sbom:lock.json"), unaffected))
 
 	t.Run("walking up from a transitive component reaches its SBOM", func(t *testing.T) {
 		sboms, err := repo.FindSBOMsContainingComponent(ctx, nil, "pkg:npm/vulnerable@1.0.0")
@@ -265,7 +265,7 @@ func TestSBOMRepositoryFindsAffectedSBOMs(t *testing.T) {
 		orphan := tree(map[string][]string{
 			"root-ref": {"pkg:npm/orphaned@1.0.0"},
 		}, "orphan-app")
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "orphan-app", "sbom:lock.json"), orphan))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "orphan-app", "sbom:lock.json"), orphan))
 		require.NoError(t, repo.DeleteByArtifact(ctx, nil, assetVersion.AssetID, assetVersion.Name, "orphan-app"))
 
 		sboms, err := repo.FindSBOMsContainingComponent(ctx, nil, "pkg:npm/orphaned@1.0.0")
@@ -282,20 +282,28 @@ func TestSBOMRepositoryListsSBOMsOfAnAssetVersion(t *testing.T) {
 	repo := repositories.NewSBOMRepository(db)
 	ctx := context.Background()
 
-	require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "app", "sbom:package-lock.json"),
+	require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "app", "sbom:package-lock.json"),
 		tree(map[string][]string{"root-ref": {"pkg:npm/a@1.0.0"}}, "app")))
-	require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "app", "sbom:go.mod"),
+	require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "app", "sbom:go.mod"),
 		tree(map[string][]string{"root-ref": {"pkg:golang/b@1.0.0"}}, "app")))
-	require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "other-app", "sbom:go.mod"),
+	require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "other-app", "sbom:go.mod"),
 		tree(map[string][]string{"root-ref": {"pkg:golang/c@1.0.0"}}, "other-app")))
 
-	t.Run("one artifact can have several origins", func(t *testing.T) {
+	t.Run("one artifact can have several sources", func(t *testing.T) {
 		sboms, err := repo.FindByArtifact(ctx, nil, assetVersion.AssetID, assetVersion.Name, "app")
 		require.NoError(t, err)
 
 		require.Len(t, sboms, 2)
-		assert.Equal(t, "sbom:go.mod", sboms[0].Origin)
-		assert.Equal(t, "sbom:package-lock.json", sboms[1].Origin)
+		assert.Equal(t, "sbom:go.mod", sboms[0].Source)
+		assert.Equal(t, "sbom:package-lock.json", sboms[1].Source)
+	})
+
+	t.Run("a single source can be loaded on its own", func(t *testing.T) {
+		sboms, err := repo.FindBySource(ctx, nil, assetVersion.AssetID, assetVersion.Name, "app", "sbom:go.mod")
+		require.NoError(t, err)
+
+		require.Len(t, sboms, 1)
+		assert.Equal(t, "sbom:go.mod", sboms[0].Source)
 	})
 
 	t.Run("scanning an asset version means fetching all of its SBOMs", func(t *testing.T) {
@@ -304,13 +312,13 @@ func TestSBOMRepositoryListsSBOMsOfAnAssetVersion(t *testing.T) {
 		assert.Len(t, sboms, 3)
 	})
 
-	t.Run("deleting one origin leaves the artifact's other SBOMs alone", func(t *testing.T) {
-		require.NoError(t, repo.DeleteByOrigin(ctx, nil, assetVersion.AssetID, assetVersion.Name, "app", "sbom:go.mod"))
+	t.Run("deleting one source leaves the artifact's other SBOMs alone", func(t *testing.T) {
+		require.NoError(t, repo.DeleteBySource(ctx, nil, assetVersion.AssetID, assetVersion.Name, "app", "sbom:go.mod"))
 
 		sboms, err := repo.FindByArtifact(ctx, nil, assetVersion.AssetID, assetVersion.Name, "app")
 		require.NoError(t, err)
 		require.Len(t, sboms, 1)
-		assert.Equal(t, "sbom:package-lock.json", sboms[0].Origin)
+		assert.Equal(t, "sbom:package-lock.json", sboms[0].Source)
 	})
 
 	t.Run("deleting an asset version cascades to its SBOMs", func(t *testing.T) {
@@ -322,7 +330,7 @@ func TestSBOMRepositoryListsSBOMsOfAnAssetVersion(t *testing.T) {
 		}
 		require.NoError(t, db.Create(&doomed).Error)
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(doomed, "doomed-app", "sbom:lock.json"),
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(doomed, "doomed-app", "sbom:lock.json"),
 			tree(map[string][]string{"root-ref": {"pkg:npm/x@1.0.0"}}, "doomed-app")))
 
 		require.NoError(t, db.Where("asset_id = ? AND name = ?", doomed.AssetID, doomed.Name).
@@ -347,13 +355,13 @@ func TestSBOMRepositoryCollectsGarbage(t *testing.T) {
 			"root-ref":              {"pkg:npm/old-dep@1.0.0"},
 			"pkg:npm/old-dep@1.0.0": {"pkg:npm/old-transitive@1.0.0"},
 		}, "gc-app")
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "gc-app", "sbom:lock.json"), old))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "gc-app", "sbom:lock.json"), old))
 
 		updated := tree(map[string][]string{
 			"root-ref":              {"pkg:npm/new-dep@1.0.0"},
 			"pkg:npm/new-dep@1.0.0": {"pkg:npm/new-transitive@1.0.0"},
 		}, "gc-app")
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "gc-app", "sbom:lock.json"), updated))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "gc-app", "sbom:lock.json"), updated))
 
 		// the old spine is unreferenced now, but content addressing never
 		// deletes on rescan, so it is still on disk until swept
@@ -381,8 +389,8 @@ func TestSBOMRepositoryCollectsGarbage(t *testing.T) {
 		keeper := tree(keptChildren, "keeper-app")
 		sharer := tree(keptChildren, "sharer-app")
 
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "keeper-app", "sbom:lock.json"), keeper))
-		require.NoError(t, repo.Save(ctx, nil, sbomFor(assetVersion, "sharer-app", "sbom:lock.json"), sharer))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "keeper-app", "sbom:lock.json"), keeper))
+		require.NoError(t, repo.SaveTree(ctx, nil, sbomFor(assetVersion, "sharer-app", "sbom:lock.json"), sharer))
 
 		// drop one of the two SBOMs sharing the subtree
 		require.NoError(t, repo.DeleteByArtifact(ctx, nil, assetVersion.AssetID, assetVersion.Name, "sharer-app"))

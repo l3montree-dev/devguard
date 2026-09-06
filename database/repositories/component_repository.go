@@ -17,19 +17,15 @@ package repositories
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type componentRepository struct {
@@ -52,204 +48,130 @@ func (c *componentRepository) FindAllWithoutLicense(ctx context.Context, tx *gor
 	return components, err
 }
 
-func (c *componentRepository) CreateComponents(ctx context.Context, tx *gorm.DB, components []models.ComponentDependency) error {
-	if len(components) == 0 {
-		return nil
-	}
-
-	return c.GetDB(ctx, tx).Clauses(clause.OnConflict{DoNothing: true}).Create(&components).Error
-}
-
-// LoadComponents loads all component dependencies for an asset version.
-// For artifact-specific filtering, use the returned components with:
-//
-//	tree := normalize.BuildDependencyTree(root, models.ToNodes(deps), models.BuildDepMap(deps))
-//	subtreeIDs := tree.ExtractSubtree("artifact:" + artifactName)
-func (c *componentRepository) LoadComponents(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
 	db := c.GetDB(ctx, tx)
 
-	// Pre-count to allocate slice with correct capacity (reduces slice growing allocations)
-	var count int64
-	if err := db.Model(&models.ComponentDependency{}).
-		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).
-		Count(&count).Error; err != nil {
-		return nil, err
-	}
+	// Edges come from a walk over this asset version's SBOMs. The subquery keeps
+	// the `component_dependencies` alias because callers pass filters and sorts
+	// already qualified with that name.
+	edges := db.Raw(`
+		WITH RECURSIVE walk AS (
+			SELECT s.asset_id, s.asset_version_name, e.component_id, e.direct_dependency_subtree_hash
+			FROM sboms s
+			JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+			WHERE s.asset_id = ? AND s.asset_version_name = ?
+		UNION
+			SELECT w.asset_id, w.asset_version_name, e.component_id, e.direct_dependency_subtree_hash
+			FROM walk w
+			JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+		)
+		SELECT DISTINCT w.asset_id, w.asset_version_name,
+		       w.component_id AS component_id,
+		       child.component_id AS dependency_id
+		FROM walk w
+		JOIN sbom_merkle_edges child ON child.subtree_hash = w.direct_dependency_subtree_hash
+		WHERE w.direct_dependency_subtree_hash IS NOT NULL`, assetID, assetVersionName)
 
-	// Pre-allocate slice with known capacity
-	components := make([]models.ComponentDependency, 0, count)
-
-	// Use Joins instead of Preload for better performance (single query with JOINs
-	// instead of N+1 queries)
-	err := db.Model(&models.ComponentDependency{}).
-		Joins("Component").
-		Joins("Dependency").
-		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID).
-		Find(&components).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return components, err
-}
-
-func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
-
-	var componentDependencies []models.ComponentDependency
-
-	query := c.GetDB(ctx, tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Dependency.ComponentProject").Joins("LEFT JOIN components as dependency ON dependency.id = dependency_id").Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
+	query := db.Table("(?) AS component_dependencies", edges).
+		Joins("LEFT JOIN components as dependency ON dependency.id = component_dependencies.dependency_id").
+		Joins("LEFT JOIN component_projects as dependency_project ON dependency.project_key = dependency_project.project_key")
 
 	for _, f := range filter {
 		query = f.Where(query)
 	}
-
-	if len(sort) > 0 {
-		for _, s := range sort {
-			query = s.Order(query)
-		}
+	for _, s := range sort {
+		query = s.Order(query)
 	}
-
-	distinctFields := []string{"dependency_id"}
-	for _, f := range sort {
-		distinctFields = append(distinctFields, f.GetField())
-	}
-
-	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") component_dependencies.*"
-
 	if search != "" {
-		query = query.Where("dependency_id ILIKE ?", "pkg:%"+search+"%")
+		query = query.Where("component_dependencies.dependency_id ILIKE ?", "pkg:%"+search+"%")
 	}
 
 	var total int64
-	query.Session(&gorm.Session{}).Distinct("dependency_id").Count(&total)
+	if err := query.Session(&gorm.Session{}).Distinct("component_dependencies.dependency_id").Count(&total).Error; err != nil {
+		return shared.Paged[models.ComponentDependency]{}, err
+	}
+
+	distinctFields := []string{"component_dependencies.dependency_id"}
+	for _, f := range sort {
+		distinctFields = append(distinctFields, f.GetField())
+	}
+	selectClause := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") component_dependencies.component_id, component_dependencies.dependency_id"
 
 	if pageInfo.PageSize == -1 {
 		slog.Warn("unlimited page size requested - returning all results...", "assetVersionName", assetVersionName, "assetID", assetID)
-		err := query.Select(distinctOnQuery).Find(&componentDependencies).Error
-		if err != nil {
-			return shared.NewPaged(pageInfo, total, componentDependencies), err
-		}
 	} else {
-		err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
-		if err != nil {
-			return shared.NewPaged(pageInfo, total, componentDependencies), err
-		}
+		query = query.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 	}
 
-	// Apply license overwrites
-	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
+	var rows []struct {
+		ComponentID  string
+		DependencyID string
+	}
+	if err := query.Select(selectClause).Scan(&rows).Error; err != nil {
+		return shared.Paged[models.ComponentDependency]{}, err
+	}
+
+	// component metadata lives in the components table, keyed by purl
+	ids := make([]string, 0, len(rows)*2)
+	for _, row := range rows {
+		ids = append(ids, row.ComponentID, row.DependencyID)
+	}
+	components, err := c.FindByIDs(ctx, tx, ids)
+	if err != nil {
+		return shared.Paged[models.ComponentDependency]{}, err
+	}
+	byID := make(map[string]models.Component, len(components))
+	for _, component := range components {
+		byID[component.ID] = component
+	}
+
+	overwritten := make(map[string]string, len(overwrittenLicenses))
 	for i := range overwrittenLicenses {
 		if overwrittenLicenses[i].FinalLicenseDecision != nil {
-			isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = *overwrittenLicenses[i].FinalLicenseDecision
+			overwritten[overwrittenLicenses[i].ComponentPurl] = *overwrittenLicenses[i].FinalLicenseDecision
 		}
+	}
+	resolve := func(id string) models.Component {
+		component := byID[id]
+		component.ID = id
+		if license, ok := overwritten[id]; ok {
+			component.License = &license
+			component.IsLicenseOverwritten = true
+		}
+		return component
 	}
 
-	for i, component := range componentDependencies {
-		if license, ok := isPurlOverwrittenMap[componentDependencies[i].DependencyID]; ok {
-			componentDependencies[i].Dependency.License = &license
-			componentDependencies[i].Dependency.IsLicenseOverwritten = true
-		}
-		if component.ComponentID != "ROOT" {
-			if license, ok := isPurlOverwrittenMap[component.ComponentID]; ok {
-				componentDependencies[i].Component.License = &license
-				componentDependencies[i].Component.IsLicenseOverwritten = true
-			}
-		}
+	componentDependencies := make([]models.ComponentDependency, 0, len(rows))
+	for _, row := range rows {
+		componentDependencies = append(componentDependencies, models.ComponentDependency{
+			AssetID:          assetID,
+			AssetVersionName: assetVersionName,
+			ComponentID:      row.ComponentID,
+			DependencyID:     row.DependencyID,
+			Component:        resolve(row.ComponentID),
+			Dependency:       resolve(row.DependencyID),
+		})
 	}
+
 	return shared.NewPaged(pageInfo, total, componentDependencies), nil
+}
 
+// FindByIDs loads component metadata for the given purls. The merkle tree
+// stores only component ids, so anything richer - licenses, types, published
+// dates - is looked up here when a document has to be rendered.
+func (c *componentRepository) FindByIDs(ctx context.Context, tx *gorm.DB, ids []string) ([]models.Component, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var components []models.Component
+	err := c.GetDB(ctx, tx).Preload("ComponentProject").Where("id = ANY (?)", pq.Array(ids)).Find(&components).Error
+	return components, err
 }
 
 func (c *componentRepository) FindByPurl(ctx context.Context, tx *gorm.DB, purl string) (models.Component, error) {
 	var component models.Component
 	err := c.GetDB(ctx, tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
-}
-
-func (c *componentRepository) HandleStateDiff(ctx context.Context, tx *gorm.DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error {
-	// Create new components in the database
-	if len(diff.AddedNodes) > 0 {
-		if err := c.CreateBatch(ctx, tx, utils.Map(diff.AddedNodes, func(node *normalize.GraphNode) models.Component {
-			return models.Component{
-				ID: node.Component.PackageURL,
-			}
-		})); err != nil {
-			return err
-		}
-	}
-
-	// delete removed components from the database
-	removedNodeIDs := diff.RemovedNodeIDs()
-	if len(removedNodeIDs) > 0 {
-		if err := c.DeleteBatch(ctx, tx, utils.Map(removedNodeIDs, func(componentID string) models.Component {
-			node := wholeAssetGraph.Node(componentID)
-			return models.Component{
-				ID: node.Component.PackageURL,
-			}
-		})); err != nil {
-			return err
-		}
-	}
-
-	// delete the removed edges from the database
-	// we can only find them by componentID and dependencyID
-	// thus the query needs to be built here
-
-	if len(diff.RemovedEdges) > 0 {
-		var valueClauses []string
-		for _, edge := range diff.RemovedEdges {
-			escapedComp := strings.ReplaceAll(edge[0], "'", "''")
-			escapedDep := strings.ReplaceAll(edge[1], "'", "''")
-			valueClauses = append(valueClauses, fmt.Sprintf("('%s', '%s')", escapedComp, escapedDep))
-		}
-		// Join the value clauses with commas
-		values := strings.Join(valueClauses, ",")
-		// Escape the asset version name for safe SQL embedding
-		escapedVersionName := strings.ReplaceAll(assetVersion.Name, "'", "''")
-		// Construct the full SQL query without GORM ? placeholders,
-		// because purls in the VALUES can contain ? (e.g. ?arch=x86_64)
-		// which GORM would misinterpret as bind parameters.
-		query := fmt.Sprintf(`
-			DELETE FROM component_dependencies
-			WHERE (component_id, dependency_id) IN (VALUES %s)
-			AND asset_id = '%s'
-			AND asset_version_name = '%s'
-		`, values, assetVersion.AssetID.String(), escapedVersionName)
-		// execute the query without any GORM bind parameters
-		err := c.GetDB(ctx, tx).Exec(query).Error
-
-		if err != nil {
-			return err
-		}
-	}
-
-	// for added edges, create them in the database
-	deps := []models.ComponentDependency{}
-	for _, edge := range diff.AddedEdges {
-		c1 := wholeAssetGraph.Node(edge[0])
-		c2 := wholeAssetGraph.Node(edge[1])
-		var componentID string
-		if c1.Type == normalize.GraphNodeTypeRoot {
-			// set to ROOT for root nodes
-			componentID = "ROOT"
-		} else {
-			componentID = c1.Component.PackageURL
-		}
-
-		componentDependency := models.ComponentDependency{
-			AssetID:          assetVersion.AssetID,
-			AssetVersionName: assetVersion.Name,
-			ComponentID:      componentID,
-			DependencyID:     c2.Component.PackageURL,
-		}
-
-		deps = append(deps, componentDependency)
-	}
-
-	if err := c.CreateComponents(ctx, tx, deps); err != nil {
-		return errors.Wrap(err, "could not create component dependencies")
-	}
-	return nil
 }
 
 func (c *componentRepository) GetDependencyCountPerScannerID(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
@@ -276,36 +198,36 @@ func (c *componentRepository) GetDependencyCountPerScannerID(ctx context.Context
 	return counts, nil
 }
 
-func (c *componentRepository) FetchInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact) ([]models.ComponentDependency, error) {
-	var result []models.ComponentDependency
-	// Information sources are dependencies directly under the artifact root node
-	artifactRoot := "artifact:" + artifact.ArtifactName
-	if err := c.GetDB(ctx, tx).Model(&models.ComponentDependency{}).Where("component_id = ? AND asset_version_name = ? AND asset_id = ?", artifactRoot, artifact.AssetVersionName, artifact.AssetID).Find(&result).Error; err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (c *componentRepository) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
-	artifactRoot := "artifact:" + artifact.ArtifactName
-	return c.GetDB(ctx, tx).Where("component_id = ? AND dependency_id = ANY (?) AND asset_version_name = ? AND asset_id = ?", pq.Array(artifactRoot), rootNodePurls, artifact.AssetVersionName, artifact.AssetID).Delete(&models.ComponentDependency{}).Error
-}
-
 func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
 	occurrences := []models.ComponentOccurrence{}
 	search = strings.TrimSpace(search)
 
 	db := c.GetDB(ctx, tx)
 
-	base := db.Table("component_dependencies").
-		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
-		Joins("JOIN projects ON assets.project_id = projects.id").
-		Joins("LEFT JOIN components ON component_dependencies.component_id = components.id").
-		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
-		Where("component_dependencies.dependency_id ILIKE ?", "%"+search+"%").Where("component_dependencies.dependency_id LIKE ?", "pkg:%")
+	// walk every SBOM of the projects in scope. component_id carries the purl of
+	// each reachable component, so no second join is needed to resolve children.
+	const walk = `
+		WITH RECURSIVE walk AS (
+			SELECT s.asset_id, s.asset_version_name, s.artifact_name,
+			       e.component_id, e.direct_dependency_subtree_hash
+			FROM sboms s
+			JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
+			JOIN assets a ON a.id = s.asset_id
+			WHERE a.project_id = ANY (?)
+		UNION
+			SELECT w.asset_id, w.asset_version_name, w.artifact_name,
+			       e.component_id, e.direct_dependency_subtree_hash
+			FROM walk w
+			JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
+		)`
 
 	var total int64
-	if err := base.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+	if err := db.Raw(walk+`
+		SELECT COUNT(*) FROM (
+			SELECT DISTINCT w.asset_id, w.asset_version_name, w.artifact_name, w.component_id
+			FROM walk w
+			WHERE w.component_id ILIKE ? AND w.component_id LIKE 'pkg:%'
+		) matches`, pq.Array(projectIDs), "%"+search+"%").Scan(&total).Error; err != nil {
 		return shared.Paged[models.ComponentOccurrence]{}, err
 	}
 
@@ -313,36 +235,32 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		return shared.NewPaged(pageInfo, 0, occurrences), nil
 	}
 
-	// Extract artifact name from component_id using the artifact: prefix
-	query := db.Table("component_dependencies").
-		Select(`component_dependencies.id AS component_dependency_id,
-            projects.id AS project_id,
-            projects.name AS project_name,
-            projects.slug AS project_slug,
-            assets.id AS asset_id,
-            assets.name AS asset_name,
-            assets.slug AS asset_slug,
-            component_dependencies.asset_version_name AS asset_version_name,
-            component_dependencies.dependency_id AS dependency_id,
-            CASE WHEN component_dependencies.component_id LIKE 'artifact:%'
-                 THEN SUBSTRING(component_dependencies.component_id FROM 10)
-                 ELSE NULL END AS artifact_name,
-            component_dependencies.asset_version_name AS artifact_asset_version_name`).
-		Joins("JOIN assets ON component_dependencies.asset_id = assets.id").
-		Joins("JOIN projects ON assets.project_id = projects.id").
-		Joins("LEFT JOIN components ON component_dependencies.component_id = components.id").
-		Where("projects.id = ANY (?)", pq.Array(projectIDs)).
-		Where("component_dependencies.dependency_id ILIKE ?", "%"+search+"%").
-		Where("component_dependencies.dependency_id LIKE ?", "pkg:%").
-		Order("component_dependencies.dependency_id ASC, component_dependencies.asset_version_name ASC")
-
+	limit, offset := -1, 0
 	if pageInfo.PageSize > 0 {
-		page := max(pageInfo.Page, 1)
-		offset := (page - 1) * pageInfo.PageSize
-		query = query.Limit(pageInfo.PageSize).Offset(offset)
+		limit = pageInfo.PageSize
+		offset = (max(pageInfo.Page, 1) - 1) * pageInfo.PageSize
 	}
 
-	if err := query.Scan(&occurrences).Error; err != nil {
+	if err := db.Raw(walk+`
+		SELECT DISTINCT
+			projects.id AS project_id,
+			projects.name AS project_name,
+			projects.slug AS project_slug,
+			assets.id AS asset_id,
+			assets.name AS asset_name,
+			assets.slug AS asset_slug,
+			w.asset_version_name AS asset_version_name,
+			w.component_id AS dependency_id,
+			w.artifact_name AS artifact_name,
+			w.asset_version_name AS artifact_asset_version_name
+		FROM walk w
+		JOIN assets ON w.asset_id = assets.id
+		JOIN projects ON assets.project_id = projects.id
+		WHERE w.component_id ILIKE ? AND w.component_id LIKE 'pkg:%'
+		ORDER BY dependency_id ASC, asset_version_name ASC
+		LIMIT NULLIF(?, -1) OFFSET ?`,
+		pq.Array(projectIDs), "%"+search+"%", limit, offset,
+	).Scan(&occurrences).Error; err != nil {
 		return shared.Paged[models.ComponentOccurrence]{}, err
 	}
 

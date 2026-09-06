@@ -35,6 +35,14 @@ type ParsedSBOM struct {
 	Components map[string]cdx.Component
 }
 
+// SBOMSource pairs a parsed SBOM with the source it came from, so several
+// upstream documents can be stored as the separate SBOMs they are rather than
+// merged into one.
+type SBOMSource struct {
+	Source string
+	SBOM   *ParsedSBOM
+}
+
 // merkleParseRoot is the synthetic ref the document hangs off. It never reaches
 // the database - the root is hashed under the artifact's own identity.
 const merkleParseRoot = "\x00sbom-root"
@@ -63,7 +71,9 @@ func MerkleTreeFromCycloneDX(bom *cdx.BOM, artifactName string) (*ParsedSBOM, er
 			components[comp.PackageURL] = comp
 		}
 	}
-	addComponent(*rootComponent)
+	// the root is sanitized like any other component, so an escaped purl or an
+	// invalid type on it cannot leak into the stored ids or the exported document
+	addComponent(sanitizeCycloneDXComponent(*rootComponent))
 
 	seen := map[string]bool{}
 	if bom.Components != nil {
@@ -154,11 +164,21 @@ func (m BOMMetadata) externalReferences() *[]cdx.ExternalReference {
 }
 
 // ToCycloneDX renders the tree back into a CycloneDX document.
-//
-// components supplies the metadata (licenses, types, hashes) that the tree
-// itself does not carry; it is keyed by component id. A component missing from
-// it is emitted with just its purl.
 func (t *MerkleTree) ToCycloneDX(metadata BOMMetadata, components map[string]cdx.Component) *cdx.BOM {
+	return MerkleForest{t}.ToCycloneDX(metadata, components)
+}
+
+// ToCycloneDX renders every SBOM in the forest as one document, which is how an
+// artifact with several origins is exported.
+//
+// components supplies the metadata (licenses, types, hashes) the trees do not
+// carry, keyed by component id. A component missing from it is emitted with
+// just its purl.
+//
+// Note that flattening several SBOMs into one document does merge their
+// dependency edges - CycloneDX has no way to say "these two sources disagree".
+// The storage keeps them apart; only this export view combines them.
+func (f MerkleForest) ToCycloneDX(metadata BOMMetadata, components map[string]cdx.Component) *cdx.BOM {
 	rootName := metadata.rootName()
 	rootPURL := ""
 	if p, err := packageurl.FromString(rootName); err == nil {
@@ -166,7 +186,7 @@ func (t *MerkleTree) ToCycloneDX(metadata BOMMetadata, components map[string]cdx
 	}
 
 	emitted := []cdx.Component{}
-	for _, id := range t.ComponentIDs() {
+	for _, id := range f.ComponentIDs() {
 		if comp, ok := components[id]; ok {
 			emitted = append(emitted, comp)
 			continue
@@ -179,27 +199,28 @@ func (t *MerkleTree) ToCycloneDX(metadata BOMMetadata, components map[string]cdx
 		})
 	}
 
-	rootComponent := cdx.Component{
+	emitted = append(emitted, cdx.Component{
 		BOMRef:     rootName,
 		Name:       rootName,
 		Type:       cdx.ComponentTypeApplication,
 		PackageURL: rootPURL,
-	}
-	emitted = append(emitted, rootComponent)
+	})
 
 	depMap := map[string][]string{rootName: {}}
-	for node := range t.MerkleNodes() {
-		parent := node.ComponentID
-		if node.SubtreeHash == t.Root {
-			parent = rootName
-		}
-		for _, childHash := range node.Children {
-			child := t.Node(childHash)
-			if child == nil || child.ComponentID == parent {
-				continue
+	for _, t := range f {
+		for node := range t.MerkleNodes() {
+			parent := node.ComponentID
+			if node.SubtreeHash == t.Root {
+				parent = rootName
 			}
-			if !slices.Contains(depMap[parent], child.ComponentID) {
-				depMap[parent] = append(depMap[parent], child.ComponentID)
+			for _, childHash := range node.Children {
+				child := t.Node(childHash)
+				if child == nil || child.ComponentID == parent {
+					continue
+				}
+				if !slices.Contains(depMap[parent], child.ComponentID) {
+					depMap[parent] = append(depMap[parent], child.ComponentID)
+				}
 			}
 		}
 	}
@@ -280,9 +301,21 @@ func validateCycloneDXComponent(comp cdx.Component) error {
 	return nil
 }
 
-// sanitizeCycloneDXComponent drops invalid hashes and external reference types
-// rather than rejecting the whole document over them.
+// sanitizeCycloneDXComponent drops invalid hashes and external reference types,
+// and repairs the purl and component type, rather than rejecting the whole
+// document over them.
 func sanitizeCycloneDXComponent(comp cdx.Component) cdx.Component {
+	if comp.PackageURL != "" {
+		// unescape URL-encoded characters (%2B -> +) so the id matches what is
+		// stored, and what an unescaped purl from another source hashes to
+		if unescaped, err := url.PathUnescape(comp.PackageURL); err == nil {
+			comp.PackageURL = unescaped
+		}
+	}
+
+	// an invalid type would fail CycloneDX schema validation on export
+	comp.Type = sanitizeComponentType(comp.Type)
+
 	if comp.Hashes != nil {
 		valid := []cdx.Hash{}
 		for _, hash := range *comp.Hashes {
@@ -316,11 +349,7 @@ func sanitizeCycloneDXComponent(comp cdx.Component) cdx.Component {
 // child refs map. When the document declares no dependencies for the root, every
 // component that is nobody's child becomes a direct dependency.
 func buildMerkleDependencyMap(bom *cdx.BOM, rootRef string, componentIDs map[string]string) map[string][]string {
-	known := make(map[string]*GraphNode, len(componentIDs))
-	for ref := range componentIDs {
-		known[ref] = &GraphNode{BOMRef: ref}
-	}
-	children := buildFilteredDependencyMap(bom.Dependencies, known, rootRef)
+	children := filterDependencies(bom.Dependencies, componentIDs, rootRef)
 
 	if len(children[rootRef]) == 0 && bom.Components != nil {
 		isChild := map[string]bool{}
@@ -336,6 +365,44 @@ func buildMerkleDependencyMap(bom *cdx.BOM, rootRef string, componentIDs map[str
 		}
 	}
 	return children
+}
+
+// filterDependencies reads the document's dependency list into a ref -> child
+// refs map, dropping references to components the document never defines.
+//
+// An undefined ref is kept when it is itself a dependency parent: CycloneDX
+// documents use those as synthetic grouping nodes, and pruneUnidentifiableRefs
+// flattens them afterwards. Only dangling leaves are dropped.
+func filterDependencies(dependencies *[]cdx.Dependency, knownRefs map[string]string, rootRef string) map[string][]string {
+	filtered := map[string][]string{}
+	if dependencies == nil {
+		return filtered
+	}
+
+	declared := make(map[string][]string, len(*dependencies))
+	for _, dep := range *dependencies {
+		if dep.Dependencies != nil {
+			declared[dep.Ref] = *dep.Dependencies
+		}
+	}
+
+	for parent, children := range declared {
+		kept := make([]string, 0, len(children))
+		for _, child := range children {
+			if child == "" {
+				continue // malformed document
+			}
+			_, defined := knownRefs[child]
+			_, isSyntheticParent := declared[child]
+			if child == rootRef || defined || isSyntheticParent {
+				kept = append(kept, child)
+				continue
+			}
+			slog.Warn("dropping dependency reference to undefined component", "parentRef", parent, "childRef", child)
+		}
+		filtered[parent] = kept
+	}
+	return filtered
 }
 
 // pruneUnidentifiableRefs removes refs whose component id is not a package purl,

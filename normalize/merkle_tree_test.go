@@ -3,6 +3,7 @@ package normalize
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,9 +17,9 @@ func adjacency(children map[string][]string) Adjacency {
 func edgeKey(e MerkleEdge) [3]string {
 	child := "NULL"
 	if e.DirectDependencySubtreeHash != nil {
-		child = *e.DirectDependencySubtreeHash
+		child = e.DirectDependencySubtreeHash.String()
 	}
-	return [3]string{e.SubtreeHash, e.ComponentID, child}
+	return [3]string{e.SubtreeHash.String(), e.ComponentID, child}
 }
 
 func edgeSet(edges []MerkleEdge) map[[3]string]struct{} {
@@ -193,7 +194,7 @@ func TestMerkleTreeRoundTrip(t *testing.T) {
 			"src": {"pkg:npm/a@1.0.0"},
 		}), "src", "my-app")
 
-		_, err := MerkleTreeFromEdges(tree.Edges(), "not-a-stored-hash")
+		_, err := MerkleTreeFromEdges(tree.Edges(), uuid.New())
 		require.Error(t, err)
 	})
 
@@ -224,5 +225,55 @@ func TestMerkleTreeAccessors(t *testing.T) {
 
 	t.Run("DirectDependencies returns only the SBOM's own dependencies", func(t *testing.T) {
 		assert.Equal(t, []string{"pkg:npm/a@1.0.0", "pkg:npm/d@1.0.0"}, tree.DirectDependencies())
+	})
+}
+
+func TestMerkleForest(t *testing.T) {
+	// two origins of one artifact that disagree about what b depends on
+	npm := buildTree(map[string][]string{
+		merkleParseRoot:   {"pkg:npm/a@1.0.0"},
+		"pkg:npm/a@1.0.0": {"pkg:npm/shared@1.0.0"},
+	}, "my-app")
+	golang := buildTree(map[string][]string{
+		merkleParseRoot:      {"pkg:golang/x@1.0.0"},
+		"pkg:golang/x@1.0.0": {"pkg:npm/shared@1.0.0"},
+	}, "my-app")
+	forest := MerkleForest{npm, golang}
+
+	t.Run("components are unioned across SBOMs", func(t *testing.T) {
+		assert.Equal(t, []string{
+			"pkg:golang/x@1.0.0", "pkg:npm/a@1.0.0", "pkg:npm/shared@1.0.0",
+		}, forest.ComponentIDs())
+	})
+
+	t.Run("a component reported by two SBOMs is flagged as shared", func(t *testing.T) {
+		assert.Equal(t, []string{"pkg:npm/shared@1.0.0"}, forest.ComponentsInMultipleSBOMs())
+	})
+
+	t.Run("paths from every SBOM are reported, so neither source is lost", func(t *testing.T) {
+		paths := forest.PathsToPURL("pkg:npm/shared@1.0.0", 0)
+
+		assert.Equal(t, []string{
+			"pkg:npm/a@1.0.0,pkg:npm/shared@1.0.0",
+			"pkg:golang/x@1.0.0,pkg:npm/shared@1.0.0",
+		}, pathStrings(paths))
+	})
+
+	t.Run("identical paths in two SBOMs are reported once", func(t *testing.T) {
+		duplicate := MerkleForest{npm, npm}
+
+		assert.Len(t, duplicate.PathsToPURL("pkg:npm/shared@1.0.0", 0), 1)
+	})
+
+	t.Run("a limit caps the total across SBOMs", func(t *testing.T) {
+		assert.Len(t, forest.PathsToPURL("pkg:npm/shared@1.0.0", 1), 1)
+	})
+
+	t.Run("an empty forest yields nothing", func(t *testing.T) {
+		empty := MerkleForest{}
+
+		assert.Empty(t, empty.ComponentIDs())
+		assert.Empty(t, empty.PathsToPURL("pkg:npm/anything@1.0.0", 0))
+		assert.Empty(t, empty.ComponentsInMultipleSBOMs())
 	})
 }

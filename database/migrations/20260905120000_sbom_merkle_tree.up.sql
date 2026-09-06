@@ -23,20 +23,23 @@
 -- while agreeing artifacts collide on the primary key and are stored once -
 -- across the whole instance.
 
+-- Hashes are UUID: the leading 128 bits of the sha256, matching how
+-- utils.HashToUUID already derives identity elsewhere. Fixed-width and half the
+-- size of the raw digest, where hex TEXT would be four times the size.
 CREATE TABLE IF NOT EXISTS public.sbom_merkle_edges (
-    subtree_hash                   TEXT NOT NULL,
+    subtree_hash                   UUID NOT NULL,
     component_id                   TEXT NOT NULL,
     -- NULL marks a leaf. The row still exists so the leaf's component id stays
     -- resolvable from its subtree hash: a leaf has no outgoing edge to carry it.
-    direct_dependency_subtree_hash TEXT,
+    direct_dependency_subtree_hash UUID,
+    -- component_id is deliberately NOT part of the key: the hash already covers
+    -- it, so two component ids under one subtree hash would be a sha256
+    -- collision. Including it only widened the index by a purl per row.
     -- NULLS NOT DISTINCT so a leaf row can only be inserted once (PG15+).
     CONSTRAINT sbom_merkle_edges_unique
-        UNIQUE NULLS NOT DISTINCT (subtree_hash, component_id, direct_dependency_subtree_hash)
+        UNIQUE NULLS NOT DISTINCT (subtree_hash, direct_dependency_subtree_hash)
 );
 
--- downward traversal (SBOM root -> components) and child-set lookup
-CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_subtree
-    ON public.sbom_merkle_edges (subtree_hash);
 
 -- upward traversal (vulnerable purl -> affected SBOMs)
 CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_child
@@ -46,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_child
 CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_component
     ON public.sbom_merkle_edges (component_id);
 
--- One row per asset version + artifact + SBOM origin, pointing at the root of
+-- One row per asset version + artifact + SBOM source, pointing at the root of
 -- that SBOM's tree. Replaces the synthetic `artifact:` / `sbom:` nodes that used
 -- to be stored as component_dependencies rows, and doubles as the stop
 -- condition for the upward walk, which is why no ROOT sentinel is needed.
@@ -55,13 +58,13 @@ CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_component
 -- non-unique by design (a component with n children has n rows), so it cannot
 -- be a foreign key target.
 CREATE TABLE IF NOT EXISTS public.sboms (
-    root_subtree_hash  TEXT NOT NULL,
+    root_subtree_hash  UUID NOT NULL,
     artifact_name      TEXT NOT NULL,
     asset_version_name TEXT NOT NULL,
     asset_id           UUID NOT NULL,
-    origin             TEXT NOT NULL,
+    source             TEXT NOT NULL,
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (root_subtree_hash, artifact_name, asset_version_name, asset_id, origin),
+    PRIMARY KEY (root_subtree_hash, artifact_name, asset_version_name, asset_id, source),
     CONSTRAINT fk_sboms_asset_version
         FOREIGN KEY (asset_version_name, asset_id)
         REFERENCES public.asset_versions (name, asset_id) ON DELETE CASCADE

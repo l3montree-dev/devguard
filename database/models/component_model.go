@@ -93,9 +93,9 @@ type ComponentDependency struct {
 // that row is what keeps a leaf's purl resolvable, since a leaf has no outgoing
 // edges to carry it otherwise.
 type SBOMMerkleEdge struct {
-	SubtreeHash                 string  `json:"subtreeHash" gorm:"column:subtree_hash;primaryKey"`
-	ComponentID                 string  `json:"componentPurl" gorm:"column:component_id;index:component_idx;primaryKey"`
-	DirectDependencySubtreeHash *string `json:"directDependencySubtreeHash" gorm:"column:direct_dependency_subtree_hash;primaryKey"`
+	SubtreeHash                 uuid.UUID  `json:"subtreeHash" gorm:"column:subtree_hash;type:uuid;primaryKey"`
+	ComponentID                 string     `json:"componentPurl" gorm:"column:component_id;index:component_idx"`
+	DirectDependencySubtreeHash *uuid.UUID `json:"directDependencySubtreeHash" gorm:"column:direct_dependency_subtree_hash;type:uuid;primaryKey"`
 
 	Component Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
 }
@@ -104,15 +104,15 @@ type SBOMMerkleEdge struct {
 // the entry point for every downward traversal. It also terminates the upward
 // traversal: a subtree hash that joins against this table has reached a root.
 //
-// Origin is the source identity as configured by the user (e.g. an upstream
+// Source is the source identity as configured by the user (e.g. an upstream
 // SBOM URL), so re-ingesting the same source replaces its row rather than
 // accumulating one per content revision.
 type SBOM struct {
-	RootSubtreeHash  string    `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;primaryKey;"`
+	RootSubtreeHash  uuid.UUID `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;type:uuid;primaryKey;"`
 	ArtifactName     string    `json:"artifactName" gorm:"column:artifact_name;primaryKey"`
 	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;primaryKey"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;primaryKey;type:uuid;"`
-	Origin           string    `json:"origin" gorm:"column:origin;primaryKey"`
+	Source           string    `json:"source" gorm:"column:source;primaryKey"`
 	UpdatedAt        time.Time `json:"updatedAt" gorm:"column:updated_at"`
 
 	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`

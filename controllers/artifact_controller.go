@@ -149,18 +149,17 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		return ctx.JSON(400, invalid)
 	}
 
-	// merge all boms
-	newGraph := normalize.NewSBOMGraph()
-	for _, bom := range boms {
-		newGraph.MergeGraph(bom) // we dont care for the diff
-	}
-
-	bom, err := c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact.ArtifactName, newGraph)
-
-	if err != nil {
-		tx.Rollback()
-		slog.Error("could not update sbom", "err", err)
-		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+	// each information source is stored as its own SBOM, so sources that
+	// disagree about a shared component both keep their account of it
+	var bom normalize.MerkleForest
+	for _, upstream := range boms {
+		var err error
+		bom, err = c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM)
+		if err != nil {
+			tx.Rollback()
+			slog.Error("could not update sbom", "err", err, "origin", upstream.Source)
+			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+		}
 	}
 	currentOwnerID := shared.GetSession(ctx).GetActorName()
 
@@ -192,9 +191,14 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		c.FireAndForget(func() {
 			// Export the updated graph back to CycloneDX format for the event
+			metadata, metaErr := c.assetVersionService.LoadComponentMetadata(linkedCtx, nil, assetVersion, bom)
+			if metaErr != nil {
+				slog.Error("could not load component metadata for sbom event", "err", metaErr)
+				return
+			}
 			exportedBOM := bom.ToCycloneDX(normalize.BOMMetadata{
 				RootName: artifact.ArtifactName,
-			})
+			}, metadata)
 			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
@@ -330,48 +334,49 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return err
 	}
 
-	oldSources, err := c.componentService.FetchInformationSources(reqCtx, nil, &artifact)
+	oldSBOMs, err := c.assetVersionService.ListSBOMs(reqCtx, nil, assetVersion, artifactName)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not fetch artifact root nodes").WithInternal(err)
+		return echo.NewHTTPError(500, "could not fetch artifact information sources").WithInternal(err)
 	}
+	oldSources := utils.Map(oldSBOMs, func(s models.SBOM) string { return s.Source })
 
-	comparison := utils.CompareSlices(utils.Map(body.InformationSources, informationSourceToString), utils.Map(oldSources, func(el models.ComponentDependency) string {
-		return el.DependencyID
-	}), func(e string) string { return e })
+	comparison := utils.CompareSlices(utils.Map(body.InformationSources, informationSourceToString), oldSources,
+		func(e string) string { return e })
 
 	toAdd := comparison.OnlyInA
 	toDelete := comparison.OnlyInB
 
-	// we just need to remove those root nodes.
-	if err := c.componentService.RemoveInformationSources(reqCtx, nil, &artifact, toDelete); err != nil {
-		return echo.NewHTTPError(500, "could not remove root nodes").WithInternal(err)
+	// dropping a source removes its SBOM; the subtrees it referenced stay for
+	// the garbage collector, since other SBOMs may still share them
+	for _, origin := range toDelete {
+		if err := c.assetVersionService.DeleteSBOMSource(reqCtx, nil, assetVersion, artifactName, origin); err != nil {
+			return echo.NewHTTPError(500, "could not remove information source").WithInternal(err)
+		}
 	}
 
-	// make sure we remove the prefix before fetching the sbom
-	toAddUrls := utils.Map(toAdd, func(e string) string {
-		_, u := normalize.RemoveInformationSourcePrefixIfExists(e)
-		return u
-	})
+	// sources are now stored as plain strings (an upstream source is just its URL)
+	toAddUrls := toAdd
 
 	//check if the upstream urls are valid urls
 	boms, _, invalidURLs := services.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls)
 	var vulns []models.DependencyVuln
 
-	graph := normalize.NewSBOMGraph()
-	for _, bom := range boms {
-		graph.MergeGraph(bom)
-	}
-
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	// make sure that we at least update the sbom once if there were deletions
-	// updating with nil, will just renormalize the sbom and remove all components which are not
-	// reachable anymore from the root nodes - we might have removed some root nodes above
-	sbom, err := c.assetVersionService.UpdateSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact.ArtifactName, graph)
+	// each newly configured source is stored as its own SBOM
+	for _, upstream := range boms {
+		if _, err := c.assetVersionService.UpdateSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
+			slog.Error("could not update sbom", "err", err, "origin", upstream.Source)
+			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+		}
+	}
+
+	// reload even when nothing was added: sources may have been removed above
+	sbom, err := c.assetVersionService.LoadArtifactSBOMs(reqCtx, tx, assetVersion, artifact.ArtifactName)
 	if err != nil {
-		slog.Error("could not update sbom", "err", err)
-		return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
+		slog.Error("could not load sboms", "err", err)
+		return echo.NewHTTPError(500, "could not load sboms").WithInternal(err)
 	}
 
 	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetActorName(), &userAgent)
@@ -397,9 +402,14 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		c.FireAndForget(func() {
 			// Export the updated graph back to CycloneDX format for the event
+			metadata, metaErr := c.assetVersionService.LoadComponentMetadata(linkedCtx, nil, assetVersion, sbom)
+			if metaErr != nil {
+				slog.Error("could not load component metadata for sbom event", "err", metaErr)
+				return
+			}
 			exportedBOM := sbom.ToCycloneDX(normalize.BOMMetadata{
 				RootName: artifactName,
-			})
+			}, metadata)
 			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
 				AssetVersion: shared.ToAssetVersionObject(assetVersion),
 				Asset:        shared.ToAssetObject(asset),
@@ -456,22 +466,22 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
+	artifact := shared.GetArtifact(ctx)
+	sbom, err := c.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, assetVersion, artifact.ArtifactName)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
 	}
 
-	// scope to artifact
-	artifact := shared.GetArtifact(ctx)
-	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
-		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+	componentMetadata, err := c.assetVersionService.LoadComponentMetadata(ctx.Request().Context(), nil, assetVersion, sbom)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not load component metadata").WithInternal(err)
 	}
 
 	ctx.Response().Header().Set("Content-Type", "application/json")
 
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).SetPretty(true).SetEscapeHTML(false)
 
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
 }
 
 // @Summary Get SBOM in XML format
@@ -489,18 +499,18 @@ func (c *ArtifactController) SBOMJSON(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.xml/ [get]
 func (c *ArtifactController) SBOMXML(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
-	if err != nil {
-		return err
-	}
-	// scope to artifact
 	artifact := shared.GetArtifact(ctx)
-	if err := sbom.ScopeToArtifact(artifact.ArtifactName); err != nil {
+	sbom, err := c.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, assetVersion, artifact.ArtifactName)
+	if err != nil {
 		return echo.NewHTTPError(500, "could not scope sbom to artifact").WithInternal(err)
+	}
+	componentMetadata, err := c.assetVersionService.LoadComponentMetadata(ctx.Request().Context(), nil, assetVersion, sbom)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not load component metadata").WithInternal(err)
 	}
 	ctx.Response().Header().Set("Content-Type", "application/xml")
 	encoder := cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).SetPretty(true).SetEscapeHTML(false)
-	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	return encoder.Encode(sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
 }
 
 // @Summary Get VEX in XML format
@@ -871,16 +881,21 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/sbom.pdf/ [get]
 func (c *ArtifactController) BuildPDFFromSBOM(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	sbom, err := c.assetVersionService.LoadFullSBOMGraph(ctx.Request().Context(), nil, assetVersion)
+	sbom, err := c.assetVersionService.LoadAssetVersionSBOMs(ctx.Request().Context(), nil, assetVersion)
 	if err != nil {
 		return err
 	}
 
 	asset := shared.GetAsset(ctx)
 
+	componentMetadata, err := c.assetVersionService.LoadComponentMetadata(ctx.Request().Context(), nil, assetVersion, sbom)
+	if err != nil {
+		return err
+	}
+
 	//write the components as markdown table to the buffer
 	markdownFile := bytes.Buffer{}
-	err = services.MarkdownTableFromSBOM(&markdownFile, sbom.ToCycloneDX(ctxToBOMMetadata(ctx)))
+	err = services.MarkdownTableFromSBOM(&markdownFile, sbom.ToCycloneDX(ctxToBOMMetadata(ctx), componentMetadata))
 	if err != nil {
 		return err
 	}

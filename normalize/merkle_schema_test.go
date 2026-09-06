@@ -77,183 +77,119 @@ func validateBOMAgainstSchema(t *testing.T, bom *cdx.BOM, schema *jsonschema.Sch
 	assert.NoError(t, err, "BOM validation against CycloneDX schema failed")
 }
 
+// components builds a components map keyed by PackageURL, as ToCycloneDX
+// expects, from a plain list.
+func components(comps ...cdx.Component) map[string]cdx.Component {
+	out := make(map[string]cdx.Component, len(comps))
+	for _, c := range comps {
+		out[c.PackageURL] = c
+	}
+	return out
+}
+
 func TestCycloneDXSchemaValidation(t *testing.T) {
 	schema := compileSchema(t)
 
-	t.Run("empty graph produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+	t.Run("empty tree produces valid CycloneDX", func(t *testing.T) {
+		tree := buildTree(map[string][]string{}, "my-app")
 
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
-		})
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, nil)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
 	t.Run("single component produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/lodash@4.17.21"},
+		}, "my-app")
 
-		comp := cdx.Component{
+		comps := components(cdx.Component{
 			BOMRef:     "pkg:npm/lodash@4.17.21",
 			Name:       "lodash",
 			Version:    "4.17.21",
 			PackageURL: "pkg:npm/lodash@4.17.21",
 			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
-
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
 		})
+
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
 	t.Run("multiple components with dependencies produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot:              {"pkg:npm/express@4.18.2"},
+			"pkg:npm/express@4.18.2":     {"pkg:npm/body-parser@1.20.2"},
+			"pkg:npm/body-parser@1.20.2": {"pkg:npm/bytes@3.1.2"},
+		}, "my-app")
 
-		compA := cdx.Component{
-			BOMRef:     "pkg:npm/express@4.18.2",
-			Name:       "express",
-			Version:    "4.18.2",
-			PackageURL: "pkg:npm/express@4.18.2",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compB := cdx.Component{
-			BOMRef:     "pkg:npm/body-parser@1.20.2",
-			Name:       "body-parser",
-			Version:    "1.20.2",
-			PackageURL: "pkg:npm/body-parser@1.20.2",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compC := cdx.Component{
-			BOMRef:     "pkg:npm/bytes@3.1.2",
-			Name:       "bytes",
-			Version:    "3.1.2",
-			PackageURL: "pkg:npm/bytes@3.1.2",
-			Type:       cdx.ComponentTypeLibrary,
-		}
+		comps := components(
+			cdx.Component{BOMRef: "pkg:npm/express@4.18.2", Name: "express", Version: "4.18.2", PackageURL: "pkg:npm/express@4.18.2", Type: cdx.ComponentTypeLibrary},
+			cdx.Component{BOMRef: "pkg:npm/body-parser@1.20.2", Name: "body-parser", Version: "1.20.2", PackageURL: "pkg:npm/body-parser@1.20.2", Type: cdx.ComponentTypeLibrary},
+			cdx.Component{BOMRef: "pkg:npm/bytes@3.1.2", Name: "bytes", Version: "3.1.2", PackageURL: "pkg:npm/bytes@3.1.2", Type: cdx.ComponentTypeLibrary},
+		)
 
-		idA := g.AddComponent(compA)
-		idB := g.AddComponent(compB)
-		idC := g.AddComponent(compC)
-
-		g.AddEdge(infoSourceID, idA)
-		g.AddEdge(idA, idB)
-		g.AddEdge(idB, idC)
-
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
-		})
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
 	t.Run("diamond dependency pattern produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot:   {"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0"},
+			"pkg:npm/a@1.0.0": {"pkg:npm/c@3.0.0"},
+			"pkg:npm/b@2.0.0": {"pkg:npm/c@3.0.0"},
+		}, "my-app")
 
-		compA := cdx.Component{
-			BOMRef:     "pkg:npm/a@1.0.0",
-			Name:       "a",
-			Version:    "1.0.0",
-			PackageURL: "pkg:npm/a@1.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compB := cdx.Component{
-			BOMRef:     "pkg:npm/b@2.0.0",
-			Name:       "b",
-			Version:    "2.0.0",
-			PackageURL: "pkg:npm/b@2.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compC := cdx.Component{
-			BOMRef:     "pkg:npm/c@3.0.0",
-			Name:       "c",
-			Version:    "3.0.0",
-			PackageURL: "pkg:npm/c@3.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
+		comps := components(
+			cdx.Component{BOMRef: "pkg:npm/a@1.0.0", Name: "a", Version: "1.0.0", PackageURL: "pkg:npm/a@1.0.0", Type: cdx.ComponentTypeLibrary},
+			cdx.Component{BOMRef: "pkg:npm/b@2.0.0", Name: "b", Version: "2.0.0", PackageURL: "pkg:npm/b@2.0.0", Type: cdx.ComponentTypeLibrary},
+			cdx.Component{BOMRef: "pkg:npm/c@3.0.0", Name: "c", Version: "3.0.0", PackageURL: "pkg:npm/c@3.0.0", Type: cdx.ComponentTypeLibrary},
+		)
 
-		idA := g.AddComponent(compA)
-		idB := g.AddComponent(compB)
-		idC := g.AddComponent(compC)
-
-		// Diamond: root -> A, root -> B, A -> C, B -> C
-		g.AddEdge(infoSourceID, idA)
-		g.AddEdge(infoSourceID, idB)
-		g.AddEdge(idA, idC)
-		g.AddEdge(idB, idC)
-
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
-		})
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
 	t.Run("components with licenses produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/lodash@4.17.21"},
+		}, "my-app")
 
-		licenses := cdx.Licenses{
-			{License: &cdx.License{ID: "MIT"}},
-		}
-		comp := cdx.Component{
+		licenses := cdx.Licenses{{License: &cdx.License{ID: "MIT"}}}
+		comps := components(cdx.Component{
 			BOMRef:     "pkg:npm/lodash@4.17.21",
 			Name:       "lodash",
 			Version:    "4.17.21",
 			PackageURL: "pkg:npm/lodash@4.17.21",
 			Type:       cdx.ComponentTypeLibrary,
 			Licenses:   &licenses,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
-
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
 		})
+
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
 	t.Run("components with hashes produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/lodash@4.17.21"},
+		}, "my-app")
 
 		hashes := []cdx.Hash{
 			{Algorithm: cdx.HashAlgoSHA256, Value: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		}
-		comp := cdx.Component{
+		comps := components(cdx.Component{
 			BOMRef:     "pkg:npm/lodash@4.17.21",
 			Name:       "lodash",
 			Version:    "4.17.21",
 			PackageURL: "pkg:npm/lodash@4.17.21",
 			Type:       cdx.ComponentTypeLibrary,
 			Hashes:     &hashes,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
-
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
 		})
+
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
@@ -261,11 +197,8 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 	t.Run("VEX with vulnerabilities produces valid CycloneDX", func(t *testing.T) {
 		affects := []cdx.Affects{{Ref: "pkg:npm/lodash@4.17.20"}}
 		vuln := cdx.Vulnerability{
-			ID: "CVE-2021-23337",
-			Source: &cdx.Source{
-				Name: "NVD",
-				URL:  "https://nvd.nist.gov/vuln/detail/CVE-2021-23337",
-			},
+			ID:      "CVE-2021-23337",
+			Source:  &cdx.Source{Name: "NVD", URL: "https://nvd.nist.gov/vuln/detail/CVE-2021-23337"},
 			Affects: &affects,
 		}
 
@@ -289,11 +222,8 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 			},
 		}
 		vuln := cdx.Vulnerability{
-			ID: "CVE-2021-23337",
-			Source: &cdx.Source{
-				Name: "NVD",
-				URL:  "https://nvd.nist.gov/vuln/detail/CVE-2021-23337",
-			},
+			ID:      "CVE-2021-23337",
+			Source:  &cdx.Source{Name: "NVD", URL: "https://nvd.nist.gov/vuln/detail/CVE-2021-23337"},
 			Affects: &affects,
 			Ratings: &ratings,
 		}
@@ -307,100 +237,64 @@ func TestCycloneDXSchemaValidation(t *testing.T) {
 	})
 
 	t.Run("BOM with PURL root name produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("pkg:devguard/org/project/asset@main")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/lodash@4.17.21"},
+		}, "pkg:devguard/org/project/asset@main")
 
-		comp := cdx.Component{
+		comps := components(cdx.Component{
 			BOMRef:     "pkg:npm/lodash@4.17.21",
 			Name:       "lodash",
 			Version:    "4.17.21",
 			PackageURL: "pkg:npm/lodash@4.17.21",
 			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
+		})
 
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := tree.ToCycloneDX(BOMMetadata{
 			RootName:     "pkg:devguard/org/project/asset@main",
 			ArtifactName: "pkg:devguard/org/project/asset@main",
-		})
+		}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
-	t.Run("complex graph with multiple artifacts produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
+	t.Run("complex forest with multiple artifacts produces valid CycloneDX", func(t *testing.T) {
+		frontend := buildTree(map[string][]string{
+			merkleParseRoot:            {"pkg:npm/react@18.2.0", "pkg:npm/react-dom@18.2.0"},
+			"pkg:npm/react-dom@18.2.0": {"pkg:npm/react@18.2.0"},
+		}, "frontend")
+		backend := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:golang/github.com/gin-gonic/gin@v1.9.1"},
+		}, "backend")
 
-		// Create first artifact with its dependencies
-		artifact1ID := g.AddArtifact("frontend")
-		infoSource1ID := g.AddInfoSource(artifact1ID, "npm-audit", InfoSourceSBOM)
+		comps := components(
+			cdx.Component{BOMRef: "pkg:npm/react@18.2.0", Name: "react", Version: "18.2.0", PackageURL: "pkg:npm/react@18.2.0", Type: cdx.ComponentTypeLibrary},
+			cdx.Component{BOMRef: "pkg:npm/react-dom@18.2.0", Name: "react-dom", Version: "18.2.0", PackageURL: "pkg:npm/react-dom@18.2.0", Type: cdx.ComponentTypeLibrary},
+			cdx.Component{BOMRef: "pkg:golang/github.com/gin-gonic/gin@v1.9.1", Name: "github.com/gin-gonic/gin", Version: "v1.9.1", PackageURL: "pkg:golang/github.com/gin-gonic/gin@v1.9.1", Type: cdx.ComponentTypeLibrary},
+		)
 
-		compReact := cdx.Component{
-			BOMRef:     "pkg:npm/react@18.2.0",
-			Name:       "react",
-			Version:    "18.2.0",
-			PackageURL: "pkg:npm/react@18.2.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compReactDOM := cdx.Component{
-			BOMRef:     "pkg:npm/react-dom@18.2.0",
-			Name:       "react-dom",
-			Version:    "18.2.0",
-			PackageURL: "pkg:npm/react-dom@18.2.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-
-		idReact := g.AddComponent(compReact)
-		idReactDOM := g.AddComponent(compReactDOM)
-
-		g.AddEdge(infoSource1ID, idReact)
-		g.AddEdge(infoSource1ID, idReactDOM)
-		g.AddEdge(idReactDOM, idReact) // react-dom depends on react
-
-		// Create second artifact
-		artifact2ID := g.AddArtifact("backend")
-		infoSource2ID := g.AddInfoSource(artifact2ID, "go-mod", InfoSourceSBOM)
-
-		compGin := cdx.Component{
-			BOMRef:     "pkg:golang/github.com/gin-gonic/gin@v1.9.1",
-			Name:       "github.com/gin-gonic/gin",
-			Version:    "v1.9.1",
-			PackageURL: "pkg:golang/github.com/gin-gonic/gin@v1.9.1",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-
-		idGin := g.AddComponent(compGin)
-		g.AddEdge(infoSource2ID, idGin)
-
-		bom := g.ToCycloneDX(BOMMetadata{
+		bom := MerkleForest{frontend, backend}.ToCycloneDX(BOMMetadata{
 			RootName:     "my-monorepo",
 			ArtifactName: "my-monorepo",
-		})
+		}, comps)
 
 		validateBOMAgainstSchema(t, bom, schema)
 	})
 
 	t.Run("BOM round-trip produces valid CycloneDX", func(t *testing.T) {
-		g := NewSBOMGraph()
-		artifactID := g.AddArtifact("my-app")
-		infoSourceID := g.AddInfoSource(artifactID, "trivy", InfoSourceSBOM)
+		tree := buildTree(map[string][]string{
+			merkleParseRoot: {"pkg:npm/express@4.18.2"},
+		}, "my-app")
 
-		comp := cdx.Component{
+		comps := components(cdx.Component{
 			BOMRef:     "pkg:npm/express@4.18.2",
 			Name:       "express",
 			Version:    "4.18.2",
 			PackageURL: "pkg:npm/express@4.18.2",
 			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := g.AddComponent(comp)
-		g.AddEdge(infoSourceID, compID)
+		})
 
 		// Generate BOM
-		bom := g.ToCycloneDX(BOMMetadata{
-			RootName:     "my-app",
-			ArtifactName: "my-app",
-		})
+		bom := tree.ToCycloneDX(BOMMetadata{RootName: "my-app", ArtifactName: "my-app"}, comps)
 
 		// Encode to JSON
 		var buf bytes.Buffer

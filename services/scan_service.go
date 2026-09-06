@@ -105,7 +105,7 @@ func NewScanService(
 
 var _ shared.ScanService = &scanService{}
 
-func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	ctx, span := servicesTracer.Start(ctx, "scanService.ScanNormalizedSBOM")
 	defer span.End()
 
@@ -115,23 +115,15 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		attribute.String("assetVersion.name", assetVersion.Name),
 	)
 
-	// remove all other artifacts from the bom
-	err := normalizedBom.ScopeToArtifact(artifact.ArtifactName)
-	if err != nil {
-		// If artifact node is not reachable, it means the artifact has no components (empty artifact)
-		// This is a valid scenario, so we return early with no vulnerabilities
-		if errors.Is(err, normalize.ErrNodeNotReachable) {
-			slog.Debug("artifact has no components, skipping scan", "artifactName", artifact.ArtifactName)
-			return nil, nil, nil, nil
-		}
-		slog.Error("could not scope bom to artifact", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, nil, nil, err
+	// no scoping step: a forest is already this artifact's SBOMs. An artifact
+	// with no components simply has nothing to scan.
+	if len(forest) == 0 {
+		slog.Debug("artifact has no sboms, skipping scan", "artifactName", artifact.ArtifactName)
+		return nil, nil, nil, nil
 	}
 
 	scanCtx, scanSpan := servicesTracer.Start(ctx, "SBOMScanner.Scan")
-	vulns, err := s.sbomScanner.Scan(scanCtx, normalizedBom)
+	vulns, err := s.sbomScanner.Scan(scanCtx, forest)
 	scanSpan.SetAttributes(attribute.Int("vulns.found", len(vulns)))
 	scanSpan.End()
 
@@ -144,7 +136,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 
 	// handle the scan result
 	resultCtx, resultSpan := servicesTracer.Start(ctx, "scanService.HandleScanResult")
-	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID, userAgent)
+	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, forest, vulns, artifact.ArtifactName, userID, userAgent)
 	resultSpan.End()
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
@@ -443,7 +435,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 	ctx, span := servicesTracer.Start(ctx, "scanService.HandleScanResult")
 	defer span.End()
 	span.SetAttributes(
@@ -453,19 +445,14 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		attribute.Int("scan.input_vuln_count", len(vulns)),
 	)
 
-	// scope the sbom to the current artifact only
-	err = sbom.ScopeToArtifact(artifactName)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not scope sbom to artifact")
-	}
+	// no scoping needed - the forest is already this artifact's SBOMs
+
 	// create dependencyVulns out of those vulnerabilities - one per unique path
 	// Pre-allocate with estimated capacity (assume ~2 paths per vuln on average)
 	dependencyVulns := make([]models.DependencyVuln, 0, len(vulns)*2)
 
 	for _, vuln := range vulns {
-		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, sbom, asset.ID, assetVersion.Name, artifactName)...)
+		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, forest, asset.ID, assetVersion.Name, artifactName)...)
 		if len(dependencyVulns) > 10000 {
 			// unique those
 			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
@@ -478,7 +465,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.handleScanResult(ctx, tx, userID, userAgent, artifactName, assetVersion, sbom, dependencyVulns, asset)
+	opened, closed, newState, err = s.handleScanResult(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -525,7 +512,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	return opened, closed, newState, nil
 }
 
-func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -549,7 +536,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
-	unfixablePurls := sbom.ComponentsWithMultipleSources()
+	unfixablePurls := forest.ComponentsInMultipleSBOMs()
 	filterPredicate := func(dv models.DependencyVuln) bool {
 		return !slices.Contains(unfixablePurls, dv.ComponentPurl)
 	}
@@ -610,7 +597,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []normalize.SBOMSource, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -673,7 +660,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 
 		// Only process SBOMs (not VEX)
 		if normalize.BomIsSBOM(&bom) {
-			normalizedBOM, err := normalize.SBOMGraphFromCycloneDX(&bom, artifactName, url)
+			parsed, err := normalize.MerkleTreeFromCycloneDX(&bom, artifactName)
 			if err != nil {
 				slog.Warn("could not normalize sbom from url", "err", err, "url", url)
 				invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
@@ -684,8 +671,7 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 			}
 
 			validURLs = append(validURLs, url)
-			// add the sbom prefix
-			boms = append(boms, normalizedBOM)
+			boms = append(boms, normalize.SBOMSource{Source: url, SBOM: parsed})
 		}
 	}
 
@@ -832,20 +818,18 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	artifact models.Artifact,
 	userID string,
 	userAgent *string,
-) (*normalize.SBOMGraph, []models.DependencyVuln, error) {
-	// Fetch information sources (SBOM URLs) from the artifact
-	rootNodes, err := s.componentService.FetchInformationSources(ctx, nil, &artifact)
+) (normalize.MerkleForest, []models.DependencyVuln, error) {
+	sboms, err := s.assetVersionService.ListSBOMs(ctx, nil, assetVersion, artifact.ArtifactName)
 	if err != nil {
-		slog.Error("failed to fetch information sources", "error", err, "artifactName", artifact.ArtifactName)
-		return nil, nil, fmt.Errorf("failed to fetch information sources: %w", err)
+		slog.Error("failed to fetch sbom sources", "error", err, "artifactName", artifact.ArtifactName)
+		return nil, nil, fmt.Errorf("failed to fetch sbom sources: %w", err)
 	}
 
-	// Extract unique HTTP URLs from information sources
-	sbomUpstreamURLs := utils.UniqBy(utils.Filter(utils.Map(rootNodes, func(el models.ComponentDependency) string {
-		_, origin := normalize.RemoveInformationSourcePrefixIfExists(el.DependencyID)
-		return origin
-	}), func(el string) bool {
-		return strings.HasPrefix(el, "http")
+	// only upstream sources can be re-fetched; a local scan's source is not a URL
+	sbomUpstreamURLs := utils.UniqBy(utils.Filter(utils.Map(sboms, func(sbom models.SBOM) string {
+		return sbom.Source
+	}), func(source string) bool {
+		return strings.HasPrefix(source, "http")
 	}), func(el string) string {
 		return el
 	})
@@ -853,26 +837,32 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	// Fetch SBOMs and VEX reports from upstream
 	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
 
-	// Merge all BOMs into a single graph
-	newGraph := normalize.NewSBOMGraph()
-	for _, bom := range boms {
-		newGraph.MergeGraph(bom)
+	// Each upstream document is stored as the separate SBOM it is. Merging them
+	// first would collapse the sources' differing accounts of shared components,
+	// which is exactly what the content-addressed storage exists to keep apart.
+	for _, upstream := range boms {
+		if _, err := s.assetVersionService.UpdateSBOM(
+			ctx,
+			tx,
+			org,
+			project,
+			asset,
+			assetVersion,
+			artifact.ArtifactName,
+			upstream.Source,
+			upstream.SBOM,
+		); err != nil {
+			slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "source", upstream.Source)
+			return nil, nil, fmt.Errorf("failed to update sbom: %w", err)
+		}
 	}
 
-	// Update SBOM in database
-	normalizedBom, err := s.assetVersionService.UpdateSBOM(
-		ctx,
-		tx,
-		org,
-		project,
-		asset,
-		assetVersion,
-		artifact.ArtifactName,
-		newGraph,
-	)
+	// An origin that failed to fetch keeps its previous SBOM rather than being
+	// dropped, so a transient network error cannot silently empty an artifact.
+	// Removing a source stays an explicit action.
+	normalizedBom, err := s.assetVersionService.LoadArtifactSBOMs(ctx, tx, assetVersion, artifact.ArtifactName)
 	if err != nil {
-		slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
-		return nil, nil, fmt.Errorf("failed to update sbom: %w", err)
+		return nil, nil, fmt.Errorf("failed to load sboms: %w", err)
 	}
 
 	// Scan the normalized SBOM for vulnerabilities
@@ -945,10 +935,12 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 }
 
 func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error) {
-	normalized, err := normalize.SBOMGraphFromCycloneDX(bom, "scan", "DEFAULT")
+	parsed, err := normalize.MerkleTreeFromCycloneDX(bom, "scan")
 	if err != nil {
 		return dtos.ScanResponse{}, fmt.Errorf("invalid SBOM: %w", err)
 	}
+	// nothing is persisted here, so this is a forest of exactly one SBOM
+	normalized := normalize.MerkleForest{parsed.Tree}
 
 	vulns, err := s.sbomScanner.Scan(ctx, normalized)
 	if err != nil {

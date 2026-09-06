@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -33,6 +34,8 @@ type sbomRepository struct {
 	db *gorm.DB
 }
 
+var _ shared.SBOMRepository = (*sbomRepository)(nil)
+
 func NewSBOMRepository(db *gorm.DB) *sbomRepository {
 	return &sbomRepository{
 		Repository: newGormRepository[string, models.SBOM](db),
@@ -40,18 +43,16 @@ func NewSBOMRepository(db *gorm.DB) *sbomRepository {
 	}
 }
 
-// Save persists one SBOM: its subtrees, then the pivot row pointing at the root.
+// SaveTree persists one SBOM: its subtrees, then the row pointing at the root.
 //
-// Edges are inserted with ON CONFLICT DO NOTHING, so subtrees the instance has
-// already stored - whether from this artifact, another artifact, or another
-// organization entirely - cost nothing. That is where the deduplication comes
-// from.
+// Edges are inserted with ON CONFLICT DO NOTHING, so subtrees already stored -
+// by this artifact, another artifact, or another organization entirely - cost
+// nothing. That is where the storage saving comes from.
 //
-// The pivot row is keyed by (asset, artifact, origin), so re-ingesting the same
-// origin moves it to the new root hash rather than accumulating one row per
-// content revision. The previous root's subtrees are left in place for the
-// garbage collector, because other SBOMs may still reference them.
-func (r *sbomRepository) Save(ctx context.Context, tx *gorm.DB, sbom models.SBOM, tree *normalize.MerkleTree) error {
+// Re-ingesting a source moves its row to the new root hash instead of adding
+// one per content revision. The superseded root's subtrees stay for the garbage
+// collector, since other SBOMs may still reference them.
+func (r *sbomRepository) SaveTree(ctx context.Context, tx *gorm.DB, sbom models.SBOM, tree *normalize.MerkleTree) error {
 	db := r.GetDB(ctx, tx)
 
 	edges := tree.Edges()
@@ -70,10 +71,10 @@ func (r *sbomRepository) Save(ctx context.Context, tx *gorm.DB, sbom models.SBOM
 		}
 	}
 
-	// drop any previous revision of this origin before pointing at the new root
+	// drop any previous revision of this source before pointing at the new root
 	if err := db.Where(
-		"asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND origin = ?",
-		sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Origin,
+		"asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?",
+		sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Source,
 	).Delete(&models.SBOM{}).Error; err != nil {
 		return errors.Wrap(err, "could not clear previous sbom revision")
 	}
@@ -87,13 +88,13 @@ func (r *sbomRepository) Save(ctx context.Context, tx *gorm.DB, sbom models.SBOM
 }
 
 // FindByAssetVersion returns every SBOM of an asset version - one row per
-// artifact and origin. This is the entry point for scanning: fetch the SBOMs,
+// artifact and source. This is the entry point for scanning: fetch the SBOMs,
 // then load whichever trees you need.
 func (r *sbomRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.SBOM, error) {
 	var sboms []models.SBOM
 	err := r.GetDB(ctx, tx).
 		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).
-		Order("artifact_name ASC, origin ASC").
+		Order("artifact_name ASC, source ASC").
 		Find(&sboms).Error
 	return sboms, err
 }
@@ -103,7 +104,17 @@ func (r *sbomRepository) FindByArtifact(ctx context.Context, tx *gorm.DB, assetI
 	var sboms []models.SBOM
 	err := r.GetDB(ctx, tx).
 		Where("asset_id = ? AND asset_version_name = ? AND artifact_name = ?", assetID, assetVersionName, artifactName).
-		Order("origin ASC").
+		Order("source ASC").
+		Find(&sboms).Error
+	return sboms, err
+}
+
+// FindBySource returns the SBOM an artifact got from one specific source.
+func (r *sbomRepository) FindBySource(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName, source string) ([]models.SBOM, error) {
+	var sboms []models.SBOM
+	err := r.GetDB(ctx, tx).
+		Where("asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?",
+			assetID, assetVersionName, artifactName, source).
 		Find(&sboms).Error
 	return sboms, err
 }
@@ -114,7 +125,7 @@ func (r *sbomRepository) FindByArtifact(ctx context.Context, tx *gorm.DB, assetI
 // close a cycle are dropped at build time. UNION rather than UNION ALL also
 // means a subtree shared by many parents is visited once, which is what bounds
 // the fan-out on wide graphs.
-func (r *sbomRepository) LoadTree(ctx context.Context, tx *gorm.DB, rootSubtreeHash string) (*normalize.MerkleTree, error) {
+func (r *sbomRepository) LoadTree(ctx context.Context, tx *gorm.DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error) {
 	var rows []models.SBOMMerkleEdge
 
 	err := r.GetDB(ctx, tx).Raw(`
@@ -184,11 +195,11 @@ func (r *sbomRepository) DeleteByArtifact(ctx context.Context, tx *gorm.DB, asse
 	).Delete(&models.SBOM{}).Error
 }
 
-// DeleteByOrigin removes a single SBOM source from an artifact.
-func (r *sbomRepository) DeleteByOrigin(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName, origin string) error {
+// DeleteBySource removes a single SBOM source from an artifact.
+func (r *sbomRepository) DeleteBySource(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName, source string) error {
 	return r.GetDB(ctx, tx).Where(
-		"asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND origin = ?",
-		assetID, assetVersionName, artifactName, origin,
+		"asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?",
+		assetID, assetVersionName, artifactName, source,
 	).Delete(&models.SBOM{}).Error
 }
 

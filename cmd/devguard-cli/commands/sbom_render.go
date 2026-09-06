@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ func newRenderCommand() *cobra.Command {
 		outputFile   string
 		format       string
 		layout       string
-		fromBOMRef   string
+		fromPURL     string
 		maxDepth     int
 		showVulns    bool
 		includeFiles bool
@@ -68,9 +69,9 @@ Examples:
   devguard-cli sbom render -i sbom.json --maxDepth 5 -o diagram.pdf
 
   # Render only the subgraph rooted at a specific component
-  devguard-cli sbom render -i sbom.json --from '/nix/store/h19kjqi10ynjk0i6scllhv82gx45p58w-go-1.25.5.drv' -o go.svg`,
+  devguard-cli sbom render -i sbom.json --from 'pkg:golang/github.com/foo/bar@v1.2.3' -o go.svg`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return renderSBOM(inputFile, outputFile, format, layout, fromBOMRef, maxDepth, showVulns, includeFiles)
+			return renderSBOM(inputFile, outputFile, format, layout, fromPURL, maxDepth, showVulns, includeFiles)
 		},
 	}
 
@@ -78,7 +79,7 @@ Examples:
 	renderCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file (pdf, png, svg, or dot)")
 	renderCmd.Flags().StringVarP(&format, "format", "f", "", "Output format (auto-detected from file extension, or specify: dot, svg, png, pdf)")
 	renderCmd.Flags().StringVarP(&layout, "layout", "l", "twopi", "Graphviz layout engine: dot (hierarchical tree, slow on large graphs), twopi (radial tree, best for SBOMs), sfdp (force-directed), fdp, circo")
-	renderCmd.Flags().StringVar(&fromBOMRef, "from", "", "Start the graph from this BOM ref instead of the root (renders only the subgraph reachable from this node)")
+	renderCmd.Flags().StringVar(&fromPURL, "from", "", "Start the graph from the component with this PURL instead of the root (renders only the subgraph(s) rooted at every subtree carrying this PURL)")
 	renderCmd.Flags().IntVarP(&maxDepth, "maxDepth", "d", 0, "Maximum depth of dependency tree to render (0 = unlimited)")
 	renderCmd.Flags().BoolVarP(&showVulns, "showVulns", "v", false, "Show vulnerabilities in the graph")
 	renderCmd.Flags().BoolVar(&includeFiles, "includeFiles", false, "Include 'file' type components (source tarballs, scripts — skipped by default as they cannot match CVEs)")
@@ -90,7 +91,7 @@ Examples:
 	return renderCmd
 }
 
-func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles bool) error {
+func renderSBOM(inputFile, outputFile, format, layout, fromPURL string, maxDepth int, showVulns, includeFiles bool) error {
 	// Read the SBOM file
 	data, err := os.ReadFile(inputFile)
 	if err != nil {
@@ -103,10 +104,10 @@ func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDep
 		return fmt.Errorf("failed to parse CycloneDX SBOM: %w", err)
 	}
 
-	// Convert to SBOMGraph
-	graph, err := normalize.SBOMGraphFromCycloneDX(&bom, inputFile, "cli-render")
+	// Convert to a content-addressed merkle tree
+	parsed, err := normalize.MerkleTreeFromCycloneDX(&bom, inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to convert SBOM to graph: %w", err)
+		return fmt.Errorf("failed to convert SBOM to merkle tree: %w", err)
 	}
 
 	// Generate DOT format
@@ -114,7 +115,7 @@ func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDep
 	if bom.Vulnerabilities != nil {
 		vulns = *bom.Vulnerabilities
 	}
-	dotContent, err := generateDOT(graph, vulns, layout, fromBOMRef, maxDepth, showVulns, includeFiles)
+	dotContent, err := generateDOT(parsed, vulns, layout, fromPURL, maxDepth, showVulns, includeFiles)
 	if err != nil {
 		return err
 	}
@@ -165,7 +166,10 @@ func renderSBOM(inputFile, outputFile, format, layout, fromBOMRef string, maxDep
 	return nil
 }
 
-func generateDOT(graph *normalize.SBOMGraph, vulns []cdx.Vulnerability, layout, fromBOMRef string, maxDepth int, showVulns, includeFiles bool) (string, error) {
+func generateDOT(parsed *normalize.ParsedSBOM, vulns []cdx.Vulnerability, layout, fromPURL string, maxDepth int, showVulns, includeFiles bool) (string, error) {
+	tree := parsed.Tree
+	components := parsed.Components
+
 	var sb strings.Builder
 
 	sb.WriteString("digraph SBOM {\n")
@@ -196,8 +200,8 @@ func generateDOT(graph *normalize.SBOMGraph, vulns []cdx.Vulnerability, layout, 
 	sb.WriteString("  node [shape=box, style=rounded, fontsize=9, width=0.3, height=0.2];\n")
 	sb.WriteString("  edge [color=gray60, arrowsize=0.6];\n\n")
 
-	visited := make(map[string]bool)
-	depths := make(map[string]int)
+	visited := make(map[uuid.UUID]bool)
+	depths := make(map[uuid.UUID]int)
 
 	// Helper to sanitize node IDs for DOT format
 	// DOT node IDs must be valid identifiers (alphanumeric + underscore)
@@ -268,89 +272,92 @@ func generateDOT(graph *normalize.SBOMGraph, vulns []cdx.Vulnerability, layout, 
 		return strings.Join(labelParts, ""), purl.Type
 	}
 
-	// Helper to get node label
-	getLabel := func(node *normalize.GraphNode) string {
+	// Helper to get a node's label. The root node represents the artifact
+	// itself; every other node is an ordinary component identified by its
+	// ComponentID (a purl), with metadata looked up from parsed.Components.
+	getLabel := func(node *normalize.MerkleNode) string {
 		if node == nil {
 			return ""
 		}
 
-		switch node.Type {
-		case normalize.GraphNodeTypeRoot:
-			return "ROOT"
-		case normalize.GraphNodeTypeArtifact:
-			return strings.TrimPrefix(node.BOMRef, "artifact:")
-		case normalize.GraphNodeTypeInfoSource:
-			return fmt.Sprintf("%s: %s", node.InfoType, strings.TrimPrefix(node.BOMRef, string(node.InfoType)+":"))
-		case normalize.GraphNodeTypeComponent:
-			// Try to use PURL from component
-			if node.Component != nil && node.Component.PackageURL != "" {
-				label, _ := formatPURL(node.Component.PackageURL)
+		if node.SubtreeHash == tree.Root {
+			return fmt.Sprintf("ROOT: %s", node.ComponentID)
+		}
+
+		// Try to use PURL formatting first
+		if node.ComponentID != "" {
+			if _, err := packageurl.FromString(node.ComponentID); err == nil {
+				label, _ := formatPURL(node.ComponentID)
 				return label
 			}
-			// Fallback to component name/version
-			if node.Component != nil {
-				name := node.Component.Name
-				if node.Component.Version != "" {
-					name = fmt.Sprintf("%s@%s", name, node.Component.Version)
-				}
-				return name
-			}
-			return node.BOMRef
-		default:
-			return node.BOMRef
 		}
+
+		// Fallback to component name/version from the metadata map
+		if comp, ok := components[node.ComponentID]; ok {
+			name := comp.Name
+			if comp.Version != "" {
+				name = fmt.Sprintf("%s@%s", name, comp.Version)
+			}
+			return name
+		}
+		return node.ComponentID
 	}
 
 	// Helper to get package type for styling
-	getPkgType := func(node *normalize.GraphNode) string {
-		if node != nil && node.Type == normalize.GraphNodeTypeComponent && node.Component != nil && node.Component.PackageURL != "" {
-			_, pkgType := formatPURL(node.Component.PackageURL)
+	getPkgType := func(node *normalize.MerkleNode) string {
+		if node != nil && node.SubtreeHash != tree.Root && node.ComponentID != "" {
+			_, pkgType := formatPURL(node.ComponentID)
 			return pkgType
 		}
 		return ""
 	}
 
-	// Helper to get node color based on type and package type
-	getNodeColor := func(node *normalize.GraphNode) string {
+	// Helper to get node color based on node kind (root vs. component) and
+	// package type
+	getNodeColor := func(node *normalize.MerkleNode) string {
 		if node == nil {
 			return "lightgray"
 		}
 
-		switch node.Type {
-		case normalize.GraphNodeTypeRoot:
+		if node.SubtreeHash == tree.Root {
+			// The old graph model's root/artifact colours (lightblue,
+			// lightgreen) collapse into one root node now; keep lightblue,
+			// since it read as the "start here" node before.
 			return "lightblue"
-		case normalize.GraphNodeTypeArtifact:
-			return "lightgreen"
-		case normalize.GraphNodeTypeInfoSource:
-			return "lightyellow"
-		case normalize.GraphNodeTypeComponent:
-			// Color by package type for better visual grouping
-			pkgType := getPkgType(node)
-			switch pkgType {
-			case "npm", "yarn":
-				return "#ffebcd" // blanched almond
-			case "golang", "go":
-				return "#add8e6" // light blue
-			case "pypi", "python":
-				return "#ffe4b5" // moccasin
-			case "maven", "jar":
-				return "#f0e68c" // khaki
-			case "cargo", "rust":
-				return "#ffdab9" // peach puff
-			case "nuget", "dotnet":
-				return "#e6e6fa" // lavender
-			case "gem", "rubygems":
-				return "#ffb6c1" // light pink
-			case "deb", "debian":
-				return "#ffc0cb" // pink
-			case "rpm", "redhat":
-				return "#f08080" // light coral
-			default:
-				return "white"
-			}
-		default:
-			return "lightgray"
 		}
+
+		// Color by package type for better visual grouping
+		pkgType := getPkgType(node)
+		switch pkgType {
+		case "npm", "yarn":
+			return "#ffebcd" // blanched almond
+		case "golang", "go":
+			return "#add8e6" // light blue
+		case "pypi", "python":
+			return "#ffe4b5" // moccasin
+		case "maven", "jar":
+			return "#f0e68c" // khaki
+		case "cargo", "rust":
+			return "#ffdab9" // peach puff
+		case "nuget", "dotnet":
+			return "#e6e6fa" // lavender
+		case "gem", "rubygems":
+			return "#ffb6c1" // light pink
+		case "deb", "debian":
+			return "#ffc0cb" // pink
+		case "rpm", "redhat":
+			return "#f08080" // light coral
+		default:
+			return "white"
+		}
+	}
+
+	isFileNode := func(node *normalize.MerkleNode) bool {
+		if includeFiles || node == nil || node.SubtreeHash == tree.Root {
+			return false
+		}
+		comp, ok := components[node.ComponentID]
+		return ok && comp.Type == cdx.ComponentTypeFile
 	}
 
 	// Traversal builds the DOT graph.
@@ -358,49 +365,48 @@ func generateDOT(graph *normalize.SBOMGraph, vulns []cdx.Vulnerability, layout, 
 	// effectiveParentID is the sanitized ID of the nearest rendered ancestor.
 	// When a file-type node is elided we pass the effectiveParentID unchanged
 	// to its children, so that A → B(file) → C is rendered as A → C.
-	var traverse func(node *normalize.GraphNode, depth int, effectiveParentID string)
-	traverse = func(node *normalize.GraphNode, depth int, effectiveParentID string) {
+	//
+	// Nodes are addressed by subtree hash, not by component id: two different
+	// components can share a purl only if they have identical subtrees, so
+	// keying by subtree hash is always collision-free.
+	var traverse func(node *normalize.MerkleNode, depth int, effectiveParentID string)
+	traverse = func(node *normalize.MerkleNode, depth int, effectiveParentID string) {
 		if node == nil || (maxDepth > 0 && depth > maxDepth) {
 			return
 		}
 
-		isFileNode := !includeFiles &&
-			node.Type == normalize.GraphNodeTypeComponent &&
-			node.Component != nil &&
-			node.Component.Type == cdx.ComponentTypeFile
-
-		if isFileNode {
+		if isFileNode(node) {
 			// Elide this node: don't render it, but keep traversing its
 			// children with the same effectiveParentID so transitive deps
 			// are still connected (A → file → C becomes A → C).
-			if visited[node.BOMRef] {
+			if visited[node.SubtreeHash] {
 				return // already processed this file node, avoid cycles
 			}
-			visited[node.BOMRef] = true
-			for child := range graph.Children(node.BOMRef) {
-				traverse(child, depth+1, effectiveParentID)
+			visited[node.SubtreeHash] = true
+			for _, childHash := range node.Children {
+				traverse(tree.Node(childHash), depth+1, effectiveParentID)
 			}
 			return
 		}
 
-		sanitizedID := sanitizeID(node.BOMRef)
+		sanitizedID := sanitizeID(node.SubtreeHash.String())
 
 		// Draw the incoming edge from the effective parent (if any).
 		if effectiveParentID != "" {
 			fmt.Fprintf(&sb, "  \"%s\" -> \"%s\";\n", effectiveParentID, sanitizedID)
 		}
 
-		if visited[node.BOMRef] {
+		if visited[node.SubtreeHash] {
 			return // node already rendered, edge drawn above, stop here
 		}
-		visited[node.BOMRef] = true
-		depths[node.BOMRef] = depth
+		visited[node.SubtreeHash] = true
+		depths[node.SubtreeHash] = depth
 
 		// Render this node.
 		label := escapeLabel(getLabel(node))
 		color := getNodeColor(node)
 		var nodeAttrs string
-		if node.Type == normalize.GraphNodeTypeComponent {
+		if node.SubtreeHash != tree.Root {
 			pkgType := getPkgType(node)
 			if pkgType != "" {
 				nodeAttrs = fmt.Sprintf("label=\"%s\", fillcolor=\"%s\", style=\"rounded,filled\", fontname=\"Courier\"", label, color)
@@ -412,21 +418,31 @@ func generateDOT(graph *normalize.SBOMGraph, vulns []cdx.Vulnerability, layout, 
 		}
 		fmt.Fprintf(&sb, "  \"%s\" [%s];\n", sanitizedID, nodeAttrs)
 
-		for child := range graph.Children(node.BOMRef) {
-			traverse(child, depth+1, sanitizedID)
+		for _, childHash := range node.Children {
+			traverse(tree.Node(childHash), depth+1, sanitizedID)
 		}
 	}
 
-	// Resolve the starting node.
-	startBOMRef := normalize.GraphRootNodeID
-	if fromBOMRef != "" {
-		startBOMRef = fromBOMRef
+	// Resolve the starting node(s). By default we start at the SBOM root;
+	// --from selects every subtree whose component matches the given PURL
+	// instead (a component can appear under more than one subtree hash if its
+	// dependency set differs by position in the document).
+	if fromPURL == "" {
+		traverse(tree.RootNode(), 0, "")
+	} else {
+		var startNodes []*normalize.MerkleNode
+		for node := range tree.MerkleNodes() {
+			if node.SubtreeHash != tree.Root && strings.EqualFold(node.ComponentID, fromPURL) {
+				startNodes = append(startNodes, node)
+			}
+		}
+		if len(startNodes) == 0 {
+			return "", fmt.Errorf("PURL %q not found in SBOM", fromPURL)
+		}
+		for _, node := range startNodes {
+			traverse(node, 0, "")
+		}
 	}
-	startNode := graph.Node(startBOMRef)
-	if startNode == nil {
-		return "", fmt.Errorf("BOM ref %q not found in SBOM", startBOMRef)
-	}
-	traverse(startNode, 0, "")
 
 	// Optionally add vulnerability information
 	if showVulns {
