@@ -19,7 +19,6 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -92,7 +91,7 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 	if err != nil {
 		return dtos.ComponentDTO{
 			Purl:                m.ID,
-			Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
+			Dependencies:        []dtos.ComponentDependencyDTO{}, // never populated: a component row carries no edges
 			ComponentType:       m.ComponentType,
 			Version:             "",
 			License:             m.License,
@@ -104,7 +103,7 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 
 	return dtos.ComponentDTO{
 		Purl:                m.ID,
-		Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
+		Dependencies:        []dtos.ComponentDependencyDTO{}, // never populated: a component row carries no edges
 		ComponentType:       m.ComponentType,
 		Version:             parsed.Version,
 		License:             m.License,

@@ -90,49 +90,9 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// Create the artifact root component (needed for FK constraint)
-			artifactRoot := "artifact:" + artifact.ArtifactName
-			err = f.DB.Create(&models.Component{ID: artifactRoot}).Error
+			err = SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName,
+				componentWithInvalidLicense.ID, componentWithValidLicense.ID, componentWithoutLicense.ID)
 			assert.NoError(t, err)
-
-			// Create artifact root node dependency (NULL -> artifact:name)
-			err = f.DB.Create(&models.ComponentDependency{
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
-				ComponentID:      "ROOT",
-				DependencyID:     artifactRoot,
-			}).Error
-			assert.NoError(t, err)
-
-			// Create component dependencies pointing to artifact root
-			componentDeps := []models.ComponentDependency{
-				{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          assetVersion.AssetID,
-					ComponentID:      artifactRoot,
-					DependencyID:     componentWithInvalidLicense.ID,
-					Dependency:       componentWithInvalidLicense,
-				},
-				{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          assetVersion.AssetID,
-					ComponentID:      artifactRoot,
-					DependencyID:     componentWithValidLicense.ID,
-					Dependency:       componentWithValidLicense,
-				},
-				{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          assetVersion.AssetID,
-					ComponentID:      artifactRoot,
-					DependencyID:     componentWithoutLicense.ID,
-					Dependency:       componentWithoutLicense,
-				},
-			}
-
-			for _, dep := range componentDeps {
-				err = f.DB.Create(&dep).Error
-				assert.NoError(t, err)
-			}
 
 			// Call the function under test using FX-injected component service
 			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, new(artifact.ArtifactName), false)
@@ -212,29 +172,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// Create the artifact root component (needed for FK constraint)
-			artifactRoot := "artifact:" + artifact.ArtifactName
-			err = f.DB.Create(&models.Component{ID: artifactRoot}).Error
-			assert.NoError(t, err)
-
-			// Create artifact root node dependency (NULL -> artifact:name)
-			err = f.DB.Create(&models.ComponentDependency{
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
-				ComponentID:      "ROOT",
-				DependencyID:     artifactRoot,
-			}).Error
-			assert.NoError(t, err)
-
-			// Create component dependency pointing to artifact root
-			componentDep := models.ComponentDependency{
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
-				ComponentID:      artifactRoot,
-				DependencyID:     componentWithInvalidLicense.ID,
-				Dependency:       componentWithInvalidLicense,
-			}
-			err = f.DB.Create(&componentDep).Error
+			err = SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, componentWithInvalidLicense.ID)
 			assert.NoError(t, err)
 
 			// Create existing license risk

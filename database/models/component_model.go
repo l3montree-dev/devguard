@@ -50,7 +50,6 @@ func (c ComponentProject) TableName() string {
 type Component struct {
 	// ID might be a PURL - but not always. Sometimes it is a file path to a binary or a "fake node" we are adding during normalization
 	ID            string                `json:"id" gorm:"primaryKey;column:id"`
-	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
 	License       *string               `json:"license"`
 	Published     *time.Time            `json:"published"`
@@ -126,22 +125,6 @@ func (m SBOMMerkleEdge) TableName() string {
 
 func (s SBOM) TableName() string {
 	return "sboms"
-}
-
-const Root string = "root"
-
-type ComponentDependencyNode struct {
-	ID string `json:"id"`
-}
-
-func (c ComponentDependencyNode) GetID() string {
-	return c.ID
-}
-
-func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
-	// a component dependency represents an edge in the dependency tree
-	// thus we can represent it as two nodes
-	return []ComponentDependencyNode{{ID: c.ComponentID}, {ID: c.DependencyID}}
 }
 
 func resolveLicense(component ComponentDependency, componentLicenseOverwrites map[string]string) cyclonedx.Licenses {

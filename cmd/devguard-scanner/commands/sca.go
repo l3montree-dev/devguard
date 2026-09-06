@@ -395,6 +395,11 @@ func MergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 				if parent == declaredRef {
 					parent = ref
 				}
+				// The extra is authoritative for the components it describes, so
+				// its child set replaces any the outer scan inferred. Unioning
+				// them instead would keep the outer scan's guesses alive and
+				// attribute this subtree's dependencies to unrelated components.
+				dependencies[parent] = map[string]struct{}{}
 				for _, child := range *dependency.Dependencies {
 					addEdge(parent, child)
 				}

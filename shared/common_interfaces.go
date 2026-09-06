@@ -256,7 +256,6 @@ type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
 	LoadComponentsWithProject(ctx context.Context, tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SearchComponentOccurrencesByProject(ctx context.Context, tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
-	FindByPurl(ctx context.Context, tx DB, purl string) (models.Component, error)
 	FindByIDs(ctx context.Context, tx DB, ids []string) ([]models.Component, error)
 }
 

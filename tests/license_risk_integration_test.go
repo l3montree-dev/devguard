@@ -127,14 +127,8 @@ func TestLicenseRiskClosedByRefresh(t *testing.T) {
 		}
 		assert.NoError(t, f.DB.Create(&artifact).Error)
 
-		// Wire the component into the SBOM graph so GetAndSaveLicenseInformation can find it
-		artifactRoot := "artifact:" + artifact.ArtifactName
-		infoSourceID := "sbom:DEFAULT@" + artifact.ArtifactName
-		assert.NoError(t, f.DB.Create(&models.Component{ID: artifactRoot}).Error)
-		assert.NoError(t, f.DB.Create(&models.Component{ID: infoSourceID}).Error)
-		assert.NoError(t, f.DB.Create(&models.ComponentDependency{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ComponentID: "ROOT", DependencyID: artifactRoot}).Error)
-		assert.NoError(t, f.DB.Create(&models.ComponentDependency{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ComponentID: artifactRoot, DependencyID: infoSourceID}).Error)
-		assert.NoError(t, f.DB.Create(&models.ComponentDependency{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ComponentID: infoSourceID, DependencyID: comp.ID}).Error)
+		// Store the component in an SBOM so GetAndSaveLicenseInformation can find it
+		assert.NoError(t, SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, comp.ID))
 
 		// Open the license risk
 		err := f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{comp}, artifact.ArtifactName)

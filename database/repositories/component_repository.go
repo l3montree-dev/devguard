@@ -168,36 +168,6 @@ func (c *componentRepository) FindByIDs(ctx context.Context, tx *gorm.DB, ids []
 	return components, err
 }
 
-func (c *componentRepository) FindByPurl(ctx context.Context, tx *gorm.DB, purl string) (models.Component, error) {
-	var component models.Component
-	err := c.GetDB(ctx, tx).Where("purl = ?", purl).First(&component).Error
-	return component, err
-}
-
-func (c *componentRepository) GetDependencyCountPerScannerID(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	var results []struct {
-		ScannerID string `gorm:"column:scanner_ids"`
-		Count     int    `gorm:"column:count"`
-	}
-	err := c.GetDB(ctx, tx).Model(&models.Component{}).
-		Select("scanner_ids , COUNT(*) as count").
-		Group("scanner_ids").
-		Where("asset_version_name = ?", assetVersionName).
-		Where("asset_id = ?", assetID).
-		Find(&results).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	counts := make(map[string]int)
-	for _, r := range results {
-		counts[r.ScannerID] = r.Count
-	}
-
-	return counts, nil
-}
-
 func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID, pageInfo shared.PageInfo, search string) (shared.Paged[models.ComponentOccurrence], error) {
 	occurrences := []models.ComponentOccurrence{}
 	search = strings.TrimSpace(search)
