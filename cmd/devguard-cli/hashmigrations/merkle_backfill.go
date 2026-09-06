@@ -51,10 +51,11 @@ type legacySBOM struct {
 //
 //	ROOT -> artifact:<name> -> sbom:<source>@<name> -> <purls...>
 const (
-	legacyRootID          = "ROOT"
-	legacyArtifactPrefix  = "artifact:"
-	legacyInfoSourcePfx   = "sbom:"
-	legacyDependencyLimit = 0 // unlimited
+	legacyRootID         = "ROOT"
+	legacyArtifactPrefix = "artifact:"
+	legacyInfoSourcePfx  = "sbom:"
+	legacyVexSourcePfx   = "vex:"
+	legacyCSAFSourcePfx  = "csaf:"
 )
 
 // reconstructSBOMs rebuilds one asset version's SBOMs from the legacy edges.
@@ -76,6 +77,11 @@ func reconstructSBOMs(edges []legacyEdge) []legacySBOM {
 		}
 		artifactName := strings.TrimPrefix(artifactNode, legacyArtifactPrefix)
 
+		// Only `sbom:` sources migrate. `vex:` and `csaf:` nodes described
+		// vulnerability documents rather than dependency trees and are handled
+		// separately now, and components attached straight to the artifact have
+		// no source to name them - both are left behind deliberately, and a
+		// rescan repopulates them.
 		for _, sourceNode := range children[artifactNode] {
 			if !strings.HasPrefix(sourceNode, legacyInfoSourcePfx) {
 				continue
@@ -97,6 +103,7 @@ func reconstructSBOMs(edges []legacyEdge) []legacySBOM {
 				),
 			})
 		}
+
 	}
 	return sboms
 }
@@ -133,7 +140,9 @@ func componentEdgesBelow(children map[string][]string, sourceNode string) map[st
 func isLegacySyntheticNode(id string) bool {
 	return id == legacyRootID ||
 		strings.HasPrefix(id, legacyArtifactPrefix) ||
-		strings.HasPrefix(id, legacyInfoSourcePfx)
+		strings.HasPrefix(id, legacyInfoSourcePfx) ||
+		strings.HasPrefix(id, legacyVexSourcePfx) ||
+		strings.HasPrefix(id, legacyCSAFSourcePfx)
 }
 
 // runMerkleBackfill rebuilds the content-addressed storage from the legacy
