@@ -69,7 +69,7 @@ type CveRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CveRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *CveRepository_Activate_Call {
+func (_e *CveRepository_Expecter) Activate(ctx any, tx any, id any) *CveRepository_Activate_Call {
 	return &CveRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -142,7 +142,7 @@ type CveRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CveRepository_Expecter) All(ctx interface{}, tx interface{}) *CveRepository_All_Call {
+func (_e *CveRepository_Expecter) All(ctx any, tx any) *CveRepository_All_Call {
 	return &CveRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -200,7 +200,7 @@ type CveRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CveRepository_Expecter) Begin(ctx interface{}) *CveRepository_Begin_Call {
+func (_e *CveRepository_Expecter) Begin(ctx any) *CveRepository_Begin_Call {
 	return &CveRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -251,7 +251,7 @@ type CveRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CveRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *CveRepository_CleanupOrphanedRecords_Call {
+func (_e *CveRepository_Expecter) CleanupOrphanedRecords(ctx any) *CveRepository_CleanupOrphanedRecords_Call {
 	return &CveRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -304,7 +304,7 @@ type CveRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CVE
-func (_e *CveRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *CveRepository_Create_Call {
+func (_e *CveRepository_Expecter) Create(ctx any, tx any, t any) *CveRepository_Create_Call {
 	return &CveRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -367,7 +367,7 @@ type CveRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CVE
-func (_e *CveRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *CveRepository_CreateBatch_Call {
+func (_e *CveRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *CveRepository_CreateBatch_Call {
 	return &CveRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -431,7 +431,7 @@ type CveRepository_CreateCVEAffectedComponentsEntries_Call struct {
 //   - tx shared.DB
 //   - cve *models.CVE
 //   - components []models.AffectedComponent
-func (_e *CveRepository_Expecter) CreateCVEAffectedComponentsEntries(ctx interface{}, tx interface{}, cve interface{}, components interface{}) *CveRepository_CreateCVEAffectedComponentsEntries_Call {
+func (_e *CveRepository_Expecter) CreateCVEAffectedComponentsEntries(ctx any, tx any, cve any, components any) *CveRepository_CreateCVEAffectedComponentsEntries_Call {
 	return &CveRepository_CreateCVEAffectedComponentsEntries_Call{Call: _e.mock.On("CreateCVEAffectedComponentsEntries", ctx, tx, cve, components)}
 }
 
@@ -499,7 +499,7 @@ type CveRepository_CreateCVEWithConflictHandling_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - cve *models.CVE
-func (_e *CveRepository_Expecter) CreateCVEWithConflictHandling(ctx interface{}, tx interface{}, cve interface{}) *CveRepository_CreateCVEWithConflictHandling_Call {
+func (_e *CveRepository_Expecter) CreateCVEWithConflictHandling(ctx any, tx any, cve any) *CveRepository_CreateCVEWithConflictHandling_Call {
 	return &CveRepository_CreateCVEWithConflictHandling_Call{Call: _e.mock.On("CreateCVEWithConflictHandling", ctx, tx, cve)}
 }
 
@@ -562,7 +562,7 @@ type CveRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CveRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *CveRepository_Delete_Call {
+func (_e *CveRepository_Expecter) Delete(ctx any, tx any, id any) *CveRepository_Delete_Call {
 	return &CveRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -625,7 +625,7 @@ type CveRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.CVE
-func (_e *CveRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *CveRepository_DeleteBatch_Call {
+func (_e *CveRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *CveRepository_DeleteBatch_Call {
 	return &CveRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -699,7 +699,7 @@ type CveRepository_FindAllListPaged_Call struct {
 //   - pageInfo shared.PageInfo
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CveRepository_Expecter) FindAllListPaged(ctx interface{}, tx interface{}, pageInfo interface{}, filter interface{}, sort interface{}) *CveRepository_FindAllListPaged_Call {
+func (_e *CveRepository_Expecter) FindAllListPaged(ctx any, tx any, pageInfo any, filter any, sort any) *CveRepository_FindAllListPaged_Call {
 	return &CveRepository_FindAllListPaged_Call{Call: _e.mock.On("FindAllListPaged", ctx, tx, pageInfo, filter, sort)}
 }
 
@@ -781,7 +781,7 @@ type CveRepository_FindByID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CveRepository_Expecter) FindByID(ctx interface{}, tx interface{}, id interface{}) *CveRepository_FindByID_Call {
+func (_e *CveRepository_Expecter) FindByID(ctx any, tx any, id any) *CveRepository_FindByID_Call {
 	return &CveRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, tx, id)}
 }
 
@@ -853,7 +853,7 @@ type CveRepository_FindCVE_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CveRepository_Expecter) FindCVE(ctx interface{}, tx interface{}, id interface{}) *CveRepository_FindCVE_Call {
+func (_e *CveRepository_Expecter) FindCVE(ctx any, tx any, id any) *CveRepository_FindCVE_Call {
 	return &CveRepository_FindCVE_Call{Call: _e.mock.On("FindCVE", ctx, tx, id)}
 }
 
@@ -927,7 +927,7 @@ type CveRepository_FindCVEs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *CveRepository_Expecter) FindCVEs(ctx interface{}, tx interface{}, ids interface{}) *CveRepository_FindCVEs_Call {
+func (_e *CveRepository_Expecter) FindCVEs(ctx any, tx any, ids any) *CveRepository_FindCVEs_Call {
 	return &CveRepository_FindCVEs_Call{Call: _e.mock.On("FindCVEs", ctx, tx, ids)}
 }
 
@@ -1000,7 +1000,7 @@ type CveRepository_GetAllCVEsID_Call struct {
 // GetAllCVEsID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CveRepository_Expecter) GetAllCVEsID(ctx interface{}, tx interface{}) *CveRepository_GetAllCVEsID_Call {
+func (_e *CveRepository_Expecter) GetAllCVEsID(ctx any, tx any) *CveRepository_GetAllCVEsID_Call {
 	return &CveRepository_GetAllCVEsID_Call{Call: _e.mock.On("GetAllCVEsID", ctx, tx)}
 }
 
@@ -1069,7 +1069,7 @@ type CveRepository_GetAllRelatedCVEsForCVE_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - cveID string
-func (_e *CveRepository_Expecter) GetAllRelatedCVEsForCVE(ctx interface{}, tx interface{}, cveID interface{}) *CveRepository_GetAllRelatedCVEsForCVE_Call {
+func (_e *CveRepository_Expecter) GetAllRelatedCVEsForCVE(ctx any, tx any, cveID any) *CveRepository_GetAllRelatedCVEsForCVE_Call {
 	return &CveRepository_GetAllRelatedCVEsForCVE_Call{Call: _e.mock.On("GetAllRelatedCVEsForCVE", ctx, tx, cveID)}
 }
 
@@ -1133,7 +1133,7 @@ type CveRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CveRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *CveRepository_GetDB_Call {
+func (_e *CveRepository_Expecter) GetDB(ctx any, tx any) *CveRepository_GetDB_Call {
 	return &CveRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1199,7 +1199,7 @@ type CveRepository_GetLastModDate_Call struct {
 // GetLastModDate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CveRepository_Expecter) GetLastModDate(ctx interface{}, tx interface{}) *CveRepository_GetLastModDate_Call {
+func (_e *CveRepository_Expecter) GetLastModDate(ctx any, tx any) *CveRepository_GetLastModDate_Call {
 	return &CveRepository_GetLastModDate_Call{Call: _e.mock.On("GetLastModDate", ctx, tx)}
 }
 
@@ -1259,7 +1259,7 @@ type CveRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *CveRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *CveRepository_InBatches_Call {
+func (_e *CveRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *CveRepository_InBatches_Call {
 	return &CveRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1333,7 +1333,7 @@ type CveRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *CveRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *CveRepository_List_Call {
+func (_e *CveRepository_Expecter) List(ctx any, tx any, ids any) *CveRepository_List_Call {
 	return &CveRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1405,7 +1405,7 @@ type CveRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *CveRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *CveRepository_Read_Call {
+func (_e *CveRepository_Expecter) Read(ctx any, tx any, id any) *CveRepository_Read_Call {
 	return &CveRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1468,7 +1468,7 @@ type CveRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CVE
-func (_e *CveRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *CveRepository_Save_Call {
+func (_e *CveRepository_Expecter) Save(ctx any, tx any, t any) *CveRepository_Save_Call {
 	return &CveRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1531,7 +1531,7 @@ type CveRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CVE
-func (_e *CveRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *CveRepository_SaveBatch_Call {
+func (_e *CveRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *CveRepository_SaveBatch_Call {
 	return &CveRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1595,7 +1595,7 @@ type CveRepository_SaveCveAffectedComponents_Call struct {
 //   - tx shared.DB
 //   - cveID string
 //   - affectedComponentHashes []int64
-func (_e *CveRepository_Expecter) SaveCveAffectedComponents(ctx interface{}, tx interface{}, cveID interface{}, affectedComponentHashes interface{}) *CveRepository_SaveCveAffectedComponents_Call {
+func (_e *CveRepository_Expecter) SaveCveAffectedComponents(ctx any, tx any, cveID any, affectedComponentHashes any) *CveRepository_SaveCveAffectedComponents_Call {
 	return &CveRepository_SaveCveAffectedComponents_Call{Call: _e.mock.On("SaveCveAffectedComponents", ctx, tx, cveID, affectedComponentHashes)}
 }
 
@@ -1662,7 +1662,7 @@ type CveRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *CveRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *CveRepository_Transaction_Call {
+func (_e *CveRepository_Expecter) Transaction(ctx any, fn any) *CveRepository_Transaction_Call {
 	return &CveRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1720,7 +1720,7 @@ type CveRepository_UpdateEpssBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batch []models.CVE
-func (_e *CveRepository_Expecter) UpdateEpssBatch(ctx interface{}, tx interface{}, batch interface{}) *CveRepository_UpdateEpssBatch_Call {
+func (_e *CveRepository_Expecter) UpdateEpssBatch(ctx any, tx any, batch any) *CveRepository_UpdateEpssBatch_Call {
 	return &CveRepository_UpdateEpssBatch_Call{Call: _e.mock.On("UpdateEpssBatch", ctx, tx, batch)}
 }
 
@@ -1785,7 +1785,7 @@ type CveRepository_Upsert_Call struct {
 //   - t *[]*models.CVE
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *CveRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *CveRepository_Upsert_Call {
+func (_e *CveRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *CveRepository_Upsert_Call {
 	return &CveRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

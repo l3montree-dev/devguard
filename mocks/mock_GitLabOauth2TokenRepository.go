@@ -65,7 +65,7 @@ type GitLabOauth2TokenRepository_CreateIfNotExists_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - tokens []*models.GitLabOauth2Token
-func (_e *GitLabOauth2TokenRepository_Expecter) CreateIfNotExists(ctx interface{}, tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) CreateIfNotExists(ctx any, tx any, tokens any) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
 	return &GitLabOauth2TokenRepository_CreateIfNotExists_Call{Call: _e.mock.On("CreateIfNotExists", ctx, tx, tokens)}
 }
 
@@ -128,7 +128,7 @@ type GitLabOauth2TokenRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - tokens []models.GitLabOauth2Token
-func (_e *GitLabOauth2TokenRepository_Expecter) Delete(ctx interface{}, tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_Delete_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) Delete(ctx any, tx any, tokens any) *GitLabOauth2TokenRepository_Delete_Call {
 	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, tokens)}
 }
 
@@ -192,7 +192,7 @@ type GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call struct {
 //   - tx shared.DB
 //   - userID string
 //   - providerID string
-func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIDAndProviderID(ctx interface{}, tx interface{}, userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIDAndProviderID(ctx any, tx any, userID any, providerID any) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
 	return &GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call{Call: _e.mock.On("DeleteByUserIDAndProviderID", ctx, tx, userID, providerID)}
 }
 
@@ -271,7 +271,7 @@ type GitLabOauth2TokenRepository_FindByUserID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - userID string
-func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserID(ctx interface{}, tx interface{}, userID interface{}) *GitLabOauth2TokenRepository_FindByUserID_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserID(ctx any, tx any, userID any) *GitLabOauth2TokenRepository_FindByUserID_Call {
 	return &GitLabOauth2TokenRepository_FindByUserID_Call{Call: _e.mock.On("FindByUserID", ctx, tx, userID)}
 }
 
@@ -346,7 +346,7 @@ type GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call struct {
 //   - tx shared.DB
 //   - userID string
 //   - providerID string
-func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserIDAndProviderID(ctx interface{}, tx interface{}, userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserIDAndProviderID(ctx any, tx any, userID any, providerID any) *GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call {
 	return &GitLabOauth2TokenRepository_FindByUserIDAndProviderID_Call{Call: _e.mock.On("FindByUserIDAndProviderID", ctx, tx, userID, providerID)}
 }
 
@@ -420,9 +420,9 @@ type GitLabOauth2TokenRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - model ...*models.GitLabOauth2Token
-func (_e *GitLabOauth2TokenRepository_Expecter) Save(ctx interface{}, tx interface{}, model ...interface{}) *GitLabOauth2TokenRepository_Save_Call {
+func (_e *GitLabOauth2TokenRepository_Expecter) Save(ctx any, tx any, model ...any) *GitLabOauth2TokenRepository_Save_Call {
 	return &GitLabOauth2TokenRepository_Save_Call{Call: _e.mock.On("Save",
-		append([]interface{}{ctx, tx}, model...)...)}
+		append([]any{ctx, tx}, model...)...)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(ctx context.Context, tx shared.DB, model ...*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {

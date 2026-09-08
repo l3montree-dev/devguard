@@ -72,7 +72,7 @@ type PublicClient_GetIdentityFromCookie_Call struct {
 // GetIdentityFromCookie is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cookie string
-func (_e *PublicClient_Expecter) GetIdentityFromCookie(ctx interface{}, cookie interface{}) *PublicClient_GetIdentityFromCookie_Call {
+func (_e *PublicClient_Expecter) GetIdentityFromCookie(ctx any, cookie any) *PublicClient_GetIdentityFromCookie_Call {
 	return &PublicClient_GetIdentityFromCookie_Call{Call: _e.mock.On("GetIdentityFromCookie", ctx, cookie)}
 }
 

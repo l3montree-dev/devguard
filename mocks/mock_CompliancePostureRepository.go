@@ -69,7 +69,7 @@ type CompliancePostureRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *CompliancePostureRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *CompliancePostureRepository_Activate_Call {
+func (_e *CompliancePostureRepository_Expecter) Activate(ctx any, tx any, id any) *CompliancePostureRepository_Activate_Call {
 	return &CompliancePostureRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -142,7 +142,7 @@ type CompliancePostureRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CompliancePostureRepository_Expecter) All(ctx interface{}, tx interface{}) *CompliancePostureRepository_All_Call {
+func (_e *CompliancePostureRepository_Expecter) All(ctx any, tx any) *CompliancePostureRepository_All_Call {
 	return &CompliancePostureRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -201,7 +201,7 @@ type CompliancePostureRepository_ApplyAndSave_Call struct {
 //   - tx shared.DB
 //   - posture *models.CompliancePosture
 //   - ev *models.VulnEvent
-func (_e *CompliancePostureRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, posture interface{}, ev interface{}) *CompliancePostureRepository_ApplyAndSave_Call {
+func (_e *CompliancePostureRepository_Expecter) ApplyAndSave(ctx any, tx any, posture any, ev any) *CompliancePostureRepository_ApplyAndSave_Call {
 	return &CompliancePostureRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, posture, ev)}
 }
 
@@ -269,7 +269,7 @@ type CompliancePostureRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CompliancePostureRepository_Expecter) Begin(ctx interface{}) *CompliancePostureRepository_Begin_Call {
+func (_e *CompliancePostureRepository_Expecter) Begin(ctx any) *CompliancePostureRepository_Begin_Call {
 	return &CompliancePostureRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -320,7 +320,7 @@ type CompliancePostureRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CompliancePostureRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *CompliancePostureRepository_CleanupOrphanedRecords_Call {
+func (_e *CompliancePostureRepository_Expecter) CleanupOrphanedRecords(ctx any) *CompliancePostureRepository_CleanupOrphanedRecords_Call {
 	return &CompliancePostureRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -373,7 +373,7 @@ type CompliancePostureRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CompliancePosture
-func (_e *CompliancePostureRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *CompliancePostureRepository_Create_Call {
+func (_e *CompliancePostureRepository_Expecter) Create(ctx any, tx any, t any) *CompliancePostureRepository_Create_Call {
 	return &CompliancePostureRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -436,7 +436,7 @@ type CompliancePostureRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CompliancePosture
-func (_e *CompliancePostureRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *CompliancePostureRepository_CreateBatch_Call {
+func (_e *CompliancePostureRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *CompliancePostureRepository_CreateBatch_Call {
 	return &CompliancePostureRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -499,7 +499,7 @@ type CompliancePostureRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *CompliancePostureRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *CompliancePostureRepository_Delete_Call {
+func (_e *CompliancePostureRepository_Expecter) Delete(ctx any, tx any, id any) *CompliancePostureRepository_Delete_Call {
 	return &CompliancePostureRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -562,7 +562,7 @@ type CompliancePostureRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.CompliancePosture
-func (_e *CompliancePostureRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *CompliancePostureRepository_DeleteBatch_Call {
+func (_e *CompliancePostureRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *CompliancePostureRepository_DeleteBatch_Call {
 	return &CompliancePostureRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -636,7 +636,7 @@ type CompliancePostureRepository_FindOrCreate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - posture models.CompliancePosture
-func (_e *CompliancePostureRepository_Expecter) FindOrCreate(ctx interface{}, tx interface{}, posture interface{}) *CompliancePostureRepository_FindOrCreate_Call {
+func (_e *CompliancePostureRepository_Expecter) FindOrCreate(ctx any, tx any, posture any) *CompliancePostureRepository_FindOrCreate_Call {
 	return &CompliancePostureRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", ctx, tx, posture)}
 }
 
@@ -716,7 +716,7 @@ type CompliancePostureRepository_GetAllControls_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CompliancePostureRepository_Expecter) GetAllControls(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}, search interface{}, filter interface{}, sort interface{}) *CompliancePostureRepository_GetAllControls_Call {
+func (_e *CompliancePostureRepository_Expecter) GetAllControls(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, search any, filter any, sort any) *CompliancePostureRepository_GetAllControls_Call {
 	return &CompliancePostureRepository_GetAllControls_Call{Call: _e.mock.On("GetAllControls", ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)}
 }
 
@@ -810,7 +810,7 @@ type CompliancePostureRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CompliancePostureRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *CompliancePostureRepository_GetDB_Call {
+func (_e *CompliancePostureRepository_Expecter) GetDB(ctx any, tx any) *CompliancePostureRepository_GetDB_Call {
 	return &CompliancePostureRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -884,7 +884,7 @@ type CompliancePostureRepository_GetForAllControlsPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CompliancePostureRepository_Expecter) GetForAllControlsPaged(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *CompliancePostureRepository_GetForAllControlsPaged_Call {
+func (_e *CompliancePostureRepository_Expecter) GetForAllControlsPaged(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, pageInfo any, search any, filter any, sort any) *CompliancePostureRepository_GetForAllControlsPaged_Call {
 	return &CompliancePostureRepository_GetForAllControlsPaged_Call{Call: _e.mock.On("GetForAllControlsPaged", ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)}
 }
 
@@ -997,7 +997,7 @@ type CompliancePostureRepository_GetForControl_Call struct {
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
-func (_e *CompliancePostureRepository_Expecter) GetForControl(ctx interface{}, tx interface{}, controlID interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}) *CompliancePostureRepository_GetForControl_Call {
+func (_e *CompliancePostureRepository_Expecter) GetForControl(ctx any, tx any, controlID any, assetVersionName any, assetID any, projectID any, orgID any) *CompliancePostureRepository_GetForControl_Call {
 	return &CompliancePostureRepository_GetForControl_Call{Call: _e.mock.On("GetForControl", ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)}
 }
 
@@ -1093,7 +1093,7 @@ type CompliancePostureRepository_GetStatsForAllControls_Call struct {
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
 //   - filter []shared.FilterQuery
-func (_e *CompliancePostureRepository_Expecter) GetStatsForAllControls(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}, filter interface{}) *CompliancePostureRepository_GetStatsForAllControls_Call {
+func (_e *CompliancePostureRepository_Expecter) GetStatsForAllControls(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, filter any) *CompliancePostureRepository_GetStatsForAllControls_Call {
 	return &CompliancePostureRepository_GetStatsForAllControls_Call{Call: _e.mock.On("GetStatsForAllControls", ctx, tx, assetVersionName, assetID, projectID, orgID, filter)}
 }
 
@@ -1178,7 +1178,7 @@ type CompliancePostureRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *CompliancePostureRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *CompliancePostureRepository_InBatches_Call {
+func (_e *CompliancePostureRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *CompliancePostureRepository_InBatches_Call {
 	return &CompliancePostureRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1252,7 +1252,7 @@ type CompliancePostureRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *CompliancePostureRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *CompliancePostureRepository_List_Call {
+func (_e *CompliancePostureRepository_Expecter) List(ctx any, tx any, ids any) *CompliancePostureRepository_List_Call {
 	return &CompliancePostureRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1324,7 +1324,7 @@ type CompliancePostureRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *CompliancePostureRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *CompliancePostureRepository_Read_Call {
+func (_e *CompliancePostureRepository_Expecter) Read(ctx any, tx any, id any) *CompliancePostureRepository_Read_Call {
 	return &CompliancePostureRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1387,7 +1387,7 @@ type CompliancePostureRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.CompliancePosture
-func (_e *CompliancePostureRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *CompliancePostureRepository_Save_Call {
+func (_e *CompliancePostureRepository_Expecter) Save(ctx any, tx any, t any) *CompliancePostureRepository_Save_Call {
 	return &CompliancePostureRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1450,7 +1450,7 @@ type CompliancePostureRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.CompliancePosture
-func (_e *CompliancePostureRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *CompliancePostureRepository_SaveBatch_Call {
+func (_e *CompliancePostureRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *CompliancePostureRepository_SaveBatch_Call {
 	return &CompliancePostureRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1512,7 +1512,7 @@ type CompliancePostureRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *CompliancePostureRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *CompliancePostureRepository_Transaction_Call {
+func (_e *CompliancePostureRepository_Expecter) Transaction(ctx any, fn any) *CompliancePostureRepository_Transaction_Call {
 	return &CompliancePostureRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1572,7 +1572,7 @@ type CompliancePostureRepository_Upsert_Call struct {
 //   - t *[]*models.CompliancePosture
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *CompliancePostureRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *CompliancePostureRepository_Upsert_Call {
+func (_e *CompliancePostureRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *CompliancePostureRepository_Upsert_Call {
 	return &CompliancePostureRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

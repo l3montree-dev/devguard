@@ -45,41 +45,33 @@ func (_m *ScanService) EXPECT() *ScanService_Expecter {
 }
 
 // FetchSbomsFromUpstream provides a mock function for the type ScanService
-func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError) {
-	ret := _mock.Called(ctx, artifactName, ref, upstreamURLs)
+func (_mock *ScanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []dtos.ExternalReferenceError) {
+	ret := _mock.Called(ctx, tx, asset, artifactName, ref, upstreamURLs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchSbomsFromUpstream")
 	}
 
 	var r0 []*normalize.SBOMGraph
-	var r1 []string
-	var r2 []dtos.ExternalReferenceError
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)); ok {
-		return returnFunc(ctx, artifactName, ref, upstreamURLs)
+	var r1 []dtos.ExternalReferenceError
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Asset, string, string, []string) ([]*normalize.SBOMGraph, []dtos.ExternalReferenceError)); ok {
+		return returnFunc(ctx, tx, asset, artifactName, ref, upstreamURLs)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []string) []*normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Asset, string, string, []string) []*normalize.SBOMGraph); ok {
+		r0 = returnFunc(ctx, tx, asset, artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*normalize.SBOMGraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, []string) []string); ok {
-		r1 = returnFunc(ctx, artifactName, ref, upstreamURLs)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Asset, string, string, []string) []dtos.ExternalReferenceError); ok {
+		r1 = returnFunc(ctx, tx, asset, artifactName, ref, upstreamURLs)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]string)
+			r1 = ret.Get(1).([]dtos.ExternalReferenceError)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, []string) []dtos.ExternalReferenceError); ok {
-		r2 = returnFunc(ctx, artifactName, ref, upstreamURLs)
-	} else {
-		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]dtos.ExternalReferenceError)
-		}
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // ScanService_FetchSbomsFromUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchSbomsFromUpstream'
@@ -89,47 +81,59 @@ type ScanService_FetchSbomsFromUpstream_Call struct {
 
 // FetchSbomsFromUpstream is a helper method to define mock.On call
 //   - ctx context.Context
+//   - tx shared.DB
+//   - asset models.Asset
 //   - artifactName string
 //   - ref string
 //   - upstreamURLs []string
-func (_e *ScanService_Expecter) FetchSbomsFromUpstream(ctx interface{}, artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchSbomsFromUpstream_Call {
-	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", ctx, artifactName, ref, upstreamURLs)}
+func (_e *ScanService_Expecter) FetchSbomsFromUpstream(ctx interface{}, tx interface{}, asset interface{}, artifactName interface{}, ref interface{}, upstreamURLs interface{}) *ScanService_FetchSbomsFromUpstream_Call {
+	return &ScanService_FetchSbomsFromUpstream_Call{Call: _e.mock.On("FetchSbomsFromUpstream", ctx, tx, asset, artifactName, ref, upstreamURLs)}
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Run(run func(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 shared.DB
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 models.Asset
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(models.Asset)
 		}
-		var arg3 []string
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].([]string)
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 []string
+		if args[5] != nil {
+			arg5 = args[5].([]string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
+			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, strings []string, externalReferenceErrors []dtos.ExternalReferenceError) *ScanService_FetchSbomsFromUpstream_Call {
-	_c.Call.Return(sBOMGraphs, strings, externalReferenceErrors)
+func (_c *ScanService_FetchSbomsFromUpstream_Call) Return(sBOMGraphs []*normalize.SBOMGraph, externalReferenceErrors []dtos.ExternalReferenceError) *ScanService_FetchSbomsFromUpstream_Call {
+	_c.Call.Return(sBOMGraphs, externalReferenceErrors)
 	return _c
 }
 
-func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
+func (_c *ScanService_FetchSbomsFromUpstream_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []dtos.ExternalReferenceError)) *ScanService_FetchSbomsFromUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -478,6 +482,144 @@ func (_c *ScanService_HandleScanResult_Call) Return(opened []models.DependencyVu
 }
 
 func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResult_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IngestVEXRules provides a mock function for the type ScanService
+func (_mock *ScanService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
+	ret := _mock.Called(ctx, tx, asset, rules)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IngestVEXRules")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Asset, []models.VEXRule) error); ok {
+		r0 = returnFunc(ctx, tx, asset, rules)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ScanService_IngestVEXRules_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IngestVEXRules'
+type ScanService_IngestVEXRules_Call struct {
+	*mock.Call
+}
+
+// IngestVEXRules is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - asset models.Asset
+//   - rules []models.VEXRule
+func (_e *ScanService_Expecter) IngestVEXRules(ctx interface{}, tx interface{}, asset interface{}, rules interface{}) *ScanService_IngestVEXRules_Call {
+	return &ScanService_IngestVEXRules_Call{Call: _e.mock.On("IngestVEXRules", ctx, tx, asset, rules)}
+}
+
+func (_c *ScanService_IngestVEXRules_Call) Run(run func(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule)) *ScanService_IngestVEXRules_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(models.Asset)
+		}
+		var arg3 []models.VEXRule
+		if args[3] != nil {
+			arg3 = args[3].([]models.VEXRule)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_IngestVEXRules_Call) Return(err error) *ScanService_IngestVEXRules_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ScanService_IngestVEXRules_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error) *ScanService_IngestVEXRules_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IngestVexFromExternalReferences provides a mock function for the type ScanService
+func (_mock *ScanService) IngestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset) error {
+	ret := _mock.Called(ctx, tx, bom, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IngestVexFromExternalReferences")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *cyclonedx.BOM, models.Asset) error); ok {
+		r0 = returnFunc(ctx, tx, bom, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ScanService_IngestVexFromExternalReferences_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IngestVexFromExternalReferences'
+type ScanService_IngestVexFromExternalReferences_Call struct {
+	*mock.Call
+}
+
+// IngestVexFromExternalReferences is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - bom *cyclonedx.BOM
+//   - asset models.Asset
+func (_e *ScanService_Expecter) IngestVexFromExternalReferences(ctx interface{}, tx interface{}, bom interface{}, asset interface{}) *ScanService_IngestVexFromExternalReferences_Call {
+	return &ScanService_IngestVexFromExternalReferences_Call{Call: _e.mock.On("IngestVexFromExternalReferences", ctx, tx, bom, asset)}
+}
+
+func (_c *ScanService_IngestVexFromExternalReferences_Call) Run(run func(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset)) *ScanService_IngestVexFromExternalReferences_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *cyclonedx.BOM
+		if args[2] != nil {
+			arg2 = args[2].(*cyclonedx.BOM)
+		}
+		var arg3 models.Asset
+		if args[3] != nil {
+			arg3 = args[3].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_IngestVexFromExternalReferences_Call) Return(err error) *ScanService_IngestVexFromExternalReferences_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ScanService_IngestVexFromExternalReferences_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset) error) *ScanService_IngestVexFromExternalReferences_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -68,7 +68,7 @@ type PolicyRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PolicyRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *PolicyRepository_Activate_Call {
+func (_e *PolicyRepository_Expecter) Activate(ctx any, tx any, id any) *PolicyRepository_Activate_Call {
 	return &PolicyRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type PolicyRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *PolicyRepository_Expecter) All(ctx interface{}, tx interface{}) *PolicyRepository_All_Call {
+func (_e *PolicyRepository_Expecter) All(ctx any, tx any) *PolicyRepository_All_Call {
 	return &PolicyRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type PolicyRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *PolicyRepository_Expecter) Begin(ctx interface{}) *PolicyRepository_Begin_Call {
+func (_e *PolicyRepository_Expecter) Begin(ctx any) *PolicyRepository_Begin_Call {
 	return &PolicyRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type PolicyRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *PolicyRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *PolicyRepository_CleanupOrphanedRecords_Call {
+func (_e *PolicyRepository_Expecter) CleanupOrphanedRecords(ctx any) *PolicyRepository_CleanupOrphanedRecords_Call {
 	return &PolicyRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type PolicyRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Policy
-func (_e *PolicyRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *PolicyRepository_Create_Call {
+func (_e *PolicyRepository_Expecter) Create(ctx any, tx any, t any) *PolicyRepository_Create_Call {
 	return &PolicyRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type PolicyRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Policy
-func (_e *PolicyRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *PolicyRepository_CreateBatch_Call {
+func (_e *PolicyRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *PolicyRepository_CreateBatch_Call {
 	return &PolicyRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type PolicyRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PolicyRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *PolicyRepository_Delete_Call {
+func (_e *PolicyRepository_Expecter) Delete(ctx any, tx any, id any) *PolicyRepository_Delete_Call {
 	return &PolicyRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type PolicyRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Policy
-func (_e *PolicyRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *PolicyRepository_DeleteBatch_Call {
+func (_e *PolicyRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *PolicyRepository_DeleteBatch_Call {
 	return &PolicyRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -566,7 +566,7 @@ type PolicyRepository_FindByOrganizationID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
-func (_e *PolicyRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, organizationID interface{}) *PolicyRepository_FindByOrganizationID_Call {
+func (_e *PolicyRepository_Expecter) FindByOrganizationID(ctx any, tx any, organizationID any) *PolicyRepository_FindByOrganizationID_Call {
 	return &PolicyRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, organizationID)}
 }
 
@@ -640,7 +640,7 @@ type PolicyRepository_FindByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *PolicyRepository_Expecter) FindByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *PolicyRepository_FindByProjectID_Call {
+func (_e *PolicyRepository_Expecter) FindByProjectID(ctx any, tx any, projectID any) *PolicyRepository_FindByProjectID_Call {
 	return &PolicyRepository_FindByProjectID_Call{Call: _e.mock.On("FindByProjectID", ctx, tx, projectID)}
 }
 
@@ -713,7 +713,7 @@ type PolicyRepository_FindCommunityManagedPolicies_Call struct {
 // FindCommunityManagedPolicies is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *PolicyRepository_Expecter) FindCommunityManagedPolicies(ctx interface{}, tx interface{}) *PolicyRepository_FindCommunityManagedPolicies_Call {
+func (_e *PolicyRepository_Expecter) FindCommunityManagedPolicies(ctx any, tx any) *PolicyRepository_FindCommunityManagedPolicies_Call {
 	return &PolicyRepository_FindCommunityManagedPolicies_Call{Call: _e.mock.On("FindCommunityManagedPolicies", ctx, tx)}
 }
 
@@ -772,7 +772,7 @@ type PolicyRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *PolicyRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *PolicyRepository_GetDB_Call {
+func (_e *PolicyRepository_Expecter) GetDB(ctx any, tx any) *PolicyRepository_GetDB_Call {
 	return &PolicyRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -832,7 +832,7 @@ type PolicyRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *PolicyRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *PolicyRepository_InBatches_Call {
+func (_e *PolicyRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *PolicyRepository_InBatches_Call {
 	return &PolicyRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -906,7 +906,7 @@ type PolicyRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *PolicyRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *PolicyRepository_List_Call {
+func (_e *PolicyRepository_Expecter) List(ctx any, tx any, ids any) *PolicyRepository_List_Call {
 	return &PolicyRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -978,7 +978,7 @@ type PolicyRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *PolicyRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *PolicyRepository_Read_Call {
+func (_e *PolicyRepository_Expecter) Read(ctx any, tx any, id any) *PolicyRepository_Read_Call {
 	return &PolicyRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1041,7 +1041,7 @@ type PolicyRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Policy
-func (_e *PolicyRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *PolicyRepository_Save_Call {
+func (_e *PolicyRepository_Expecter) Save(ctx any, tx any, t any) *PolicyRepository_Save_Call {
 	return &PolicyRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1104,7 +1104,7 @@ type PolicyRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Policy
-func (_e *PolicyRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *PolicyRepository_SaveBatch_Call {
+func (_e *PolicyRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *PolicyRepository_SaveBatch_Call {
 	return &PolicyRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1166,7 +1166,7 @@ type PolicyRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *PolicyRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *PolicyRepository_Transaction_Call {
+func (_e *PolicyRepository_Expecter) Transaction(ctx any, fn any) *PolicyRepository_Transaction_Call {
 	return &PolicyRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1226,7 +1226,7 @@ type PolicyRepository_Upsert_Call struct {
 //   - t *[]*models.Policy
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *PolicyRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PolicyRepository_Upsert_Call {
+func (_e *PolicyRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *PolicyRepository_Upsert_Call {
 	return &PolicyRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

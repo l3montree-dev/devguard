@@ -76,7 +76,7 @@ type VEXRuleRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *VEXRuleRepository_Expecter) All(ctx interface{}, tx interface{}) *VEXRuleRepository_All_Call {
+func (_e *VEXRuleRepository_Expecter) All(ctx any, tx any) *VEXRuleRepository_All_Call {
 	return &VEXRuleRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -134,7 +134,7 @@ type VEXRuleRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *VEXRuleRepository_Expecter) Begin(ctx interface{}) *VEXRuleRepository_Begin_Call {
+func (_e *VEXRuleRepository_Expecter) Begin(ctx any) *VEXRuleRepository_Begin_Call {
 	return &VEXRuleRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -187,7 +187,7 @@ type VEXRuleRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rule *models.VEXRule
-func (_e *VEXRuleRepository_Expecter) Create(ctx interface{}, tx interface{}, rule interface{}) *VEXRuleRepository_Create_Call {
+func (_e *VEXRuleRepository_Expecter) Create(ctx any, tx any, rule any) *VEXRuleRepository_Create_Call {
 	return &VEXRuleRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, rule)}
 }
 
@@ -250,7 +250,7 @@ type VEXRuleRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rule models.VEXRule
-func (_e *VEXRuleRepository_Expecter) Delete(ctx interface{}, tx interface{}, rule interface{}) *VEXRuleRepository_Delete_Call {
+func (_e *VEXRuleRepository_Expecter) Delete(ctx any, tx any, rule any) *VEXRuleRepository_Delete_Call {
 	return &VEXRuleRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, rule)}
 }
 
@@ -313,7 +313,7 @@ type VEXRuleRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rules []models.VEXRule
-func (_e *VEXRuleRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, rules interface{}) *VEXRuleRepository_DeleteBatch_Call {
+func (_e *VEXRuleRepository_Expecter) DeleteBatch(ctx any, tx any, rules any) *VEXRuleRepository_DeleteBatch_Call {
 	return &VEXRuleRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, rules)}
 }
 
@@ -376,7 +376,7 @@ type VEXRuleRepository_DeleteByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *VEXRuleRepository_Expecter) DeleteByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *VEXRuleRepository_DeleteByAssetID_Call {
+func (_e *VEXRuleRepository_Expecter) DeleteByAssetID(ctx any, tx any, assetID any) *VEXRuleRepository_DeleteByAssetID_Call {
 	return &VEXRuleRepository_DeleteByAssetID_Call{Call: _e.mock.On("DeleteByAssetID", ctx, tx, assetID)}
 }
 
@@ -451,7 +451,7 @@ type VEXRuleRepository_FindByAssetAndVexSource_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - vexSource string
-func (_e *VEXRuleRepository_Expecter) FindByAssetAndVexSource(ctx interface{}, tx interface{}, assetID interface{}, vexSource interface{}) *VEXRuleRepository_FindByAssetAndVexSource_Call {
+func (_e *VEXRuleRepository_Expecter) FindByAssetAndVexSource(ctx any, tx any, assetID any, vexSource any) *VEXRuleRepository_FindByAssetAndVexSource_Call {
 	return &VEXRuleRepository_FindByAssetAndVexSource_Call{Call: _e.mock.On("FindByAssetAndVexSource", ctx, tx, assetID, vexSource)}
 }
 
@@ -530,7 +530,7 @@ type VEXRuleRepository_FindByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *VEXRuleRepository_Expecter) FindByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *VEXRuleRepository_FindByAssetID_Call {
+func (_e *VEXRuleRepository_Expecter) FindByAssetID(ctx any, tx any, assetID any) *VEXRuleRepository_FindByAssetID_Call {
 	return &VEXRuleRepository_FindByAssetID_Call{Call: _e.mock.On("FindByAssetID", ctx, tx, assetID)}
 }
 
@@ -606,7 +606,7 @@ type VEXRuleRepository_FindByAssetIDPaged_Call struct {
 //   - search string
 //   - filterQuery []shared.FilterQuery
 //   - sortQuery []shared.SortQuery
-func (_e *VEXRuleRepository_Expecter) FindByAssetIDPaged(ctx interface{}, tx interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filterQuery interface{}, sortQuery interface{}) *VEXRuleRepository_FindByAssetIDPaged_Call {
+func (_e *VEXRuleRepository_Expecter) FindByAssetIDPaged(ctx any, tx any, assetID any, pageInfo any, search any, filterQuery any, sortQuery any) *VEXRuleRepository_FindByAssetIDPaged_Call {
 	return &VEXRuleRepository_FindByAssetIDPaged_Call{Call: _e.mock.On("FindByAssetIDPaged", ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)}
 }
 
@@ -700,7 +700,7 @@ type VEXRuleRepository_FindByAssetIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetIDs []uuid.UUID
-func (_e *VEXRuleRepository_Expecter) FindByAssetIDs(ctx interface{}, tx interface{}, assetIDs interface{}) *VEXRuleRepository_FindByAssetIDs_Call {
+func (_e *VEXRuleRepository_Expecter) FindByAssetIDs(ctx any, tx any, assetIDs any) *VEXRuleRepository_FindByAssetIDs_Call {
 	return &VEXRuleRepository_FindByAssetIDs_Call{Call: _e.mock.On("FindByAssetIDs", ctx, tx, assetIDs)}
 }
 
@@ -772,7 +772,7 @@ type VEXRuleRepository_FindByID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *VEXRuleRepository_Expecter) FindByID(ctx interface{}, tx interface{}, id interface{}) *VEXRuleRepository_FindByID_Call {
+func (_e *VEXRuleRepository_Expecter) FindByID(ctx any, tx any, id any) *VEXRuleRepository_FindByID_Call {
 	return &VEXRuleRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, tx, id)}
 }
 
@@ -836,7 +836,7 @@ type VEXRuleRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - db shared.DB
-func (_e *VEXRuleRepository_Expecter) GetDB(ctx interface{}, db interface{}) *VEXRuleRepository_GetDB_Call {
+func (_e *VEXRuleRepository_Expecter) GetDB(ctx any, db any) *VEXRuleRepository_GetDB_Call {
 	return &VEXRuleRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, db)}
 }
 
@@ -894,7 +894,7 @@ type VEXRuleRepository_Update_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rule *models.VEXRule
-func (_e *VEXRuleRepository_Expecter) Update(ctx interface{}, tx interface{}, rule interface{}) *VEXRuleRepository_Update_Call {
+func (_e *VEXRuleRepository_Expecter) Update(ctx any, tx any, rule any) *VEXRuleRepository_Update_Call {
 	return &VEXRuleRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, rule)}
 }
 
@@ -957,7 +957,7 @@ type VEXRuleRepository_Upsert_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rule *models.VEXRule
-func (_e *VEXRuleRepository_Expecter) Upsert(ctx interface{}, tx interface{}, rule interface{}) *VEXRuleRepository_Upsert_Call {
+func (_e *VEXRuleRepository_Expecter) Upsert(ctx any, tx any, rule any) *VEXRuleRepository_Upsert_Call {
 	return &VEXRuleRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, rule)}
 }
 
@@ -1020,7 +1020,7 @@ type VEXRuleRepository_UpsertBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rules []models.VEXRule
-func (_e *VEXRuleRepository_Expecter) UpsertBatch(ctx interface{}, tx interface{}, rules interface{}) *VEXRuleRepository_UpsertBatch_Call {
+func (_e *VEXRuleRepository_Expecter) UpsertBatch(ctx any, tx any, rules any) *VEXRuleRepository_UpsertBatch_Call {
 	return &VEXRuleRepository_UpsertBatch_Call{Call: _e.mock.On("UpsertBatch", ctx, tx, rules)}
 }
 

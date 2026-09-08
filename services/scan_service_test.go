@@ -17,8 +17,12 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -190,6 +194,85 @@ func TestFirstPartyVulnHash(t *testing.T) {
 		assert.Equal(t, "ffffffff-ffff-ffff-ffff-ffffffffffff", r[0].ID.String())
 	})
 
+}
+
+func TestIngestVexFromExternalReferences(t *testing.T) {
+	asset := models.Asset{}
+
+	t.Run("does nothing when the SBOM has no exploitability-statement references", func(t *testing.T) {
+		externalReferenceRepositoryMock := mocks.NewExternalReferenceRepository(t)
+		vexRuleRepositoryMock := mocks.NewVEXRuleRepository(t)
+
+		s := &scanService{
+			externalReferenceRepository: externalReferenceRepositoryMock,
+			vexRuleRepository:           vexRuleRepositoryMock,
+		}
+
+		bom := &cyclonedx.BOM{}
+
+		err := s.IngestVexFromExternalReferences(context.Background(), nil, bom, asset)
+
+		assert.NoError(t, err)
+		externalReferenceRepositoryMock.AssertNotCalled(t, "SaveBatch", mock.Anything, mock.Anything, mock.Anything)
+		vexRuleRepositoryMock.AssertNotCalled(t, "UpsertBatch", mock.Anything, mock.Anything, mock.Anything)
+	})
+
+	t.Run("fetches and ingests VEX rules when an exploitability-statement reference is present", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(mustMarshalJSON(t, map[string]any{
+				"@context":  "https://openvex.dev/ns/v0.2.0",
+				"@id":       "openvex-1",
+				"author":    "test-author",
+				"timestamp": time.Date(2026, time.May, 20, 12, 0, 0, 0, time.UTC),
+				"version":   1,
+				"statements": []any{
+					map[string]any{
+						"vulnerability": map[string]any{"name": "CVE-2024-1234"},
+						"products": []any{
+							map[string]any{"@id": "pkg:npm/test-component@1.0.0"},
+						},
+						"status": "not_affected",
+					},
+				},
+			})))
+		}))
+		defer server.Close()
+
+		vexURL := server.URL + "/component.vex.json"
+
+		externalReferenceRepositoryMock := mocks.NewExternalReferenceRepository(t)
+		vexRuleRepositoryMock := mocks.NewVEXRuleRepository(t)
+		dependencyVulnRepositoryMock := mocks.NewDependencyVulnRepository(t)
+
+		externalReferenceRepositoryMock.EXPECT().SaveBatch(mock.Anything, mock.Anything, mock.MatchedBy(func(refs []models.ExternalReference) bool {
+			ref := refs[0]
+			return ref.URL == vexURL && ref.AssetID == asset.ID
+		})).Return(nil)
+
+		vexRuleRepositoryMock.EXPECT().FindByAssetID(mock.Anything, mock.Anything, asset.ID).Return(nil, nil)
+		vexRuleRepositoryMock.EXPECT().UpsertBatch(mock.Anything, mock.Anything, mock.MatchedBy(func(rules []models.VEXRule) bool {
+			return len(rules) == 1
+		})).Return(nil)
+		dependencyVulnRepositoryMock.EXPECT().GetAllOpenVulnsByAssetID(mock.Anything, mock.Anything, asset.ID, mock.Anything).Return(func(yield func([]models.DependencyVuln, error) bool) {})
+
+		s := &scanService{
+			externalReferenceRepository: externalReferenceRepositoryMock,
+			vexRuleRepository:           vexRuleRepositoryMock,
+			dependencyVulnRepository:    dependencyVulnRepositoryMock,
+		}
+
+		refs := []cyclonedx.ExternalReference{
+			{Type: cyclonedx.ERTypeExploitabilityStatement, URL: vexURL},
+			{Type: cyclonedx.ERTypeOther, URL: "https://example.com/irrelevant"},
+		}
+		bom := &cyclonedx.BOM{ExternalReferences: &refs}
+
+		err := s.IngestVexFromExternalReferences(context.Background(), nil, bom, asset)
+
+		assert.NoError(t, err)
+	})
 }
 
 func mustMarshalJSON(t *testing.T, value any) string {

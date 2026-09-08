@@ -64,7 +64,7 @@ type ModelWriter_Activate_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Activate(ctx interface{}, tx interface{}, id interface{}) *ModelWriter_Activate_Call[ID, T, Tx] {
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Activate(ctx any, tx any, id any) *ModelWriter_Activate_Call[ID, T, Tx] {
 	return &ModelWriter_Activate_Call[ID, T, Tx]{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -125,7 +125,7 @@ type ModelWriter_CleanupOrphanedRecords_Call[ID any, T utils.Tabler, Tx any] str
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ModelWriter_Expecter[ID, T, Tx]) CleanupOrphanedRecords(ctx interface{}) *ModelWriter_CleanupOrphanedRecords_Call[ID, T, Tx] {
+func (_e *ModelWriter_Expecter[ID, T, Tx]) CleanupOrphanedRecords(ctx any) *ModelWriter_CleanupOrphanedRecords_Call[ID, T, Tx] {
 	return &ModelWriter_CleanupOrphanedRecords_Call[ID, T, Tx]{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -178,7 +178,7 @@ type ModelWriter_Create_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Create(ctx interface{}, tx interface{}, t interface{}) *ModelWriter_Create_Call[ID, T, Tx] {
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Create(ctx any, tx any, t any) *ModelWriter_Create_Call[ID, T, Tx] {
 	return &ModelWriter_Create_Call[ID, T, Tx]{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -241,7 +241,7 @@ type ModelWriter_Delete_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Delete(ctx interface{}, tx interface{}, id interface{}) *ModelWriter_Delete_Call[ID, T, Tx] {
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Delete(ctx any, tx any, id any) *ModelWriter_Delete_Call[ID, T, Tx] {
 	return &ModelWriter_Delete_Call[ID, T, Tx]{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -304,7 +304,7 @@ type ModelWriter_Save_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - t *T
-func (_e *ModelWriter_Expecter[ID, T, Tx]) Save(ctx interface{}, tx interface{}, t interface{}) *ModelWriter_Save_Call[ID, T, Tx] {
+func (_e *ModelWriter_Expecter[ID, T, Tx]) Save(ctx any, tx any, t any) *ModelWriter_Save_Call[ID, T, Tx] {
 	return &ModelWriter_Save_Call[ID, T, Tx]{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 

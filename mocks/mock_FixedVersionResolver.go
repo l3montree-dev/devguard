@@ -70,7 +70,7 @@ type FixedVersionResolver_ResolveFixedVersions_Call struct {
 // ResolveFixedVersions is a helper method to define mock.On call
 //   - path []packageurl.PackageURL
 //   - fixedVersion string
-func (_e *FixedVersionResolver_Expecter) ResolveFixedVersions(path interface{}, fixedVersion interface{}) *FixedVersionResolver_ResolveFixedVersions_Call {
+func (_e *FixedVersionResolver_Expecter) ResolveFixedVersions(path any, fixedVersion any) *FixedVersionResolver_ResolveFixedVersions_Call {
 	return &FixedVersionResolver_ResolveFixedVersions_Call{Call: _e.mock.On("ResolveFixedVersions", path, fixedVersion)}
 }
 

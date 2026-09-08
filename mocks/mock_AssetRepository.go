@@ -69,7 +69,7 @@ type AssetRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AssetRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_Activate_Call {
+func (_e *AssetRepository_Expecter) Activate(ctx any, tx any, id any) *AssetRepository_Activate_Call {
 	return &AssetRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -142,7 +142,7 @@ type AssetRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetRepository_Expecter) All(ctx interface{}, tx interface{}) *AssetRepository_All_Call {
+func (_e *AssetRepository_Expecter) All(ctx any, tx any) *AssetRepository_All_Call {
 	return &AssetRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -200,7 +200,7 @@ type AssetRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *AssetRepository_Expecter) Begin(ctx interface{}) *AssetRepository_Begin_Call {
+func (_e *AssetRepository_Expecter) Begin(ctx any) *AssetRepository_Begin_Call {
 	return &AssetRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -251,7 +251,7 @@ type AssetRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *AssetRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *AssetRepository_CleanupOrphanedRecords_Call {
+func (_e *AssetRepository_Expecter) CleanupOrphanedRecords(ctx any) *AssetRepository_CleanupOrphanedRecords_Call {
 	return &AssetRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -304,7 +304,7 @@ type AssetRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Asset
-func (_e *AssetRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *AssetRepository_Create_Call {
+func (_e *AssetRepository_Expecter) Create(ctx any, tx any, t any) *AssetRepository_Create_Call {
 	return &AssetRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -367,7 +367,7 @@ type AssetRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Asset
-func (_e *AssetRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *AssetRepository_CreateBatch_Call {
+func (_e *AssetRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *AssetRepository_CreateBatch_Call {
 	return &AssetRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -430,7 +430,7 @@ type AssetRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AssetRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_Delete_Call {
+func (_e *AssetRepository_Expecter) Delete(ctx any, tx any, id any) *AssetRepository_Delete_Call {
 	return &AssetRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -493,7 +493,7 @@ type AssetRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.Asset
-func (_e *AssetRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *AssetRepository_DeleteBatch_Call {
+func (_e *AssetRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *AssetRepository_DeleteBatch_Call {
 	return &AssetRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -568,7 +568,7 @@ type AssetRepository_FindAssetByExternalProviderID_Call struct {
 //   - tx shared.DB
 //   - externalEntityProviderID string
 //   - externalEntityID string
-func (_e *AssetRepository_Expecter) FindAssetByExternalProviderID(ctx interface{}, tx interface{}, externalEntityProviderID interface{}, externalEntityID interface{}) *AssetRepository_FindAssetByExternalProviderID_Call {
+func (_e *AssetRepository_Expecter) FindAssetByExternalProviderID(ctx any, tx any, externalEntityProviderID any, externalEntityID any) *AssetRepository_FindAssetByExternalProviderID_Call {
 	return &AssetRepository_FindAssetByExternalProviderID_Call{Call: _e.mock.On("FindAssetByExternalProviderID", ctx, tx, externalEntityProviderID, externalEntityID)}
 }
 
@@ -645,7 +645,7 @@ type AssetRepository_FindByName_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - name string
-func (_e *AssetRepository_Expecter) FindByName(ctx interface{}, tx interface{}, name interface{}) *AssetRepository_FindByName_Call {
+func (_e *AssetRepository_Expecter) FindByName(ctx any, tx any, name any) *AssetRepository_FindByName_Call {
 	return &AssetRepository_FindByName_Call{Call: _e.mock.On("FindByName", ctx, tx, name)}
 }
 
@@ -718,7 +718,7 @@ type AssetRepository_GetAllAssetsFromDB_Call struct {
 // GetAllAssetsFromDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetRepository_Expecter) GetAllAssetsFromDB(ctx interface{}, tx interface{}) *AssetRepository_GetAllAssetsFromDB_Call {
+func (_e *AssetRepository_Expecter) GetAllAssetsFromDB(ctx any, tx any) *AssetRepository_GetAllAssetsFromDB_Call {
 	return &AssetRepository_GetAllAssetsFromDB_Call{Call: _e.mock.On("GetAllAssetsFromDB", ctx, tx)}
 }
 
@@ -788,7 +788,7 @@ type AssetRepository_GetAllowedAssetsByProjectID_Call struct {
 //   - tx shared.DB
 //   - allowedAssetIDs []string
 //   - projectID uuid.UUID
-func (_e *AssetRepository_Expecter) GetAllowedAssetsByProjectID(ctx interface{}, tx interface{}, allowedAssetIDs interface{}, projectID interface{}) *AssetRepository_GetAllowedAssetsByProjectID_Call {
+func (_e *AssetRepository_Expecter) GetAllowedAssetsByProjectID(ctx any, tx any, allowedAssetIDs any, projectID any) *AssetRepository_GetAllowedAssetsByProjectID_Call {
 	return &AssetRepository_GetAllowedAssetsByProjectID_Call{Call: _e.mock.On("GetAllowedAssetsByProjectID", ctx, tx, allowedAssetIDs, projectID)}
 }
 
@@ -868,7 +868,7 @@ type AssetRepository_GetAssetIDBySlug_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - slug string
-func (_e *AssetRepository_Expecter) GetAssetIDBySlug(ctx interface{}, tx interface{}, projectID interface{}, slug interface{}) *AssetRepository_GetAssetIDBySlug_Call {
+func (_e *AssetRepository_Expecter) GetAssetIDBySlug(ctx any, tx any, projectID any, slug any) *AssetRepository_GetAssetIDBySlug_Call {
 	return &AssetRepository_GetAssetIDBySlug_Call{Call: _e.mock.On("GetAssetIDBySlug", ctx, tx, projectID, slug)}
 }
 
@@ -947,7 +947,7 @@ type AssetRepository_GetAssetsWithVulnSharingEnabled_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *AssetRepository_Expecter) GetAssetsWithVulnSharingEnabled(ctx interface{}, tx interface{}, orgID interface{}) *AssetRepository_GetAssetsWithVulnSharingEnabled_Call {
+func (_e *AssetRepository_Expecter) GetAssetsWithVulnSharingEnabled(ctx any, tx any, orgID any) *AssetRepository_GetAssetsWithVulnSharingEnabled_Call {
 	return &AssetRepository_GetAssetsWithVulnSharingEnabled_Call{Call: _e.mock.On("GetAssetsWithVulnSharingEnabled", ctx, tx, orgID)}
 }
 
@@ -1021,7 +1021,7 @@ type AssetRepository_GetByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - organizationID uuid.UUID
-func (_e *AssetRepository_Expecter) GetByOrgID(ctx interface{}, tx interface{}, organizationID interface{}) *AssetRepository_GetByOrgID_Call {
+func (_e *AssetRepository_Expecter) GetByOrgID(ctx any, tx any, organizationID any) *AssetRepository_GetByOrgID_Call {
 	return &AssetRepository_GetByOrgID_Call{Call: _e.mock.On("GetByOrgID", ctx, tx, organizationID)}
 }
 
@@ -1095,7 +1095,7 @@ type AssetRepository_GetByProjectID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectID uuid.UUID
-func (_e *AssetRepository_Expecter) GetByProjectID(ctx interface{}, tx interface{}, projectID interface{}) *AssetRepository_GetByProjectID_Call {
+func (_e *AssetRepository_Expecter) GetByProjectID(ctx any, tx any, projectID any) *AssetRepository_GetByProjectID_Call {
 	return &AssetRepository_GetByProjectID_Call{Call: _e.mock.On("GetByProjectID", ctx, tx, projectID)}
 }
 
@@ -1169,7 +1169,7 @@ type AssetRepository_GetByProjectIDs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - projectIDs []uuid.UUID
-func (_e *AssetRepository_Expecter) GetByProjectIDs(ctx interface{}, tx interface{}, projectIDs interface{}) *AssetRepository_GetByProjectIDs_Call {
+func (_e *AssetRepository_Expecter) GetByProjectIDs(ctx any, tx any, projectIDs any) *AssetRepository_GetByProjectIDs_Call {
 	return &AssetRepository_GetByProjectIDs_Call{Call: _e.mock.On("GetByProjectIDs", ctx, tx, projectIDs)}
 }
 
@@ -1244,7 +1244,7 @@ type AssetRepository_GetByProjectIDsWithProviderID_Call struct {
 //   - tx shared.DB
 //   - projectIDs []uuid.UUID
 //   - providerID string
-func (_e *AssetRepository_Expecter) GetByProjectIDsWithProviderID(ctx interface{}, tx interface{}, projectIDs interface{}, providerID interface{}) *AssetRepository_GetByProjectIDsWithProviderID_Call {
+func (_e *AssetRepository_Expecter) GetByProjectIDsWithProviderID(ctx any, tx any, projectIDs any, providerID any) *AssetRepository_GetByProjectIDsWithProviderID_Call {
 	return &AssetRepository_GetByProjectIDsWithProviderID_Call{Call: _e.mock.On("GetByProjectIDsWithProviderID", ctx, tx, projectIDs, providerID)}
 }
 
@@ -1313,7 +1313,7 @@ type AssetRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AssetRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *AssetRepository_GetDB_Call {
+func (_e *AssetRepository_Expecter) GetDB(ctx any, tx any) *AssetRepository_GetDB_Call {
 	return &AssetRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1380,7 +1380,7 @@ type AssetRepository_GetFQNByID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AssetRepository_Expecter) GetFQNByID(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_GetFQNByID_Call {
+func (_e *AssetRepository_Expecter) GetFQNByID(ctx any, tx any, id any) *AssetRepository_GetFQNByID_Call {
 	return &AssetRepository_GetFQNByID_Call{Call: _e.mock.On("GetFQNByID", ctx, tx, id)}
 }
 
@@ -1464,7 +1464,7 @@ type AssetRepository_GetOrgProjectAssetSlugsByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetRepository_Expecter) GetOrgProjectAssetSlugsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AssetRepository_GetOrgProjectAssetSlugsByAssetID_Call {
+func (_e *AssetRepository_Expecter) GetOrgProjectAssetSlugsByAssetID(ctx any, tx any, assetID any) *AssetRepository_GetOrgProjectAssetSlugsByAssetID_Call {
 	return &AssetRepository_GetOrgProjectAssetSlugsByAssetID_Call{Call: _e.mock.On("GetOrgProjectAssetSlugsByAssetID", ctx, tx, assetID)}
 }
 
@@ -1529,7 +1529,7 @@ type AssetRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *AssetRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *AssetRepository_InBatches_Call {
+func (_e *AssetRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *AssetRepository_InBatches_Call {
 	return &AssetRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1603,7 +1603,7 @@ type AssetRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *AssetRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *AssetRepository_List_Call {
+func (_e *AssetRepository_Expecter) List(ctx any, tx any, ids any) *AssetRepository_List_Call {
 	return &AssetRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1675,7 +1675,7 @@ type AssetRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *AssetRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_Read_Call {
+func (_e *AssetRepository_Expecter) Read(ctx any, tx any, id any) *AssetRepository_Read_Call {
 	return &AssetRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1748,7 +1748,7 @@ type AssetRepository_ReadBySlug_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - slug string
-func (_e *AssetRepository_Expecter) ReadBySlug(ctx interface{}, tx interface{}, projectID interface{}, slug interface{}) *AssetRepository_ReadBySlug_Call {
+func (_e *AssetRepository_Expecter) ReadBySlug(ctx any, tx any, projectID any, slug any) *AssetRepository_ReadBySlug_Call {
 	return &AssetRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, tx, projectID, slug)}
 }
 
@@ -1826,7 +1826,7 @@ type AssetRepository_ReadBySlugUnscoped_Call struct {
 //   - tx shared.DB
 //   - projectID uuid.UUID
 //   - slug string
-func (_e *AssetRepository_Expecter) ReadBySlugUnscoped(ctx interface{}, tx interface{}, projectID interface{}, slug interface{}) *AssetRepository_ReadBySlugUnscoped_Call {
+func (_e *AssetRepository_Expecter) ReadBySlugUnscoped(ctx any, tx any, projectID any, slug any) *AssetRepository_ReadBySlugUnscoped_Call {
 	return &AssetRepository_ReadBySlugUnscoped_Call{Call: _e.mock.On("ReadBySlugUnscoped", ctx, tx, projectID, slug)}
 }
 
@@ -1903,7 +1903,7 @@ type AssetRepository_ReadWithAssetVersions_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetRepository_Expecter) ReadWithAssetVersions(ctx interface{}, tx interface{}, assetID interface{}) *AssetRepository_ReadWithAssetVersions_Call {
+func (_e *AssetRepository_Expecter) ReadWithAssetVersions(ctx any, tx any, assetID any) *AssetRepository_ReadWithAssetVersions_Call {
 	return &AssetRepository_ReadWithAssetVersions_Call{Call: _e.mock.On("ReadWithAssetVersions", ctx, tx, assetID)}
 }
 
@@ -1975,7 +1975,7 @@ type AssetRepository_ReadWithProject_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - id uuid.UUID
-func (_e *AssetRepository_Expecter) ReadWithProject(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_ReadWithProject_Call {
+func (_e *AssetRepository_Expecter) ReadWithProject(ctx any, tx any, id any) *AssetRepository_ReadWithProject_Call {
 	return &AssetRepository_ReadWithProject_Call{Call: _e.mock.On("ReadWithProject", ctx, tx, id)}
 }
 
@@ -2049,7 +2049,7 @@ type AssetRepository_ReadWithProjects_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - id []uuid.UUID
-func (_e *AssetRepository_Expecter) ReadWithProjects(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_ReadWithProjects_Call {
+func (_e *AssetRepository_Expecter) ReadWithProjects(ctx any, tx any, id any) *AssetRepository_ReadWithProjects_Call {
 	return &AssetRepository_ReadWithProjects_Call{Call: _e.mock.On("ReadWithProjects", ctx, tx, id)}
 }
 
@@ -2112,7 +2112,7 @@ type AssetRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.Asset
-func (_e *AssetRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *AssetRepository_Save_Call {
+func (_e *AssetRepository_Expecter) Save(ctx any, tx any, t any) *AssetRepository_Save_Call {
 	return &AssetRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -2175,7 +2175,7 @@ type AssetRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.Asset
-func (_e *AssetRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *AssetRepository_SaveBatch_Call {
+func (_e *AssetRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *AssetRepository_SaveBatch_Call {
 	return &AssetRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -2237,7 +2237,7 @@ type AssetRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *AssetRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *AssetRepository_Transaction_Call {
+func (_e *AssetRepository_Expecter) Transaction(ctx any, fn any) *AssetRepository_Transaction_Call {
 	return &AssetRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -2295,7 +2295,7 @@ type AssetRepository_Update_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - asset *models.Asset
-func (_e *AssetRepository_Expecter) Update(ctx interface{}, tx interface{}, asset interface{}) *AssetRepository_Update_Call {
+func (_e *AssetRepository_Expecter) Update(ctx any, tx any, asset any) *AssetRepository_Update_Call {
 	return &AssetRepository_Update_Call{Call: _e.mock.On("Update", ctx, tx, asset)}
 }
 
@@ -2360,7 +2360,7 @@ type AssetRepository_Upsert_Call struct {
 //   - assets *[]*models.Asset
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *AssetRepository_Expecter) Upsert(ctx interface{}, tx interface{}, assets interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
+func (_e *AssetRepository_Expecter) Upsert(ctx any, tx any, assets any, conflictingColumns any, updateOnly any) *AssetRepository_Upsert_Call {
 	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, assets, conflictingColumns, updateOnly)}
 }
 
@@ -2453,7 +2453,7 @@ type AssetRepository_UpsertSplit_Call struct {
 //   - tx shared.DB
 //   - externalProviderID string
 //   - assets []*models.Asset
-func (_e *AssetRepository_Expecter) UpsertSplit(ctx interface{}, tx interface{}, externalProviderID interface{}, assets interface{}) *AssetRepository_UpsertSplit_Call {
+func (_e *AssetRepository_Expecter) UpsertSplit(ctx any, tx any, externalProviderID any, assets any) *AssetRepository_UpsertSplit_Call {
 	return &AssetRepository_UpsertSplit_Call{Call: _e.mock.On("UpsertSplit", ctx, tx, externalProviderID, assets)}
 }
 

@@ -610,7 +610,7 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) (boms []*normalize.SBOMGraph, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -628,45 +628,12 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 			continue
 		}
 
-		var bom cyclonedx.BOM
-		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-		defer cancel()
-		// fetch the file from the url
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-
+		bom, err := fetchUpstreamURL(ctx, url)
 		if err != nil {
+			// reason is described by the functions error
 			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
 				URL:    url,
-				Reason: fmt.Sprintf("could not create request for url: %v", err),
-			})
-			continue
-		}
-
-		resp, err := utils.EgressClient.Do(req)
-		if err != nil || resp.StatusCode != 200 {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not fetch url or non 200 status code: %v", err),
-			})
-			continue
-		}
-		defer resp.Body.Close()
-
-		// download the url and check if it is a valid sbom
-		file, err := io.ReadAll(resp.Body)
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not read response body: %v", err),
-			})
-			continue
-		}
-
-		err = json.Unmarshal(file, &bom)
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not unmarshal response body into cyclonedx bom: %v", err),
+				Reason: err.Error(),
 			})
 			continue
 		}
@@ -683,13 +650,50 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 				continue
 			}
 
-			validURLs = append(validURLs, url)
+			if err := s.IngestVexFromExternalReferences(ctx, tx, &bom, asset); err != nil {
+				slog.Error("could not ingest vex from external references", "err", err)
+			}
+
 			// add the sbom prefix
 			boms = append(boms, normalizedBOM)
+		} else {
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: "referenced document is not a valid SBOM",
+			})
 		}
 	}
 
-	return boms, validURLs, invalidURLs
+	return boms, invalidURLs
+}
+
+// fetches url inside a function to properly cancel ctx and close the response body
+func fetchUpstreamURL(ctx context.Context, url string) (cyclonedx.BOM, error) {
+	var bom cyclonedx.BOM
+	reqCtx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
+	if err != nil {
+		return bom, fmt.Errorf("could not create request for url: %w", err)
+	}
+
+	resp, err := utils.EgressClient.Do(req)
+	if err != nil {
+		return bom, fmt.Errorf("could not fetch url: %w", err)
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return bom, fmt.Errorf("non 200 status code when fetching url: %d", resp.StatusCode)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&bom)
+	if err != nil {
+		return bom, fmt.Errorf("could not parse bom to cyclone dx bom: %w", err)
+	}
+
+	return bom, nil
 }
 
 // sniffVexFormat detects the VEX document format from top-level JSON keys.
@@ -851,7 +855,7 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	})
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
+	boms, _ := s.FetchSbomsFromUpstream(ctx, tx, asset, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
 
 	// Merge all BOMs into a single graph
 	newGraph := normalize.NewSBOMGraph()
@@ -974,4 +978,32 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		AmountOpened:    len(vulnDTOs),
 		DependencyVulns: vulnDTOs,
 	}, nil
+}
+
+func (s *scanService) IngestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset) error {
+	externalURLs := []string{}
+	if bom.ExternalReferences != nil {
+		for _, ref := range *bom.ExternalReferences {
+			if ref.Type == cyclonedx.ERTypeExploitabilityStatement {
+				externalURLs = append(externalURLs, ref.URL)
+			}
+		}
+	}
+
+	if len(externalURLs) == 0 {
+		return nil
+	}
+
+	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, externalURLs)
+
+	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
+		slog.Error("could not store vex external reference", "err", err)
+		return err
+	}
+
+	if len(rules) == 0 {
+		return nil
+	}
+
+	return s.IngestVEXRules(ctx, tx, asset, rules)
 }

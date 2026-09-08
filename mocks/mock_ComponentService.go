@@ -73,7 +73,7 @@ type ComponentService_FetchComponentProject_Call struct {
 // FetchComponentProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - component models.Component
-func (_e *ComponentService_Expecter) FetchComponentProject(ctx interface{}, component interface{}) *ComponentService_FetchComponentProject_Call {
+func (_e *ComponentService_Expecter) FetchComponentProject(ctx any, component any) *ComponentService_FetchComponentProject_Call {
 	return &ComponentService_FetchComponentProject_Call{Call: _e.mock.On("FetchComponentProject", ctx, component)}
 }
 
@@ -142,7 +142,7 @@ type ComponentService_FetchInformationSources_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - artifact *models.Artifact
-func (_e *ComponentService_Expecter) FetchInformationSources(ctx interface{}, tx interface{}, artifact interface{}) *ComponentService_FetchInformationSources_Call {
+func (_e *ComponentService_Expecter) FetchInformationSources(ctx any, tx any, artifact any) *ComponentService_FetchInformationSources_Call {
 	return &ComponentService_FetchInformationSources_Call{Call: _e.mock.On("FetchInformationSources", ctx, tx, artifact)}
 }
 
@@ -218,7 +218,7 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
 //   - forceRefresh bool
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(ctx any, tx any, assetVersion any, artifactName any, forceRefresh any) *ComponentService_GetAndSaveLicenseInformation_Call {
 	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", ctx, tx, assetVersion, artifactName, forceRefresh)}
 }
 
@@ -299,7 +299,7 @@ type ComponentService_GetLicense_Call struct {
 // GetLicense is a helper method to define mock.On call
 //   - ctx context.Context
 //   - component models.Component
-func (_e *ComponentService_Expecter) GetLicense(ctx interface{}, component interface{}) *ComponentService_GetLicense_Call {
+func (_e *ComponentService_Expecter) GetLicense(ctx any, component any) *ComponentService_GetLicense_Call {
 	return &ComponentService_GetLicense_Call{Call: _e.mock.On("GetLicense", ctx, component)}
 }
 
@@ -345,7 +345,7 @@ type ComponentService_RefreshComponentProjectInformation_Call struct {
 // RefreshComponentProjectInformation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - project models.ComponentProject
-func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(ctx interface{}, project interface{}) *ComponentService_RefreshComponentProjectInformation_Call {
+func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(ctx any, project any) *ComponentService_RefreshComponentProjectInformation_Call {
 	return &ComponentService_RefreshComponentProjectInformation_Call{Call: _e.mock.On("RefreshComponentProjectInformation", ctx, project)}
 }
 
@@ -404,7 +404,7 @@ type ComponentService_RemoveInformationSources_Call struct {
 //   - tx shared.DB
 //   - artifact *models.Artifact
 //   - rootNodePurls []string
-func (_e *ComponentService_Expecter) RemoveInformationSources(ctx interface{}, tx interface{}, artifact interface{}, rootNodePurls interface{}) *ComponentService_RemoveInformationSources_Call {
+func (_e *ComponentService_Expecter) RemoveInformationSources(ctx any, tx any, artifact any, rootNodePurls any) *ComponentService_RemoveInformationSources_Call {
 	return &ComponentService_RemoveInformationSources_Call{Call: _e.mock.On("RemoveInformationSources", ctx, tx, artifact, rootNodePurls)}
 }
 

@@ -68,7 +68,7 @@ type SupplyChainRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *SupplyChainRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *SupplyChainRepository_Activate_Call {
+func (_e *SupplyChainRepository_Expecter) Activate(ctx any, tx any, id any) *SupplyChainRepository_Activate_Call {
 	return &SupplyChainRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -141,7 +141,7 @@ type SupplyChainRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *SupplyChainRepository_Expecter) All(ctx interface{}, tx interface{}) *SupplyChainRepository_All_Call {
+func (_e *SupplyChainRepository_Expecter) All(ctx any, tx any) *SupplyChainRepository_All_Call {
 	return &SupplyChainRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -199,7 +199,7 @@ type SupplyChainRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *SupplyChainRepository_Expecter) Begin(ctx interface{}) *SupplyChainRepository_Begin_Call {
+func (_e *SupplyChainRepository_Expecter) Begin(ctx any) *SupplyChainRepository_Begin_Call {
 	return &SupplyChainRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -250,7 +250,7 @@ type SupplyChainRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *SupplyChainRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *SupplyChainRepository_CleanupOrphanedRecords_Call {
+func (_e *SupplyChainRepository_Expecter) CleanupOrphanedRecords(ctx any) *SupplyChainRepository_CleanupOrphanedRecords_Call {
 	return &SupplyChainRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -303,7 +303,7 @@ type SupplyChainRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.SupplyChain
-func (_e *SupplyChainRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *SupplyChainRepository_Create_Call {
+func (_e *SupplyChainRepository_Expecter) Create(ctx any, tx any, t any) *SupplyChainRepository_Create_Call {
 	return &SupplyChainRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -366,7 +366,7 @@ type SupplyChainRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.SupplyChain
-func (_e *SupplyChainRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *SupplyChainRepository_CreateBatch_Call {
+func (_e *SupplyChainRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *SupplyChainRepository_CreateBatch_Call {
 	return &SupplyChainRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -429,7 +429,7 @@ type SupplyChainRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *SupplyChainRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *SupplyChainRepository_Delete_Call {
+func (_e *SupplyChainRepository_Expecter) Delete(ctx any, tx any, id any) *SupplyChainRepository_Delete_Call {
 	return &SupplyChainRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -492,7 +492,7 @@ type SupplyChainRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.SupplyChain
-func (_e *SupplyChainRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *SupplyChainRepository_DeleteBatch_Call {
+func (_e *SupplyChainRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *SupplyChainRepository_DeleteBatch_Call {
 	return &SupplyChainRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -566,7 +566,7 @@ type SupplyChainRepository_FindByDigest_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - digest string
-func (_e *SupplyChainRepository_Expecter) FindByDigest(ctx interface{}, tx interface{}, digest interface{}) *SupplyChainRepository_FindByDigest_Call {
+func (_e *SupplyChainRepository_Expecter) FindByDigest(ctx any, tx any, digest any) *SupplyChainRepository_FindByDigest_Call {
 	return &SupplyChainRepository_FindByDigest_Call{Call: _e.mock.On("FindByDigest", ctx, tx, digest)}
 }
 
@@ -640,7 +640,7 @@ type SupplyChainRepository_FindBySupplyChainID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - supplyChainID string
-func (_e *SupplyChainRepository_Expecter) FindBySupplyChainID(ctx interface{}, tx interface{}, supplyChainID interface{}) *SupplyChainRepository_FindBySupplyChainID_Call {
+func (_e *SupplyChainRepository_Expecter) FindBySupplyChainID(ctx any, tx any, supplyChainID any) *SupplyChainRepository_FindBySupplyChainID_Call {
 	return &SupplyChainRepository_FindBySupplyChainID_Call{Call: _e.mock.On("FindBySupplyChainID", ctx, tx, supplyChainID)}
 }
 
@@ -704,7 +704,7 @@ type SupplyChainRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *SupplyChainRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *SupplyChainRepository_GetDB_Call {
+func (_e *SupplyChainRepository_Expecter) GetDB(ctx any, tx any) *SupplyChainRepository_GetDB_Call {
 	return &SupplyChainRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -764,7 +764,7 @@ type SupplyChainRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *SupplyChainRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *SupplyChainRepository_InBatches_Call {
+func (_e *SupplyChainRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *SupplyChainRepository_InBatches_Call {
 	return &SupplyChainRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -838,7 +838,7 @@ type SupplyChainRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []uuid.UUID
-func (_e *SupplyChainRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *SupplyChainRepository_List_Call {
+func (_e *SupplyChainRepository_Expecter) List(ctx any, tx any, ids any) *SupplyChainRepository_List_Call {
 	return &SupplyChainRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -911,7 +911,7 @@ type SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call struct {
 //   - tx shared.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *SupplyChainRepository_Expecter) PercentageOfVerifiedSupplyChains(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+func (_e *SupplyChainRepository_Expecter) PercentageOfVerifiedSupplyChains(ctx any, tx any, assetVersionName any, assetID any) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
 	return &SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call{Call: _e.mock.On("PercentageOfVerifiedSupplyChains", ctx, tx, assetVersionName, assetID)}
 }
 
@@ -988,7 +988,7 @@ type SupplyChainRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *SupplyChainRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *SupplyChainRepository_Read_Call {
+func (_e *SupplyChainRepository_Expecter) Read(ctx any, tx any, id any) *SupplyChainRepository_Read_Call {
 	return &SupplyChainRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1051,7 +1051,7 @@ type SupplyChainRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.SupplyChain
-func (_e *SupplyChainRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *SupplyChainRepository_Save_Call {
+func (_e *SupplyChainRepository_Expecter) Save(ctx any, tx any, t any) *SupplyChainRepository_Save_Call {
 	return &SupplyChainRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1114,7 +1114,7 @@ type SupplyChainRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.SupplyChain
-func (_e *SupplyChainRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *SupplyChainRepository_SaveBatch_Call {
+func (_e *SupplyChainRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *SupplyChainRepository_SaveBatch_Call {
 	return &SupplyChainRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1176,7 +1176,7 @@ type SupplyChainRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *SupplyChainRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *SupplyChainRepository_Transaction_Call {
+func (_e *SupplyChainRepository_Expecter) Transaction(ctx any, fn any) *SupplyChainRepository_Transaction_Call {
 	return &SupplyChainRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1236,7 +1236,7 @@ type SupplyChainRepository_Upsert_Call struct {
 //   - t *[]*models.SupplyChain
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *SupplyChainRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *SupplyChainRepository_Upsert_Call {
+func (_e *SupplyChainRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *SupplyChainRepository_Upsert_Call {
 	return &SupplyChainRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 
