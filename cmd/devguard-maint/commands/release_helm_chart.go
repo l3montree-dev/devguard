@@ -66,9 +66,22 @@ func runReleaseHelmChart(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("no devguard-ci-components release found with minor version %s — run 'release ci-components' first", minor)
 	}
 
+	kratosTag, err := i.NixVersion(filepath.Join("devguard", "nix", "kratos.nix"))
+	if err != nil {
+		return fmt.Errorf("could not detect kratos upstream version: %w", err)
+	}
+
+	postgresqlTag, err := i.NixVersion(filepath.Join("devguard", "nix", "postgresql.nix"))
+	if err != nil {
+		return fmt.Errorf("could not detect postgresql upstream version: %w", err)
+	}
+	postgresqlTag = i.StripPackageRevision(postgresqlTag)
+
 	fmt.Printf("✓ devguard latest tag for minor %s: %s\n", minor, apiTag)
 	fmt.Printf("✓ devguard-web latest tag for minor %s: %s\n", minor, webTag)
 	fmt.Printf("✓ devguard-ci-components latest tag for minor %s: %s\n", minor, ciComponentsTag)
+	fmt.Printf("✓ kratos upstream version: %s\n", kratosTag)
+	fmt.Printf("✓ postgresql upstream version: %s\n", postgresqlTag)
 
 	if err := i.GitCheckoutMain("devguard-helm-chart"); err != nil {
 		return fmt.Errorf("checkout main in devguard-helm-chart: %w", err)
@@ -87,7 +100,7 @@ func runReleaseHelmChart(_ *cobra.Command, args []string) error {
 
 	cl := &i.Changelog{}
 
-	if err := updateHelmChart(semver, apiTag, webTag, ciComponentsTag, cl); err != nil {
+	if err := updateHelmChart(semver, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag, cl); err != nil {
 		return err
 	}
 
@@ -102,8 +115,8 @@ func runReleaseHelmChart(_ *cobra.Command, args []string) error {
 	}
 
 	helmMsg := fmt.Sprintf(
-		"chore: update Helm chart to %s\n\n- devguard image: %s\n- devguard-web image: %s\n- devguard-ci-components: %s\n- kratos image: %s\n- Helm chart version: %s, appVersion: %s",
-		tag, apiTag, webTag, ciComponentsTag, apiTag, semver, apiTag,
+		"chore: update Helm chart to %s\n\n- devguard image: %s\n- devguard-web image: %s\n- devguard-ci-components: %s\n- kratos image: %s\n- postgresql image: %s\n- Helm chart version: %s, appVersion: %s",
+		tag, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag, semver, apiTag,
 	)
 	if err := i.GitAdd("devguard-helm-chart", "."); err != nil {
 		return err
@@ -133,12 +146,13 @@ func runReleaseHelmChart(_ *cobra.Command, args []string) error {
 
 // updateHelmChart regenerates values.yaml, Chart.yaml, and questions.yaml from
 // devguard-helm-chart/schema (see schema/schema.ts) by running `bun run
-// generate` with the four version knobs it requires — one per independently
+// generate` with the version knobs it requires — one per independently
 // released component, all confirmed present via EnsureHelmChangelogEntry /
-// GitLatestTagWithMinor before this runs. kratos and postgresql are tagged
-// and released alongside devguard (see nix/kratos.nix), so both track apiTag
-// without a knob of their own (see devguard-helm-chart/schema/versions.ts).
-func updateHelmChart(chartSemver, apiTag, webTag, ciComponentsTag string, cl *i.Changelog) error {
+// GitLatestTagWithMinor before this runs, plus kratos and postgresql, whose
+// published ghcr.io tags are the plain upstream versions pinned in
+// nix/kratos.nix and nix/postgresql.nix (not the devguard release tag — see
+// StripPackageRevision for the postgresql apk revision suffix).
+func updateHelmChart(chartSemver, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag string, cl *i.Changelog) error {
 	cmd := exec.Command("bun", "run", "generate")
 	cmd.Dir = "devguard-helm-chart/schema"
 	cmd.Env = append(os.Environ(),
@@ -146,6 +160,8 @@ func updateHelmChart(chartSemver, apiTag, webTag, ciComponentsTag string, cl *i.
 		"WEB_VERSION="+strings.TrimPrefix(webTag, "v"),
 		"CHART_VERSION="+chartSemver,
 		"CI_COMPONENTS_VERSION="+strings.TrimPrefix(ciComponentsTag, "v"),
+		"KRATOS_VERSION="+kratosTag,
+		"POSTGRESQL_VERSION="+postgresqlTag,
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -154,8 +170,8 @@ func updateHelmChart(chartSemver, apiTag, webTag, ciComponentsTag string, cl *i.
 		return fmt.Errorf("bun run generate failed: %w", err)
 	}
 	cl.Change(fmt.Sprintf(
-		"Regenerated Helm chart from schema (chart=%s, api=%s, web=%s, ci-components=%s, kratos=%s)",
-		chartSemver, apiTag, webTag, ciComponentsTag, apiTag,
+		"Regenerated Helm chart from schema (chart=%s, api=%s, web=%s, ci-components=%s, kratos=%s, postgresql=%s)",
+		chartSemver, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag,
 	))
 	return nil
 }

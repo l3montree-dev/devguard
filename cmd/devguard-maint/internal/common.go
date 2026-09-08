@@ -13,6 +13,31 @@ import (
 
 var semverRe = regexp.MustCompile(`^v(\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*)?)$`)
 var bareSemverRe = regexp.MustCompile(`^\d+\.\d+\.\d+`)
+var nixVersionRe = regexp.MustCompile(`(?m)^\s*version\s*=\s*"([^"]+)"`)
+var pkgRevisionSuffixRe = regexp.MustCompile(`-r\d+$`)
+
+// NixVersion reads the `version = "..."` assignment pinning the vendored
+// upstream version out of a nix file (e.g. nix/kratos.nix, nix/postgresql.nix).
+func NixVersion(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	m := nixVersionRe.FindSubmatch(data)
+	if m == nil {
+		return "", fmt.Errorf("version not found in %s", path)
+	}
+	return string(m[1]), nil
+}
+
+// StripPackageRevision drops a trailing apk-style "-rN" revision suffix (e.g.
+// "16.15-r0" -> "16.15"), as pinned by nix/postgresql.nix. The published
+// ghcr.io tag for that image omits the revision — it's a floating tag
+// re-pushed on every build, so it always points at the latest image for that
+// version.
+func StripPackageRevision(version string) string {
+	return pkgRevisionSuffixRe.ReplaceAllString(version, "")
+}
 
 func ValidateTag(tag string) (semver string, err error) {
 	if m := semverRe.FindStringSubmatch(tag); m != nil {
