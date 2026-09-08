@@ -55,6 +55,9 @@ func WithPreloads(preloads ...func(*gorm.DB) *gorm.DB) func(*PurlComparer) {
 	}
 }
 
+// cache Size is the maximum number of elements held at one time
+// if 0 is provided the cache gets disabled
+// if nil is provided the default is used
 func NewPurlComparer(db shared.DB, cacheSize *int, opts ...func(*PurlComparer)) *PurlComparer {
 	comparer := &PurlComparer{
 		db:       db,
@@ -93,8 +96,10 @@ func newCandidate(purl packageurl.PackageURL) *candidate {
 	}
 }
 
+// lookupKey identifies one row of the unnest join. The original version belongs
+// in the key because the query matches ac.version against it as well.
 func (c *candidate) lookupKey() string {
-	return c.matchCtx.SearchPurl + "@" + c.matchCtx.NormalizedVersion
+	return c.matchCtx.SearchPurl + "@" + c.matchCtx.NormalizedVersion + "@" + c.matchCtx.OriginalVersion
 }
 
 // builds the key for the cache from a candidate
@@ -162,7 +167,6 @@ type AffectedComponentsCache struct {
 
 const defaultCacheSize = 3000 // about 20% of all components (20/80 rule)
 
-// builds a new affected components cache
 // cache Size is the maximum number of elements held at one time
 // if 0 is provided the cache gets disabled
 // if nil is provided the default is used
@@ -292,16 +296,19 @@ func (comparer *PurlComparer) resolveCandidates(ctx context.Context, purls []pac
 // matching affected components per candidate lookup key, with the same preloads
 // GetAffectedComponents uses.
 func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape queryShape, candidates []*candidate) (map[string][]models.AffectedComponent, error) {
-	// The wanted packages and versions are passed as arrays and joined via
-	// unnest, so the statement text stays identical regardless of the batch
-	// size and postgres can reuse the plan.
-	searchPurls := make([]string, len(candidates))
-	versions := make([]string, len(candidates))
-	originalVersions := make([]string, len(candidates))
-	for i, c := range candidates {
-		searchPurls[i] = c.matchCtx.SearchPurl
-		versions[i] = c.matchCtx.NormalizedVersion
-		originalVersions[i] = c.matchCtx.OriginalVersion
+	seen := make(map[string]struct{}, len(candidates))
+	searchPurls := make([]string, 0, len(candidates))
+	versions := make([]string, 0, len(candidates))
+	originalVersions := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		key := c.lookupKey()
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		searchPurls = append(searchPurls, c.matchCtx.SearchPurl)
+		versions = append(versions, c.matchCtx.NormalizedVersion)
+		originalVersions = append(originalVersions, c.matchCtx.OriginalVersion)
 	}
 
 	var conditions []string
@@ -320,7 +327,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	// Selecting the ids plus the columns the ecosystem specific version check
 	// needs keeps the joined result small - the rows are hydrated by a second
 	// query using preloads AFTER filtering
-	query := `SELECT q.purl, q.version, ac.id,
+	query := `SELECT q.purl, q.version, q.original_version, ac.id,
 			ac.purl AS component_purl,
 			ac.version AS component_version,
 			ac.version_introduced AS component_version_introduced,
@@ -334,9 +341,10 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	}
 
 	var matches []struct {
-		Purl    string
-		Version string
-		ID      int64
+		Purl            string
+		Version         string
+		OriginalVersion string
+		ID              int64
 
 		// used for filtering
 		ComponentPurl              string
@@ -390,7 +398,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	componentsByKey := make(map[string][]models.AffectedComponent, len(candidates))
 	for _, match := range matches {
 		if component, ok := componentsByID[match.ID]; ok {
-			key := match.Purl + "@" + match.Version
+			key := match.Purl + "@" + match.Version + "@" + match.OriginalVersion
 			componentsByKey[key] = append(componentsByKey[key], component)
 		}
 	}

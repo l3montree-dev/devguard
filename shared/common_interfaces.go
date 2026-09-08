@@ -49,6 +49,7 @@ type DaemonRunner interface {
 	RunVEXRuleRecommendationDaemon(ctx context.Context) error
 
 	Start(ctx context.Context)
+	StartBenchmarkJobs(ctx context.Context, stages []string)
 }
 
 type FixedVersionResolver interface {
@@ -488,7 +489,7 @@ type AssetVersionService interface {
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
 	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
-	LoadFullSBOMGraph(ctx context.Context, tx DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
+	LoadFullSBOMGraph(ctx context.Context, tx DB, AssetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
 }
 
 type AssetVersionRepository interface {

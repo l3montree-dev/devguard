@@ -25,17 +25,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/errgroup"
+	"gorm.io/datatypes"
 )
 
 type assetWithProjectAndOrg struct {
@@ -200,11 +205,13 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 				out <- assetWithDetails
 				continue
 			}
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.resolve-fixed-versions")
 			toSaveVulns := make([]models.DependencyVuln, 0)
 			// get all closed/accepted vulnerabilities for the asset version
-			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(assetWithDetails.ctx, nil, assetWithDetails.asset.ID)
+			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(stageCtx, nil, assetWithDetails.asset.ID)
 			if err != nil {
 				slog.Error("could not get vulns for asset", "assetID", assetWithDetails.asset.ID, "err", err)
+				failStage(assetWithDetails.ctx, span, err)
 				errChan <- pipelineError{
 					asset: assetWithDetails.asset,
 					err:   fmt.Errorf("could not get vulns for asset: %w", err),
@@ -240,10 +247,11 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 
 			if len(toSaveVulns) > 0 {
 				tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-				err = runner.dependencyVulnRepository.SaveBatch(assetWithDetails.ctx, tx, toSaveVulns)
+				err = runner.dependencyVulnRepository.SaveBatch(stageCtx, tx, toSaveVulns)
 				if err != nil {
 					tx.Rollback()
 					slog.Error("could not save vulns with resolved fixed versions", "assetID", assetWithDetails.asset.ID, "err", err)
+					failStage(assetWithDetails.ctx, span, err)
 					errChan <- pipelineError{
 						asset: assetWithDetails.asset,
 						err:   fmt.Errorf("could not save vulns with resolved fixed versions: %w", err),
@@ -257,6 +265,8 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 				}
 			}
 
+			span.SetAttributes(attribute.Int("vulns.resolved", len(toSaveVulns)))
+			span.End()
 			out <- assetWithDetails
 		}
 	}()
@@ -280,12 +290,12 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			)
 			slog.Info("running asset pipeline", "assetID", assetID, "traceID", span.SpanContext().TraceID().String())
 
-			asset, err := runner.assetRepository.Read(assetCtx, nil, assetID)
+			fetchCtx, fetchSpan := daemonTracer.Start(assetCtx, "pipeline.fetch-details")
+
+			asset, err := runner.assetRepository.Read(fetchCtx, nil, assetID)
 			if err != nil {
 				slog.Error("could not fetch asset in runner", "assetID", assetID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch asset failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: models.Asset{Model: models.Model{ID: assetID}},
 					err:   fmt.Errorf("could not fetch asset: %w", err),
@@ -298,12 +308,10 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 				attribute.String("asset.name", asset.Name),
 			)
 
-			assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(assetCtx, nil, asset.ID)
+			assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(fetchCtx, nil, asset.ID)
 			if err != nil {
 				slog.Error("could not fetch asset versions in runner", "assetID", asset.ID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch asset versions failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch asset versions: %w", err),
@@ -320,24 +328,20 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 				}
 			}
 
-			project, err := runner.projectRepository.Read(assetCtx, nil, asset.ProjectID)
+			project, err := runner.projectRepository.Read(fetchCtx, nil, asset.ProjectID)
 			if err != nil {
 				slog.Error("could not fetch project in runner", "assetID", asset.ID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch project failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch project: %w", err),
 				}
 				continue
 			}
-			org, err := runner.orgRepository.Read(assetCtx, nil, project.OrganizationID)
+			org, err := runner.orgRepository.Read(fetchCtx, nil, project.OrganizationID)
 			if err != nil {
 				slog.Error("could not fetch org in runner", "assetID", asset.ID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch org failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch project: %w", err),
@@ -349,13 +353,11 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			asset.PipelineLastRun = time.Now()
 			asset.PipelineError = nil
 			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-			err = runner.assetRepository.Save(assetCtx, tx, &asset)
+			err = runner.assetRepository.Save(fetchCtx, tx, &asset)
 			if err != nil {
 				tx.Rollback()
 				monitoring.Alert("could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "save pipeline run failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch project: %w", err),
@@ -367,6 +369,9 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			} else {
 				tx.Commit()
 			}
+
+			fetchSpan.SetAttributes(attribute.Int("asset.versions", len(assetVersions)))
+			fetchSpan.End()
 
 			// NOTE: the pipeline.asset span is intentionally NOT ended here.
 			// It stays open until CollectStats (success) or failStage (failure).
@@ -522,6 +527,402 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 	return out
 }
 
+func (runner *DaemonRunner) NewScanAsset() error {
+	ctx := context.Background()
+	conn, err := runner.pgxpool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	slog.Info("start collecting all dependencies")
+	start := time.Now()
+	purlRows, err := conn.Query(ctx, `SELECT DISTINCT dependency_id FROM public.component_dependencies;`)
+	if err != nil {
+		return err
+	}
+
+	allDependencies := make([]packageurl.PackageURL, 0, 15_000)
+	rawPurlsByCanonical := make(map[string][]string, 15_000)
+	var purl string
+	var parsedPurl packageurl.PackageURL
+	for purlRows.Next() {
+		err = purlRows.Scan(&purl)
+		if err != nil {
+			return err
+		}
+		parsedPurl, err = packageurl.FromString(purl)
+		if err != nil {
+			continue
+		}
+		canonicalPurl := parsedPurl.String()
+		if _, ok := rawPurlsByCanonical[canonicalPurl]; !ok {
+			allDependencies = append(allDependencies, parsedPurl)
+		}
+		rawPurlsByCanonical[canonicalPurl] = append(rawPurlsByCanonical[canonicalPurl], purl)
+	}
+	purlRows.Close()
+	if err := purlRows.Err(); err != nil {
+		return err
+	}
+	slog.Info("finished reading all dependencies", "amount", len(allDependencies), "time", time.Since(start))
+
+	purlMatcher := scan.NewPurlComparer(runner.db, new(int(0)), scan.WithPreloads())
+
+	slog.Info("start matching purls to affected components")
+	start = time.Now()
+	candidates, err := purlMatcher.GetAffectedComponentsBatch(ctx, allDependencies)
+	if err != nil {
+		return fmt.Errorf("could not match purls: %w", err)
+	}
+	slog.Info("finished matching purls to affected components", "candidates", len(candidates), "time", time.Since(start))
+
+	allDependencies = nil
+	// represents a row in the temporary pivot table
+	type purlAffectedComponent struct {
+		purl                string
+		affectedComponentID int64
+		fixedVersion        *string
+	}
+
+	affectedPurls := make([]purlAffectedComponent, 0, len(candidates))
+	isPurlAffected := make(map[string]struct{}, len(candidates)/2)
+	for _, candidate := range candidates {
+		if len(candidate.Components) == 0 {
+			continue
+		}
+		for _, rawPurl := range rawPurlsByCanonical[candidate.Purl.String()] {
+			isPurlAffected[rawPurl] = struct{}{}
+			for i := range candidate.Components {
+				fixed := candidate.Components[i].SemverFixed
+				if fixed == nil {
+					fixed = candidate.Components[i].VersionFixed
+				}
+				affectedPurls = append(affectedPurls, purlAffectedComponent{
+					purl:                rawPurl,
+					affectedComponentID: candidate.Components[i].ID,
+					fixedVersion:        fixed,
+				})
+			}
+		}
+	}
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, `
+	CREATE TABLE purl_mapping (
+		purl text,
+		affected_component_id bigint,
+		fixed_version text
+	);`)
+	if err != nil {
+		return fmt.Errorf("could not create temp table for purl Mapping: %w", err)
+	}
+
+	start = time.Now()
+	slog.Info("start copying into temporary table")
+	_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(affectedPurls), func(i int) ([]any, error) {
+		return []any{affectedPurls[i].purl, affectedPurls[i].affectedComponentID, affectedPurls[i].fixedVersion}, nil
+	}))
+	if err != nil {
+		return fmt.Errorf("could not copy rows into temporary table: %w", err)
+	}
+
+	slog.Info("successfully populated temporary table", "time", time.Since(start))
+
+	_, err = tx.Exec(ctx, `
+	ALTER TABLE purl_mapping 
+		ADD CONSTRAINT purl_mapping_pkey PRIMARY KEY (purl, affected_component_id);`)
+	if err != nil {
+		return fmt.Errorf("could not create primary key on temp table for purl Mapping: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// maybe only scan default branches
+	avRows, err := conn.Query(ctx, `
+	SELECT DISTINCT cd.component_id, cd.asset_id, cd.asset_version_name FROM public.component_dependencies cd 
+	WHERE cd.component_id LIKE 'artifact:%';`)
+	if err != nil {
+		return fmt.Errorf("could not fetch all asset version to scan: %w", err)
+	}
+	defer avRows.Close()
+
+	type mapKey struct {
+		AssetVersionName, AssetID string
+	}
+	var key mapKey
+	var componentID, assetID, assetVersionName string
+	avToArtifacts := make(map[mapKey][]string, 1024)
+	for avRows.Next() {
+		err = avRows.Scan(&componentID, &assetID, &assetVersionName)
+		if err != nil {
+			return fmt.Errorf("could not scan asset version row: %w", err)
+		}
+		key = mapKey{AssetVersionName: assetVersionName, AssetID: assetID}
+		avToArtifacts[key] = append(avToArtifacts[key], strings.TrimPrefix(componentID, "artifact:"))
+	}
+	avRows.Close()
+	if err := avRows.Err(); err != nil {
+		return err
+	}
+
+	allAssetVersions := make([]assetVersionInAsset, 0, len(avToArtifacts))
+	for key, artifacts := range avToArtifacts {
+		parsedAssetID, err := uuid.Parse(key.AssetID)
+		if err != nil {
+			return fmt.Errorf("could not parse assetID: %w", err)
+		}
+		allAssetVersions = append(allAssetVersions, assetVersionInAsset{
+			AssetVersionName: key.AssetVersionName,
+			AssetID:          parsedAssetID,
+			Artifacts:        artifacts,
+		})
+	}
+
+	slog.Info("finished collecting asset versions with components", "amount", len(allAssetVersions))
+
+	start = time.Now()
+	const maxNumberOfGoRoutines = 8
+	scanningWaitGroup, scanCtx := errgroup.WithContext(ctx)
+	scanningWaitGroup.SetLimit(maxNumberOfGoRoutines)
+
+	allResults := make([]models.DependencyVuln, 0, len(affectedPurls)*8)
+	resultsChannel := make(chan *models.DependencyVuln, maxNumberOfGoRoutines*16)
+
+	go func() {
+		for vuln := range resultsChannel {
+			allResults = append(allResults, *vuln)
+		}
+	}()
+
+	for i, av := range allAssetVersions {
+		if i%5 == 0 {
+			slog.Info(fmt.Sprintf("Scanning asset versions, processing %d/%d", i, len(allAssetVersions)), "time", time.Since(start))
+		}
+		if err := runner.ScanAssetVersion(scanCtx, av, resultsChannel, isPurlAffected); err != nil {
+			slog.Error("could not scan asset version", "av_name", av.AssetVersionName, "assetID", av.AssetID, "error", err)
+		}
+		// scanningWaitGroup.Go(func() error {
+		// 	if err := runner.ScanAssetVersion(scanCtx, av, resultsChannel, isPurlAffected); err != nil {
+		// 		slog.Error("could not scan asset version", "av_name", av.AssetVersionName, "assetID", av.AssetID, "error", err)
+		// 	}
+		// 	return nil
+		// })
+	}
+	// scanningWaitGroup.Wait()
+	close(resultsChannel)
+
+	slog.Info("finished collecting all paths to all purls", "amount", len(allResults), "time", time.Since(start))
+	return nil
+}
+
+type assetVersionInAsset struct {
+	AssetVersionName string
+	AssetID          uuid.UUID
+	Artifacts        []string
+}
+
+type purlWithPaths struct {
+	Purl  string
+	Paths []string
+}
+
+func (runner *DaemonRunner) ScanAssetVersion(scanCtx context.Context, assetVersion assetVersionInAsset, results chan *models.DependencyVuln, purlLookUp map[string]struct{}) error {
+	bom, err := runner.assetVersionService.LoadFullSBOMGraph(scanCtx, nil, models.AssetVersion{Name: assetVersion.AssetVersionName, AssetID: assetVersion.AssetID})
+	if err != nil {
+		return fmt.Errorf("could not build SBOM for asset version")
+	}
+
+	sbomCache := map[string][]*models.DependencyVuln{}
+
+	for _, artifactName := range assetVersion.Artifacts {
+		currentBom := *bom
+		// remove all other artifacts from the bom
+		err := currentBom.ScopeToArtifact(artifactName)
+		if err != nil {
+			// If artifact node is not reachable, it means the artifact has no components (empty artifact)
+			// This is a valid scenario, so we return early with no vulnerabilities
+			if errors.Is(err, normalize.ErrNodeNotReachable) {
+				slog.Warn("artifact has no components, skipping scan", "artifactName", artifactName)
+				continue
+			}
+			slog.Error("could not scope bom to artifact", "err", err)
+			return err
+		}
+
+		sbomHash := currentBom.GetSBOMHash()
+		vulns, ok := sbomCache[sbomHash]
+		if ok {
+			slog.Info("hit cache", "hash", sbomHash, "cached vulns amount", len(vulns))
+			for i := range vulns {
+				vuln := *vulns[i]
+				vuln.Artifacts = []models.Artifact{
+					{
+						ArtifactName:     artifactName,
+						AssetVersionName: assetVersion.AssetVersionName,
+						AssetID:          assetVersion.AssetID,
+					},
+				}
+				results <- &vuln
+			}
+			continue
+		}
+
+		vulnsInPackage, err := runner.optimizedScan(scanCtx, currentBom, purlLookUp)
+		if err != nil {
+			slog.Error("could not scan file", "err", err)
+			return err
+		}
+
+		if artifactName == "pkg:oci/kratos?repository_url=ghcr.io/l3montree-dev/devguard/kratos&arch=amd64&tag=v26.2.0-v1.13.3-amd64" {
+			slog.Info("stop")
+		}
+
+		dependencyVulns := make([]models.DependencyVuln, 0, len(vulnsInPackage)*2)
+		for _, vuln := range vulnsInPackage {
+			dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, &currentBom, assetVersion.AssetID, assetVersion.AssetVersionName, artifactName)...)
+		}
+
+		dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
+			return f.CalculateHash()
+		})
+
+		for i := range dependencyVulns {
+			sbomCache[sbomHash] = append(sbomCache[sbomHash], &dependencyVulns[i])
+			results <- &dependencyVulns[i]
+		}
+
+		// handle the scan result
+		// opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID, userAgent)
+		// if err != nil {
+		// 	slog.Error("could not handle scan result", "err", err)
+		// 	return nil, nil, nil, err
+		// }
+
+		// // newly opened vulns may already be covered by previously created, still-enabled VEX
+		// // rules for this asset (e.g. a rule created before this vulnerability was ever detected).
+		// var updatedVulns []models.DependencyVuln
+		// var events []models.VulnEvent
+		// existingRules, rulesErr := s.vexRuleRepository.FindByAssetID(scanCtx, tx, asset.ID)
+		// if rulesErr != nil {
+		// 	slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
+		// } else if len(existingRules) > 0 {
+		// 	var applyErr error
+		// 	if updatedVulns, events, applyErr = ApplyVEXRulesToVulns(scanCtx, existingRules, newState); applyErr != nil {
+		// 		slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
+		// 	} else if len(updatedVulns) > 0 {
+		// 		if err := s.dependencyVulnRepository.SaveBatch(scanCtx, tx, updatedVulns); err != nil {
+		// 			slog.Error("could not save vulns updated by existing VEX rules", "err", err)
+		// 		}
+		// 		if err := s.vulnEventRepository.SaveBatch(scanCtx, tx, events); err != nil {
+		// 			slog.Error("could not save events from existing VEX rules", "err", err)
+		// 		}
+		// 	}
+		// }
+		// //update the state in newState to reflect the changes made by applying the VEX rules
+		// newStateMap := make(map[uuid.UUID]models.DependencyVuln)
+		// for _, vuln := range newState {
+		// 	newStateMap[vuln.ID] = vuln
+		// }
+		// updatedVulnsMap := make(map[uuid.UUID]models.DependencyVuln)
+		// for _, vuln := range updatedVulns {
+		// 	updatedVulnsMap[vuln.ID] = vuln
+		// }
+
+		// for i, vuln := range newState {
+		// 	if updatedVuln, ok := updatedVulnsMap[vuln.ID]; ok {
+		// 		vuln.State = updatedVuln.State
+		// 		newState[i] = vuln
+		// 		newStateMap[vuln.ID] = vuln
+		// 	}
+		// }
+
+	}
+	return nil
+}
+
+func (runner *DaemonRunner) optimizedScan(ctx context.Context, bom normalize.SBOMGraph, purlLookUp map[string]struct{}) ([]models.VulnInPackage, error) {
+	var affectedPurls []string
+	for c := range bom.NodesOfType(normalize.GraphNodeTypeComponent) {
+		if c.Component.PackageURL != "" {
+			// filter only the affected purls
+			if _, ok := purlLookUp[c.Component.PackageURL]; ok {
+				affectedPurls = append(affectedPurls, c.Component.PackageURL)
+			}
+		}
+	}
+
+	if len(affectedPurls) == 0 {
+		return []models.VulnInPackage{}, nil
+	}
+
+	rows, err := runner.pgxpool.Query(ctx, `
+	SELECT pm.purl, pm.fixed_version,
+		c.id, c.content_hash, c.cve, c.date_published, c.date_last_modified,
+		COALESCE(c.description, ''), COALESCE(c.cvss, 0)::real, COALESCE(c."references", ''),
+		c.cisa_exploit_add, c.cisa_action_due, c.cisa_required_action, c.cisa_vulnerability_name,
+		c.epss::double precision, c.percentile::real, COALESCE(c.vector, ''),
+		c.euvd_exploit_add, c.withdrawn, c.cwes
+	FROM purl_mapping pm 
+	JOIN cve_affected_component cac 
+	ON cac.affected_component_id = pm.affected_component_id
+	JOIN cves c
+	ON c.id = cac.cve_id
+	WHERE pm.purl = ANY ($1);`, affectedPurls)
+	if err != nil {
+		return nil, fmt.Errorf("could not retreive cves for purl: %w", err)
+	}
+	defer rows.Close()
+
+	var purl string
+	var fixedVersion *string
+	var cve models.CVE
+	// nullable date columns do not fit the models.CVE fields directly
+	var datePublished, dateLastModified, cisaExploitAdd, cisaActionDue, euvdExploitAdd, withdrawn *time.Time
+
+	vulnsInPackage := make([]models.VulnInPackage, 0, len(affectedPurls))
+	for rows.Next() {
+		err = rows.Scan(&purl, &fixedVersion,
+			&cve.ID, &cve.ContentHash, &cve.CVE, &datePublished, &dateLastModified,
+			&cve.Description, &cve.CVSS, &cve.References,
+			&cisaExploitAdd, &cisaActionDue, &cve.CISARequiredAction, &cve.CISAVulnerabilityName,
+			&cve.EPSS, &cve.Percentile, &cve.Vector,
+			&euvdExploitAdd, &withdrawn, &cve.CWEs)
+		if err != nil {
+			return nil, fmt.Errorf("could not scan cve row: %w", err)
+		}
+
+		cve.DatePublished = utils.OrDefault(datePublished, time.Time{})
+		cve.DateLastModified = utils.OrDefault(dateLastModified, time.Time{})
+		cve.CISAExploitAdd = (*datatypes.Date)(cisaExploitAdd)
+		cve.CISAActionDue = (*datatypes.Date)(cisaActionDue)
+		cve.EUVDExploitAdd = (*datatypes.Date)(euvdExploitAdd)
+		cve.Withdrawn = (*datatypes.Date)(withdrawn)
+
+		parsedPurl, _ := packageurl.FromString(purl)
+		vulnsInPackage = append(vulnsInPackage, models.VulnInPackage{
+			CVE:          cve,
+			Purl:         parsedPurl,
+			CVEID:        cve.CVE,
+			FixedVersion: fixedVersion,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("could not read cve rows: %w", err)
+	}
+
+	return vulnsInPackage, nil
+}
+
 func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
@@ -544,10 +945,11 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 			asset := assetWithDetails.asset
 			project := assetWithDetails.project
 			org := assetWithDetails.org
-
+			slog.Info("start scanning asset versions", "amount", len(assetVersions))
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.scan")
 			errs := make([]error, 0)
 			for i := range assetVersions {
+				start := time.Now()
 				artifacts := assetVersions[i].Artifacts
 				bom, err := runner.assetVersionService.LoadFullSBOMGraph(stageCtx, nil, assetVersions[i])
 				if err != nil {
@@ -556,6 +958,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 					continue
 				}
 
+				slog.Info("start scanning artifacts", "assetVersion", assetVersions[i].Name, "amount artifacts", len(assetVersions[i].Artifacts))
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 
@@ -571,21 +974,15 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 
 					if runner.debugOptions.DryRun {
 						tx.Rollback()
-						for _, v := range opened {
-							slog.Info("[DRY-RUN] would open vuln", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "component", v.ComponentPurl)
-						}
-						for _, v := range closed {
-							slog.Info("[DRY-RUN] would close vuln", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "component", v.ComponentPurl)
-						}
-						for _, v := range newState {
-							slog.Info("[DRY-RUN] vuln unchanged", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "state", v.State, "component", v.ComponentPurl)
-						}
+
+						slog.Info("[DRY-RUN] finished", "open", len(opened), "closed", len(closed), "newState", len(newState))
+
 					} else {
 						tx.Commit()
 					}
 
-					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				}
+				slog.Info(fmt.Sprintf("scanned asset version %d/%d", i, len(assetVersions)), "time", time.Since(start), "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 			}
 			if len(errs) > 0 {
 				joined := errors.Join(errs...)
@@ -1028,4 +1425,19 @@ func (runner *DaemonRunner) RunResolveFixedVersionsPipeline(ctx context.Context,
 	utils.WaitForChannelDrain(ch)
 	close(errChan)
 	return nil
+}
+
+// StartBenchmarkJobs runs the asset pipeline over all assets with every database
+// write rolled back. stages limits the run to the given pipeline stages, see
+// DebugOptions.LimitToStages for the valid names - pass nil to run all of them.
+func (runner *DaemonRunner) StartBenchmarkJobs(ctx context.Context, stages []string) {
+	runner.SetDebugOptions(DebugOptions{
+		DryRun:        true,
+		LimitToStages: stages,
+	})
+
+	errChan := make(chan pipelineError, 100)
+	runner.collectErrors(errChan)
+
+	runner.runPipeline(ctx, runner.FetchAllAssetIDs(ctx), errChan)
 }
