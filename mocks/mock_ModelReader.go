@@ -76,7 +76,7 @@ type ModelReader_All_Call[ID any, T utils.Tabler, Tx any] struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx Tx
-func (_e *ModelReader_Expecter[ID, T, Tx]) All(ctx interface{}, tx interface{}) *ModelReader_All_Call[ID, T, Tx] {
+func (_e *ModelReader_Expecter[ID, T, Tx]) All(ctx any, tx any) *ModelReader_All_Call[ID, T, Tx] {
 	return &ModelReader_All_Call[ID, T, Tx]{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -136,7 +136,7 @@ type ModelReader_InBatches_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - batchSize int
-func (_e *ModelReader_Expecter[ID, T, Tx]) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *ModelReader_InBatches_Call[ID, T, Tx] {
+func (_e *ModelReader_Expecter[ID, T, Tx]) InBatches(ctx any, tx any, batchSize any) *ModelReader_InBatches_Call[ID, T, Tx] {
 	return &ModelReader_InBatches_Call[ID, T, Tx]{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -210,7 +210,7 @@ type ModelReader_List_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ids []ID
-func (_e *ModelReader_Expecter[ID, T, Tx]) List(ctx interface{}, tx interface{}, ids interface{}) *ModelReader_List_Call[ID, T, Tx] {
+func (_e *ModelReader_Expecter[ID, T, Tx]) List(ctx any, tx any, ids any) *ModelReader_List_Call[ID, T, Tx] {
 	return &ModelReader_List_Call[ID, T, Tx]{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -284,7 +284,7 @@ type ModelReader_Read_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - id ID
-func (_e *ModelReader_Expecter[ID, T, Tx]) Read(ctx interface{}, tx interface{}, id interface{}) *ModelReader_Read_Call[ID, T, Tx] {
+func (_e *ModelReader_Expecter[ID, T, Tx]) Read(ctx any, tx any, id any) *ModelReader_Read_Call[ID, T, Tx] {
 	return &ModelReader_Read_Call[ID, T, Tx]{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -349,7 +349,7 @@ type ModelReader_Upsert_Call[ID any, T utils.Tabler, Tx any] struct {
 //   - t *[]*T
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *ModelReader_Expecter[ID, T, Tx]) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ModelReader_Upsert_Call[ID, T, Tx] {
+func (_e *ModelReader_Expecter[ID, T, Tx]) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *ModelReader_Upsert_Call[ID, T, Tx] {
 	return &ModelReader_Upsert_Call[ID, T, Tx]{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

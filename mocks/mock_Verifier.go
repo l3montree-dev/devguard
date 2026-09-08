@@ -75,7 +75,7 @@ type Verifier_VerifyAPIToken_Call struct {
 // VerifyAPIToken is a helper method to define mock.On call
 //   - ctx context.Context
 //   - token string
-func (_e *Verifier_Expecter) VerifyAPIToken(ctx interface{}, token interface{}) *Verifier_VerifyAPIToken_Call {
+func (_e *Verifier_Expecter) VerifyAPIToken(ctx any, token any) *Verifier_VerifyAPIToken_Call {
 	return &Verifier_VerifyAPIToken_Call{Call: _e.mock.On("VerifyAPIToken", ctx, token)}
 }
 
@@ -143,7 +143,7 @@ type Verifier_VerifyRequestSignature_Call struct {
 // VerifyRequestSignature is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req *http.Request
-func (_e *Verifier_Expecter) VerifyRequestSignature(ctx interface{}, req interface{}) *Verifier_VerifyRequestSignature_Call {
+func (_e *Verifier_Expecter) VerifyRequestSignature(ctx any, req any) *Verifier_VerifyRequestSignature_Call {
 	return &Verifier_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", ctx, req)}
 }
 

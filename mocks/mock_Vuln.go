@@ -53,7 +53,7 @@ type Vuln_AddScannerID_Call struct {
 
 // AddScannerID is a helper method to define mock.On call
 //   - scannerID string
-func (_e *Vuln_Expecter) AddScannerID(scannerID interface{}) *Vuln_AddScannerID_Call {
+func (_e *Vuln_Expecter) AddScannerID(scannerID any) *Vuln_AddScannerID_Call {
 	return &Vuln_AddScannerID_Call{Call: _e.mock.On("AddScannerID", scannerID)}
 }
 
@@ -789,7 +789,7 @@ type Vuln_RemoveScannerID_Call struct {
 
 // RemoveScannerID is a helper method to define mock.On call
 //   - scannerID string
-func (_e *Vuln_Expecter) RemoveScannerID(scannerID interface{}) *Vuln_RemoveScannerID_Call {
+func (_e *Vuln_Expecter) RemoveScannerID(scannerID any) *Vuln_RemoveScannerID_Call {
 	return &Vuln_RemoveScannerID_Call{Call: _e.mock.On("RemoveScannerID", scannerID)}
 }
 
@@ -829,7 +829,7 @@ type Vuln_SetManualTicketCreation_Call struct {
 
 // SetManualTicketCreation is a helper method to define mock.On call
 //   - manualTicketCreation bool
-func (_e *Vuln_Expecter) SetManualTicketCreation(manualTicketCreation interface{}) *Vuln_SetManualTicketCreation_Call {
+func (_e *Vuln_Expecter) SetManualTicketCreation(manualTicketCreation any) *Vuln_SetManualTicketCreation_Call {
 	return &Vuln_SetManualTicketCreation_Call{Call: _e.mock.On("SetManualTicketCreation", manualTicketCreation)}
 }
 
@@ -869,7 +869,7 @@ type Vuln_SetRawRiskAssessment_Call struct {
 
 // SetRawRiskAssessment is a helper method to define mock.On call
 //   - risk float64
-func (_e *Vuln_Expecter) SetRawRiskAssessment(risk interface{}) *Vuln_SetRawRiskAssessment_Call {
+func (_e *Vuln_Expecter) SetRawRiskAssessment(risk any) *Vuln_SetRawRiskAssessment_Call {
 	return &Vuln_SetRawRiskAssessment_Call{Call: _e.mock.On("SetRawRiskAssessment", risk)}
 }
 
@@ -909,7 +909,7 @@ type Vuln_SetRiskRecalculatedAt_Call struct {
 
 // SetRiskRecalculatedAt is a helper method to define mock.On call
 //   - time1 time.Time
-func (_e *Vuln_Expecter) SetRiskRecalculatedAt(time1 interface{}) *Vuln_SetRiskRecalculatedAt_Call {
+func (_e *Vuln_Expecter) SetRiskRecalculatedAt(time1 any) *Vuln_SetRiskRecalculatedAt_Call {
 	return &Vuln_SetRiskRecalculatedAt_Call{Call: _e.mock.On("SetRiskRecalculatedAt", time1)}
 }
 
@@ -949,7 +949,7 @@ type Vuln_SetState_Call struct {
 
 // SetState is a helper method to define mock.On call
 //   - state dtos.VulnState
-func (_e *Vuln_Expecter) SetState(state interface{}) *Vuln_SetState_Call {
+func (_e *Vuln_Expecter) SetState(state any) *Vuln_SetState_Call {
 	return &Vuln_SetState_Call{Call: _e.mock.On("SetState", state)}
 }
 
@@ -989,7 +989,7 @@ type Vuln_SetTicketID_Call struct {
 
 // SetTicketID is a helper method to define mock.On call
 //   - ticketID string
-func (_e *Vuln_Expecter) SetTicketID(ticketID interface{}) *Vuln_SetTicketID_Call {
+func (_e *Vuln_Expecter) SetTicketID(ticketID any) *Vuln_SetTicketID_Call {
 	return &Vuln_SetTicketID_Call{Call: _e.mock.On("SetTicketID", ticketID)}
 }
 
@@ -1029,7 +1029,7 @@ type Vuln_SetTicketURL_Call struct {
 
 // SetTicketURL is a helper method to define mock.On call
 //   - ticketURL string
-func (_e *Vuln_Expecter) SetTicketURL(ticketURL interface{}) *Vuln_SetTicketURL_Call {
+func (_e *Vuln_Expecter) SetTicketURL(ticketURL any) *Vuln_SetTicketURL_Call {
 	return &Vuln_SetTicketURL_Call{Call: _e.mock.On("SetTicketURL", ticketURL)}
 }
 

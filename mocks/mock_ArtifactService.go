@@ -67,7 +67,7 @@ type ArtifactService_DeleteArtifact_Call struct {
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - artifactName string
-func (_e *ArtifactService_Expecter) DeleteArtifact(ctx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}) *ArtifactService_DeleteArtifact_Call {
+func (_e *ArtifactService_Expecter) DeleteArtifact(ctx any, assetID any, assetVersionName any, artifactName any) *ArtifactService_DeleteArtifact_Call {
 	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", ctx, assetID, assetVersionName, artifactName)}
 }
 
@@ -146,7 +146,7 @@ type ArtifactService_GatherVexInformation_Call struct {
 //   - ctx context.Context
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
-func (_e *ArtifactService_Expecter) GatherVexInformation(ctx interface{}, assetVersion interface{}, artifactName interface{}) *ArtifactService_GatherVexInformation_Call {
+func (_e *ArtifactService_Expecter) GatherVexInformation(ctx any, assetVersion any, artifactName any) *ArtifactService_GatherVexInformation_Call {
 	return &ArtifactService_GatherVexInformation_Call{Call: _e.mock.On("GatherVexInformation", ctx, assetVersion, artifactName)}
 }
 
@@ -221,7 +221,7 @@ type ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
-func (_e *ArtifactService_Expecter) GetArtifactsByAssetIDAndAssetVersionName(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
+func (_e *ArtifactService_Expecter) GetArtifactsByAssetIDAndAssetVersionName(ctx any, tx any, assetID any, assetVersionName any) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
 	return &ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetArtifactsByAssetIDAndAssetVersionName", ctx, tx, assetID, assetVersionName)}
 }
 
@@ -300,7 +300,7 @@ type ArtifactService_ReadArtifact_Call struct {
 //   - name string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *ArtifactService_Expecter) ReadArtifact(ctx interface{}, tx interface{}, name interface{}, assetVersionName interface{}, assetID interface{}) *ArtifactService_ReadArtifact_Call {
+func (_e *ArtifactService_Expecter) ReadArtifact(ctx any, tx any, name any, assetVersionName any, assetID any) *ArtifactService_ReadArtifact_Call {
 	return &ArtifactService_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", ctx, tx, name, assetVersionName, assetID)}
 }
 
@@ -373,7 +373,7 @@ type ArtifactService_SaveArtifact_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - artifact *models.Artifact
-func (_e *ArtifactService_Expecter) SaveArtifact(ctx interface{}, tx interface{}, artifact interface{}) *ArtifactService_SaveArtifact_Call {
+func (_e *ArtifactService_Expecter) SaveArtifact(ctx any, tx any, artifact any) *ArtifactService_SaveArtifact_Call {
 	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", ctx, tx, artifact)}
 }
 

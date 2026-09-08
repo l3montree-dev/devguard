@@ -57,21 +57,22 @@ CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_component
 -- root_subtree_hash carries no foreign key: sbom_merkle_edges.subtree_hash is
 -- non-unique by design (a component with n children has n rows), so it cannot
 -- be a foreign key target.
+-- Primary key leads with (asset_id, asset_version_name): that is the lookup
+-- driving normal reads (all SBOMs for an asset version), and a composite PK's
+-- index already serves any query on a leading prefix of its columns, so this
+-- ordering makes a separate (asset_id, asset_version_name) index redundant.
 CREATE TABLE IF NOT EXISTS public.sboms (
-    root_subtree_hash  UUID NOT NULL,
-    artifact_name      TEXT NOT NULL,
-    asset_version_name TEXT NOT NULL,
     asset_id           UUID NOT NULL,
+    asset_version_name TEXT NOT NULL,
+    artifact_name      TEXT NOT NULL,
     source             TEXT NOT NULL,
+    root_subtree_hash  UUID NOT NULL,
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (root_subtree_hash, artifact_name, asset_version_name, asset_id, source),
+    PRIMARY KEY (asset_id, asset_version_name, artifact_name, source, root_subtree_hash),
     CONSTRAINT fk_sboms_asset_version
         FOREIGN KEY (asset_version_name, asset_id)
         REFERENCES public.asset_versions (name, asset_id) ON DELETE CASCADE
 );
-
-CREATE INDEX IF NOT EXISTS idx_sboms_asset_version
-    ON public.sboms (asset_id, asset_version_name);
 
 CREATE INDEX IF NOT EXISTS idx_sboms_root
     ON public.sboms (root_subtree_hash);

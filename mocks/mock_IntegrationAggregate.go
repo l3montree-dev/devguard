@@ -66,7 +66,7 @@ type IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call struct {
 //   - ctx context.Context
 //   - asset models.Asset
 //   - vulnsWithTickets []models.DependencyVuln
-func (_e *IntegrationAggregate_Expecter) CompareIssueStatesAndResolveDifferences(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
+func (_e *IntegrationAggregate_Expecter) CompareIssueStatesAndResolveDifferences(ctx any, asset any, vulnsWithTickets any) *IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call {
 	return &IntegrationAggregate_CompareIssueStatesAndResolveDifferences_Call{Call: _e.mock.On("CompareIssueStatesAndResolveDifferences", ctx, asset, vulnsWithTickets)}
 }
 
@@ -135,7 +135,7 @@ type IntegrationAggregate_CreateIssue_Call struct {
 //   - justification string
 //   - userID string
 //   - userAgent *string
-func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, vuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, userID interface{}, userAgent interface{}) *IntegrationAggregate_CreateIssue_Call {
+func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx any, asset any, assetVersionName any, vuln any, projectSlug any, orgSlug any, justification any, userID any, userAgent any) *IntegrationAggregate_CreateIssue_Call {
 	return &IntegrationAggregate_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID, userAgent)}
 }
 
@@ -227,7 +227,7 @@ type IntegrationAggregate_CreateLabels_Call struct {
 // CreateLabels is a helper method to define mock.On call
 //   - ctx context.Context
 //   - asset models.Asset
-func (_e *IntegrationAggregate_Expecter) CreateLabels(ctx interface{}, asset interface{}) *IntegrationAggregate_CreateLabels_Call {
+func (_e *IntegrationAggregate_Expecter) CreateLabels(ctx any, asset any) *IntegrationAggregate_CreateLabels_Call {
 	return &IntegrationAggregate_CreateLabels_Call{Call: _e.mock.On("CreateLabels", ctx, asset)}
 }
 
@@ -296,7 +296,7 @@ type IntegrationAggregate_GetExcessTicketIDs_Call struct {
 //   - ctx context.Context
 //   - asset models.Asset
 //   - vulnsWithTickets []models.DependencyVuln
-func (_e *IntegrationAggregate_Expecter) GetExcessTicketIDs(ctx interface{}, asset interface{}, vulnsWithTickets interface{}) *IntegrationAggregate_GetExcessTicketIDs_Call {
+func (_e *IntegrationAggregate_Expecter) GetExcessTicketIDs(ctx any, asset any, vulnsWithTickets any) *IntegrationAggregate_GetExcessTicketIDs_Call {
 	return &IntegrationAggregate_GetExcessTicketIDs_Call{Call: _e.mock.On("GetExcessTicketIDs", ctx, asset, vulnsWithTickets)}
 }
 
@@ -403,7 +403,7 @@ type IntegrationAggregate_GetIntegration_Call struct {
 
 // GetIntegration is a helper method to define mock.On call
 //   - id shared.IntegrationID
-func (_e *IntegrationAggregate_Expecter) GetIntegration(id interface{}) *IntegrationAggregate_GetIntegration_Call {
+func (_e *IntegrationAggregate_Expecter) GetIntegration(id any) *IntegrationAggregate_GetIntegration_Call {
 	return &IntegrationAggregate_GetIntegration_Call{Call: _e.mock.On("GetIntegration", id)}
 }
 
@@ -456,7 +456,7 @@ type IntegrationAggregate_GetUsers_Call struct {
 
 // GetUsers is a helper method to define mock.On call
 //   - org models.Org
-func (_e *IntegrationAggregate_Expecter) GetUsers(org interface{}) *IntegrationAggregate_GetUsers_Call {
+func (_e *IntegrationAggregate_Expecter) GetUsers(org any) *IntegrationAggregate_GetUsers_Call {
 	return &IntegrationAggregate_GetUsers_Call{Call: _e.mock.On("GetUsers", org)}
 }
 
@@ -509,7 +509,7 @@ type IntegrationAggregate_HandleEvent_Call struct {
 //   - ctx context.Context
 //   - event any
 //   - userAgent *string
-func (_e *IntegrationAggregate_Expecter) HandleEvent(ctx interface{}, event interface{}, userAgent interface{}) *IntegrationAggregate_HandleEvent_Call {
+func (_e *IntegrationAggregate_Expecter) HandleEvent(ctx any, event any, userAgent any) *IntegrationAggregate_HandleEvent_Call {
 	return &IntegrationAggregate_HandleEvent_Call{Call: _e.mock.On("HandleEvent", ctx, event, userAgent)}
 }
 
@@ -570,7 +570,7 @@ type IntegrationAggregate_HandleWebhook_Call struct {
 
 // HandleWebhook is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *IntegrationAggregate_Expecter) HandleWebhook(ctx interface{}) *IntegrationAggregate_HandleWebhook_Call {
+func (_e *IntegrationAggregate_Expecter) HandleWebhook(ctx any) *IntegrationAggregate_HandleWebhook_Call {
 	return &IntegrationAggregate_HandleWebhook_Call{Call: _e.mock.On("HandleWebhook", ctx)}
 }
 
@@ -642,7 +642,7 @@ type IntegrationAggregate_ListGroups_Call struct {
 //   - ctx context.Context
 //   - userID string
 //   - providerID string
-func (_e *IntegrationAggregate_Expecter) ListGroups(ctx interface{}, userID interface{}, providerID interface{}) *IntegrationAggregate_ListGroups_Call {
+func (_e *IntegrationAggregate_Expecter) ListGroups(ctx any, userID any, providerID any) *IntegrationAggregate_ListGroups_Call {
 	return &IntegrationAggregate_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, userID, providerID)}
 }
 
@@ -714,7 +714,7 @@ type IntegrationAggregate_ListOrgs_Call struct {
 
 // ListOrgs is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *IntegrationAggregate_Expecter) ListOrgs(ctx interface{}) *IntegrationAggregate_ListOrgs_Call {
+func (_e *IntegrationAggregate_Expecter) ListOrgs(ctx any) *IntegrationAggregate_ListOrgs_Call {
 	return &IntegrationAggregate_ListOrgs_Call{Call: _e.mock.On("ListOrgs", ctx)}
 }
 
@@ -787,7 +787,7 @@ type IntegrationAggregate_ListProjects_Call struct {
 //   - userID string
 //   - providerID string
 //   - groupID string
-func (_e *IntegrationAggregate_Expecter) ListProjects(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *IntegrationAggregate_ListProjects_Call {
+func (_e *IntegrationAggregate_Expecter) ListProjects(ctx any, userID any, providerID any, groupID any) *IntegrationAggregate_ListProjects_Call {
 	return &IntegrationAggregate_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, userID, providerID, groupID)}
 }
 
@@ -864,7 +864,7 @@ type IntegrationAggregate_ListRepositories_Call struct {
 
 // ListRepositories is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *IntegrationAggregate_Expecter) ListRepositories(ctx interface{}) *IntegrationAggregate_ListRepositories_Call {
+func (_e *IntegrationAggregate_Expecter) ListRepositories(ctx any) *IntegrationAggregate_ListRepositories_Call {
 	return &IntegrationAggregate_ListRepositories_Call{Call: _e.mock.On("ListRepositories", ctx)}
 }
 
@@ -919,7 +919,7 @@ type IntegrationAggregate_UpdateIssue_Call struct {
 //   - assetVersionSlug string
 //   - vuln models.Vuln
 //   - userAgent *string
-func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, assetVersionSlug interface{}, vuln interface{}, userAgent interface{}) *IntegrationAggregate_UpdateIssue_Call {
+func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx any, asset any, assetVersionSlug any, vuln any, userAgent any) *IntegrationAggregate_UpdateIssue_Call {
 	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, assetVersionSlug, vuln, userAgent)}
 }
 
@@ -990,7 +990,7 @@ type IntegrationAggregate_WantsToHandleWebhook_Call struct {
 
 // WantsToHandleWebhook is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *IntegrationAggregate_Expecter) WantsToHandleWebhook(ctx interface{}) *IntegrationAggregate_WantsToHandleWebhook_Call {
+func (_e *IntegrationAggregate_Expecter) WantsToHandleWebhook(ctx any) *IntegrationAggregate_WantsToHandleWebhook_Call {
 	return &IntegrationAggregate_WantsToHandleWebhook_Call{Call: _e.mock.On("WantsToHandleWebhook", ctx)}
 }
 

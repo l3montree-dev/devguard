@@ -69,7 +69,7 @@ type SBOMRepository_Activate_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *SBOMRepository_Expecter) Activate(ctx interface{}, tx interface{}, id interface{}) *SBOMRepository_Activate_Call {
+func (_e *SBOMRepository_Expecter) Activate(ctx any, tx any, id any) *SBOMRepository_Activate_Call {
 	return &SBOMRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
@@ -142,7 +142,7 @@ type SBOMRepository_All_Call struct {
 // All is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *SBOMRepository_Expecter) All(ctx interface{}, tx interface{}) *SBOMRepository_All_Call {
+func (_e *SBOMRepository_Expecter) All(ctx any, tx any) *SBOMRepository_All_Call {
 	return &SBOMRepository_All_Call{Call: _e.mock.On("All", ctx, tx)}
 }
 
@@ -200,7 +200,7 @@ type SBOMRepository_Begin_Call struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *SBOMRepository_Expecter) Begin(ctx interface{}) *SBOMRepository_Begin_Call {
+func (_e *SBOMRepository_Expecter) Begin(ctx any) *SBOMRepository_Begin_Call {
 	return &SBOMRepository_Begin_Call{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -217,8 +217,8 @@ func (_c *SBOMRepository_Begin_Call) Run(run func(ctx context.Context)) *SBOMRep
 	return _c
 }
 
-func (_c *SBOMRepository_Begin_Call) Return(v shared.DB) *SBOMRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *SBOMRepository_Begin_Call) Return(dB shared.DB) *SBOMRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -251,7 +251,7 @@ type SBOMRepository_CleanupOrphanedRecords_Call struct {
 
 // CleanupOrphanedRecords is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *SBOMRepository_Expecter) CleanupOrphanedRecords(ctx interface{}) *SBOMRepository_CleanupOrphanedRecords_Call {
+func (_e *SBOMRepository_Expecter) CleanupOrphanedRecords(ctx any) *SBOMRepository_CleanupOrphanedRecords_Call {
 	return &SBOMRepository_CleanupOrphanedRecords_Call{Call: _e.mock.On("CleanupOrphanedRecords", ctx)}
 }
 
@@ -312,7 +312,7 @@ type SBOMRepository_CollectGarbage_Call struct {
 // CollectGarbage is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *SBOMRepository_Expecter) CollectGarbage(ctx interface{}, tx interface{}) *SBOMRepository_CollectGarbage_Call {
+func (_e *SBOMRepository_Expecter) CollectGarbage(ctx any, tx any) *SBOMRepository_CollectGarbage_Call {
 	return &SBOMRepository_CollectGarbage_Call{Call: _e.mock.On("CollectGarbage", ctx, tx)}
 }
 
@@ -370,7 +370,7 @@ type SBOMRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.SBOM
-func (_e *SBOMRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *SBOMRepository_Create_Call {
+func (_e *SBOMRepository_Expecter) Create(ctx any, tx any, t any) *SBOMRepository_Create_Call {
 	return &SBOMRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -433,7 +433,7 @@ type SBOMRepository_CreateBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.SBOM
-func (_e *SBOMRepository_Expecter) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *SBOMRepository_CreateBatch_Call {
+func (_e *SBOMRepository_Expecter) CreateBatch(ctx any, tx any, ts any) *SBOMRepository_CreateBatch_Call {
 	return &SBOMRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -496,7 +496,7 @@ type SBOMRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *SBOMRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *SBOMRepository_Delete_Call {
+func (_e *SBOMRepository_Expecter) Delete(ctx any, tx any, id any) *SBOMRepository_Delete_Call {
 	return &SBOMRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -559,7 +559,7 @@ type SBOMRepository_DeleteBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []models.SBOM
-func (_e *SBOMRepository_Expecter) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *SBOMRepository_DeleteBatch_Call {
+func (_e *SBOMRepository_Expecter) DeleteBatch(ctx any, tx any, ids any) *SBOMRepository_DeleteBatch_Call {
 	return &SBOMRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -624,7 +624,7 @@ type SBOMRepository_DeleteByArtifact_Call struct {
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - artifactName string
-func (_e *SBOMRepository_Expecter) DeleteByArtifact(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}) *SBOMRepository_DeleteByArtifact_Call {
+func (_e *SBOMRepository_Expecter) DeleteByArtifact(ctx any, tx any, assetID any, assetVersionName any, artifactName any) *SBOMRepository_DeleteByArtifact_Call {
 	return &SBOMRepository_DeleteByArtifact_Call{Call: _e.mock.On("DeleteByArtifact", ctx, tx, assetID, assetVersionName, artifactName)}
 }
 
@@ -700,7 +700,7 @@ type SBOMRepository_DeleteBySource_Call struct {
 //   - assetVersionName string
 //   - artifactName string
 //   - source string
-func (_e *SBOMRepository_Expecter) DeleteBySource(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}, source interface{}) *SBOMRepository_DeleteBySource_Call {
+func (_e *SBOMRepository_Expecter) DeleteBySource(ctx any, tx any, assetID any, assetVersionName any, artifactName any, source any) *SBOMRepository_DeleteBySource_Call {
 	return &SBOMRepository_DeleteBySource_Call{Call: _e.mock.On("DeleteBySource", ctx, tx, assetID, assetVersionName, artifactName, source)}
 }
 
@@ -791,7 +791,7 @@ type SBOMRepository_FindByArtifact_Call struct {
 //   - assetID uuid.UUID
 //   - assetVersionName string
 //   - artifactName string
-func (_e *SBOMRepository_Expecter) FindByArtifact(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}) *SBOMRepository_FindByArtifact_Call {
+func (_e *SBOMRepository_Expecter) FindByArtifact(ctx any, tx any, assetID any, assetVersionName any, artifactName any) *SBOMRepository_FindByArtifact_Call {
 	return &SBOMRepository_FindByArtifact_Call{Call: _e.mock.On("FindByArtifact", ctx, tx, assetID, assetVersionName, artifactName)}
 }
 
@@ -876,7 +876,7 @@ type SBOMRepository_FindByAssetVersion_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - assetVersionName string
-func (_e *SBOMRepository_Expecter) FindByAssetVersion(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}) *SBOMRepository_FindByAssetVersion_Call {
+func (_e *SBOMRepository_Expecter) FindByAssetVersion(ctx any, tx any, assetID any, assetVersionName any) *SBOMRepository_FindByAssetVersion_Call {
 	return &SBOMRepository_FindByAssetVersion_Call{Call: _e.mock.On("FindByAssetVersion", ctx, tx, assetID, assetVersionName)}
 }
 
@@ -958,7 +958,7 @@ type SBOMRepository_FindBySource_Call struct {
 //   - assetVersionName string
 //   - artifactName string
 //   - source string
-func (_e *SBOMRepository_Expecter) FindBySource(ctx interface{}, tx interface{}, assetID interface{}, assetVersionName interface{}, artifactName interface{}, source interface{}) *SBOMRepository_FindBySource_Call {
+func (_e *SBOMRepository_Expecter) FindBySource(ctx any, tx any, assetID any, assetVersionName any, artifactName any, source any) *SBOMRepository_FindBySource_Call {
 	return &SBOMRepository_FindBySource_Call{Call: _e.mock.On("FindBySource", ctx, tx, assetID, assetVersionName, artifactName, source)}
 }
 
@@ -1047,7 +1047,7 @@ type SBOMRepository_FindSBOMsContainingComponent_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - componentID string
-func (_e *SBOMRepository_Expecter) FindSBOMsContainingComponent(ctx interface{}, tx interface{}, componentID interface{}) *SBOMRepository_FindSBOMsContainingComponent_Call {
+func (_e *SBOMRepository_Expecter) FindSBOMsContainingComponent(ctx any, tx any, componentID any) *SBOMRepository_FindSBOMsContainingComponent_Call {
 	return &SBOMRepository_FindSBOMsContainingComponent_Call{Call: _e.mock.On("FindSBOMsContainingComponent", ctx, tx, componentID)}
 }
 
@@ -1111,7 +1111,7 @@ type SBOMRepository_GetDB_Call struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *SBOMRepository_Expecter) GetDB(ctx interface{}, tx interface{}) *SBOMRepository_GetDB_Call {
+func (_e *SBOMRepository_Expecter) GetDB(ctx any, tx any) *SBOMRepository_GetDB_Call {
 	return &SBOMRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -1133,8 +1133,8 @@ func (_c *SBOMRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared
 	return _c
 }
 
-func (_c *SBOMRepository_GetDB_Call) Return(v shared.DB) *SBOMRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *SBOMRepository_GetDB_Call) Return(dB shared.DB) *SBOMRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -1171,7 +1171,7 @@ type SBOMRepository_InBatches_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - batchSize int
-func (_e *SBOMRepository_Expecter) InBatches(ctx interface{}, tx interface{}, batchSize interface{}) *SBOMRepository_InBatches_Call {
+func (_e *SBOMRepository_Expecter) InBatches(ctx any, tx any, batchSize any) *SBOMRepository_InBatches_Call {
 	return &SBOMRepository_InBatches_Call{Call: _e.mock.On("InBatches", ctx, tx, batchSize)}
 }
 
@@ -1245,7 +1245,7 @@ type SBOMRepository_List_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ids []string
-func (_e *SBOMRepository_Expecter) List(ctx interface{}, tx interface{}, ids interface{}) *SBOMRepository_List_Call {
+func (_e *SBOMRepository_Expecter) List(ctx any, tx any, ids any) *SBOMRepository_List_Call {
 	return &SBOMRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
@@ -1283,7 +1283,7 @@ func (_c *SBOMRepository_List_Call) RunAndReturn(run func(ctx context.Context, t
 }
 
 // LoadTree provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) LoadTree(ctx context.Context, tx shared.DB, rootSubtreeHash string) (*normalize.MerkleTree, error) {
+func (_mock *SBOMRepository) LoadTree(ctx context.Context, tx shared.DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error) {
 	ret := _mock.Called(ctx, tx, rootSubtreeHash)
 
 	if len(ret) == 0 {
@@ -1292,17 +1292,17 @@ func (_mock *SBOMRepository) LoadTree(ctx context.Context, tx shared.DB, rootSub
 
 	var r0 *normalize.MerkleTree
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (*normalize.MerkleTree, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (*normalize.MerkleTree, error)); ok {
 		return returnFunc(ctx, tx, rootSubtreeHash)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) *normalize.MerkleTree); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) *normalize.MerkleTree); ok {
 		r0 = returnFunc(ctx, tx, rootSubtreeHash)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.MerkleTree)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, rootSubtreeHash)
 	} else {
 		r1 = ret.Error(1)
@@ -1318,12 +1318,12 @@ type SBOMRepository_LoadTree_Call struct {
 // LoadTree is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - rootSubtreeHash string
-func (_e *SBOMRepository_Expecter) LoadTree(ctx interface{}, tx interface{}, rootSubtreeHash interface{}) *SBOMRepository_LoadTree_Call {
+//   - rootSubtreeHash uuid.UUID
+func (_e *SBOMRepository_Expecter) LoadTree(ctx any, tx any, rootSubtreeHash any) *SBOMRepository_LoadTree_Call {
 	return &SBOMRepository_LoadTree_Call{Call: _e.mock.On("LoadTree", ctx, tx, rootSubtreeHash)}
 }
 
-func (_c *SBOMRepository_LoadTree_Call) Run(run func(ctx context.Context, tx shared.DB, rootSubtreeHash string)) *SBOMRepository_LoadTree_Call {
+func (_c *SBOMRepository_LoadTree_Call) Run(run func(ctx context.Context, tx shared.DB, rootSubtreeHash uuid.UUID)) *SBOMRepository_LoadTree_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1333,9 +1333,9 @@ func (_c *SBOMRepository_LoadTree_Call) Run(run func(ctx context.Context, tx sha
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -1351,7 +1351,7 @@ func (_c *SBOMRepository_LoadTree_Call) Return(merkleTree *normalize.MerkleTree,
 	return _c
 }
 
-func (_c *SBOMRepository_LoadTree_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rootSubtreeHash string) (*normalize.MerkleTree, error)) *SBOMRepository_LoadTree_Call {
+func (_c *SBOMRepository_LoadTree_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error)) *SBOMRepository_LoadTree_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1391,7 +1391,7 @@ type SBOMRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id string
-func (_e *SBOMRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *SBOMRepository_Read_Call {
+func (_e *SBOMRepository_Expecter) Read(ctx any, tx any, id any) *SBOMRepository_Read_Call {
 	return &SBOMRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -1454,7 +1454,7 @@ type SBOMRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.SBOM
-func (_e *SBOMRepository_Expecter) Save(ctx interface{}, tx interface{}, t interface{}) *SBOMRepository_Save_Call {
+func (_e *SBOMRepository_Expecter) Save(ctx any, tx any, t any) *SBOMRepository_Save_Call {
 	return &SBOMRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, t)}
 }
 
@@ -1517,7 +1517,7 @@ type SBOMRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.SBOM
-func (_e *SBOMRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *SBOMRepository_SaveBatch_Call {
+func (_e *SBOMRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *SBOMRepository_SaveBatch_Call {
 	return &SBOMRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 
@@ -1581,7 +1581,7 @@ type SBOMRepository_SaveTree_Call struct {
 //   - tx shared.DB
 //   - sbom models.SBOM
 //   - tree *normalize.MerkleTree
-func (_e *SBOMRepository_Expecter) SaveTree(ctx interface{}, tx interface{}, sbom interface{}, tree interface{}) *SBOMRepository_SaveTree_Call {
+func (_e *SBOMRepository_Expecter) SaveTree(ctx any, tx any, sbom any, tree any) *SBOMRepository_SaveTree_Call {
 	return &SBOMRepository_SaveTree_Call{Call: _e.mock.On("SaveTree", ctx, tx, sbom, tree)}
 }
 
@@ -1648,7 +1648,7 @@ type SBOMRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *SBOMRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *SBOMRepository_Transaction_Call {
+func (_e *SBOMRepository_Expecter) Transaction(ctx any, fn any) *SBOMRepository_Transaction_Call {
 	return &SBOMRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 
@@ -1708,7 +1708,7 @@ type SBOMRepository_Upsert_Call struct {
 //   - t *[]*models.SBOM
 //   - conflictingColumns []clause.Column
 //   - updateOnly []string
-func (_e *SBOMRepository_Expecter) Upsert(ctx interface{}, tx interface{}, t interface{}, conflictingColumns interface{}, updateOnly interface{}) *SBOMRepository_Upsert_Call {
+func (_e *SBOMRepository_Expecter) Upsert(ctx any, tx any, t any, conflictingColumns any, updateOnly any) *SBOMRepository_Upsert_Call {
 	return &SBOMRepository_Upsert_Call{Call: _e.mock.On("Upsert", ctx, tx, t, conflictingColumns, updateOnly)}
 }
 

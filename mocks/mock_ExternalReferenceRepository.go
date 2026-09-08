@@ -67,7 +67,7 @@ type ExternalReferenceRepository_Create_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - t *models.ExternalReference
-func (_e *ExternalReferenceRepository_Expecter) Create(ctx interface{}, tx interface{}, t interface{}) *ExternalReferenceRepository_Create_Call {
+func (_e *ExternalReferenceRepository_Expecter) Create(ctx any, tx any, t any) *ExternalReferenceRepository_Create_Call {
 	return &ExternalReferenceRepository_Create_Call{Call: _e.mock.On("Create", ctx, tx, t)}
 }
 
@@ -131,7 +131,7 @@ type ExternalReferenceRepository_DeleteByURL_Call struct {
 //   - tx shared.DB
 //   - assetID uuid.UUID
 //   - url string
-func (_e *ExternalReferenceRepository_Expecter) DeleteByURL(ctx interface{}, tx interface{}, assetID interface{}, url interface{}) *ExternalReferenceRepository_DeleteByURL_Call {
+func (_e *ExternalReferenceRepository_Expecter) DeleteByURL(ctx any, tx any, assetID any, url any) *ExternalReferenceRepository_DeleteByURL_Call {
 	return &ExternalReferenceRepository_DeleteByURL_Call{Call: _e.mock.On("DeleteByURL", ctx, tx, assetID, url)}
 }
 
@@ -210,7 +210,7 @@ type ExternalReferenceRepository_FindByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *ExternalReferenceRepository_Expecter) FindByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *ExternalReferenceRepository_FindByAssetID_Call {
+func (_e *ExternalReferenceRepository_Expecter) FindByAssetID(ctx any, tx any, assetID any) *ExternalReferenceRepository_FindByAssetID_Call {
 	return &ExternalReferenceRepository_FindByAssetID_Call{Call: _e.mock.On("FindByAssetID", ctx, tx, assetID)}
 }
 
@@ -286,7 +286,7 @@ type ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call struct 
 //   - search string
 //   - filterQuery []shared.FilterQuery
 //   - sortQuery []shared.SortQuery
-func (_e *ExternalReferenceRepository_Expecter) FindByAssetIDWithVexRuleCountPaged(ctx interface{}, tx interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filterQuery interface{}, sortQuery interface{}) *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call {
+func (_e *ExternalReferenceRepository_Expecter) FindByAssetIDWithVexRuleCountPaged(ctx any, tx any, assetID any, pageInfo any, search any, filterQuery any, sortQuery any) *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call {
 	return &ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call{Call: _e.mock.On("FindByAssetIDWithVexRuleCountPaged", ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)}
 }
 
@@ -369,7 +369,7 @@ type ExternalReferenceRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ts []models.ExternalReference
-func (_e *ExternalReferenceRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *ExternalReferenceRepository_SaveBatch_Call {
+func (_e *ExternalReferenceRepository_Expecter) SaveBatch(ctx any, tx any, ts any) *ExternalReferenceRepository_SaveBatch_Call {
 	return &ExternalReferenceRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 

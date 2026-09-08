@@ -72,7 +72,7 @@ type AssetVersionService_BuildOpenVeX_Call struct {
 //   - assetVersion models.AssetVersion
 //   - organizationSlug string
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildOpenVeX(ctx interface{}, tx interface{}, asset interface{}, assetVersion interface{}, organizationSlug interface{}, dependencyVulns interface{}) *AssetVersionService_BuildOpenVeX_Call {
+func (_e *AssetVersionService_Expecter) BuildOpenVeX(ctx any, tx any, asset any, assetVersion any, organizationSlug any, dependencyVulns any) *AssetVersionService_BuildOpenVeX_Call {
 	return &AssetVersionService_BuildOpenVeX_Call{Call: _e.mock.On("BuildOpenVeX", ctx, tx, asset, assetVersion, organizationSlug, dependencyVulns)}
 }
 
@@ -155,7 +155,7 @@ type AssetVersionService_BuildVeX_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - dependencyVulns []models.DependencyVuln
-func (_e *AssetVersionService_Expecter) BuildVeX(ctx interface{}, tx interface{}, metadata interface{}, asset interface{}, assetVersion interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
+func (_e *AssetVersionService_Expecter) BuildVeX(ctx any, tx any, metadata any, asset any, assetVersion any, dependencyVulns any) *AssetVersionService_BuildVeX_Call {
 	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", ctx, tx, metadata, asset, assetVersion, dependencyVulns)}
 }
 
@@ -235,7 +235,7 @@ type AssetVersionService_DeleteSBOMSource_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName string
 //   - source string
-func (_e *AssetVersionService_Expecter) DeleteSBOMSource(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}, source interface{}) *AssetVersionService_DeleteSBOMSource_Call {
+func (_e *AssetVersionService_Expecter) DeleteSBOMSource(ctx any, tx any, assetVersion any, artifactName any, source any) *AssetVersionService_DeleteSBOMSource_Call {
 	return &AssetVersionService_DeleteSBOMSource_Call{Call: _e.mock.On("DeleteSBOMSource", ctx, tx, assetVersion, artifactName, source)}
 }
 
@@ -319,7 +319,7 @@ type AssetVersionService_GetAssetVersionsByAssetID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetID uuid.UUID
-func (_e *AssetVersionService_Expecter) GetAssetVersionsByAssetID(ctx interface{}, tx interface{}, assetID interface{}) *AssetVersionService_GetAssetVersionsByAssetID_Call {
+func (_e *AssetVersionService_Expecter) GetAssetVersionsByAssetID(ctx any, tx any, assetID any) *AssetVersionService_GetAssetVersionsByAssetID_Call {
 	return &AssetVersionService_GetAssetVersionsByAssetID_Call{Call: _e.mock.On("GetAssetVersionsByAssetID", ctx, tx, assetID)}
 }
 
@@ -394,7 +394,7 @@ type AssetVersionService_ListSBOMs_Call struct {
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
 //   - artifactName string
-func (_e *AssetVersionService_Expecter) ListSBOMs(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}) *AssetVersionService_ListSBOMs_Call {
+func (_e *AssetVersionService_Expecter) ListSBOMs(ctx any, tx any, assetVersion any, artifactName any) *AssetVersionService_ListSBOMs_Call {
 	return &AssetVersionService_ListSBOMs_Call{Call: _e.mock.On("ListSBOMs", ctx, tx, assetVersion, artifactName)}
 }
 
@@ -474,7 +474,7 @@ type AssetVersionService_LoadArtifactSBOMs_Call struct {
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
 //   - artifactName string
-func (_e *AssetVersionService_Expecter) LoadArtifactSBOMs(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}) *AssetVersionService_LoadArtifactSBOMs_Call {
+func (_e *AssetVersionService_Expecter) LoadArtifactSBOMs(ctx any, tx any, assetVersion any, artifactName any) *AssetVersionService_LoadArtifactSBOMs_Call {
 	return &AssetVersionService_LoadArtifactSBOMs_Call{Call: _e.mock.On("LoadArtifactSBOMs", ctx, tx, assetVersion, artifactName)}
 }
 
@@ -553,7 +553,7 @@ type AssetVersionService_LoadAssetVersionSBOMs_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
-func (_e *AssetVersionService_Expecter) LoadAssetVersionSBOMs(ctx interface{}, tx interface{}, assetVersion interface{}) *AssetVersionService_LoadAssetVersionSBOMs_Call {
+func (_e *AssetVersionService_Expecter) LoadAssetVersionSBOMs(ctx any, tx any, assetVersion any) *AssetVersionService_LoadAssetVersionSBOMs_Call {
 	return &AssetVersionService_LoadAssetVersionSBOMs_Call{Call: _e.mock.On("LoadAssetVersionSBOMs", ctx, tx, assetVersion)}
 }
 
@@ -628,7 +628,7 @@ type AssetVersionService_LoadComponentMetadata_Call struct {
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
 //   - forest normalize.MerkleForest
-func (_e *AssetVersionService_Expecter) LoadComponentMetadata(ctx interface{}, tx interface{}, assetVersion interface{}, forest interface{}) *AssetVersionService_LoadComponentMetadata_Call {
+func (_e *AssetVersionService_Expecter) LoadComponentMetadata(ctx any, tx any, assetVersion any, forest any) *AssetVersionService_LoadComponentMetadata_Call {
 	return &AssetVersionService_LoadComponentMetadata_Call{Call: _e.mock.On("LoadComponentMetadata", ctx, tx, assetVersion, forest)}
 }
 
@@ -709,7 +709,7 @@ type AssetVersionService_LoadSBOM_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName string
 //   - source string
-func (_e *AssetVersionService_Expecter) LoadSBOM(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}, source interface{}) *AssetVersionService_LoadSBOM_Call {
+func (_e *AssetVersionService_Expecter) LoadSBOM(ctx any, tx any, assetVersion any, artifactName any, source any) *AssetVersionService_LoadSBOM_Call {
 	return &AssetVersionService_LoadSBOM_Call{Call: _e.mock.On("LoadSBOM", ctx, tx, assetVersion, artifactName, source)}
 }
 
@@ -799,7 +799,7 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - artifactName string
 //   - source string
 //   - parsed *normalize.ParsedSBOM
-func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx interface{}, tx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, source interface{}, parsed interface{}) *AssetVersionService_UpdateSBOM_Call {
+func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifactName any, source any, parsed any) *AssetVersionService_UpdateSBOM_Call {
 	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)}
 }
 
