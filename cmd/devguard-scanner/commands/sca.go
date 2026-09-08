@@ -441,11 +441,44 @@ func MergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 		}
 	}
 
+	// the root is always reachable, even if no extras contributed anything
+	if dependencies[rootRef] == nil {
+		dependencies[rootRef] = map[string]struct{}{}
+	}
+
+	// a component only survives the merge if it is actually reachable from the
+	// root via the dependency graph - anything an extra declared but never
+	// wired into that graph (e.g. because its own Dependencies was nil) is
+	// dangling and gets dropped rather than surfaced as a phantom component.
+	reachable := map[string]struct{}{rootRef: {}}
+	queue := []string{rootRef}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for child := range dependencies[cur] {
+			if _, ok := reachable[child]; !ok {
+				reachable[child] = struct{}{}
+				queue = append(queue, child)
+			}
+		}
+	}
+
+	// every reachable node needs its own dependency entry, even an empty one,
+	// so leaf components are still declared per the CycloneDX convention.
+	for ref := range reachable {
+		if dependencies[ref] == nil {
+			dependencies[ref] = map[string]struct{}{}
+		}
+	}
+
 	// the root component is described by bom.Metadata, so it is not listed
 	// among the components
 	mergedComponents := make([]cyclonedx.Component, 0, len(components))
 	for ref, component := range components {
 		if ref == rootRef {
+			continue
+		}
+		if _, ok := reachable[ref]; !ok {
 			continue
 		}
 		mergedComponents = append(mergedComponents, component)
@@ -456,6 +489,9 @@ func MergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 
 	mergedDependencies := make([]cyclonedx.Dependency, 0, len(dependencies))
 	for parent, children := range dependencies {
+		if _, ok := reachable[parent]; !ok {
+			continue
+		}
 		refs := make([]string, 0, len(children))
 		for child := range children {
 			refs = append(refs, child)
