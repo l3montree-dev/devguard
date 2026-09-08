@@ -191,8 +191,8 @@ func (_c *PubSubBroker_Subscribe_Call) Run(run func(topic shared.PubSubChannel))
 	return _c
 }
 
-func (_c *PubSubBroker_Subscribe_Call) Return(stringToVCh <-chan map[string]any, err error) *PubSubBroker_Subscribe_Call {
-	_c.Call.Return(stringToVCh, err)
+func (_c *PubSubBroker_Subscribe_Call) Return(stringToAnyMoqParamCh <-chan map[string]any, err error) *PubSubBroker_Subscribe_Call {
+	_c.Call.Return(stringToAnyMoqParamCh, err)
 	return _c
 }
 

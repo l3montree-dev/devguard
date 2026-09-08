@@ -286,8 +286,8 @@ func (_c *CompliancePostureRepository_Begin_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *CompliancePostureRepository_Begin_Call) Return(v shared.DB) *CompliancePostureRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *CompliancePostureRepository_Begin_Call) Return(dB shared.DB) *CompliancePostureRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -832,8 +832,8 @@ func (_c *CompliancePostureRepository_GetDB_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *CompliancePostureRepository_GetDB_Call) Return(v shared.DB) *CompliancePostureRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *CompliancePostureRepository_GetDB_Call) Return(dB shared.DB) *CompliancePostureRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

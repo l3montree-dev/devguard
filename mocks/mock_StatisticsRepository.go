@@ -614,8 +614,8 @@ func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Run
 	return _c
 }
 
-func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Return(v dtos.OrgVulnAverage, err error) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
-	_c.Call.Return(v, err)
+func (_c *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call) Return(orgVulnAverage dtos.OrgVulnAverage, err error) *StatisticsRepository_GetAverageOpenVulnsPerOrgAcrossInstance_Call {
+	_c.Call.Return(orgVulnAverage, err)
 	return _c
 }
 

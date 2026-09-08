@@ -668,8 +668,8 @@ func (_c *Context_Get_Call) Run(run func(key string)) *Context_Get_Call {
 	return _c
 }
 
-func (_c *Context_Get_Call) Return(v any) *Context_Get_Call {
-	_c.Call.Return(v)
+func (_c *Context_Get_Call) Return(anyMoqParam any) *Context_Get_Call {
+	_c.Call.Return(anyMoqParam)
 	return _c
 }
 

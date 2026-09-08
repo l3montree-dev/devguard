@@ -138,8 +138,8 @@ func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.Affecte
 // one for each unique path through the dependency graph. This ensures that the same CVE
 // appearing through different dependency paths (e.g., A -> trivy -> stdlib vs A -> cosign -> stdlib)
 // creates separate vulnerability records.
-func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, sbom *normalize.SBOMGraph, assetID uuid.UUID, assetVersionName string, artifactName string) []models.DependencyVuln {
-	vulns := VulnInPackageToDependencyVulnsWithoutArtifact(vuln, sbom, assetID, assetVersionName)
+func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, forest normalize.MerkleForest, assetID uuid.UUID, assetVersionName string, artifactName string) []models.DependencyVuln {
+	vulns := VulnInPackageToDependencyVulnsWithoutArtifact(vuln, forest, assetID, assetVersionName)
 
 	// set the artifact for each vuln
 	for i := range vulns {
@@ -157,7 +157,7 @@ func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, sbom *normalize.S
 
 // VulnInPackageToDependencyVulnsWithoutArtifact converts a vulnerability to multiple DependencyVuln objects
 // based on all paths through the dependency graph.
-func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sbom *normalize.SBOMGraph, assetID uuid.UUID, assetVersionName string) []models.DependencyVuln {
+func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, forest normalize.MerkleForest, assetID uuid.UUID, assetVersionName string) []models.DependencyVuln {
 	v := vuln
 	// Unescape URL-encoded characters (e.g., %2B -> +) to match the format stored in the database
 	stringPurl, err := normalize.PURLToString(v.Purl)
@@ -168,7 +168,7 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, sb
 	fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
 
 	// Find all paths to this vulnerable component
-	paths := sbom.FindAllComponentOnlyPathsToPURL(stringPurl, 12) // at max we use 12 paths, to avoid path explosion
+	paths := forest.PathsToPURL(stringPurl, 12) // at max we use 12 paths, to avoid path explosion
 
 	// If no paths found, create a single vuln with empty path (fallback)
 	if len(paths) == 0 || len(paths) == 12 {

@@ -88,8 +88,8 @@ func (_c *ConfigRepository_GetDB_Call) Run(run func(ctx context.Context, tx shar
 	return _c
 }
 
-func (_c *ConfigRepository_GetDB_Call) Return(v shared.DB) *ConfigRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *ConfigRepository_GetDB_Call) Return(dB shared.DB) *ConfigRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

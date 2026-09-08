@@ -216,8 +216,8 @@ func (_c *AttestationRepository_Begin_Call) Run(run func(ctx context.Context)) *
 	return _c
 }
 
-func (_c *AttestationRepository_Begin_Call) Return(v shared.DB) *AttestationRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *AttestationRepository_Begin_Call) Return(dB shared.DB) *AttestationRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -732,8 +732,8 @@ func (_c *AttestationRepository_GetDB_Call) Run(run func(ctx context.Context, tx
 	return _c
 }
 
-func (_c *AttestationRepository_GetDB_Call) Return(v shared.DB) *AttestationRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *AttestationRepository_GetDB_Call) Return(dB shared.DB) *AttestationRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

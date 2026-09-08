@@ -207,6 +207,81 @@ func (_c *AssetVersionService_BuildVeX_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// DeleteSBOMSource provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) DeleteSBOMSource(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string) error {
+	ret := _mock.Called(ctx, tx, assetVersion, artifactName, source)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSBOMSource")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetVersion, artifactName, source)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetVersionService_DeleteSBOMSource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSBOMSource'
+type AssetVersionService_DeleteSBOMSource_Call struct {
+	*mock.Call
+}
+
+// DeleteSBOMSource is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersion models.AssetVersion
+//   - artifactName string
+//   - source string
+func (_e *AssetVersionService_Expecter) DeleteSBOMSource(ctx any, tx any, assetVersion any, artifactName any, source any) *AssetVersionService_DeleteSBOMSource_Call {
+	return &AssetVersionService_DeleteSBOMSource_Call{Call: _e.mock.On("DeleteSBOMSource", ctx, tx, assetVersion, artifactName, source)}
+}
+
+func (_c *AssetVersionService_DeleteSBOMSource_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string)) *AssetVersionService_DeleteSBOMSource_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(models.AssetVersion)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionService_DeleteSBOMSource_Call) Return(err error) *AssetVersionService_DeleteSBOMSource_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetVersionService_DeleteSBOMSource_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string) error) *AssetVersionService_DeleteSBOMSource_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAssetVersionsByAssetID provides a mock function for the type AssetVersionService
 func (_mock *AssetVersionService) GetAssetVersionsByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	ret := _mock.Called(ctx, tx, assetID)
@@ -281,24 +356,184 @@ func (_c *AssetVersionService_GetAssetVersionsByAssetID_Call) RunAndReturn(run f
 	return _c
 }
 
-// LoadFullSBOMGraph provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) LoadFullSBOMGraph(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error) {
+// ListSBOMs provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) ListSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) ([]models.SBOM, error) {
+	ret := _mock.Called(ctx, tx, assetVersion, artifactName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSBOMs")
+	}
+
+	var r0 []models.SBOM
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string) ([]models.SBOM, error)); ok {
+		return returnFunc(ctx, tx, assetVersion, artifactName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string) []models.SBOM); ok {
+		r0 = returnFunc(ctx, tx, assetVersion, artifactName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.SBOM)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.AssetVersion, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersion, artifactName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionService_ListSBOMs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSBOMs'
+type AssetVersionService_ListSBOMs_Call struct {
+	*mock.Call
+}
+
+// ListSBOMs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersion models.AssetVersion
+//   - artifactName string
+func (_e *AssetVersionService_Expecter) ListSBOMs(ctx any, tx any, assetVersion any, artifactName any) *AssetVersionService_ListSBOMs_Call {
+	return &AssetVersionService_ListSBOMs_Call{Call: _e.mock.On("ListSBOMs", ctx, tx, assetVersion, artifactName)}
+}
+
+func (_c *AssetVersionService_ListSBOMs_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string)) *AssetVersionService_ListSBOMs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(models.AssetVersion)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionService_ListSBOMs_Call) Return(sBOMs []models.SBOM, err error) *AssetVersionService_ListSBOMs_Call {
+	_c.Call.Return(sBOMs, err)
+	return _c
+}
+
+func (_c *AssetVersionService_ListSBOMs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) ([]models.SBOM, error)) *AssetVersionService_ListSBOMs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LoadArtifactSBOMs provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) LoadArtifactSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) (normalize.MerkleForest, error) {
+	ret := _mock.Called(ctx, tx, assetVersion, artifactName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadArtifactSBOMs")
+	}
+
+	var r0 normalize.MerkleForest
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string) (normalize.MerkleForest, error)); ok {
+		return returnFunc(ctx, tx, assetVersion, artifactName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string) normalize.MerkleForest); ok {
+		r0 = returnFunc(ctx, tx, assetVersion, artifactName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(normalize.MerkleForest)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.AssetVersion, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersion, artifactName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionService_LoadArtifactSBOMs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadArtifactSBOMs'
+type AssetVersionService_LoadArtifactSBOMs_Call struct {
+	*mock.Call
+}
+
+// LoadArtifactSBOMs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersion models.AssetVersion
+//   - artifactName string
+func (_e *AssetVersionService_Expecter) LoadArtifactSBOMs(ctx any, tx any, assetVersion any, artifactName any) *AssetVersionService_LoadArtifactSBOMs_Call {
+	return &AssetVersionService_LoadArtifactSBOMs_Call{Call: _e.mock.On("LoadArtifactSBOMs", ctx, tx, assetVersion, artifactName)}
+}
+
+func (_c *AssetVersionService_LoadArtifactSBOMs_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string)) *AssetVersionService_LoadArtifactSBOMs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(models.AssetVersion)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionService_LoadArtifactSBOMs_Call) Return(merkleForest normalize.MerkleForest, err error) *AssetVersionService_LoadArtifactSBOMs_Call {
+	_c.Call.Return(merkleForest, err)
+	return _c
+}
+
+func (_c *AssetVersionService_LoadArtifactSBOMs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) (normalize.MerkleForest, error)) *AssetVersionService_LoadArtifactSBOMs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LoadAssetVersionSBOMs provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) LoadAssetVersionSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) (normalize.MerkleForest, error) {
 	ret := _mock.Called(ctx, tx, assetVersion)
 
 	if len(ret) == 0 {
-		panic("no return value specified for LoadFullSBOMGraph")
+		panic("no return value specified for LoadAssetVersionSBOMs")
 	}
 
-	var r0 *normalize.SBOMGraph
+	var r0 normalize.MerkleForest
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion) (*normalize.SBOMGraph, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion) (normalize.MerkleForest, error)); ok {
 		return returnFunc(ctx, tx, assetVersion)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion) *normalize.SBOMGraph); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion) normalize.MerkleForest); ok {
 		r0 = returnFunc(ctx, tx, assetVersion)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*normalize.SBOMGraph)
+			r0 = ret.Get(0).(normalize.MerkleForest)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.AssetVersion) error); ok {
@@ -309,20 +544,20 @@ func (_mock *AssetVersionService) LoadFullSBOMGraph(ctx context.Context, tx shar
 	return r0, r1
 }
 
-// AssetVersionService_LoadFullSBOMGraph_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadFullSBOMGraph'
-type AssetVersionService_LoadFullSBOMGraph_Call struct {
+// AssetVersionService_LoadAssetVersionSBOMs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadAssetVersionSBOMs'
+type AssetVersionService_LoadAssetVersionSBOMs_Call struct {
 	*mock.Call
 }
 
-// LoadFullSBOMGraph is a helper method to define mock.On call
+// LoadAssetVersionSBOMs is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - assetVersion models.AssetVersion
-func (_e *AssetVersionService_Expecter) LoadFullSBOMGraph(ctx any, tx any, assetVersion any) *AssetVersionService_LoadFullSBOMGraph_Call {
-	return &AssetVersionService_LoadFullSBOMGraph_Call{Call: _e.mock.On("LoadFullSBOMGraph", ctx, tx, assetVersion)}
+func (_e *AssetVersionService_Expecter) LoadAssetVersionSBOMs(ctx any, tx any, assetVersion any) *AssetVersionService_LoadAssetVersionSBOMs_Call {
+	return &AssetVersionService_LoadAssetVersionSBOMs_Call{Call: _e.mock.On("LoadAssetVersionSBOMs", ctx, tx, assetVersion)}
 }
 
-func (_c *AssetVersionService_LoadFullSBOMGraph_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion)) *AssetVersionService_LoadFullSBOMGraph_Call {
+func (_c *AssetVersionService_LoadAssetVersionSBOMs_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion)) *AssetVersionService_LoadAssetVersionSBOMs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -345,38 +580,204 @@ func (_c *AssetVersionService_LoadFullSBOMGraph_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *AssetVersionService_LoadFullSBOMGraph_Call) Return(sBOMGraph *normalize.SBOMGraph, err error) *AssetVersionService_LoadFullSBOMGraph_Call {
-	_c.Call.Return(sBOMGraph, err)
+func (_c *AssetVersionService_LoadAssetVersionSBOMs_Call) Return(merkleForest normalize.MerkleForest, err error) *AssetVersionService_LoadAssetVersionSBOMs_Call {
+	_c.Call.Return(merkleForest, err)
 	return _c
 }
 
-func (_c *AssetVersionService_LoadFullSBOMGraph_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error)) *AssetVersionService_LoadFullSBOMGraph_Call {
+func (_c *AssetVersionService_LoadAssetVersionSBOMs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) (normalize.MerkleForest, error)) *AssetVersionService_LoadAssetVersionSBOMs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LoadComponentMetadata provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) LoadComponentMetadata(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, forest normalize.MerkleForest) (map[string]cyclonedx.Component, error) {
+	ret := _mock.Called(ctx, tx, assetVersion, forest)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadComponentMetadata")
+	}
+
+	var r0 map[string]cyclonedx.Component
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, normalize.MerkleForest) (map[string]cyclonedx.Component, error)); ok {
+		return returnFunc(ctx, tx, assetVersion, forest)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, normalize.MerkleForest) map[string]cyclonedx.Component); ok {
+		r0 = returnFunc(ctx, tx, assetVersion, forest)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]cyclonedx.Component)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.AssetVersion, normalize.MerkleForest) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersion, forest)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionService_LoadComponentMetadata_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadComponentMetadata'
+type AssetVersionService_LoadComponentMetadata_Call struct {
+	*mock.Call
+}
+
+// LoadComponentMetadata is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersion models.AssetVersion
+//   - forest normalize.MerkleForest
+func (_e *AssetVersionService_Expecter) LoadComponentMetadata(ctx any, tx any, assetVersion any, forest any) *AssetVersionService_LoadComponentMetadata_Call {
+	return &AssetVersionService_LoadComponentMetadata_Call{Call: _e.mock.On("LoadComponentMetadata", ctx, tx, assetVersion, forest)}
+}
+
+func (_c *AssetVersionService_LoadComponentMetadata_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, forest normalize.MerkleForest)) *AssetVersionService_LoadComponentMetadata_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(models.AssetVersion)
+		}
+		var arg3 normalize.MerkleForest
+		if args[3] != nil {
+			arg3 = args[3].(normalize.MerkleForest)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionService_LoadComponentMetadata_Call) Return(stringToComponent map[string]cyclonedx.Component, err error) *AssetVersionService_LoadComponentMetadata_Call {
+	_c.Call.Return(stringToComponent, err)
+	return _c
+}
+
+func (_c *AssetVersionService_LoadComponentMetadata_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, forest normalize.MerkleForest) (map[string]cyclonedx.Component, error)) *AssetVersionService_LoadComponentMetadata_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LoadSBOM provides a mock function for the type AssetVersionService
+func (_mock *AssetVersionService) LoadSBOM(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string) (normalize.MerkleForest, error) {
+	ret := _mock.Called(ctx, tx, assetVersion, artifactName, source)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadSBOM")
+	}
+
+	var r0 normalize.MerkleForest
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string, string) (normalize.MerkleForest, error)); ok {
+		return returnFunc(ctx, tx, assetVersion, artifactName, source)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string, string) normalize.MerkleForest); ok {
+		r0 = returnFunc(ctx, tx, assetVersion, artifactName, source)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(normalize.MerkleForest)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.AssetVersion, string, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersion, artifactName, source)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionService_LoadSBOM_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadSBOM'
+type AssetVersionService_LoadSBOM_Call struct {
+	*mock.Call
+}
+
+// LoadSBOM is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersion models.AssetVersion
+//   - artifactName string
+//   - source string
+func (_e *AssetVersionService_Expecter) LoadSBOM(ctx any, tx any, assetVersion any, artifactName any, source any) *AssetVersionService_LoadSBOM_Call {
+	return &AssetVersionService_LoadSBOM_Call{Call: _e.mock.On("LoadSBOM", ctx, tx, assetVersion, artifactName, source)}
+}
+
+func (_c *AssetVersionService_LoadSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string)) *AssetVersionService_LoadSBOM_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(models.AssetVersion)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionService_LoadSBOM_Call) Return(merkleForest normalize.MerkleForest, err error) *AssetVersionService_LoadSBOM_Call {
+	_c.Call.Return(merkleForest, err)
+	return _c
+}
+
+func (_c *AssetVersionService_LoadSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string) (normalize.MerkleForest, error)) *AssetVersionService_LoadSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error) {
-	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifactName, sbom)
+func (_mock *AssetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
 	}
 
-	var r0 *normalize.SBOMGraph
+	var r0 normalize.MerkleForest
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph) (*normalize.SBOMGraph, error)); ok {
-		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, sbom)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, string, *normalize.ParsedSBOM) (normalize.MerkleForest, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph) *normalize.SBOMGraph); ok {
-		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, sbom)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, string, *normalize.ParsedSBOM) normalize.MerkleForest); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*normalize.SBOMGraph)
+			r0 = ret.Get(0).(normalize.MerkleForest)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, *normalize.SBOMGraph) error); ok {
-		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, sbom)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, string, *normalize.ParsedSBOM) error); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -396,12 +797,13 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - artifactName string
-//   - sbom *normalize.SBOMGraph
-func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifactName any, sbom any) *AssetVersionService_UpdateSBOM_Call {
-	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", ctx, tx, org, project, asset, assetVersion, artifactName, sbom)}
+//   - source string
+//   - parsed *normalize.ParsedSBOM
+func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifactName any, source any, parsed any) *AssetVersionService_UpdateSBOM_Call {
+	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)}
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -431,9 +833,13 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context,
 		if args[6] != nil {
 			arg6 = args[6].(string)
 		}
-		var arg7 *normalize.SBOMGraph
+		var arg7 string
 		if args[7] != nil {
-			arg7 = args[7].(*normalize.SBOMGraph)
+			arg7 = args[7].(string)
+		}
+		var arg8 *normalize.ParsedSBOM
+		if args[8] != nil {
+			arg8 = args[8].(*normalize.ParsedSBOM)
 		}
 		run(
 			arg0,
@@ -444,17 +850,18 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context,
 			arg5,
 			arg6,
 			arg7,
+			arg8,
 		)
 	})
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Return(sBOMGraph *normalize.SBOMGraph, err error) *AssetVersionService_UpdateSBOM_Call {
-	_c.Call.Return(sBOMGraph, err)
+func (_c *AssetVersionService_UpdateSBOM_Call) Return(merkleForest normalize.MerkleForest, err error) *AssetVersionService_UpdateSBOM_Call {
+	_c.Call.Return(merkleForest, err)
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -216,8 +216,8 @@ func (_c *PolicyRepository_Begin_Call) Run(run func(ctx context.Context)) *Polic
 	return _c
 }
 
-func (_c *PolicyRepository_Begin_Call) Return(v shared.DB) *PolicyRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *PolicyRepository_Begin_Call) Return(dB shared.DB) *PolicyRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -794,8 +794,8 @@ func (_c *PolicyRepository_GetDB_Call) Run(run func(ctx context.Context, tx shar
 	return _c
 }
 
-func (_c *PolicyRepository_GetDB_Call) Return(v shared.DB) *PolicyRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *PolicyRepository_GetDB_Call) Return(dB shared.DB) *PolicyRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

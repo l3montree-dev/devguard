@@ -215,8 +215,8 @@ func (_c *CVERelationshipRepository_Begin_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *CVERelationshipRepository_Begin_Call) Return(v shared.DB) *CVERelationshipRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *CVERelationshipRepository_Begin_Call) Return(dB shared.DB) *CVERelationshipRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -651,8 +651,8 @@ func (_c *CVERelationshipRepository_GetDB_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *CVERelationshipRepository_GetDB_Call) Return(v shared.DB) *CVERelationshipRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *CVERelationshipRepository_GetDB_Call) Return(dB shared.DB) *CVERelationshipRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

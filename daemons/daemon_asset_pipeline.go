@@ -29,7 +29,6 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
@@ -549,20 +548,23 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 			errs := make([]error, 0)
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
-				bom, err := runner.assetVersionService.LoadFullSBOMGraph(stageCtx, nil, assetVersions[i])
-				if err != nil {
-					slog.Error("failed to load full sbom", "error", err, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-					errs = append(errs, err)
-					continue
-				}
-
 				for _, artifact := range artifacts {
+					// each artifact's SBOMs are loaded on their own - there is no
+					// shared asset-version graph to scope out of any more
+					bom, err := runner.assetVersionService.LoadArtifactSBOMs(stageCtx, nil, assetVersions[i], artifact.ArtifactName)
+					if err != nil {
+						slog.Error("failed to load sboms", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+						errs = append(errs, err)
+						continue
+					}
+
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 
-					bom.ClearScope()
 					opened, closed, newState, err := runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system", nil)
 
-					if err != nil && !errors.Is(err, normalize.ErrNodeNotReachable) {
+					// an artifact with no SBOMs is not an error - it just has
+					// nothing to scan, and ScanNormalizedSBOM returns early
+					if err != nil {
 						tx.Rollback()
 						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)

@@ -217,8 +217,8 @@ func (_c *AssetRepository_Begin_Call) Run(run func(ctx context.Context)) *AssetR
 	return _c
 }
 
-func (_c *AssetRepository_Begin_Call) Return(v shared.DB) *AssetRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *AssetRepository_Begin_Call) Return(dB shared.DB) *AssetRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -1335,8 +1335,8 @@ func (_c *AssetRepository_GetDB_Call) Run(run func(ctx context.Context, tx share
 	return _c
 }
 
-func (_c *AssetRepository_GetDB_Call) Return(v shared.DB) *AssetRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *AssetRepository_GetDB_Call) Return(dB shared.DB) *AssetRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

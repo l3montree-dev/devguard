@@ -216,8 +216,8 @@ func (_c *FrameworkControlRepository_Begin_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *FrameworkControlRepository_Begin_Call) Return(v shared.DB) *FrameworkControlRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *FrameworkControlRepository_Begin_Call) Return(dB shared.DB) *FrameworkControlRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -652,8 +652,8 @@ func (_c *FrameworkControlRepository_GetDB_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *FrameworkControlRepository_GetDB_Call) Return(v shared.DB) *FrameworkControlRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *FrameworkControlRepository_GetDB_Call) Return(dB shared.DB) *FrameworkControlRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

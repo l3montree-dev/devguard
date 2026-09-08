@@ -217,8 +217,8 @@ func (_c *CveRepository_Begin_Call) Run(run func(ctx context.Context)) *CveRepos
 	return _c
 }
 
-func (_c *CveRepository_Begin_Call) Return(v shared.DB) *CveRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *CveRepository_Begin_Call) Return(dB shared.DB) *CveRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -1096,8 +1096,8 @@ func (_c *CveRepository_GetAllRelatedCVEsForCVE_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *CveRepository_GetAllRelatedCVEsForCVE_Call) Return(vToCVEs map[dtos.RelationshipType][]models.CVE, err error) *CveRepository_GetAllRelatedCVEsForCVE_Call {
-	_c.Call.Return(vToCVEs, err)
+func (_c *CveRepository_GetAllRelatedCVEsForCVE_Call) Return(relationshipTypeToCVEs map[dtos.RelationshipType][]models.CVE, err error) *CveRepository_GetAllRelatedCVEsForCVE_Call {
+	_c.Call.Return(relationshipTypeToCVEs, err)
 	return _c
 }
 
@@ -1155,8 +1155,8 @@ func (_c *CveRepository_GetDB_Call) Run(run func(ctx context.Context, tx shared.
 	return _c
 }
 
-func (_c *CveRepository_GetDB_Call) Return(v shared.DB) *CveRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *CveRepository_GetDB_Call) Return(dB shared.DB) *CveRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

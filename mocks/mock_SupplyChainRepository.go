@@ -216,8 +216,8 @@ func (_c *SupplyChainRepository_Begin_Call) Run(run func(ctx context.Context)) *
 	return _c
 }
 
-func (_c *SupplyChainRepository_Begin_Call) Return(v shared.DB) *SupplyChainRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *SupplyChainRepository_Begin_Call) Return(dB shared.DB) *SupplyChainRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -726,8 +726,8 @@ func (_c *SupplyChainRepository_GetDB_Call) Run(run func(ctx context.Context, tx
 	return _c
 }
 
-func (_c *SupplyChainRepository_GetDB_Call) Return(v shared.DB) *SupplyChainRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *SupplyChainRepository_GetDB_Call) Return(dB shared.DB) *SupplyChainRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

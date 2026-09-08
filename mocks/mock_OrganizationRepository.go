@@ -216,8 +216,8 @@ func (_c *OrganizationRepository_Begin_Call) Run(run func(ctx context.Context)) 
 	return _c
 }
 
-func (_c *OrganizationRepository_Begin_Call) Return(v shared.DB) *OrganizationRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *OrganizationRepository_Begin_Call) Return(dB shared.DB) *OrganizationRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -338,8 +338,8 @@ func (_c *OrganizationRepository_ContentTree_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *OrganizationRepository_ContentTree_Call) Return(vs []any) *OrganizationRepository_ContentTree_Call {
-	_c.Call.Return(vs)
+func (_c *OrganizationRepository_ContentTree_Call) Return(anyMoqParams []any) *OrganizationRepository_ContentTree_Call {
+	_c.Call.Return(anyMoqParams)
 	return _c
 }
 
@@ -649,8 +649,8 @@ func (_c *OrganizationRepository_GetDB_Call) Run(run func(ctx context.Context, t
 	return _c
 }
 
-func (_c *OrganizationRepository_GetDB_Call) Return(v shared.DB) *OrganizationRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *OrganizationRepository_GetDB_Call) Return(dB shared.DB) *OrganizationRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

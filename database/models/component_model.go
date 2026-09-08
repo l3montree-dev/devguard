@@ -50,7 +50,6 @@ func (c ComponentProject) TableName() string {
 type Component struct {
 	// ID might be a PURL - but not always. Sometimes it is a file path to a binary or a "fake node" we are adding during normalization
 	ID            string                `json:"id" gorm:"primaryKey;column:id"`
-	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType dtos.ComponentType    `json:"componentType"`
 	License       *string               `json:"license"`
 	Published     *time.Time            `json:"published"`
@@ -79,20 +78,53 @@ type ComponentDependency struct {
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 }
 
-const Root string = "root"
+// SBOMMerkleEdge is a single edge of the content-addressed dependency graph.
+//
+// SubtreeHash is hash(ComponentID, sorted child subtree hashes), so it covers a
+// component's entire child set. Two artifacts that disagree about a shared
+// component's children produce different subtree hashes and both edge sets
+// coexist as separate rows; where they agree the rows are identical and collide
+// on the primary key, so nothing is stored twice - across the whole instance.
+//
+// A component with n children has n rows sharing one SubtreeHash, which is why
+// subtree_hash is deliberately not unique and cannot serve as a foreign key
+// target. A leaf gets a single row with a NULL DirectDependencySubtreeHash;
+// that row is what keeps a leaf's purl resolvable, since a leaf has no outgoing
+// edges to carry it otherwise.
+type SBOMMerkleEdge struct {
+	SubtreeHash                 uuid.UUID  `json:"subtreeHash" gorm:"column:subtree_hash;type:uuid;primaryKey"`
+	ComponentID                 string     `json:"componentPurl" gorm:"column:component_id;index:component_idx"`
+	DirectDependencySubtreeHash *uuid.UUID `json:"directDependencySubtreeHash" gorm:"column:direct_dependency_subtree_hash;type:uuid;primaryKey"`
 
-type ComponentDependencyNode struct {
-	ID string `json:"id"`
+	Component Component `json:"component" gorm:"foreignKey:ComponentID;references:ID;constraint:OnDelete:CASCADE;"`
 }
 
-func (c ComponentDependencyNode) GetID() string {
-	return c.ID
+// SBOM anchors one ingested SBOM source into the content-addressed graph and is
+// the entry point for every downward traversal. It also terminates the upward
+// traversal: a subtree hash that joins against this table has reached a root.
+//
+// Source is the source identity as configured by the user (e.g. an upstream
+// SBOM URL), so re-ingesting the same source replaces its row rather than
+// accumulating one per content revision.
+type SBOM struct {
+	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;primaryKey;type:uuid;"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;primaryKey"`
+	ArtifactName     string    `json:"artifactName" gorm:"column:artifact_name;primaryKey"`
+	Source           string    `json:"source" gorm:"column:source;primaryKey"`
+	RootSubtreeHash  uuid.UUID `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;type:uuid;primaryKey;"`
+	UpdatedAt        time.Time `json:"updatedAt" gorm:"column:updated_at"`
+
+	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	// not persisted: subtree_hash is non-unique, so this cannot be a real association
+	Tree SBOMMerkleEdge `json:"tree" gorm:"-"`
 }
 
-func (c ComponentDependency) ToNodes() []ComponentDependencyNode {
-	// a component dependency represents an edge in the dependency tree
-	// thus we can represent it as two nodes
-	return []ComponentDependencyNode{{ID: c.ComponentID}, {ID: c.DependencyID}}
+func (m SBOMMerkleEdge) TableName() string {
+	return "sbom_merkle_edges"
+}
+
+func (s SBOM) TableName() string {
+	return "sboms"
 }
 
 func resolveLicense(component ComponentDependency, componentLicenseOverwrites map[string]string) cyclonedx.Licenses {

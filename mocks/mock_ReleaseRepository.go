@@ -216,8 +216,8 @@ func (_c *ReleaseRepository_Begin_Call) Run(run func(ctx context.Context)) *Rele
 	return _c
 }
 
-func (_c *ReleaseRepository_Begin_Call) Return(v shared.DB) *ReleaseRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *ReleaseRepository_Begin_Call) Return(dB shared.DB) *ReleaseRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -1040,8 +1040,8 @@ func (_c *ReleaseRepository_GetDB_Call) Run(run func(ctx context.Context, tx sha
 	return _c
 }
 
-func (_c *ReleaseRepository_GetDB_Call) Return(v shared.DB) *ReleaseRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *ReleaseRepository_GetDB_Call) Return(dB shared.DB) *ReleaseRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

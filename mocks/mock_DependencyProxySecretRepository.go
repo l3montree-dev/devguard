@@ -216,8 +216,8 @@ func (_c *DependencyProxySecretRepository_Begin_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *DependencyProxySecretRepository_Begin_Call) Return(v shared.DB) *DependencyProxySecretRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *DependencyProxySecretRepository_Begin_Call) Return(dB shared.DB) *DependencyProxySecretRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -650,8 +650,8 @@ func (_c *DependencyProxySecretRepository_GetDB_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *DependencyProxySecretRepository_GetDB_Call) Return(v shared.DB) *DependencyProxySecretRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *DependencyProxySecretRepository_GetDB_Call) Return(dB shared.DB) *DependencyProxySecretRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 

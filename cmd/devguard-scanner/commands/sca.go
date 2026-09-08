@@ -33,7 +33,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
-	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 
@@ -326,42 +325,186 @@ func printSupplementarySBOMExample(path string) {
 func MergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error {
 	rootRef := bom.Metadata.Component.BOMRef
 
-	g, err := normalize.InvalidSBOMGraphFromCycloneDX(bom, "cli-scan", "cli-scan")
-	if err != nil {
-		return errors.Wrap(err, "could not build SBOM graph")
+	components := map[string]cyclonedx.Component{}
+	if bom.Components != nil {
+		for _, component := range *bom.Components {
+			components[component.BOMRef] = component
+		}
+	}
+
+	dependencies := map[string]map[string]struct{}{}
+	addEdge := func(parent, child string) {
+		if dependencies[parent] == nil {
+			dependencies[parent] = map[string]struct{}{}
+		}
+		dependencies[parent][child] = struct{}{}
+	}
+	if bom.Dependencies != nil {
+		for _, dependency := range *bom.Dependencies {
+			if dependency.Ref == "" {
+				continue
+			}
+			if dependencies[dependency.Ref] == nil {
+				dependencies[dependency.Ref] = map[string]struct{}{}
+			}
+			if dependency.Dependencies != nil {
+				for _, child := range *dependency.Dependencies {
+					addEdge(dependency.Ref, child)
+				}
+			}
+		}
 	}
 
 	for _, extra := range extras {
-		isNew, err := g.EnrichSBOM(extra, rootRef)
-		if err != nil {
-			return err
+		if extra.Metadata == nil || extra.Metadata.Component == nil {
+			return errors.New("extra BOM has no root component")
 		}
+		extraRoot := *extra.Metadata.Component
+		declaredRef := extraRoot.BOMRef
+
+		// attach to an existing component of the same name if there is one,
+		// otherwise the extra's own root becomes a new node under the scan root
+		ref, isNew := declaredRef, true
+		var candidates []string
+		for _, component := range components {
+			if component.Name == extraRoot.Name {
+				candidates = append(candidates, component.BOMRef)
+			}
+		}
+		if len(candidates) > 0 {
+			slices.Sort(candidates)
+			ref, isNew = candidates[0], false
+		}
+
+		extraRoot.BOMRef = ref
+		if _, exists := components[ref]; !exists {
+			components[ref] = extraRoot
+		}
+
+		introduced := map[string]struct{}{ref: {}}
+		if extra.Components != nil {
+			for _, component := range *extra.Components {
+				introduced[component.BOMRef] = struct{}{}
+				if _, exists := components[component.BOMRef]; !exists {
+					components[component.BOMRef] = component
+				}
+			}
+		}
+		if extra.Dependencies != nil {
+			for _, dependency := range *extra.Dependencies {
+				if dependency.Ref == "" || dependency.Dependencies == nil {
+					continue
+				}
+				parent := dependency.Ref
+				if parent == declaredRef {
+					parent = ref
+				}
+				// The extra is authoritative for the components it describes, so
+				// its child set replaces any the outer scan inferred. Unioning
+				// them instead would keep the outer scan's guesses alive and
+				// attribute this subtree's dependencies to unrelated components.
+				dependencies[parent] = map[string]struct{}{}
+				for _, child := range *dependency.Dependencies {
+					addEdge(parent, child)
+				}
+			}
+		}
+
 		if isNew {
-			slog.Info("enrichment attached a new node under the scan root", "path", extra.Metadata.Component.Name)
+			addEdge(rootRef, ref)
+			slog.Info("enrichment attached a new node under the scan root", "path", extraRoot.Name)
 		} else {
-			slog.Info("enrichment replaced an existing component's subtree", "path", extra.Metadata.Component.Name)
+			slog.Info("enrichment replaced an existing component's subtree", "path", extraRoot.Name)
 		}
+
+		// Some scanners can only attach every package they find directly to the
+		// scan root - a flat placeholder with no real tree. Once the merged
+		// subtree nests one of those packages somewhere else, that direct edge
+		// is stale, because the package is only really reachable transitively.
+		for candidate := range introduced {
+			if candidate == rootRef {
+				continue
+			}
+			for parent, children := range dependencies {
+				if parent == rootRef {
+					continue
+				}
+				if _, ok := children[candidate]; ok {
+					delete(dependencies[rootRef], candidate)
+					break
+				}
+			}
+		}
+
 		if extra.ExternalReferences != nil {
 			mergeExternalReferences(bom, *extra.ExternalReferences)
 		}
 	}
 
-	// Deferred from InvalidSBOMGraphFromCycloneDX: pruning the root component
-	// (routinely purl-less for a container/image scan) any earlier would have
-	// deleted the attach point EnrichSBOM just used, above.
-	g.MakeValid()
-
-	exported := g.ToCycloneDX(normalize.BOMMetadata{RootName: rootRef})
-	filtered := make([]cyclonedx.Component, 0, len(*exported.Components))
-	for _, c := range *exported.Components {
-		if c.BOMRef == rootRef {
-			continue
-		}
-		filtered = append(filtered, c)
+	// the root is always reachable, even if no extras contributed anything
+	if dependencies[rootRef] == nil {
+		dependencies[rootRef] = map[string]struct{}{}
 	}
 
-	bom.Components = &filtered
-	bom.Dependencies = exported.Dependencies
+	// a component only survives the merge if it is actually reachable from the
+	// root via the dependency graph - anything an extra declared but never
+	// wired into that graph (e.g. because its own Dependencies was nil) is
+	// dangling and gets dropped rather than surfaced as a phantom component.
+	reachable := map[string]struct{}{rootRef: {}}
+	queue := []string{rootRef}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for child := range dependencies[cur] {
+			if _, ok := reachable[child]; !ok {
+				reachable[child] = struct{}{}
+				queue = append(queue, child)
+			}
+		}
+	}
+
+	// every reachable node needs its own dependency entry, even an empty one,
+	// so leaf components are still declared per the CycloneDX convention.
+	for ref := range reachable {
+		if dependencies[ref] == nil {
+			dependencies[ref] = map[string]struct{}{}
+		}
+	}
+
+	// the root component is described by bom.Metadata, so it is not listed
+	// among the components
+	mergedComponents := make([]cyclonedx.Component, 0, len(components))
+	for ref, component := range components {
+		if ref == rootRef {
+			continue
+		}
+		if _, ok := reachable[ref]; !ok {
+			continue
+		}
+		mergedComponents = append(mergedComponents, component)
+	}
+	slices.SortFunc(mergedComponents, func(a, b cyclonedx.Component) int {
+		return strings.Compare(a.BOMRef, b.BOMRef)
+	})
+
+	mergedDependencies := make([]cyclonedx.Dependency, 0, len(dependencies))
+	for parent, children := range dependencies {
+		if _, ok := reachable[parent]; !ok {
+			continue
+		}
+		refs := make([]string, 0, len(children))
+		for child := range children {
+			refs = append(refs, child)
+		}
+		slices.Sort(refs)
+		mergedDependencies = append(mergedDependencies, cyclonedx.Dependency{Ref: parent, Dependencies: &refs})
+	}
+	slices.SortFunc(mergedDependencies, func(a, b cyclonedx.Dependency) int {
+		return strings.Compare(a.Ref, b.Ref)
+	})
+
+	bom.Components = &mergedComponents
+	bom.Dependencies = &mergedDependencies
 	return nil
 }
 

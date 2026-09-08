@@ -151,8 +151,8 @@ func (_c *VEXRuleRepository_Begin_Call) Run(run func(ctx context.Context)) *VEXR
 	return _c
 }
 
-func (_c *VEXRuleRepository_Begin_Call) Return(v shared.DB) *VEXRuleRepository_Begin_Call {
-	_c.Call.Return(v)
+func (_c *VEXRuleRepository_Begin_Call) Return(dB shared.DB) *VEXRuleRepository_Begin_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
@@ -858,8 +858,8 @@ func (_c *VEXRuleRepository_GetDB_Call) Run(run func(ctx context.Context, db sha
 	return _c
 }
 
-func (_c *VEXRuleRepository_GetDB_Call) Return(v shared.DB) *VEXRuleRepository_GetDB_Call {
-	_c.Call.Return(v)
+func (_c *VEXRuleRepository_GetDB_Call) Return(dB shared.DB) *VEXRuleRepository_GetDB_Call {
+	_c.Call.Return(dB)
 	return _c
 }
 
