@@ -365,11 +365,15 @@ func MergeSupplementarySBOMs(bom *cyclonedx.BOM, extras []*cyclonedx.BOM) error 
 		// attach to an existing component of the same name if there is one,
 		// otherwise the extra's own root becomes a new node under the scan root
 		ref, isNew := declaredRef, true
+		var candidates []string
 		for _, component := range components {
 			if component.Name == extraRoot.Name {
-				ref, isNew = component.BOMRef, false
-				break
+				candidates = append(candidates, component.BOMRef)
 			}
+		}
+		if len(candidates) > 0 {
+			slices.Sort(candidates)
+			ref, isNew = candidates[0], false
 		}
 
 		extraRoot.BOMRef = ref
