@@ -15,6 +15,39 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// addTrailingSlash stands in for echo's middleware.AddTrailingSlash, which
+// only appends to URL.Path. echo.GetPath - what the router matches on - prefers
+// URL.RawPath whenever it is set, and net/url sets RawPath for every path
+// carrying a %xx escape. So for e.g. /organizations/%40opencode the appended
+// slash stayed invisible to the router, /organizations/:organization/ never
+// matched, and the request fell through to a broader-scoped route (403/404).
+// Keep both fields in sync. https://github.com/labstack/echo/blob/v4.15.4/middleware/slash.go#L67
+func addTrailingSlash(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		url := c.Request().URL
+
+		// The OCI Distribution Spec routes - /v2/<name>/manifests/<reference>
+		// and friends - are defined without trailing slashes, and adding one
+		// causes every registry (ghcr.io, quay.io, ...) to return 404.
+		if strings.HasPrefix(url.Path, "/v2/") || strings.HasSuffix(url.Path, "/") {
+			return next(c)
+		}
+
+		url.Path += "/"
+		if url.RawPath != "" {
+			url.RawPath += "/"
+		}
+
+		uri := url.EscapedPath()
+		if qs := c.QueryString(); qs != "" {
+			uri += "?" + qs
+		}
+		c.Request().RequestURI = uri
+
+		return next(c)
+	}
+}
+
 func registerMiddlewares(e *echo.Echo) {
 
 	if os.Getenv("PROFILE") == "true" {
@@ -44,15 +77,10 @@ func registerMiddlewares(e *echo.Echo) {
 	// Expose the trace ID to the client so it can be referenced in Jaeger / GlitchTip.
 	e.Use(traceID())
 
-	// AddTrailingSlash normalises REST endpoints, but it must be skipped for
-	// the OCI Distribution Spec routes — /v2/<name>/manifests/<reference> and
-	// friends are defined without trailing slashes, and adding one causes
-	// every registry (ghcr.io, quay.io, ...) to return 404.
-	e.Pre(middleware.AddTrailingSlashWithConfig(middleware.TrailingSlashConfig{
-		Skipper: func(c echo.Context) bool {
-			return strings.HasPrefix(c.Request().URL.Path, "/v2/")
-		},
-	}))
+	// Normalises REST endpoints so every route can be registered with a
+	// trailing slash. Must stay a Pre middleware: echo re-reads the path via
+	// GetPath() after the pre chain runs.
+	e.Pre(addTrailingSlash)
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
 			AllowOrigins:     []string{"http://localhost:3000"},
