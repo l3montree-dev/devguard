@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.6] - 2026-09-08
+
+### Changed
+
+- **Trailing-slash normalization now covers the OCI registry routes too** — `addTrailingSlash` exempted every `/v2/` path, because the OCI Distribution Spec routes were registered without a trailing slash and appending one made them stop matching. Those routes now carry the normalising slash like every other route in DevGuard, so the special case is gone and all requests take one path through the middleware. Image pulls are unaffected: the OCI proxy rebuilds the upstream request path from its route parameters, so the appended slash is never forwarded to docker.io, ghcr.io or quay.io
+- Regression coverage for the percent-encoded path fix shipped in v1.13.5 — `ResourceFetchMiddleware` is now tested against an organization slug carrying an encoded `@` (`%40test-org`), and the trailing-slash routing test exercises `/organizations/%40opencode` rather than an unescaped slug
+
 ## [v1.13.5] - 2026-09-08
 
 ### Fixed

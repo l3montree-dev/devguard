@@ -29,7 +29,7 @@ func TestAddTrailingSlash(t *testing.T) {
 	}
 
 	t.Run("it should route a path without a trailing slash to the trailing slash route", func(t *testing.T) {
-		assert.Equal(t, http.StatusOK, serve("/organizations/acme").Code)
+		assert.Equal(t, http.StatusOK, serve("/organizations/%40opencode").Code)
 	})
 
 	// Regression: echo.GetPath - what the router matches on - prefers URL.RawPath
