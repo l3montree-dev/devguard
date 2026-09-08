@@ -41,9 +41,11 @@ CREATE TABLE IF NOT EXISTS public.sbom_merkle_edges (
 );
 
 
--- upward traversal (vulnerable purl -> affected SBOMs)
+-- upward traversal (vulnerable purl -> affected SBOMs). subtree_hash rides
+-- along so the recursive join in FindSBOMsContainingComponent, which needs it
+-- on every step, can be satisfied as an index-only scan.
 CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_child
-    ON public.sbom_merkle_edges (direct_dependency_subtree_hash);
+    ON public.sbom_merkle_edges (direct_dependency_subtree_hash, subtree_hash);
 
 -- seed of the upward traversal
 CREATE INDEX IF NOT EXISTS idx_sbom_merkle_edges_component
