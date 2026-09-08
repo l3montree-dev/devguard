@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.4] - 2026-09-08
+
+### Fixed
+
+- **VEX ingest from an external SBOM URL** — the ingest path was reworked and moved into `scan_service`, fixing a bug where VEX statements attached to externally-hosted SBOMs weren't picked up during scanning
+- GitLab CI no longer builds Kratos and PostgreSQL images for `main`, reducing pipeline time
+
+### Changed
+
+- `python-tools` dependencies updated (`uv.lock` now includes `gitpython==3.1.59`)
+
 ## [v1.13.3] - 2026-09-02
 
 ### Added
