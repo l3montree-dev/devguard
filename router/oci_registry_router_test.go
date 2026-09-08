@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	pathUnauthManifest1Seg = "/v2/:registry/:image/manifests/:reference"
-	pathUnauthManifest2Seg = "/v2/:registry/:namespace/:image/manifests/:reference"
-	pathSecretManifest2Seg = "/v2/:secret/:registry/:namespace/:image/manifests/:reference"
+	pathUnauthManifest1Seg = "/v2/:registry/:image/manifests/:reference/"
+	pathUnauthManifest2Seg = "/v2/:registry/:namespace/:image/manifests/:reference/"
+	pathSecretManifest2Seg = "/v2/:secret/:registry/:namespace/:image/manifests/:reference/"
 	pathVersionCheck       = "/v2/"
 )
 
