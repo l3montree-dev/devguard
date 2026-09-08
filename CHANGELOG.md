@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.13.5] - 2026-09-08
+
+### Fixed
+
+- **Routing of percent-encoded paths** — requests whose path carried a `%xx` escape were not matched against the intended route and fell through to a broader-scoped one, answering `403` or `404`. Echo's `AddTrailingSlash` middleware appends the normalising slash to `URL.Path` only, while echo's router matches on `URL.RawPath` whenever that field is set — which `net/url` does for every escaped path. DevGuard now normalises both fields. Most visibly this made organizations whose slug starts with `@` (the reserved external-entity-provider orgs, e.g. `/api/v1/organizations/%40opencode`) unreachable, returning a 404 in the web UI for logged-in members
+
 ## [v1.13.4] - 2026-09-08
 
 ### Fixed
