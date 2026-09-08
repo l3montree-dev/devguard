@@ -40,8 +40,8 @@ func (_m *SBOMScanner) EXPECT() *SBOMScanner_Expecter {
 }
 
 // Scan provides a mock function for the type SBOMScanner
-func (_mock *SBOMScanner) Scan(ctx context.Context, bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
-	ret := _mock.Called(ctx, bom)
+func (_mock *SBOMScanner) Scan(ctx context.Context, forest normalize.MerkleForest) ([]models.VulnInPackage, error) {
+	ret := _mock.Called(ctx, forest)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Scan")
@@ -49,18 +49,18 @@ func (_mock *SBOMScanner) Scan(ctx context.Context, bom *normalize.SBOMGraph) ([
 
 	var r0 []models.VulnInPackage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *normalize.SBOMGraph) ([]models.VulnInPackage, error)); ok {
-		return returnFunc(ctx, bom)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, normalize.MerkleForest) ([]models.VulnInPackage, error)); ok {
+		return returnFunc(ctx, forest)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *normalize.SBOMGraph) []models.VulnInPackage); ok {
-		r0 = returnFunc(ctx, bom)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, normalize.MerkleForest) []models.VulnInPackage); ok {
+		r0 = returnFunc(ctx, forest)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnInPackage)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *normalize.SBOMGraph) error); ok {
-		r1 = returnFunc(ctx, bom)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, normalize.MerkleForest) error); ok {
+		r1 = returnFunc(ctx, forest)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,20 +74,20 @@ type SBOMScanner_Scan_Call struct {
 
 // Scan is a helper method to define mock.On call
 //   - ctx context.Context
-//   - bom *normalize.SBOMGraph
-func (_e *SBOMScanner_Expecter) Scan(ctx interface{}, bom interface{}) *SBOMScanner_Scan_Call {
-	return &SBOMScanner_Scan_Call{Call: _e.mock.On("Scan", ctx, bom)}
+//   - forest normalize.MerkleForest
+func (_e *SBOMScanner_Expecter) Scan(ctx interface{}, forest interface{}) *SBOMScanner_Scan_Call {
+	return &SBOMScanner_Scan_Call{Call: _e.mock.On("Scan", ctx, forest)}
 }
 
-func (_c *SBOMScanner_Scan_Call) Run(run func(ctx context.Context, bom *normalize.SBOMGraph)) *SBOMScanner_Scan_Call {
+func (_c *SBOMScanner_Scan_Call) Run(run func(ctx context.Context, forest normalize.MerkleForest)) *SBOMScanner_Scan_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *normalize.SBOMGraph
+		var arg1 normalize.MerkleForest
 		if args[1] != nil {
-			arg1 = args[1].(*normalize.SBOMGraph)
+			arg1 = args[1].(normalize.MerkleForest)
 		}
 		run(
 			arg0,
@@ -102,7 +102,7 @@ func (_c *SBOMScanner_Scan_Call) Return(vulnInPackages []models.VulnInPackage, e
 	return _c
 }
 
-func (_c *SBOMScanner_Scan_Call) RunAndReturn(run func(ctx context.Context, bom *normalize.SBOMGraph) ([]models.VulnInPackage, error)) *SBOMScanner_Scan_Call {
+func (_c *SBOMScanner_Scan_Call) RunAndReturn(run func(ctx context.Context, forest normalize.MerkleForest) ([]models.VulnInPackage, error)) *SBOMScanner_Scan_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -31,97 +31,20 @@ func createTestAffectedComponent(purlStr string, cves []models.CVE) (models.Affe
 	}, nil
 }
 
-// createSBOMStructure creates a complete SBOM tree structure for testing
-// This includes: artifact root, info source, and component dependencies
+// createSBOMStructure stores one SBOM for the artifact, the way an ingest would.
 func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, origin string) error {
-	// Create artifact root component (needed for FK constraint)
-	artifactRoot := "artifact:" + artifact.ArtifactName
-	if err := f.DB.Create(&models.Component{ID: artifactRoot}).Error; err != nil {
-		return err
-	}
-
-	// Create info source component (needed for FK constraint)
-	infoSourceID := "sbom:" + origin + "@" + artifact.ArtifactName
-	if err := f.DB.Create(&models.Component{ID: infoSourceID}).Error; err != nil {
-		return err
-	}
-
-	// Create artifact root node dependency (NULL -> artifact:name)
-	artifactRootDep := models.ComponentDependency{
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-		ComponentID:      "ROOT",
-		DependencyID:     artifactRoot,
-	}
-	if err := f.DB.Create(&artifactRootDep).Error; err != nil {
-		return err
-	}
-
-	// Create info source dependency (artifact:name -> sbom:origin@artifact)
-	infoSourceDep := models.ComponentDependency{
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-		ComponentID:      artifactRoot,
-		DependencyID:     infoSourceID,
-	}
-	if err := f.DB.Create(&infoSourceDep).Error; err != nil {
-		return err
-	}
-
-	// Create component dependencies (sbom:origin@artifact -> pkg:...)
-	for _, purl := range componentPurls {
-		componentDependency := models.ComponentDependency{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			ComponentID:      infoSourceID,
-			DependencyID:     purl,
-		}
-		if err := f.DB.Create(&componentDependency).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return SeedSBOM(f.DB, assetVersion, artifact.ArtifactName, origin, map[string][]string{
+		sbomSeedRoot: componentPurls,
+	})
 }
 
-// createVEXStructure creates a VEX info source and links vulnerabilities to components
-// This simulates a VEX document that reports specific CVEs affecting specific components
+// createVEXStructure stores a second SBOM for the artifact, standing in for a
+// VEX document that reports these components. It is a separate source, so it
+// coexists with the scanner's own SBOM rather than overwriting it.
 func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, cves []string, origin string) error {
-	// Create artifact root (should already exist but check)
-	artifactRoot := "artifact:" + artifact.ArtifactName
-
-	// Create VEX info source component (needed for FK constraint)
-	vexInfoSourceID := "vex:" + origin + "@" + artifact.ArtifactName
-	if err := f.DB.Create(&models.Component{ID: vexInfoSourceID}).Error; err != nil {
-		return err
-	}
-
-	// Create VEX info source dependency (artifact:name -> vex:origin@artifact)
-	vexInfoSourceDep := models.ComponentDependency{
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-		ComponentID:      artifactRoot,
-		DependencyID:     vexInfoSourceID,
-	}
-	if err := f.DB.Create(&vexInfoSourceDep).Error; err != nil {
-		return err
-	}
-
-	// Create component dependencies from VEX to affected components
-	// This represents the VEX document saying "these components have vulnerabilities"
-	for _, purl := range componentPurls {
-		componentDependency := models.ComponentDependency{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			ComponentID:      vexInfoSourceID,
-			DependencyID:     purl,
-		}
-		if err := f.DB.Create(&componentDependency).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return SeedSBOM(f.DB, assetVersion, artifact.ArtifactName, "vex:"+origin, map[string][]string{
+		sbomSeedRoot: componentPurls,
+	})
 }
 
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
@@ -170,30 +93,7 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// Create artifact root component (needed for FK constraint)
-			artifactRoot := "artifact:" + artifact.ArtifactName
-			err = f.DB.Create(&models.Component{ID: artifactRoot}).Error
-			assert.NoError(t, err)
-
-			// Create artifact root node dependency (NULL -> artifact:name)
-			artifactRootDep := models.ComponentDependency{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				ComponentID:      "ROOT",
-				DependencyID:     artifactRoot,
-			}
-			err = f.DB.Create(&artifactRootDep).Error
-			assert.NoError(t, err)
-
-			// Create component dependency (artifact:name -> pkg:...)
-			componentDependency := models.ComponentDependency{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				ComponentID:      artifactRoot,
-				DependencyID:     "pkg:npm/test-package@1.0.0",
-				Dependency:       component,
-			}
-			err = f.DB.Create(&componentDependency).Error
+			err = SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, "pkg:npm/test-package@1.0.0")
 			assert.NoError(t, err)
 
 			// Run the daemon pipeline for this specific asset
@@ -577,31 +477,7 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 		err = f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
 
-		// create the component for artifact root node
-		artifactRootID := "artifact:" + artifact.ArtifactName
-		err = f.DB.Create(&models.Component{ID: artifactRootID}).Error
-		assert.NoError(t, err)
-
-		// Create artifact root node dependency (NULL -> artifact:name)
-		artifactRoot := "artifact:" + artifact.ArtifactName
-		artifactRootDep := models.ComponentDependency{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			ComponentID:      "ROOT",
-			DependencyID:     artifactRoot,
-		}
-		err = f.DB.Create(&artifactRootDep).Error
-		assert.NoError(t, err)
-
-		// Create component dependency (artifact:name -> pkg:...)
-		componentDependency := models.ComponentDependency{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			ComponentID:      artifactRoot,
-			DependencyID:     "pkg:npm/vulnerable-package@2.0.0",
-			Dependency:       component,
-		}
-		err = f.DB.Create(&componentDependency).Error
+		err = SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, "pkg:npm/vulnerable-package@2.0.0")
 		assert.NoError(t, err)
 
 		// Mark asset for processing
@@ -772,31 +648,7 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
 
-			// create the component for artifact root node
-			artifactRootID := "artifact:" + artifact.ArtifactName
-			err = f.DB.Create(&models.Component{ID: artifactRootID}).Error
-			assert.NoError(t, err)
-
-			// Create artifact root node dependency (NULL -> artifact:name)
-			artifactRoot := "artifact:" + artifact.ArtifactName
-			artifactRootDep := models.ComponentDependency{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				ComponentID:      "ROOT",
-				DependencyID:     artifactRoot,
-			}
-			err = f.DB.Create(&artifactRootDep).Error
-			assert.NoError(t, err)
-
-			// Create component dependency (artifact:name -> pkg:...)
-			componentDependency := models.ComponentDependency{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				ComponentID:      artifactRoot,
-				DependencyID:     "pkg:npm/risk-test-package@1.0.0",
-				Dependency:       component,
-			}
-			err = f.DB.Create(&componentDependency).Error
+			err = SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, "pkg:npm/risk-test-package@1.0.0")
 			assert.NoError(t, err)
 
 			err = f.App.AssetRepository.Save(context.Background(), nil, &asset)

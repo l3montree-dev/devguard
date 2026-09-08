@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package normalize
+package transformer
 
 import (
 	"fmt"
@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -91,7 +92,7 @@ func dedupVexVulnerabilities(vulns []cdx.Vulnerability) []cdx.Vulnerability {
 // vulnerabilities, without going through an SBOMGraph. The affected components (from each
 // vulnerability's Affects refs) become the BOM's components, all declared as direct
 // dependencies of the root component described by metadata.
-func CycloneDXVEXFromVulnerabilities(vulns []cdx.Vulnerability, metadata BOMMetadata) *cdx.BOM {
+func CycloneDXVEXFromVulnerabilities(vulns []cdx.Vulnerability, metadata normalize.BOMMetadata) *cdx.BOM {
 	deduped := dedupVexVulnerabilities(vulns)
 
 	rootName := metadata.RootName
@@ -186,12 +187,12 @@ func MergeCycloneDXVEX(boms []*cdx.BOM, rootName string) *cdx.BOM {
 			vulns = append(vulns, *b.Vulnerabilities...)
 		}
 	}
-	return CycloneDXVEXFromVulnerabilities(vulns, BOMMetadata{RootName: rootName})
+	return CycloneDXVEXFromVulnerabilities(vulns, normalize.BOMMetadata{RootName: rootName})
 }
 
 // vexExternalReferences builds the up-to-date VEX / SBOM / dashboard external references for
 // a VEX BOM when the asset shares information.
-func vexExternalReferences(metadata BOMMetadata) *[]cdx.ExternalReference {
+func vexExternalReferences(metadata normalize.BOMMetadata) *[]cdx.ExternalReference {
 	if !metadata.AddExternalReferences {
 		return nil
 	}

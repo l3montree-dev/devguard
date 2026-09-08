@@ -13,11 +13,11 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type ComponentService struct {
 	componentRepository        shared.ComponentRepository
+	sbomRepository             shared.SBOMRepository
 	openSourceInsightsService  shared.OpenSourceInsightService
 	componentProjectRepository shared.ComponentProjectRepository
 	licenseRiskService         shared.LicenseRiskService
@@ -27,10 +27,11 @@ type ComponentService struct {
 
 var _ shared.ComponentService = (*ComponentService)(nil) // Ensure ComponentService implements shared.ComponentService interface
 
-func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer utils.FireAndForgetSynchronizer) *ComponentService {
+func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, sbomRepository shared.SBOMRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer utils.FireAndForgetSynchronizer) *ComponentService {
 
 	return &ComponentService{
 		componentRepository:        componentRepository,
+		sbomRepository:             sbomRepository,
 		componentProjectRepository: componentProjectRepository,
 		openSourceInsightsService:  openSourceInsightsService,
 		licenseRiskService:         licenseRiskService,
@@ -178,37 +179,45 @@ func (s *ComponentService) FetchComponentProject(ctx context.Context, component 
 }
 
 func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(ctx, tx, assetVersion.Name, assetVersion.AssetID)
-	if err != nil {
-		return nil, err
-	}
-
-	sbomGraph, err := normalize.SBOMGraphFromComponents(componentDependencies, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create sbom graph from components")
-	}
-
+	var sboms []models.SBOM
+	var err error
 	if artifactName != nil {
-		err := sbomGraph.ScopeToArtifact(*artifactName)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not scope sbom graph to artifact")
-		}
+		sboms, err = s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.AssetID, assetVersion.Name, *artifactName)
+	} else {
+		sboms, err = s.sbomRepository.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load sboms")
 	}
 
-	minimalTree := sbomGraph.ToMinimalTree()
-
-	// only get the components - there might be duplicates
-	componentsWithoutLicense := make([]models.Component, 0)
-	seen := make(map[string]bool)
-	for _, componentDependency := range componentDependencies {
-		// check if exists in minimal tree
-		if _, ok := minimalTree.Dependencies[componentDependency.DependencyID]; !ok {
-			continue
+	forest := make(normalize.MerkleForest, 0, len(sboms))
+	for _, sbom := range sboms {
+		tree, err := s.sbomRepository.LoadTree(ctx, tx, sbom.RootSubtreeHash)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not load sbom tree")
 		}
+		forest = append(forest, tree)
+	}
 
-		if _, ok := seen[componentDependency.DependencyID]; !ok && (forceRefresh || componentDependency.Dependency.License == nil) {
-			seen[componentDependency.DependencyID] = true
-			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
+	ids := forest.ComponentIDs()
+	known, err := s.componentRepository.FindByIDs(ctx, tx, ids)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load components")
+	}
+	byID := make(map[string]models.Component, len(known))
+	for _, component := range known {
+		byID[component.ID] = component
+	}
+
+	// a component with no row yet has no licence either, so it always needs fetching
+	componentsWithoutLicense := make([]models.Component, 0)
+	for _, id := range ids {
+		component, exists := byID[id]
+		if !exists {
+			component = models.Component{ID: id}
+		}
+		if forceRefresh || component.License == nil {
+			componentsWithoutLicense = append(componentsWithoutLicense, component)
 		}
 	}
 
@@ -236,12 +245,15 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 		return nil, err
 	}
 
+	// the freshly fetched ones, plus those that already had a licence
 	allComponents := components
-	// get all the components - with licenses and without
-	for _, componentDependency := range componentDependencies {
-		if !seen[componentDependency.DependencyID] {
-			// if the component is not in the seen map, it means it was not processed to get a new license
-			allComponents = append(allComponents, componentDependency.Dependency)
+	refreshed := make(map[string]bool, len(components))
+	for _, component := range components {
+		refreshed[component.ID] = true
+	}
+	for _, id := range ids {
+		if component, exists := byID[id]; exists && !refreshed[id] {
+			allComponents = append(allComponents, component)
 		}
 	}
 
@@ -277,12 +289,4 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 	})
 
 	return allComponents, nil
-}
-
-func (s *ComponentService) FetchInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact) ([]models.ComponentDependency, error) {
-	return s.componentRepository.FetchInformationSources(ctx, tx, artifact)
-}
-
-func (s *ComponentService) RemoveInformationSources(ctx context.Context, tx *gorm.DB, artifact *models.Artifact, rootNodePurls []string) error {
-	return s.componentRepository.RemoveInformationSources(ctx, tx, artifact, rootNodePurls)
 }

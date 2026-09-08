@@ -2509,7 +2509,7 @@ func TestTrivyDebianSBOMRescan(t *testing.T) {
 			shared.SetSession(ctx, authSession)
 		}
 
-		sbomBytes, err := os.ReadFile("../normalize/testdata/trivy-debian-sbom.json")
+		sbomBytes, err := os.ReadFile("../transformer/testdata/trivy-debian-sbom.json")
 		assert.NoError(t, err)
 
 		doScan := func(label string) error {

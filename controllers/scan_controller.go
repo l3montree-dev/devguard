@@ -232,7 +232,8 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		attribute.String("artifact.name", artifactName),
 	)
 
-	normalized, normErr := normalize.SBOMGraphFromCycloneDX(bom, artifactName, utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT"))
+	sbomOrigin := utils.OrDefault(utils.EmptyThenNil(origin), "DEFAULT")
+	normalized, normErr := transformer.MerkleTreeFromCycloneDX(bom, artifactName)
 	if normErr != nil {
 		span.RecordError(normErr)
 		span.SetStatus(codes.Error, normErr.Error())
@@ -287,7 +288,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		defer tx.Rollback()
 	}
 
-	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifactName, normalized)
+	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifactName, sbomOrigin, normalized)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		span.RecordError(err)
@@ -341,10 +342,15 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 
 		if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 			s.FireAndForget(func() {
-				// Export the updated graph back to CycloneDX format for the event
-				exportedBOM := wholeSBOM.ToCycloneDX(normalize.BOMMetadata{
+				// Export the updated SBOMs back to CycloneDX format for the event
+				metadata, metaErr := s.assetVersionService.LoadComponentMetadata(linkedCtx, nil, assetVersion, wholeSBOM)
+				if metaErr != nil {
+					slog.Error("could not load component metadata for sbom event", "err", metaErr)
+					return
+				}
+				exportedBOM := transformer.ForestToCycloneDX(wholeSBOM, normalize.BOMMetadata{
 					RootName: artifactName,
-				})
+				}, metadata)
 				if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
 					AssetVersion: shared.ToAssetVersionObject(assetVersion),
 					Asset:        shared.ToAssetObject(asset),

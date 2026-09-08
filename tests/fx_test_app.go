@@ -85,6 +85,7 @@ type TestApp struct {
 	AssetRepository                 shared.AssetRepository
 	AssetVersionRepository          shared.AssetVersionRepository
 	ComponentRepository             shared.ComponentRepository
+	SBOMRepository                  shared.SBOMRepository
 	DependencyVulnRepository        shared.DependencyVulnRepository
 	FirstPartyVulnRepository        shared.FirstPartyVulnRepository
 	CveRepository                   shared.CveRepository
@@ -254,17 +255,6 @@ func createMockedComponentService(t testing.TB, realCS shared.ComponentService) 
 			result, _ := realCS.GetLicense(ctx, component)
 			return result
 		}, nil)
-
-	mockCS.On("FetchInformationSources", mock.Anything, mock.Anything, mock.Anything).
-		Return(func(ctx context.Context, tx shared.DB, artifact *models.Artifact) []models.ComponentDependency {
-			result, _ := realCS.FetchInformationSources(ctx, tx, artifact)
-			return result
-		}, nil)
-
-	mockCS.On("RemoveInformationSources", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(func(ctx context.Context, tx shared.DB, artifact *models.Artifact, rootNodePurls []string) error {
-			return realCS.RemoveInformationSources(ctx, tx, artifact, rootNodePurls)
-		})
 
 	mockCS.On("RefreshComponentProjectInformation", mock.Anything, mock.Anything).
 		Return(func(ctx context.Context, project models.ComponentProject) {

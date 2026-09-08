@@ -99,7 +99,7 @@ type CSAFService interface {
 }
 
 type SBOMScanner interface {
-	Scan(ctx context.Context, bom *normalize.SBOMGraph) ([]models.VulnInPackage, error)
+	Scan(ctx context.Context, forest normalize.MerkleForest) ([]models.VulnInPackage, error)
 }
 type ProjectRepository interface {
 	Read(ctx context.Context, tx DB, projectID uuid.UUID) (models.Project, error)
@@ -255,14 +255,26 @@ type MaliciousPackageChecker interface {
 
 type ComponentRepository interface {
 	utils.Repository[string, models.Component, DB]
-	LoadComponents(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(ctx context.Context, tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SearchComponentOccurrencesByProject(ctx context.Context, tx DB, projectIDs []uuid.UUID, pageInfo PageInfo, search string) (Paged[models.ComponentOccurrence], error)
-	FindByPurl(ctx context.Context, tx DB, purl string) (models.Component, error)
-	HandleStateDiff(ctx context.Context, tx DB, assetVersion models.AssetVersion, wholeAssetGraph *normalize.SBOMGraph, diff normalize.GraphDiff) error
-	CreateComponents(ctx context.Context, tx DB, components []models.ComponentDependency) error
-	FetchInformationSources(ctx context.Context, tx DB, artifact *models.Artifact) ([]models.ComponentDependency, error)
-	RemoveInformationSources(ctx context.Context, tx DB, artifact *models.Artifact, rootNodePurls []string) error
+	FindByIDs(ctx context.Context, tx DB, ids []string) ([]models.Component, error)
+}
+
+// SBOMRepository stores SBOMs as content-addressed merkle trees. Scanning an
+// asset version means fetching its SBOMs here and loading the trees they point
+// at - there is no per-asset-version graph to assemble.
+type SBOMRepository interface {
+	utils.Repository[string, models.SBOM, DB]
+
+	SaveTree(ctx context.Context, tx DB, sbom models.SBOM, tree *normalize.MerkleTree) error
+	FindByAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string) ([]models.SBOM, error)
+	FindByArtifact(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName, artifactName string) ([]models.SBOM, error)
+	FindBySource(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName, artifactName, source string) ([]models.SBOM, error)
+	LoadTree(ctx context.Context, tx DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error)
+	FindSBOMsContainingComponent(ctx context.Context, tx DB, componentID string) ([]models.SBOM, error)
+	DeleteByArtifact(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName, artifactName string) error
+	DeleteBySource(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName, artifactName, source string) error
+	CollectGarbage(ctx context.Context, tx DB) (int64, error)
 }
 
 type DependencyVulnRepository interface {
@@ -487,9 +499,14 @@ type DependencyVulnService interface {
 type AssetVersionService interface {
 	BuildVeX(ctx context.Context, tx DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cyclonedx.BOM
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
-	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error)
+	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error)
+	LoadArtifactSBOMs(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName string) (normalize.MerkleForest, error)
+	ListSBOMs(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName string) ([]models.SBOM, error)
+	LoadSBOM(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName, source string) (normalize.MerkleForest, error)
+	DeleteSBOMSource(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName, source string) error
+	LoadComponentMetadata(ctx context.Context, tx DB, assetVersion models.AssetVersion, forest normalize.MerkleForest) (map[string]cyclonedx.Component, error)
+	LoadAssetVersionSBOMs(ctx context.Context, tx DB, assetVersion models.AssetVersion) (normalize.MerkleForest, error)
 	BuildOpenVeX(ctx context.Context, tx DB, asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
-	LoadFullSBOMGraph(ctx context.Context, tx DB, AssetVersion models.AssetVersion) (*normalize.SBOMGraph, error)
 }
 
 type AssetVersionRepository interface {
@@ -525,12 +542,12 @@ type FirstPartyVulnService interface {
 }
 
 type ScanService interface {
-	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, normalizedBom *normalize.SBOMGraph, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
-	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sbom *normalize.SBOMGraph, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
+	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (*normalize.SBOMGraph, []models.DependencyVuln, error)
+	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)
 	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)
-	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]*normalize.SBOMGraph, []string, []dtos.ExternalReferenceError)
+	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []string, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
@@ -697,8 +714,6 @@ type ComponentService interface {
 	RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject)
 	GetLicense(ctx context.Context, component models.Component) (models.Component, error)
 	FetchComponentProject(ctx context.Context, component models.Component) (models.Component, error)
-	FetchInformationSources(ctx context.Context, tx DB, artifact *models.Artifact) ([]models.ComponentDependency, error)
-	RemoveInformationSources(ctx context.Context, tx DB, artifact *models.Artifact, rootNodePurls []string) error
 }
 
 type CVERelationshipRepository interface {

@@ -16,11 +16,54 @@
 package transformer
 
 import (
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
+
+// ComponentsToCdx renders stored component metadata for CycloneDX export,
+// keyed by component id. A merkle tree carries only ids, so this is what puts
+// licenses and types back into an exported document.
+func ComponentsToCdx(components []models.Component, licenseOverwrites map[string]string) map[string]cyclonedx.Component {
+	result := make(map[string]cyclonedx.Component, len(components))
+	for _, component := range components {
+		// reuse the edge renderer so licenses resolve identically to before,
+		// including the component project fallback
+		cdxComponent, err := models.ComponentDependency{
+			DependencyID: component.ID,
+			Dependency:   component,
+		}.ToCdxComponent(licenseOverwrites)
+		if err != nil {
+			continue
+		}
+		result[component.ID] = cdxComponent
+	}
+	return result
+}
+
+// LicenseDistribution counts how often each license appears among the given
+// components. A component counts once however many SBOMs report it.
+func LicenseDistribution(components map[string]cyclonedx.Component, componentIDs []string) map[string]int {
+	counts := map[string]int{}
+	for _, id := range componentIDs {
+		component, ok := components[id]
+		if !ok || component.Licenses == nil {
+			continue
+		}
+		for _, choice := range *component.Licenses {
+			switch {
+			case choice.License != nil && choice.License.ID != "":
+				counts[choice.License.ID]++
+			case choice.License != nil && choice.License.Name != "":
+				counts[choice.License.Name]++
+			case choice.Expression != "":
+				counts[choice.Expression]++
+			}
+		}
+	}
+	return counts
+}
 
 func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 	var componentProject *dtos.ComponentProjectDTO
@@ -48,7 +91,7 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 	if err != nil {
 		return dtos.ComponentDTO{
 			Purl:                m.ID,
-			Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
+			Dependencies:        []dtos.ComponentDependencyDTO{}, // never populated: a component row carries no edges
 			ComponentType:       m.ComponentType,
 			Version:             "",
 			License:             m.License,
@@ -60,7 +103,7 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 
 	return dtos.ComponentDTO{
 		Purl:                m.ID,
-		Dependencies:        utils.Map(m.Dependencies, ComponentDependencyToDTO),
+		Dependencies:        []dtos.ComponentDependencyDTO{}, // never populated: a component row carries no edges
 		ComponentType:       m.ComponentType,
 		Version:             parsed.Version,
 		License:             m.License,
