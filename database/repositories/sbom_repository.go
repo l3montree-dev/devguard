@@ -53,8 +53,12 @@ func NewSBOMRepository(db *gorm.DB) *sbomRepository {
 // one per content revision. The superseded root's subtrees stay for the garbage
 // collector, since other SBOMs may still reference them.
 func (r *sbomRepository) SaveTree(ctx context.Context, tx *gorm.DB, sbom models.SBOM, tree *normalize.MerkleTree) error {
+	if tx == nil {
+		return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			return r.SaveTree(ctx, tx, sbom, tree)
+		})
+	}
 	db := r.GetDB(ctx, tx)
-
 	edges := tree.Edges()
 	rows := make([]models.SBOMMerkleEdge, 0, len(edges))
 	for _, e := range edges {
