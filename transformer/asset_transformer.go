@@ -63,12 +63,11 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
 		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
 		ExternalEntityID:             asset.ExternalEntityID,
+		PipelineLastRun:              asset.PipelineLastRun,
 		RepositoryProvider:           asset.RepositoryProvider,
 		IsPublic:                     asset.IsPublic,
 		ParanoidMode:                 asset.ParanoidMode,
 		SharesInformation:            asset.SharesInformation,
-		PipelineLastRun:              asset.PipelineLastRun,
-		PipelineError:                asset.PipelineError,
 		State:                        string(asset.State),
 	}
 }

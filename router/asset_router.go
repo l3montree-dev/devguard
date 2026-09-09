@@ -40,6 +40,7 @@ func NewAssetRouter(
 	scanController *controllers.ScanController,
 	assetRepository shared.AssetRepository,
 	patController *controllers.PatController,
+	logController *controllers.LogController,
 ) AssetRouter {
 	/**
 	Asset scoped router
@@ -61,6 +62,7 @@ func NewAssetRouter(
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
+	assetRouter.GET("/logs/", logController.ListPaged)
 
 	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))

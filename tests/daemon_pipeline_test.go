@@ -206,7 +206,6 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			err = f.DB.First(&updatedAsset, "id = ?", asset.ID).Error
 			assert.NoError(t, err)
 			assert.True(t, updatedAsset.PipelineLastRun.After(time.Now().Add(-1*time.Minute)), "PipelineLastRun should be recent")
-			assert.Nil(t, updatedAsset.PipelineError, "Pipeline should complete without errors")
 
 			// Verify vulnerabilities were detected
 			var vulnerabilities []models.DependencyVuln

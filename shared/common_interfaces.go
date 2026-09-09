@@ -914,6 +914,17 @@ type TrustedEntityRepository interface {
 	GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error)
 }
 
+type LogService interface {
+	StoreCaptureException(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error
+	StoreRecoverPanic(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error
+	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID) (Paged[models.Log], error)
+}
+
+type LogRepository interface {
+	Save(ctx context.Context, tx *gorm.DB, invitation *models.Log) error
+	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
+}
+
 type Object string
 
 const (

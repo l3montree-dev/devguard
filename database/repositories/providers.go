@@ -65,4 +65,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewComplianceComponentRepository, fx.As(new(shared.ComplianceComponentRepository)))),
 	fx.Provide(fx.Annotate(NewUpstreamVEXRuleRepository, fx.As(new(shared.UpstreamVEXRuleRepository)))),
 	fx.Provide(fx.Annotate(NewVEXRuleRecommendationRepository, fx.As(new(shared.VEXRuleRecommendationRepository)))),
+	fx.Provide(fx.Annotate(NewLogRepository, fx.As(new(shared.LogRepository)))),
 )

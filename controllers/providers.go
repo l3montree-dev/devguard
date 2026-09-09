@@ -142,5 +142,8 @@ var ControllerModule = fx.Options(
 	//Crowdsourced Vexing
 	fx.Provide(NewVexRuleRecommendationController),
 
+	//Logs
+	fx.Provide(NewLogController),
+
 	fx.Provide(NewAdvisoryController),
 )

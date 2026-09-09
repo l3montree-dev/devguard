@@ -194,7 +194,7 @@ func (runner *DaemonRunner) tick() {
 		runner.runDaemons(tickCtx)
 		runner.RunAssetPipeline(tickCtx, false)
 		if err := tickCtx.Err(); err != nil {
-			monitoring.Alert("asset pipeline timed out after 2 hours", err)
+			monitoring.Alert("asset pipeline timed out after 2 hours", err, monitoring.AlertOptions{})
 		}
 		cancel()
 	} else {

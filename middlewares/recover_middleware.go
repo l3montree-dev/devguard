@@ -14,7 +14,7 @@ func recovermiddleware() echo.MiddlewareFunc {
 		return func(ctx echo.Context) (returnErr error) {
 			defer func() {
 				if r := recover(); r != nil {
-					monitoring.RecoverAndAlert("panic recovered in middleware", fmt.Errorf("%v", r))
+					monitoring.RecoverAndAlert("panic recovered in middleware", fmt.Errorf("%v", r), monitoring.AlertOptions{})
 
 					if r == http.ErrAbortHandler {
 						panic(r)

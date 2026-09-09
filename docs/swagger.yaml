@@ -4493,8 +4493,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         projectId:
@@ -4545,7 +4543,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - projectId
       - refs
@@ -4610,8 +4607,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         projectId:
@@ -4663,7 +4658,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - projectId
       - refs
@@ -4728,8 +4722,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         projectId:
@@ -4783,7 +4775,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - projectId
       - refs
@@ -9388,8 +9379,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         project:
@@ -9454,7 +9443,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - project
       - projectId
@@ -10130,6 +10118,34 @@ components:
       - updatedAt
       - vulnAssetId
       type: object
+    github_com_l3montree-dev_devguard_database_models.Log:
+      properties:
+        assetID:
+          type: string
+        assetVersionName:
+          type: string
+        createdAt:
+          type: string
+        id:
+          type: string
+        logLevel:
+          $ref: '#/components/schemas/logger.LogLevel'
+        message:
+          type: string
+        orgID:
+          type: string
+        projectID:
+          type: string
+      required:
+      - assetID
+      - assetVersionName
+      - createdAt
+      - id
+      - logLevel
+      - message
+      - orgID
+      - projectID
+      type: object
     github_com_l3montree-dev_devguard_database_models.Org:
       properties:
         configFiles:
@@ -10757,6 +10773,25 @@ components:
       - pageSize
       - total
       type: object
+    github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Log:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Log'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
     github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Project:
       properties:
         data:
@@ -10807,6 +10842,18 @@ components:
       - referenceNumber
       - seeAlso
       type: object
+    logger.LogLevel:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      type: integer
+      x-enum-varnames:
+      - Silent
+      - Error
+      - Warn
+      - Info
     normalize.MinimalTree:
       properties:
         dependencies:
@@ -10897,16 +10944,6 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10937,16 +10974,6 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -14642,6 +14669,41 @@ paths:
       summary: Auto-setup the GitLab integration for an asset
       tags:
       - Integrations
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Log'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List logs
+      tags:
+      - Logs
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/members/:
     get:
       parameters:

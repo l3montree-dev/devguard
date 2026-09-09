@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/mocks"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -63,6 +64,7 @@ type TestApp struct {
 	ReleaseService           shared.ReleaseService
 	OpenSourceInsightService shared.OpenSourceInsightService
 	MaliciousPackageChecker  shared.MaliciousPackageChecker
+	LogService               shared.LogService
 
 	// Controllers
 	AssetController             *controllers.AssetController
@@ -107,6 +109,7 @@ type TestApp struct {
 	TrustedEntityRepository         shared.TrustedEntityRepository
 	ExternalReferenceRepository     shared.ExternalReferenceRepository
 	UpstreamVEXRuleRepository       shared.UpstreamVEXRuleRepository
+	LogRepository                   shared.LogRepository
 
 	// Access Control
 	RBACProvider shared.RBACProvider
@@ -170,6 +173,8 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fx.Decorate(func() shared.LeaderElector {
 			return &testLeaderElector{}
 		}),
+		// Wire up the monitoring package-level logger, mirroring production (cmd/devguard/main.go)
+		fx.Invoke(monitoring.SetLogger),
 	}
 
 	// Add extra options if provided (this allows tests to provide custom services)

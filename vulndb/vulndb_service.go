@@ -539,7 +539,7 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 		if opts.Debug {
 			showImportDebug(ctx, tx, workingDir, failingTables)
 		}
-		monitoring.Alert("vulndb integrity check failed", err)
+		monitoring.Alert("vulndb integrity check failed", err, monitoring.AlertOptions{Ctx: ctx})
 		span.SetAttributes(
 			attribute.StringSlice("vulndb.failing_tables", failingTables),
 		)
@@ -971,7 +971,7 @@ func (service *VulnDBService) applyFromWorkingDir(ctx context.Context, tx pgx.Tx
 		ok, err := service.tryApplyQuickDiff(ctx, tx, workingDir, integrityGroundTruth)
 		if err != nil {
 			slog.Warn("quick-diff apply failed, will retry as full sync", "err", err)
-			monitoring.Alert("vulndb quick-diff apply failed", fmt.Errorf("quick-diff apply failed: %w, will retry as full sync", err))
+			monitoring.Alert("vulndb quick-diff apply failed", fmt.Errorf("quick-diff apply failed: %w, will retry as full sync", err), monitoring.AlertOptions{Ctx: ctx})
 			return nil, errQuickDiffFailed
 		}
 		if !ok {
