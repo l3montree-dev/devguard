@@ -921,7 +921,7 @@ type LogService interface {
 }
 
 type LogRepository interface {
-	Save(ctx context.Context, tx *gorm.DB, invitation *models.Log) error
+	Save(ctx context.Context, tx *gorm.DB, log *models.Log) error
 	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
 }
 

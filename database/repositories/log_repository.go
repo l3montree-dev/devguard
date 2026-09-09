@@ -27,7 +27,7 @@ func (r logRepository) Save(ctx context.Context, tx *gorm.DB, log *models.Log) e
 func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, pageInfo shared.PageInfo) (shared.Paged[models.Log], error) {
 	var count int64
 	logs := []models.Log{}
-	q := r.Repository.GetDB(ctx, tx).Model(&models.Log{}).Where("org_id = ? AND project_id = ? AND asset_id = ?", orgID, projectID, assetID)
+	q := r.Repository.GetDB(ctx, tx).Model(&models.Log{}).Where("org_id = ? AND project_id = ? AND asset_id = ?", orgID, projectID, assetID).Order("created_at DESC, id DESC")
 
 	err := q.Session(&gorm.Session{}).Count(&count).Error
 	if err != nil {

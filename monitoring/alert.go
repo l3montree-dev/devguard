@@ -51,13 +51,17 @@ func Alert(message string, err error, opts AlertOptions) {
 	// log it
 	evID := sentry.CurrentHub().CaptureException(errors.Wrap(err, message))
 	if evID == nil {
-		slog.Error("critical error encountered - not send to external error tracking", "msg", message, "error", err)
+		slog.Error("critical error encountered - not sent to external error tracking", "msg", message, "error", err)
 	} else {
 		slog.Error("critical error encountered", "msg", message, "error", err, "id", *evID)
 	}
 	ctx := opts.Ctx
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if logger == nil {
+		slog.Error("could not store error in database", "msg", "logger has not been set yet")
+		return
 	}
 	loggerErr := logger.StoreCaptureException(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, message)
 	if loggerErr != nil {
@@ -73,9 +77,17 @@ func RecoverAndAlert(message string, err error, opts AlertOptions) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	loggerErr := logger.StoreCaptureException(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, message)
+	if logger == nil {
+		slog.Error("could not store error in database", "msg", "logger has not been set yet")
+		return
+	}
+	storedMsg := message
+	if err != nil {
+		storedMsg = fmt.Sprintf("%s: %v", message, err)
+	}
+	loggerErr := logger.StoreCaptureException(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, storedMsg)
 	if loggerErr != nil {
-		slog.Error("could not store error in database", "msg", message, "error", err)
+		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
 	}
 }
 
@@ -86,6 +98,10 @@ func RecoverPanic(msg string, opts AlertOptions) {
 	ctx := opts.Ctx
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if logger == nil {
+		slog.Error("could not store error in database", "msg", "logger has not been set yet")
+		return
 	}
 	loggerErr := logger.StoreRecoverPanic(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, msg)
 	if loggerErr != nil {

@@ -133,7 +133,7 @@ func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 			err := runner.assetRepository.Save(context.Background(), tx, &asset)
 			if err != nil {
 				tx.Rollback()
-				monitoring.Alert("could not save pipeline error to asset", err, monitoring.AlertOptions{Tx: tx, AssetID: assetWithDetails.asset.ID})
+				monitoring.Alert("could not save pipeline error to asset", err, monitoring.AlertOptions{AssetID: assetWithDetails.asset.ID})
 				continue
 			}
 			if runner.debugOptions.DryRun {

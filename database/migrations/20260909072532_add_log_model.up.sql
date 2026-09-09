@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS public.logs (
     project_id uuid,
     asset_id uuid,
     asset_version_name text,
-    created_at timestamp NOT NULL DEFAULT now(),
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
     log_level int NOT NULL,
     message text NOT NULL
 );
