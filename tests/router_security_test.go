@@ -164,6 +164,7 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/dependency-proxy-urls/":                                                   shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/external-references/":                                                     shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/in-toto/root.layout.json/":                                                shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/logs/":                                                                    shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/members/":                                                                 shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/number-of-exploits/":                                                      shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/pats/":                                                                    shared.RoleAdmin,

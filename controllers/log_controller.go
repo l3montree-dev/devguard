@@ -26,7 +26,7 @@ func NewLogController(logService shared.LogService) *LogController {
 // @Param pageSize query int false "Page size"
 // @Success 200 {object} shared.Paged[models.Log]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/ [get]
-func (controller LogController) ListPaged(ctx shared.Context) error {
+func (controller *LogController) ListPaged(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
