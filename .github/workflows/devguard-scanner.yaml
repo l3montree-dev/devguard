@@ -62,7 +62,7 @@ jobs:
     - name: Run unittests
       run: nix develop . --command bash -c "go test -timeout 20m -p 8 \$(go list ./... | grep -v '/mocks' | grep -v '^github.com/l3montree-dev/devguard/tests\$') -coverprofile=coverage.out && go tool cover -func=coverage.out"
     - name: Archive code coverage results
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 - https://github.com/actions/upload-artifact/releases/tag/v4.6.2
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
         name: code-coverage
         path: coverage.out
@@ -118,7 +118,7 @@ jobs:
           go test -timeout 20m -run "^($pattern)\$" -coverprofile="coverage-shard-$SHARD.out" ./tests/...
         '
     - name: Archive shard coverage results
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2 - https://github.com/actions/upload-artifact/releases/tag/v4.6.2
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
         name: code-coverage-integration-shard-${{ matrix.shard }}
         path: coverage-shard-${{ matrix.shard }}.out
