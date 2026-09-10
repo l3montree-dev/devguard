@@ -72,6 +72,10 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context
 		return nil, err
 	}
 
+	if err := attachGroupEvents(r.GetDB(ctx, tx), dependencyVulns, &time); err != nil {
+		return nil, err
+	}
+
 	return replayHistoricalEvents(dependencyVulns), nil
 }
 
