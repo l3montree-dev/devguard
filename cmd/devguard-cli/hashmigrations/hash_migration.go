@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -26,7 +27,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 7
+	CurrentHashVersion = 8
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -155,8 +156,226 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			}
 		}
 
+		if currentVersion < 8 {
+			// dividing merkle edges into edges and nodes tables
+			// removing artifact names from subtree_hash calculation
+			// in order to achieve better deduplication
+			if err := rewireMerkleTreeRootsAndSplitNodes(pool); err != nil {
+				return fmt.Errorf("failed fixing artifact names in merkle subtree hashes (v8): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v8: %w", err)
+			}
+
+			startVacuum := time.Now()
+			slog.Info("start vacuum and analyzing all tables")
+			_, err = pool.Exec(context.Background(), `
+				VACUUM FULL public.sbom_merkle_edges;`)
+			if err != nil {
+				return fmt.Errorf("could not full vacuum edges table: %w", err)
+			}
+
+			_, err = pool.Exec(context.Background(), `
+				VACUUM ANALYZE;`)
+			if err != nil {
+				return fmt.Errorf("could not vacuum and analyze all tables: %w", err)
+			}
+			slog.Info("finished vacuum and analyzing all tables", "time", time.Since(startVacuum))
+		}
+
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
+
+	return nil
+}
+
+func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
+	start := time.Now()
+	slog.Info("start hash migration v8")
+	ctx := context.Background()
+
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("could not start transaction for v8: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// drop unique constraint to temporarily allow duplicates inside the transaction
+	// also improves performance on DML operations
+	_, err = tx.Exec(ctx, `
+	ALTER TABLE sbom_merkle_edges DROP CONSTRAINT sbom_merkle_edges_unique;`)
+	if err != nil {
+		return fmt.Errorf("could not drop unique constraint on edges table: %w", err)
+	}
+
+	// first remove the component_id from root nodes
+	_, err = tx.Exec(ctx, `
+		UPDATE sbom_merkle_edges sm
+		SET component_id = $1
+		WHERE EXISTS (
+				SELECT FROM sboms s 
+				WHERE s.root_subtree_hash = sm.subtree_hash
+		);`, normalize.MerkleRootID)
+	if err != nil {
+		return fmt.Errorf("could not remove component_id from root edges: %w", err)
+	}
+	slog.Info("removed component_id from root nodes")
+
+	// now recalculate the hash based on only the subtree's hashes
+	rows, err := tx.Query(ctx, `
+		SELECT subtree_hash, direct_dependency_subtree_hash
+		FROM sbom_merkle_edges sm 
+		WHERE EXISTS (
+			SELECT FROM sboms s 
+			WHERE s.root_subtree_hash = sm.subtree_hash
+		);`)
+	if err != nil {
+		return fmt.Errorf("could not query root nodes from merkle edge table: %w", err)
+	}
+	defer rows.Close()
+
+	edgesPerRoot := make(map[uuid.UUID][]uuid.UUID, 75_000)
+	var root uuid.UUID
+	var edge *uuid.UUID
+	for rows.Next() {
+		err = rows.Scan(&root, &edge)
+		if err != nil {
+			return fmt.Errorf("could not scan row: %w", err)
+		}
+		// also collect nodes with nil edges
+		if _, ok := edgesPerRoot[root]; !ok {
+			edgesPerRoot[root] = nil
+		}
+		if edge != nil {
+			edgesPerRoot[root] = append(edgesPerRoot[root], *edge)
+		}
+	}
+	rows.Close()
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error occurred whilst scanning rows: %w", err)
+	}
+	slog.Info("collected root nodes")
+
+	// now we build the new hashes for the root nodes without including the component_id
+	oldHashes := make([]uuid.UUID, len(edgesPerRoot))
+	newHashes := make([]uuid.UUID, len(edgesPerRoot))
+	i := 0
+	for root, edges := range edgesPerRoot {
+		oldHashes[i] = root
+		newHashes[i] = normalize.HashSubtree(normalize.MerkleRootID, edges)
+		i++
+	}
+
+	_, err = tx.Exec(ctx, `
+	UPDATE sbom_merkle_edges sm SET subtree_hash = sub.new_hash
+		FROM (
+			SELECT 
+				UNNEST($1::uuid[]) as old_hash,
+				UNNEST($2::uuid[]) as new_hash
+		) as sub
+	WHERE sub.old_hash = sm.subtree_hash;
+	`, oldHashes, newHashes)
+	if err != nil {
+		return fmt.Errorf("could not update edges root nodes: %w", err)
+	}
+	slog.Info("updated edges root nodes")
+
+	_, err = tx.Exec(ctx, `
+	UPDATE sboms s SET root_subtree_hash = sub.new_hash
+		FROM (
+			SELECT 
+				UNNEST($1::uuid[]) as old_hash,
+				UNNEST($2::uuid[]) as new_hash
+		) as sub
+	WHERE sub.old_hash = s.root_subtree_hash;
+	`, oldHashes, newHashes)
+	if err != nil {
+		return fmt.Errorf("could not update sbom root nodes: %w", err)
+	}
+	slog.Info("updated sbom root nodes")
+
+	results, err := tx.Exec(ctx, `
+	DELETE FROM sbom_merkle_edges a
+	USING sbom_merkle_edges b
+	WHERE a.subtree_hash = b.subtree_hash
+	AND a.direct_dependency_subtree_hash = b.direct_dependency_subtree_hash
+	AND a.ctid > b.ctid;`)
+	if err != nil {
+		return fmt.Errorf("could not remove duplicates from edges table: %w", err)
+	}
+	slog.Info("removed duplicates from edges table", "amount", results.RowsAffected())
+
+	// now we continue with separating nodes from the edges table
+	_, err = tx.Exec(ctx, `
+		INSERT INTO public.sbom_merkle_nodes (node_hash, component_id) (
+			SELECT DISTINCT subtree_hash, component_id
+			FROM sbom_merkle_edges
+		);`)
+	if err != nil {
+		return fmt.Errorf("could not transfer nodes from edges to nodes table: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+	ALTER TABLE public.sbom_merkle_edges DROP COLUMN component_id;`)
+	if err != nil {
+		return fmt.Errorf("could not drop component_id column from edges table: %w", err)
+	}
+
+	// ensure referential integrity between edges and nodes
+	_, err = tx.Exec(ctx, `
+		ALTER TABLE public.sbom_merkle_edges 
+			ADD FOREIGN KEY (subtree_hash) 
+				REFERENCES public.sbom_merkle_nodes (node_hash),
+			ADD FOREIGN KEY (direct_dependency_subtree_hash) 
+				REFERENCES public.sbom_merkle_nodes (node_hash);`)
+	if err != nil {
+		return fmt.Errorf("could not check apply foreign key from edges to nodes: %w", err)
+	}
+
+	// ensure referential integrity between sboms and nodes
+	_, err = tx.Exec(ctx, `
+		ALTER TABLE public.sboms
+		ADD FOREIGN KEY (root_subtree_hash) 
+		REFERENCES public.sbom_merkle_nodes (node_hash);`)
+	if err != nil {
+		return fmt.Errorf("could not check apply foreign key from sboms to nodes: %w", err)
+	}
+	slog.Info("dropped component_id and applied all referential integrity checks")
+
+	// delete all leaf edges
+	results, err = tx.Exec(ctx, `
+		DELETE FROM public.sbom_merkle_edges sme
+		WHERE sme.direct_dependency_subtree_hash IS NULL;`)
+	if err != nil {
+		return fmt.Errorf("could not delete leaf edges: %w", err)
+	}
+	slog.Info("deleted all leaf edges", "amount", results.RowsAffected())
+
+	_, err = tx.Exec(ctx, `
+	ALTER TABLE public.sbom_merkle_edges 
+	ADD PRIMARY KEY (subtree_hash, direct_dependency_subtree_hash);`)
+	if err != nil {
+		return fmt.Errorf("could not add primary key constraint to edges table: %w", err)
+	}
+	slog.Info("added primary key constraint to edges table", "time", time.Since(start))
+
+	_, err = tx.Exec(ctx, `
+		CREATE INDEX sbom_merkle_nodes_component_id 
+		ON public.sbom_merkle_nodes (component_id);`)
+	if err != nil {
+		return fmt.Errorf("could not create component_id index for nodes table: %w", err)
+	}
+	slog.Info("added primary key constraint to edges table", "time", time.Since(start))
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("could not commit migration v8: %w", err)
+	}
+	slog.Info("successfully finished v8 migration", "time", time.Since(start))
 
 	return nil
 }
