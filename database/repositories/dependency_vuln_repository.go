@@ -83,13 +83,13 @@ func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if err := attachGroupEvents(repository.GetDB(ctx, tx), dependencyVulns, nil); err != nil {
+	if err := AttachGroupEvents(repository.GetDB(ctx, tx), dependencyVulns, nil); err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
 }
 
-func attachGroupEvents(db *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error {
+func AttachGroupEvents(db *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error {
 	if len(vulns) == 0 {
 		return nil
 	}
@@ -361,7 +361,7 @@ func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB
 	}
 
 	vulns := []models.DependencyVuln{t}
-	if err := attachGroupEvents(repository.GetDB(ctx, tx), vulns, nil); err != nil {
+	if err := AttachGroupEvents(repository.GetDB(ctx, tx), vulns, nil); err != nil {
 		return t, err
 	}
 	return vulns[0], nil
