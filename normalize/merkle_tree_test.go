@@ -22,57 +22,69 @@ func buildTree(children map[string][]string, artifactName string) *MerkleTree {
 	return BuildMerkleTree(Adjacency{Children: children}, merkleParseRoot, artifactName)
 }
 
-func edgeKey(e MerkleEdge) [3]string {
-	child := "NULL"
-	if e.DirectDependencySubtreeHash != nil {
-		child = e.DirectDependencySubtreeHash.String()
-	}
-	return [3]string{e.SubtreeHash.String(), e.ComponentID, child}
+func edgeKey(e MerkleEdge) [2]string {
+	return [2]string{e.SubtreeHash.String(), e.DirectDependencySubtreeHash.String()}
 }
 
-func edgeSet(edges []MerkleEdge) map[[3]string]struct{} {
-	set := make(map[[3]string]struct{}, len(edges))
+func edgeSet(edges []MerkleEdge) map[[2]string]struct{} {
+	set := make(map[[2]string]struct{}, len(edges))
 	for _, e := range edges {
 		set[edgeKey(e)] = struct{}{}
 	}
 	return set
 }
 
-func rowsFor(edges []MerkleEdge, componentID string) []MerkleEdge {
+// nodesFor returns every node covering componentID. One component appears more
+// than once when two SBOMs disagree about its children.
+func nodesFor(tree *MerkleTree, componentID string) []MerkleNode {
+	var nodes []MerkleNode
+	for _, n := range tree.Nodes() {
+		if n.ComponentID == componentID {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+// rowsFor returns the edges leaving every node that covers componentID. A leaf
+// has none - its identity is carried by its node row.
+func rowsFor(tree *MerkleTree, componentID string) []MerkleEdge {
 	var rows []MerkleEdge
-	for _, e := range edges {
-		if e.ComponentID == componentID {
-			rows = append(rows, e)
+	for _, n := range nodesFor(tree, componentID) {
+		for _, e := range tree.Edges() {
+			if e.SubtreeHash == n.SubtreeHash {
+				rows = append(rows, e)
+			}
 		}
 	}
 	return rows
 }
 
 func TestBuildMerkleTree(t *testing.T) {
-	t.Run("a leaf gets a row with a nil child, so its component id stays resolvable", func(t *testing.T) {
+	t.Run("a leaf gets a node but no edge, and stays resolvable through it", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/leaf@1.0.0"},
 		}), "src", "my-artifact")
 
-		rows := rowsFor(tree.Edges(), "pkg:npm/leaf@1.0.0")
-		require.Len(t, rows, 1, "a leaf must have a row of its own")
-		assert.Nil(t, rows[0].DirectDependencySubtreeHash)
+		nodes := nodesFor(tree, "pkg:npm/leaf@1.0.0")
+		require.Len(t, nodes, 1, "a leaf must have a node of its own")
+		assert.Empty(t, rowsFor(tree, "pkg:npm/leaf@1.0.0"), "a leaf has no outgoing edge")
 	})
 
-	t.Run("the root is hashed under the artifact identity, never a sentinel", func(t *testing.T) {
+	t.Run("the root is hashed under the sentinel, and no synthetic node reaches the nodes", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/leaf@1.0.0"},
-		}), "src", "my-app")
+		}), "src", MerkleRootID)
 
-		for _, e := range tree.Edges() {
-			assert.NotEqual(t, "ROOT", e.ComponentID, "the ROOT sentinel is replaced by the sboms pivot table")
-			assert.NotContains(t, e.ComponentID, "sbom:", "synthetic nodes must not reach the edge table")
-			assert.NotContains(t, e.ComponentID, "artifact:")
+		for _, n := range tree.Nodes() {
+			assert.NotContains(t, n.ComponentID, "sbom:", "synthetic nodes must not reach the node table")
+			assert.NotContains(t, n.ComponentID, "artifact:")
 		}
 
 		root := tree.RootNode()
 		require.NotNil(t, root)
-		assert.Equal(t, "my-app", root.ComponentID)
+		assert.Equal(t, MerkleRootID, root.ComponentID,
+			"the artifact name lives in the sboms row, not in the root hash")
 	})
 
 	t.Run("fan-out A->B, A->C shares one subtree hash across two rows", func(t *testing.T) {
@@ -81,7 +93,7 @@ func TestBuildMerkleTree(t *testing.T) {
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0", "pkg:npm/c@1.0.0"},
 		}), "src", "my-app")
 
-		rows := rowsFor(tree.Edges(), "pkg:npm/a@1.0.0")
+		rows := rowsFor(tree, "pkg:npm/a@1.0.0")
 		require.Len(t, rows, 2, "a node with two children has two rows")
 		assert.Equal(t, rows[0].SubtreeHash, rows[1].SubtreeHash, "both rows share one subtree hash")
 	})
@@ -93,25 +105,26 @@ func TestBuildMerkleTree(t *testing.T) {
 			"pkg:npm/b@1.0.0": {"pkg:npm/shared@1.0.0"},
 		}), "src", "my-app")
 
-		assert.Len(t, rowsFor(tree.Edges(), "pkg:npm/shared@1.0.0"), 1)
+		assert.Len(t, nodesFor(tree, "pkg:npm/shared@1.0.0"), 1)
 	})
 
 	t.Run("agreeing SBOMs produce identical rows, so the subtree is stored once", func(t *testing.T) {
 		a := BuildMerkleTree(adjacency(map[string][]string{
 			"src":                    {"pkg:golang/circl@1.6.3"},
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.1.0"},
-		}), "src", "app-one")
+		}), "src", MerkleRootID)
 		b := BuildMerkleTree(adjacency(map[string][]string{
 			"other":                  {"pkg:golang/circl@1.6.3"},
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.1.0"},
-		}), "other", "app-two")
+		}), "other", MerkleRootID)
 
 		assert.Equal(t,
-			edgeSet(rowsFor(a.Edges(), "pkg:golang/circl@1.6.3")),
-			edgeSet(rowsFor(b.Edges(), "pkg:golang/circl@1.6.3")),
+			edgeSet(rowsFor(a, "pkg:golang/circl@1.6.3")),
+			edgeSet(rowsFor(b, "pkg:golang/circl@1.6.3")),
 			"the shared subtree must be byte-identical in both SBOMs")
 
-		assert.NotEqual(t, a.Root, b.Root, "different artifacts are different SBOMs")
+		assert.Equal(t, a.Root, b.Root,
+			"two artifacts with the same dependencies share one root - which artifact it is lives in the sboms row")
 	})
 
 	t.Run("disagreeing SBOMs keep both edge sets", func(t *testing.T) {
@@ -126,8 +139,8 @@ func TestBuildMerkleTree(t *testing.T) {
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.2.0"},
 		}), "src", "app")
 
-		circlA := rowsFor(a.Edges(), "pkg:golang/circl@1.6.3")
-		circlB := rowsFor(b.Edges(), "pkg:golang/circl@1.6.3")
+		circlA := rowsFor(a, "pkg:golang/circl@1.6.3")
+		circlB := rowsFor(b, "pkg:golang/circl@1.6.3")
 		require.Len(t, circlA, 1)
 		require.Len(t, circlB, 1)
 		assert.NotEqual(t, circlA[0].SubtreeHash, circlB[0].SubtreeHash,
@@ -154,9 +167,8 @@ func TestBuildMerkleTree(t *testing.T) {
 		}), "src", "my-app")
 
 		assert.NotEmpty(t, tree.Root)
-		rows := rowsFor(tree.Edges(), "pkg:npm/b@1.0.0")
-		require.Len(t, rows, 1)
-		assert.Nil(t, rows[0].DirectDependencySubtreeHash,
+		require.Len(t, nodesFor(tree, "pkg:npm/b@1.0.0"), 1)
+		assert.Empty(t, rowsFor(tree, "pkg:npm/b@1.0.0"),
 			"the node closing the cycle is stored as a leaf")
 	})
 
@@ -164,9 +176,8 @@ func TestBuildMerkleTree(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{}), "src", "my-app")
 
 		assert.NotEmpty(t, tree.Root)
-		edges := tree.Edges()
-		require.Len(t, edges, 1)
-		assert.Nil(t, edges[0].DirectDependencySubtreeHash)
+		assert.Empty(t, tree.Edges(), "an empty SBOM has no edges at all")
+		require.Len(t, tree.Nodes(), 1, "only the root node is stored")
 	})
 
 	t.Run("a node id that is not a purl falls back to its own id", func(t *testing.T) {
@@ -175,7 +186,7 @@ func TestBuildMerkleTree(t *testing.T) {
 			ComponentIDs: map[string]string{"some-binary": ""},
 		}, "src", "my-app")
 
-		assert.Len(t, rowsFor(tree.Edges(), "some-binary"), 1)
+		assert.Len(t, nodesFor(tree, "some-binary"), 1)
 	})
 }
 
@@ -187,7 +198,7 @@ func TestMerkleTreeRoundTrip(t *testing.T) {
 			"pkg:npm/b@1.0.0": {"pkg:npm/leaf@1.0.0"},
 		}), "src", "my-app")
 
-		loaded, err := MerkleTreeFromEdges(original.Edges(), original.Root)
+		loaded, err := MerkleTreeFromNodesAndEdges(original.Nodes(), original.Edges(), original.Root)
 		require.NoError(t, err)
 
 		assert.Equal(t, original.Root, loaded.Root)
@@ -202,7 +213,7 @@ func TestMerkleTreeRoundTrip(t *testing.T) {
 			"src": {"pkg:npm/a@1.0.0"},
 		}), "src", "my-app")
 
-		_, err := MerkleTreeFromEdges(tree.Edges(), uuid.New())
+		_, err := MerkleTreeFromNodesAndEdges(tree.Nodes(), tree.Edges(), uuid.New())
 		require.Error(t, err)
 	})
 
