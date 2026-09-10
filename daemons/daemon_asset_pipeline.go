@@ -534,7 +534,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	slog.Info("start collecting all dependencies")
 	start := time.Now()
-	purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_edges;`)
+	purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_nodes;`)
 	if err != nil {
 		return err
 	}
@@ -792,21 +792,29 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string
 	// maybe use prepared statements
 	rows, err := runner.pgxpool.Query(ctx, `
 	WITH RECURSIVE up AS (
-		SELECT DISTINCT sm.subtree_hash, ARRAY[sm.subtree_hash] AS path
-		FROM sbom_merkle_edges sm
-		WHERE sm.component_id = ANY ($1)
-  	UNION ALL
-		SELECT sm.subtree_hash, sm.subtree_hash || up.path
+		SELECT nodes.node_hash, ARRAY[nodes.node_hash] AS path
+		FROM sbom_merkle_nodes nodes
+		WHERE nodes.component_id = ANY($1)
+			UNION ALL
+		SELECT edges.subtree_hash, edges.subtree_hash || up.path
 		FROM up
-		JOIN sbom_merkle_edges sm ON sm.direct_dependency_subtree_hash = up.subtree_hash
+		JOIN sbom_merkle_edges edges ON edges.direct_dependency_subtree_hash = up.node_hash
+		WHERE cardinality(up.path) < 32
+	), roots AS (
+		SELECT DISTINCT ON (up.node_hash, up.path[cardinality(up.path)], up.path[2])
+			up.node_hash AS root_hash,
+			up.path[cardinality(up.path)] AS component_hash,
+			up.path[2:] AS path
+		FROM up
+		WHERE EXISTS (SELECT 1 FROM sboms s WHERE s.root_subtree_hash = up.node_hash)
+		ORDER BY up.node_hash, up.path[cardinality(up.path)], up.path[2], cardinality(up.path)
 	)
-	SELECT mn.component_id, up.path[2:] AS path,
-		s.asset_id, s.asset_version_name, s.artifact_name, s.source
-	FROM up
-	JOIN sboms s ON s.root_subtree_hash = up.subtree_hash
-	JOIN merkle_nodes mn ON mn.subtree_hash = up.path[cardinality(up.path)];`, purls)
+	SELECT mn.component_id, r.path, s.asset_id, s.asset_version_name, s.artifact_name, s.source
+	FROM roots r
+	JOIN sboms s ON s.root_subtree_hash = r.root_hash
+	JOIN sbom_merkle_nodes mn ON mn.node_hash = r.component_hash;`, purls)
 	if err != nil {
-		return nil, fmt.Errorf("could not query paths for purls")
+		return nil, fmt.Errorf("could not query paths for purls: %w", err)
 	}
 	defer rows.Close()
 
@@ -837,176 +845,6 @@ type purlWithPaths struct {
 	Purl  string
 	Paths []string
 }
-
-// func (runner *DaemonRunner) ScanAssetVersion(scanCtx context.Context, assetVersion assetVersionInAsset, results chan *models.DependencyVuln, purlLookUp map[string]struct{}) error {
-// 	bom, err := runner.assetVersionService.LoadFullSBOMGraph(scanCtx, nil, models.AssetVersion{Name: assetVersion.AssetVersionName, AssetID: assetVersion.AssetID})
-// 	if err != nil {
-// 		return fmt.Errorf("could not build SBOM for asset version")
-// 	}
-
-// 	sbomCache := map[string][]*models.DependencyVuln{}
-
-// 	for _, artifactName := range assetVersion.Artifacts {
-// 		currentBom := *bom
-// 		// remove all other artifacts from the bom
-// 		err := currentBom.ScopeToArtifact(artifactName)
-// 		if err != nil {
-// 			// If artifact node is not reachable, it means the artifact has no components (empty artifact)
-// 			// This is a valid scenario, so we return early with no vulnerabilities
-// 			if errors.Is(err, normalize.ErrNodeNotReachable) {
-// 				slog.Warn("artifact has no components, skipping scan", "artifactName", artifactName)
-// 				continue
-// 			}
-// 			slog.Error("could not scope bom to artifact", "err", err)
-// 			return err
-// 		}
-
-// 		vulnsInPackage, err := runner.optimizedScan(scanCtx, currentBom, purlLookUp)
-// 		if err != nil {
-// 			slog.Error("could not scan file", "err", err)
-// 			return err
-// 		}
-
-// 		if artifactName == "pkg:oci/kratos?repository_url=ghcr.io/l3montree-dev/devguard/kratos&arch=amd64&tag=v26.2.0-v1.13.3-amd64" {
-// 			slog.Info("stop")
-// 		}
-
-// 		dependencyVulns := make([]models.DependencyVuln, 0, len(vulnsInPackage)*2)
-// 		for _, vuln := range vulnsInPackage {
-// 			dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, &currentBom, assetVersion.AssetID, assetVersion.AssetVersionName, artifactName)...)
-// 		}
-
-// 		dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
-// 			return f.CalculateHash()
-// 		})
-
-// 		for i := range dependencyVulns {
-// 			sbomCache[sbomHash] = append(sbomCache[sbomHash], &dependencyVulns[i])
-// 			results <- &dependencyVulns[i]
-// 		}
-
-// handle the scan result
-// opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, normalizedBom, vulns, artifact.ArtifactName, userID, userAgent)
-// if err != nil {
-// 	slog.Error("could not handle scan result", "err", err)
-// 	return nil, nil, nil, err
-// }
-
-// // newly opened vulns may already be covered by previously created, still-enabled VEX
-// // rules for this asset (e.g. a rule created before this vulnerability was ever detected).
-// var updatedVulns []models.DependencyVuln
-// var events []models.VulnEvent
-// existingRules, rulesErr := s.vexRuleRepository.FindByAssetID(scanCtx, tx, asset.ID)
-// if rulesErr != nil {
-// 	slog.Error("could not fetch existing VEX rules to apply to newly detected vulns", "err", rulesErr)
-// } else if len(existingRules) > 0 {
-// 	var applyErr error
-// 	if updatedVulns, events, applyErr = ApplyVEXRulesToVulns(scanCtx, existingRules, newState); applyErr != nil {
-// 		slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
-// 	} else if len(updatedVulns) > 0 {
-// 		if err := s.dependencyVulnRepository.SaveBatch(scanCtx, tx, updatedVulns); err != nil {
-// 			slog.Error("could not save vulns updated by existing VEX rules", "err", err)
-// 		}
-// 		if err := s.vulnEventRepository.SaveBatch(scanCtx, tx, events); err != nil {
-// 			slog.Error("could not save events from existing VEX rules", "err", err)
-// 		}
-// 	}
-// }
-// //update the state in newState to reflect the changes made by applying the VEX rules
-// newStateMap := make(map[uuid.UUID]models.DependencyVuln)
-// for _, vuln := range newState {
-// 	newStateMap[vuln.ID] = vuln
-// }
-// updatedVulnsMap := make(map[uuid.UUID]models.DependencyVuln)
-// for _, vuln := range updatedVulns {
-// 	updatedVulnsMap[vuln.ID] = vuln
-// }
-
-// for i, vuln := range newState {
-// 	if updatedVuln, ok := updatedVulnsMap[vuln.ID]; ok {
-// 		vuln.State = updatedVuln.State
-// 		newState[i] = vuln
-// 		newStateMap[vuln.ID] = vuln
-// 	}
-// }
-
-// 	}
-// 	return nil
-// }
-
-// func (runner *DaemonRunner) optimizedScan(ctx context.Context, bom normalize.SBOMGraph, purlLookUp map[string]struct{}) ([]models.VulnInPackage, error) {
-// 	var affectedPurls []string
-// 	for c := range bom.NodesOfType(normalize.GraphNodeTypeComponent) {
-// 		if c.Component.PackageURL != "" {
-// 			// filter only the affected purls
-// 			if _, ok := purlLookUp[c.Component.PackageURL]; ok {
-// 				affectedPurls = append(affectedPurls, c.Component.PackageURL)
-// 			}
-// 		}
-// 	}
-
-// 	if len(affectedPurls) == 0 {
-// 		return []models.VulnInPackage{}, nil
-// 	}
-
-// 	rows, err := runner.pgxpool.Query(ctx, `
-// 	SELECT pm.purl, pm.fixed_version,
-// 		c.id, c.content_hash, c.cve, c.date_published, c.date_last_modified,
-// 		COALESCE(c.description, ''), COALESCE(c.cvss, 0)::real, COALESCE(c."references", ''),
-// 		c.cisa_exploit_add, c.cisa_action_due, c.cisa_required_action, c.cisa_vulnerability_name,
-// 		c.epss::double precision, c.percentile::real, COALESCE(c.vector, ''),
-// 		c.euvd_exploit_add, c.withdrawn, c.cwes
-// 	FROM purl_mapping pm
-// 	JOIN cve_affected_component cac
-// 	ON cac.affected_component_id = pm.affected_component_id
-// 	JOIN cves c
-// 	ON c.id = cac.cve_id
-// 	WHERE pm.purl = ANY ($1);`, affectedPurls)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("could not retreive cves for purl: %w", err)
-// 	}
-// 	defer rows.Close()
-
-// 	var purl string
-// 	var fixedVersion *string
-// 	var cve models.CVE
-// 	// nullable date columns do not fit the models.CVE fields directly
-// 	var datePublished, dateLastModified, cisaExploitAdd, cisaActionDue, euvdExploitAdd, withdrawn *time.Time
-
-// 	vulnsInPackage := make([]models.VulnInPackage, 0, len(affectedPurls))
-// 	for rows.Next() {
-// 		err = rows.Scan(&purl, &fixedVersion,
-// 			&cve.ID, &cve.ContentHash, &cve.CVE, &datePublished, &dateLastModified,
-// 			&cve.Description, &cve.CVSS, &cve.References,
-// 			&cisaExploitAdd, &cisaActionDue, &cve.CISARequiredAction, &cve.CISAVulnerabilityName,
-// 			&cve.EPSS, &cve.Percentile, &cve.Vector,
-// 			&euvdExploitAdd, &withdrawn, &cve.CWEs)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("could not scan cve row: %w", err)
-// 		}
-
-// 		cve.DatePublished = utils.OrDefault(datePublished, time.Time{})
-// 		cve.DateLastModified = utils.OrDefault(dateLastModified, time.Time{})
-// 		cve.CISAExploitAdd = (*datatypes.Date)(cisaExploitAdd)
-// 		cve.CISAActionDue = (*datatypes.Date)(cisaActionDue)
-// 		cve.EUVDExploitAdd = (*datatypes.Date)(euvdExploitAdd)
-// 		cve.Withdrawn = (*datatypes.Date)(withdrawn)
-
-// 		parsedPurl, _ := packageurl.FromString(purl)
-// 		vulnsInPackage = append(vulnsInPackage, models.VulnInPackage{
-// 			CVE:          cve,
-// 			Purl:         parsedPurl,
-// 			CVEID:        cve.CVE,
-// 			FixedVersion: fixedVersion,
-// 		})
-// 	}
-
-// 	if err := rows.Err(); err != nil {
-// 		return nil, fmt.Errorf("could not read cve rows: %w", err)
-// 	}
-
-// 	return vulnsInPackage, nil
-// }
 
 func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)

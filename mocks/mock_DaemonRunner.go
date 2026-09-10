@@ -232,6 +232,52 @@ func (_c *DaemonRunner_Start_Call) RunAndReturn(run func(ctx context.Context)) *
 	return _c
 }
 
+// StartBenchmarkJobs provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) StartBenchmarkJobs(ctx context.Context, stages []string) {
+	_mock.Called(ctx, stages)
+	return
+}
+
+// DaemonRunner_StartBenchmarkJobs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StartBenchmarkJobs'
+type DaemonRunner_StartBenchmarkJobs_Call struct {
+	*mock.Call
+}
+
+// StartBenchmarkJobs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - stages []string
+func (_e *DaemonRunner_Expecter) StartBenchmarkJobs(ctx interface{}, stages interface{}) *DaemonRunner_StartBenchmarkJobs_Call {
+	return &DaemonRunner_StartBenchmarkJobs_Call{Call: _e.mock.On("StartBenchmarkJobs", ctx, stages)}
+}
+
+func (_c *DaemonRunner_StartBenchmarkJobs_Call) Run(run func(ctx context.Context, stages []string)) *DaemonRunner_StartBenchmarkJobs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_StartBenchmarkJobs_Call) Return() *DaemonRunner_StartBenchmarkJobs_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *DaemonRunner_StartBenchmarkJobs_Call) RunAndReturn(run func(ctx context.Context, stages []string)) *DaemonRunner_StartBenchmarkJobs_Call {
+	_c.Run(run)
+	return _c
+}
+
 // UpdateFixedVersions provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) UpdateFixedVersions(ctx context.Context) error {
 	ret := _mock.Called(ctx)

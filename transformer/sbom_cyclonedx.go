@@ -98,10 +98,13 @@ func MerkleTreeFromCycloneDX(bom *cdx.BOM, artifactName string) (*normalize.Pars
 
 	pruneUnidentifiableRefs(children, componentIDs)
 
+	// the root is hashed under the sentinel, not the artifact name: two artifacts
+	// with the same dependencies must reach the same root hash or the tree is
+	// stored twice. Which artifact this SBOM belongs to lives in the sboms row.
 	tree := normalize.BuildMerkleTree(
 		normalize.Adjacency{Children: children, ComponentIDs: componentIDs},
 		merkleParseRoot,
-		artifactName,
+		normalize.MerkleRootID,
 	)
 	return &normalize.ParsedSBOM{Tree: tree, Components: components}, nil
 }

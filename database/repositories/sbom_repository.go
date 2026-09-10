@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -45,9 +46,10 @@ func NewSBOMRepository(db *gorm.DB) *sbomRepository {
 
 // SaveTree persists one SBOM: its subtrees, then the row pointing at the root.
 //
-// Edges are inserted with ON CONFLICT DO NOTHING, so subtrees already stored -
-// by this artifact, another artifact, or another organization entirely - cost
-// nothing. That is where the storage saving comes from.
+// Nodes go in before edges, since an edge references two of them. Both are
+// inserted with ON CONFLICT DO NOTHING, so subtrees already stored - by this
+// artifact, another artifact, or another organization entirely - cost nothing.
+// That is where the storage saving comes from.
 //
 // Re-ingesting a source moves its row to the new root hash instead of adding
 // one per content revision. The superseded root's subtrees stay for the garbage
@@ -55,19 +57,33 @@ func NewSBOMRepository(db *gorm.DB) *sbomRepository {
 func (r *sbomRepository) SaveTree(ctx context.Context, tx *gorm.DB, sbom models.SBOM, tree *normalize.MerkleTree) error {
 	db := r.GetDB(ctx, tx)
 
+	nodes := tree.Nodes()
+	nodeRows := make([]models.SBOMMerkleNode, 0, len(nodes))
+	for _, n := range nodes {
+		nodeRows = append(nodeRows, models.SBOMMerkleNode{
+			NodeHash:    n.SubtreeHash,
+			ComponentID: n.ComponentID,
+		})
+	}
+
+	if len(nodeRows) > 0 {
+		if err := db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(nodeRows, 1000).Error; err != nil {
+			return errors.Wrap(err, "could not store sbom subtree nodes")
+		}
+	}
+
 	edges := tree.Edges()
-	rows := make([]models.SBOMMerkleEdge, 0, len(edges))
+	edgeRows := make([]models.SBOMMerkleEdge, 0, len(edges))
 	for _, e := range edges {
-		rows = append(rows, models.SBOMMerkleEdge{
+		edgeRows = append(edgeRows, models.SBOMMerkleEdge{
 			SubtreeHash:                 e.SubtreeHash,
-			ComponentID:                 e.ComponentID,
 			DirectDependencySubtreeHash: e.DirectDependencySubtreeHash,
 		})
 	}
 
-	if len(rows) > 0 {
-		if err := db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(rows, 1000).Error; err != nil {
-			return errors.Wrap(err, "could not store sbom subtrees")
+	if len(edgeRows) > 0 {
+		if err := db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(edgeRows, 1000).Error; err != nil {
+			return errors.Wrap(err, "could not store sbom subtree edges")
 		}
 	}
 
@@ -126,34 +142,68 @@ func (r *sbomRepository) FindBySource(ctx context.Context, tx *gorm.DB, assetID 
 // means a subtree shared by many parents is visited once, which is what bounds
 // the fan-out on wide graphs.
 func (r *sbomRepository) LoadTree(ctx context.Context, tx *gorm.DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error) {
-	var rows []models.SBOMMerkleEdge
+	db := r.GetDB(ctx, tx)
 
-	err := r.GetDB(ctx, tx).Raw(`
+	// the walk itself stays on hashes - resolving purls per edge would resolve a
+	// shared subtree once per parent
+	var edgeRows []models.SBOMMerkleEdge
+	err := db.Raw(`
 		WITH RECURSIVE walk AS (
-			SELECT subtree_hash, component_id, direct_dependency_subtree_hash
+			SELECT subtree_hash, direct_dependency_subtree_hash
 			FROM sbom_merkle_edges
 			WHERE subtree_hash = ?
 		UNION
-			SELECT e.subtree_hash, e.component_id, e.direct_dependency_subtree_hash
+			SELECT e.subtree_hash, e.direct_dependency_subtree_hash
 			FROM sbom_merkle_edges e
 			JOIN walk w ON e.subtree_hash = w.direct_dependency_subtree_hash
 		)
-		SELECT subtree_hash, component_id, direct_dependency_subtree_hash FROM walk
-	`, rootSubtreeHash).Scan(&rows).Error
+		SELECT subtree_hash, direct_dependency_subtree_hash FROM walk
+	`, rootSubtreeHash).Scan(&edgeRows).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "could not walk sbom subtrees")
 	}
 
-	edges := make([]normalize.MerkleEdge, 0, len(rows))
-	for _, row := range rows {
+	// every hash in the tree is either the root or some edge's child, so the two
+	// together name exactly the nodes to resolve. Deduplicated because a subtree
+	// shared by n parents appears once per parent.
+	seen := make(map[uuid.UUID]struct{}, len(edgeRows)+1)
+	hashes := make([]uuid.UUID, 0, len(edgeRows)+1)
+	addHash := func(hash uuid.UUID) {
+		if _, ok := seen[hash]; ok {
+			return
+		}
+		seen[hash] = struct{}{}
+		hashes = append(hashes, hash)
+	}
+	addHash(rootSubtreeHash)
+	for _, e := range edgeRows {
+		addHash(e.DirectDependencySubtreeHash)
+	}
+
+	// ANY over one array parameter rather than an IN list, which on a large SBOM
+	// would be tens of thousands of placeholders
+	var nodeRows []models.SBOMMerkleNode
+	if err := db.Where("node_hash = ANY(?)", pq.Array(hashes)).Find(&nodeRows).Error; err != nil {
+		return nil, errors.Wrap(err, "could not resolve sbom subtree nodes")
+	}
+
+	nodes := make([]normalize.MerkleNode, 0, len(nodeRows))
+	for _, row := range nodeRows {
+		nodes = append(nodes, normalize.MerkleNode{
+			SubtreeHash: row.NodeHash,
+			ComponentID: row.ComponentID,
+		})
+	}
+
+	edges := make([]normalize.MerkleEdge, 0, len(edgeRows))
+	for _, row := range edgeRows {
 		edges = append(edges, normalize.MerkleEdge{
 			SubtreeHash:                 row.SubtreeHash,
-			ComponentID:                 row.ComponentID,
 			DirectDependencySubtreeHash: row.DirectDependencySubtreeHash,
 		})
 	}
 
-	return normalize.MerkleTreeFromEdges(edges, rootSubtreeHash)
+	return normalize.MerkleTreeFromNodesAndEdges(nodes, edges, rootSubtreeHash)
 }
 
 // FindSBOMsContainingComponent walks upward from every subtree carrying the
@@ -168,8 +218,8 @@ func (r *sbomRepository) FindSBOMsContainingComponent(ctx context.Context, tx *g
 
 	err := r.GetDB(ctx, tx).Raw(`
 		WITH RECURSIVE up AS (
-			SELECT subtree_hash
-			FROM sbom_merkle_edges
+			SELECT node_hash AS subtree_hash
+			FROM sbom_merkle_nodes
 			WHERE component_id = ?
 		UNION
 			SELECT e.subtree_hash
@@ -211,24 +261,43 @@ func (r *sbomRepository) DeleteBySource(ctx context.Context, tx *gorm.DB, assetI
 // table can tell those apart from subtrees still shared by someone else, which
 // is why this is a mark and sweep rather than reference counting.
 //
-// It returns the number of deleted edges.
+// Edges are swept before nodes: an edge references two node rows, so the nodes
+// cannot go first. The second sweep walks the already-pruned graph, which
+// reaches the same set - removing unreachable edges cannot disconnect anything
+// still reachable.
+//
+// It returns the number of deleted rows across both tables.
 func (r *sbomRepository) CollectGarbage(ctx context.Context, tx *gorm.DB) (int64, error) {
-	result := r.GetDB(ctx, tx).Exec(`
+	db := r.GetDB(ctx, tx)
+
+	const reachable = `
 		WITH RECURSIVE reachable AS (
 			SELECT root_subtree_hash AS subtree_hash FROM sboms
 		UNION
 			SELECT e.direct_dependency_subtree_hash
 			FROM sbom_merkle_edges e
 			JOIN reachable r ON e.subtree_hash = r.subtree_hash
-			WHERE e.direct_dependency_subtree_hash IS NOT NULL
-		)
+		)`
+
+	edges := db.Exec(reachable + `
 		DELETE FROM sbom_merkle_edges e
 		WHERE NOT EXISTS (
 			SELECT 1 FROM reachable r WHERE r.subtree_hash = e.subtree_hash
 		)
 	`)
-	if result.Error != nil {
-		return 0, errors.Wrap(result.Error, "could not collect sbom garbage")
+	if edges.Error != nil {
+		return 0, errors.Wrap(edges.Error, "could not collect sbom edge garbage")
 	}
-	return result.RowsAffected, nil
+
+	nodes := db.Exec(reachable + `
+		DELETE FROM sbom_merkle_nodes n
+		WHERE NOT EXISTS (
+			SELECT 1 FROM reachable r WHERE r.subtree_hash = n.node_hash
+		)
+	`)
+	if nodes.Error != nil {
+		return 0, errors.Wrap(nodes.Error, "could not collect sbom node garbage")
+	}
+
+	return edges.RowsAffected + nodes.RowsAffected, nil
 }

@@ -1283,7 +1283,7 @@ func (_c *SBOMRepository_List_Call) RunAndReturn(run func(ctx context.Context, t
 }
 
 // LoadTree provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) LoadTree(ctx context.Context, tx shared.DB, rootSubtreeHash string) (*normalize.MerkleTree, error) {
+func (_mock *SBOMRepository) LoadTree(ctx context.Context, tx shared.DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error) {
 	ret := _mock.Called(ctx, tx, rootSubtreeHash)
 
 	if len(ret) == 0 {
@@ -1292,17 +1292,17 @@ func (_mock *SBOMRepository) LoadTree(ctx context.Context, tx shared.DB, rootSub
 
 	var r0 *normalize.MerkleTree
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (*normalize.MerkleTree, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (*normalize.MerkleTree, error)); ok {
 		return returnFunc(ctx, tx, rootSubtreeHash)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) *normalize.MerkleTree); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) *normalize.MerkleTree); ok {
 		r0 = returnFunc(ctx, tx, rootSubtreeHash)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*normalize.MerkleTree)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, tx, rootSubtreeHash)
 	} else {
 		r1 = ret.Error(1)
@@ -1318,12 +1318,12 @@ type SBOMRepository_LoadTree_Call struct {
 // LoadTree is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - rootSubtreeHash string
+//   - rootSubtreeHash uuid.UUID
 func (_e *SBOMRepository_Expecter) LoadTree(ctx interface{}, tx interface{}, rootSubtreeHash interface{}) *SBOMRepository_LoadTree_Call {
 	return &SBOMRepository_LoadTree_Call{Call: _e.mock.On("LoadTree", ctx, tx, rootSubtreeHash)}
 }
 
-func (_c *SBOMRepository_LoadTree_Call) Run(run func(ctx context.Context, tx shared.DB, rootSubtreeHash string)) *SBOMRepository_LoadTree_Call {
+func (_c *SBOMRepository_LoadTree_Call) Run(run func(ctx context.Context, tx shared.DB, rootSubtreeHash uuid.UUID)) *SBOMRepository_LoadTree_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1333,9 +1333,9 @@ func (_c *SBOMRepository_LoadTree_Call) Run(run func(ctx context.Context, tx sha
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -1351,7 +1351,7 @@ func (_c *SBOMRepository_LoadTree_Call) Return(merkleTree *normalize.MerkleTree,
 	return _c
 }
 
-func (_c *SBOMRepository_LoadTree_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rootSubtreeHash string) (*normalize.MerkleTree, error)) *SBOMRepository_LoadTree_Call {
+func (_c *SBOMRepository_LoadTree_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rootSubtreeHash uuid.UUID) (*normalize.MerkleTree, error)) *SBOMRepository_LoadTree_Call {
 	_c.Call.Return(run)
 	return _c
 }

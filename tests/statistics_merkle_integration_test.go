@@ -47,12 +47,12 @@ func TestStatisticsQueriesAgainstMerkleSBOMs(t *testing.T) {
 	// per artifact/SBOM.
 	sharedTree := tree(map[string][]string{
 		"root-ref": {"pkg:npm/shared@1.0.0"},
-	}, "artifact-one")
+	})
 	require.NoError(t, sbomRepo.SaveTree(ctx, nil, sbomFor(assetVersion, "artifact-one", "sbom:lock.json"), sharedTree))
 
 	sharedTree2 := tree(map[string][]string{
 		"root-ref": {"pkg:npm/shared@1.0.0"},
-	}, "artifact-two")
+	})
 	require.NoError(t, sbomRepo.SaveTree(ctx, nil, sbomFor(assetVersion, "artifact-two", "sbom:lock.json"), sharedTree2))
 
 	// a transitive-only component, several levels deep, plus a golang
@@ -62,7 +62,7 @@ func TestStatisticsQueriesAgainstMerkleSBOMs(t *testing.T) {
 		"root-ref":                 {"pkg:npm/direct@1.0.0"},
 		"pkg:npm/direct@1.0.0":     {"pkg:npm/transitive@1.0.0"},
 		"pkg:npm/transitive@1.0.0": {"pkg:golang/deep-transitive@1.0.0"},
-	}, "artifact-three")
+	})
 	require.NoError(t, sbomRepo.SaveTree(ctx, nil, sbomFor(assetVersion, "artifact-three", "sbom:lock.json"), transitiveTree))
 
 	// a malicious package, matched against a component in the tree above

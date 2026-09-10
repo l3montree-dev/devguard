@@ -128,7 +128,7 @@ func reconstructSBOMs(edges []legacyEdge) []legacySBOM {
 				Tree: normalize.BuildMerkleTree(
 					normalize.Adjacency{Children: componentEdgesBelow(children, sourceNode)},
 					sourceNode,
-					artifactName,
+					normalize.MerkleRootID,
 				),
 			})
 		}

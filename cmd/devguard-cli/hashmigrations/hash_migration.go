@@ -141,21 +141,9 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			}
 		}
 
-		if currentVersion < 7 {
-			// Rebuild the content-addressed SBOM storage from the legacy
-			// component_dependencies table, so upgrading instances keep their
-			// SBOMs rather than having to rescan everything.
-			if err := runMerkleBackfill(pool); err != nil {
-				return fmt.Errorf("failed to backfill merkle sboms (v7): %w", err)
-			}
-
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v7: %w", err)
-			}
-		}
-
+		// v8 runs before v7 on purpose: the backfill below stores SBOMs through
+		// the sbom repository, which writes the split shape. Splitting first
+		// means it always finds the table it expects.
 		if currentVersion < 8 {
 			// dividing merkle edges into edges and nodes tables
 			// removing artifact names from subtree_hash calculation
@@ -186,6 +174,21 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			slog.Info("finished vacuum and analyzing all tables", "time", time.Since(startVacuum))
 		}
 
+		if currentVersion < 7 {
+			// Rebuild the content-addressed SBOM storage from the legacy
+			// component_dependencies table, so upgrading instances keep their
+			// SBOMs rather than having to rescan everything.
+			if err := runMerkleBackfill(pool); err != nil {
+				return fmt.Errorf("failed to backfill merkle sboms (v7): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v7: %w", err)
+			}
+		}
+
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
 
@@ -196,6 +199,25 @@ func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
 	start := time.Now()
 	slog.Info("start hash migration v8")
 	ctx := context.Background()
+
+	// The schema migration reshapes the edge table itself whenever it is empty,
+	// which covers fresh installs and anything that ran the v7 backfill on the
+	// new code. Only a table still carrying component_id has data in the old
+	// shape for this to rewrite.
+	var needsRewire bool
+	if err := pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_schema = 'public'
+			  AND table_name = 'sbom_merkle_edges'
+			  AND column_name = 'component_id'
+		);`).Scan(&needsRewire); err != nil {
+		return fmt.Errorf("could not check whether the edges table still holds component_id: %w", err)
+	}
+	if !needsRewire {
+		slog.Info("merkle edges are already split into nodes and edges - skipping v8")
+		return nil
+	}
 
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {

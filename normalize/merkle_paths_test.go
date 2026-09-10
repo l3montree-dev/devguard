@@ -105,7 +105,7 @@ func TestPathsToPURL(t *testing.T) {
 			"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
 		}), "src", "my-app")
 
-		loaded, err := MerkleTreeFromEdges(tree.Edges(), tree.Root)
+		loaded, err := MerkleTreeFromNodesAndEdges(tree.Nodes(), tree.Edges(), tree.Root)
 		require.NoError(t, err)
 
 		assert.Equal(t,

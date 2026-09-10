@@ -27,6 +27,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// MerkleRootID is the identity every SBOM root is hashed under. It is a
+// sentinel rather than the artifact name on purpose: two artifacts with an
+// identical dependency set must reach the same root hash, or the whole tree is
+// stored twice. The artifact name lives in the sboms row instead.
+const MerkleRootID = "ROOT"
+
 // MerkleTree is one SBOM, keyed by subtree hash rather than by component id.
 //
 // hash(component_id, sorted child hashes) covers a component's entire child
@@ -55,13 +61,12 @@ func (n *MerkleNode) IsLeaf() bool {
 	return len(n.Children) == 0
 }
 
-// MerkleEdge is one persisted edge. A component with n children yields n edges
-// sharing a SubtreeHash; a leaf yields one edge with a nil child, which is what
-// keeps its component id resolvable.
+// MerkleEdge is one persisted edge - a pure pivot between two node hashes. A
+// component with n children yields n edges sharing a SubtreeHash; a leaf yields
+// none, since its component id is carried by its node row instead.
 type MerkleEdge struct {
 	SubtreeHash                 uuid.UUID
-	ComponentID                 string
-	DirectDependencySubtreeHash *uuid.UUID
+	DirectDependencySubtreeHash uuid.UUID
 }
 
 // merkleCycleMarker stands in for a node already on the recursion stack. A
@@ -177,57 +182,63 @@ func (t *MerkleTree) build(adj Adjacency, ref, rootComponentID string, hashes ma
 	return hash
 }
 
-// MerkleTreeFromEdges rebuilds a tree from persisted edges. root selects which
-// SBOM to materialize, since the edges handed in may cover several.
-func MerkleTreeFromEdges(edges []MerkleEdge, root uuid.UUID) (*MerkleTree, error) {
-	t := &MerkleTree{Root: root, nodes: make(map[uuid.UUID]*MerkleNode)}
+// MerkleTreeFromNodesAndEdges rebuilds a tree from persisted rows. root selects
+// which SBOM to materialize, since the rows handed in may cover several.
+//
+// Nodes carry the component ids and edges only the shape, so a leaf is a node
+// with no outgoing edge rather than an edge with a nil child. Children on the
+// nodes handed in are ignored - the edges are the authority on shape.
+func MerkleTreeFromNodesAndEdges(nodes []MerkleNode, edges []MerkleEdge, root uuid.UUID) (*MerkleTree, error) {
+	t := &MerkleTree{Root: root, nodes: make(map[uuid.UUID]*MerkleNode, len(nodes))}
+
+	for _, n := range nodes {
+		t.nodes[n.SubtreeHash] = &MerkleNode{SubtreeHash: n.SubtreeHash, ComponentID: n.ComponentID}
+	}
 
 	for _, e := range edges {
-		node, exists := t.nodes[e.SubtreeHash]
-		if !exists {
-			node = &MerkleNode{SubtreeHash: e.SubtreeHash, ComponentID: e.ComponentID}
-			t.nodes[e.SubtreeHash] = node
+		node, ok := t.nodes[e.SubtreeHash]
+		if !ok {
+			return nil, fmt.Errorf("edge references subtree %s with no node row", e.SubtreeHash)
 		}
-		// a nil child is the leaf marker - that row exists only so the leaf's
-		// component id stays resolvable
-		if e.DirectDependencySubtreeHash != nil {
-			node.Children = append(node.Children, *e.DirectDependencySubtreeHash)
-		}
+		node.Children = append(node.Children, e.DirectDependencySubtreeHash)
 	}
 
 	for _, node := range t.nodes {
 		sortHashes(node.Children)
 	}
 
-	if _, ok := t.nodes[root]; !ok && len(edges) > 0 {
-		return nil, fmt.Errorf("root subtree %s is not present in the given edges", root)
+	if _, ok := t.nodes[root]; !ok && len(nodes) > 0 {
+		return nil, fmt.Errorf("root subtree %s is not present in the given nodes", root)
 	}
 	return t, nil
 }
 
-// Edges renders the tree as rows to persist. Insert them with ON CONFLICT DO
-// NOTHING: rows for subtrees the instance has already stored are no-ops, which
-// is where the storage saving comes from.
+// Edges renders the tree's shape as rows to persist. Leaves contribute nothing:
+// they have no outgoing edge, and Nodes carries their component id.
+//
+// Insert them with ON CONFLICT DO NOTHING: rows for subtrees the instance has
+// already stored are no-ops, which is where the storage saving comes from.
 func (t *MerkleTree) Edges() []MerkleEdge {
 	edges := make([]MerkleEdge, 0, len(t.nodes))
 	for _, node := range t.nodes {
-		if node.IsLeaf() {
-			edges = append(edges, MerkleEdge{
-				SubtreeHash: node.SubtreeHash,
-				ComponentID: node.ComponentID,
-			})
-			continue
-		}
 		for _, child := range node.Children {
 			edges = append(edges, MerkleEdge{
 				SubtreeHash:                 node.SubtreeHash,
-				ComponentID:                 node.ComponentID,
-				DirectDependencySubtreeHash: &child,
+				DirectDependencySubtreeHash: child,
 			})
 		}
-
 	}
 	return edges
+}
+
+// Nodes renders the tree's component identities as rows to persist, one per
+// distinct subtree. Insert these before Edges: an edge references two of them.
+func (t *MerkleTree) Nodes() []MerkleNode {
+	nodes := make([]MerkleNode, 0, len(t.nodes))
+	for _, node := range t.nodes {
+		nodes = append(nodes, MerkleNode{SubtreeHash: node.SubtreeHash, ComponentID: node.ComponentID})
+	}
+	return nodes
 }
 
 // Node returns the node for a subtree hash, or nil.
