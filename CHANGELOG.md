@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.13.7
+
+### Added
+- Add an `--offline` flag to the `attest` command in `devguard-scanner`, allowing attestations to be generated without writing/pushing results.
+
+
 ## [v1.13.6] - 2026-09-08
 
 ### Changed
