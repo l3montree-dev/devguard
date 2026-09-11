@@ -99,8 +99,13 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// upload the attestation to the backend
-	return scanner.UploadAttestation(cmd.Context(), predicate)
+	if !config.RuntimeBaseConfig.NoWrite {
+		// upload the attestation to the backend
+		return scanner.UploadAttestation(cmd.Context(), predicate)
+	} else {
+		slog.Info("not uploading attestation to backend due to --no-write flag", "predicate", predicate)
+		return nil
+	}
 }
 
 func NewAttestCommand() *cobra.Command {
@@ -163,6 +168,6 @@ attestation directly to the image in the OCI registry using cosign.`,
 	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (if required)")
 	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to (optional)")
 	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If empty, a name will be generated from the asset name.")
-
+	cmd.Flags().Bool("noWrite", false, "If set, do not upload the attestation to the backend. Useful for testing or debugging.")
 	return cmd
 }
