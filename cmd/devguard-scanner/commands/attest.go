@@ -99,11 +99,11 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if !config.RuntimeBaseConfig.NoWrite {
+	if !config.RuntimeBaseConfig.Offline {
 		// upload the attestation to the backend
 		return scanner.UploadAttestation(cmd.Context(), predicate)
 	} else {
-		slog.Info("not uploading attestation to backend due to --no-write flag", "predicate", predicate)
+		slog.Info("not uploading attestation to backend due to --offline flag", "predicate", predicate)
 		return nil
 	}
 }
@@ -142,7 +142,10 @@ attestation directly to the image in the OCI registry using cosign.`,
   devguard-scanner curl https://api.example.com/sbom.json --token=... | devguard-scanner attest - ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom
 
   # Upload attestation without attaching to an image
-  devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1`,
+  devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1
+
+  # Attach an attestation to an image without uploading it to DevGuard (e.g. a multi-arch manifest)
+  devguard-scanner attest sbom.json ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom --offline`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestCmd(cmd, args)
@@ -168,6 +171,6 @@ attestation directly to the image in the OCI registry using cosign.`,
 	cmd.Flags().StringP("password", "p", "", "The password to authenticate to the container registry (if required)")
 	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to (optional)")
 	cmd.Flags().String("artifactName", "", "The name of the artifact which was scanned. If empty, a name will be generated from the asset name.")
-	cmd.Flags().Bool("noWrite", false, "If set, do not upload the attestation to the backend. Useful for testing or debugging.")
+	cmd.Flags().BoolP("offline", "o", false, "If set, do not upload the attestation to the backend. Useful for testing, debugging, or attesting artifacts that have no corresponding DevGuard asset (e.g. a multi-arch manifest).")
 	return cmd
 }
