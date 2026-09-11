@@ -39,7 +39,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 1, // metadata component added to components list
-			expectedDeps:       2, // root's own entry + lib1's own (empty) entry
+			expectedDeps:       1, // the root's entry; lib1 declares no children, so it gets none
 			wantErr:            false,
 		},
 		{
@@ -66,10 +66,10 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			// comp1 is never declared as anyone's dependency (extra's Dependencies is
-			// nil), so it's unreachable and gets pruned - only lib1 (the metadata
-			// component) survives.
-			expectedComponents: 1,
-			expectedDeps:       2, // root's own entry + lib1's own (empty) entry
+			// nil), but merging no longer prunes: every component the extra lists is
+			// carried over, reachable or not.
+			expectedComponents: 2, // lib1 (the metadata component) + comp1
+			expectedDeps:       1, // the root's entry; nothing else declares children
 			wantErr:            false,
 		},
 		{
@@ -90,7 +90,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 1, // metadata component added to components list
-			expectedDeps:       2, // root's own entry + lib1's own (empty) entry
+			expectedDeps:       1, // the root's entry; lib1 declares no children, so it gets none
 			wantErr:            false,
 		},
 		{
@@ -145,7 +145,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 4, // comp1 + lib1 + comp2 + lib2
-			expectedDeps:       5, // root + lib1 + comp1 (empty) + lib2 + comp2 (empty)
+			expectedDeps:       3, // root + lib1 + lib2; the leaves declare no children
 			wantErr:            false,
 		},
 		{
@@ -181,7 +181,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 0,
-			expectedDeps:       1, // root dependency only
+			expectedDeps:       0, // the SBOM is skipped, so nothing is merged under the root
 			wantErr:            false,
 		},
 		{
@@ -198,7 +198,7 @@ func TestMergeSBOMs(t *testing.T) {
 				},
 			},
 			expectedComponents: 0,
-			expectedDeps:       1, // root dependency only
+			expectedDeps:       0, // the SBOM is skipped, so nothing is merged under the root
 			wantErr:            false,
 		},
 	}
