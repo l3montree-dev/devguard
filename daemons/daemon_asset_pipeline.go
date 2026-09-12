@@ -610,6 +610,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer tx.Rollback(ctx)
 
+	// make that temporary when not testing
 	_, err = tx.Exec(ctx, `
 	CREATE TABLE purl_mapping (
 		purl text,
@@ -618,24 +619,6 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	);`)
 	if err != nil {
 		return fmt.Errorf("could not create temp table for purl Mapping: %w", err)
-	}
-
-	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths;`)
-	if err != nil {
-		return fmt.Errorf("could not drop table for vuln paths: %w", err)
-	}
-
-	_, err = tx.Exec(ctx, `
-	CREATE TABLE vuln_paths (
-		component_purl text,
-		path text[],
-		asset_id uuid,
-		asset_version_name text,
-		artifact_name text,
-		source text
-	);`)
-	if err != nil {
-		return fmt.Errorf("could not create table for vuln paths: %w", err)
 	}
 
 	start = time.Now()
@@ -647,13 +630,46 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		return fmt.Errorf("could not copy rows into temporary table: %w", err)
 	}
 
-	slog.Info("successfully populated temporary table", "time", time.Since(start))
+	// precompute the join to the cve ids
+	_, err = tx.Exec(ctx, `
+	CREATE TABLE purl_to_cves AS (
+		SELECT DISTINCT pm.purl,pm.fixed_version, cac.cve_id 
+		FROM purl_mapping pm 
+		JOIN cve_affected_component cac
+		ON cac.affected_component_id = pm.affected_component_id
+	);
+	
+	DROP TABLE public.purl_mapping;
+	ALTER TABLE public.purl_to_cves RENAME TO purl_mapping;`)
+	if err != nil {
+		return fmt.Errorf("could not convert affected component mapping to cve id mapping: %w", err)
+	}
 
 	_, err = tx.Exec(ctx, `
-	ALTER TABLE purl_mapping 
-		ADD CONSTRAINT purl_mapping_pkey PRIMARY KEY (purl, affected_component_id);`)
+	CREATE INDEX ON public.purl_mapping (purl,cve_id,fixed_version);`)
 	if err != nil {
-		return fmt.Errorf("could not create primary key on temp table for purl Mapping: %w", err)
+		return fmt.Errorf("could not enforce primary key on purl_mapping table: %w", err)
+	}
+
+	slog.Info("successfully populated temporary table", "time", time.Since(start))
+
+	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths;`)
+	if err != nil {
+		return fmt.Errorf("could not drop table for vuln paths: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+	CREATE TABLE vuln_paths (
+		component_purl text,
+		path text[],
+		cve_id text,
+		fixed_version text,
+		asset_id uuid,
+		asset_version_name text,
+		artifact_name text
+	);`)
+	if err != nil {
+		return fmt.Errorf("could not create table for vuln paths: %w", err)
 	}
 
 	err = tx.Commit(ctx)
@@ -667,19 +683,19 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	start = time.Now()
 	const purlBatchSize = 50
 	totalVulns := 0
-	vulnPathColumns := []string{"component_purl", "path", "asset_id", "asset_version_name", "artifact_name", "source"}
+	vulnPathColumns := []string{"component_purl", "path", "cve_id", "fixed_version", "asset_id", "asset_version_name", "artifact_name"}
 	for start := 0; start < len(affectedPurls); start += purlBatchSize {
 		timer := time.Now()
 		end := min(start+purlBatchSize, len(affectedPurls))
-		vulns, err := runner.GetPathsForPurls(ctx, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
+		vulnsPerSBOM, err := runner.GetPathsForPurls(ctx, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
 		if err != nil {
 			return fmt.Errorf("could not get paths for purls: %w", err)
 		}
 
-		copyRows := make([][]any, 0, len(vulns))
-		for sbom, componentsWithPath := range vulns {
-			for i := range componentsWithPath {
-				copyRows = append(copyRows, []any{componentsWithPath[i].ComponentPurl, componentsWithPath[i].Path, sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Source})
+		copyRows := make([][]any, 0, len(vulnsPerSBOM))
+		for sbom, vulns := range vulnsPerSBOM {
+			for i := range vulns {
+				copyRows = append(copyRows, []any{vulns[i].ComponentPurl, vulns[i].Path, vulns[i].CVE, vulns[i].FixedVersion, sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName})
 			}
 		}
 
@@ -689,106 +705,26 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		}
 		totalVulns += len(copyRows)
 
-		slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer), "sboms", len(vulns), "paths", len(copyRows))
+		slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer), "sboms", len(vulnsPerSBOM), "paths", len(copyRows))
 	}
 
 	slog.Info("finished scanning all purls", "time", time.Since(start), "total vulns", totalVulns)
 	return nil
-	// // maybe only scan default branches
-	// avRows, err := conn.Query(ctx, `
-	// SELECT DISTINCT cd.component_id, cd.asset_id, cd.asset_version_name FROM public.component_dependencies cd
-	// WHERE cd.component_id LIKE 'artifact:%';`)
-	// if err != nil {
-	// 	return fmt.Errorf("could not fetch all asset version to scan: %w", err)
-	// }
-	// defer avRows.Close()
-
-	// type mapKey struct {
-	// 	AssetVersionName, AssetID string
-	// }
-	// var key mapKey
-	// var componentID, assetID, assetVersionName string
-	// avToArtifacts := make(map[mapKey][]string, 1024)
-	// for avRows.Next() {
-	// 	err = avRows.Scan(&componentID, &assetID, &assetVersionName)
-	// 	if err != nil {
-	// 		return fmt.Errorf("could not scan asset version row: %w", err)
-	// 	}
-	// 	key = mapKey{AssetVersionName: assetVersionName, AssetID: assetID}
-	// 	avToArtifacts[key] = append(avToArtifacts[key], strings.TrimPrefix(componentID, "artifact:"))
-	// }
-	// avRows.Close()
-	// if err := avRows.Err(); err != nil {
-	// 	return err
-	// }
-
-	// allAssetVersions := make([]assetVersionInAsset, 0, len(avToArtifacts))
-	// for key, artifacts := range avToArtifacts {
-	// 	parsedAssetID, err := uuid.Parse(key.AssetID)
-	// 	if err != nil {
-	// 		return fmt.Errorf("could not parse assetID: %w", err)
-	// 	}
-	// 	allAssetVersions = append(allAssetVersions, assetVersionInAsset{
-	// 		AssetVersionName: key.AssetVersionName,
-	// 		AssetID:          parsedAssetID,
-	// 		Artifacts:        artifacts,
-	// 	})
-	// }
-
-	// slog.Info("finished collecting asset versions with components", "amount", len(allAssetVersions))
-
-	// start = time.Now()
-	// const maxNumberOfGoRoutines = 8
-	// scanningWaitGroup, scanCtx := errgroup.WithContext(ctx)
-	// scanningWaitGroup.SetLimit(maxNumberOfGoRoutines)
-
-	// allResults := make([]models.DependencyVuln, 0, len(affectedPurls)*8)
-	// resultsChannel := make(chan *models.DependencyVuln, maxNumberOfGoRoutines*16)
-
-	// go func() {
-	// 	for vuln := range resultsChannel {
-	// 		allResults = append(allResults, *vuln)
-	// 	}
-	// }()
-
-	// for i, av := range allAssetVersions {
-	// 	if i%5 == 0 {
-	// 		slog.Info(fmt.Sprintf("Scanning asset versions, processing %d/%d", i, len(allAssetVersions)), "time", time.Since(start))
-	// 	}
-	// 	if err := runner.ScanAssetVersion(scanCtx, av, resultsChannel, isPurlAffected); err != nil {
-	// 		slog.Error("could not scan asset version", "av_name", av.AssetVersionName, "assetID", av.AssetID, "error", err)
-	// 	}
-	// 	// scanningWaitGroup.Go(func() error {
-	// 	// 	if err := runner.ScanAssetVersion(scanCtx, av, resultsChannel, isPurlAffected); err != nil {
-	// 	// 		slog.Error("could not scan asset version", "av_name", av.AssetVersionName, "assetID", av.AssetID, "error", err)
-	// 	// 	}
-	// 	// 	return nil
-	// 	// })
-	// }
-	// // scanningWaitGroup.Wait()
-	// close(resultsChannel)
-
-	// slog.Info("finished collecting all paths to all purls", "amount", len(allResults), "time", time.Since(start))
-	// return nil
-}
-
-type vulnsInSBOM struct {
-	SBOM
-	Vulns []componentWithPath
 }
 
 type SBOM struct {
 	AssetID          uuid.UUID
 	AssetVersionName string
 	ArtifactName     string
-	Source           string
 }
-type componentWithPath struct {
+type vulnIdentity struct {
 	ComponentPurl string
+	CVE           string
+	FixedVersion  *string
 	Path          []string
 }
 
-func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string) (map[SBOM][]componentWithPath, error) {
+func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string) (map[SBOM][]vulnIdentity, error) {
 	// maybe use prepared statements
 	rows, err := runner.pgxpool.Query(ctx, `
 	WITH RECURSIVE up AS (
@@ -809,41 +745,32 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string
 		WHERE EXISTS (SELECT 1 FROM sboms s WHERE s.root_subtree_hash = up.node_hash)
 		ORDER BY up.node_hash, up.path[cardinality(up.path)], up.path[2], cardinality(up.path)
 	)
-	SELECT mn.component_id, r.path, s.asset_id, s.asset_version_name, s.artifact_name, s.source
+	SELECT mn.component_id, r.path, cves.cve,pm.fixed_version, s.asset_id, s.asset_version_name, s.artifact_name
 	FROM roots r
 	JOIN sboms s ON s.root_subtree_hash = r.root_hash
-	JOIN sbom_merkle_nodes mn ON mn.node_hash = r.component_hash;`, purls)
+	JOIN sbom_merkle_nodes mn ON mn.node_hash = r.component_hash
+	JOIN purl_mapping pm ON pm.purl = mn.component_id
+	JOIN cves ON cves.id = pm.cve_id;`, purls)
 	if err != nil {
 		return nil, fmt.Errorf("could not query paths for purls: %w", err)
 	}
 	defer rows.Close()
 
-	vulns := make(map[SBOM][]componentWithPath, len(purls))
+	vulnsPerSBOM := make(map[SBOM][]vulnIdentity, len(purls))
 	var key SBOM
-	var vuln componentWithPath
+	var vuln vulnIdentity
 	for rows.Next() {
-		err = rows.Scan(&vuln.ComponentPurl, &vuln.Path, &key.AssetID, &key.AssetVersionName, &key.ArtifactName, &key.Source)
+		err = rows.Scan(&vuln.ComponentPurl, &vuln.Path, &vuln.CVE, &vuln.FixedVersion, &key.AssetID, &key.AssetVersionName, &key.ArtifactName)
 		if err != nil {
 			return nil, fmt.Errorf("could not scan row: %w", err)
 		}
-		vulns[key] = append(vulns[key], vuln)
+		vulnsPerSBOM[key] = append(vulnsPerSBOM[key], vuln)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("could not scan rows: %w", err)
 	}
-	return vulns, nil
-}
-
-type assetVersionInAsset struct {
-	AssetVersionName string
-	AssetID          uuid.UUID
-	Artifacts        []string
-}
-
-type purlWithPaths struct {
-	Purl  string
-	Paths []string
+	return vulnsPerSBOM, nil
 }
 
 func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
