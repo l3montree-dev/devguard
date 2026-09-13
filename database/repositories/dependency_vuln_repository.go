@@ -6,6 +6,7 @@ import (
 	"iter"
 	"log/slog"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -78,17 +79,17 @@ func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, 
 		Joins("JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id OR (vuln_events.asset_signature IS NOT NULL AND vuln_events.asset_signature = dependency_vulns.asset_signature)").
 		Where("vuln_events.vex_rule_id = ?", vexRuleID).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Preload("Events.VexRule").Find(&dependencyVulns).Error
+	}).Preload("Events.VexRule").Preload("Artifacts").Find(&dependencyVulns).Error
 	if err != nil {
 		return nil, err
 	}
-	if err := repository.attachGroupEvents(ctx, tx, dependencyVulns); err != nil {
+	if err := AttachGroupEvents(repository.GetDB(ctx, tx), dependencyVulns, nil); err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) attachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln) error {
+func AttachGroupEvents(db *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error {
 	if len(vulns) == 0 {
 		return nil
 	}
@@ -102,9 +103,13 @@ func (repository *dependencyVulnRepository) attachGroupEvents(ctx context.Contex
 		}
 	}
 
+	q := db.Preload("VexRule").Where("asset_signature = ANY (?)", pq.Array(signatures))
+	if cutoff != nil {
+		q = q.Where("created_at <= ?", *cutoff)
+	}
+
 	var groupEvents []models.VulnEvent
-	if err := repository.Repository.GetDB(ctx, tx).Preload("VexRule").
-		Where("asset_signature = ANY (?)", pq.Array(signatures)).Order("created_at ASC").Find(&groupEvents).Error; err != nil {
+	if err := q.Order("created_at ASC").Find(&groupEvents).Error; err != nil {
 		return err
 	}
 	if len(groupEvents) == 0 {
@@ -356,7 +361,7 @@ func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB
 	}
 
 	vulns := []models.DependencyVuln{t}
-	if err := repository.attachGroupEvents(ctx, tx, vulns); err != nil {
+	if err := AttachGroupEvents(repository.GetDB(ctx, tx), vulns, nil); err != nil {
 		return t, err
 	}
 	return vulns[0], nil
