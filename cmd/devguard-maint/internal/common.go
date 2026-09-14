@@ -233,7 +233,7 @@ func hasChangelogEntry(content, tag string) bool {
 // versions; if approved, it generates and inserts a changelog entry
 // documenting just those image bumps. If declined, it returns an error so the
 // release can be aborted for a manual entry.
-func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTag string) error {
+func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag string) error {
 	data, err := os.ReadFile(changelogPath)
 	if err != nil {
 		return fmt.Errorf("could not read %s: %w", changelogPath, err)
@@ -249,8 +249,8 @@ func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTa
 	}
 
 	entry := fmt.Sprintf(
-		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` / `kratos` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`\n\n---\n\n",
-		tag, time.Now().Format("2006-01-02"), apiTag, webTag, ciComponentsTag,
+		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`, `kratos` to `%s`, `postgresql` to `%s`\n\n---\n\n",
+		tag, time.Now().Format("2006-01-02"), apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag,
 	)
 
 	idx := strings.Index(content, "\n## [")

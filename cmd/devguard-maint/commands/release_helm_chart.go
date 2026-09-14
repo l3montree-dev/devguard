@@ -94,7 +94,7 @@ func runReleaseHelmChart(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("working directory devguard-helm-chart is not clean")
 	}
 
-	if err := i.EnsureHelmChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag, apiTag, webTag, ciComponentsTag); err != nil {
+	if err := i.EnsureHelmChangelogEntry(filepath.Join("devguard-helm-chart", "CHANGELOG.md"), tag, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag); err != nil {
 		return err
 	}
 
