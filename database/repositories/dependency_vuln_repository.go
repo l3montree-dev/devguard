@@ -342,7 +342,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 }
 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersionPagedAndFlat(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.DependencyVuln], error) {
-	return repository.GetDependencyVulnsPaged(ctx, tx, []string{assetVersionName}, []string{assetID.String()}, pageInfo, search, filter, sort)
+	return repository.GetDependencyVulnsPaged(ctx, tx, pq.Array([]string{assetVersionName}), pq.Array([]string{assetID.String()}), pageInfo, search, filter, sort)
 }
 
 func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.DependencyVuln, error) {
