@@ -100,10 +100,10 @@ func BenchmarkNewScanAsset(b *testing.B) {
 	b.ReportMetric(float64(queries.Duration().Milliseconds())/float64(iterations), "db_ms/op")
 
 	var mappedRows int64
-	if err := db.Raw(`SELECT count(*) FROM purl_mapping`).Scan(&mappedRows).Error; err != nil {
-		b.Fatalf("could not count purl_mapping rows: %v", err)
+	if err := db.Raw(`SELECT count(*) FROM vuln_paths;`).Scan(&mappedRows).Error; err != nil {
+		b.Fatalf("could not count vuln_paths rows: %v", err)
 	}
-	b.Logf("%d iteration(s) over %d dependencies produced %d purl_mapping rows", iterations, dependencies, mappedRows)
+	b.Logf("%d iteration(s) over %d dependencies produced %d vuln_path rows", iterations, dependencies, mappedRows)
 	for _, line := range queries.Report(10, iterations) {
 		b.Logf("%s", line)
 	}

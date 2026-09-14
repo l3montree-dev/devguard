@@ -308,7 +308,7 @@ type DependencyVulnRepository interface {
 	ListUnfixedByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(ctx context.Context, tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(ctx context.Context, tx DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetNotFixedDependencyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(ctx context.Context, tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(ctx context.Context, tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
@@ -544,6 +544,7 @@ type FirstPartyVulnService interface {
 type ScanService interface {
 	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	HandleScanResultForVulns(ctx context.Context, tx DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)
 	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)

@@ -163,12 +163,12 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx
 // bounds every preload issued for them.
 const otherAssetVersionsBatchSize = 1000
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetNotFixedDependencyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
 	q := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Preload("CVE").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
+	}).Preload("CVE").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, dtos.VulnStateFixed)
 
 	var batch []models.DependencyVuln
 	if err := q.FindInBatches(&batch, otherAssetVersionsBatchSize, func(*gorm.DB, int) error {

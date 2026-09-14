@@ -465,7 +465,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.handleScanResult(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	opened, closed, newState, err = s.HandleScanResultForVulns(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -512,7 +512,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	return opened, closed, newState, nil
 }
 
-func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -520,18 +520,11 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	}
 
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetNotFixedDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
-
-	// Keep all fixed vulns in existingDependencyVulns so that when a component reappears,
-	// the vuln lands in Unchanged rather than NewlyDiscovered. This lets us fire an
-	// explicit reopened event instead of silently resetting state via a detected event.
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dv models.DependencyVuln) bool {
-		return dv.State != dtos.VulnStateFixed
-	})
 
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
@@ -547,7 +540,6 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	})
 	fixedOnThisArtifactName := utils.Filter(diff.RemovedFromArtifact, filterPredicate)
 
-	// newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(diff.NewlyDiscovered, existingVulnsOnOtherBranch)
 	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(diff.NewlyDiscovered, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
 
 	// make sure to first create a user detected event for vulnerabilities with just upstream events
