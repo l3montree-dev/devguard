@@ -49,6 +49,9 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 		if purl.Type == "deb" || purl.Type == "rpm" {
 			if epoch := qualifier.Map()["epoch"]; epoch != "" {
 				normalizedVersion = epoch + ":" + normalizedVersion
+			} else {
+				// If no epoch qualifier is present, prepend "0:" to the version
+				normalizedVersion = "0:" + normalizedVersion
 			}
 		}
 	} else {
