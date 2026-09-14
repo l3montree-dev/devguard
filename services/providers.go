@@ -44,7 +44,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewCompliancePostureService, fx.As(new(shared.CompliancePostureService)))),
 	fx.Provide(fx.Annotate(NewGitHubVexFetcher, fx.As(new(shared.GitHubVexFetcher)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(shared.LogService)))),
-	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(monitoring.LogService)))),
+	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(monitoring.AlertLogService)))),
 	fx.Provide(func(db shared.DB) *scan.PurlComparer {
 		return scan.NewPurlComparer(db, nil) // nil to use default cache size
 	}),

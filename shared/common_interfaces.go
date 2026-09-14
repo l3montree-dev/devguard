@@ -102,6 +102,7 @@ type SBOMScanner interface {
 }
 type ProjectRepository interface {
 	Read(ctx context.Context, tx DB, projectID uuid.UUID) (models.Project, error)
+	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Project, error)
 	ReadBySlug(ctx context.Context, tx DB, organizationID uuid.UUID, slug string) (models.Project, error)
 	ReadBySlugUnscoped(ctx context.Context, tx DB, organizationID uuid.UUID, slug string) (models.Project, error)
 	Update(ctx context.Context, tx DB, project *models.Project) error
@@ -179,6 +180,7 @@ type AssetRepository interface {
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
 	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadWithProjects(ctx context.Context, tx *gorm.DB, id []uuid.UUID) ([]models.Asset, error)
+	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
 }
 
@@ -494,6 +496,7 @@ type AssetVersionService interface {
 type AssetVersionRepository interface {
 	All(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 	Read(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
+	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
 	GetDB(ctx context.Context, tx DB) DB
 	Begin(ctx context.Context) DB
 	Delete(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
@@ -915,8 +918,7 @@ type TrustedEntityRepository interface {
 }
 
 type LogService interface {
-	StoreCaptureException(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error
-	StoreRecoverPanic(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error
+	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error
 	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID) (Paged[models.Log], error)
 }
 

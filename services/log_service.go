@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type logService struct {
@@ -35,40 +35,42 @@ func NewLogsService(
 	}
 }
 
-func (s logService) cascadeIDs(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID uuid.UUID, assetVersionName string) (uuid.UUID, uuid.UUID, uuid.UUID, string, error) {
-	var cascadedProjectID, cascadedAssetID uuid.UUID
+func (s logService) cascadeIDs(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string) (*uuid.UUID, *uuid.UUID, *uuid.UUID, string, error) {
+	//Given any ID, this function is suppose to find every ID of every parent if not existing
+
+	var cascadedProjectID, cascadedAssetID *uuid.UUID
 	var cascadedAssetVersionName string
 
-	if assetID != uuid.Nil {
-		asset, err := s.assetRepository.Read(ctx, tx, assetID)
+	if assetID != nil {
+		asset, err := s.assetRepository.ReadWithoutErrorLog(ctx, tx, *assetID)
 		if err != nil {
-			return uuid.Nil, uuid.Nil, uuid.Nil, "", err
+			return nil, nil, nil, "", err
 		}
-		projectID = asset.ProjectID
+		projectID = &asset.ProjectID
 
 		if assetVersionName != "" {
-			assetVersion, err := s.assetVersionRepository.Read(ctx, tx, assetVersionName, assetID)
+			assetVersion, err := s.assetVersionRepository.ReadWithoutErrorLog(ctx, tx, assetVersionName, *assetID)
 			if err != nil {
-				return uuid.Nil, uuid.Nil, uuid.Nil, "", err
+				return nil, nil, nil, "", err
 			}
 			cascadedAssetVersionName = assetVersion.Name
 		}
 		cascadedAssetID = assetID
 	}
 	// If asset is nil, continue with project level -> Error was on project level instead of asset level
-	if projectID != uuid.Nil {
+	if projectID != nil {
 		cascadedProjectID = projectID
-		project, err := s.projectRepository.Read(ctx, tx, projectID)
+		project, err := s.projectRepository.ReadWithoutErrorLog(ctx, tx, *projectID)
 		if err != nil {
-			return uuid.Nil, uuid.Nil, uuid.Nil, "", err
+			return nil, nil, nil, "", err
 		}
-		orgID = project.OrganizationID
+		orgID = &project.OrganizationID
 	}
 
 	return orgID, cascadedProjectID, cascadedAssetID, cascadedAssetVersionName, nil
 }
 
-func (s logService) StoreCaptureException(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error {
+func (s logService) SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error {
 	cascadedOrgID, cascadedProjectID, cascadedAssetID, cascadedAssetVersionName, err := s.cascadeIDs(ctx, tx, orgID, projectID, assetID, assetVersionName)
 	if err != nil {
 		return err
@@ -80,30 +82,7 @@ func (s logService) StoreCaptureException(ctx context.Context, tx *gorm.DB, orgI
 		AssetID:          cascadedAssetID,
 		AssetVersionName: cascadedAssetVersionName,
 		Message:          message,
-		LogLevel:         logger.Error,
-	}
-
-	err = s.logRepository.Save(ctx, tx, &log)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s logService) StoreRecoverPanic(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error {
-	cascadedOrgID, cascadedProjectID, cascadedAssetID, cascadedAssetVersionName, err := s.cascadeIDs(ctx, tx, orgID, projectID, assetID, assetVersionName)
-	if err != nil {
-		return err
-	}
-
-	log := models.Log{
-		OrgID:            cascadedOrgID,
-		ProjectID:        cascadedProjectID,
-		AssetID:          cascadedAssetID,
-		AssetVersionName: cascadedAssetVersionName,
-		Message:          message,
-		LogLevel:         logger.Error,
+		LogLevel:         dtos.LogLevelError,
 	}
 
 	err = s.logRepository.Save(ctx, tx, &log)

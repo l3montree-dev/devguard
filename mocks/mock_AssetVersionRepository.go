@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // NewAssetVersionRepository creates a new instance of AssetVersionRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1331,6 +1332,84 @@ func (_c *AssetVersionRepository_ReadBySlug_Call) Return(assetVersion models.Ass
 }
 
 func (_c *AssetVersionRepository_ReadBySlug_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, slug string) (models.AssetVersion, error)) *AssetVersionRepository_ReadBySlug_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReadWithoutErrorLog provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+	ret := _mock.Called(ctx, tx, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadWithoutErrorLog")
+	}
+
+	var r0 models.AssetVersion
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, string, uuid.UUID) (models.AssetVersion, error)); ok {
+		return returnFunc(ctx, tx, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, string, uuid.UUID) models.AssetVersion); ok {
+		r0 = returnFunc(ctx, tx, assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(models.AssetVersion)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetVersionRepository_ReadWithoutErrorLog_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadWithoutErrorLog'
+type AssetVersionRepository_ReadWithoutErrorLog_Call struct {
+	*mock.Call
+}
+
+// ReadWithoutErrorLog is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *AssetVersionRepository_Expecter) ReadWithoutErrorLog(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *AssetVersionRepository_ReadWithoutErrorLog_Call {
+	return &AssetVersionRepository_ReadWithoutErrorLog_Call{Call: _e.mock.On("ReadWithoutErrorLog", ctx, tx, assetVersionName, assetID)}
+}
+
+func (_c *AssetVersionRepository_ReadWithoutErrorLog_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID)) *AssetVersionRepository_ReadWithoutErrorLog_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_ReadWithoutErrorLog_Call) Return(assetVersion models.AssetVersion, err error) *AssetVersionRepository_ReadWithoutErrorLog_Call {
+	_c.Call.Return(assetVersion, err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_ReadWithoutErrorLog_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)) *AssetVersionRepository_ReadWithoutErrorLog_Call {
 	_c.Call.Return(run)
 	return _c
 }

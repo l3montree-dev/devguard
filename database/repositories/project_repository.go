@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type projectRepository struct {
@@ -27,6 +28,15 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),
 	}
+}
+
+func (g *projectRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Project, error) {
+	var result models.Project
+	err := g.GetDB(ctx, tx).Session(&gorm.Session{
+		Logger:               logger.Default.LogMode(logger.Silent),
+		FullSaveAssociations: false,
+	}).Model(models.Project{}).Where("ID = ?", id).First(&result).Error
+	return result, err
 }
 
 func (g *projectRepository) All(ctx context.Context, tx *gorm.DB) ([]models.Project, error) {

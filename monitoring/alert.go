@@ -27,9 +27,8 @@ import (
 	"gorm.io/gorm"
 )
 
-type LogService interface {
-	StoreCaptureException(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error
-	StoreRecoverPanic(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, assetVersionName string, message string) error
+type AlertLogService interface {
+	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error
 }
 
 type AlertOptions struct {
@@ -41,9 +40,9 @@ type AlertOptions struct {
 	AssetVersionName string
 }
 
-var logger LogService
+var logger AlertLogService
 
-func SetLogger(ls LogService) {
+func SetLogger(ls AlertLogService) {
 	logger = ls
 }
 
@@ -63,7 +62,7 @@ func Alert(message string, err error, opts AlertOptions) {
 		slog.Error("could not store error in database", "msg", "logger has not been set yet")
 		return
 	}
-	loggerErr := logger.StoreCaptureException(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, message)
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, message)
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "error", err)
 	}
@@ -85,7 +84,7 @@ func RecoverAndAlert(message string, err error, opts AlertOptions) {
 	if err != nil {
 		storedMsg = fmt.Sprintf("%s: %v", message, err)
 	}
-	loggerErr := logger.StoreCaptureException(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, storedMsg)
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, storedMsg)
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
 	}
@@ -94,17 +93,5 @@ func RecoverAndAlert(message string, err error, opts AlertOptions) {
 func RecoverPanic(msg string, opts AlertOptions) {
 	if r := recover(); r != nil {
 		Alert(msg, fmt.Errorf("panic recovered: %v", r), opts)
-	}
-	ctx := opts.Ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if logger == nil {
-		slog.Error("could not store error in database", "msg", "logger has not been set yet")
-		return
-	}
-	loggerErr := logger.StoreRecoverPanic(ctx, opts.Tx, opts.OrgID, opts.ProjectID, opts.AssetID, opts.AssetVersionName, msg)
-	if loggerErr != nil {
-		slog.Error("could not store error in database", "msg", msg, "err", loggerErr)
 	}
 }

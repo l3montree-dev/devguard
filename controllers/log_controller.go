@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -30,7 +29,6 @@ func (controller *LogController) ListPaged(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
-	var logs shared.Paged[models.Log]
 	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, project.ID, asset.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get logs").WithInternal(err)
