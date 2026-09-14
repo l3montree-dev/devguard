@@ -75,7 +75,7 @@ type AdminRepository_GetAllExternalEntityOrganizations_Call struct {
 // GetAllExternalEntityOrganizations is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *AdminRepository_Expecter) GetAllExternalEntityOrganizations(ctx any, tx any) *AdminRepository_GetAllExternalEntityOrganizations_Call {
+func (_e *AdminRepository_Expecter) GetAllExternalEntityOrganizations(ctx interface{}, tx interface{}) *AdminRepository_GetAllExternalEntityOrganizations_Call {
 	return &AdminRepository_GetAllExternalEntityOrganizations_Call{Call: _e.mock.On("GetAllExternalEntityOrganizations", ctx, tx)}
 }
 

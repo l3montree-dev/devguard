@@ -72,7 +72,7 @@ type AdminClient_GetIdentity_Call struct {
 // GetIdentity is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID string
-func (_e *AdminClient_Expecter) GetIdentity(ctx any, userID any) *AdminClient_GetIdentity_Call {
+func (_e *AdminClient_Expecter) GetIdentity(ctx interface{}, userID interface{}) *AdminClient_GetIdentity_Call {
 	return &AdminClient_GetIdentity_Call{Call: _e.mock.On("GetIdentity", ctx, userID)}
 }
 
@@ -138,7 +138,7 @@ type AdminClient_GetIdentityWithCredentials_Call struct {
 // GetIdentityWithCredentials is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID string
-func (_e *AdminClient_Expecter) GetIdentityWithCredentials(ctx any, userID any) *AdminClient_GetIdentityWithCredentials_Call {
+func (_e *AdminClient_Expecter) GetIdentityWithCredentials(ctx interface{}, userID interface{}) *AdminClient_GetIdentityWithCredentials_Call {
 	return &AdminClient_GetIdentityWithCredentials_Call{Call: _e.mock.On("GetIdentityWithCredentials", ctx, userID)}
 }
 
@@ -205,7 +205,7 @@ type AdminClient_ListUser_Call struct {
 
 // ListUser is a helper method to define mock.On call
 //   - client1 client.IdentityAPIListIdentitiesRequest
-func (_e *AdminClient_Expecter) ListUser(client1 any) *AdminClient_ListUser_Call {
+func (_e *AdminClient_Expecter) ListUser(client1 interface{}) *AdminClient_ListUser_Call {
 	return &AdminClient_ListUser_Call{Call: _e.mock.On("ListUser", client1)}
 }
 

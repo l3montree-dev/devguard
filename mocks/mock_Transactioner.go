@@ -63,7 +63,7 @@ type Transactioner_Begin_Call[Tx any] struct {
 
 // Begin is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *Transactioner_Expecter[Tx]) Begin(ctx any) *Transactioner_Begin_Call[Tx] {
+func (_e *Transactioner_Expecter[Tx]) Begin(ctx interface{}) *Transactioner_Begin_Call[Tx] {
 	return &Transactioner_Begin_Call[Tx]{Call: _e.mock.On("Begin", ctx)}
 }
 
@@ -117,7 +117,7 @@ type Transactioner_GetDB_Call[Tx any] struct {
 // GetDB is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx Tx
-func (_e *Transactioner_Expecter[Tx]) GetDB(ctx any, tx any) *Transactioner_GetDB_Call[Tx] {
+func (_e *Transactioner_Expecter[Tx]) GetDB(ctx interface{}, tx interface{}) *Transactioner_GetDB_Call[Tx] {
 	return &Transactioner_GetDB_Call[Tx]{Call: _e.mock.On("GetDB", ctx, tx)}
 }
 
@@ -174,7 +174,7 @@ type Transactioner_Transaction_Call[Tx any] struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx Tx) error
-func (_e *Transactioner_Expecter[Tx]) Transaction(ctx any, fn any) *Transactioner_Transaction_Call[Tx] {
+func (_e *Transactioner_Expecter[Tx]) Transaction(ctx interface{}, fn interface{}) *Transactioner_Transaction_Call[Tx] {
 	return &Transactioner_Transaction_Call[Tx]{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 

@@ -62,7 +62,7 @@ type Resolver_CheckIfVulnerabilityIsFixed_Call[T any] struct {
 // CheckIfVulnerabilityIsFixed is a helper method to define mock.On call
 //   - vulnVersion string
 //   - fixedVersion string
-func (_e *Resolver_Expecter[T]) CheckIfVulnerabilityIsFixed(vulnVersion any, fixedVersion any) *Resolver_CheckIfVulnerabilityIsFixed_Call[T] {
+func (_e *Resolver_Expecter[T]) CheckIfVulnerabilityIsFixed(vulnVersion interface{}, fixedVersion interface{}) *Resolver_CheckIfVulnerabilityIsFixed_Call[T] {
 	return &Resolver_CheckIfVulnerabilityIsFixed_Call[T]{Call: _e.mock.On("CheckIfVulnerabilityIsFixed", vulnVersion, fixedVersion)}
 }
 
@@ -129,7 +129,7 @@ type Resolver_FetchPackageMetadata_Call[T any] struct {
 
 // FetchPackageMetadata is a helper method to define mock.On call
 //   - purl packageurl.PackageURL
-func (_e *Resolver_Expecter[T]) FetchPackageMetadata(purl any) *Resolver_FetchPackageMetadata_Call[T] {
+func (_e *Resolver_Expecter[T]) FetchPackageMetadata(purl interface{}) *Resolver_FetchPackageMetadata_Call[T] {
 	return &Resolver_FetchPackageMetadata_Call[T]{Call: _e.mock.On("FetchPackageMetadata", purl)}
 }
 
@@ -190,7 +190,7 @@ type Resolver_FindDependencyVersionInMeta_Call[T any] struct {
 // FindDependencyVersionInMeta is a helper method to define mock.On call
 //   - depMeta T
 //   - pkgName string
-func (_e *Resolver_Expecter[T]) FindDependencyVersionInMeta(depMeta any, pkgName any) *Resolver_FindDependencyVersionInMeta_Call[T] {
+func (_e *Resolver_Expecter[T]) FindDependencyVersionInMeta(depMeta interface{}, pkgName interface{}) *Resolver_FindDependencyVersionInMeta_Call[T] {
 	return &Resolver_FindDependencyVersionInMeta_Call[T]{Call: _e.mock.On("FindDependencyVersionInMeta", depMeta, pkgName)}
 }
 
@@ -258,7 +258,7 @@ type Resolver_GetUpgradeCandidates_Call[T any] struct {
 // GetUpgradeCandidates is a helper method to define mock.On call
 //   - allVersionsMeta T
 //   - currentVersion string
-func (_e *Resolver_Expecter[T]) GetUpgradeCandidates(allVersionsMeta any, currentVersion any) *Resolver_GetUpgradeCandidates_Call[T] {
+func (_e *Resolver_Expecter[T]) GetUpgradeCandidates(allVersionsMeta interface{}, currentVersion interface{}) *Resolver_GetUpgradeCandidates_Call[T] {
 	return &Resolver_GetUpgradeCandidates_Call[T]{Call: _e.mock.On("GetUpgradeCandidates", allVersionsMeta, currentVersion)}
 }
 
@@ -323,7 +323,7 @@ type Resolver_ParseVersionConstraint_Call[T any] struct {
 
 // ParseVersionConstraint is a helper method to define mock.On call
 //   - spec string
-func (_e *Resolver_Expecter[T]) ParseVersionConstraint(spec any) *Resolver_ParseVersionConstraint_Call[T] {
+func (_e *Resolver_Expecter[T]) ParseVersionConstraint(spec interface{}) *Resolver_ParseVersionConstraint_Call[T] {
 	return &Resolver_ParseVersionConstraint_Call[T]{Call: _e.mock.On("ParseVersionConstraint", spec)}
 }
 
@@ -385,7 +385,7 @@ type Resolver_ResolveBestVersion_Call[T any] struct {
 //   - allVersionsMeta T
 //   - versionConstraint fixedversion.VersionConstraint
 //   - currentVersion string
-func (_e *Resolver_Expecter[T]) ResolveBestVersion(allVersionsMeta any, versionConstraint any, currentVersion any) *Resolver_ResolveBestVersion_Call[T] {
+func (_e *Resolver_Expecter[T]) ResolveBestVersion(allVersionsMeta interface{}, versionConstraint interface{}, currentVersion interface{}) *Resolver_ResolveBestVersion_Call[T] {
 	return &Resolver_ResolveBestVersion_Call[T]{Call: _e.mock.On("ResolveBestVersion", allVersionsMeta, versionConstraint, currentVersion)}
 }
 

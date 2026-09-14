@@ -67,7 +67,7 @@ type ProjectService_BootstrapProject_Call struct {
 //   - ctx context.Context
 //   - rbac shared.AccessControl
 //   - project *models.Project
-func (_e *ProjectService_Expecter) BootstrapProject(ctx any, rbac any, project any) *ProjectService_BootstrapProject_Call {
+func (_e *ProjectService_Expecter) BootstrapProject(ctx interface{}, rbac interface{}, project interface{}) *ProjectService_BootstrapProject_Call {
 	return &ProjectService_BootstrapProject_Call{Call: _e.mock.On("BootstrapProject", ctx, rbac, project)}
 }
 
@@ -129,7 +129,7 @@ type ProjectService_CreateProject_Call struct {
 // CreateProject is a helper method to define mock.On call
 //   - ctx shared.Context
 //   - project *models.Project
-func (_e *ProjectService_Expecter) CreateProject(ctx any, project any) *ProjectService_CreateProject_Call {
+func (_e *ProjectService_Expecter) CreateProject(ctx interface{}, project interface{}) *ProjectService_CreateProject_Call {
 	return &ProjectService_CreateProject_Call{Call: _e.mock.On("CreateProject", ctx, project)}
 }
 
@@ -202,7 +202,7 @@ type ProjectService_FindOrCreateProject_Call struct {
 //   - externalEntityID string
 //   - parentID uuid.UUID
 //   - description string
-func (_e *ProjectService_Expecter) FindOrCreateProject(ctx any, providerID any, orgID any, name any, externalEntityID any, parentID any, description any) *ProjectService_FindOrCreateProject_Call {
+func (_e *ProjectService_Expecter) FindOrCreateProject(ctx interface{}, providerID interface{}, orgID interface{}, name interface{}, externalEntityID interface{}, parentID interface{}, description interface{}) *ProjectService_FindOrCreateProject_Call {
 	return &ProjectService_FindOrCreateProject_Call{Call: _e.mock.On("FindOrCreateProject", ctx, providerID, orgID, name, externalEntityID, parentID, description)}
 }
 
@@ -295,7 +295,7 @@ type ProjectService_GetDirectChildProjects_Call struct {
 // GetDirectChildProjects is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *ProjectService_Expecter) GetDirectChildProjects(ctx any, projectID any) *ProjectService_GetDirectChildProjects_Call {
+func (_e *ProjectService_Expecter) GetDirectChildProjects(ctx interface{}, projectID interface{}) *ProjectService_GetDirectChildProjects_Call {
 	return &ProjectService_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", ctx, projectID)}
 }
 
@@ -362,7 +362,7 @@ type ProjectService_ListAllowedProjects_Call struct {
 
 // ListAllowedProjects is a helper method to define mock.On call
 //   - ctx shared.Context
-func (_e *ProjectService_Expecter) ListAllowedProjects(ctx any) *ProjectService_ListAllowedProjects_Call {
+func (_e *ProjectService_Expecter) ListAllowedProjects(ctx interface{}) *ProjectService_ListAllowedProjects_Call {
 	return &ProjectService_ListAllowedProjects_Call{Call: _e.mock.On("ListAllowedProjects", ctx)}
 }
 
@@ -422,7 +422,7 @@ type ProjectService_ListAllowedProjectsPaged_Call struct {
 
 // ListAllowedProjectsPaged is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ProjectService_Expecter) ListAllowedProjectsPaged(c any) *ProjectService_ListAllowedProjectsPaged_Call {
+func (_e *ProjectService_Expecter) ListAllowedProjectsPaged(c interface{}) *ProjectService_ListAllowedProjectsPaged_Call {
 	return &ProjectService_ListAllowedProjectsPaged_Call{Call: _e.mock.On("ListAllowedProjectsPaged", c)}
 }
 
@@ -482,7 +482,7 @@ type ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call struct {
 
 // ListAllowedSubProjectsAndAssetsPaged is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ProjectService_Expecter) ListAllowedSubProjectsAndAssetsPaged(c any) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
+func (_e *ProjectService_Expecter) ListAllowedSubProjectsAndAssetsPaged(c interface{}) *ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call {
 	return &ProjectService_ListAllowedSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("ListAllowedSubProjectsAndAssetsPaged", c)}
 }
 
@@ -545,7 +545,7 @@ type ProjectService_ListProjectsByOrganizationID_Call struct {
 // ListProjectsByOrganizationID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - organizationID uuid.UUID
-func (_e *ProjectService_Expecter) ListProjectsByOrganizationID(ctx any, organizationID any) *ProjectService_ListProjectsByOrganizationID_Call {
+func (_e *ProjectService_Expecter) ListProjectsByOrganizationID(ctx interface{}, organizationID interface{}) *ProjectService_ListProjectsByOrganizationID_Call {
 	return &ProjectService_ListProjectsByOrganizationID_Call{Call: _e.mock.On("ListProjectsByOrganizationID", ctx, organizationID)}
 }
 
@@ -612,7 +612,7 @@ type ProjectService_ReadBySlug_Call struct {
 //   - ctx shared.Context
 //   - organizationID uuid.UUID
 //   - slug string
-func (_e *ProjectService_Expecter) ReadBySlug(ctx any, organizationID any, slug any) *ProjectService_ReadBySlug_Call {
+func (_e *ProjectService_Expecter) ReadBySlug(ctx interface{}, organizationID interface{}, slug interface{}) *ProjectService_ReadBySlug_Call {
 	return &ProjectService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, organizationID, slug)}
 }
 
@@ -685,7 +685,7 @@ type ProjectService_RecursivelyGetChildProjects_Call struct {
 // RecursivelyGetChildProjects is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID uuid.UUID
-func (_e *ProjectService_Expecter) RecursivelyGetChildProjects(ctx any, projectID any) *ProjectService_RecursivelyGetChildProjects_Call {
+func (_e *ProjectService_Expecter) RecursivelyGetChildProjects(ctx interface{}, projectID interface{}) *ProjectService_RecursivelyGetChildProjects_Call {
 	return &ProjectService_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", ctx, projectID)}
 }
 
@@ -750,7 +750,7 @@ type ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call struct {
 
 // SearchProjectsWithSubProjectsAndAssetsPaged is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ProjectService_Expecter) SearchProjectsWithSubProjectsAndAssetsPaged(c any) *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+func (_e *ProjectService_Expecter) SearchProjectsWithSubProjectsAndAssetsPaged(c interface{}) *ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
 	return &ProjectService_SearchProjectsWithSubProjectsAndAssetsPaged_Call{Call: _e.mock.On("SearchProjectsWithSubProjectsAndAssetsPaged", c)}
 }
 

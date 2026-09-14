@@ -315,6 +315,7 @@ type DependencyVulnRepository interface {
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 	GetByVexRuleID(ctx context.Context, tx DB, vexRuleID string) ([]models.DependencyVuln, error)
+	AttachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error
 }
 
 type FirstPartyVulnRepository interface {

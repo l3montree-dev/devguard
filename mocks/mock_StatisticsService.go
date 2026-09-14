@@ -82,7 +82,7 @@ type StatisticsService_GetArtifactRiskHistory_Call struct {
 //   - assetID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(ctx any, artifactName any, assetVersionName any, assetID any, start any, end any) *StatisticsService_GetArtifactRiskHistory_Call {
+func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(ctx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *StatisticsService_GetArtifactRiskHistory_Call {
 	return &StatisticsService_GetArtifactRiskHistory_Call{Call: _e.mock.On("GetArtifactRiskHistory", ctx, artifactName, assetVersionName, assetID, start, end)}
 }
 
@@ -173,7 +173,7 @@ type StatisticsService_GetArtifactRiskHistoryWithVersion_Call struct {
 //   - assetID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) GetArtifactRiskHistoryWithVersion(ctx any, artifactName any, assetID any, start any, end any) *StatisticsService_GetArtifactRiskHistoryWithVersion_Call {
+func (_e *StatisticsService_Expecter) GetArtifactRiskHistoryWithVersion(ctx interface{}, artifactName interface{}, assetID interface{}, start interface{}, end interface{}) *StatisticsService_GetArtifactRiskHistoryWithVersion_Call {
 	return &StatisticsService_GetArtifactRiskHistoryWithVersion_Call{Call: _e.mock.On("GetArtifactRiskHistoryWithVersion", ctx, artifactName, assetID, start, end)}
 }
 
@@ -258,7 +258,7 @@ type StatisticsService_GetComponentRisk_Call struct {
 //   - artifactName *string
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsService_Expecter) GetComponentRisk(ctx any, artifactName any, assetVersionName any, assetID any) *StatisticsService_GetComponentRisk_Call {
+func (_e *StatisticsService_Expecter) GetComponentRisk(ctx interface{}, artifactName interface{}, assetVersionName interface{}, assetID interface{}) *StatisticsService_GetComponentRisk_Call {
 	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", ctx, artifactName, assetVersionName, assetID)}
 }
 
@@ -338,7 +338,7 @@ type StatisticsService_GetOrgStatistics_Call struct {
 //   - topCVEsLimit int
 //   - topComponentsLimit int
 //   - forceRefresh bool
-func (_e *StatisticsService_Expecter) GetOrgStatistics(ctx any, orgID any, orgComponentsLimit any, topCVEsLimit any, topComponentsLimit any, forceRefresh any) *StatisticsService_GetOrgStatistics_Call {
+func (_e *StatisticsService_Expecter) GetOrgStatistics(ctx interface{}, orgID interface{}, orgComponentsLimit interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, forceRefresh interface{}) *StatisticsService_GetOrgStatistics_Call {
 	return &StatisticsService_GetOrgStatistics_Call{Call: _e.mock.On("GetOrgStatistics", ctx, orgID, orgComponentsLimit, topCVEsLimit, topComponentsLimit, forceRefresh)}
 }
 
@@ -428,7 +428,7 @@ type StatisticsService_GetReleaseRiskHistory_Call struct {
 //   - releaseID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) GetReleaseRiskHistory(ctx any, releaseID any, start any, end any) *StatisticsService_GetReleaseRiskHistory_Call {
+func (_e *StatisticsService_Expecter) GetReleaseRiskHistory(ctx interface{}, releaseID interface{}, start interface{}, end interface{}) *StatisticsService_GetReleaseRiskHistory_Call {
 	return &StatisticsService_GetReleaseRiskHistory_Call{Call: _e.mock.On("GetReleaseRiskHistory", ctx, releaseID, start, end)}
 }
 
@@ -504,7 +504,7 @@ type StatisticsService_GetRemediationTimeAveragesForRelease_Call struct {
 // GetRemediationTimeAveragesForRelease is a helper method to define mock.On call
 //   - ctx context.Context
 //   - releaseID uuid.UUID
-func (_e *StatisticsService_Expecter) GetRemediationTimeAveragesForRelease(ctx any, releaseID any) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
+func (_e *StatisticsService_Expecter) GetRemediationTimeAveragesForRelease(ctx interface{}, releaseID interface{}) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
 	return &StatisticsService_GetRemediationTimeAveragesForRelease_Call{Call: _e.mock.On("GetRemediationTimeAveragesForRelease", ctx, releaseID)}
 }
 
@@ -572,7 +572,7 @@ type StatisticsService_GetTopEcosystemsInOrg_Call struct {
 // GetTopEcosystemsInOrg is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx any, orgID any) *StatisticsService_GetTopEcosystemsInOrg_Call {
+func (_e *StatisticsService_Expecter) GetTopEcosystemsInOrg(ctx interface{}, orgID interface{}) *StatisticsService_GetTopEcosystemsInOrg_Call {
 	return &StatisticsService_GetTopEcosystemsInOrg_Call{Call: _e.mock.On("GetTopEcosystemsInOrg", ctx, orgID)}
 }
 
@@ -633,7 +633,7 @@ type StatisticsService_UpdateArtifactRiskAggregation_Call struct {
 //   - assetID uuid.UUID
 //   - begin time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx any, tx any, artifact any, assetID any, begin any, end any) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx interface{}, tx interface{}, artifact interface{}, assetID interface{}, begin interface{}, end interface{}) *StatisticsService_UpdateArtifactRiskAggregation_Call {
 	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, tx, artifact, assetID, begin, end)}
 }
 

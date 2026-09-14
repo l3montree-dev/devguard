@@ -83,7 +83,7 @@ type GitlabClientFacade_AddProjectHook_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - opt *gitlab.AddProjectHookOptions
-func (_e *GitlabClientFacade_Expecter) AddProjectHook(ctx any, projectID any, opt any) *GitlabClientFacade_AddProjectHook_Call {
+func (_e *GitlabClientFacade_Expecter) AddProjectHook(ctx interface{}, projectID interface{}, opt interface{}) *GitlabClientFacade_AddProjectHook_Call {
 	return &GitlabClientFacade_AddProjectHook_Call{Call: _e.mock.On("AddProjectHook", ctx, projectID, opt)}
 }
 
@@ -165,7 +165,7 @@ type GitlabClientFacade_CreateIssue_Call struct {
 //   - ctx context.Context
 //   - pid int
 //   - opt *gitlab.CreateIssueOptions
-func (_e *GitlabClientFacade_Expecter) CreateIssue(ctx any, pid any, opt any) *GitlabClientFacade_CreateIssue_Call {
+func (_e *GitlabClientFacade_Expecter) CreateIssue(ctx interface{}, pid interface{}, opt interface{}) *GitlabClientFacade_CreateIssue_Call {
 	return &GitlabClientFacade_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, pid, opt)}
 }
 
@@ -248,7 +248,7 @@ type GitlabClientFacade_CreateIssueComment_Call struct {
 //   - pid int
 //   - issue int
 //   - opt *gitlab.CreateIssueNoteOptions
-func (_e *GitlabClientFacade_Expecter) CreateIssueComment(ctx any, pid any, issue any, opt any) *GitlabClientFacade_CreateIssueComment_Call {
+func (_e *GitlabClientFacade_Expecter) CreateIssueComment(ctx interface{}, pid interface{}, issue interface{}, opt interface{}) *GitlabClientFacade_CreateIssueComment_Call {
 	return &GitlabClientFacade_CreateIssueComment_Call{Call: _e.mock.On("CreateIssueComment", ctx, pid, issue, opt)}
 }
 
@@ -335,7 +335,7 @@ type GitlabClientFacade_CreateMergeRequest_Call struct {
 //   - ctx context.Context
 //   - project string
 //   - opt *gitlab.CreateMergeRequestOptions
-func (_e *GitlabClientFacade_Expecter) CreateMergeRequest(ctx any, project any, opt any) *GitlabClientFacade_CreateMergeRequest_Call {
+func (_e *GitlabClientFacade_Expecter) CreateMergeRequest(ctx interface{}, project interface{}, opt interface{}) *GitlabClientFacade_CreateMergeRequest_Call {
 	return &GitlabClientFacade_CreateMergeRequest_Call{Call: _e.mock.On("CreateMergeRequest", ctx, project, opt)}
 }
 
@@ -417,7 +417,7 @@ type GitlabClientFacade_CreateNewLabel_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - label *gitlab.CreateLabelOptions
-func (_e *GitlabClientFacade_Expecter) CreateNewLabel(ctx any, projectID any, label any) *GitlabClientFacade_CreateNewLabel_Call {
+func (_e *GitlabClientFacade_Expecter) CreateNewLabel(ctx interface{}, projectID interface{}, label interface{}) *GitlabClientFacade_CreateNewLabel_Call {
 	return &GitlabClientFacade_CreateNewLabel_Call{Call: _e.mock.On("CreateNewLabel", ctx, projectID, label)}
 }
 
@@ -499,7 +499,7 @@ type GitlabClientFacade_CreateVariable_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - opt *gitlab.CreateProjectVariableOptions
-func (_e *GitlabClientFacade_Expecter) CreateVariable(ctx any, projectID any, opt any) *GitlabClientFacade_CreateVariable_Call {
+func (_e *GitlabClientFacade_Expecter) CreateVariable(ctx interface{}, projectID interface{}, opt interface{}) *GitlabClientFacade_CreateVariable_Call {
 	return &GitlabClientFacade_CreateVariable_Call{Call: _e.mock.On("CreateVariable", ctx, projectID, opt)}
 }
 
@@ -573,7 +573,7 @@ type GitlabClientFacade_DeleteProjectHook_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - hookID int
-func (_e *GitlabClientFacade_Expecter) DeleteProjectHook(ctx any, projectID any, hookID any) *GitlabClientFacade_DeleteProjectHook_Call {
+func (_e *GitlabClientFacade_Expecter) DeleteProjectHook(ctx interface{}, projectID interface{}, hookID interface{}) *GitlabClientFacade_DeleteProjectHook_Call {
 	return &GitlabClientFacade_DeleteProjectHook_Call{Call: _e.mock.On("DeleteProjectHook", ctx, projectID, hookID)}
 }
 
@@ -656,7 +656,7 @@ type GitlabClientFacade_EditIssue_Call struct {
 //   - pid int
 //   - issue int
 //   - opt *gitlab.UpdateIssueOptions
-func (_e *GitlabClientFacade_Expecter) EditIssue(ctx any, pid any, issue any, opt any) *GitlabClientFacade_EditIssue_Call {
+func (_e *GitlabClientFacade_Expecter) EditIssue(ctx interface{}, pid interface{}, issue interface{}, opt interface{}) *GitlabClientFacade_EditIssue_Call {
 	return &GitlabClientFacade_EditIssue_Call{Call: _e.mock.On("EditIssue", ctx, pid, issue, opt)}
 }
 
@@ -736,7 +736,7 @@ type GitlabClientFacade_EditIssueLabel_Call struct {
 //   - pid int
 //   - issue int
 //   - labels []*gitlab.CreateLabelOptions
-func (_e *GitlabClientFacade_Expecter) EditIssueLabel(ctx any, pid any, issue any, labels any) *GitlabClientFacade_EditIssueLabel_Call {
+func (_e *GitlabClientFacade_Expecter) EditIssueLabel(ctx interface{}, pid interface{}, issue interface{}, labels interface{}) *GitlabClientFacade_EditIssueLabel_Call {
 	return &GitlabClientFacade_EditIssueLabel_Call{Call: _e.mock.On("EditIssueLabel", ctx, pid, issue, labels)}
 }
 
@@ -812,7 +812,7 @@ type GitlabClientFacade_FetchGroupAvatarBase64_Call struct {
 // FetchGroupAvatarBase64 is a helper method to define mock.On call
 //   - ctx context.Context
 //   - groupID int
-func (_e *GitlabClientFacade_Expecter) FetchGroupAvatarBase64(ctx any, groupID any) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+func (_e *GitlabClientFacade_Expecter) FetchGroupAvatarBase64(ctx interface{}, groupID interface{}) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
 	return &GitlabClientFacade_FetchGroupAvatarBase64_Call{Call: _e.mock.On("FetchGroupAvatarBase64", ctx, groupID)}
 }
 
@@ -878,7 +878,7 @@ type GitlabClientFacade_FetchProjectAvatarBase64_Call struct {
 // FetchProjectAvatarBase64 is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID int
-func (_e *GitlabClientFacade_Expecter) FetchProjectAvatarBase64(ctx any, projectID any) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+func (_e *GitlabClientFacade_Expecter) FetchProjectAvatarBase64(ctx interface{}, projectID interface{}) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
 	return &GitlabClientFacade_FetchProjectAvatarBase64_Call{Call: _e.mock.On("FetchProjectAvatarBase64", ctx, projectID)}
 }
 
@@ -998,7 +998,7 @@ type GitlabClientFacade_GetGroup_Call struct {
 // GetGroup is a helper method to define mock.On call
 //   - ctx context.Context
 //   - groupID int
-func (_e *GitlabClientFacade_Expecter) GetGroup(ctx any, groupID any) *GitlabClientFacade_GetGroup_Call {
+func (_e *GitlabClientFacade_Expecter) GetGroup(ctx interface{}, groupID interface{}) *GitlabClientFacade_GetGroup_Call {
 	return &GitlabClientFacade_GetGroup_Call{Call: _e.mock.On("GetGroup", ctx, groupID)}
 }
 
@@ -1075,7 +1075,7 @@ type GitlabClientFacade_GetMemberInGroup_Call struct {
 //   - ctx context.Context
 //   - userID int
 //   - groupID int
-func (_e *GitlabClientFacade_Expecter) GetMemberInGroup(ctx any, userID any, groupID any) *GitlabClientFacade_GetMemberInGroup_Call {
+func (_e *GitlabClientFacade_Expecter) GetMemberInGroup(ctx interface{}, userID interface{}, groupID interface{}) *GitlabClientFacade_GetMemberInGroup_Call {
 	return &GitlabClientFacade_GetMemberInGroup_Call{Call: _e.mock.On("GetMemberInGroup", ctx, userID, groupID)}
 }
 
@@ -1157,7 +1157,7 @@ type GitlabClientFacade_GetMemberInProject_Call struct {
 //   - ctx context.Context
 //   - userID int
 //   - projectID int
-func (_e *GitlabClientFacade_Expecter) GetMemberInProject(ctx any, userID any, projectID any) *GitlabClientFacade_GetMemberInProject_Call {
+func (_e *GitlabClientFacade_Expecter) GetMemberInProject(ctx interface{}, userID interface{}, projectID interface{}) *GitlabClientFacade_GetMemberInProject_Call {
 	return &GitlabClientFacade_GetMemberInProject_Call{Call: _e.mock.On("GetMemberInProject", ctx, userID, projectID)}
 }
 
@@ -1238,7 +1238,7 @@ type GitlabClientFacade_GetProject_Call struct {
 // GetProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - projectID int
-func (_e *GitlabClientFacade_Expecter) GetProject(ctx any, projectID any) *GitlabClientFacade_GetProject_Call {
+func (_e *GitlabClientFacade_Expecter) GetProject(ctx interface{}, projectID interface{}) *GitlabClientFacade_GetProject_Call {
 	return &GitlabClientFacade_GetProject_Call{Call: _e.mock.On("GetProject", ctx, projectID)}
 }
 
@@ -1315,7 +1315,7 @@ type GitlabClientFacade_GetProjectIssues_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - opt *gitlab.ListProjectIssuesOptions
-func (_e *GitlabClientFacade_Expecter) GetProjectIssues(ctx any, projectID any, opt any) *GitlabClientFacade_GetProjectIssues_Call {
+func (_e *GitlabClientFacade_Expecter) GetProjectIssues(ctx interface{}, projectID interface{}, opt interface{}) *GitlabClientFacade_GetProjectIssues_Call {
 	return &GitlabClientFacade_GetProjectIssues_Call{Call: _e.mock.On("GetProjectIssues", ctx, projectID, opt)}
 }
 
@@ -1395,7 +1395,7 @@ type GitlabClientFacade_GetVersion_Call struct {
 
 // GetVersion is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *GitlabClientFacade_Expecter) GetVersion(ctx any) *GitlabClientFacade_GetVersion_Call {
+func (_e *GitlabClientFacade_Expecter) GetVersion(ctx interface{}) *GitlabClientFacade_GetVersion_Call {
 	return &GitlabClientFacade_GetVersion_Call{Call: _e.mock.On("GetVersion", ctx)}
 }
 
@@ -1467,7 +1467,7 @@ type GitlabClientFacade_InviteReporter_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - userID int
-func (_e *GitlabClientFacade_Expecter) InviteReporter(ctx any, projectID any, userID any) *GitlabClientFacade_InviteReporter_Call {
+func (_e *GitlabClientFacade_Expecter) InviteReporter(ctx interface{}, projectID interface{}, userID interface{}) *GitlabClientFacade_InviteReporter_Call {
 	return &GitlabClientFacade_InviteReporter_Call{Call: _e.mock.On("InviteReporter", ctx, projectID, userID)}
 }
 
@@ -1540,7 +1540,7 @@ type GitlabClientFacade_IsProjectMember_Call struct {
 //   - projectID int
 //   - userID int
 //   - options *gitlab.ListProjectMembersOptions
-func (_e *GitlabClientFacade_Expecter) IsProjectMember(ctx any, projectID any, userID any, options any) *GitlabClientFacade_IsProjectMember_Call {
+func (_e *GitlabClientFacade_Expecter) IsProjectMember(ctx interface{}, projectID interface{}, userID interface{}, options interface{}) *GitlabClientFacade_IsProjectMember_Call {
 	return &GitlabClientFacade_IsProjectMember_Call{Call: _e.mock.On("IsProjectMember", ctx, projectID, userID, options)}
 }
 
@@ -1626,7 +1626,7 @@ type GitlabClientFacade_ListGroups_Call struct {
 // ListGroups is a helper method to define mock.On call
 //   - ctx context.Context
 //   - opt *gitlab.ListGroupsOptions
-func (_e *GitlabClientFacade_Expecter) ListGroups(ctx any, opt any) *GitlabClientFacade_ListGroups_Call {
+func (_e *GitlabClientFacade_Expecter) ListGroups(ctx interface{}, opt interface{}) *GitlabClientFacade_ListGroups_Call {
 	return &GitlabClientFacade_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, opt)}
 }
 
@@ -1703,7 +1703,7 @@ type GitlabClientFacade_ListLabels_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - opt *gitlab.ListLabelsOptions
-func (_e *GitlabClientFacade_Expecter) ListLabels(ctx any, projectID any, opt any) *GitlabClientFacade_ListLabels_Call {
+func (_e *GitlabClientFacade_Expecter) ListLabels(ctx interface{}, projectID interface{}, opt interface{}) *GitlabClientFacade_ListLabels_Call {
 	return &GitlabClientFacade_ListLabels_Call{Call: _e.mock.On("ListLabels", ctx, projectID, opt)}
 }
 
@@ -1785,7 +1785,7 @@ type GitlabClientFacade_ListProjectHooks_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - options *gitlab.ListProjectHooksOptions
-func (_e *GitlabClientFacade_Expecter) ListProjectHooks(ctx any, projectID any, options any) *GitlabClientFacade_ListProjectHooks_Call {
+func (_e *GitlabClientFacade_Expecter) ListProjectHooks(ctx interface{}, projectID interface{}, options interface{}) *GitlabClientFacade_ListProjectHooks_Call {
 	return &GitlabClientFacade_ListProjectHooks_Call{Call: _e.mock.On("ListProjectHooks", ctx, projectID, options)}
 }
 
@@ -1866,7 +1866,7 @@ type GitlabClientFacade_ListProjects_Call struct {
 // ListProjects is a helper method to define mock.On call
 //   - ctx context.Context
 //   - opt *gitlab.ListProjectsOptions
-func (_e *GitlabClientFacade_Expecter) ListProjects(ctx any, opt any) *GitlabClientFacade_ListProjects_Call {
+func (_e *GitlabClientFacade_Expecter) ListProjects(ctx interface{}, opt interface{}) *GitlabClientFacade_ListProjects_Call {
 	return &GitlabClientFacade_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, opt)}
 }
 
@@ -1943,7 +1943,7 @@ type GitlabClientFacade_ListProjectsInGroup_Call struct {
 //   - ctx context.Context
 //   - groupID int
 //   - opt *gitlab.ListGroupProjectsOptions
-func (_e *GitlabClientFacade_Expecter) ListProjectsInGroup(ctx any, groupID any, opt any) *GitlabClientFacade_ListProjectsInGroup_Call {
+func (_e *GitlabClientFacade_Expecter) ListProjectsInGroup(ctx interface{}, groupID interface{}, opt interface{}) *GitlabClientFacade_ListProjectsInGroup_Call {
 	return &GitlabClientFacade_ListProjectsInGroup_Call{Call: _e.mock.On("ListProjectsInGroup", ctx, groupID, opt)}
 }
 
@@ -2025,7 +2025,7 @@ type GitlabClientFacade_ListVariables_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - options *gitlab.ListProjectVariablesOptions
-func (_e *GitlabClientFacade_Expecter) ListVariables(ctx any, projectID any, options any) *GitlabClientFacade_ListVariables_Call {
+func (_e *GitlabClientFacade_Expecter) ListVariables(ctx interface{}, projectID interface{}, options interface{}) *GitlabClientFacade_ListVariables_Call {
 	return &GitlabClientFacade_ListVariables_Call{Call: _e.mock.On("ListVariables", ctx, projectID, options)}
 }
 
@@ -2099,7 +2099,7 @@ type GitlabClientFacade_RemoveVariable_Call struct {
 //   - ctx context.Context
 //   - projectID int
 //   - key string
-func (_e *GitlabClientFacade_Expecter) RemoveVariable(ctx any, projectID any, key any) *GitlabClientFacade_RemoveVariable_Call {
+func (_e *GitlabClientFacade_Expecter) RemoveVariable(ctx interface{}, projectID interface{}, key interface{}) *GitlabClientFacade_RemoveVariable_Call {
 	return &GitlabClientFacade_RemoveVariable_Call{Call: _e.mock.On("RemoveVariable", ctx, projectID, key)}
 }
 
@@ -2182,7 +2182,7 @@ type GitlabClientFacade_UpdateLabel_Call struct {
 //   - projectID int
 //   - labelID int
 //   - opt *gitlab.UpdateLabelOptions
-func (_e *GitlabClientFacade_Expecter) UpdateLabel(ctx any, projectID any, labelID any, opt any) *GitlabClientFacade_UpdateLabel_Call {
+func (_e *GitlabClientFacade_Expecter) UpdateLabel(ctx interface{}, projectID interface{}, labelID interface{}, opt interface{}) *GitlabClientFacade_UpdateLabel_Call {
 	return &GitlabClientFacade_UpdateLabel_Call{Call: _e.mock.On("UpdateLabel", ctx, projectID, labelID, opt)}
 }
 
@@ -2270,7 +2270,7 @@ type GitlabClientFacade_UpdateVariable_Call struct {
 //   - projectID int
 //   - key string
 //   - opt *gitlab.UpdateProjectVariableOptions
-func (_e *GitlabClientFacade_Expecter) UpdateVariable(ctx any, projectID any, key any, opt any) *GitlabClientFacade_UpdateVariable_Call {
+func (_e *GitlabClientFacade_Expecter) UpdateVariable(ctx interface{}, projectID interface{}, key interface{}, opt interface{}) *GitlabClientFacade_UpdateVariable_Call {
 	return &GitlabClientFacade_UpdateVariable_Call{Call: _e.mock.On("UpdateVariable", ctx, projectID, key, opt)}
 }
 
@@ -2355,7 +2355,7 @@ type GitlabClientFacade_Whoami_Call struct {
 
 // Whoami is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *GitlabClientFacade_Expecter) Whoami(ctx any) *GitlabClientFacade_Whoami_Call {
+func (_e *GitlabClientFacade_Expecter) Whoami(ctx interface{}) *GitlabClientFacade_Whoami_Call {
 	return &GitlabClientFacade_Whoami_Call{Call: _e.mock.On("Whoami", ctx)}
 }
 

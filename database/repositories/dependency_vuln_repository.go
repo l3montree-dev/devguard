@@ -83,13 +83,13 @@ func (repository *dependencyVulnRepository) GetByVexRuleID(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if err := AttachGroupEvents(repository.GetDB(ctx, tx), dependencyVulns, nil); err != nil {
+	if err := repository.AttachGroupEvents(ctx, tx, dependencyVulns, nil); err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
 }
 
-func AttachGroupEvents(db *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error {
+func (repository *dependencyVulnRepository) AttachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error {
 	if len(vulns) == 0 {
 		return nil
 	}
@@ -103,7 +103,7 @@ func AttachGroupEvents(db *gorm.DB, vulns []models.DependencyVuln, cutoff *time.
 		}
 	}
 
-	q := db.Preload("VexRule").Where("asset_signature = ANY (?)", pq.Array(signatures))
+	q := repository.Repository.GetDB(ctx, tx).Preload("VexRule").Where("asset_signature = ANY (?)", pq.Array(signatures))
 	if cutoff != nil {
 		q = q.Where("created_at <= ?", *cutoff)
 	}
@@ -361,7 +361,7 @@ func (repository dependencyVulnRepository) Read(ctx context.Context, tx *gorm.DB
 	}
 
 	vulns := []models.DependencyVuln{t}
-	if err := AttachGroupEvents(repository.GetDB(ctx, tx), vulns, nil); err != nil {
+	if err := repository.AttachGroupEvents(ctx, tx, vulns, nil); err != nil {
 		return t, err
 	}
 	return vulns[0], nil

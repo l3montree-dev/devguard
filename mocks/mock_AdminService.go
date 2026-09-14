@@ -67,7 +67,7 @@ type AdminService_AddAdminToOrg_Call struct {
 //   - ctx context.Context
 //   - orgID uuid.UUID
 //   - userID uuid.UUID
-func (_e *AdminService_Expecter) AddAdminToOrg(ctx any, orgID any, userID any) *AdminService_AddAdminToOrg_Call {
+func (_e *AdminService_Expecter) AddAdminToOrg(ctx interface{}, orgID interface{}, userID interface{}) *AdminService_AddAdminToOrg_Call {
 	return &AdminService_AddAdminToOrg_Call{Call: _e.mock.On("AddAdminToOrg", ctx, orgID, userID)}
 }
 
@@ -129,7 +129,7 @@ type AdminService_CheckIfOrgExists_Call struct {
 // CheckIfOrgExists is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-func (_e *AdminService_Expecter) CheckIfOrgExists(ctx any, orgID any) *AdminService_CheckIfOrgExists_Call {
+func (_e *AdminService_Expecter) CheckIfOrgExists(ctx interface{}, orgID interface{}) *AdminService_CheckIfOrgExists_Call {
 	return &AdminService_CheckIfOrgExists_Call{Call: _e.mock.On("CheckIfOrgExists", ctx, orgID)}
 }
 
@@ -198,7 +198,7 @@ type AdminService_GetAdminsForOrg_Call struct {
 //   - ctx context.Context
 //   - orgID uuid.UUID
 //   - adminClient shared.AdminClient
-func (_e *AdminService_Expecter) GetAdminsForOrg(ctx any, orgID any, adminClient any) *AdminService_GetAdminsForOrg_Call {
+func (_e *AdminService_Expecter) GetAdminsForOrg(ctx interface{}, orgID interface{}, adminClient interface{}) *AdminService_GetAdminsForOrg_Call {
 	return &AdminService_GetAdminsForOrg_Call{Call: _e.mock.On("GetAdminsForOrg", ctx, orgID, adminClient)}
 }
 
@@ -270,7 +270,7 @@ type AdminService_GetInstanceUsageStatistics_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - authClient shared.AdminClient
-func (_e *AdminService_Expecter) GetInstanceUsageStatistics(ctx any, tx any, authClient any) *AdminService_GetInstanceUsageStatistics_Call {
+func (_e *AdminService_Expecter) GetInstanceUsageStatistics(ctx interface{}, tx interface{}, authClient interface{}) *AdminService_GetInstanceUsageStatistics_Call {
 	return &AdminService_GetInstanceUsageStatistics_Call{Call: _e.mock.On("GetInstanceUsageStatistics", ctx, tx, authClient)}
 }
 
@@ -343,7 +343,7 @@ type AdminService_GetInstanceVulnStatistics_Call struct {
 //   - topCVEsLimit int
 //   - topComponentsLimit int
 //   - topProjectsLimit int
-func (_e *AdminService_Expecter) GetInstanceVulnStatistics(ctx any, topCVEsLimit any, topComponentsLimit any, topProjectsLimit any) *AdminService_GetInstanceVulnStatistics_Call {
+func (_e *AdminService_Expecter) GetInstanceVulnStatistics(ctx interface{}, topCVEsLimit interface{}, topComponentsLimit interface{}, topProjectsLimit interface{}) *AdminService_GetInstanceVulnStatistics_Call {
 	return &AdminService_GetInstanceVulnStatistics_Call{Call: _e.mock.On("GetInstanceVulnStatistics", ctx, topCVEsLimit, topComponentsLimit, topProjectsLimit)}
 }
 
@@ -420,7 +420,7 @@ type AdminService_GetMailFromUserID_Call struct {
 //   - ctx context.Context
 //   - authClient shared.AdminClient
 //   - userID uuid.UUID
-func (_e *AdminService_Expecter) GetMailFromUserID(ctx any, authClient any, userID any) *AdminService_GetMailFromUserID_Call {
+func (_e *AdminService_Expecter) GetMailFromUserID(ctx interface{}, authClient interface{}, userID interface{}) *AdminService_GetMailFromUserID_Call {
 	return &AdminService_GetMailFromUserID_Call{Call: _e.mock.On("GetMailFromUserID", ctx, authClient, userID)}
 }
 
@@ -493,7 +493,7 @@ type AdminService_GetOrgsWhereUserIsOwner_Call struct {
 // GetOrgsWhereUserIsOwner is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-func (_e *AdminService_Expecter) GetOrgsWhereUserIsOwner(ctx any, userID any) *AdminService_GetOrgsWhereUserIsOwner_Call {
+func (_e *AdminService_Expecter) GetOrgsWhereUserIsOwner(ctx interface{}, userID interface{}) *AdminService_GetOrgsWhereUserIsOwner_Call {
 	return &AdminService_GetOrgsWhereUserIsOwner_Call{Call: _e.mock.On("GetOrgsWhereUserIsOwner", ctx, userID)}
 }
 
@@ -561,7 +561,7 @@ type AdminService_GetOwnerForOrg_Call struct {
 // GetOwnerForOrg is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
-func (_e *AdminService_Expecter) GetOwnerForOrg(ctx any, orgID any) *AdminService_GetOwnerForOrg_Call {
+func (_e *AdminService_Expecter) GetOwnerForOrg(ctx interface{}, orgID interface{}) *AdminService_GetOwnerForOrg_Call {
 	return &AdminService_GetOwnerForOrg_Call{Call: _e.mock.On("GetOwnerForOrg", ctx, orgID)}
 }
 
@@ -630,7 +630,7 @@ type AdminService_GetUserIDFromMail_Call struct {
 //   - ctx context.Context
 //   - adminClient shared.AdminClient
 //   - email string
-func (_e *AdminService_Expecter) GetUserIDFromMail(ctx any, adminClient any, email any) *AdminService_GetUserIDFromMail_Call {
+func (_e *AdminService_Expecter) GetUserIDFromMail(ctx interface{}, adminClient interface{}, email interface{}) *AdminService_GetUserIDFromMail_Call {
 	return &AdminService_GetUserIDFromMail_Call{Call: _e.mock.On("GetUserIDFromMail", ctx, adminClient, email)}
 }
 
@@ -693,7 +693,7 @@ type AdminService_RevokeAdminFromOrg_Call struct {
 //   - ctx context.Context
 //   - orgID uuid.UUID
 //   - userID uuid.UUID
-func (_e *AdminService_Expecter) RevokeAdminFromOrg(ctx any, orgID any, userID any) *AdminService_RevokeAdminFromOrg_Call {
+func (_e *AdminService_Expecter) RevokeAdminFromOrg(ctx interface{}, orgID interface{}, userID interface{}) *AdminService_RevokeAdminFromOrg_Call {
 	return &AdminService_RevokeAdminFromOrg_Call{Call: _e.mock.On("RevokeAdminFromOrg", ctx, orgID, userID)}
 }
 

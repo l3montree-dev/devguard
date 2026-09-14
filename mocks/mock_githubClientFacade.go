@@ -84,7 +84,7 @@ type GithubClientFacade_CreateIssue_Call struct {
 //   - owner string
 //   - repo string
 //   - issue *github.IssueRequest
-func (_e *GithubClientFacade_Expecter) CreateIssue(ctx any, owner any, repo any, issue any) *GithubClientFacade_CreateIssue_Call {
+func (_e *GithubClientFacade_Expecter) CreateIssue(ctx interface{}, owner interface{}, repo interface{}, issue interface{}) *GithubClientFacade_CreateIssue_Call {
 	return &GithubClientFacade_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, owner, repo, issue)}
 }
 
@@ -173,7 +173,7 @@ type GithubClientFacade_CreateIssueComment_Call struct {
 //   - repo string
 //   - number int
 //   - comment *github.IssueComment
-func (_e *GithubClientFacade_Expecter) CreateIssueComment(ctx any, owner any, repo any, number any, comment any) *GithubClientFacade_CreateIssueComment_Call {
+func (_e *GithubClientFacade_Expecter) CreateIssueComment(ctx interface{}, owner interface{}, repo interface{}, number interface{}, comment interface{}) *GithubClientFacade_CreateIssueComment_Call {
 	return &GithubClientFacade_CreateIssueComment_Call{Call: _e.mock.On("CreateIssueComment", ctx, owner, repo, number, comment)}
 }
 
@@ -267,7 +267,7 @@ type GithubClientFacade_EditIssue_Call struct {
 //   - repo string
 //   - number int
 //   - issue *github.IssueRequest
-func (_e *GithubClientFacade_Expecter) EditIssue(ctx any, owner any, repo any, number any, issue any) *GithubClientFacade_EditIssue_Call {
+func (_e *GithubClientFacade_Expecter) EditIssue(ctx interface{}, owner interface{}, repo interface{}, number interface{}, issue interface{}) *GithubClientFacade_EditIssue_Call {
 	return &GithubClientFacade_EditIssue_Call{Call: _e.mock.On("EditIssue", ctx, owner, repo, number, issue)}
 }
 
@@ -361,7 +361,7 @@ type GithubClientFacade_EditIssueLabel_Call struct {
 //   - repo string
 //   - name string
 //   - label *github.Label
-func (_e *GithubClientFacade_Expecter) EditIssueLabel(ctx any, owner any, repo any, name any, label any) *GithubClientFacade_EditIssueLabel_Call {
+func (_e *GithubClientFacade_Expecter) EditIssueLabel(ctx interface{}, owner interface{}, repo interface{}, name interface{}, label interface{}) *GithubClientFacade_EditIssueLabel_Call {
 	return &GithubClientFacade_EditIssueLabel_Call{Call: _e.mock.On("EditIssueLabel", ctx, owner, repo, name, label)}
 }
 
@@ -445,7 +445,7 @@ type GithubClientFacade_IsCollaboratorInRepository_Call struct {
 //   - repoID string
 //   - userID int64
 //   - opts *github.ListCollaboratorsOptions
-func (_e *GithubClientFacade_Expecter) IsCollaboratorInRepository(ctx any, owner any, repoID any, userID any, opts any) *GithubClientFacade_IsCollaboratorInRepository_Call {
+func (_e *GithubClientFacade_Expecter) IsCollaboratorInRepository(ctx interface{}, owner interface{}, repoID interface{}, userID interface{}, opts interface{}) *GithubClientFacade_IsCollaboratorInRepository_Call {
 	return &GithubClientFacade_IsCollaboratorInRepository_Call{Call: _e.mock.On("IsCollaboratorInRepository", ctx, owner, repoID, userID, opts)}
 }
 
@@ -538,7 +538,7 @@ type GithubClientFacade_ListIssues_Call struct {
 //   - owner string
 //   - repo string
 //   - opt *github.IssueListByRepoOptions
-func (_e *GithubClientFacade_Expecter) ListIssues(ctx any, owner any, repo any, opt any) *GithubClientFacade_ListIssues_Call {
+func (_e *GithubClientFacade_Expecter) ListIssues(ctx interface{}, owner interface{}, repo interface{}, opt interface{}) *GithubClientFacade_ListIssues_Call {
 	return &GithubClientFacade_ListIssues_Call{Call: _e.mock.On("ListIssues", ctx, owner, repo, opt)}
 }
 

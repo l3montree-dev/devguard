@@ -84,7 +84,7 @@ type DependencyVulnService_CreateVulnEventAndApply_Call struct {
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - assetVersionName string
 //   - userAgent *string
-func (_e *DependencyVulnService_Expecter) CreateVulnEventAndApply(ctx any, tx any, assetID any, userID any, dependencyVuln any, status any, justification any, mechanicalJustification any, assetVersionName any, userAgent any) *DependencyVulnService_CreateVulnEventAndApply_Call {
+func (_e *DependencyVulnService_Expecter) CreateVulnEventAndApply(ctx interface{}, tx interface{}, assetID interface{}, userID interface{}, dependencyVuln interface{}, status interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}, userAgent interface{}) *DependencyVulnService_CreateVulnEventAndApply_Call {
 	return &DependencyVulnService_CreateVulnEventAndApply_Call{Call: _e.mock.On("CreateVulnEventAndApply", ctx, tx, assetID, userID, dependencyVuln, status, justification, mechanicalJustification, assetVersionName, userAgent)}
 }
 
@@ -193,7 +193,7 @@ type DependencyVulnService_GetAllUniqueCVEsForAsset_Call struct {
 //   - ctx context.Context
 //   - assetID uuid.UUID
 //   - compareFunc func(existingLeader models.DependencyVuln, newVuln models.DependencyVuln) bool
-func (_e *DependencyVulnService_Expecter) GetAllUniqueCVEsForAsset(ctx any, assetID any, compareFunc any) *DependencyVulnService_GetAllUniqueCVEsForAsset_Call {
+func (_e *DependencyVulnService_Expecter) GetAllUniqueCVEsForAsset(ctx interface{}, assetID interface{}, compareFunc interface{}) *DependencyVulnService_GetAllUniqueCVEsForAsset_Call {
 	return &DependencyVulnService_GetAllUniqueCVEsForAsset_Call{Call: _e.mock.On("GetAllUniqueCVEsForAsset", ctx, assetID, compareFunc)}
 }
 
@@ -270,7 +270,7 @@ type DependencyVulnService_RecalculateRawRiskAssessment_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - justification string
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) RecalculateRawRiskAssessment(ctx any, tx any, userID any, dependencyVulns any, justification any, asset any) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
+func (_e *DependencyVulnService_Expecter) RecalculateRawRiskAssessment(ctx interface{}, tx interface{}, userID interface{}, dependencyVulns interface{}, justification interface{}, asset interface{}) *DependencyVulnService_RecalculateRawRiskAssessment_Call {
 	return &DependencyVulnService_RecalculateRawRiskAssessment_Call{Call: _e.mock.On("RecalculateRawRiskAssessment", ctx, tx, userID, dependencyVulns, justification, asset)}
 }
 
@@ -351,7 +351,7 @@ type DependencyVulnService_SyncAllIssues_Call struct {
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
 //   - userAgent *string
-func (_e *DependencyVulnService_Expecter) SyncAllIssues(ctx any, org any, project any, asset any, assetVersion any, userAgent any) *DependencyVulnService_SyncAllIssues_Call {
+func (_e *DependencyVulnService_Expecter) SyncAllIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, userAgent interface{}) *DependencyVulnService_SyncAllIssues_Call {
 	return &DependencyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", ctx, org, project, asset, assetVersion, userAgent)}
 }
 
@@ -433,7 +433,7 @@ type DependencyVulnService_SyncIssues_Call struct {
 //   - assetVersion models.AssetVersion
 //   - vulnList []models.DependencyVuln
 //   - userAgent *string
-func (_e *DependencyVulnService_Expecter) SyncIssues(ctx any, org any, project any, asset any, assetVersion any, vulnList any, userAgent any) *DependencyVulnService_SyncIssues_Call {
+func (_e *DependencyVulnService_Expecter) SyncIssues(ctx interface{}, org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}, userAgent interface{}) *DependencyVulnService_SyncIssues_Call {
 	return &DependencyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", ctx, org, project, asset, assetVersion, vulnList, userAgent)}
 }
 
@@ -517,7 +517,7 @@ type DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call stru
 //   - tx shared.DB
 //   - vulnerabilities []models.DependencyVuln
 //   - artifactName string
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulnInAnotherArtifact(ctx any, tx any, vulnerabilities any, artifactName any) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulnInAnotherArtifact(ctx interface{}, tx interface{}, vulnerabilities interface{}, artifactName interface{}) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
 	return &DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call{Call: _e.mock.On("UserDetectedDependencyVulnInAnotherArtifact", ctx, tx, vulnerabilities, artifactName)}
 }
 
@@ -590,7 +590,7 @@ type DependencyVulnService_UserDetectedDependencyVulns_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(ctx any, tx any, userID any, userAgent any, artifactName any, dependencyVulns any, assetVersion any, asset any) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", ctx, tx, userID, userAgent, artifactName, dependencyVulns, assetVersion, asset)}
 }
 
@@ -681,7 +681,7 @@ type DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call struct
 //   - dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln]
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) UserDetectedExistingVulnOnDifferentBranch(ctx any, tx any, artifactName any, dependencyVulns any, assetVersion any, asset any) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+func (_e *DependencyVulnService_Expecter) UserDetectedExistingVulnOnDifferentBranch(ctx interface{}, tx interface{}, artifactName interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
 	return &DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingVulnOnDifferentBranch", ctx, tx, artifactName, dependencyVulns, assetVersion, asset)}
 }
 
@@ -760,7 +760,7 @@ type DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call 
 //   - tx shared.DB
 //   - vulnerabilities []models.DependencyVuln
 //   - artifactName string
-func (_e *DependencyVulnService_Expecter) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx any, tx any, vulnerabilities any, artifactName any) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
+func (_e *DependencyVulnService_Expecter) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx interface{}, tx interface{}, vulnerabilities interface{}, artifactName interface{}) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
 	return &DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call{Call: _e.mock.On("UserDidNotDetectDependencyVulnInArtifactAnymore", ctx, tx, vulnerabilities, artifactName)}
 }
 
@@ -832,7 +832,7 @@ type DependencyVulnService_UserFixedDependencyVulns_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-func (_e *DependencyVulnService_Expecter) UserFixedDependencyVulns(ctx any, tx any, userID any, userAgent any, dependencyVulns any, assetVersion any, asset any) *DependencyVulnService_UserFixedDependencyVulns_Call {
+func (_e *DependencyVulnService_Expecter) UserFixedDependencyVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserFixedDependencyVulns_Call {
 	return &DependencyVulnService_UserFixedDependencyVulns_Call{Call: _e.mock.On("UserFixedDependencyVulns", ctx, tx, userID, userAgent, dependencyVulns, assetVersion, asset)}
 }
 
@@ -917,7 +917,7 @@ type DependencyVulnService_UserReopenedToOpen_Call struct {
 //   - userID string
 //   - userAgent *string
 //   - dependencyVulns []models.DependencyVuln
-func (_e *DependencyVulnService_Expecter) UserReopenedToOpen(ctx any, tx any, userID any, userAgent any, dependencyVulns any) *DependencyVulnService_UserReopenedToOpen_Call {
+func (_e *DependencyVulnService_Expecter) UserReopenedToOpen(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, dependencyVulns interface{}) *DependencyVulnService_UserReopenedToOpen_Call {
 	return &DependencyVulnService_UserReopenedToOpen_Call{Call: _e.mock.On("UserReopenedToOpen", ctx, tx, userID, userAgent, dependencyVulns)}
 }
 

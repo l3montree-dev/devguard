@@ -62,7 +62,7 @@ type RequestSigner_AuthenticateRequestWithToken_Call struct {
 // AuthenticateRequestWithToken is a helper method to define mock.On call
 //   - token string
 //   - req *http.Request
-func (_e *RequestSigner_Expecter) AuthenticateRequestWithToken(token any, req any) *RequestSigner_AuthenticateRequestWithToken_Call {
+func (_e *RequestSigner_Expecter) AuthenticateRequestWithToken(token interface{}, req interface{}) *RequestSigner_AuthenticateRequestWithToken_Call {
 	return &RequestSigner_AuthenticateRequestWithToken_Call{Call: _e.mock.On("AuthenticateRequestWithToken", token, req)}
 }
 

@@ -75,7 +75,7 @@ type CweRepository_GetAllCWEsID_Call struct {
 // GetAllCWEsID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-func (_e *CweRepository_Expecter) GetAllCWEsID(ctx any, tx any) *CweRepository_GetAllCWEsID_Call {
+func (_e *CweRepository_Expecter) GetAllCWEsID(ctx interface{}, tx interface{}) *CweRepository_GetAllCWEsID_Call {
 	return &CweRepository_GetAllCWEsID_Call{Call: _e.mock.On("GetAllCWEsID", ctx, tx)}
 }
 
@@ -133,7 +133,7 @@ type CweRepository_SaveBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - cwes []models.CWE
-func (_e *CweRepository_Expecter) SaveBatch(ctx any, tx any, cwes any) *CweRepository_SaveBatch_Call {
+func (_e *CweRepository_Expecter) SaveBatch(ctx interface{}, tx interface{}, cwes interface{}) *CweRepository_SaveBatch_Call {
 	return &CweRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", ctx, tx, cwes)}
 }
 

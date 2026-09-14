@@ -75,7 +75,7 @@ type Comparer_GetVulns_Call struct {
 // GetVulns is a helper method to define mock.On call
 //   - ctx context.Context
 //   - purls []packageurl.PackageURL
-func (_e *Comparer_Expecter) GetVulns(ctx any, purls any) *Comparer_GetVulns_Call {
+func (_e *Comparer_Expecter) GetVulns(ctx interface{}, purls interface{}) *Comparer_GetVulns_Call {
 	return &Comparer_GetVulns_Call{Call: _e.mock.On("GetVulns", ctx, purls)}
 }
 

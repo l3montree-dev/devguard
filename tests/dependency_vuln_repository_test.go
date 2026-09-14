@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,6 +26,8 @@ func TestAttachGroupEvents(t *testing.T) {
 				VulnerabilityPath: []string{"root"},
 			}
 			assert.NoError(t, f.DB.Create(&vuln).Error)
+
+			repo := repositories.NewDependencyVulnRepository(f.DB)
 
 			sig := vuln.AssetSignature
 			groupEvents := []models.VulnEvent{
@@ -59,7 +62,7 @@ func TestAttachGroupEvents(t *testing.T) {
 
 			cutoff := time.Date(1990, time.March, 15, 15, 30, 0, 0, time.UTC)
 			vulns := []models.DependencyVuln{vuln}
-			err := repositories.AttachGroupEvents(f.DB, vulns, &cutoff)
+			err := repo.AttachGroupEvents(context.Background(), f.DB, vulns, &cutoff)
 			assert.NoError(t, err)
 			assert.Equal(t, 3, len(vulns[0].Events))
 			assert.Equal(t, dtos.VulnStateOpen, vulns[0].State)

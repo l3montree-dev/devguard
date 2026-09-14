@@ -73,7 +73,7 @@ type EPSService_Fetch_Call struct {
 
 // Fetch is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *EPSService_Expecter) Fetch(ctx any) *EPSService_Fetch_Call {
+func (_e *EPSService_Expecter) Fetch(ctx interface{}) *EPSService_Fetch_Call {
 	return &EPSService_Fetch_Call{Call: _e.mock.On("Fetch", ctx)}
 }
 
