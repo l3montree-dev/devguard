@@ -57,7 +57,7 @@ func NewProjectRouter(
 	projectRouter.GET("/resources/", projectController.ListSubProjectsAndAssets)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
-	projectRouter.GET("/logs/", logController.ListPaged)
+	projectRouter.GET("/logs/", logController.ListPaged, middlewares.NeededScope([]string{"scan"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	projectRouter.GET("/compliance-postures/", compliancePostureController.ProjectListPaged)
 	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.ProjectGetOSCAL)
