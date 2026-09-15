@@ -223,7 +223,12 @@ func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
 	if err != nil {
 		return fmt.Errorf("could not start transaction for v8: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			panic("fatal: could not rollback transaction, database possibly inconsistent!")
+		}
+	}()
 
 	// drop unique constraint to temporarily allow duplicates inside the transaction
 	// also improves performance on DML operations
