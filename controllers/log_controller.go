@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -28,8 +29,12 @@ func NewLogController(logService shared.LogService) *LogController {
 func (controller *LogController) ListPaged(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
-	asset := shared.GetAsset(ctx)
-	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, project.ID, asset.ID)
+	var assetID *uuid.UUID
+	asset, err := shared.MaybeGetAsset(ctx)
+	if err == nil {
+		assetID = &asset.ID
+	}
+	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, project.ID, assetID, shared.GetPageInfo(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get logs").WithInternal(err)
 	}

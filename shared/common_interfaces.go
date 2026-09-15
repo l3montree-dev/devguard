@@ -919,12 +919,12 @@ type TrustedEntityRepository interface {
 
 type LogService interface {
 	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error
-	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID) (Paged[models.Log], error)
+	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
 }
 
 type LogRepository interface {
 	Save(ctx context.Context, tx *gorm.DB, log *models.Log) error
-	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
+	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
 }
 
 type Object string
