@@ -92,6 +92,14 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	return nil
 }
 
+func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) error {
+	if err := runner.externalEntityProviderService.CollectGarbage(ctx); err != nil {
+		slog.Error("failed to collect external entity garbage", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	if err := runner.maybeRunAndMark(ctx, "vexrules.recommendations", func() error {
 		return runner.RunVEXRuleRecommendationDaemon(ctx)
@@ -132,5 +140,11 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 		return runner.RunResolveFixedVersionsPipeline(ctx, false)
 	}); err != nil {
 		monitoring.Alert("could not resolve direct dependency fixed versions", err)
+	}
+
+	if err := runner.maybeRunAndMark(ctx, "externalEntityGarbageCollection", func() error {
+		return runner.CollectExternalEntityGarbage(ctx)
+	}); err != nil {
+		monitoring.Alert("could not collect external entity garbage", err)
 	}
 }
