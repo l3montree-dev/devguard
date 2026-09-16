@@ -31,6 +31,7 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewReleaseRepository, fx.As(new(shared.ReleaseRepository)))),
 	fx.Provide(fx.Annotate(NewProjectRepository, fx.As(new(shared.ProjectRepository)))),
 	fx.Provide(fx.Annotate(NewComponentRepository, fx.As(new(shared.ComponentRepository)))),
+	fx.Provide(fx.Annotate(NewSBOMRepository, fx.As(new(shared.SBOMRepository)))),
 	fx.Provide(fx.Annotate(NewVulnEventRepository, fx.As(new(shared.VulnEventRepository)))),
 	fx.Provide(fx.Annotate(NewOrgRepository, fx.As(new(shared.OrganizationRepository)))),
 	fx.Provide(fx.Annotate(NewCVERepository, fx.As(new(shared.CveRepository)))),

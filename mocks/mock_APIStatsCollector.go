@@ -62,7 +62,7 @@ type APIStatsCollector_CollectAPIStartupStats_Call struct {
 
 // CollectAPIStartupStats is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *APIStatsCollector_Expecter) CollectAPIStartupStats(ctx interface{}) *APIStatsCollector_CollectAPIStartupStats_Call {
+func (_e *APIStatsCollector_Expecter) CollectAPIStartupStats(ctx any) *APIStatsCollector_CollectAPIStartupStats_Call {
 	return &APIStatsCollector_CollectAPIStartupStats_Call{Call: _e.mock.On("CollectAPIStartupStats", ctx)}
 }
 

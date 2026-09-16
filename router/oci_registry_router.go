@@ -70,20 +70,20 @@ func NewOCIRegistryRouter(srv api.Server, ociController *dependencyfirewall.OCID
 	// DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED=false.
 	if ociPublicProxyEnabled() {
 		// 1-segment image: docker.io/nginx
-		v2.GET("/:registry/:image/manifests/:reference", ociController.ProxyOCIManifest)
-		v2.HEAD("/:registry/:image/manifests/:reference", ociController.ProxyOCIManifest)
-		v2.GET("/:registry/:image/blobs/:digest", ociController.ProxyOCIBlob)
-		v2.HEAD("/:registry/:image/blobs/:digest", ociController.ProxyOCIBlob)
-		v2.GET("/:registry/:image/tags/list", ociController.ProxyOCITagsList)
-		v2.GET("/:registry/:image/referrers/:digest", ociController.ProxyOCIReferrers)
+		v2.GET("/:registry/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+		v2.HEAD("/:registry/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+		v2.GET("/:registry/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+		v2.HEAD("/:registry/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+		v2.GET("/:registry/:image/tags/list/", ociController.ProxyOCITagsList)
+		v2.GET("/:registry/:image/referrers/:digest/", ociController.ProxyOCIReferrers)
 
 		// 2-segment image: docker.io/library/nginx
-		v2.GET("/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
-		v2.HEAD("/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
-		v2.GET("/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
-		v2.HEAD("/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
-		v2.GET("/:registry/:namespace/:image/tags/list", ociController.ProxyOCITagsList)
-		v2.GET("/:registry/:namespace/:image/referrers/:digest", ociController.ProxyOCIReferrers)
+		v2.GET("/:registry/:namespace/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+		v2.HEAD("/:registry/:namespace/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+		v2.GET("/:registry/:namespace/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+		v2.HEAD("/:registry/:namespace/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+		v2.GET("/:registry/:namespace/:image/tags/list/", ociController.ProxyOCITagsList)
+		v2.GET("/:registry/:namespace/:image/referrers/:digest/", ociController.ProxyOCIReferrers)
 	}
 
 	// ── Secret-scoped routes ────────────────────────────────────────────────
@@ -91,20 +91,20 @@ func NewOCIRegistryRouter(srv api.Server, ociController *dependencyfirewall.OCID
 	// the matching asset / project / organization.
 
 	// 2-segment image: <secret>/docker.io/library/nginx
-	v2.GET("/:secret/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.HEAD("/:secret/:registry/:namespace/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.GET("/:secret/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.HEAD("/:secret/:registry/:namespace/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.GET("/:secret/:registry/:namespace/:image/tags/list", ociController.ProxyOCITagsList)
-	v2.GET("/:secret/:registry/:namespace/:image/referrers/:digest", ociController.ProxyOCIReferrers)
+	v2.GET("/:secret/:registry/:namespace/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+	v2.HEAD("/:secret/:registry/:namespace/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+	v2.GET("/:secret/:registry/:namespace/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+	v2.HEAD("/:secret/:registry/:namespace/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+	v2.GET("/:secret/:registry/:namespace/:image/tags/list/", ociController.ProxyOCITagsList)
+	v2.GET("/:secret/:registry/:namespace/:image/referrers/:digest/", ociController.ProxyOCIReferrers)
 
 	// 3-segment image: <secret>/ghcr.io/org/team/repo
-	v2.GET("/:secret/:registry/:ns1/:ns2/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.HEAD("/:secret/:registry/:ns1/:ns2/:image/manifests/:reference", ociController.ProxyOCIManifest)
-	v2.GET("/:secret/:registry/:ns1/:ns2/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.HEAD("/:secret/:registry/:ns1/:ns2/:image/blobs/:digest", ociController.ProxyOCIBlob)
-	v2.GET("/:secret/:registry/:ns1/:ns2/:image/tags/list", ociController.ProxyOCITagsList)
-	v2.GET("/:secret/:registry/:ns1/:ns2/:image/referrers/:digest", ociController.ProxyOCIReferrers)
+	v2.GET("/:secret/:registry/:ns1/:ns2/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+	v2.HEAD("/:secret/:registry/:ns1/:ns2/:image/manifests/:reference/", ociController.ProxyOCIManifest)
+	v2.GET("/:secret/:registry/:ns1/:ns2/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+	v2.HEAD("/:secret/:registry/:ns1/:ns2/:image/blobs/:digest/", ociController.ProxyOCIBlob)
+	v2.GET("/:secret/:registry/:ns1/:ns2/:image/tags/list/", ociController.ProxyOCITagsList)
+	v2.GET("/:secret/:registry/:ns1/:ns2/:image/referrers/:digest/", ociController.ProxyOCIReferrers)
 
 	return OCIRegistryRouter{Group: v2}
 }

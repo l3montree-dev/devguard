@@ -224,7 +224,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			artifactName := "trivy-debian-image-bug1810"
 
 			// Scan a real SBOM to populate component_dependencies and license_risks.
-			sbomBytes, err := os.ReadFile("../normalize/testdata/trivy-debian-sbom.json")
+			sbomBytes, err := os.ReadFile("../transformer/testdata/trivy-debian-sbom.json")
 			assert.NoError(t, err)
 
 			recorder := httptest.NewRecorder()
@@ -245,12 +245,12 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, 200, recorder.Code, "scan should succeed")
 
-			// Verify component_dependencies were created.
+			// Verify the scan stored an SBOM.
 			var depCount int64
-			f.DB.Table("component_dependencies").
+			f.DB.Table("sboms").
 				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
 				Count(&depCount)
-			assert.Greater(t, depCount, int64(0), "component_dependencies should be populated after scan")
+			assert.Greater(t, depCount, int64(0), "an sbom should be stored after the scan")
 
 			// Delete the artifact.
 			artifact := models.Artifact{
@@ -267,12 +267,14 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, 200, recorder2.Code, "delete should succeed")
 
-			// After deleting the only artifact, component_dependencies must be empty.
+			// After deleting the only artifact, its SBOMs must be gone. The
+			// subtrees they pointed at stay for the garbage collector, since
+			// other artifacts may share them.
 			var depCountAfter int64
-			f.DB.Table("component_dependencies").
+			f.DB.Table("sboms").
 				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
 				Count(&depCountAfter)
-			assert.Equal(t, int64(0), depCountAfter, "component_dependencies should be empty after deleting all artifacts")
+			assert.Equal(t, int64(0), depCountAfter, "no sboms should remain after deleting all artifacts")
 
 			// license_risks must also be empty.
 			var licenseCountAfter int64

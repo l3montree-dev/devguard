@@ -71,7 +71,7 @@ type ConfigService_GetInstanceSettings_Call struct {
 
 // GetInstanceSettings is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ConfigService_Expecter) GetInstanceSettings(ctx interface{}) *ConfigService_GetInstanceSettings_Call {
+func (_e *ConfigService_Expecter) GetInstanceSettings(ctx any) *ConfigService_GetInstanceSettings_Call {
 	return &ConfigService_GetInstanceSettings_Call{Call: _e.mock.On("GetInstanceSettings", ctx)}
 }
 
@@ -124,7 +124,7 @@ type ConfigService_GetJSONConfig_Call struct {
 //   - ctx context.Context
 //   - key string
 //   - v any
-func (_e *ConfigService_Expecter) GetJSONConfig(ctx interface{}, key interface{}, v interface{}) *ConfigService_GetJSONConfig_Call {
+func (_e *ConfigService_Expecter) GetJSONConfig(ctx any, key any, v any) *ConfigService_GetJSONConfig_Call {
 	return &ConfigService_GetJSONConfig_Call{Call: _e.mock.On("GetJSONConfig", ctx, key, v)}
 }
 
@@ -187,7 +187,7 @@ type ConfigService_SetJSONConfig_Call struct {
 //   - ctx context.Context
 //   - key string
 //   - v any
-func (_e *ConfigService_Expecter) SetJSONConfig(ctx interface{}, key interface{}, v interface{}) *ConfigService_SetJSONConfig_Call {
+func (_e *ConfigService_Expecter) SetJSONConfig(ctx any, key any, v any) *ConfigService_SetJSONConfig_Call {
 	return &ConfigService_SetJSONConfig_Call{Call: _e.mock.On("SetJSONConfig", ctx, key, v)}
 }
 

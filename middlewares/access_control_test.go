@@ -612,6 +612,54 @@ func TestResourceFetchMiddleware(t *testing.T) {
 		mockProjectRepo.AssertExpectations(t)
 	})
 
+	t.Run("resolves org with encoded @", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("organization", "projectSlug")
+		ctx.SetParamValues("%40test-org", "test-project")
+
+		orgID := uuid.New()
+		org := &models.Org{Model: models.Model{ID: orgID}, Slug: "@test-org"}
+		project := models.Project{Model: models.Model{ID: uuid.New()}, Slug: "test-project", OrganizationID: orgID}
+
+		mockOrgService := mocks.OrgService{}
+		mockRBACProvider := mocks.RBACProvider{}
+		mockProjectRepo := mocks.ProjectRepository{}
+		mockAssetRepo := mocks.AssetRepository{}
+		mockAccessControl := mocks.AccessControl{}
+
+		mockOrgService.On("ReadBySlug", mock.Anything, "@test-org").Return(org, nil)
+		mockRBACProvider.On("GetDomainRBAC", orgID.String()).Return(&mockAccessControl)
+		mockProjectRepo.On("ReadBySlug", mock.Anything, mock.Anything, orgID, "test-project").Return(project, nil)
+
+		// project-scoped session whose owner ID matches the path-resolved project -
+		// resolveActorScope must reuse it, never calling Read for the actor scope.
+		session := shared.NewSession(project.ID.String(), shared.SessionActorProject, nil, false)
+		shared.SetSession(ctx, session)
+
+		middleware := ResourceFetchMiddleware(&mockRBACProvider, &mockOrgService, &mockProjectRepo, &mockAssetRepo)
+
+		var gotScope shared.ActorScope
+		err := middleware(func(ctx echo.Context) error {
+			gotScope = shared.GetActorScope(ctx)
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, org.ID, shared.GetOrg(ctx).ID)
+		assert.Equal(t, project.ID, shared.GetProject(ctx).ID)
+		if assert.NotNil(t, gotScope.Project) {
+			assert.Equal(t, project.ID, gotScope.Project.ID)
+		}
+		mockProjectRepo.AssertNotCalled(t, "Read", mock.Anything, mock.Anything, mock.Anything)
+		mockOrgService.AssertExpectations(t)
+		mockRBACProvider.AssertExpectations(t)
+		mockProjectRepo.AssertExpectations(t)
+	})
+
 	t.Run("fetches the actor's own project separately when it differs from the path-resolved project", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)

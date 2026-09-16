@@ -26,7 +26,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 6
+	CurrentHashVersion = 7
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -137,6 +137,21 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			config.Val = strconv.Itoa(CurrentHashVersion)
 			if err := db.Save(&config).Error; err != nil {
 				return fmt.Errorf("failed to update hash migration version after v6: %w", err)
+			}
+		}
+
+		if currentVersion < 7 {
+			// Rebuild the content-addressed SBOM storage from the legacy
+			// component_dependencies table, so upgrading instances keep their
+			// SBOMs rather than having to rescan everything.
+			if err := runMerkleBackfill(pool); err != nil {
+				return fmt.Errorf("failed to backfill merkle sboms (v7): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v7: %w", err)
 			}
 		}
 
@@ -758,7 +773,6 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 
 	// Run everything in a single transaction so failures roll back safely
 	err := db.Transaction(func(tx *gorm.DB) error {
-		componentRepository := repositories.NewComponentRepository(tx)
 		batchSize := 1000
 
 		// Delete all old dependency vuln related data
@@ -799,15 +813,25 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 			var vulnsToCreate []models.DependencyVuln
 			var eventsToCreate []models.VulnEvent
 
-			// Load SBOM components for this asset version
-			componentDeps, err := componentRepository.LoadComponents(context.Background(), tx, key.AssetVersionName, key.AssetID)
+			// Rebuild this asset version's SBOMs from the legacy edge table.
+			// This migration predates the content-addressed storage, so any
+			// instance still on it has its graph only in component_dependencies.
+			var legacyEdges []legacyEdge
+			err := tx.Raw(`
+				SELECT asset_id, asset_version_name, component_id, dependency_id
+				FROM component_dependencies
+				WHERE asset_id = ? AND asset_version_name = ?
+			`, key.AssetID, key.AssetVersionName).Scan(&legacyEdges).Error
 			if err != nil {
 				return fmt.Errorf("failed to load components for asset version %s/%s: %w", key.AssetID, key.AssetVersionName, err)
 			} else {
-				sbom, _ := normalize.SBOMGraphFromComponents(utils.MapType[normalize.GraphComponent](componentDeps), nil)
+				var sbom normalize.MerkleForest
+				for _, reconstructed := range reconstructSBOMs(legacyEdges) {
+					sbom = append(sbom, reconstructed.Tree)
+				}
 
 				for _, oldVuln := range vulns {
-					paths := sbom.FindAllComponentOnlyPathsToPURL(oldVuln.ComponentPurl, 0)
+					paths := sbom.PathsToPURL(oldVuln.ComponentPurl, 0)
 
 					if len(paths) == 0 {
 						slog.Warn("No SBOM paths found for vulnerable component, using empty path",

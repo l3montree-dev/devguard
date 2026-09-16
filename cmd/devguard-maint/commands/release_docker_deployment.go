@@ -54,8 +54,21 @@ func runReleaseDockerDeployment(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("no devguard-web release found with minor version %s — run 'release web' first", minor)
 	}
 
+	kratosTag, err := i.NixVersion(filepath.Join("devguard", "nix", "kratos.nix"))
+	if err != nil {
+		return fmt.Errorf("could not detect kratos upstream version: %w", err)
+	}
+
+	postgresqlTag, err := i.NixVersion(filepath.Join("devguard", "nix", "postgresql.nix"))
+	if err != nil {
+		return fmt.Errorf("could not detect postgresql upstream version: %w", err)
+	}
+	postgresqlTag = i.StripPackageRevision(postgresqlTag)
+
 	fmt.Printf("✓ devguard latest tag for minor %s: %s\n", minor, apiTag)
 	fmt.Printf("✓ devguard-web latest tag for minor %s: %s\n", minor, webTag)
+	fmt.Printf("✓ kratos upstream version: %s\n", kratosTag)
+	fmt.Printf("✓ postgresql upstream version: %s\n", postgresqlTag)
 
 	if err := i.GitCheckoutMain("devguard-docker-deployment"); err != nil {
 		return fmt.Errorf("checkout main in devguard-docker-deployment: %w", err)
@@ -74,7 +87,7 @@ func runReleaseDockerDeployment(_ *cobra.Command, args []string) error {
 
 	cl := &i.Changelog{}
 
-	composeChanged, err := updateDockerDeployment(apiTag, webTag, cl)
+	composeChanged, err := updateDockerDeployment(apiTag, webTag, kratosTag, postgresqlTag, cl)
 	if err != nil {
 		return err
 	}
@@ -97,7 +110,7 @@ func runReleaseDockerDeployment(_ *cobra.Command, args []string) error {
 		if err := i.GitAdd("devguard-docker-deployment", "."); err != nil {
 			return err
 		}
-		if err := i.GitCommit("devguard-docker-deployment", fmt.Sprintf("chore: update .env.example and CHANGELOG.md (api=%s web=%s)", apiTag, webTag)); err != nil {
+		if err := i.GitCommit("devguard-docker-deployment", fmt.Sprintf("chore: update .env.example and CHANGELOG.md (api=%s web=%s kratos=%s postgresql=%s)", apiTag, webTag, kratosTag, postgresqlTag)); err != nil {
 			return err
 		}
 		if err := i.GitPush("devguard-docker-deployment"); err != nil {
@@ -121,7 +134,7 @@ func runReleaseDockerDeployment(_ *cobra.Command, args []string) error {
 // actually changed on disk, so the caller can skip commit/push when it was
 // already up to date (a distinct case from the tag variables not matching at
 // all, which is a real failure).
-func updateDockerDeployment(apiTag, webTag string, cl *i.Changelog) (bool, error) {
+func updateDockerDeployment(apiTag, webTag, kratosTag, postgresqlTag string, cl *i.Changelog) (bool, error) {
 	path := "devguard-docker-deployment/.env.example"
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -137,8 +150,8 @@ func updateDockerDeployment(apiTag, webTag string, cl *i.Changelog) (bool, error
 	replacements := []replacement{
 		{regexp.MustCompile(`(?m)^(DEVGUARD_API_TAG=).*$`), apiTag},
 		{regexp.MustCompile(`(?m)^(DEVGUARD_WEB_TAG=).*$`), webTag},
-		{regexp.MustCompile(`(?m)^(POSTGRESQL_TAG=).*$`), apiTag},
-		{regexp.MustCompile(`(?m)^(KRATOS_TAG=).*$`), apiTag},
+		{regexp.MustCompile(`(?m)^(POSTGRESQL_TAG=).*$`), postgresqlTag},
+		{regexp.MustCompile(`(?m)^(KRATOS_TAG=).*$`), kratosTag},
 	}
 	matched := false
 	for _, r := range replacements {
@@ -156,12 +169,12 @@ func updateDockerDeployment(apiTag, webTag string, cl *i.Changelog) (bool, error
 	}
 
 	if updated == string(data) {
-		cl.Change(".env.example already up to date (api=" + apiTag + ", web=" + webTag + ")")
+		cl.Change(fmt.Sprintf(".env.example already up to date (api=%s, web=%s, kratos=%s, postgresql=%s)", apiTag, webTag, kratosTag, postgresqlTag))
 		return false, nil
 	}
 	if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
 		return false, err
 	}
-	cl.Change(fmt.Sprintf("Updated devguard-docker-deployment/.env.example (api=%s, web=%s)", apiTag, webTag))
+	cl.Change(fmt.Sprintf("Updated devguard-docker-deployment/.env.example (api=%s, web=%s, kratos=%s, postgresql=%s)", apiTag, webTag, kratosTag, postgresqlTag))
 	return true, nil
 }

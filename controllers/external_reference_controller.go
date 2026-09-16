@@ -35,9 +35,6 @@ type ExternalReferenceController struct {
 	assetVersionRepository      shared.AssetVersionRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	artifactRepository          shared.ArtifactRepository
-	vexRuleRepository           shared.VEXRuleRepository
-	dependencyVulnRepository    shared.DependencyVulnRepository
-	vulnEventRepository         shared.VulnEventRepository
 	dependencyVulnService       shared.DependencyVulnService
 	statisticsService           shared.StatisticsService
 	utils.FireAndForgetSynchronizer
@@ -48,9 +45,6 @@ func NewExternalReferenceController(
 	assetVersionRepository shared.AssetVersionRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	artifactRepository shared.ArtifactRepository,
-	vexRuleRepository shared.VEXRuleRepository,
-	dependencyVulnRepository shared.DependencyVulnRepository,
-	vulnEventRepository shared.VulnEventRepository,
 	dependencyVulnService shared.DependencyVulnService,
 	statisticsService shared.StatisticsService,
 	synchronizer utils.FireAndForgetSynchronizer,
@@ -60,9 +54,6 @@ func NewExternalReferenceController(
 		assetVersionRepository:      assetVersionRepository,
 		externalReferenceRepository: externalReferenceRepository,
 		artifactRepository:          artifactRepository,
-		vexRuleRepository:           vexRuleRepository,
-		dependencyVulnRepository:    dependencyVulnRepository,
-		vulnEventRepository:         vulnEventRepository,
 		dependencyVulnService:       dependencyVulnService,
 		statisticsService:           statisticsService,
 		FireAndForgetSynchronizer:   synchronizer,
@@ -193,7 +184,7 @@ func (c *ExternalReferenceController) syncVEXSources(reqCtx context.Context, ass
 		slog.Error("could not store vex external reference", "err", err, "assetID", asset.ID)
 	}
 
-	if err := ingestVEXRules(reqCtx, tx, c.vexRuleRepository, c.dependencyVulnRepository, c.vulnEventRepository, asset, rules); err != nil {
+	if err := c.IngestVEXRules(reqCtx, tx, asset, rules); err != nil {
 		tx.Rollback()
 		slog.Error("could not sync vex external references", "err", err, "assetID", asset.ID)
 		return echo.NewHTTPError(500, "could not sync vex external references").WithInternal(err)

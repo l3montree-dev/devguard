@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -14,66 +13,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// sbomOf builds one SBOM from a parent -> children map, rooted at "root".
+func sbomOf(artifactName string, children map[string][]string) *normalize.MerkleTree {
+	return normalize.BuildMerkleTree(normalize.Adjacency{Children: children}, "root", artifactName)
+}
+
 func TestVulnInPackageToDependencyVulns(t *testing.T) {
 	assetID := uuid.New()
 	assetVersionName := "main"
 	artifactName := "my-artifact"
 
 	t.Run("same CVE in different dependency paths creates separate vulnerabilities", func(t *testing.T) {
-		// Create an SBOM graph with the same vulnerable component reachable via two different dependency paths:
-		// root -> artifact -> sbom -> trivy -> stdlib
-		// root -> artifact -> sbom -> cosign -> stdlib
-		// The actual PURL paths are:
-		// pkg:golang/trivy@1.0.0 -> pkg:golang/stdlib@1.20.0
-		// pkg:golang/cosign@1.0.0 -> pkg:golang/stdlib@1.20.0
-		sbom := normalize.NewSBOMGraph()
-
-		artifactID := sbom.AddArtifact(artifactName)
-		infoSourceID := sbom.AddInfoSource(artifactID, "sbom-tool", normalize.InfoSourceSBOM)
-
-		// Add intermediate packages (trivy and cosign as actual packages)
+		// the same vulnerable component reachable via two dependency paths:
+		//   pkg:golang/trivy@1.0.0  -> pkg:golang/stdlib@1.20.0
+		//   pkg:golang/cosign@1.0.0 -> pkg:golang/stdlib@1.20.0
 		trivyPurl := "pkg:golang/trivy@1.0.0"
-		trivyComp := cdx.Component{
-			BOMRef:     trivyPurl,
-			PackageURL: trivyPurl,
-			Name:       "trivy",
-			Version:    "1.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		trivyID := sbom.AddComponent(trivyComp)
-		sbom.AddEdge(infoSourceID, trivyID)
-
 		cosignPurl := "pkg:golang/cosign@1.0.0"
-		cosignComp := cdx.Component{
-			BOMRef:     cosignPurl,
-			PackageURL: cosignPurl,
-			Name:       "cosign",
-			Version:    "1.0.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		cosignID := sbom.AddComponent(cosignComp)
-		sbom.AddEdge(infoSourceID, cosignID)
-
-		// Add the vulnerable stdlib component
 		stdlibPurl := "pkg:golang/stdlib@1.20.0"
-		stdlibComp := cdx.Component{
-			BOMRef:     stdlibPurl,
-			PackageURL: stdlibPurl,
-			Name:       "stdlib",
-			Version:    "1.20.0",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		stdlibID := sbom.AddComponent(stdlibComp)
 
-		// Create two paths to stdlib via different intermediate packages
-		sbom.AddEdge(trivyID, stdlibID)
-		sbom.AddEdge(cosignID, stdlibID)
+		forest := normalize.MerkleForest{sbomOf(artifactName, map[string][]string{
+			"root":     {trivyPurl, cosignPurl},
+			trivyPurl:  {stdlibPurl},
+			cosignPurl: {stdlibPurl},
+		})}
 
-		// Scope to the artifact
-		err := sbom.ScopeToArtifact(artifactName)
-		require.NoError(t, err)
-
-		// Create a vulnerability for stdlib
 		purl, err := packageurl.FromString(stdlibPurl)
 		require.NoError(t, err)
 
@@ -88,8 +51,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			},
 		}
 
-		// Transform the vulnerability
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
 
 		// Should create 2 separate vulnerabilities, one for each dependency path
 		assert.Len(t, vulns, 2)
@@ -103,10 +65,8 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			assert.Equal(t, assetVersionName, v.AssetVersionName)
 			assert.NotEmpty(t, v.VulnerabilityPath)
 
-			// Convert path slice to string for uniqueness check
 			pathStrs[strings.Join(v.VulnerabilityPath, ",")] = true
 
-			// Verify artifact is set
 			require.Len(t, v.Artifacts, 1)
 			assert.Equal(t, artifactName, v.Artifacts[0].ArtifactName)
 		}
@@ -115,32 +75,17 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		assert.Len(t, pathStrs, 2)
 
 		// Verify the hashes are different (since dependency paths are different)
-		// Hash only includes actual package PURLs, not structural nodes
 		hash1 := vulns[0].CalculateHash()
 		hash2 := vulns[1].CalculateHash()
 		assert.NotEqual(t, hash1, hash2)
 	})
 
 	t.Run("single path creates single vulnerability", func(t *testing.T) {
-		sbom := normalize.NewSBOMGraph()
-
-		artifactID := sbom.AddArtifact(artifactName)
-		trivyID := sbom.AddInfoSource(artifactID, "trivy", normalize.InfoSourceSBOM)
-
-		// Add component with single path
 		compPurl := "pkg:npm/lodash@4.17.20"
-		comp := cdx.Component{
-			BOMRef:     compPurl,
-			PackageURL: compPurl,
-			Name:       "lodash",
-			Version:    "4.17.20",
-			Type:       cdx.ComponentTypeLibrary,
-		}
-		compID := sbom.AddComponent(comp)
-		sbom.AddEdge(trivyID, compID)
 
-		err := sbom.ScopeToArtifact(artifactName)
-		require.NoError(t, err)
+		forest := normalize.MerkleForest{sbomOf(artifactName, map[string][]string{
+			"root": {compPurl},
+		})}
 
 		purl, err := packageurl.FromString(compPurl)
 		require.NoError(t, err)
@@ -154,24 +99,20 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
 
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-23337", vulns[0].CVEID)
-		// Path should contain trivy info source and the component purl
+		// the path holds the component, never the SBOM source it came from
 		pathStr := strings.Join(vulns[0].VulnerabilityPath, ",")
 		assert.NotContains(t, pathStr, "trivy")
 		assert.Contains(t, pathStr, compPurl)
 	})
 
 	t.Run("no path found creates fallback vulnerability with empty path", func(t *testing.T) {
-		sbom := normalize.NewSBOMGraph()
-		sbom.AddArtifact(artifactName)
+		forest := normalize.MerkleForest{sbomOf(artifactName, map[string][]string{})}
 
-		err := sbom.ScopeToArtifact(artifactName)
-		require.NoError(t, err)
-
-		// Create vuln for a component not in the graph
+		// Create vuln for a component not in the SBOM
 		purl, err := packageurl.FromString("pkg:npm/unknown@1.0.0")
 		require.NoError(t, err)
 
@@ -183,39 +124,27 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
 
 		assert.Len(t, vulns, 1)
 		assert.Empty(t, vulns[0].VulnerabilityPath)
 	})
 
-	t.Run("non-package info source does not create extra vuln", func(t *testing.T) {
-		// Two graph paths to pkg:B via pkg:A, but one goes through package-lock.json (an info source):
-		//   artifact -> sbom:tool         -> pkg:A -> pkg:B
-		//   artifact -> sbom:package-lock.json -> pkg:A -> pkg:B
-		// Since package-lock.json is not a package, both paths produce the same
-		// component-only path [pkg:A, pkg:B], so only ONE dependency vuln should be created.
-		sbom := normalize.NewSBOMGraph()
-
-		artifactID := sbom.AddArtifact(artifactName)
-		toolID := sbom.AddInfoSource(artifactID, "tool", normalize.InfoSourceSBOM)
-		lockfileID := sbom.AddInfoSource(artifactID, "package-lock.json", normalize.InfoSourceSBOM)
-
+	t.Run("two SBOM sources agreeing on a chain do not create an extra vuln", func(t *testing.T) {
+		// One artifact with two origins - a scanner and package-lock.json - that
+		// both report pkg:A -> pkg:B. The SBOMs are stored separately, but they
+		// agree, so the paths are identical and only ONE vuln is created.
 		pkgAPurl := "pkg:npm/a@1.0.0"
-		pkgAComp := cdx.Component{PackageURL: pkgAPurl, BOMRef: pkgAPurl, Name: "a", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
-		pkgAID := sbom.AddComponent(pkgAComp)
-
 		pkgBPurl := "pkg:npm/b@1.0.0"
-		pkgBComp := cdx.Component{PackageURL: pkgBPurl, BOMRef: pkgBPurl, Name: "b", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
-		pkgBID := sbom.AddComponent(pkgBComp)
 
-		// Both info sources lead to the same pkg:A -> pkg:B chain
-		sbom.AddEdge(toolID, pkgAID)
-		sbom.AddEdge(lockfileID, pkgAID)
-		sbom.AddEdge(pkgAID, pkgBID)
-
-		err := sbom.ScopeToArtifact(artifactName)
-		require.NoError(t, err)
+		chain := map[string][]string{
+			"root":   {pkgAPurl},
+			pkgAPurl: {pkgBPurl},
+		}
+		forest := normalize.MerkleForest{
+			sbomOf(artifactName, chain),
+			sbomOf(artifactName, chain),
+		}
 
 		purl, err := packageurl.FromString(pkgBPurl)
 		require.NoError(t, err)
@@ -226,39 +155,58 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			CVE:   models.CVE{CVE: "CVE-2024-5678"},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
 
-		// Only 1 vuln should be created — the two paths are identical once non-package nodes are stripped
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2024-5678", vulns[0].CVEID)
 		assert.Equal(t, pkgBPurl, vulns[0].ComponentPurl)
 		assert.Equal(t, []string{pkgAPurl, pkgBPurl}, vulns[0].VulnerabilityPath)
 	})
 
-	t.Run("transitive dependency has correct depth", func(t *testing.T) {
-		sbom := normalize.NewSBOMGraph()
+	t.Run("two SBOM sources disagreeing about a chain both get reported", func(t *testing.T) {
+		// The case the old merged graph could not represent: two origins give
+		// the same component different parents, so both paths must survive.
+		pkgBPurl := "pkg:npm/b@1.0.0"
 
-		artifactID := sbom.AddArtifact(artifactName)
-		infoSourceID := sbom.AddInfoSource(artifactID, "npm", normalize.InfoSourceSBOM)
+		forest := normalize.MerkleForest{
+			sbomOf(artifactName, map[string][]string{
+				"root":            {"pkg:npm/a@1.0.0"},
+				"pkg:npm/a@1.0.0": {pkgBPurl},
+			}),
+			sbomOf(artifactName, map[string][]string{
+				"root":            {"pkg:npm/x@1.0.0"},
+				"pkg:npm/x@1.0.0": {pkgBPurl},
+			}),
+		}
 
-		// Create a chain: infoSource -> dep1 -> dep2 -> vulnerable
-		dep1Purl := "pkg:npm/dep1@1.0.0"
-		dep1 := cdx.Component{BOMRef: dep1Purl, PackageURL: dep1Purl, Name: "dep1", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
-		dep1ID := sbom.AddComponent(dep1)
-		sbom.AddEdge(infoSourceID, dep1ID)
-
-		dep2Purl := "pkg:npm/dep2@1.0.0"
-		dep2 := cdx.Component{BOMRef: dep2Purl, PackageURL: dep2Purl, Name: "dep2", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
-		dep2ID := sbom.AddComponent(dep2)
-		sbom.AddEdge(dep1ID, dep2ID)
-
-		vulnPurl := "pkg:npm/vulnerable@1.0.0"
-		vulnComp := cdx.Component{BOMRef: vulnPurl, PackageURL: vulnPurl, Name: "vulnerable", Version: "1.0.0", Type: cdx.ComponentTypeLibrary}
-		vulnID := sbom.AddComponent(vulnComp)
-		sbom.AddEdge(dep2ID, vulnID)
-
-		err := sbom.ScopeToArtifact(artifactName)
+		purl, err := packageurl.FromString(pkgBPurl)
 		require.NoError(t, err)
+
+		vulns := transformer.VulnInPackageToDependencyVulns(models.VulnInPackage{
+			Purl:  purl,
+			CVEID: "CVE-2024-DISAGREE",
+			CVE:   models.CVE{CVE: "CVE-2024-DISAGREE"},
+		}, forest, assetID, assetVersionName, artifactName)
+
+		require.Len(t, vulns, 2)
+		paths := []string{
+			strings.Join(vulns[0].VulnerabilityPath, ","),
+			strings.Join(vulns[1].VulnerabilityPath, ","),
+		}
+		assert.Contains(t, paths, "pkg:npm/a@1.0.0,"+pkgBPurl)
+		assert.Contains(t, paths, "pkg:npm/x@1.0.0,"+pkgBPurl)
+	})
+
+	t.Run("transitive dependency has correct depth", func(t *testing.T) {
+		dep1Purl := "pkg:npm/dep1@1.0.0"
+		dep2Purl := "pkg:npm/dep2@1.0.0"
+		vulnPurl := "pkg:npm/vulnerable@1.0.0"
+
+		forest := normalize.MerkleForest{sbomOf(artifactName, map[string][]string{
+			"root":   {dep1Purl},
+			dep1Purl: {dep2Purl},
+			dep2Purl: {vulnPurl},
+		})}
 
 		purl, err := packageurl.FromString(vulnPurl)
 		require.NoError(t, err)
@@ -269,7 +217,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			CVE:   models.CVE{CVE: "CVE-2024-DEEP"},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, sbom, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
 
 		assert.Len(t, vulns, 1)
 		// Path: dep1 > dep2 > vulnerable = 3 elements, depth = 3

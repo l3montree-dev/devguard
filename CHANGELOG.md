@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.13.7 - 2026-09-11
+
+### Added
+- Add an `--offline` flag to the `attest` command in `devguard-scanner`, allowing attestations to be generated without writing/pushing results.
+
+
+## [v1.13.6] - 2026-09-08
+
+### Changed
+
+- **Trailing-slash normalization now covers the OCI registry routes too** — `addTrailingSlash` exempted every `/v2/` path, because the OCI Distribution Spec routes were registered without a trailing slash and appending one made them stop matching. Those routes now carry the normalising slash like every other route in DevGuard, so the special case is gone and all requests take one path through the middleware. Image pulls are unaffected: the OCI proxy rebuilds the upstream request path from its route parameters, so the appended slash is never forwarded to docker.io, ghcr.io or quay.io
+- Regression coverage for the percent-encoded path fix shipped in v1.13.5 — `ResourceFetchMiddleware` is now tested against an organization slug carrying an encoded `@` (`%40test-org`), and the trailing-slash routing test exercises `/organizations/%40opencode` rather than an unescaped slug
+
+## [v1.13.5] - 2026-09-08
+
+### Fixed
+
+- **Routing of percent-encoded paths** — requests whose path carried a `%xx` escape were not matched against the intended route and fell through to a broader-scoped one, answering `403` or `404`. Echo's `AddTrailingSlash` middleware appends the normalising slash to `URL.Path` only, while echo's router matches on `URL.RawPath` whenever that field is set — which `net/url` does for every escaped path. DevGuard now normalises both fields. Most visibly this made organizations whose slug starts with `@` (the reserved external-entity-provider orgs, e.g. `/api/v1/organizations/%40opencode`) unreachable, returning a 404 in the web UI for logged-in members
+
+## [v1.13.4] - 2026-09-08
+
+### Fixed
+
+- **VEX ingest from an external SBOM URL** — the ingest path was reworked and moved into `scan_service`, fixing a bug where VEX statements attached to externally-hosted SBOMs weren't picked up during scanning
+- GitLab CI no longer builds Kratos and PostgreSQL images for `main`, reducing pipeline time
+
+### Changed
+
+- `python-tools` dependencies updated (`uv.lock` now includes `gitpython==3.1.59`)
+
 ## [v1.13.3] - 2026-09-02
 
 ### Added

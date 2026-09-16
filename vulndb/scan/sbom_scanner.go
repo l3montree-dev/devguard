@@ -43,18 +43,16 @@ func NewSBOMScanner(purlComparer comparer, cveRepository shared.CveRepository) *
 	}
 }
 
-func (s *sbomScanner) Scan(ctx context.Context, bom *normalize.SBOMGraph) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(ctx context.Context, forest normalize.MerkleForest) ([]models.VulnInPackage, error) {
 	// Collect all PURLs first
 	var purls []packageurl.PackageURL
-	for c := range bom.NodesOfType(normalize.GraphNodeTypeComponent) {
-		if c.Component.PackageURL != "" {
-			parsed, err := packageurl.FromString(c.Component.PackageURL)
-			if err != nil {
-				// slog.Warn("could not parse purl", "purl", c.Component.PackageURL, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
-				continue
-			}
-			purls = append(purls, parsed)
+	for _, id := range forest.ComponentIDs() {
+		parsed, err := packageurl.FromString(id)
+		if err != nil {
+			// slog.Warn("could not parse purl", "purl", id, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
+			continue
 		}
+		purls = append(purls, parsed)
 	}
 
 	if len(purls) == 0 {

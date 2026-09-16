@@ -59,8 +59,6 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Create artifact root node dependencies (NULL -> artifact:name)
-		artifactRoot1 := "artifact:" + a1.ArtifactName
-		artifactRoot2 := "artifact:" + a2.ArtifactName
 
 		// ensure Component rows exist for the dependency purls (FK to components.purl)
 		compA := models.Component{ID: "pkg:maven/org.example/component-a@1.0.0"}
@@ -71,29 +69,11 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		if err := f.DB.Create(&compB).Error; err != nil {
 			t.Fatal(err)
 		}
-		f.DB.Create(models.Component{
-			ID: artifactRoot1,
-		})
-		f.DB.Create(models.Component{
-			ID: artifactRoot2,
-		})
-
-		rootDep1 := models.ComponentDependency{DependencyID: artifactRoot1, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: "ROOT"}
-		rootDep2 := models.ComponentDependency{DependencyID: artifactRoot2, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: "ROOT"}
-		if err := f.DB.Create(&rootDep1).Error; err != nil {
+		// each artifact gets its own SBOM, so the release merges two of them
+		if err := SeedDirectDependencies(f.DB, assetVersion, a1.ArtifactName, compA.ID); err != nil {
 			t.Fatal(err)
 		}
-		if err := f.DB.Create(&rootDep2).Error; err != nil {
-			t.Fatal(err)
-		}
-
-		// Create component dependencies (artifact:name -> pkg:...)
-		c1 := models.ComponentDependency{DependencyID: compA.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: artifactRoot1}
-		c2 := models.ComponentDependency{DependencyID: compB.ID, AssetVersionName: assetVersion.Name, AssetID: asset.ID, ComponentID: artifactRoot2}
-		if err := f.DB.Create(&c1).Error; err != nil {
-			t.Fatal(err)
-		}
-		if err := f.DB.Create(&c2).Error; err != nil {
+		if err := SeedDirectDependencies(f.DB, assetVersion, a2.ArtifactName, compB.ID); err != nil {
 			t.Fatal(err)
 		}
 

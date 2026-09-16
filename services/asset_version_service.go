@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 
@@ -33,6 +34,7 @@ import (
 
 type assetVersionService struct {
 	componentRepository    shared.ComponentRepository
+	sbomRepository         shared.SBOMRepository
 	assetVersionRepository shared.AssetVersionRepository
 	componentService       shared.ComponentService
 	thirdPartyIntegration  shared.IntegrationAggregate
@@ -42,10 +44,11 @@ type assetVersionService struct {
 
 var _ shared.AssetVersionService = &assetVersionService{}
 
-func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
+func NewAssetVersionService(assetVersionRepository shared.AssetVersionRepository, componentRepository shared.ComponentRepository, sbomRepository shared.SBOMRepository, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate, licenseRiskRepository shared.LicenseRiskRepository, synchronizer utils.FireAndForgetSynchronizer) *assetVersionService {
 	return &assetVersionService{
 		assetVersionRepository:    assetVersionRepository,
 		componentRepository:       componentRepository,
+		sbomRepository:            sbomRepository,
 		componentService:          componentService,
 		thirdPartyIntegration:     thirdPartyIntegration,
 		licenseRiskRepository:     licenseRiskRepository,
@@ -90,53 +93,113 @@ func preferMarkdown(text sarif.MultiformatMessageString) string {
 	return text.Text
 }
 
-func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom *normalize.SBOMGraph) (*normalize.SBOMGraph, error) {
+// UpdateSBOM stores one ingested SBOM and returns every SBOM of the artifact,
+// which is what gets scanned.
+//
+// There is no diff to compute. The tree is addressed by its content, so an
+// unchanged rescan re-inserts rows that collide on the primary key and change
+// nothing, while a changed one inserts only the subtrees that actually differ.
+func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	// Load the full SBOM graph from the database
-	wholeAssetGraph, err := s.LoadFullSBOMGraph(ctx, tx, assetVersion)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not build whole asset sbom graph")
+	// component metadata stays in the components table, keyed by purl
+	components := make([]models.Component, 0, len(parsed.Components))
+	for id := range parsed.Components {
+		components = append(components, models.Component{ID: id})
+	}
+	if err := s.componentRepository.CreateBatch(ctx, tx, components); err != nil {
+		return nil, errors.Wrap(err, "could not create components")
 	}
 
-	diff := wholeAssetGraph.MergeGraph(sbom)
-
-	if err := s.componentRepository.HandleStateDiff(ctx, tx, assetVersion, wholeAssetGraph, diff); err != nil {
-		return nil, errors.Wrap(err, "could not handle state diff")
+	if err := s.sbomRepository.SaveTree(ctx, tx, models.SBOM{
+		AssetID:          assetVersion.AssetID,
+		AssetVersionName: assetVersion.Name,
+		ArtifactName:     artifactName,
+		Source:           source,
+	}, parsed.Tree); err != nil {
+		return nil, errors.Wrap(err, "could not store sbom")
 	}
 
-	return wholeAssetGraph, nil
+	return s.LoadArtifactSBOMs(ctx, tx, assetVersion, artifactName)
 }
 
-// LoadFullSBOMGraph loads all components for an asset version and builds a complete SBOMGraph.
-// This is the new graph-based approach that will eventually replace LoadFullSBOM.
-func (s *assetVersionService) LoadFullSBOMGraph(ctx context.Context, tx *gorm.DB, assetVersion models.AssetVersion) (*normalize.SBOMGraph, error) {
+// LoadComponentMetadata fetches the metadata needed to render a forest as a
+// CycloneDX document. The trees carry only component ids, so licenses and types
+// come from the components table, with license overwrites applied on top.
+func (s *assetVersionService) LoadComponentMetadata(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, forest normalize.MerkleForest) (map[string]cdx.Component, error) {
+	ids := forest.ComponentIDs()
+	components, err := s.componentRepository.FindByIDs(ctx, tx, ids)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load component metadata")
+	}
+
 	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not load license overwrites")
 	}
-	componentLicenseOverwrites := make(map[string]string, len(licenseRisks))
+	overwrites := make(map[string]string, len(licenseRisks))
 	for i := range licenseRisks {
 		if licenseRisks[i].FinalLicenseDecision != nil {
-			componentLicenseOverwrites[licenseRisks[i].ComponentPurl] = *licenseRisks[i].FinalLicenseDecision
+			overwrites[licenseRisks[i].ComponentPurl] = *licenseRisks[i].FinalLicenseDecision
 		}
 	}
 
-	// Load ALL components for the asset version
-	components, err := s.componentRepository.LoadComponents(ctx, tx, assetVersion.Name, assetVersion.AssetID)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not load components")
-	}
+	return transformer.ComponentsToCdx(components, overwrites), nil
+}
 
-	// Uses generics to avoid slice type conversion (reduces allocations)
-	sbom, err := normalize.SBOMGraphFromComponents(components, componentLicenseOverwrites)
+// ListSBOMs returns an artifact's SBOM rows - one per source, carrying the
+// source itself and the root hash of its tree.
+func (s *assetVersionService) ListSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) ([]models.SBOM, error) {
+	return s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName)
+}
+
+// DeleteSBOMSource drops one SBOM source from an artifact. Only the pointer
+// goes; its subtrees stay for the garbage collector, since other SBOMs are
+// likely to share them.
+func (s *assetVersionService) DeleteSBOMSource(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName, source string) error {
+	return s.sbomRepository.DeleteBySource(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName, source)
+}
+
+// LoadSBOM loads the SBOM an artifact got from one source.
+func (s *assetVersionService) LoadSBOM(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName, source string) (normalize.MerkleForest, error) {
+	sboms, err := s.sbomRepository.FindBySource(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName, source)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not build SBOM graph from components")
+		return nil, errors.Wrap(err, "could not load sbom")
 	}
-	return sbom, nil
+	return s.loadForest(ctx, tx, sboms)
+}
+
+// LoadArtifactSBOMs loads every SBOM of one artifact - one tree per origin.
+func (s *assetVersionService) LoadArtifactSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) (normalize.MerkleForest, error) {
+	sboms, err := s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load sboms of artifact")
+	}
+	return s.loadForest(ctx, tx, sboms)
+}
+
+// LoadAssetVersionSBOMs loads every SBOM of an asset version, across artifacts.
+func (s *assetVersionService) LoadAssetVersionSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) (normalize.MerkleForest, error) {
+	sboms, err := s.sbomRepository.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load sboms of asset version")
+	}
+	return s.loadForest(ctx, tx, sboms)
+}
+
+func (s *assetVersionService) loadForest(ctx context.Context, tx shared.DB, sboms []models.SBOM) (normalize.MerkleForest, error) {
+	forest := make(normalize.MerkleForest, 0, len(sboms))
+	for _, sbom := range sboms {
+		tree, err := s.sbomRepository.LoadTree(ctx, tx, sbom.RootSubtreeHash)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not load sbom tree")
+		}
+		forest = append(forest, tree)
+	}
+	return forest, nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -301,7 +364,7 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 		vulnerabilities = append(vulnerabilities, vuln)
 	}
 
-	return normalize.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
+	return transformer.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
 }
 
 func scoreToSeverity(score float64) cdx.Severity {

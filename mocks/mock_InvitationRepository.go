@@ -67,7 +67,7 @@ type InvitationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *InvitationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *InvitationRepository_Delete_Call {
+func (_e *InvitationRepository_Expecter) Delete(ctx any, tx any, id any) *InvitationRepository_Delete_Call {
 	return &InvitationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -139,7 +139,7 @@ type InvitationRepository_FindByCode_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - code string
-func (_e *InvitationRepository_Expecter) FindByCode(ctx interface{}, tx interface{}, code interface{}) *InvitationRepository_FindByCode_Call {
+func (_e *InvitationRepository_Expecter) FindByCode(ctx any, tx any, code any) *InvitationRepository_FindByCode_Call {
 	return &InvitationRepository_FindByCode_Call{Call: _e.mock.On("FindByCode", ctx, tx, code)}
 }
 
@@ -213,7 +213,7 @@ type InvitationRepository_FindByOrgID_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - orgID string
-func (_e *InvitationRepository_Expecter) FindByOrgID(ctx interface{}, tx interface{}, orgID interface{}) *InvitationRepository_FindByOrgID_Call {
+func (_e *InvitationRepository_Expecter) FindByOrgID(ctx any, tx any, orgID any) *InvitationRepository_FindByOrgID_Call {
 	return &InvitationRepository_FindByOrgID_Call{Call: _e.mock.On("FindByOrgID", ctx, tx, orgID)}
 }
 
@@ -276,7 +276,7 @@ type InvitationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - invitation *models.Invitation
-func (_e *InvitationRepository_Expecter) Save(ctx interface{}, tx interface{}, invitation interface{}) *InvitationRepository_Save_Call {
+func (_e *InvitationRepository_Expecter) Save(ctx any, tx any, invitation any) *InvitationRepository_Save_Call {
 	return &InvitationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, invitation)}
 }
 

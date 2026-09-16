@@ -71,7 +71,7 @@ type LicenseRiskService_FindLicenseRisksInComponents_Call struct {
 //   - assetVersion models.AssetVersion
 //   - components []models.Component
 //   - artifactName string
-func (_e *LicenseRiskService_Expecter) FindLicenseRisksInComponents(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, assetVersion interface{}, components interface{}, artifactName interface{}) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+func (_e *LicenseRiskService_Expecter) FindLicenseRisksInComponents(ctx any, tx any, userID any, userAgent any, assetVersion any, components any, artifactName any) *LicenseRiskService_FindLicenseRisksInComponents_Call {
 	return &LicenseRiskService_FindLicenseRisksInComponents_Call{Call: _e.mock.On("FindLicenseRisksInComponents", ctx, tx, userID, userAgent, assetVersion, components, artifactName)}
 }
 
@@ -158,7 +158,7 @@ type LicenseRiskService_MakeFinalLicenseDecision_Call struct {
 //   - justification string
 //   - userID string
 //   - userAgent *string
-func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(ctx interface{}, tx interface{}, vulnID interface{}, finalLicense interface{}, justification interface{}, userID interface{}, userAgent interface{}) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(ctx any, tx any, vulnID any, finalLicense any, justification any, userID any, userAgent any) *LicenseRiskService_MakeFinalLicenseDecision_Call {
 	return &LicenseRiskService_MakeFinalLicenseDecision_Call{Call: _e.mock.On("MakeFinalLicenseDecision", ctx, tx, vulnID, finalLicense, justification, userID, userAgent)}
 }
 
@@ -255,7 +255,7 @@ type LicenseRiskService_UpdateLicenseRiskState_Call struct {
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - userAgent *string
-func (_e *LicenseRiskService_Expecter) UpdateLicenseRiskState(ctx interface{}, tx interface{}, userID interface{}, licenseRisk interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, userAgent interface{}) *LicenseRiskService_UpdateLicenseRiskState_Call {
+func (_e *LicenseRiskService_Expecter) UpdateLicenseRiskState(ctx any, tx any, userID any, licenseRisk any, statusType any, justification any, mechanicalJustification any, userAgent any) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	return &LicenseRiskService_UpdateLicenseRiskState_Call{Call: _e.mock.On("UpdateLicenseRiskState", ctx, tx, userID, licenseRisk, statusType, justification, mechanicalJustification, userAgent)}
 }
 

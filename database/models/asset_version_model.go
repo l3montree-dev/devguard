@@ -31,7 +31,6 @@ type AssetVersion struct {
 	DependencyVulns []DependencyVuln      `json:"dependencyVulns" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	Artifacts       []Artifact            `json:"artifacts" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Type            AssetVersionType      `json:"type" gorm:"type:text;not null;"`
-	Components      []ComponentDependency `json:"components" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	SigningPubKey  *string             `json:"signingPubKey" gorm:"type:text;"`

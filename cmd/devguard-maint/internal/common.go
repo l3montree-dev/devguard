@@ -13,6 +13,31 @@ import (
 
 var semverRe = regexp.MustCompile(`^v(\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*)?)$`)
 var bareSemverRe = regexp.MustCompile(`^\d+\.\d+\.\d+`)
+var nixVersionRe = regexp.MustCompile(`(?m)^\s*version\s*=\s*"([^"]+)"`)
+var pkgRevisionSuffixRe = regexp.MustCompile(`-r\d+$`)
+
+// NixVersion reads the `version = "..."` assignment pinning the vendored
+// upstream version out of a nix file (e.g. nix/kratos.nix, nix/postgresql.nix).
+func NixVersion(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	m := nixVersionRe.FindSubmatch(data)
+	if m == nil {
+		return "", fmt.Errorf("version not found in %s", path)
+	}
+	return string(m[1]), nil
+}
+
+// StripPackageRevision drops a trailing apk-style "-rN" revision suffix (e.g.
+// "16.15-r0" -> "16.15"), as pinned by nix/postgresql.nix. The published
+// ghcr.io tag for that image omits the revision — it's a floating tag
+// re-pushed on every build, so it always points at the latest image for that
+// version.
+func StripPackageRevision(version string) string {
+	return pkgRevisionSuffixRe.ReplaceAllString(version, "")
+}
 
 func ValidateTag(tag string) (semver string, err error) {
 	if m := semverRe.FindStringSubmatch(tag); m != nil {
@@ -208,7 +233,7 @@ func hasChangelogEntry(content, tag string) bool {
 // versions; if approved, it generates and inserts a changelog entry
 // documenting just those image bumps. If declined, it returns an error so the
 // release can be aborted for a manual entry.
-func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTag string) error {
+func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag string) error {
 	data, err := os.ReadFile(changelogPath)
 	if err != nil {
 		return fmt.Errorf("could not read %s: %w", changelogPath, err)
@@ -224,8 +249,8 @@ func EnsureHelmChangelogEntry(changelogPath, tag, apiTag, webTag, ciComponentsTa
 	}
 
 	entry := fmt.Sprintf(
-		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` / `postgresql` / `kratos` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`\n\n---\n\n",
-		tag, time.Now().Format("2006-01-02"), apiTag, webTag, ciComponentsTag,
+		"## [%s] — %s\n\n### Changed\n\n- Bumped default DevGuard image versions: `devguard` to `%s`, `devguard-web` to `%s`, `devguard-ci-components` to `%s`, `kratos` to `%s`, `postgresql` to `%s`\n\n---\n\n",
+		tag, time.Now().Format("2006-01-02"), apiTag, webTag, ciComponentsTag, kratosTag, postgresqlTag,
 	)
 
 	idx := strings.Index(content, "\n## [")

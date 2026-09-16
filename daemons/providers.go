@@ -77,6 +77,7 @@ type DaemonRunner struct {
 	trustedEntityRepository         shared.TrustedEntityRepository
 	upstreamVEXRuleRepository       shared.UpstreamVEXRuleRepository
 	externalReferenceRepository     shared.ExternalReferenceRepository
+	sbomRepository                  shared.SBOMRepository
 	pgxpool                         *pgxpool.Pool
 
 	debugOptions         DebugOptions
@@ -133,6 +134,7 @@ func NewDaemonRunner(
 	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository,
 	trustedEntityRepository shared.TrustedEntityRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
+	sbomRepository shared.SBOMRepository,
 	fixedVersionResolver shared.FixedVersionResolver,
 	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 	pool *pgxpool.Pool,
@@ -169,6 +171,7 @@ func NewDaemonRunner(
 		vexRuleRecommendationRepository: vexRuleRecommendationRepository,
 		trustedEntityRepository:         trustedEntityRepository,
 		externalReferenceRepository:     externalReferenceRepository,
+		sbomRepository:                  sbomRepository,
 		fixedVersionResolver:            fixedVersionResolver,
 		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
 		pgxpool:                         pool,

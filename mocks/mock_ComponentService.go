@@ -73,7 +73,7 @@ type ComponentService_FetchComponentProject_Call struct {
 // FetchComponentProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - component models.Component
-func (_e *ComponentService_Expecter) FetchComponentProject(ctx interface{}, component interface{}) *ComponentService_FetchComponentProject_Call {
+func (_e *ComponentService_Expecter) FetchComponentProject(ctx any, component any) *ComponentService_FetchComponentProject_Call {
 	return &ComponentService_FetchComponentProject_Call{Call: _e.mock.On("FetchComponentProject", ctx, component)}
 }
 
@@ -101,80 +101,6 @@ func (_c *ComponentService_FetchComponentProject_Call) Return(component1 models.
 }
 
 func (_c *ComponentService_FetchComponentProject_Call) RunAndReturn(run func(ctx context.Context, component models.Component) (models.Component, error)) *ComponentService_FetchComponentProject_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FetchInformationSources provides a mock function for the type ComponentService
-func (_mock *ComponentService) FetchInformationSources(ctx context.Context, tx shared.DB, artifact *models.Artifact) ([]models.ComponentDependency, error) {
-	ret := _mock.Called(ctx, tx, artifact)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FetchInformationSources")
-	}
-
-	var r0 []models.ComponentDependency
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact) ([]models.ComponentDependency, error)); ok {
-		return returnFunc(ctx, tx, artifact)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact) []models.ComponentDependency); ok {
-		r0 = returnFunc(ctx, tx, artifact)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ComponentDependency)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *models.Artifact) error); ok {
-		r1 = returnFunc(ctx, tx, artifact)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ComponentService_FetchInformationSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchInformationSources'
-type ComponentService_FetchInformationSources_Call struct {
-	*mock.Call
-}
-
-// FetchInformationSources is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - artifact *models.Artifact
-func (_e *ComponentService_Expecter) FetchInformationSources(ctx interface{}, tx interface{}, artifact interface{}) *ComponentService_FetchInformationSources_Call {
-	return &ComponentService_FetchInformationSources_Call{Call: _e.mock.On("FetchInformationSources", ctx, tx, artifact)}
-}
-
-func (_c *ComponentService_FetchInformationSources_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact)) *ComponentService_FetchInformationSources_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *models.Artifact
-		if args[2] != nil {
-			arg2 = args[2].(*models.Artifact)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ComponentService_FetchInformationSources_Call) Return(componentDependencys []models.ComponentDependency, err error) *ComponentService_FetchInformationSources_Call {
-	_c.Call.Return(componentDependencys, err)
-	return _c
-}
-
-func (_c *ComponentService_FetchInformationSources_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact) ([]models.ComponentDependency, error)) *ComponentService_FetchInformationSources_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -218,7 +144,7 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
 //   - forceRefresh bool
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(ctx any, tx any, assetVersion any, artifactName any, forceRefresh any) *ComponentService_GetAndSaveLicenseInformation_Call {
 	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", ctx, tx, assetVersion, artifactName, forceRefresh)}
 }
 
@@ -299,7 +225,7 @@ type ComponentService_GetLicense_Call struct {
 // GetLicense is a helper method to define mock.On call
 //   - ctx context.Context
 //   - component models.Component
-func (_e *ComponentService_Expecter) GetLicense(ctx interface{}, component interface{}) *ComponentService_GetLicense_Call {
+func (_e *ComponentService_Expecter) GetLicense(ctx any, component any) *ComponentService_GetLicense_Call {
 	return &ComponentService_GetLicense_Call{Call: _e.mock.On("GetLicense", ctx, component)}
 }
 
@@ -345,7 +271,7 @@ type ComponentService_RefreshComponentProjectInformation_Call struct {
 // RefreshComponentProjectInformation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - project models.ComponentProject
-func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(ctx interface{}, project interface{}) *ComponentService_RefreshComponentProjectInformation_Call {
+func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(ctx any, project any) *ComponentService_RefreshComponentProjectInformation_Call {
 	return &ComponentService_RefreshComponentProjectInformation_Call{Call: _e.mock.On("RefreshComponentProjectInformation", ctx, project)}
 }
 
@@ -374,74 +300,5 @@ func (_c *ComponentService_RefreshComponentProjectInformation_Call) Return() *Co
 
 func (_c *ComponentService_RefreshComponentProjectInformation_Call) RunAndReturn(run func(ctx context.Context, project models.ComponentProject)) *ComponentService_RefreshComponentProjectInformation_Call {
 	_c.Run(run)
-	return _c
-}
-
-// RemoveInformationSources provides a mock function for the type ComponentService
-func (_mock *ComponentService) RemoveInformationSources(ctx context.Context, tx shared.DB, artifact *models.Artifact, rootNodePurls []string) error {
-	ret := _mock.Called(ctx, tx, artifact, rootNodePurls)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RemoveInformationSources")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact, []string) error); ok {
-		r0 = returnFunc(ctx, tx, artifact, rootNodePurls)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// ComponentService_RemoveInformationSources_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveInformationSources'
-type ComponentService_RemoveInformationSources_Call struct {
-	*mock.Call
-}
-
-// RemoveInformationSources is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - artifact *models.Artifact
-//   - rootNodePurls []string
-func (_e *ComponentService_Expecter) RemoveInformationSources(ctx interface{}, tx interface{}, artifact interface{}, rootNodePurls interface{}) *ComponentService_RemoveInformationSources_Call {
-	return &ComponentService_RemoveInformationSources_Call{Call: _e.mock.On("RemoveInformationSources", ctx, tx, artifact, rootNodePurls)}
-}
-
-func (_c *ComponentService_RemoveInformationSources_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, rootNodePurls []string)) *ComponentService_RemoveInformationSources_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 *models.Artifact
-		if args[2] != nil {
-			arg2 = args[2].(*models.Artifact)
-		}
-		var arg3 []string
-		if args[3] != nil {
-			arg3 = args[3].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *ComponentService_RemoveInformationSources_Call) Return(err error) *ComponentService_RemoveInformationSources_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *ComponentService_RemoveInformationSources_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, rootNodePurls []string) error) *ComponentService_RemoveInformationSources_Call {
-	_c.Call.Return(run)
 	return _c
 }
