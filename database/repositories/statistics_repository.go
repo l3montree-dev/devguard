@@ -16,13 +16,15 @@ import (
 )
 
 type statisticsRepository struct {
-	createBatchSize int
-	db              *gorm.DB
+	createBatchSize          int
+	db                       *gorm.DB
+	dependencyVulnRepository shared.DependencyVulnRepository
 }
 
-func NewStatisticsRepository(db *gorm.DB) *statisticsRepository {
+func NewStatisticsRepository(db *gorm.DB, dependencyVulnRepository shared.DependencyVulnRepository) *statisticsRepository {
 	return &statisticsRepository{
-		db: db,
+		db:                       db,
+		dependencyVulnRepository: dependencyVulnRepository,
 	}
 }
 
@@ -69,6 +71,10 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context
 			Find(&dependencyVulns).Error
 	}
 	if err != nil {
+		return nil, err
+	}
+
+	if err := r.dependencyVulnRepository.AttachGroupEvents(ctx, tx, dependencyVulns, &time); err != nil {
 		return nil, err
 	}
 

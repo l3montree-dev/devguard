@@ -388,6 +388,75 @@ func (_c *DependencyVulnRepository_ApplyGroupEventsAndSave_Call) RunAndReturn(ru
 	return _c
 }
 
+// AttachGroupEvents provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) AttachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error {
+	ret := _mock.Called(ctx, tx, vulns, cutoff)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AttachGroupEvents")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []models.DependencyVuln, *time.Time) error); ok {
+		r0 = returnFunc(ctx, tx, vulns, cutoff)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnRepository_AttachGroupEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AttachGroupEvents'
+type DependencyVulnRepository_AttachGroupEvents_Call struct {
+	*mock.Call
+}
+
+// AttachGroupEvents is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - vulns []models.DependencyVuln
+//   - cutoff *time.Time
+func (_e *DependencyVulnRepository_Expecter) AttachGroupEvents(ctx any, tx any, vulns any, cutoff any) *DependencyVulnRepository_AttachGroupEvents_Call {
+	return &DependencyVulnRepository_AttachGroupEvents_Call{Call: _e.mock.On("AttachGroupEvents", ctx, tx, vulns, cutoff)}
+}
+
+func (_c *DependencyVulnRepository_AttachGroupEvents_Call) Run(run func(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time)) *DependencyVulnRepository_AttachGroupEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 []models.DependencyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.DependencyVuln)
+		}
+		var arg3 *time.Time
+		if args[3] != nil {
+			arg3 = args[3].(*time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_AttachGroupEvents_Call) Return(err error) *DependencyVulnRepository_AttachGroupEvents_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_AttachGroupEvents_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error) *DependencyVulnRepository_AttachGroupEvents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) Begin(ctx context.Context) shared.DB {
 	ret := _mock.Called(ctx)
