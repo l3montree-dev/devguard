@@ -651,8 +651,13 @@ func (c *casbinRBAC) IsAllowedInProject(ctx context.Context, project *models.Pro
 	case shared.SessionActorProject:
 		// if the session is a project session, then we allow all actions except deleting or updating the project itself
 		isOwnProject := project.ID.String() == ownerID
-		return isOwnProject && (object != shared.ObjectProject || (action != shared.ActionDelete && action != shared.ActionUpdate)), nil
-
+		if !isOwnProject {
+			return false, nil
+		}
+		if object == shared.ObjectProject {
+			return action != shared.ActionDelete && action != shared.ActionUpdate, nil
+		}
+		return true, nil
 	case shared.SessionActorAsset:
 		// if asset, we allow read
 		if actorScope.Asset == nil {
