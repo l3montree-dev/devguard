@@ -64,7 +64,7 @@ type BatchModelWriter_CreateBatch_Call[T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) CreateBatch(ctx interface{}, tx interface{}, ts interface{}) *BatchModelWriter_CreateBatch_Call[T, Tx] {
+func (_e *BatchModelWriter_Expecter[T, Tx]) CreateBatch(ctx any, tx any, ts any) *BatchModelWriter_CreateBatch_Call[T, Tx] {
 	return &BatchModelWriter_CreateBatch_Call[T, Tx]{Call: _e.mock.On("CreateBatch", ctx, tx, ts)}
 }
 
@@ -127,7 +127,7 @@ type BatchModelWriter_DeleteBatch_Call[T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ids []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) DeleteBatch(ctx interface{}, tx interface{}, ids interface{}) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
+func (_e *BatchModelWriter_Expecter[T, Tx]) DeleteBatch(ctx any, tx any, ids any) *BatchModelWriter_DeleteBatch_Call[T, Tx] {
 	return &BatchModelWriter_DeleteBatch_Call[T, Tx]{Call: _e.mock.On("DeleteBatch", ctx, tx, ids)}
 }
 
@@ -190,7 +190,7 @@ type BatchModelWriter_SaveBatch_Call[T utils.Tabler, Tx any] struct {
 //   - ctx context.Context
 //   - tx Tx
 //   - ts []T
-func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatch(ctx interface{}, tx interface{}, ts interface{}) *BatchModelWriter_SaveBatch_Call[T, Tx] {
+func (_e *BatchModelWriter_Expecter[T, Tx]) SaveBatch(ctx any, tx any, ts any) *BatchModelWriter_SaveBatch_Call[T, Tx] {
 	return &BatchModelWriter_SaveBatch_Call[T, Tx]{Call: _e.mock.On("SaveBatch", ctx, tx, ts)}
 }
 

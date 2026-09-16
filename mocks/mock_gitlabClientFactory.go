@@ -76,7 +76,7 @@ type GitlabClientFactory_FromAccessToken_Call struct {
 // FromAccessToken is a helper method to define mock.On call
 //   - accessToken string
 //   - baseURL string
-func (_e *GitlabClientFactory_Expecter) FromAccessToken(accessToken interface{}, baseURL interface{}) *GitlabClientFactory_FromAccessToken_Call {
+func (_e *GitlabClientFactory_Expecter) FromAccessToken(accessToken any, baseURL any) *GitlabClientFactory_FromAccessToken_Call {
 	return &GitlabClientFactory_FromAccessToken_Call{Call: _e.mock.On("FromAccessToken", accessToken, baseURL)}
 }
 
@@ -143,7 +143,7 @@ type GitlabClientFactory_FromIntegration_Call struct {
 
 // FromIntegration is a helper method to define mock.On call
 //   - integration models.GitLabIntegration
-func (_e *GitlabClientFactory_Expecter) FromIntegration(integration interface{}) *GitlabClientFactory_FromIntegration_Call {
+func (_e *GitlabClientFactory_Expecter) FromIntegration(integration any) *GitlabClientFactory_FromIntegration_Call {
 	return &GitlabClientFactory_FromIntegration_Call{Call: _e.mock.On("FromIntegration", integration)}
 }
 
@@ -206,7 +206,7 @@ type GitlabClientFactory_FromIntegrationUUID_Call struct {
 // FromIntegrationUUID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *GitlabClientFactory_Expecter) FromIntegrationUUID(ctx interface{}, id interface{}) *GitlabClientFactory_FromIntegrationUUID_Call {
+func (_e *GitlabClientFactory_Expecter) FromIntegrationUUID(ctx any, id any) *GitlabClientFactory_FromIntegrationUUID_Call {
 	return &GitlabClientFactory_FromIntegrationUUID_Call{Call: _e.mock.On("FromIntegrationUUID", ctx, id)}
 }
 
@@ -275,7 +275,7 @@ type GitlabClientFactory_FromOauth2Token_Call struct {
 //   - ctx context.Context
 //   - token models.GitLabOauth2Token
 //   - enableClientCache bool
-func (_e *GitlabClientFactory_Expecter) FromOauth2Token(ctx interface{}, token interface{}, enableClientCache interface{}) *GitlabClientFactory_FromOauth2Token_Call {
+func (_e *GitlabClientFactory_Expecter) FromOauth2Token(ctx any, token any, enableClientCache any) *GitlabClientFactory_FromOauth2Token_Call {
 	return &GitlabClientFactory_FromOauth2Token_Call{Call: _e.mock.On("FromOauth2Token", ctx, token, enableClientCache)}
 }
 

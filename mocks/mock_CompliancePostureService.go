@@ -84,7 +84,7 @@ type CompliancePostureService_GetAllControls_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CompliancePostureService_Expecter) GetAllControls(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}, search interface{}, filter interface{}, sort interface{}) *CompliancePostureService_GetAllControls_Call {
+func (_e *CompliancePostureService_Expecter) GetAllControls(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, search any, filter any, sort any) *CompliancePostureService_GetAllControls_Call {
 	return &CompliancePostureService_GetAllControls_Call{Call: _e.mock.On("GetAllControls", ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)}
 }
 
@@ -193,7 +193,7 @@ type CompliancePostureService_GetForAllControlsPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CompliancePostureService_Expecter) GetForAllControlsPaged(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *CompliancePostureService_GetForAllControlsPaged_Call {
+func (_e *CompliancePostureService_Expecter) GetForAllControlsPaged(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, pageInfo any, search any, filter any, sort any) *CompliancePostureService_GetForAllControlsPaged_Call {
 	return &CompliancePostureService_GetForAllControlsPaged_Call{Call: _e.mock.On("GetForAllControlsPaged", ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)}
 }
 
@@ -306,7 +306,7 @@ type CompliancePostureService_GetForControl_Call struct {
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
-func (_e *CompliancePostureService_Expecter) GetForControl(ctx interface{}, tx interface{}, controlID interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}) *CompliancePostureService_GetForControl_Call {
+func (_e *CompliancePostureService_Expecter) GetForControl(ctx any, tx any, controlID any, assetVersionName any, assetID any, projectID any, orgID any) *CompliancePostureService_GetForControl_Call {
 	return &CompliancePostureService_GetForControl_Call{Call: _e.mock.On("GetForControl", ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)}
 }
 
@@ -402,7 +402,7 @@ type CompliancePostureService_GetStatsForAllControls_Call struct {
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
 //   - filter []shared.FilterQuery
-func (_e *CompliancePostureService_Expecter) GetStatsForAllControls(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}, projectID interface{}, orgID interface{}, filter interface{}) *CompliancePostureService_GetStatsForAllControls_Call {
+func (_e *CompliancePostureService_Expecter) GetStatsForAllControls(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, filter any) *CompliancePostureService_GetStatsForAllControls_Call {
 	return &CompliancePostureService_GetStatsForAllControls_Call{Call: _e.mock.On("GetStatsForAllControls", ctx, tx, assetVersionName, assetID, projectID, orgID, filter)}
 }
 
@@ -499,7 +499,7 @@ type CompliancePostureService_UpdateCompliancePostureState_Call struct {
 //   - justification string
 //   - mechanicalJustification dtos.MechanicalJustificationType
 //   - userAgent *string
-func (_e *CompliancePostureService_Expecter) UpdateCompliancePostureState(ctx interface{}, tx interface{}, userID interface{}, posture interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, userAgent interface{}) *CompliancePostureService_UpdateCompliancePostureState_Call {
+func (_e *CompliancePostureService_Expecter) UpdateCompliancePostureState(ctx any, tx any, userID any, posture any, statusType any, justification any, mechanicalJustification any, userAgent any) *CompliancePostureService_UpdateCompliancePostureState_Call {
 	return &CompliancePostureService_UpdateCompliancePostureState_Call{Call: _e.mock.On("UpdateCompliancePostureState", ctx, tx, userID, posture, statusType, justification, mechanicalJustification, userAgent)}
 }
 

@@ -116,8 +116,8 @@ func (_c *PubSubMessage_GetPayload_Call) Run(run func()) *PubSubMessage_GetPaylo
 	return _c
 }
 
-func (_c *PubSubMessage_GetPayload_Call) Return(stringToV map[string]any) *PubSubMessage_GetPayload_Call {
-	_c.Call.Return(stringToV)
+func (_c *PubSubMessage_GetPayload_Call) Return(stringToAnyMoqParam map[string]any) *PubSubMessage_GetPayload_Call {
+	_c.Call.Return(stringToAnyMoqParam)
 	return _c
 }
 

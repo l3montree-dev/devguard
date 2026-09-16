@@ -71,7 +71,7 @@ type InTotoVerifierService_HexPublicKeyToInTotoKey_Call struct {
 
 // HexPublicKeyToInTotoKey is a helper method to define mock.On call
 //   - hexPubKey string
-func (_e *InTotoVerifierService_Expecter) HexPublicKeyToInTotoKey(hexPubKey interface{}) *InTotoVerifierService_HexPublicKeyToInTotoKey_Call {
+func (_e *InTotoVerifierService_Expecter) HexPublicKeyToInTotoKey(hexPubKey any) *InTotoVerifierService_HexPublicKeyToInTotoKey_Call {
 	return &InTotoVerifierService_HexPublicKeyToInTotoKey_Call{Call: _e.mock.On("HexPublicKeyToInTotoKey", hexPubKey)}
 }
 
@@ -132,7 +132,7 @@ type InTotoVerifierService_VerifySupplyChain_Call struct {
 // VerifySupplyChain is a helper method to define mock.On call
 //   - ctx context.Context
 //   - supplyChainID string
-func (_e *InTotoVerifierService_Expecter) VerifySupplyChain(ctx interface{}, supplyChainID interface{}) *InTotoVerifierService_VerifySupplyChain_Call {
+func (_e *InTotoVerifierService_Expecter) VerifySupplyChain(ctx any, supplyChainID any) *InTotoVerifierService_VerifySupplyChain_Call {
 	return &InTotoVerifierService_VerifySupplyChain_Call{Call: _e.mock.On("VerifySupplyChain", ctx, supplyChainID)}
 }
 
@@ -198,7 +198,7 @@ type InTotoVerifierService_VerifySupplyChainByDigestOnly_Call struct {
 // VerifySupplyChainByDigestOnly is a helper method to define mock.On call
 //   - ctx context.Context
 //   - digest string
-func (_e *InTotoVerifierService_Expecter) VerifySupplyChainByDigestOnly(ctx interface{}, digest interface{}) *InTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
+func (_e *InTotoVerifierService_Expecter) VerifySupplyChainByDigestOnly(ctx any, digest any) *InTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
 	return &InTotoVerifierService_VerifySupplyChainByDigestOnly_Call{Call: _e.mock.On("VerifySupplyChainByDigestOnly", ctx, digest)}
 }
 
@@ -265,7 +265,7 @@ type InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call struct {
 //   - ctx context.Context
 //   - supplyChainID string
 //   - digest string
-func (_e *InTotoVerifierService_Expecter) VerifySupplyChainWithOutputDigest(ctx interface{}, supplyChainID interface{}, digest interface{}) *InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call {
+func (_e *InTotoVerifierService_Expecter) VerifySupplyChainWithOutputDigest(ctx any, supplyChainID any, digest any) *InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call {
 	return &InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call{Call: _e.mock.On("VerifySupplyChainWithOutputDigest", ctx, supplyChainID, digest)}
 }
 
