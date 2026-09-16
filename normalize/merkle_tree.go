@@ -141,11 +141,11 @@ func (a Adjacency) componentID(ref string) string {
 // rootComponentID is the identity the root is hashed under. A document's root
 // is a parse artifact, not a real component, so passing the artifact's purl (or
 // its name, when it has none) keeps every stored component id a real one.
-func BuildMerkleTree(adj Adjacency, rootRef, rootComponentID string) *MerkleTree {
+func BuildMerkleTree(adj Adjacency, rootRef string) *MerkleTree {
 	t := &MerkleTree{nodes: make(map[uuid.UUID]*MerkleNode, len(adj.Children))}
 	hashes := make(map[string]uuid.UUID, len(adj.Children))
 	onStack := make(map[string]bool)
-	t.Root = t.build(adj, rootRef, rootComponentID, hashes, onStack)
+	t.Root = t.build(adj, rootRef, MerkleRootID, hashes, onStack)
 	return t
 }
 

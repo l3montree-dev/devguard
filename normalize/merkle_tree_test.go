@@ -19,7 +19,7 @@ func adjacency(children map[string][]string) Adjacency {
 const merkleParseRoot = "\x00sbom-root"
 
 func buildTree(children map[string][]string, artifactName string) *MerkleTree {
-	return BuildMerkleTree(Adjacency{Children: children}, merkleParseRoot, artifactName)
+	return BuildMerkleTree(Adjacency{Children: children}, merkleParseRoot)
 }
 
 func edgeKey(e MerkleEdge) [2]string {
@@ -64,7 +64,7 @@ func TestBuildMerkleTree(t *testing.T) {
 	t.Run("a leaf gets a node but no edge, and stays resolvable through it", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/leaf@1.0.0"},
-		}), "src", "my-artifact")
+		}), "src")
 
 		nodes := nodesFor(tree, "pkg:npm/leaf@1.0.0")
 		require.Len(t, nodes, 1, "a leaf must have a node of its own")
@@ -74,7 +74,7 @@ func TestBuildMerkleTree(t *testing.T) {
 	t.Run("the root is hashed under the sentinel, and no synthetic node reaches the nodes", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/leaf@1.0.0"},
-		}), "src", MerkleRootID)
+		}), "src")
 
 		for _, n := range tree.Nodes() {
 			assert.NotContains(t, n.ComponentID, "sbom:", "synthetic nodes must not reach the node table")
@@ -91,7 +91,7 @@ func TestBuildMerkleTree(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src":             {"pkg:npm/a@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0", "pkg:npm/c@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		rows := rowsFor(tree, "pkg:npm/a@1.0.0")
 		require.Len(t, rows, 2, "a node with two children has two rows")
@@ -103,7 +103,7 @@ func TestBuildMerkleTree(t *testing.T) {
 			"src":             {"pkg:npm/a@1.0.0", "pkg:npm/b@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/shared@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/shared@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		assert.Len(t, nodesFor(tree, "pkg:npm/shared@1.0.0"), 1)
 	})
@@ -112,11 +112,11 @@ func TestBuildMerkleTree(t *testing.T) {
 		a := BuildMerkleTree(adjacency(map[string][]string{
 			"src":                    {"pkg:golang/circl@1.6.3"},
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.1.0"},
-		}), "src", MerkleRootID)
+		}), "src")
 		b := BuildMerkleTree(adjacency(map[string][]string{
 			"other":                  {"pkg:golang/circl@1.6.3"},
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.1.0"},
-		}), "other", MerkleRootID)
+		}), "other")
 
 		assert.Equal(t,
 			edgeSet(rowsFor(a, "pkg:golang/circl@1.6.3")),
@@ -133,11 +133,11 @@ func TestBuildMerkleTree(t *testing.T) {
 		a := BuildMerkleTree(adjacency(map[string][]string{
 			"src":                    {"pkg:golang/circl@1.6.3"},
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.1.0"},
-		}), "src", "app")
+		}), "src")
 		b := BuildMerkleTree(adjacency(map[string][]string{
 			"src":                    {"pkg:golang/circl@1.6.3"},
 			"pkg:golang/circl@1.6.3": {"pkg:golang/sys@0.2.0"},
-		}), "src", "app")
+		}), "src")
 
 		circlA := rowsFor(a, "pkg:golang/circl@1.6.3")
 		circlB := rowsFor(b, "pkg:golang/circl@1.6.3")
@@ -150,10 +150,10 @@ func TestBuildMerkleTree(t *testing.T) {
 	t.Run("hashing is independent of child order", func(t *testing.T) {
 		a := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/a@1.0.0", "pkg:npm/b@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 		b := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/b@1.0.0", "pkg:npm/a@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		assert.Equal(t, a.Root, b.Root)
 		assert.Equal(t, edgeSet(a.Edges()), edgeSet(b.Edges()))
@@ -164,7 +164,7 @@ func TestBuildMerkleTree(t *testing.T) {
 			"src":             {"pkg:npm/a@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/a@1.0.0"}, // back edge
-		}), "src", "my-app")
+		}), "src")
 
 		assert.NotEmpty(t, tree.Root)
 		require.Len(t, nodesFor(tree, "pkg:npm/b@1.0.0"), 1)
@@ -173,7 +173,7 @@ func TestBuildMerkleTree(t *testing.T) {
 	})
 
 	t.Run("an empty SBOM still yields a root hash", func(t *testing.T) {
-		tree := BuildMerkleTree(adjacency(map[string][]string{}), "src", "my-app")
+		tree := BuildMerkleTree(adjacency(map[string][]string{}), "src")
 
 		assert.NotEmpty(t, tree.Root)
 		assert.Empty(t, tree.Edges(), "an empty SBOM has no edges at all")
@@ -184,7 +184,7 @@ func TestBuildMerkleTree(t *testing.T) {
 		tree := BuildMerkleTree(Adjacency{
 			Children:     map[string][]string{"src": {"some-binary"}},
 			ComponentIDs: map[string]string{"some-binary": ""},
-		}, "src", "my-app")
+		}, "src")
 
 		assert.Len(t, nodesFor(tree, "some-binary"), 1)
 	})
@@ -196,7 +196,7 @@ func TestMerkleTreeRoundTrip(t *testing.T) {
 			"src":             {"pkg:npm/a@1.0.0", "pkg:npm/d@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0", "pkg:npm/c@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/leaf@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		loaded, err := MerkleTreeFromNodesAndEdges(original.Nodes(), original.Edges(), original.Root)
 		require.NoError(t, err)
@@ -211,7 +211,7 @@ func TestMerkleTreeRoundTrip(t *testing.T) {
 	t.Run("loading with a root that is absent from the edges is an error", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/a@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		_, err := MerkleTreeFromNodesAndEdges(tree.Nodes(), tree.Edges(), uuid.New())
 		require.Error(t, err)
@@ -222,7 +222,7 @@ func TestMerkleTreeRoundTrip(t *testing.T) {
 			return BuildMerkleTree(adjacency(map[string][]string{
 				"src":             {"pkg:npm/a@1.0.0"},
 				"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
-			}), "src", "my-app")
+			}), "src")
 		}
 
 		assert.Equal(t, build().Root, build().Root,
@@ -234,7 +234,7 @@ func TestMerkleTreeAccessors(t *testing.T) {
 	tree := BuildMerkleTree(adjacency(map[string][]string{
 		"src":             {"pkg:npm/a@1.0.0", "pkg:npm/d@1.0.0"},
 		"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
-	}), "src", "my-app")
+	}), "src")
 
 	t.Run("ComponentIDs excludes the artifact itself", func(t *testing.T) {
 		assert.Equal(t, []string{

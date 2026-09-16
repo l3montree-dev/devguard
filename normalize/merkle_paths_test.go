@@ -19,7 +19,7 @@ func TestPathsToPURL(t *testing.T) {
 	t.Run("a direct dependency yields a single one element path", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/a@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		paths := tree.PathsToPURL("pkg:npm/a@1.0.0", 0)
 
@@ -32,7 +32,7 @@ func TestPathsToPURL(t *testing.T) {
 			"src":             {"pkg:npm/a@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/c@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		paths := tree.PathsToPURL("pkg:npm/c@1.0.0", 0)
 
@@ -44,7 +44,7 @@ func TestPathsToPURL(t *testing.T) {
 			"src":             {"pkg:npm/target@1.0.0", "pkg:npm/a@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		paths := tree.PathsToPURL("pkg:npm/target@1.0.0", 0)
 
@@ -59,7 +59,7 @@ func TestPathsToPURL(t *testing.T) {
 			"src":             {"pkg:npm/target@1.0.0", "pkg:npm/a@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		paths := tree.PathsToPURL("pkg:npm/target@1.0.0", 1)
 
@@ -69,7 +69,7 @@ func TestPathsToPURL(t *testing.T) {
 	t.Run("a component absent from the SBOM has no paths", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/a@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		assert.Nil(t, tree.PathsToPURL("pkg:npm/absent@1.0.0", 0))
 	})
@@ -77,7 +77,7 @@ func TestPathsToPURL(t *testing.T) {
 	t.Run("matching a purl is case insensitive", func(t *testing.T) {
 		tree := BuildMerkleTree(adjacency(map[string][]string{
 			"src": {"pkg:npm/A@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		assert.Len(t, tree.PathsToPURL("pkg:npm/a@1.0.0", 0), 1)
 	})
@@ -89,7 +89,7 @@ func TestPathsToPURL(t *testing.T) {
 				"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 				"pkg:npm/x@1.0.0": {"pkg:npm/b@1.0.0"},
 				"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
-			}), "src", "my-app")
+			}), "src")
 		}
 
 		first := pathStrings(build().PathsToPURL("pkg:npm/target@1.0.0", 0))
@@ -103,7 +103,7 @@ func TestPathsToPURL(t *testing.T) {
 			"src":             {"pkg:npm/a@1.0.0"},
 			"pkg:npm/a@1.0.0": {"pkg:npm/b@1.0.0"},
 			"pkg:npm/b@1.0.0": {"pkg:npm/target@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		loaded, err := MerkleTreeFromNodesAndEdges(tree.Nodes(), tree.Edges(), tree.Root)
 		require.NoError(t, err)
@@ -122,7 +122,7 @@ func TestPathsToPURL(t *testing.T) {
 			"pkg:npm/withTarget@1.0.0": {"pkg:npm/b@1.0.0"},
 			"pkg:npm/without@1.0.0":    {"pkg:npm/bLeaf@1.0.0"},
 			"pkg:npm/b@1.0.0":          {"pkg:npm/target@1.0.0"},
-		}), "src", "my-app")
+		}), "src")
 
 		paths := tree.PathsToPURL("pkg:npm/target@1.0.0", 0)
 
