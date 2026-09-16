@@ -220,7 +220,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			assert.Equal(t, anotherAssetVersion.Name, artifacts[0].AssetVersionName)
 		})
 
-		t.Run("should clear component_dependencies and license_risks after deleting all artifacts (bug #1810)", func(t *testing.T) {
+		t.Run("should clear sboms and license_risks after deleting all artifacts (bug #1810)", func(t *testing.T) {
 			artifactName := "trivy-debian-image-bug1810"
 
 			// Scan a real SBOM to populate component_dependencies and license_risks.
