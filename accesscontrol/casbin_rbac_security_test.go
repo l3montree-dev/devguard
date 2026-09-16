@@ -179,10 +179,26 @@ func TestSecurityProjectTokenCannotDeleteOrUpdateItsOwnProject(t *testing.T) {
 	ctx := context.Background()
 	session := projectSession(f.projA1.ID)
 
+	allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, shared.ActionRead, shared.ActorScope{})
+	require.NoError(t, err)
+	assert.True(t, allowed, "reading own project")
+
 	for _, action := range []shared.Action{shared.ActionUpdate, shared.ActionDelete} {
 		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectProject, action, shared.ActorScope{})
 		require.NoError(t, err)
 		assert.Falsef(t, allowed, "action %q on own project", action)
+	}
+}
+
+func TestSecurityProjectTokenCanUpdateAndDeleteNonProjectObjectsInItsOwnProject(t *testing.T) {
+	f := newSecurityFixture(t)
+	ctx := context.Background()
+	session := projectSession(f.projA1.ID)
+
+	for _, action := range []shared.Action{shared.ActionRead, shared.ActionCreate, shared.ActionUpdate, shared.ActionDelete} {
+		allowed, err := f.rbacOrgA.IsAllowedInProject(ctx, &f.projA1, session, shared.ObjectAsset, action, shared.ActorScope{})
+		require.NoError(t, err)
+		assert.Truef(t, allowed, "action %q on asset of own project", action)
 	}
 }
 
