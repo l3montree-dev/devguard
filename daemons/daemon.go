@@ -80,7 +80,7 @@ func (runner *DaemonRunner) CollectSBOMGarbage(ctx context.Context) error {
 		slog.Error("failed to collect sbom garbage", "error", err)
 		return err
 	}
-	slog.Info("collected sbom garbage", "deletedEdges", deleted)
+	slog.Info("collected sbom garbage", "deletedRows", deleted)
 	return nil
 }
 
