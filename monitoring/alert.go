@@ -46,6 +46,23 @@ func SetLogger(ls AlertLogService) {
 	logger = ls
 }
 
+// save the error to DB but do not log it to sentry
+func Error(message string, err error, opts AlertOptions) {
+	ctx := opts.Ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if logger == nil {
+		slog.Error("could not store error in database", "msg", "logger has not been set yet")
+		return
+	}
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, fmt.Sprintf("%s: %v", message, err))
+	if loggerErr != nil {
+		slog.Error("could not store error in database", "msg", message, "error", err)
+	}
+}
+
+// save the error to DB and log it to sentry
 func Alert(message string, err error, opts AlertOptions) {
 	// log it
 	evID := sentry.CurrentHub().CaptureException(errors.Wrap(err, message))
@@ -62,7 +79,7 @@ func Alert(message string, err error, opts AlertOptions) {
 		slog.Error("could not store error in database", "msg", "logger has not been set yet")
 		return
 	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, message)
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, fmt.Sprintf("%s: %v", message, err))
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "error", err)
 	}

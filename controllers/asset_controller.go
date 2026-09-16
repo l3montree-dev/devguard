@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -404,6 +405,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion, &userAgent); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
+				monitoring.Error("could not sync tickets", err, monitoring.AlertOptions{
+					Ctx:       linkedCtx,
+					OrgID:     org.ID,
+					ProjectID: project.ID,
+					AssetID:   asset.ID,
+				})
 			}
 		})
 	}

@@ -21,7 +21,7 @@ func NewLogController(logService shared.LogService) *LogController {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
+// @Param assetSlug path string false "Asset slug"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
 // @Success 200 {object} shared.Paged[models.Log]
