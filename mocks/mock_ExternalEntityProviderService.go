@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -35,6 +37,57 @@ type ExternalEntityProviderService_Expecter struct {
 
 func (_m *ExternalEntityProviderService) EXPECT() *ExternalEntityProviderService_Expecter {
 	return &ExternalEntityProviderService_Expecter{mock: &_m.Mock}
+}
+
+// CollectGarbage provides a mock function for the type ExternalEntityProviderService
+func (_mock *ExternalEntityProviderService) CollectGarbage(c context.Context) error {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CollectGarbage")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ExternalEntityProviderService_CollectGarbage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CollectGarbage'
+type ExternalEntityProviderService_CollectGarbage_Call struct {
+	*mock.Call
+}
+
+// CollectGarbage is a helper method to define mock.On call
+//   - c context.Context
+func (_e *ExternalEntityProviderService_Expecter) CollectGarbage(c any) *ExternalEntityProviderService_CollectGarbage_Call {
+	return &ExternalEntityProviderService_CollectGarbage_Call{Call: _e.mock.On("CollectGarbage", c)}
+}
+
+func (_c *ExternalEntityProviderService_CollectGarbage_Call) Run(run func(c context.Context)) *ExternalEntityProviderService_CollectGarbage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_CollectGarbage_Call) Return(err error) *ExternalEntityProviderService_CollectGarbage_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_CollectGarbage_Call) RunAndReturn(run func(c context.Context) error) *ExternalEntityProviderService_CollectGarbage_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // RefreshExternalEntityProviderProjects provides a mock function for the type ExternalEntityProviderService

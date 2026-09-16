@@ -118,8 +118,9 @@ type TestApp struct {
 	VulnDBService        shared.VulnDBService
 
 	// Daemons
-	DaemonRunner         shared.DaemonRunner
-	FixedVersionResolver shared.FixedVersionResolver
+	DaemonRunner                  shared.DaemonRunner
+	FixedVersionResolver          shared.FixedVersionResolver
+	ExternalEntityProviderService shared.ExternalEntityProviderService
 }
 
 // TestAppOptions configures the test application

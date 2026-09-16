@@ -48,6 +48,7 @@ type DaemonRunner interface {
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
 	RunVEXRuleRecommendationDaemon(ctx context.Context) error
 	CollectSBOMGarbage(ctx context.Context) error
+	CollectExternalEntityGarbage(ctx context.Context) error
 
 	Start(ctx context.Context)
 }
@@ -439,6 +440,7 @@ type ExternalEntityProviderService interface {
 	TriggerOrgSync(c Context) error
 	SyncOrgs(c Context) ([]*models.Org, error)
 	TriggerSync(c Context) error
+	CollectGarbage(c context.Context) error
 }
 
 type ProjectService interface {
