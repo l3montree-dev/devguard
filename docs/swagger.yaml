@@ -522,6 +522,7 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
+          description: New in 1.7
         issuerName:
           type: string
         notValidAfter:
@@ -1853,7 +1854,6 @@ components:
       - workflows
       type: object
     cyclonedx.Hash:
-      description: New in 1.7
       properties:
         alg:
           $ref: '#/components/schemas/cyclonedx.HashAlgorithm'
@@ -2730,6 +2730,7 @@ components:
           uniqueItems: false
         manufacture:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+          description: 'Deprecated: Use Component Manufacturer instead.'
         manufacturer:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         properties:
@@ -2783,7 +2784,6 @@ components:
       - phone
       type: object
     cyclonedx.OrganizationalEntity:
-      description: 'Deprecated: Use Component Manufacturer instead.'
       properties:
         address:
           $ref: '#/components/schemas/cyclonedx.PostalAddress'
@@ -3004,6 +3004,7 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
+          description: New in 1.7
         format:
           type: string
         id:
@@ -5667,6 +5668,10 @@ components:
           type: string
         type:
           $ref: '#/components/schemas/dtos.ExternalReferenceType'
+          enum:
+          - cyclonedx
+          - csaf
+          - openvex
         url:
           type: string
       required:
@@ -5699,6 +5704,10 @@ components:
           type: string
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
+          enum:
+          - accepted
+          - falsePositive
+          - reopened
         justification:
           type: string
         mechanicalJustification:
@@ -5768,7 +5777,6 @@ components:
       - waitDuration
       type: object
     dtos.DatabaseSpecifics:
-      description: specific additional information, not standardized
       properties:
         cwe_ids:
           description: array of cwe ids associated with this vulnerability
@@ -6263,9 +6271,6 @@ components:
       - csaf
       - openvex
       - unknown
-      - cyclonedx
-      - csaf
-      - openvex
       type: string
       x-enum-varnames:
       - ExternalReferenceTypeCycloneDX
@@ -6756,12 +6761,6 @@ components:
       - low
       - high
       - X
-      - X
-      - low
-      - high
-      - X
-      - low
-      - high
       type: string
       x-enum-varnames:
       - MACLow
@@ -6774,16 +6773,6 @@ components:
       - local
       - physical
       - X
-      - X
-      - network
-      - adjacent
-      - local
-      - physical
-      - X
-      - network
-      - adjacent
-      - local
-      - physical
       type: string
       x-enum-varnames:
       - MAVNetwork
@@ -6797,14 +6786,6 @@ components:
       - low
       - high
       - X
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
       type: string
       x-enum-varnames:
       - MPRNone
@@ -6813,30 +6794,6 @@ components:
       - MPRNotDefined
     dtos.ModifiedRequirementLevel:
       enum:
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
       - X
       - none
       - low
@@ -6852,12 +6809,6 @@ components:
       - unchanged
       - changed
       - X
-      - X
-      - unchanged
-      - changed
-      - X
-      - unchanged
-      - changed
       type: string
       x-enum-varnames:
       - MSUnchanged
@@ -6865,12 +6816,6 @@ components:
       - MSNotDefined
     dtos.ModifiedUserInteraction:
       enum:
-      - X
-      - none
-      - required
-      - X
-      - none
-      - required
       - X
       - none
       - required
@@ -6893,6 +6838,7 @@ components:
           uniqueItems: false
         database_specific:
           $ref: '#/components/schemas/dtos.DatabaseSpecifics'
+          description: specific additional information, not standardized
         details:
           type: string
         id:
@@ -7794,6 +7740,7 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.ProjectDTO'
+          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -7860,6 +7807,7 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.ProjectDTO'
+          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -8159,24 +8107,6 @@ components:
       type: object
     dtos.RequirementLevel:
       enum:
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
       - low
       - medium
       - high
@@ -8592,6 +8522,10 @@ components:
           uniqueItems: false
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
+          enum:
+          - accepted
+          - falsePositive
+          - reopened
       required:
       - celExpression
       - eventType
@@ -8816,12 +8750,6 @@ components:
       - removedComplianceComponent
       - detected
       - rawRiskAssessmentUpdated
-      - accepted
-      - falsePositive
-      - reopened
-      - accepted
-      - falsePositive
-      - reopened
       type: string
       x-enum-varnames:
       - EventTypeFixed
@@ -9145,8 +9073,6 @@ components:
       - versionStart
       type: object
     github_com_l3montree-dev_devguard_database_models.Artifact:
-      description: 'Ensure foreign key field order matches Artifact primary key: ArtifactName,
-        AssetVersionName, AssetID'
       properties:
         artifactName:
           type: string
@@ -9489,11 +9415,6 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
         assetId:
           type: string
-        components:
-          items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency'
-          type: array
-          uniqueItems: false
         createdAt:
           type: string
         defaultBranch:
@@ -9526,7 +9447,6 @@ components:
       - artifacts
       - asset
       - assetId
-      - components
       - createdAt
       - defaultBranch
       - dependencyVulns
@@ -9551,6 +9471,8 @@ components:
       properties:
         artifact:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
+          description: 'Ensure foreign key field order matches Artifact primary key:
+            ArtifactName, AssetVersionName, AssetID'
         artifactName:
           type: string
         assetId:
@@ -9675,6 +9597,9 @@ components:
           type: string
         target_cve_data:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
+          description: |-
+            TargetCVEData is populated by GORM nested preload. It is nil when the target
+            CVE does not exist in this database — no DB-level FK constraint is added.
       required:
       - relationship_type
       - source_cve
@@ -9685,11 +9610,6 @@ components:
       properties:
         componentType:
           $ref: '#/components/schemas/dtos.ComponentType'
-        dependsOn:
-          items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency'
-          type: array
-          uniqueItems: false
         id:
           description: ID might be a PURL - but not always. Sometimes it is a file
             path to a binary or a "fake node" we are adding during normalization
@@ -9706,40 +9626,12 @@ components:
           type: string
       required:
       - componentType
-      - dependsOn
       - id
       - isLicenseOverwritten
       - license
       - project
       - projectId
       - published
-      type: object
-    github_com_l3montree-dev_devguard_database_models.ComponentDependency:
-      properties:
-        assetId:
-          type: string
-        assetVersion:
-          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
-        assetVersionName:
-          description: Foreign key fields for AssetVersion relationship
-          type: string
-        component:
-          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
-        componentPurl:
-          description: will be ROOT for direct dependencies
-          type: string
-        dependency:
-          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
-        dependencyPurl:
-          type: string
-      required:
-      - assetId
-      - assetVersion
-      - assetVersionName
-      - component
-      - componentPurl
-      - dependency
-      - dependencyPurl
       type: object
     github_com_l3montree-dev_devguard_database_models.ComponentProject:
       properties:
@@ -10122,14 +10014,12 @@ components:
       properties:
         assetID:
           type: string
-        assetVersionName:
-          type: string
         createdAt:
           type: string
         id:
           type: string
         logLevel:
-          $ref: '#/components/schemas/logger.LogLevel'
+          type: string
         message:
           type: string
         orgID:
@@ -10138,7 +10028,6 @@ components:
           type: string
       required:
       - assetID
-      - assetVersionName
       - createdAt
       - id
       - logLevel
@@ -10446,6 +10335,7 @@ components:
       properties:
         asset:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
+          description: Relationships
         assetId:
           description: Composite key components (for indexing and queries)
           type: string
@@ -10773,11 +10663,11 @@ components:
       - pageSize
       - total
       type: object
-    github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Log:
+    github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Project:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Log'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
           type: array
           uniqueItems: false
         page:
@@ -10792,11 +10682,11 @@ components:
       - pageSize
       - total
       type: object
-    github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Project:
+    github_com_l3montree-dev_devguard_shared.Paged-models_Log:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Log'
           type: array
           uniqueItems: false
         page:
@@ -10841,35 +10731,6 @@ components:
       - reference
       - referenceNumber
       - seeAlso
-      type: object
-    logger.LogLevel:
-      enum:
-      - 1
-      - 2
-      - 3
-      - 4
-      type: integer
-      x-enum-varnames:
-      - Silent
-      - Error
-      - Warn
-      - Info
-    normalize.MinimalTree:
-      properties:
-        dependencies:
-          additionalProperties:
-            items:
-              type: string
-            type: array
-          type: object
-        nodes:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
-      required:
-      - dependencies
-      - nodes
       type: object
     normalize.PurlMatchContext:
       properties:
@@ -10958,6 +10819,12 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -10990,6 +10857,29 @@ components:
       - Second
       - Minute
       - Hour
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+    transformer.MinimalTree:
+      properties:
+        dependencies:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+        nodes:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - dependencies
+      - nodes
+      type: object
   securitySchemes:
     AdminSignedAuth:
       description: Instance admin authentication using ECDSA P-256 HTTP message signing.
@@ -14691,7 +14581,6 @@ paths:
       - description: Asset slug
         in: path
         name: assetSlug
-        required: true
         schema:
           type: string
       - description: Page number
@@ -14709,7 +14598,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-github_com_l3montree-dev_devguard_database_models_Log'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-models_Log'
           description: OK
       security:
       - CookieAuth: []
@@ -16899,7 +16788,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/normalize.MinimalTree'
+                $ref: '#/components/schemas/transformer.MinimalTree'
           description: OK
       security:
       - CookieAuth: []
@@ -18519,10 +18408,16 @@ paths:
           type: string
       requestBody:
         content:
-          application/x-www-form-urlencoded:
+          multipart/form-data:
             schema:
-              title: file
-              type: file
+              properties:
+                file:
+                  description: SBOM file
+                  format: binary
+                  type: string
+              required:
+              - file
+              type: object
         description: SBOM file
         required: true
       responses:

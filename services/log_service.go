@@ -35,26 +35,18 @@ func NewLogsService(
 	}
 }
 
-func (s logService) cascadeIDs(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string) (*uuid.UUID, *uuid.UUID, *uuid.UUID, string, error) {
+func (s logService) cascadeIDs(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID) (*uuid.UUID, *uuid.UUID, *uuid.UUID, error) {
 	//Given any ID, this function is suppose to find every ID of every parent if not existing
 
 	var cascadedProjectID, cascadedAssetID *uuid.UUID
-	var cascadedAssetVersionName string
 
 	if assetID != nil {
 		asset, err := s.assetRepository.ReadWithoutErrorLog(ctx, tx, *assetID)
 		if err != nil {
-			return nil, nil, nil, "", err
+			return nil, nil, nil, err
 		}
 		projectID = &asset.ProjectID
 
-		if assetVersionName != "" {
-			assetVersion, err := s.assetVersionRepository.ReadWithoutErrorLog(ctx, tx, assetVersionName, *assetID)
-			if err != nil {
-				return nil, nil, nil, "", err
-			}
-			cascadedAssetVersionName = assetVersion.Name
-		}
 		cascadedAssetID = assetID
 	}
 	// If asset is nil, continue with project level -> Error was on project level instead of asset level
@@ -62,27 +54,26 @@ func (s logService) cascadeIDs(ctx context.Context, tx *gorm.DB, orgID, projectI
 		cascadedProjectID = projectID
 		project, err := s.projectRepository.ReadWithoutErrorLog(ctx, tx, *projectID)
 		if err != nil {
-			return nil, nil, nil, "", err
+			return nil, nil, nil, err
 		}
 		orgID = &project.OrganizationID
 	}
 
-	return orgID, cascadedProjectID, cascadedAssetID, cascadedAssetVersionName, nil
+	return orgID, cascadedProjectID, cascadedAssetID, nil
 }
 
 func (s logService) SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error {
-	cascadedOrgID, cascadedProjectID, cascadedAssetID, cascadedAssetVersionName, err := s.cascadeIDs(ctx, tx, orgID, projectID, assetID, assetVersionName)
+	cascadedOrgID, cascadedProjectID, cascadedAssetID, err := s.cascadeIDs(ctx, tx, orgID, projectID, assetID)
 	if err != nil {
 		return err
 	}
 
 	log := models.Log{
-		OrgID:            cascadedOrgID,
-		ProjectID:        cascadedProjectID,
-		AssetID:          cascadedAssetID,
-		AssetVersionName: cascadedAssetVersionName,
-		Message:          message,
-		LogLevel:         dtos.LogLevelError,
+		OrgID:     cascadedOrgID,
+		ProjectID: cascadedProjectID,
+		AssetID:   cascadedAssetID,
+		Message:   message,
+		LogLevel:  dtos.LogLevelError,
 	}
 
 	err = s.logRepository.Save(ctx, tx, &log)
