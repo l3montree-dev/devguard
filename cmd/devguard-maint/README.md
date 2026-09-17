@@ -138,6 +138,7 @@ devguard-maint logs -f api.log summary        # levels, top sources, top message
 devguard-maint logs -f api.log errors         # every ERR and FTL entry
 devguard-maint logs -f api.log filter -l ERR -c auswaertiges-amt
 devguard-maint logs -f postgres.log timeline  # per-minute level histogram
+devguard-maint logs -f api.log durations      # request latency plotted over time
 devguard-maint logs -f web.log formats        # what did it detect, and why
 ```
 
@@ -161,6 +162,53 @@ devguard-maint logs -f api.log summary -N --top 200 | grep "connection refused"
 Tokens replaced: `<ts>`, `<date>`, `<uuid>`, `<addr>` (IP, optionally with port),
 `<hex>` (16+ hex chars), `<dur>`, `<n>`. For a plain occurrence count of one
 substring, `filter -c "connection refused"` reports the number of matches.
+
+#### `logs durations`
+
+Plots request latency over time from the api log's `handled request` entries,
+which are the only ones carrying a `duration=` field. URLs are reduced to their
+route — query string dropped, org, project, asset, ref and id segments replaced
+by placeholders — so the same endpoint hit against different assets groups into
+one row.
+
+```bash
+devguard-maint logs -f api.log durations
+devguard-maint logs -f api.log durations --bucket second --slow 5s
+devguard-maint logs -f api.log durations --route stats/risk-history
+```
+
+Sections, in order: overall percentiles, the per-bucket plot, stalls, the routes
+that consume the most total time, the slowest individual requests, and the
+precursor ranking.
+
+The plot's `INFLIGHT` column is the one that usually explains a slowdown. It is
+reconstructed by subtracting each entry's duration from its completion time, so
+it counts requests that were *still running* during a bucket rather than those
+that finished in it. A bucket completing 8 requests while 116 were in flight is
+a queue, not idleness:
+
+```
+BUCKET               REQS INFLIGHT      P50      P95      MAX  P95
+08:24                   8       21   58.31s     1.0m     1.0m ! ███████████
+08:25                   0       18        -        -        - ! (no request completed)
+08:28                 116      163    904ms     3.7m     3.9m ! ████████████████████████████████████████
+```
+
+A bucket where nothing completed at all is kept as a row rather than skipped,
+and consecutive ones are summarised under `Stalls`. On an instance serving
+traffic every minute those are hard outages, and they are invisible in a plot
+that only draws buckets it has data for.
+
+Buckets whose p95 crosses the slow threshold are marked `!`. The threshold
+defaults to the p95 of the worst tenth of buckets, so it scales with the log;
+pin it with `--slow`.
+
+The precursor section takes each latency onset — a slow bucket whose predecessor
+was not slow — and ranks the non-request event kinds over-represented in the
+buckets just before it, by lift over their baseline rate. It ranks coincidence
+rather than cause: an event that only ever fires under load scores high whether
+it is the trigger or another symptom. Tune the window with `--lead`, or skip the
+section with `--no-precursors`.
 
 #### `logs correlate <file> <file> [file...]`
 
