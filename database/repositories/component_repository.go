@@ -180,29 +180,40 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 	// the child hash rather than the parent's is what reaches leaves: a leaf has
 	// no outgoing edge, so it never appears as a subtree_hash. It also drops the
 	// root, which is the artifact rather than one of its dependencies.
-	const walk = `
-		WITH RECURSIVE walk AS (
-			SELECT s.asset_id, s.asset_version_name, s.artifact_name,
-			       e.direct_dependency_subtree_hash AS node_hash
+	//
+	// Keyed by root hash, not by asset version and artifact: identical trees
+	// share one root hash, so walking per sboms row re-expands the same subtree
+	// once per row. sboms is joined back afterwards, re-checking the project
+	// because a root hash is shared instance-wide.
+	const matches = `
+		WITH RECURSIVE roots AS (
+			SELECT DISTINCT s.root_subtree_hash
 			FROM sboms s
-			JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
 			JOIN assets a ON a.id = s.asset_id
 			WHERE a.project_id = ANY (?)
+		), walk AS (
+			SELECT r.root_subtree_hash AS root_hash,
+			       e.direct_dependency_subtree_hash AS node_hash
+			FROM roots r
+			JOIN sbom_merkle_edges e ON e.subtree_hash = r.root_subtree_hash
 		UNION
-			SELECT w.asset_id, w.asset_version_name, w.artifact_name,
-			       e.direct_dependency_subtree_hash
+			SELECT w.root_hash, e.direct_dependency_subtree_hash
 			FROM walk w
 			JOIN sbom_merkle_edges e ON e.subtree_hash = w.node_hash
+		), matches AS (
+			SELECT DISTINCT s.asset_id, s.asset_version_name, s.artifact_name, n.component_id
+			FROM walk w
+			JOIN sbom_merkle_nodes n ON n.node_hash = w.node_hash
+			JOIN sboms s ON s.root_subtree_hash = w.root_hash
+			JOIN assets a ON a.id = s.asset_id
+			WHERE a.project_id = ANY (?)
+			  AND n.component_id ILIKE ? AND n.component_id LIKE 'pkg:%'
 		)`
 
 	var total int64
-	if err := db.Raw(walk+`
-		SELECT COUNT(*) FROM (
-			SELECT DISTINCT w.asset_id, w.asset_version_name, w.artifact_name, n.component_id
-			FROM walk w
-			JOIN sbom_merkle_nodes n ON n.node_hash = w.node_hash
-			WHERE n.component_id ILIKE ? AND n.component_id LIKE 'pkg:%'
-		) matches`, pq.Array(projectIDs), "%"+search+"%").Scan(&total).Error; err != nil {
+	if err := db.Raw(matches+`
+		SELECT COUNT(*) FROM matches`,
+		pq.Array(projectIDs), pq.Array(projectIDs), "%"+search+"%").Scan(&total).Error; err != nil {
 		return shared.Paged[models.ComponentOccurrence]{}, err
 	}
 
@@ -216,26 +227,28 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		offset = (max(pageInfo.Page, 1) - 1) * pageInfo.PageSize
 	}
 
-	if err := db.Raw(walk+`
-		SELECT DISTINCT
+	if err := db.Raw(matches+`
+		, page AS (
+			SELECT * FROM matches
+			ORDER BY component_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC
+			LIMIT NULLIF(?, -1) OFFSET ?
+		)
+		SELECT
 			projects.id AS project_id,
 			projects.name AS project_name,
 			projects.slug AS project_slug,
 			assets.id AS asset_id,
 			assets.name AS asset_name,
 			assets.slug AS asset_slug,
-			w.asset_version_name AS asset_version_name,
-			n.component_id AS dependency_id,
-			w.artifact_name AS artifact_name,
-			w.asset_version_name AS artifact_asset_version_name
-		FROM walk w
-		JOIN sbom_merkle_nodes n ON n.node_hash = w.node_hash
-		JOIN assets ON w.asset_id = assets.id
+			page.asset_version_name AS asset_version_name,
+			page.component_id AS dependency_id,
+			page.artifact_name AS artifact_name,
+			page.asset_version_name AS artifact_asset_version_name
+		FROM page
+		JOIN assets ON page.asset_id = assets.id
 		JOIN projects ON assets.project_id = projects.id
-		WHERE n.component_id ILIKE ? AND n.component_id LIKE 'pkg:%'
-		ORDER BY dependency_id ASC, asset_version_name ASC
-		LIMIT NULLIF(?, -1) OFFSET ?`,
-		pq.Array(projectIDs), "%"+search+"%", limit, offset,
+		ORDER BY dependency_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC`,
+		pq.Array(projectIDs), pq.Array(projectIDs), "%"+search+"%", limit, offset,
 	).Scan(&occurrences).Error; err != nil {
 		return shared.Paged[models.ComponentOccurrence]{}, err
 	}
