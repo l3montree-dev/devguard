@@ -6639,6 +6639,37 @@ components:
       - assetId
       - assetVersionName
       type: object
+    dtos.LogDTO:
+      properties:
+        assetID:
+          type: string
+        assetName:
+          type: string
+        createdAt:
+          type: string
+        id:
+          type: string
+        logLevel:
+          type: string
+        message:
+          type: string
+        orgID:
+          type: string
+        projectID:
+          type: string
+        projectName:
+          type: string
+      required:
+      - assetID
+      - assetName
+      - createdAt
+      - id
+      - logLevel
+      - message
+      - orgID
+      - projectID
+      - projectName
+      type: object
     dtos.LookupResponse:
       properties:
         asset:
@@ -7575,6 +7606,19 @@ components:
       - expiryDateUnix
       - pubKey
       - scopes
+      type: object
+    dtos.PermalinkResponse:
+      properties:
+        assetSlug:
+          type: string
+        organizationSlug:
+          type: string
+        projectSlug:
+          type: string
+      required:
+      - assetSlug
+      - organizationSlug
+      - projectSlug
       type: object
     dtos.PolicyDTO:
       properties:
@@ -10010,31 +10054,6 @@ components:
       - updatedAt
       - vulnAssetId
       type: object
-    github_com_l3montree-dev_devguard_database_models.Log:
-      properties:
-        assetID:
-          type: string
-        createdAt:
-          type: string
-        id:
-          type: string
-        logLevel:
-          type: string
-        message:
-          type: string
-        orgID:
-          type: string
-        projectID:
-          type: string
-      required:
-      - assetID
-      - createdAt
-      - id
-      - logLevel
-      - message
-      - orgID
-      - projectID
-      type: object
     github_com_l3montree-dev_devguard_database_models.Org:
       properties:
         configFiles:
@@ -10568,6 +10587,25 @@ components:
       - pageSize
       - total
       type: object
+    github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/dtos.LogDTO'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
     github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO:
       properties:
         data:
@@ -10682,25 +10720,6 @@ components:
       - pageSize
       - total
       type: object
-    github_com_l3montree-dev_devguard_shared.Paged-models_Log:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Log'
-          type: array
-          uniqueItems: false
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        total:
-          type: integer
-      required:
-      - data
-      - page
-      - pageSize
-      - total
-      type: object
     licenses.License:
       properties:
         detailsURL:
@@ -10789,24 +10808,6 @@ components:
       type: object
     time.Duration:
       enum:
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10819,6 +10820,17 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
       - 1
       - 1000
       - 1000000
@@ -10827,24 +10839,6 @@ components:
       - 3600000000000
       type: integer
       x-enum-varnames:
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -10857,6 +10851,17 @@ components:
       - Second
       - Minute
       - Hour
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -14575,7 +14580,6 @@ paths:
       - description: Project slug
         in: path
         name: projectSlug
-        required: true
         schema:
           type: string
       - description: Asset slug
@@ -14593,12 +14597,27 @@ paths:
         name: pageSize
         schema:
           type: integer
+      - description: Search term
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Sort query, e.g. sort[createdAt]=desc
+        in: query
+        name: sort
+        schema:
+          type: string
+      - description: Filter query, e.g. filterQuery[logs.log_level][is]=error
+        in: query
+        name: filterQuery
+        schema:
+          type: string
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-models_Log'
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO'
           description: OK
       security:
       - CookieAuth: []
@@ -21018,6 +21037,41 @@ paths:
       summary: Get recommended fixed version for a package
       tags:
       - Vulnerabilities
+  /resolve:
+    get:
+      description: Resolves an organization, project or asset UUID to the slugs the
+        frontend needs to build a human readable URL. Exactly one of the query parameters
+        must be set.
+      parameters:
+      - description: Organization ID
+        in: query
+        name: orgid
+        schema:
+          type: string
+      - description: Project ID
+        in: query
+        name: projectid
+        schema:
+          type: string
+      - description: Asset ID
+        in: query
+        name: assetid
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.PermalinkResponse'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Resolve a permalink
+      tags:
+      - Organizations
   /sarif-scan:
     post:
       deprecated: true

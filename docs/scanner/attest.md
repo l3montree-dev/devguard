@@ -57,6 +57,9 @@ devguard-scanner attest <predicate> [container-image] [flags]
 
   # Upload attestation without attaching to an image
   devguard-scanner attest predicate.json --predicateType https://example.com/custom/v1
+
+  # Attach an attestation to an image without uploading it to DevGuard (e.g. a multi-arch manifest)
+  devguard-scanner attest sbom.json ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom --offline
 ```
 
 ### Options
@@ -68,6 +71,7 @@ devguard-scanner attest <predicate> [container-image] [flags]
       --defaultRef string      The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.
   -h, --help                   help for attest
       --isTag                  If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.
+  -o, --offline                If set, do not upload the attestation to the backend. Useful for testing, debugging, or attesting artifacts that have no corresponding DevGuard asset (e.g. a multi-arch manifest).
   -p, --password string        The password to authenticate to the container registry (if required)
   -a, --predicateType string   The predicate type (URI) for the attestation, e.g. https://slsa.dev/provenance/v1 or https://cyclonedx.org/vex/1.0
       --ref string             The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.
