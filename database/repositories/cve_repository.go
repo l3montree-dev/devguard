@@ -140,7 +140,8 @@ func applyFilters(q *gorm.DB, filter []shared.FilterQuery) (*gorm.DB, bool) {
 					Distinct()
 				hasEcosystemJoin = true
 			}
-			q = q.Where("affected_components.ecosystem ILIKE ?", f.FieldValue)
+		
+			q = q.Where("LOWER(affected_components.ecosystem) LIKE LOWER(?)", f.FieldValue)
 		} else {
 			q = f.Where(q)
 		}
