@@ -116,6 +116,7 @@ type ProjectRepository interface {
 	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
+	GetOrgProjectSlugsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) (string, string, error)
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
 	List(ctx context.Context, tx DB, idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	ListPaged(ctx context.Context, tx DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
@@ -937,12 +938,12 @@ type TrustedEntityRepository interface {
 
 type LogService interface {
 	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error
-	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
+	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[dtos.LogDTO], error)
 }
 
 type LogRepository interface {
 	Save(ctx context.Context, tx *gorm.DB, log *models.Log) error
-	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[models.Log], error)
+	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[dtos.LogDTO], error)
 }
 
 type Object string
