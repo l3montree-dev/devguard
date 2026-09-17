@@ -107,7 +107,7 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	if err := runner.maybeRunAndMark(ctx, "maintain.sbomGarbageCollection", func() error {
 		return runner.CollectSBOMGarbage(ctx)
 	}); err != nil {
-		monitoring.Alert("could not collect sbom garbage", err)
+		monitoring.Alert("could not collect sbom garbage", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.opensourceinsights", func() error {
