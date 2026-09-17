@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## v1.14.0 - 2026-09-17
+## [v1.14.0] - 2026-09-17
 
 ### Added
 
@@ -31,7 +31,7 @@ All notable changes to this project will be documented in this file.
 - Fixed wrong image tags being used in the `devguard-maint` CLI
 - Fixed the merge of supplementary SBOMs creating phantom components
 
-## v1.13.7 - 2026-09-11
+## [v1.13.7] - 2026-09-11
 
 ### Added
 - Add an `--offline` flag to the `attest` command in `devguard-scanner`, allowing attestations to be generated without writing/pushing results.
