@@ -332,6 +332,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 	if err := subquery.Model(&frameworkControlPostureRow{}).
 		Preload("MappedControls").
 		Preload("Events").
+		Preload("Events.ComplianceComponent").
 		Preload("ByComponents.ComplianceComponentImplementsControl.ComplianceComponent").
 		Find(&rows).Error; err != nil {
 		return nil, err
@@ -450,6 +451,7 @@ func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gor
 			Joins("FrameworkControl").
 			Preload("FrameworkControl.MappedControls").
 			Preload("Events").
+			Preload("Events.ComplianceComponent").
 			Preload("ByComponents.ComplianceComponentImplementsControl.ComplianceComponent").
 			Where("compliance_postures.id = ?", result.ID).
 			First(&posture).Error; err != nil {

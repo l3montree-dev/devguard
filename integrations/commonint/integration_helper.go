@@ -137,7 +137,7 @@ func RenderMarkdownForLicenseRisk(licenseRisk models.LicenseRisk, baseURL, orgSl
 	return str.String()
 }
 
-func CreateNewVulnEventBasedOnComment(vulnID uuid.UUID, vulnType dtos.VulnType, userID, comment string, artifactName string, userAgent *string) models.VulnEvent {
+func CreateNewVulnEventBasedOnComment(vulnID uuid.UUID, vulnType dtos.VulnType, userID, comment string, userAgent *string) models.VulnEvent {
 
 	event, mechanicalJustification, justification := commentTrimmedPrefix(vulnType, comment)
 
@@ -145,7 +145,7 @@ func CreateNewVulnEventBasedOnComment(vulnID uuid.UUID, vulnType dtos.VulnType, 
 	case dtos.EventTypeAccepted:
 		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification, false, userAgent)
 	case dtos.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName, false, userAgent)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, false, userAgent)
 	case dtos.EventTypeReopened:
 		return models.NewReopenedEvent(vulnID, vulnType, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:

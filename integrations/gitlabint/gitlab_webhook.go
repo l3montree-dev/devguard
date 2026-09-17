@@ -229,7 +229,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		})
 
 		// create a new event based on the comment
-		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDsOrArtifactNames(), &userAgent)
+		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, &userAgent)
 
 		statemachine.Apply(vuln, vulnEvent)
 

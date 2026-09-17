@@ -67,7 +67,9 @@ type VulnEventDTO struct {
 	Justification           *string                     `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 
-	ArbitraryJSONData map[string]any `json:"arbitraryJSONData"`
+	Risk                     *float64   `json:"risk"`
+	ComplianceComponentID    *uuid.UUID `json:"complianceComponentId"`
+	ComplianceComponentTitle *string    `json:"complianceComponentTitle"`
 
 	CreatedAt                time.Time   `json:"createdAt"`
 	OriginalAssetVersionName *string     `json:"originalAssetVersionName"`

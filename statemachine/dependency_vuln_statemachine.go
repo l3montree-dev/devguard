@@ -261,14 +261,8 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 func Apply(vuln models.Vuln, event models.VulnEvent) {
 	switch event.Type {
 	case dtos.EventTypeLicenseDecision:
-		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
-		if !ok {
-			slog.Error("could not parse final license decision", "vulnEventID", event.ID)
-			return
-		}
-		v := vuln.(*models.LicenseRisk)
-		v.SetFinalLicenseDecision(finalLicenseDecision)
-		v.SetState(dtos.VulnStateFixed)
+		// the decision itself lives on the license risk and is set by the caller
+		vuln.SetState(dtos.VulnStateFixed)
 	case dtos.EventTypeFixed:
 		vuln.SetState(dtos.VulnStateFixed)
 	case dtos.EventTypeReopened:
@@ -280,17 +274,16 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		currentState := vuln.GetState()
 		if currentState == dtos.VulnStateFixed || currentState == dtos.VulnStateFalsePositive || currentState == dtos.VulnStateAccepted {
 			// Still update risk assessment, but don't change state
-			f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-			if ok {
-				vuln.SetRawRiskAssessment(f)
+			if event.Risk != nil {
+				vuln.SetRawRiskAssessment(*event.Risk)
 				vuln.SetRiskRecalculatedAt(time.Now())
 			}
 			return
 		}
 		// Apply detected event for all other cases
-		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-		if !ok {
-			f = vuln.GetRawRiskAssessment()
+		f := vuln.GetRawRiskAssessment()
+		if event.Risk != nil {
+			f = *event.Risk
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
@@ -302,12 +295,11 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeMarkedForTransfer:
 		vuln.SetState(dtos.VulnStateMarkedForTransfer)
 	case dtos.EventTypeRawRiskAssessmentUpdated:
-		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-		if !ok {
-			slog.Error("could not parse risk assessment", "vulnEventID", event.ID)
+		if event.Risk == nil {
+			slog.Error("risk assessment updated event without risk", "vulnEventID", event.ID)
 			return
 		}
-		vuln.SetRawRiskAssessment(f)
+		vuln.SetRawRiskAssessment(*event.Risk)
 		vuln.SetRiskRecalculatedAt(time.Now())
 	case dtos.EventTypeImplemented:
 		vuln.SetState(dtos.VulnStateImplemented)

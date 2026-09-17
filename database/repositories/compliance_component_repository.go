@@ -133,7 +133,6 @@ func (r *ComplianceComponentRepository) DeleteStatement(ctx context.Context, tx 
 
 	var statement models.ComplianceComponentImplementsControlStatement
 	if err := scopeStatementToTenant(ctx, db).
-		Preload("ComplianceComponentImplementsControl.ComplianceComponent").
 		Where("compliance_component_implements_control_statements.id = ?", statementID).
 		First(&statement).Error; err != nil {
 		return nil, err

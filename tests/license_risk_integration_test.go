@@ -150,6 +150,7 @@ func TestLicenseRiskClosedByRefresh(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, risks, 1)
 		assert.Equal(t, dtos.VulnStateFixed, risks[0].State, "license risk should be closed after refresh returns a valid license")
+		assert.Equal(t, "MIT", *risks[0].FinalLicenseDecision)
 	})
 }
 
