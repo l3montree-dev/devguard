@@ -937,7 +937,7 @@ type TrustedEntityRepository interface {
 }
 
 type LogService interface {
-	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error
+	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error
 	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[dtos.LogDTO], error)
 }
 

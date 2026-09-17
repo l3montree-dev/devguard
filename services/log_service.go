@@ -62,7 +62,7 @@ func (s logService) cascadeIDs(ctx context.Context, tx *gorm.DB, orgID, projectI
 	return orgID, cascadedProjectID, cascadedAssetID, nil
 }
 
-func (s logService) SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error {
+func (s logService) SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error {
 	cascadedOrgID, cascadedProjectID, cascadedAssetID, err := s.cascadeIDs(ctx, tx, orgID, projectID, assetID)
 	if err != nil {
 		return err

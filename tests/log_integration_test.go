@@ -29,10 +29,10 @@ import (
 func TestLogService_SaveLog(t *testing.T) {
 	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 
 		t.Run("writes a log row with the exact ids and message passed in", func(t *testing.T) {
-			err := f.App.LogService.SaveLog(context.Background(), nil, &org.ID, &project.ID, &asset.ID, assetVersion.Name, "something went wrong")
+			err := f.App.LogService.SaveLog(context.Background(), nil, &org.ID, &project.ID, &asset.ID, "something went wrong")
 			assert.Nil(t, err)
 
 			var stored models.Log
@@ -42,7 +42,6 @@ func TestLogService_SaveLog(t *testing.T) {
 			assert.Equal(t, &org.ID, stored.OrgID)
 			assert.Equal(t, &project.ID, stored.ProjectID)
 			assert.Equal(t, &asset.ID, stored.AssetID)
-			assert.Equal(t, assetVersion.Name, stored.AssetVersionName)
 			assert.Equal(t, "something went wrong", stored.Message)
 			assert.Equal(t, dtos.LogLevel(dtos.LogLevelError), stored.LogLevel)
 			assert.NotEqual(t, uuid.Nil, stored.ID)
@@ -50,7 +49,7 @@ func TestLogService_SaveLog(t *testing.T) {
 		})
 
 		t.Run("cascades project and org ids from the asset when only assetID is given", func(t *testing.T) {
-			err := f.App.LogService.SaveLog(context.Background(), nil, nil, nil, &asset.ID, "", "cascaded from asset")
+			err := f.App.LogService.SaveLog(context.Background(), nil, nil, nil, &asset.ID, "cascaded from asset")
 			assert.Nil(t, err)
 
 			var stored models.Log
@@ -63,7 +62,7 @@ func TestLogService_SaveLog(t *testing.T) {
 		})
 
 		t.Run("cascades org id from the project when only projectID is given", func(t *testing.T) {
-			err := f.App.LogService.SaveLog(context.Background(), nil, nil, &project.ID, nil, "", "cascaded from project")
+			err := f.App.LogService.SaveLog(context.Background(), nil, nil, &project.ID, nil, "cascaded from project")
 			assert.Nil(t, err)
 
 			var stored models.Log
@@ -80,20 +79,20 @@ func TestLogService_SaveLog(t *testing.T) {
 func TestLogService_ListPaged(t *testing.T) {
 	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
 
 		otherOrg := f.CreateOrg("other-org")
 		otherProject := f.CreateProject(otherOrg.ID, "other-project")
 		otherAsset := f.CreateAsset(otherProject.ID, "other-asset")
-		otherAssetVersion := f.CreateAssetVersion(otherAsset.ID, "main", true)
+		_ = f.CreateAssetVersion(otherAsset.ID, "main", true)
 
-		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &org.ID, &project.ID, &asset.ID, assetVersion.Name, "first"))
-		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &org.ID, &project.ID, &asset.ID, assetVersion.Name, "second"))
+		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &org.ID, &project.ID, &asset.ID, "first"))
+		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &org.ID, &project.ID, &asset.ID, "second"))
 		// belongs to a different org/asset - must not leak into the results below
-		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &otherOrg.ID, &otherProject.ID, &otherAsset.ID, otherAssetVersion.Name, "unrelated"))
+		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &otherOrg.ID, &otherProject.ID, &otherAsset.ID, "unrelated"))
 
 		pageInfo := shared.PageInfo{Page: 1, PageSize: 10}
-		paged, err := f.App.LogRepository.ListPaged(context.Background(), nil, org.ID, project.ID, asset.ID, pageInfo)
+		paged, err := f.App.LogRepository.ListPaged(context.Background(), nil, org.ID, &project.ID, &asset.ID, pageInfo)
 		assert.Nil(t, err)
 
 		assert.Equal(t, int64(2), paged.Total)

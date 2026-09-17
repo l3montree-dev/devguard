@@ -28,16 +28,15 @@ import (
 )
 
 type AlertLogService interface {
-	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, assetVersionName string, message string) error
+	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error
 }
 
 type AlertOptions struct {
-	Ctx              context.Context
-	Tx               *gorm.DB
-	OrgID            uuid.UUID
-	ProjectID        uuid.UUID
-	AssetID          uuid.UUID
-	AssetVersionName string
+	Ctx       context.Context
+	Tx        *gorm.DB
+	OrgID     uuid.UUID
+	ProjectID uuid.UUID
+	AssetID   uuid.UUID
 }
 
 var logger AlertLogService
@@ -56,7 +55,7 @@ func Error(message string, err error, opts AlertOptions) {
 		slog.Error("could not store error in database", "msg", "logger has not been set yet")
 		return
 	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, fmt.Sprintf("%s: %v", message, err))
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, fmt.Sprintf("%s: %v", message, err))
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "error", err)
 	}
@@ -79,7 +78,7 @@ func Alert(message string, err error, opts AlertOptions) {
 		slog.Error("could not store error in database", "msg", "logger has not been set yet")
 		return
 	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, fmt.Sprintf("%s: %v", message, err))
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, fmt.Sprintf("%s: %v", message, err))
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "error", err)
 	}
@@ -101,7 +100,7 @@ func RecoverAndAlert(message string, err error, opts AlertOptions) {
 	if err != nil {
 		storedMsg = fmt.Sprintf("%s: %v", message, err)
 	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, opts.AssetVersionName, storedMsg)
+	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, storedMsg)
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
 	}
