@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.14.1] - 2026-09-17
+
+### Added
+
+- Log duration analysis in the `devguard-maint` CLI
+
+### Changed
+
+- **Vulnerability event feed query reworked** — `ReadEventsByAssetIDAndAssetVersionName` now drives the query from the vuln tables via `UNION ALL` instead of an `OR`-ed `ANY (...)` filter that seq-scanned `vuln_events`. The feed also covers license risks, compliance postures and advisories, pages deterministically (`created_at DESC, id DESC`), and counts separately from the page
+
+### Fixed
+
+- **Self-healing VEX rules** — a rule is re-applied when the vulnerability is no longer in the state the rule dictates, and a failed state or event write now aborts the scan instead of leaving vulns and their event history out of sync
+
 ## [v1.14.0] - 2026-09-17
 
 ### Added
