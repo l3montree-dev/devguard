@@ -938,12 +938,12 @@ type TrustedEntityRepository interface {
 
 type LogService interface {
 	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error
-	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[dtos.LogDTO], error)
+	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.LogDTO], error)
 }
 
 type LogRepository interface {
 	Save(ctx context.Context, tx *gorm.DB, log *models.Log) error
-	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo) (Paged[dtos.LogDTO], error)
+	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.LogDTO], error)
 }
 
 type Object string

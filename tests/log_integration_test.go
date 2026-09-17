@@ -92,7 +92,7 @@ func TestLogService_ListPaged(t *testing.T) {
 		assert.Nil(t, f.App.LogService.SaveLog(context.Background(), nil, &otherOrg.ID, &otherProject.ID, &otherAsset.ID, "unrelated"))
 
 		pageInfo := shared.PageInfo{Page: 1, PageSize: 10}
-		paged, err := f.App.LogRepository.ListPaged(context.Background(), nil, org.ID, &project.ID, &asset.ID, pageInfo)
+		paged, err := f.App.LogRepository.ListPaged(context.Background(), nil, org.ID, &project.ID, &asset.ID, pageInfo, "", nil, nil)
 		assert.Nil(t, err)
 
 		assert.Equal(t, int64(2), paged.Total)

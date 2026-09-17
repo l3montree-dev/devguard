@@ -24,6 +24,9 @@ func NewLogController(logService shared.LogService) *LogController {
 // @Param assetSlug path string false "Asset slug"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
+// @Param search query string false "Search term"
+// @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
+// @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
 // @Success 200 {object} shared.Paged[dtos.LogDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/ [get]
 func (controller *LogController) ListPaged(ctx shared.Context) error {
@@ -39,7 +42,7 @@ func (controller *LogController) ListPaged(ctx shared.Context) error {
 	if err == nil {
 		assetID = &asset.ID
 	}
-	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, projectID, assetID, shared.GetPageInfo(ctx))
+	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, projectID, assetID, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get logs").WithInternal(err)
 	}
