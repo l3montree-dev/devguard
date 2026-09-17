@@ -179,6 +179,80 @@ func (_c *VulnEventRepository_DeleteEventByID_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// GetEventsByDependencyVulnIDs provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) GetEventsByDependencyVulnIDs(ctx context.Context, tx shared.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {
+	ret := _mock.Called(ctx, tx, vulnIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEventsByDependencyVulnIDs")
+	}
+
+	var r0 []models.VulnEvent
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.VulnEvent, error)); ok {
+		return returnFunc(ctx, tx, vulnIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.VulnEvent); ok {
+		r0 = returnFunc(ctx, tx, vulnIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VulnEvent)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, vulnIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VulnEventRepository_GetEventsByDependencyVulnIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEventsByDependencyVulnIDs'
+type VulnEventRepository_GetEventsByDependencyVulnIDs_Call struct {
+	*mock.Call
+}
+
+// GetEventsByDependencyVulnIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - vulnIDs []uuid.UUID
+func (_e *VulnEventRepository_Expecter) GetEventsByDependencyVulnIDs(ctx any, tx any, vulnIDs any) *VulnEventRepository_GetEventsByDependencyVulnIDs_Call {
+	return &VulnEventRepository_GetEventsByDependencyVulnIDs_Call{Call: _e.mock.On("GetEventsByDependencyVulnIDs", ctx, tx, vulnIDs)}
+}
+
+func (_c *VulnEventRepository_GetEventsByDependencyVulnIDs_Call) Run(run func(ctx context.Context, tx shared.DB, vulnIDs []uuid.UUID)) *VulnEventRepository_GetEventsByDependencyVulnIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VulnEventRepository_GetEventsByDependencyVulnIDs_Call) Return(vulnEvents []models.VulnEvent, err error) *VulnEventRepository_GetEventsByDependencyVulnIDs_Call {
+	_c.Call.Return(vulnEvents, err)
+	return _c
+}
+
+func (_c *VulnEventRepository_GetEventsByDependencyVulnIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)) *VulnEventRepository_GetEventsByDependencyVulnIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetLastEventBeforeTimestamp provides a mock function for the type VulnEventRepository
 func (_mock *VulnEventRepository) GetLastEventBeforeTimestamp(ctx context.Context, tx shared.DB, vulnID uuid.UUID, time1 time.Time) (models.VulnEvent, error) {
 	ret := _mock.Called(ctx, tx, vulnID, time1)
