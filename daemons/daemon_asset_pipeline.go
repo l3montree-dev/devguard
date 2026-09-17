@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math"
 	"os"
 	"strings"
@@ -35,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
 	"go.opentelemetry.io/otel/attribute"
@@ -728,7 +730,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 
 	// speed up artifact lookup queries
-	_, err = conn.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.vuln_paths (asset_id, asset_version_name, artifact_name);`)
+	_, err = conn.Exec(ctx, `CREATE INDEX IF NOT EXISTS artifact_lookup_idx ON public.vuln_paths (asset_id, asset_version_name, artifact_name);`)
 	if err != nil {
 		return fmt.Errorf("could not create index on vuln_path artifact lookup: %w", err)
 	}
@@ -776,28 +778,41 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *
 	if err != nil {
 		return fmt.Errorf("could not fetch asset versions for asset: %w", err)
 	}
+
+	var asset models.Asset
+	err = runner.db.Raw(`SELECT * FROM assets WHERE id = ?`, assetID).Find(&asset).Error
+	if err != nil {
+		return fmt.Errorf("could not fetch asset details: %w", err)
+	}
+
 	for _, assetVersion := range assetVersions {
 		for _, artifact := range assetVersion.Artifacts {
 			foundVulns, err := runner.fetchNewVulnsForArtifact(ctx, conn, artifact)
 			if err != nil {
-				slog.Error("could not query found vulns for artifact", "err", err, "artifact", artifact, "av", assetVersion, "asset", assetID)
 				return fmt.Errorf("could not query found vulns for artifact: %w", err)
 			}
-			slog.Info("successfully fetched vulns", "amount", len(foundVulns))
+			slog.Info("finished fetching vulns, start handling results", "amount", len(foundVulns))
+
+			start := time.Now()
+			err = runner.HandleScanResultBatch(ctx, foundVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
+			if err != nil {
+				return fmt.Errorf("could not handle scan results: %w", err)
+			}
+			slog.Info("handled scan result", "time", time.Since(start))
 		}
 	}
 	return nil
 }
 
-func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependencyVulns []models.DependencyVuln, artifactName, assetVersionName string, assetID uuid.UUID) error {
-	existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersionName, assetID)
+func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependencyVulns []models.DependencyVuln, artifactName, assetVersionName string, asset models.Asset) error {
+	existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersionName, asset.ID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return err
 	}
 
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetNotFixedDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, assetID)
+	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetNotFixedDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, asset.ID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return err
@@ -806,7 +821,7 @@ func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependenc
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
-	unfixablePurls, err := runner.fetchPurlsInMultipleSBOMs(ctx, assetID, assetVersionName, artifactName)
+	unfixablePurls, err := runner.fetchPurlsInMultipleSBOMs(ctx, asset.ID, assetVersionName, artifactName)
 	if err != nil {
 		return fmt.Errorf("could not fetch purls in multiple sboms: %w", err)
 	}
@@ -815,69 +830,212 @@ func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependenc
 		return !ok
 	}
 
-	// Only generate fix events for vulns that are not already fixed, to avoid duplicate events.
-	fixedVulns := utils.Filter(diff.FixedEverywhere, func(dv models.DependencyVuln) bool {
-		return filterPredicate(dv) && dv.State != dtos.VulnStateFixed
-	})
+	tx, err := runner.pgxpool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("could not begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	fixedOnThisArtifactName := utils.Filter(diff.RemovedFromArtifact, filterPredicate)
 
 	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(diff.NewlyDiscovered, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
 
 	// make sure to first create a user detected event for vulnerabilities with just upstream events
 	// this way we preserve the event history
-	if err := runner.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(ctx, tx, artifactName, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
+	if err := runner.DetectedExistingVulnOnDifferentBranch(ctx, tx, artifactName, branchDiff.ExistingOnOtherBranches, asset); err != nil {
 		slog.Error("error when trying to add events for existing vulnerability on different branch")
 		return err
 	}
 	// We can create the newly found one without checking anything
-	if err := runner.dependencyVulnService.UserDetectedDependencyVulns(ctx, tx, userID, userAgent, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset); err != nil {
+	if err := runner.DetectedDependencyVulns(ctx, tx, "system", nil, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), asset); err != nil {
 		return err
 	}
 
-	err = runner.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(ctx, tx, diff.NewInArtifact, artifactName)
+	err = runner.DetectedDependencyVulnInAnotherArtifact(ctx, tx, diff.NewInArtifact, artifactName)
 	if err != nil {
-		slog.Error("error when trying to add events for adding scanner to vulnerability")
+		slog.Error("error when trying to associate new artifact to vulnerabilities")
 		return err
 	}
 
-	err = runner.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(ctx, tx, fixedOnThisArtifactName, artifactName)
+	err = runner.DidNotDetectDependencyVulnInArtifactAnymore(ctx, tx, fixedOnThisArtifactName, artifactName)
 	if err != nil {
-		slog.Error("error when trying to add events for removing scanner from vulnerability")
+		slog.Error("error when trying to remove artifact association from vulnerabilities")
 		return err
 	}
 
-	if err := runner.dependencyVulnService.UserFixedDependencyVulns(ctx, tx, userID, userAgent, fixedVulns, *assetVersion, asset); err != nil {
-		slog.Error("error when trying to add fix event")
-		return err
-	}
-
-	// Vulns that were fixed and now the component reappeared: fire an explicit reopened event
-	// instead of silently resetting state via the detected path on a fresh struct.
-	vulnsToReopen := utils.Filter(diff.Unchanged, func(dv models.DependencyVuln) bool {
-		return dv.State == dtos.VulnStateFixed
-	})
-	if err := runner.dependencyVulnService.UserReopenedToOpen(ctx, tx, userID, userAgent, vulnsToReopen); err != nil {
-		slog.Error("error when trying to reopen previously fixed vulnerability")
-		return err
-	}
-
-	v, err := runner.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, tx, assetVersionName, assetID, &artifactName)
+	err = tx.Commit(ctx)
 	if err != nil {
-		slog.Error("could not get existing dependencyVulns", "err", err)
-		return err
+		return fmt.Errorf("could not commit transaction: %w", err)
 	}
 
-	// return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 	return nil
 }
 
+func (runner *DaemonRunner) DetectedExistingVulnOnDifferentBranch(ctx context.Context, tx pgx.Tx, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], asset models.Asset) error {
+	if len(dependencyVulns) == 0 {
+		return nil
+	}
+
+	vulns := utils.Map(dependencyVulns, func(el statemachine.BranchVulnMatch[*models.DependencyVuln]) models.DependencyVuln {
+		return *el.CurrentBranchVuln
+	})
+	events := utils.Flat(utils.Map(dependencyVulns, func(el statemachine.BranchVulnMatch[*models.DependencyVuln]) []models.VulnEvent {
+		return el.EventsToCopy
+	}))
+
+	if err := copyDependencyVulns(ctx, tx, vulns); err != nil {
+		return err
+	}
+	return copyVulnEvents(ctx, tx, events)
+}
+
+func (runner *DaemonRunner) DetectedDependencyVulns(ctx context.Context, tx pgx.Tx, userID string, userAgent *string, artifactName string, dependencyVulns []models.DependencyVuln, asset models.Asset) error {
+	if len(dependencyVulns) == 0 {
+		return nil
+	}
+
+	events := make([]models.VulnEvent, len(dependencyVulns))
+	for i := range dependencyVulns {
+		depth := max(len(dependencyVulns[i].VulnerabilityPath), 1)
+		riskReport := vulndb.RawRisk(dependencyVulns[i].CVE, asset.Environmental, depth)
+		events[i] = models.NewDetectedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, riskReport, artifactName, false, userAgent)
+		statemachine.Apply(&dependencyVulns[i], events[i])
+	}
+
+	if err := copyDependencyVulns(ctx, tx, dependencyVulns); err != nil {
+		return err
+	}
+	return copyVulnEvents(ctx, tx, events)
+}
+
+// copyDependencyVulns inserts new vulns and their artifact associations, COPY fails on already existing vulns
+func copyDependencyVulns(ctx context.Context, tx pgx.Tx, vulns []models.DependencyVuln) error {
+	now := time.Now()
+	artifactRows := make([][]any, 0, len(vulns))
+
+	for i := range vulns {
+		vuln := &vulns[i]
+		// gorm used to call this hook on save, it sets the id and signatures
+		if err := vuln.BeforeSave(nil); err != nil {
+			return err
+		}
+		// column defaults gorm used for zero values
+		if vuln.State == "" {
+			vuln.State = dtos.VulnStateOpen
+		}
+		if vuln.LastStateChange.IsZero() {
+			vuln.LastStateChange = now
+		}
+		// a nil path would be stored as json null instead of []
+		if vuln.VulnerabilityPath == nil {
+			vuln.VulnerabilityPath = []string{}
+		}
+		vuln.CreatedAt = now
+		vuln.UpdatedAt = now
+
+		for _, artifact := range vuln.Artifacts {
+			artifactRows = append(artifactRows, []any{artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, vuln.ID})
+		}
+	}
+
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"dependency_vulns"}, []string{"id", "asset_version_name", "asset_id", "state", "last_state_change", "created_at", "updated_at", "cve_id", "component_purl", "component_fixed_version", "direct_dependency_fixed_version", "vulnerability_path", "risk_assessment", "risk_recalculated_at", "signature", "asset_signature"}, pgx.CopyFromSlice(len(vulns), func(i int) ([]any, error) {
+		v := vulns[i]
+		return []any{v.ID, v.AssetVersionName, v.AssetID, string(v.State), v.LastStateChange, v.CreatedAt, v.UpdatedAt, v.CVEID, v.ComponentPurl, v.ComponentFixedVersion, v.DirectDependencyFixedVersion, v.VulnerabilityPath, v.RiskAssessment, v.RiskRecalculatedAt, v.Signature, v.AssetSignature}, nil
+	}))
+	if err != nil {
+		return fmt.Errorf("could not copy dependency vulns: %w", err)
+	}
+
+	_, err = tx.CopyFrom(ctx, pgx.Identifier{"artifact_dependency_vulns"}, []string{"artifact_artifact_name", "artifact_asset_version_name", "artifact_asset_id", "dependency_vuln_id"}, pgx.CopyFromRows(artifactRows))
+	if err != nil {
+		return fmt.Errorf("could not copy artifact associations: %w", err)
+	}
+	return nil
+}
+
+func copyVulnEvents(ctx context.Context, tx pgx.Tx, events []models.VulnEvent) error {
+	now := time.Now()
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"vuln_events"}, []string{"created_at", "type", "user_id", "justification", "mechanical_justification", "arbitrary_json_data", "original_asset_version_name", "created_by_vex_rule", "dependency_vuln_id", "user_agent", "vex_rule_id", "asset_signature"}, pgx.CopyFromSlice(len(events), func(i int) ([]any, error) {
+		ev := events[i]
+		// events copied from other branches keep their original timestamp
+		createdAt := ev.CreatedAt
+		if createdAt.IsZero() {
+			createdAt = now
+		}
+		return []any{createdAt, string(ev.Type), ev.UserID, ev.Justification, string(ev.MechanicalJustification), ev.ArbitraryJSONData, ev.OriginalAssetVersionName, ev.CreatedByVexRule, ev.DependencyVulnID, ev.UserAgent, ev.VexRuleID, ev.AssetSignature}, nil
+	}))
+	if err != nil {
+		return fmt.Errorf("could not copy vuln events: %w", err)
+	}
+	return nil
+}
+
+func (runner *DaemonRunner) DetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifactName string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	assetVersionNames := make([]string, 0, len(vulnerabilities))
+	assetIDs := make([]uuid.UUID, 0, len(vulnerabilities))
+	dependencyVulnIDs := make([]uuid.UUID, 0, len(vulnerabilities))
+
+	for i := range vulnerabilities {
+		alreadyAssociated := false
+		for _, a := range vulnerabilities[i].Artifacts {
+			if a.ArtifactName == artifactName {
+				alreadyAssociated = true
+				break
+			}
+		}
+		if !alreadyAssociated {
+			assetVersionNames = append(assetVersionNames, vulnerabilities[i].AssetVersionName)
+			assetIDs = append(assetIDs, vulnerabilities[i].AssetID)
+			dependencyVulnIDs = append(dependencyVulnIDs, vulnerabilities[i].CalculateHash())
+		}
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO artifact_dependency_vulns 
+				(artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id)
+				SELECT 
+					$1,
+					UNNEST($2::text[]),
+					UNNEST($3::uuid[]),
+					UNNEST($4::uuid[])
+				ON CONFLICT DO NOTHING;`, artifactName, assetVersionNames, assetIDs, dependencyVulnIDs)
+
+	return err
+}
+
+func (runner *DaemonRunner) DidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifactName string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	assetVersionNames := make([]string, len(vulnerabilities))
+	assetIDs := make([]uuid.UUID, len(vulnerabilities))
+	dependencyVulnIDs := make([]uuid.UUID, len(vulnerabilities))
+	for i := range vulnerabilities {
+		assetVersionNames[i] = vulnerabilities[i].AssetVersionName
+		assetIDs[i] = vulnerabilities[i].AssetID
+		dependencyVulnIDs[i] = vulnerabilities[i].CalculateHash()
+	}
+
+	_, err := tx.Exec(ctx, `DELETE FROM artifact_dependency_vulns adv
+				USING UNNEST($2::text[], $3::uuid[], $4::uuid[]) AS u(asset_version_name, asset_id, dependency_vuln_id)
+				WHERE adv.artifact_artifact_name = $1
+				AND adv.artifact_asset_version_name = u.asset_version_name
+				AND adv.artifact_asset_id = u.asset_id
+				AND adv.dependency_vuln_id = u.dependency_vuln_id;`, artifactName, assetVersionNames, assetIDs, dependencyVulnIDs)
+
+	return err
+}
+
 func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, conn *pgxpool.Conn, artifact models.Artifact) ([]models.DependencyVuln, error) {
-	// DISTINCT: identical paths reported by multiple sources collapse into one vuln
+	// the vuln id only hashes cve and path, so rows differing only in fixed_version (multiple affected components) must collapse into one vuln
 	rows, err := conn.Query(ctx, `
-	SELECT DISTINCT
+	SELECT DISTINCT ON (vp.cve_id, path_purls)
     vp.component_purl,
     ARRAY(
-        SELECT nodes.component_purl
+        SELECT nodes.component_id
         FROM UNNEST(vp.path) WITH ORDINALITY AS u(node_hash, ord)
         JOIN sbom_merkle_nodes nodes
         ON nodes.node_hash = u.node_hash
@@ -888,7 +1046,8 @@ func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, conn *
 	FROM vuln_paths vp
 	WHERE vp.asset_id = $1
 	AND vp.asset_version_name = $2
-	AND vp.artifact_name = $3;`, artifact.AssetID, artifact.AssetVersionName, artifact.ArtifactName)
+	AND vp.artifact_name = $3
+	ORDER BY vp.cve_id, path_purls, vp.fixed_version NULLS LAST;`, artifact.AssetID, artifact.AssetVersionName, artifact.ArtifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -904,7 +1063,7 @@ func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, conn *
 		vuln.CVE = &models.CVE{CVE: vuln.CVEID}
 		vuln.Artifacts = []models.Artifact{artifact}
 		vuln.AssetID = artifact.AssetID
-		vuln.AssetVersion = artifact.AssetVersion
+		vuln.AssetVersionName = artifact.AssetVersionName
 		dependencyVulns = append(dependencyVulns, vuln)
 	}
 	err = rows.Err()
@@ -954,52 +1113,115 @@ type vulnIdentity struct {
 }
 
 func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string) (map[SBOM][]vulnIdentity, error) {
-	// maybe use prepared statements
-	rows, err := runner.pgxpool.Query(ctx, `
-	WITH RECURSIVE up AS (
-		SELECT nodes.node_hash, ARRAY[nodes.node_hash] AS path
-		FROM sbom_merkle_nodes nodes
-		WHERE nodes.component_id = ANY($1)
-			UNION ALL
-		SELECT edges.subtree_hash, edges.subtree_hash || up.path
-		FROM up
-		JOIN sbom_merkle_edges edges ON edges.direct_dependency_subtree_hash = up.node_hash
-		WHERE cardinality(up.path) < 32
-	), roots AS (
-		SELECT DISTINCT ON (up.node_hash, up.path[cardinality(up.path)], up.path[2])
-			up.node_hash AS root_hash,
-			up.path[cardinality(up.path)] AS component_hash,
-			up.path[2:] AS path
-		FROM up
-		WHERE EXISTS (SELECT 1 FROM sboms s WHERE s.root_subtree_hash = up.node_hash)
-		ORDER BY up.node_hash, up.path[cardinality(up.path)], up.path[2], cardinality(up.path)
-	)
-	SELECT mn.component_id, r.path, cves.cve,pm.fixed_version, s.asset_id, s.asset_version_name, s.artifact_name, s.source
-	FROM roots r
-	JOIN sboms s ON s.root_subtree_hash = r.root_hash
-	JOIN sbom_merkle_nodes mn ON mn.node_hash = r.component_hash
-	JOIN purl_mapping pm ON pm.purl = mn.component_id
-	JOIN cves ON cves.id = pm.cve_id;`, purls)
+	start := time.Now()
+	// calculate map size upper bound
+	row := runner.pgxpool.QueryRow(ctx, `SELECT COUNT(*) FROM sbom_merkle_nodes;`)
+
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("could not query count of nodes: %w", err)
+	}
+
+	edgeRows, err := runner.pgxpool.Query(ctx, `SELECT subtree_hash,direct_dependency_subtree_hash FROM sbom_merkle_edges;`)
 	if err != nil {
 		return nil, fmt.Errorf("could not query paths for purls: %w", err)
 	}
-	defer rows.Close()
+	defer edgeRows.Close()
 
-	vulnsPerSBOM := make(map[SBOM][]vulnIdentity, len(purls))
-	var key SBOM
-	var vuln vulnIdentity
-	for rows.Next() {
-		err = rows.Scan(&vuln.ComponentPurl, &vuln.Path, &vuln.CVE, &vuln.FixedVersion, &key.AssetID, &key.AssetVersionName, &key.ArtifactName, &key.Source)
+	// for each node lookup map for all parent nodes
+	edges := make(map[uuid.UUID]map[uuid.UUID]struct{}, count)
+	var parent, child uuid.UUID
+	for edgeRows.Next() {
+		err = edgeRows.Scan(&parent, &child)
 		if err != nil {
-			return nil, fmt.Errorf("could not scan row: %w", err)
+			return nil, fmt.Errorf("could not scan edge: %w", err)
 		}
-		vulnsPerSBOM[key] = append(vulnsPerSBOM[key], vuln)
-	}
 
-	if err := rows.Err(); err != nil {
+		_, ok := edges[child]
+		if !ok {
+			edges[child] = map[uuid.UUID]struct{}{parent: struct{}{}}
+		} else {
+			edges[child][parent] = struct{}{}
+		}
+	}
+	edgeRows.Close()
+	if err := edgeRows.Err(); err != nil {
 		return nil, fmt.Errorf("could not scan rows: %w", err)
 	}
-	return vulnsPerSBOM, nil
+
+	slog.Info("loaded SBOM into memory", "time", time.Since(start))
+
+	purlRows, err := runner.pgxpool.Query(ctx, `
+		SELECT node_hash, component_id 
+		FROM sbom_merkle_nodes
+		WHERE component_id = ANY($1)`, purls)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch hash to purl mapping: %w", err)
+	}
+	defer purlRows.Close()
+
+	purlToHash := make(map[string]uuid.UUID, len(purls))
+	var purl string
+	var hash uuid.UUID
+	for purlRows.Next() {
+		err = purlRows.Scan(&hash, &purl)
+		if err != nil {
+			return nil, err
+		}
+		purlToHash[purl] = hash
+	}
+	purlRows.Close()
+	if err := purlRows.Err(); err != nil {
+		return nil, fmt.Errorf("could not scan purl rows: %w", err)
+	}
+
+	// lookup which nodes are
+	rootRows, err := runner.pgxpool.Query(ctx, `
+		SELECT node_hash
+		FROM sbom_merkle_nodes nodes 
+		WHERE EXISTS (
+			SELECT FROM sboms s 
+			WHERE s.root_subtree_hash = nodes.node_hash
+		);`)
+	defer rootRows.Close()
+
+	var rootHash uuid.UUID
+	isNodeRoot := make(map[uuid.UUID]struct{})
+	for rootRows.Next() {
+		err = row.Scan(&rootHash)
+		if err != nil {
+			return nil, err
+		}
+		isNodeRoot[rootHash] = struct{}{}
+	}
+	rootRows.Close()
+	err = rootRows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	pathsForPurls := make(map[string][]uuid.UUID, len(purls))
+	queue := make([]uuid.UUID, 0, count)
+	currentElement := 0
+	for _, vulnerablePurl := range purls {
+		nodeHash, ok := purlToHash[vulnerablePurl]
+		if !ok {
+			panic("could not find hash for purl")
+		}
+
+		edges, ok := edges[nodeHash]
+		if !ok {
+			slog.Info("no paths for purl,skipping")
+			continue
+		}
+
+		for edge := range maps.Keys(edges) {
+
+		}
+
+	}
+	return nil, nil
 }
 
 func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
