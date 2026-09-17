@@ -300,7 +300,7 @@ type DependencyVulnRepository interface {
 	GetDefaultDependencyVulnsByOrgIDPaged(ctx context.Context, tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIDPaged(ctx context.Context, tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDependencyVulnsByAssetVersionPagedAndFlat(ctx context.Context, tx DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	ListByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	ListByAssetAndAssetVersionWithoutEvents(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(ctx context.Context, tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	ApplyGroupEventAndSave(ctx context.Context, tx DB, assetSignature int64, vulnEvent *models.VulnEvent) error
@@ -309,7 +309,7 @@ type DependencyVulnRepository interface {
 	ListUnfixedByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(ctx context.Context, tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(ctx context.Context, tx DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, assetSignatures []int64) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(ctx context.Context, tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(ctx context.Context, tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
@@ -578,6 +578,7 @@ type VulnEventRepository interface {
 	ReadAssetEventsByVulnID(ctx context.Context, tx DB, vulnID uuid.UUID, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)
+	GetEventsByDependencyVulnIDs(ctx context.Context, tx DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)
 	CountByVexRuleIDs(ctx context.Context, tx DB, ruleIDs []string) (map[string]int, error)
 	GetLastEventBeforeTimestamp(ctx context.Context, tx DB, vulnID uuid.UUID, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(ctx context.Context, tx DB, eventID string) error

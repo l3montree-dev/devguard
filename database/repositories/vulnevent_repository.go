@@ -184,6 +184,21 @@ func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(ctx context.Contex
 	return events, nil
 }
 
+func (r *eventRepository) GetEventsByDependencyVulnIDs(ctx context.Context, tx *gorm.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {
+	if len(vulnIDs) == 0 {
+		return nil, nil
+	}
+	var events []models.VulnEvent
+	err := r.Repository.GetDB(ctx, tx).
+		Where("dependency_vuln_id = ANY (?)", pq.Array(vulnIDs)).
+		Order("created_at ASC").
+		Find(&events).Error
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
 func (r *eventRepository) GetLastEventBeforeTimestamp(ctx context.Context, tx *gorm.DB, vulnID uuid.UUID, time time.Time) (models.VulnEvent, error) {
 	var event models.VulnEvent
 	err := r.Repository.GetDB(ctx, tx).Raw("SELECT * FROM vuln_events WHERE (dependency_vuln_id = ? OR first_party_vuln_id = ? OR license_risk_id = ?) AND type IN ('detected','accepted','fixed','reopened') AND created_at <= ? ORDER BY created_at DESC", vulnID, vulnID, vulnID, time).First(&event).Error

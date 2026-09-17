@@ -168,12 +168,21 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx
 // bounds every preload issued for them.
 const otherAssetVersionsBatchSize = 1000
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+
+func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, assetSignatures []int64) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
+
+	// nothing to match against - every row would be discarded by the caller
+	if len(assetSignatures) == 0 {
+		return dependencyVulns, nil
+	}
 
 	q := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Preload("CVE").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
+	}).Preload("CVE").Preload("CVE.Exploits").
+		Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID).
+		Where("dependency_vulns.state != ?", dtos.VulnStateFixed).
+		Where("dependency_vulns.asset_signature = ANY (?)", pq.Array(assetSignatures))
 
 	var batch []models.DependencyVuln
 	if err := q.FindInBatches(&batch, otherAssetVersionsBatchSize, func(*gorm.DB, int) error {
@@ -205,11 +214,12 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVers
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) ListByAssetAndAssetVersionWithoutEvents(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(ctx, tx).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Preload("Events", func(db *gorm.DB) *gorm.DB {
-		return db.Order("created_at ASC")
-	}).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+	// Events are deliberately not preloaded here. This is the scan path, and preloading
+	// them fans out to every event of every vuln on the asset version - ~90k rows for a
+	// large one - while the scan diff only ever reads Artifacts, State and the hash.
+	if err := repository.Repository.GetDB(ctx, tx).Preload("Artifacts").Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
