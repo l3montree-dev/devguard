@@ -962,6 +962,7 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 
 	DROP INDEX IF EXISTS cve_affected_component_affected_component_id;
 	DROP INDEX IF EXISTS cve_affected_component_cve_id;
+	DROP INDEX IF EXISTS idx_cve_affected_component_cve_id;
 	DROP INDEX IF EXISTS idx_cve_affected_component_cve_id_aff_comp_id;
 
 	DROP INDEX IF EXISTS idx_cve_relationships_target_cve;
@@ -1009,7 +1010,7 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	-- Lastly rebuild the indexes
 	CREATE INDEX IF NOT EXISTS idx_cves_lower_cve ON public.cves USING hash (LOWER(cve));
 
-    CREATE INDEX IF NOT EXISTS cve_affected_component_cve_id ON public.cve_affected_component USING hash (cve_id);
+    CREATE INDEX IF NOT EXISTS idx_cve_affected_component_cve_id ON public.cve_affected_component USING btree (cve_id, affected_component_id);
 
 	CREATE INDEX idx_cve_relationships_source_cve ON public.cve_relationships USING btree (source_cve);
 	
