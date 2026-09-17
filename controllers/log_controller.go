@@ -20,21 +20,26 @@ func NewLogController(logService shared.LogService) *LogController {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
+// @Param projectSlug path string false "Project slug"
 // @Param assetSlug path string false "Asset slug"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
-// @Success 200 {object} shared.Paged[models.Log]
+// @Success 200 {object} shared.Paged[dtos.LogDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/ [get]
 func (controller *LogController) ListPaged(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
+
+	var projectID *uuid.UUID
+	project, err := shared.MaybeGetProject(ctx)
+	if err == nil {
+		projectID = &project.ID
+	}
 	var assetID *uuid.UUID
 	asset, err := shared.MaybeGetAsset(ctx)
 	if err == nil {
 		assetID = &asset.ID
 	}
-	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, project.ID, assetID, shared.GetPageInfo(ctx))
+	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, projectID, assetID, shared.GetPageInfo(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get logs").WithInternal(err)
 	}

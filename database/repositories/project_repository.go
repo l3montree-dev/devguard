@@ -708,3 +708,21 @@ SELECT 1`
 		organizationID, providerID, projectExternalEntityID, artifactName,
 	).Error
 }
+
+func (g *projectRepository) GetOrgProjectSlugsByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) (string, string, error) {
+	var slugs struct {
+		OrgSlug     string `gorm:"column:org_slug"`
+		ProjectSlug string `gorm:"column:project_slug"`
+	}
+
+	query := "SELECT organizations.slug AS org_slug, projects.slug AS project_slug " +
+		"FROM projects " +
+		"JOIN organizations ON organizations.id = projects.organization_id " +
+		"WHERE projects.id = ?"
+
+	if err := g.GetDB(ctx, tx).Raw(query, projectID).First(&slugs).Error; err != nil {
+		return "", "", err
+	}
+
+	return slugs.OrgSlug, slugs.ProjectSlug, nil
+}
