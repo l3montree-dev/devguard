@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.14.0 - 2026-09-17
+
+### Added
+
+- **SBOM Merkle tree storage** — SBOMs are now stored and compared as a Merkle tree (nodes/edges tables, UUID-keyed hashes) instead of the old flat `component_dependencies` table, letting DevGuard detect unchanged subtrees and diff SBOMs without recomputing the whole graph. This includes a CycloneDX-to-Merkle-tree transformer, a new SBOM repository, transactional tree saves, a hash migration that backfills existing data into the new edges/nodes tables, and an index tuned for upward tree traversal (`idx_sbom_merkle_edges_child`, extended with `subtree_hash`). SBOM garbage collection now runs as a background job, and the old `component_dependencies` table has been dropped now that everything reads from the tree
+- **External entity garbage collection** — a new background daemon job deletes projects and assets belonging to external entity providers once they no longer have any member, cleaning up orphaned data left behind
+
+### Changed
+
+- **Major CVE query performance overhaul** — several hot database paths used for vulnerability scanning and listing were reworked to make better use of indices:
+  - Redundant shadow indexes were dropped and CVE pagination `Count` queries fixed
+  - The `idx_cve_affected_component_cve_id` index is now a btree index (was a hash index), matching the `IN` queries run against it
+  - A new ecosystem index on affected components lets that query avoid a broader scan, and the query itself no longer uses `ILIKE`
+  - New indices on `cves.date_published` and `cves.cvss` speed up paginated/sorted CVE listing
+  - `purl_comparer` now issues `UNION ALL` queries instead of `OR`-ed conditions, letting Postgres use indices per branch instead of falling back to a sequential scan
+- **Scan hot path optimized** — dependency vulnerability scanning no longer preloads all vuln events, and now only fetches other vulnerabilities matching the asset signature instead of the whole set, reducing memory and query cost per scan
+- `attachGroupEvent` moved to a repository-scoped method
+- Ticket state is only resolved when the affected dependency vulnerabilities array is non-empty, avoiding unnecessary provider calls
+- OTel metrics now trim the span name option in SQL
+- Removed the unused `componentId` parameter from the SBOM merkle tree build path
+
+### Fixed
+
+- **Purl epoch normalization for deb and rpm packages** — RPM packages are now included when prepending the epoch to a purl version, and a missing epoch now defaults to `0` for both deb and rpm purls, fixing missed vulnerability matches
+- Fixed a malformed database query caused by a missing `pg.Array` call in the compliance posture and dependency vuln repositories
+- Fixed project session permission logic incorrectly applied to non-project objects
+- Fixed wrong image tags being used in the `devguard-maint` CLI
+- Fixed the merge of supplementary SBOMs creating phantom components
+
 ## v1.13.7 - 2026-09-11
 
 ### Added
