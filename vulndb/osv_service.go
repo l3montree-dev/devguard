@@ -949,6 +949,8 @@ func PrepareBulkInsert(ctx context.Context, tx pgx.Tx) error {
 	-- lastly drop all indexes (might be redundant but safe)
 	DROP INDEX IF EXISTS idx_cves_lower_cve;
 	DROP INDEX IF EXISTS idx_cves_date_published;
+	DROP INDEX IF EXISTS idx_cves_cvss;
+	DROP INDEX IF EXISTS idx_cves_cvss_desc;
 	DROP INDEX IF EXISTS idx_affected_components_lower_ecosystem;
 	DROP INDEX IF EXISTS idx_affected_components_semver_fixed;
     DROP INDEX IF EXISTS idx_affected_components_semver_introduced;
@@ -1014,6 +1016,11 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 
 	-- serves the count(*) and the ordering behind the paginated vulndb list
 	CREATE INDEX IF NOT EXISTS idx_cves_date_published ON public.cves USING btree (date_published);
+
+	-- the two sort directions the vulndb list emits for cvss. cvss is nullable, so the
+	-- ascending index cannot serve DESC NULLS LAST - both opclasses are needed.
+	CREATE INDEX IF NOT EXISTS idx_cves_cvss ON public.cves USING btree (cvss);
+	CREATE INDEX IF NOT EXISTS idx_cves_cvss_desc ON public.cves USING btree (cvss DESC NULLS LAST);
 
 	-- serves LOWER(ecosystem) LIKE LOWER(?) as a prefix scan; text_pattern_ops is what
 	-- makes that indexable regardless of the database collation
