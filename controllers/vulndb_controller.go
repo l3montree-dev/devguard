@@ -361,33 +361,35 @@ func (c *VulnDBController) GetCVEEcosystemDistribution(ctx shared.Context) error
 	return ctx.JSONPretty(200, result.(map[string]int), config.PrettyJSONIndent)
 }
 
+// Both queries cut the ecosystem to its reported prefix before deduplicating, so a
+// CVE listed under both debian:11 and debian:12 counts once.
 func (c *VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) (map[string]int, error) {
 	cveResults := make([]ecosystemRow, 0, 1024)
 	maliciousPackageResults := make([]ecosystemRow, 0, 64)
 
 	// count distinct CVEs per ecosystem (not cve_affected_component rows)
-	cveSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(DISTINCT a.cve_id) FROM cve_affected_component a
-	LEFT JOIN affected_components b ON b.id = a.affected_component_id
-	GROUP BY LOWER(b.ecosystem);`
+	cveSQL := `SELECT ecosystem, COUNT(*) FROM (
+		SELECT DISTINCT SPLIT_PART(LOWER(b.ecosystem), ':', 1) as ecosystem, a.cve_id FROM cve_affected_component a
+		LEFT JOIN affected_components b ON b.id = a.affected_component_id
+	) d GROUP BY ecosystem;`
 	err := c.affectedComponentRepository.GetDB(ctx, nil).Raw(cveSQL).Find(&cveResults).Error
 	if err != nil {
 		return nil, err
 	}
 
-	// do the same thing for malicious packages
-	maliciousPackagesSQL := `SELECT LOWER(b.ecosystem) as ecosystem, COUNT(*) FROM malicious_packages a
-	LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id
-	GROUP BY LOWER(b.ecosystem);`
+	// count distinct malicious packages per ecosystem (not malicious_affected_components rows)
+	maliciousPackagesSQL := `SELECT ecosystem, COUNT(*) FROM (
+		SELECT DISTINCT SPLIT_PART(LOWER(b.ecosystem), ':', 1) as ecosystem, a.id FROM malicious_packages a
+		LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id
+	) d GROUP BY ecosystem;`
 	err = c.affectedComponentRepository.GetDB(ctx, nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
 	if err != nil {
 		return nil, err
 	}
 
-	// group the results in a map by cutting the ecosystem identifier before the ':'
 	ecosystemToAmount := make(map[string]int, len(cveResults))
 	for _, row := range append(cveResults, maliciousPackageResults...) {
-		key, _, _ := strings.Cut(row.Ecosystem, ":")
-		ecosystemToAmount[key] += row.Count
+		ecosystemToAmount[row.Ecosystem] += row.Count
 	}
 
 	return ecosystemToAmount, nil
