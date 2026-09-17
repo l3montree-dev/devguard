@@ -42,6 +42,8 @@ type OrgController struct {
 	projectService         shared.ProjectService
 	invitationRepository   shared.InvitationRepository
 	adminService           shared.AdminService
+	projectRepository      shared.ProjectRepository
+	assetRepository        shared.AssetRepository
 }
 
 func isInvitationExpired(invite models.Invitation) bool {
@@ -49,7 +51,7 @@ func isInvitationExpired(invite models.Invitation) bool {
 	return now.After(invite.CreatedAt.Add(expiryDuration))
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService) *OrgController {
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
@@ -57,6 +59,8 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 		projectService:         projectService,
 		invitationRepository:   invitationRepository,
 		adminService:           adminService,
+		projectRepository:      projectRepository,
+		assetRepository:        assetRepository,
 	}
 }
 
@@ -646,4 +650,78 @@ func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
 	}
 
 	return ctx.NoContent(200)
+}
+
+// @Summary Resolve a permalink
+// @Description Resolves an organization, project or asset UUID to the slugs the frontend needs to build a human readable URL. Exactly one of the query parameters must be set.
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param orgid query string false "Organization ID"
+// @Param projectid query string false "Project ID"
+// @Param assetid query string false "Asset ID"
+// @Success 200 {object} dtos.PermalinkResponse
+// @Router /resolve [get]
+func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
+
+	orgID := ctx.QueryParam("orgid")
+	projectID := ctx.QueryParam("projectid")
+	assetID := ctx.QueryParam("assetid")
+
+	switch {
+	case assetID != "":
+		id, err := uuid.Parse(assetID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse asset id").WithInternal(err)
+		}
+
+		organizationSlug, projectSlug, assetSlug, err := controller.assetRepository.GetOrgProjectAssetSlugsByAssetID(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "asset not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve asset").WithInternal(err)
+		}
+
+		return ctx.JSON(200, dtos.PermalinkResponse{
+			OrganizationSlug: organizationSlug,
+			ProjectSlug:      projectSlug,
+			AssetSlug:        assetSlug,
+		})
+	case projectID != "":
+		id, err := uuid.Parse(projectID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse project id").WithInternal(err)
+		}
+
+		organizationSlug, projectSlug, err := controller.projectRepository.GetOrgProjectSlugsByProjectID(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "project not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve project").WithInternal(err)
+		}
+
+		return ctx.JSON(200, dtos.PermalinkResponse{
+			OrganizationSlug: organizationSlug,
+			ProjectSlug:      projectSlug,
+		})
+	default:
+		id, err := uuid.Parse(orgID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse organization id").WithInternal(err)
+		}
+
+		organization, err := controller.organizationRepository.GetOrgByID(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "organization not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve organization").WithInternal(err)
+		}
+
+		return ctx.JSON(200, dtos.PermalinkResponse{OrganizationSlug: organization.Slug})
+	}
 }
