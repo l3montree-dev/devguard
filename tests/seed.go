@@ -25,7 +25,6 @@ func SeedSBOM(db shared.DB, assetVersion models.AssetVersion, artifactName, sour
 	tree := normalize.BuildMerkleTree(
 		normalize.Adjacency{Children: children},
 		sbomSeedRoot,
-		artifactName,
 	)
 	return repositories.NewSBOMRepository(db).SaveTree(context.Background(), nil, models.SBOM{
 		AssetID:          assetVersion.AssetID,

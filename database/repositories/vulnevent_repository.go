@@ -96,54 +96,72 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 
 	var events []models.VulnEventDetail
 
-	dependencyVulnSubQuery := r.GetDB(ctx, tx).
-		Table("dependency_vulns").
-		Select("id").
-		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+	// Driven from the vuln tables, which have an (asset_id, asset_version_name) index:
+	// filtering vuln_events by "dependency_vuln_id = ANY (...) OR first_party_vuln_id =
+	// ANY (...)" cannot use an index and seq scans the whole table. Group events carry an
+	// asset_signature instead of a parent and so belong to no asset version.
+	eventsOfAssetVersion := r.GetDB(ctx, tx).Raw(`
+		SELECT ev.* FROM dependency_vulns dvi
+			JOIN vuln_events ev ON ev.dependency_vuln_id = dvi.id
+			WHERE dvi.asset_id = ? AND dvi.asset_version_name = ?
+		UNION ALL
+		SELECT ev.* FROM first_party_vulnerabilities fvi
+			JOIN vuln_events ev ON ev.first_party_vuln_id = fvi.id
+			WHERE fvi.asset_id = ? AND fvi.asset_version_name = ?
+		UNION ALL
+		SELECT ev.* FROM license_risks lri
+			JOIN vuln_events ev ON ev.license_risk_id = lri.id
+			WHERE lri.asset_id = ? AND lri.asset_version_name = ?
+		UNION ALL
+		SELECT ev.* FROM compliance_postures cpi
+			JOIN vuln_events ev ON ev.compliance_posture_id = cpi.id
+			WHERE cpi.asset_id = ? AND cpi.asset_version_name = ?
+		UNION ALL
+		SELECT ev.* FROM advisories advi
+			JOIN vuln_events ev ON ev.security_advisory_id = advi.id
+			WHERE advi.asset_id = ? AND advi.asset_version_name = ?`,
+		assetID, assetVersionName, assetID, assetVersionName, assetID,
+		assetVersionName, assetID, assetVersionName, assetID, assetVersionName)
 
-	firstPartyVulnSubQuery := r.GetDB(ctx, tx).
-		Table("first_party_vulnerabilities").
-		Select("id").
-		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+	// joined on the outside so filters can still address e, dv, fv and lr
+	withDetails := func(from any) *gorm.DB {
+		return r.GetDB(ctx, tx).
+			Table("(?) AS e", from).
+			Joins("LEFT JOIN dependency_vulns dv ON e.dependency_vuln_id = dv.id").
+			Joins("LEFT JOIN first_party_vulnerabilities fv ON e.first_party_vuln_id = fv.id").
+			Joins("LEFT JOIN license_risks lr ON e.license_risk_id = lr.id").
+			// id breaks ties - batched events share a created_at, and without it
+			// the same row lands on two pages while another lands on none
+			Order("e.created_at DESC, e.id DESC")
+	}
 
-	q := r.GetDB(ctx, tx).
-		Table("vuln_events AS e").
-		Joins("LEFT JOIN dependency_vulns dv ON e.dependency_vuln_id = dv.id").
-		Joins("LEFT JOIN first_party_vulnerabilities fv ON e.first_party_vuln_id = fv.id").
-		Where("(e.dependency_vuln_id = ANY (?) OR e.first_party_vuln_id = ANY (?))", dependencyVulnSubQuery, firstPartyVulnSubQuery).
-		Order("e.created_at DESC")
-
-	// apply filters
+	q := withDetails(eventsOfAssetVersion)
 	for _, f := range filter {
 		q = f.Where(q)
 	}
 
-	type rowWithCount struct {
-		models.VulnEventDetail
-		TotalCount int64
-	}
-	var rows []rowWithCount
-
-	// use a new gorm session to force a new statement for both queries
-	err := q.Session(&gorm.Session{}).Select("e.*, dv.cve_id, dv.component_purl, fv.uri, COUNT(*) OVER() AS total_count").
-		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
-		Scan(&rows).Error
-	if err != nil {
+	// counted separately: COUNT(*) OVER() has to build every row before LIMIT drops them
+	var count int64
+	if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
 		return shared.Paged[models.VulnEventDetail]{}, err
 	}
 
-	var count int64
-	events = make([]models.VulnEventDetail, len(rows))
-	for i, r := range rows {
-		events[i] = r.VulnEventDetail
-		count = r.TotalCount
+	page := q.Session(&gorm.Session{}).
+		Limit(pageInfo.PageSize).
+		Offset((pageInfo.Page - 1) * pageInfo.PageSize)
+
+	if len(filter) == 0 {
+		// unfiltered, the page can be cut before the detail joins run; with filters it
+		// cannot, since they apply to the outer query and would hit a truncated page
+		paged := r.GetDB(ctx, tx).Raw("SELECT * FROM (?) u ORDER BY u.created_at DESC, u.id DESC LIMIT ? OFFSET ?",
+			eventsOfAssetVersion, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)
+		page = withDetails(paged).Session(&gorm.Session{})
 	}
 
-	// if we have no rows the window functions does not work, so we fallback to a traditional count
-	if len(rows) == 0 {
-		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
-			return shared.Paged[models.VulnEventDetail]{}, err
-		}
+	// a license risk names its component in the same field a dependency vuln does
+	if err := page.Select("e.*, dv.cve_id, COALESCE(dv.component_purl, lr.component_purl) AS component_purl, fv.uri").
+		Scan(&events).Error; err != nil {
+		return shared.Paged[models.VulnEventDetail]{}, err
 	}
 
 	return shared.NewPaged(pageInfo, count, events), nil
@@ -178,6 +196,21 @@ func (r *eventRepository) CountByVexRuleIDs(ctx context.Context, tx *gorm.DB, ru
 func (r *eventRepository) GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx *gorm.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {
 	var events []models.VulnEvent
 	err := r.Repository.GetDB(ctx, tx).Raw("SELECT * FROM vuln_events WHERE (dependency_vuln_id = ANY (?) OR first_party_vuln_id = ANY (?) OR license_risk_id = ANY (?)) AND type IN ('detected','accepted','falsePositive','fixed','reopened') ORDER BY created_at ASC;", pq.Array(vulnIDs), pq.Array(vulnIDs), pq.Array(vulnIDs)).Find(&events).Error
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+func (r *eventRepository) GetEventsByDependencyVulnIDs(ctx context.Context, tx *gorm.DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error) {
+	if len(vulnIDs) == 0 {
+		return nil, nil
+	}
+	var events []models.VulnEvent
+	err := r.Repository.GetDB(ctx, tx).
+		Where("dependency_vuln_id = ANY (?)", pq.Array(vulnIDs)).
+		Order("created_at ASC").
+		Find(&events).Error
 	if err != nil {
 		return nil, err
 	}

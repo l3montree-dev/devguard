@@ -2490,7 +2490,6 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 	})
 }
 
-// TestTrivyDebianSBOMRescan reproduces the FK violation on component_dependencies.
 // When a component is missing from the components table (e.g. deleted externally,
 // or evicted by a concurrent transaction), a rescan must still succeed by
 // re-inserting the missing component before creating the dependency edge.

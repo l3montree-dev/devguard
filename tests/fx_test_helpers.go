@@ -198,6 +198,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.SBOMRepository,
 		f.App.FixedVersionResolver,
 		f.App.UpstreamVEXRuleRepository,
+		f.App.ExternalEntityProviderService,
 		f.Pool,
 	)
 }

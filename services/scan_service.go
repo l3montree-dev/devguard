@@ -157,11 +157,20 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		if updatedVulns, events, applyErr = ApplyVEXRulesToVulns(ctx, existingRules, newState); applyErr != nil {
 			slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
 		} else if len(updatedVulns) > 0 {
+			// The state write and the event write have to stand or fall together. If
+			// only the events land, the vulns are stuck in their pre-rule state with
+			// an event history that says otherwise, and no later scan repairs it.
 			if err := s.dependencyVulnRepository.SaveBatch(ctx, tx, updatedVulns); err != nil {
 				slog.Error("could not save vulns updated by existing VEX rules", "err", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return nil, nil, nil, errors.Wrap(err, "could not save vulns updated by existing VEX rules")
 			}
 			if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
 				slog.Error("could not save events from existing VEX rules", "err", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return nil, nil, nil, errors.Wrap(err, "could not save events from existing VEX rules")
 			}
 		}
 	}
@@ -512,28 +521,60 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	return opened, closed, newState, nil
 }
 
+func (s *scanService) attachEventsTo(ctx context.Context, tx shared.DB, vulns []models.DependencyVuln) error {
+	if len(vulns) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, len(vulns))
+	for i := range vulns {
+		ids[i] = vulns[i].CalculateHash()
+	}
+
+	events, err := s.vulnEventRepository.GetEventsByDependencyVulnIDs(ctx, tx, ids)
+	if err != nil {
+		return err
+	}
+
+	// GetEventsByDependencyVulnIDs returns them ordered by created_at
+	byVuln := make(map[uuid.UUID][]models.VulnEvent, len(vulns))
+	for _, ev := range events {
+		if ev.DependencyVulnID == nil {
+			continue
+		}
+		byVuln[*ev.DependencyVulnID] = append(byVuln[*ev.DependencyVulnID], ev)
+	}
+	for i := range vulns {
+		vulns[i].Events = byVuln[ids[i]]
+	}
+	return nil
+}
+
 func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID)
+	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID)
+	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+
+	// Get the vulns from other branches that could match something newly discovered here.
+	//
+	// Only diff.NewlyDiscovered is ever compared against them, by asset version independent
+	// hash, so the query is restricted to exactly those signatures instead of loading every
+	// vuln of every other branch.
+	newlyDiscoveredSignatures := make([]int64, len(diff.NewlyDiscovered))
+	for i := range diff.NewlyDiscovered {
+		newlyDiscoveredSignatures[i] = utils.HashToInt64(diff.NewlyDiscovered[i].CalculateAssetVersionIndependentHash())
+	}
+
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID, newlyDiscoveredSignatures)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// Keep all fixed vulns in existingDependencyVulns so that when a component reappears,
-	// the vuln lands in Unchanged rather than NewlyDiscovered. This lets us fire an
-	// explicit reopened event instead of silently resetting state via a detected event.
-	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dv models.DependencyVuln) bool {
-		return dv.State != dtos.VulnStateFixed
-	})
-
-	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := forest.ComponentsInMultipleSBOMs()
@@ -583,6 +624,16 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	vulnsToReopen := utils.Filter(diff.Unchanged, func(dv models.DependencyVuln) bool {
 		return dv.State == dtos.VulnStateFixed
 	})
+
+	// These are the only vulns from the listing above whose event history is ever read:
+	// they are handed back as `opened`, and the third party integration serialises their
+	// events into its DTO. Loading them here - normally for a handful of vulns, rather
+	// than preloading every event of the whole asset version - keeps that payload intact.
+	if err := s.attachEventsTo(ctx, tx, vulnsToReopen); err != nil {
+		slog.Error("could not load events for reopened vulnerabilities", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
 	if err := s.dependencyVulnService.UserReopenedToOpen(ctx, tx, userID, userAgent, vulnsToReopen); err != nil {
 		slog.Error("error when trying to reopen previously fixed vulnerability")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
