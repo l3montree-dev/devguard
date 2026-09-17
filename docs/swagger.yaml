@@ -9501,11 +9501,6 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
         assetId:
           type: string
-        components:
-          items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency'
-          type: array
-          uniqueItems: false
         createdAt:
           type: string
         defaultBranch:
@@ -9538,7 +9533,6 @@ components:
       - artifacts
       - asset
       - assetId
-      - components
       - createdAt
       - defaultBranch
       - dependencyVulns
@@ -9697,11 +9691,6 @@ components:
       properties:
         componentType:
           $ref: '#/components/schemas/dtos.ComponentType'
-        dependsOn:
-          items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency'
-          type: array
-          uniqueItems: false
         id:
           description: ID might be a PURL - but not always. Sometimes it is a file
             path to a binary or a "fake node" we are adding during normalization
@@ -9718,40 +9707,12 @@ components:
           type: string
       required:
       - componentType
-      - dependsOn
       - id
       - isLicenseOverwritten
       - license
       - project
       - projectId
       - published
-      type: object
-    github_com_l3montree-dev_devguard_database_models.ComponentDependency:
-      properties:
-        assetId:
-          type: string
-        assetVersion:
-          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion'
-        assetVersionName:
-          description: Foreign key fields for AssetVersion relationship
-          type: string
-        component:
-          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
-        componentPurl:
-          description: will be ROOT for direct dependencies
-          type: string
-        dependency:
-          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component'
-        dependencyPurl:
-          type: string
-      required:
-      - assetId
-      - assetVersion
-      - assetVersionName
-      - component
-      - componentPurl
-      - dependency
-      - dependencyPurl
       type: object
     github_com_l3montree-dev_devguard_database_models.ComponentProject:
       properties:
@@ -10807,23 +10768,6 @@ components:
       - referenceNumber
       - seeAlso
       type: object
-    normalize.MinimalTree:
-      properties:
-        dependencies:
-          additionalProperties:
-            items:
-              type: string
-            type: array
-          type: object
-        nodes:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
-      required:
-      - dependencies
-      - nodes
-      type: object
     normalize.PurlMatchContext:
       properties:
         howToInterpretVersionString:
@@ -10897,8 +10841,6 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10929,8 +10871,6 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -10943,6 +10883,23 @@ components:
       - Second
       - Minute
       - Hour
+    transformer.MinimalTree:
+      properties:
+        dependencies:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+        nodes:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - dependencies
+      - nodes
+      type: object
   securitySchemes:
     AdminSignedAuth:
       description: Instance admin authentication using ECDSA P-256 HTTP message signing.
@@ -16807,7 +16764,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/normalize.MinimalTree'
+                $ref: '#/components/schemas/transformer.MinimalTree'
           description: OK
       security:
       - CookieAuth: []
