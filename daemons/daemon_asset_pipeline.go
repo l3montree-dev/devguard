@@ -489,6 +489,13 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 			}
 			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.resolve-ticket-differences")
 			depVulns, err := runner.dependencyVulnRepository.GetAllVulnsByAssetIDWithTicketIDs(stageCtx, nil, asset.ID)
+			if len(depVulns) == 0 {
+				slog.Info("no dependency vulns with tickets found for asset - skipping ResolveDifferencesInTicketState", "assetID", asset.ID)
+				span.End()
+				out <- assetWithDetails
+				continue
+			}
+
 			if err != nil {
 				slog.Error("could not get dependency vulns for asset", "assetID", asset.ID, "err", err)
 				failStage(assetWithDetails.ctx, span, err)

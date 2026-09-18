@@ -132,13 +132,59 @@ func TestIsVexEventAlreadyAppliedPointerComparison(t *testing.T) {
 	}
 
 	vuln := models.DependencyVuln{
-		Events: []models.VulnEvent{existingEvent},
+		// the event has to have landed on the vuln as well - an event whose state
+		// write was lost is deliberately not treated as applied
+		Vulnerability: models.Vulnerability{State: dtos.VulnStateFalsePositive},
+		Events:        []models.VulnEvent{existingEvent},
 	}
 
 	// This SHOULD return true (same type + same justification string),
 	// but returns false because &justificationA != &justificationB.
 	assert.True(t, isVexEventAlreadyApplied(vuln, newEvent),
 		"should detect duplicate event with same type and justification value")
+}
+
+// TestIsVexEventAlreadyAppliedStateDiverged covers the case where the event row was
+// written but the state write that belongs to it was lost. The rule has to be applied
+// again, otherwise the vuln stays in the wrong state forever - every later run would
+// see the matching last event and skip it.
+func TestIsVexEventAlreadyAppliedStateDiverged(t *testing.T) {
+	justification := "not_affected"
+
+	appliedEvent := models.VulnEvent{
+		Type:          dtos.EventTypeFalsePositive,
+		Justification: &justification,
+	}
+
+	newEvent := models.VulnEvent{
+		Type:          dtos.EventTypeFalsePositive,
+		Justification: &justification,
+	}
+
+	t.Run("state diverged from the event - not applied", func(t *testing.T) {
+		vuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{State: dtos.VulnStateOpen},
+			Events:        []models.VulnEvent{appliedEvent},
+		}
+		assert.False(t, isVexEventAlreadyApplied(vuln, newEvent))
+	})
+
+	t.Run("state matches the event - applied", func(t *testing.T) {
+		vuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{State: dtos.VulnStateFalsePositive},
+			Events:        []models.VulnEvent{appliedEvent},
+		}
+		assert.True(t, isVexEventAlreadyApplied(vuln, newEvent))
+	})
+
+	t.Run("does not mutate the vuln it inspects", func(t *testing.T) {
+		vuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{State: dtos.VulnStateOpen},
+			Events:        []models.VulnEvent{appliedEvent},
+		}
+		isVexEventAlreadyApplied(vuln, newEvent)
+		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
+	})
 }
 
 // TestVEXRuleEnabledBasedOnParanoidMode tests that VEX rules are enabled/disabled based on asset ParanoidMode

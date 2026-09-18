@@ -91,7 +91,7 @@ func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
 	config.MaxConnLifetime = cfg.ConnMaxLifetime
 	config.MaxConns = cfg.MaxOpenConns
 	config.MinConns = cfg.MinConns
-	config.ConnConfig.Tracer = otelpgx.NewTracer()
+	config.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
 
 	ctx := context.Background()
 

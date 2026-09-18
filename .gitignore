@@ -38,3 +38,4 @@ instance_admin_pub_key_new.pem
 app_side_encryption_key.key
 *.log
 *.dump
+.*.sh

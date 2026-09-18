@@ -26,8 +26,43 @@ func InitDatabaseContainer(initDBSQLPath string) (shared.DB, *pgxpool.Pool, func
 		log.Printf("failed to run migrations: %s", err)
 		panic(err)
 	}
+	splitMerkleEdges(db)
 
 	return db, pool, terminate
+}
+
+// splitMerkleEdges brings sbom_merkle_edges into the shape hash migration v8
+// leaves behind: component_id moved out to sbom_merkle_nodes, so an edge is a
+// pure pivot between two node hashes.
+//
+// The schema migrations still create the pre-split table, and a real instance
+// only reaches the split shape by running the hash migrations - which the test
+// harness cannot do wholesale, since v4 needs a vulndb service and v7 drops
+// component_dependencies out from under the artifact tests. So the one step the
+// repositories depend on is applied here instead.
+func splitMerkleEdges(db shared.DB) {
+	statements := []string{
+		`ALTER TABLE public.sbom_merkle_edges DROP CONSTRAINT IF EXISTS sbom_merkle_edges_unique`,
+		`ALTER TABLE public.sbom_merkle_edges DROP COLUMN IF EXISTS component_id`,
+		`ALTER TABLE public.sbom_merkle_edges
+			ADD PRIMARY KEY (subtree_hash, direct_dependency_subtree_hash),
+			ADD FOREIGN KEY (subtree_hash)
+				REFERENCES public.sbom_merkle_nodes (node_hash),
+			ADD FOREIGN KEY (direct_dependency_subtree_hash)
+				REFERENCES public.sbom_merkle_nodes (node_hash)`,
+		`ALTER TABLE public.sboms
+			ADD FOREIGN KEY (root_subtree_hash)
+				REFERENCES public.sbom_merkle_nodes (node_hash)`,
+		`CREATE INDEX IF NOT EXISTS sbom_merkle_nodes_component_id
+			ON public.sbom_merkle_nodes (component_id)`,
+	}
+
+	for _, statement := range statements {
+		if err := db.Exec(statement).Error; err != nil {
+			log.Printf("failed to split merkle edges: %s", err)
+			panic(err)
+		}
+	}
 }
 
 func InitRawDatabaseContainer(initDBSQLPath string) (*pgxpool.Pool, func()) {

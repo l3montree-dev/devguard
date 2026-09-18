@@ -80,13 +80,21 @@ func (runner *DaemonRunner) CollectSBOMGarbage(ctx context.Context) error {
 		slog.Error("failed to collect sbom garbage", "error", err)
 		return err
 	}
-	slog.Info("collected sbom garbage", "deletedEdges", deleted)
+	slog.Info("collected sbom garbage", "deletedRows", deleted)
 	return nil
 }
 
 func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	if err := runner.artifactRepository.CleanupOrphanedRecords(ctx); err != nil {
 		slog.Error("failed to clean up orphaned records", "error", err)
+		return err
+	}
+	return nil
+}
+
+func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) error {
+	if err := runner.externalEntityProviderService.CollectGarbage(ctx); err != nil {
+		slog.Error("failed to collect external entity garbage", "error", err)
 		return err
 	}
 	return nil
@@ -132,5 +140,11 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 		return runner.RunResolveFixedVersionsPipeline(ctx, false)
 	}); err != nil {
 		monitoring.Alert("could not resolve direct dependency fixed versions", err, monitoring.AlertOptions{Ctx: ctx})
+	}
+
+	if err := runner.maybeRunAndMark(ctx, "externalEntityGarbageCollection", func() error {
+		return runner.CollectExternalEntityGarbage(ctx)
+	}); err != nil {
+		monitoring.Alert("could not collect external entity garbage", err)
 	}
 }

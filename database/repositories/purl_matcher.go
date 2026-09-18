@@ -118,22 +118,25 @@ func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace strin
 	return nil
 }
 
-// The returned SQL references the affected components as "ac" and the joined
-// candidates as "q" (with a text column "version"). An empty string means the
-// mode carries no SQL-expressible version predicate: EcosystemSpecificVersion
-// has to be narrowed in Go by the caller.
-func BatchedVersionPredicate(interpretation normalize.VersionInterpretationType) string {
+
+func BatchedVersionPredicates(interpretation normalize.VersionInterpretationType) []string {
+	const exactVersion = `ac.version = ANY(ARRAY[q.version, q.original_version])`
+
 	switch interpretation {
 	case normalize.ExactVersionString:
-		return `(ac.version = q.version OR ac.version = q.original_version)`
+		return []string{exactVersion}
 	case normalize.EmptyVersion:
-		return `ac.version IS NULL AND ac.semver_introduced IS NULL AND ac.semver_fixed IS NULL AND ac.version_introduced IS NULL AND ac.version_fixed IS NULL`
+		return []string{`ac.version IS NULL AND ac.semver_introduced IS NULL AND ac.semver_fixed IS NULL AND ac.version_introduced IS NULL AND ac.version_fixed IS NULL`}
 	case normalize.SemanticVersionString:
-		return `(ac.version = q.version OR ac.version = q.original_version
-			OR (ac.semver_introduced IS NULL AND ac.semver_fixed > q.version::semver)
-			OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed IS NULL)
-			OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed > q.version::semver))`
+		return []string{
+			exactVersion,
+			// the semver ranges, minus anything the exact branch already returned
+			`((ac.semver_introduced IS NULL AND ac.semver_fixed > q.version::semver)
+				OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed IS NULL)
+				OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed > q.version::semver))
+			AND ac.version IS DISTINCT FROM q.version AND ac.version IS DISTINCT FROM q.original_version`,
+		}
 	default:
-		return ""
+		return []string{""}
 	}
 }

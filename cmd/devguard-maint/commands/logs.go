@@ -104,6 +104,44 @@ Detection always runs on the file, independently of --format.`,
 		},
 	}
 
+	var dur durationsOptions
+	durations := &cobra.Command{
+		Use:   "durations",
+		Short: "Plot request latency over time and find what precedes a slowdown",
+		Long: `Plot request latency over time and find what precedes a slowdown.
+
+Reads the "handled request" entries the api logging middleware writes, which are
+the only entries carrying a duration, so this subcommand applies to the api
+format only. URLs are reduced to their route (query string dropped, org, project,
+asset, ref and id segments replaced by placeholders) so the same endpoint hit
+against different assets groups into one row.
+
+Latency is bucketed over time and plotted as a p95 bar chart. Buckets whose p95
+crosses the slow threshold are marked "!"; the threshold defaults to the p95 of
+the worst tenth of buckets and can be pinned with --slow.
+
+The precursor section takes each latency onset - a slow bucket whose predecessor
+was not slow - and ranks the non-request event kinds over represented in the
+buckets just before it. That ranks coincidence rather than cause, but it is what
+the log supports: there are no request ids to trace a slow request back with.
+
+Examples:
+  devguard-maint logs -f api.log durations
+  devguard-maint logs -f api.log durations --bucket second --slow 5s
+  devguard-maint logs -f api.log durations --route stats/risk-history
+  devguard-maint logs -f api.log durations --min-latency 1s --top 40`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return logsDurations(logFile, logFormatFlag, dur)
+		},
+	}
+	durations.Flags().StringVarP(&dur.bucket, "bucket", "b", "minute", "bucket size: second, minute, hour")
+	durations.Flags().IntVarP(&dur.top, "top", "t", 15, "how many rows per ranked section")
+	durations.Flags().StringVar(&dur.slow, "slow", "", "latency a bucket's p95 must reach to count as slow (default: p95 of the worst tenth of buckets)")
+	durations.Flags().IntVar(&dur.lead, "lead", 3, "how many buckets before an onset to search for precursors")
+	durations.Flags().StringVar(&dur.minLatency, "min-latency", "", "ignore requests faster than this, e.g. 1s")
+	durations.Flags().StringVar(&dur.route, "route", "", "only consider requests whose url or route contains this substring")
+	durations.Flags().BoolVar(&dur.noPrecurse, "no-precursors", false, "skip the precursor analysis")
+
 	var corr correlateOptions
 	correlate := &cobra.Command{
 		Use:   "correlate <file> <file> [file...]",
@@ -146,5 +184,5 @@ Examples:
 	correlate.Flags().StringVar(&corr.date, "date", "", "anchor undated logs to this date (YYYY-MM-DD)")
 	correlate.Flags().StringArrayVar(&corr.offsets, "offset", nil, "shift a log onto the shared timeline, e.g. --offset api=+2h")
 
-	LogsCmd.AddCommand(summary, filter, errors, timeline, formats, correlate)
+	LogsCmd.AddCommand(summary, filter, errors, timeline, durations, formats, correlate)
 }

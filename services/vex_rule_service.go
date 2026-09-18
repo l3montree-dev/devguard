@@ -80,9 +80,17 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	return ev, nil
 }
 
+
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
 	events := vuln.GetEvents()
 	if len(events) == 0 {
+		return false
+	}
+
+
+	probe := vuln
+	statemachine.Apply(&probe, event)
+	if probe.GetState() != vuln.GetState() {
 		return false
 	}
 	var ev models.VulnEvent

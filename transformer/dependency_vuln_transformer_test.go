@@ -15,7 +15,7 @@ import (
 
 // sbomOf builds one SBOM from a parent -> children map, rooted at "root".
 func sbomOf(artifactName string, children map[string][]string) *normalize.MerkleTree {
-	return normalize.BuildMerkleTree(normalize.Adjacency{Children: children}, "root", artifactName)
+	return normalize.BuildMerkleTree(normalize.Adjacency{Children: children}, "root")
 }
 
 func TestVulnInPackageToDependencyVulns(t *testing.T) {
