@@ -370,8 +370,8 @@ func (c *VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) 
 	// count distinct CVEs per ecosystem (not cve_affected_component rows)
 	cveSQL := `SELECT ecosystem, COUNT(*) FROM (
 		SELECT DISTINCT SPLIT_PART(LOWER(b.ecosystem), ':', 1) as ecosystem, a.cve_id FROM cve_affected_component a
-		LEFT JOIN affected_components b ON b.id = a.affected_component_id
-	) d GROUP BY ecosystem;`
+		JOIN affected_components b ON b.id = a.affected_component_id
+	) d GROUP BY ecosystem HAVING ecosystem <> '';`
 	err := c.affectedComponentRepository.GetDB(ctx, nil).Raw(cveSQL).Find(&cveResults).Error
 	if err != nil {
 		return nil, err
@@ -380,7 +380,7 @@ func (c *VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) 
 	// count distinct malicious packages per ecosystem (not malicious_affected_components rows)
 	maliciousPackagesSQL := `SELECT ecosystem, COUNT(*) FROM (
 		SELECT DISTINCT SPLIT_PART(LOWER(b.ecosystem), ':', 1) as ecosystem, a.id FROM malicious_packages a
-		LEFT JOIN malicious_affected_components b ON a.id = b.malicious_package_id
+		JOIN malicious_affected_components b ON a.id = b.malicious_package_id
 	) d GROUP BY ecosystem;`
 	err = c.affectedComponentRepository.GetDB(ctx, nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
 	if err != nil {
