@@ -28,6 +28,8 @@ func NewLogController(logService shared.LogService) *LogController {
 // @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
 // @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
 // @Success 200 {object} shared.Paged[dtos.LogDTO]
+// @Router /organizations/{organization}/logs/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/logs/ [get]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/ [get]
 func (controller *LogController) ListPaged(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
