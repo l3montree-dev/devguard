@@ -98,7 +98,7 @@ func TestLogService_ListPaged(t *testing.T) {
 		assert.Equal(t, int64(2), paged.Total)
 		assert.Len(t, paged.Data, 2)
 		for _, l := range paged.Data {
-			assert.Equal(t, &org.ID, l.OrgID)
+			assert.Equal(t, org.ID, l.OrgID)
 			assert.Equal(t, &project.ID, l.ProjectID)
 			assert.Equal(t, &asset.ID, l.AssetID)
 		}
