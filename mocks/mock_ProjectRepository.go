@@ -976,6 +976,84 @@ func (_c *ProjectRepository_GetDirectChildProjectsWithProviderID_Call) RunAndRet
 	return _c
 }
 
+// GetOrgProjectSlugsByProjectID provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) GetOrgProjectSlugsByProjectID(ctx context.Context, tx shared.DB, projectID uuid.UUID) (string, string, error) {
+	ret := _mock.Called(ctx, tx, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetOrgProjectSlugsByProjectID")
+	}
+
+	var r0 string
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (string, string, error)); ok {
+		return returnFunc(ctx, tx, projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) string); ok {
+		r0 = returnFunc(ctx, tx, projectID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) string); ok {
+		r1 = returnFunc(ctx, tx, projectID)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r2 = returnFunc(ctx, tx, projectID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// ProjectRepository_GetOrgProjectSlugsByProjectID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgProjectSlugsByProjectID'
+type ProjectRepository_GetOrgProjectSlugsByProjectID_Call struct {
+	*mock.Call
+}
+
+// GetOrgProjectSlugsByProjectID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - projectID uuid.UUID
+func (_e *ProjectRepository_Expecter) GetOrgProjectSlugsByProjectID(ctx any, tx any, projectID any) *ProjectRepository_GetOrgProjectSlugsByProjectID_Call {
+	return &ProjectRepository_GetOrgProjectSlugsByProjectID_Call{Call: _e.mock.On("GetOrgProjectSlugsByProjectID", ctx, tx, projectID)}
+}
+
+func (_c *ProjectRepository_GetOrgProjectSlugsByProjectID_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID)) *ProjectRepository_GetOrgProjectSlugsByProjectID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_GetOrgProjectSlugsByProjectID_Call) Return(s string, s1 string, err error) *ProjectRepository_GetOrgProjectSlugsByProjectID_Call {
+	_c.Call.Return(s, s1, err)
+	return _c
+}
+
+func (_c *ProjectRepository_GetOrgProjectSlugsByProjectID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID) (string, string, error)) *ProjectRepository_GetOrgProjectSlugsByProjectID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetProjectByAssetID provides a mock function for the type ProjectRepository
 func (_mock *ProjectRepository) GetProjectByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) (models.Project, error) {
 	ret := _mock.Called(ctx, tx, assetID)
@@ -1619,7 +1697,7 @@ type ProjectRepository_ReadWithoutErrorLog_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - id uuid.UUID
-func (_e *ProjectRepository_Expecter) ReadWithoutErrorLog(ctx interface{}, tx interface{}, id interface{}) *ProjectRepository_ReadWithoutErrorLog_Call {
+func (_e *ProjectRepository_Expecter) ReadWithoutErrorLog(ctx any, tx any, id any) *ProjectRepository_ReadWithoutErrorLog_Call {
 	return &ProjectRepository_ReadWithoutErrorLog_Call{Call: _e.mock.On("ReadWithoutErrorLog", ctx, tx, id)}
 }
 

@@ -145,6 +145,6 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	if err := runner.maybeRunAndMark(ctx, "externalEntityGarbageCollection", func() error {
 		return runner.CollectExternalEntityGarbage(ctx)
 	}); err != nil {
-		monitoring.Alert("could not collect external entity garbage", err)
+		monitoring.Alert("could not collect external entity garbage", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 }

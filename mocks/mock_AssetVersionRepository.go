@@ -1372,7 +1372,7 @@ type AssetVersionRepository_ReadWithoutErrorLog_Call struct {
 //   - tx *gorm.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *AssetVersionRepository_Expecter) ReadWithoutErrorLog(ctx interface{}, tx interface{}, assetVersionName interface{}, assetID interface{}) *AssetVersionRepository_ReadWithoutErrorLog_Call {
+func (_e *AssetVersionRepository_Expecter) ReadWithoutErrorLog(ctx any, tx any, assetVersionName any, assetID any) *AssetVersionRepository_ReadWithoutErrorLog_Call {
 	return &AssetVersionRepository_ReadWithoutErrorLog_Call{Call: _e.mock.On("ReadWithoutErrorLog", ctx, tx, assetVersionName, assetID)}
 }
 

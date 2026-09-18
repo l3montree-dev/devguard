@@ -40,16 +40,16 @@ func (_m *AlertLogService) EXPECT() *AlertLogService_Expecter {
 }
 
 // SaveLog provides a mock function for the type AlertLogService
-func (_mock *AlertLogService) SaveLog(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName string, message string) error {
-	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, assetVersionName, message)
+func (_mock *AlertLogService) SaveLog(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, message string) error {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, message)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveLog")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, assetVersionName, message)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, string) error); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, message)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -67,13 +67,12 @@ type AlertLogService_SaveLog_Call struct {
 //   - orgID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - assetID *uuid.UUID
-//   - assetVersionName string
 //   - message string
-func (_e *AlertLogService_Expecter) SaveLog(ctx interface{}, tx interface{}, orgID interface{}, projectID interface{}, assetID interface{}, assetVersionName interface{}, message interface{}) *AlertLogService_SaveLog_Call {
-	return &AlertLogService_SaveLog_Call{Call: _e.mock.On("SaveLog", ctx, tx, orgID, projectID, assetID, assetVersionName, message)}
+func (_e *AlertLogService_Expecter) SaveLog(ctx any, tx any, orgID any, projectID any, assetID any, message any) *AlertLogService_SaveLog_Call {
+	return &AlertLogService_SaveLog_Call{Call: _e.mock.On("SaveLog", ctx, tx, orgID, projectID, assetID, message)}
 }
 
-func (_c *AlertLogService_SaveLog_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName string, message string)) *AlertLogService_SaveLog_Call {
+func (_c *AlertLogService_SaveLog_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, message string)) *AlertLogService_SaveLog_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -99,10 +98,6 @@ func (_c *AlertLogService_SaveLog_Call) Run(run func(ctx context.Context, tx *go
 		if args[5] != nil {
 			arg5 = args[5].(string)
 		}
-		var arg6 string
-		if args[6] != nil {
-			arg6 = args[6].(string)
-		}
 		run(
 			arg0,
 			arg1,
@@ -110,7 +105,6 @@ func (_c *AlertLogService_SaveLog_Call) Run(run func(ctx context.Context, tx *go
 			arg3,
 			arg4,
 			arg5,
-			arg6,
 		)
 	})
 	return _c
@@ -121,7 +115,7 @@ func (_c *AlertLogService_SaveLog_Call) Return(err error) *AlertLogService_SaveL
 	return _c
 }
 
-func (_c *AlertLogService_SaveLog_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName string, message string) error) *AlertLogService_SaveLog_Call {
+func (_c *AlertLogService_SaveLog_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, message string) error) *AlertLogService_SaveLog_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -2121,7 +2121,7 @@ type AssetRepository_ReadWithoutErrorLog_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - id uuid.UUID
-func (_e *AssetRepository_Expecter) ReadWithoutErrorLog(ctx interface{}, tx interface{}, id interface{}) *AssetRepository_ReadWithoutErrorLog_Call {
+func (_e *AssetRepository_Expecter) ReadWithoutErrorLog(ctx any, tx any, id any) *AssetRepository_ReadWithoutErrorLog_Call {
 	return &AssetRepository_ReadWithoutErrorLog_Call{Call: _e.mock.On("ReadWithoutErrorLog", ctx, tx, id)}
 }
 
