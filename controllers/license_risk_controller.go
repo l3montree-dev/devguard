@@ -92,7 +92,8 @@ func (controller *LicenseRiskController) Create(ctx shared.Context) error {
 	}
 
 	userAgent := ctx.Request().UserAgent()
-	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetActorName(), "", "", newLicenseRisk.FinalLicenseDecision, &userAgent)
+	licenseRisk.SetFinalLicenseDecision(newLicenseRisk.FinalLicenseDecision)
+	ev := models.NewLicenseDecisionEvent(riskHash, dtos.VulnTypeLicenseRisk, shared.GetSession(ctx).GetActorName(), "", &userAgent)
 
 	err = controller.licenseRiskRepository.ApplyAndSave(ctx.Request().Context(), nil, &licenseRisk, &ev)
 	if err != nil {
@@ -162,7 +163,6 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 				MechanicalJustification:  ev.MechanicalJustification,
 				OriginalAssetVersionName: ev.OriginalAssetVersionName,
 				VulnerabilityName:        licenseRisk.ComponentPurl,
-				ArbitraryJSONData:        ev.GetArbitraryJSONData(),
 				CreatedAt:                ev.CreatedAt,
 				CreatedByVexRule:         ev.CreatedByVexRule,
 			}

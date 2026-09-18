@@ -54,7 +54,6 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 			rule.CreatedByID,
 			rule.Justification,
 			rule.MechanicalJustification,
-			"",
 			true,
 			nil,
 		), nil

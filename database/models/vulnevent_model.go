@@ -1,9 +1,7 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,11 +22,9 @@ type VulnEvent struct {
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-	ArbitraryJSONData        string                           `json:"arbitraryJSONData" gorm:"type:text;"`
-	arbitraryJSONData        map[string]any
-	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
-	CreatedByVexRule         bool    `json:"createdByVexRule" gorm:"column:created_by_vex_rule;default:false;not null"`
-	UserAgent                *string `json:"userAgent" gorm:"column:user_agent;type:text;default:null;"`
+	OriginalAssetVersionName *string                          `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
+	CreatedByVexRule         bool                             `json:"createdByVexRule" gorm:"column:created_by_vex_rule;default:false;not null"`
+	UserAgent                *string                          `json:"userAgent" gorm:"column:user_agent;type:text;default:null;"`
 
 	// set instead of DependencyVulnID for a group event applying to every
 	// DependencyVuln sharing this AssetSignature.
@@ -108,30 +104,6 @@ type VulnEventDetail struct {
 	URI              string `json:"uri"`
 }
 
-func (event *VulnEvent) GetArbitraryJSONData() map[string]any {
-	// parse the additional data
-	if event.ArbitraryJSONData == "" {
-		return make(map[string]any)
-	}
-	if event.arbitraryJSONData == nil {
-		event.arbitraryJSONData = make(map[string]any)
-		err := json.Unmarshal([]byte(event.ArbitraryJSONData), &event.arbitraryJSONData)
-		if err != nil {
-			slog.Error("could not parse additional data", "err", err, "vulnEventID", event.ID)
-		}
-	}
-	return event.arbitraryJSONData
-}
-
-func (event *VulnEvent) SetArbitraryJSONData(data map[string]any) {
-	event.arbitraryJSONData = data
-	// parse the additional data
-	dataBytes, err := json.Marshal(event.arbitraryJSONData)
-	if err != nil {
-		slog.Error("could not marshal additional data", "err", err, "vulnEventID", event.ID)
-	}
-	event.ArbitraryJSONData = string(dataBytes)
-}
 func (event VulnEvent) TableName() string {
 	return "vuln_events"
 }
@@ -172,7 +144,7 @@ func NewCommentEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justifica
 	return ev
 }
 
-func NewFalsePositiveEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, artifactName string, createdByRule bool, userAgent *string) VulnEvent {
+func NewFalsePositiveEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, justification string, mechanicalJustification dtos.MechanicalJustificationType, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:                    dtos.EventTypeFalsePositive,
 		UserID:                  userID,
@@ -182,11 +154,10 @@ func NewFalsePositiveEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID, jus
 		UserAgent:               userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
-	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewFixedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, artifactName string, createdByRule bool, userAgent *string) VulnEvent {
+func NewFixedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeFixed,
 		UserID:           userID,
@@ -194,11 +165,11 @@ func NewFixedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, arti
 		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
-	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName})
 	return ev
 }
 
-func NewLicenseDecisionEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification, artifactName string, finalLicenseDecision string, userAgent *string) VulnEvent {
+// the decision itself is stored on the license risk - set it there before applying this event
+func NewLicenseDecisionEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:          dtos.EventTypeLicenseDecision,
 		UserID:        userID,
@@ -206,11 +177,11 @@ func NewLicenseDecisionEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID st
 		UserAgent:     userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
-	ev.SetArbitraryJSONData(map[string]any{"artifactNames": artifactName, "finalLicenseDecision": finalLicenseDecision})
 	return ev
 }
 
-func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, riskCalculationReport dtos.RiskCalculationReport, scannerID string, createdByRule bool, userAgent *string) VulnEvent {
+// the risk itself is stored on the vuln - set it there before applying this event
+func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeDetected,
 		UserID:           userID,
@@ -218,16 +189,10 @@ func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, r
 		UserAgent:        userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
-
-	m := riskCalculationReport.Map()
-	m["scannerID"] = scannerID
-
-	ev.SetArbitraryJSONData(m)
-
 	return ev
 }
 
-func NewMitigateEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, arbitraryData map[string]any, userAgent *string) VulnEvent {
+func NewMitigateEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:          dtos.EventTypeMitigate,
 		UserID:        userID,
@@ -235,23 +200,17 @@ func NewMitigateEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, j
 		UserAgent:     userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
-	ev.SetArbitraryJSONData(arbitraryData)
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, oldRisk *float64, report dtos.RiskCalculationReport) VulnEvent {
+// the risk itself is stored on the vuln - set it there before applying this event
+func NewRawRiskAssessmentUpdatedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string) VulnEvent {
 	event := VulnEvent{
 		Type:          dtos.EventTypeRawRiskAssessmentUpdated,
 		UserID:        userID,
 		Justification: &justification,
 	}
 	SetVulnIDOnEvent(&event, vulnID, vulnType)
-	m := report.Map()
-	if oldRisk != nil {
-		m["oldRisk"] = *oldRisk
-	}
-
-	event.SetArbitraryJSONData(m)
 	return event
 }
 
@@ -280,28 +239,26 @@ func NewNotApplicableEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID stri
 // NewAttachedComplianceComponentEvent records that a component was attached to
 // a compliance posture (an OSCAL by-component statement was created). This is
 // an audit-log entry only - it does not change the posture's state.
-func NewAttachedComplianceComponentEvent(vulnID uuid.UUID, userID string, componentTitle string, userAgent *string) VulnEvent {
+func NewAttachedComplianceComponentEvent(vulnID uuid.UUID, userID string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:      dtos.EventTypeAttachedComplianceComponent,
 		UserID:    userID,
 		UserAgent: userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
-	ev.SetArbitraryJSONData(map[string]any{"componentTitle": componentTitle})
 	return ev
 }
 
 // NewRemovedComplianceComponentEvent records that a component was removed from
 // a compliance posture (its by-component statement was deleted). This is an
 // audit-log entry only - it does not change the posture's state.
-func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, componentTitle string, userAgent *string) VulnEvent {
+func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:      dtos.EventTypeRemovedComplianceComponent,
 		UserID:    userID,
 		UserAgent: userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
-	ev.SetArbitraryJSONData(map[string]any{"componentTitle": componentTitle})
 	return ev
 }
 

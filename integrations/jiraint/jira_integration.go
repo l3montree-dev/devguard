@@ -486,11 +486,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 		vuln.GetType(),
 		userID,
 		justification,
-		map[string]any{
-			"ticketID": vuln.GetTicketID(),
-			//TODO: set the right ticket URL
-			"ticketUrl": vuln.GetTicketURL(),
-		}, userAgent)
+		userAgent)
 
 	err = i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 	if err != nil {
@@ -602,7 +598,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == `failed to create issue comment, status code: 404, response: {"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}` {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames(), false, userAgent)
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, false, userAgent)
 			// save the event
 			err = i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 			if err != nil {
