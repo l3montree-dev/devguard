@@ -381,7 +381,7 @@ func (c *VulnDBController) computeCVEEcosystemDistribution(ctx context.Context) 
 	maliciousPackagesSQL := `SELECT ecosystem, COUNT(*) FROM (
 		SELECT DISTINCT SPLIT_PART(LOWER(b.ecosystem), ':', 1) as ecosystem, a.id FROM malicious_packages a
 		JOIN malicious_affected_components b ON a.id = b.malicious_package_id
-	) d GROUP BY ecosystem;`
+	) d GROUP BY ecosystem HAVING ecosystem <> '';`
 	err = c.affectedComponentRepository.GetDB(ctx, nil).Raw(maliciousPackagesSQL).Find(&maliciousPackageResults).Error
 	if err != nil {
 		return nil, err
