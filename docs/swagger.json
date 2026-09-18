@@ -11834,10 +11834,6 @@
             },
             "dtos.VulnEventDTO": {
                 "properties": {
-                    "arbitraryJSONData": {
-                        "additionalProperties": {},
-                        "type": "object"
-                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -11888,7 +11884,6 @@
                     }
                 },
                 "required": [
-                    "arbitraryJSONData",
                     "createdAt",
                     "createdByVexRule",
                     "id",
@@ -14089,9 +14084,6 @@
             },
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
-                    "arbitraryJSONData": {
-                        "type": "string"
-                    },
                     "assetSignature": {
                         "description": "set instead of DependencyVulnID for a group event applying to every\nDependencyVuln sharing this AssetSignature.",
                         "type": "integer"
@@ -14146,7 +14138,6 @@
                     }
                 },
                 "required": [
-                    "arbitraryJSONData",
                     "assetSignature",
                     "compliancePostureId",
                     "createdAt",
@@ -14649,7 +14640,17 @@
                     1000000,
                     1000000000,
                     60000000000,
-                    3600000000000
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14684,7 +14685,17 @@
                     "Millisecond",
                     "Second",
                     "Minute",
-                    "Hour"
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second"
                 ]
             },
             "transformer.MinimalTree": {

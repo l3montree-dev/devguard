@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.14.2] - 2026-09-18
+
+### Changed
+
+- **`arbitraryJSONData` removed from vulnerability events** — the column held a free-form JSON blob per event that only ever duplicated data already stored on the vulnerability itself (risk report, scanner IDs, artifact names, ticket ID/URL, final license decision, compliance component title). It was the widest column of `vuln_events`, the largest table in DevGuard. It is now gone from the model, the DTO and the API responses, and the event constructors no longer take the values that fed it. This is a breaking API change: `arbitraryJSONData` is no longer part of `VulnEventDTO`
+  - The column is dropped by migration `20260917123342`, followed by a `VACUUM FULL public.vuln_events` to actually reclaim the space. Statements like this cannot run inside the migration transaction, so migrations now support post-migration statements, executed once after the migration of that version has been committed — a failure there is logged and leaves nothing but unreclaimed space behind
+  - Risk assessment and final license decision are set on the vulnerability by the caller before the event is applied, instead of being parsed back out of the event in `statemachine.Apply`
+  - Branch diffing carries both values over explicitly: a vulnerability detected on a new branch takes its risk from the matching vulnerability on another branch, and a license risk takes the decision from the branch with the most recent license decision event
+- **`/projects/{project}/components/` sped up** — `SearchComponentOccurrencesByProject` now walks the merkle tree keyed by distinct root hash rather than per `sboms` row, so asset versions and artifacts sharing an identical tree expand that subtree once instead of once per row, and the `sboms` rows are joined back afterwards. The total is taken from a window count over the same CTE instead of running the recursive walk a second time, the `LIKE` filter is omitted entirely when no search string is given, and paging is now deterministic (`component_id, asset_version_name, artifact_name, asset_id`)
+- **`/vulndb/cve-ecosystem-distribution/` sped up and its counts corrected** — both queries now cut the ecosystem to its reported prefix and deduplicate inside SQL rather than summing per-ecosystem counts in Go. A CVE listed under both `debian:11` and `debian:12` counted twice before and counts once now, and malicious packages are counted per package instead of per `malicious_affected_components` row. Ecosystem-less rows no longer produce an empty-string bucket
+
 ## [v1.14.1] - 2026-09-17
 
 ### Added
