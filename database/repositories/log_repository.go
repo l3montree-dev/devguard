@@ -21,8 +21,49 @@ func NewLogRepository(db *gorm.DB) *logRepository {
 	}
 }
 
+// maxLogsPerScope defines how many log entries are kept per scope (asset, project or
+// organization). Whenever a new log is written, the oldest entries exceeding this limit
+// are deleted.
+const maxLogsPerScope = 50
+
 func (r logRepository) Save(ctx context.Context, tx *gorm.DB, log *models.Log) error {
-	return r.Repository.GetDB(ctx, tx).Save(log).Error
+	db := r.GetDB(ctx, tx)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(log).Error; err != nil {
+			return err
+		}
+
+		return pruneScope(tx, log)
+	})
+}
+
+func pruneScope(tx *gorm.DB, log *models.Log) error {
+	var scopeWhere string
+	var scopeID uuid.UUID
+
+	switch {
+	case log.AssetID != nil:
+		scopeWhere, scopeID = "asset_id = ?", *log.AssetID
+	case log.ProjectID != nil:
+		// project level logs only - asset logs have their own scope
+		scopeWhere, scopeID = "project_id = ? AND asset_id IS NULL", *log.ProjectID
+	case log.OrgID != nil:
+		scopeWhere, scopeID = "org_id = ? AND project_id IS NULL AND asset_id IS NULL", *log.OrgID
+	default:
+		// no scope - nothing we could prune deterministically
+		return nil
+	}
+
+	keep := tx.Model(&models.Log{}).
+		Select("id").
+		Where(scopeWhere, scopeID).
+		Order("created_at DESC, id DESC").
+		Limit(maxLogsPerScope)
+
+	return tx.Where(scopeWhere, scopeID).
+		Where("id NOT IN (?)", keep).
+		Delete(&models.Log{}).Error
 }
 
 func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
