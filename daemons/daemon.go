@@ -104,47 +104,47 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 	if err := runner.maybeRunAndMark(ctx, "vexrules.recommendations", func() error {
 		return runner.RunVEXRuleRecommendationDaemon(ctx)
 	}); err != nil {
-		monitoring.Alert("could not build and save recommendations", err)
+		monitoring.Alert("could not build and save recommendations", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 	if err := runner.maybeRunAndMark(ctx, "maintain.cleanup", func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {
-		monitoring.Alert("could not clean up orphaned records", err)
+		monitoring.Alert("could not clean up orphaned records", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "maintain.sbomGarbageCollection", func() error {
 		return runner.CollectSBOMGarbage(ctx)
 	}); err != nil {
-		monitoring.Alert("could not collect sbom garbage", err)
+		monitoring.Alert("could not collect sbom garbage", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.opensourceinsights", func() error {
 		return runner.UpdateOpenSourceInsightInformation(ctx)
 	}); err != nil {
-		monitoring.Alert("could not update open source insight information", err)
+		monitoring.Alert("could not update open source insight information", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.vulndb", func() error {
 		return runner.UpdateVulnDB(ctx)
 	}); err != nil {
-		monitoring.Alert("could not update vulndb", err)
+		monitoring.Alert("could not update vulndb", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.fixedVersions", func() error {
 		return runner.UpdateFixedVersions(ctx)
 	}); err != nil {
-		monitoring.Alert("could not update fixed versions", err)
+		monitoring.Alert("could not update fixed versions", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "vulndb.directDependencyFixedVersion", func() error {
 		return runner.RunResolveFixedVersionsPipeline(ctx, false)
 	}); err != nil {
-		monitoring.Alert("could not resolve direct dependency fixed versions", err)
+		monitoring.Alert("could not resolve direct dependency fixed versions", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 
 	if err := runner.maybeRunAndMark(ctx, "externalEntityGarbageCollection", func() error {
 		return runner.CollectExternalEntityGarbage(ctx)
 	}); err != nil {
-		monitoring.Alert("could not collect external entity garbage", err)
+		monitoring.Alert("could not collect external entity garbage", err, monitoring.AlertOptions{Ctx: ctx})
 	}
 }

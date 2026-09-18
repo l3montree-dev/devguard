@@ -26,6 +26,7 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type assetRepository struct {
@@ -66,6 +67,19 @@ func (repository *assetRepository) prepareUniqueSlugs(ctx context.Context, tx *g
 	}
 
 	return nil
+}
+
+func (repository *assetRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	db := repository.GetDB(ctx, tx).Session(&gorm.Session{
+		Logger:               logger.Default.LogMode(logger.Silent),
+		FullSaveAssociations: false,
+	}).Preload("Project").Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(asset, ids))
+	}
+	err := db.First(&asset).Error
+	return asset, err
 }
 
 func (repository *assetRepository) ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {

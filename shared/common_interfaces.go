@@ -104,6 +104,7 @@ type SBOMScanner interface {
 }
 type ProjectRepository interface {
 	Read(ctx context.Context, tx DB, projectID uuid.UUID) (models.Project, error)
+	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Project, error)
 	ReadBySlug(ctx context.Context, tx DB, organizationID uuid.UUID, slug string) (models.Project, error)
 	ReadBySlugUnscoped(ctx context.Context, tx DB, organizationID uuid.UUID, slug string) (models.Project, error)
 	Update(ctx context.Context, tx DB, project *models.Project) error
@@ -116,6 +117,7 @@ type ProjectRepository interface {
 	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
 	GetByOrgID(ctx context.Context, tx DB, organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.Project, error)
+	GetOrgProjectSlugsByProjectID(ctx context.Context, tx DB, projectID uuid.UUID) (string, string, error)
 	GetByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.Project, error)
 	List(ctx context.Context, tx DB, idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	ListPaged(ctx context.Context, tx DB, projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Project], error)
@@ -181,6 +183,7 @@ type AssetRepository interface {
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, assets []*models.Asset) ([]*models.Asset, []*models.Asset, error)
 	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadWithProjects(ctx context.Context, tx *gorm.DB, id []uuid.UUID) ([]models.Asset, error)
+	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
 }
 
@@ -515,6 +518,7 @@ type AssetVersionService interface {
 type AssetVersionRepository interface {
 	All(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 	Read(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
+	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
 	GetDB(ctx context.Context, tx DB) DB
 	Begin(ctx context.Context) DB
 	Delete(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
@@ -934,6 +938,16 @@ type TrustedEntityRepository interface {
 	ListAllTrustedEntities(ctx context.Context, tx DB) ([]models.TrustedEntity, error)
 	GetTrustedEntitiesByProjectIDs(ctx context.Context, tx DB, projectIDs []uuid.UUID) ([]models.TrustedEntity, error)
 	GetTrustedEntitiesByOrganizationIDs(ctx context.Context, tx DB, organizationIDs []uuid.UUID) ([]models.TrustedEntity, error)
+}
+
+type LogService interface {
+	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error
+	ListPaged(ctx Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.LogDTO], error)
+}
+
+type LogRepository interface {
+	Save(ctx context.Context, tx *gorm.DB, log *models.Log) error
+	ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.LogDTO], error)
 }
 
 type Object string

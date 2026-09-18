@@ -732,7 +732,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "issuerName": {
                         "type": "string"
@@ -2459,7 +2460,6 @@
                 "type": "object"
             },
             "cyclonedx.Hash": {
-                "description": "New in 1.7",
                 "properties": {
                     "alg": {
                         "$ref": "#/components/schemas/cyclonedx.HashAlgorithm"
@@ -3636,7 +3636,8 @@
                         "uniqueItems": false
                     },
                     "manufacture": {
-                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
+                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity",
+                        "description": "Deprecated: Use Component Manufacturer instead."
                     },
                     "manufacturer": {
                         "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
@@ -3712,7 +3713,6 @@
                 "type": "object"
             },
             "cyclonedx.OrganizationalEntity": {
-                "description": "Deprecated: Use Component Manufacturer instead.",
                 "properties": {
                     "address": {
                         "$ref": "#/components/schemas/cyclonedx.PostalAddress"
@@ -4016,7 +4016,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "format": {
                         "type": "string"
@@ -6036,9 +6037,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -6103,7 +6101,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "projectId",
                     "refs",
@@ -6194,9 +6191,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -6262,7 +6256,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "projectId",
                     "refs",
@@ -6353,9 +6346,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -6424,7 +6414,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "projectId",
                     "refs",
@@ -7639,7 +7628,12 @@
                         "type": "string"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType",
+                        "enum": [
+                            "cyclonedx",
+                            "csaf",
+                            "openvex"
+                        ]
                     },
                     "url": {
                         "type": "string"
@@ -7685,7 +7679,12 @@
                         "type": "string"
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     },
                     "justification": {
                         "type": "string"
@@ -7782,7 +7781,6 @@
                 "type": "object"
             },
             "dtos.DatabaseSpecifics": {
-                "description": "specific additional information, not standardized",
                 "properties": {
                     "cwe_ids": {
                         "description": "array of cwe ids associated with this vulnerability",
@@ -8455,10 +8453,7 @@
                     "cyclonedx",
                     "csaf",
                     "openvex",
-                    "unknown",
-                    "cyclonedx",
-                    "csaf",
-                    "openvex"
+                    "unknown"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -8976,6 +8971,49 @@
                 ],
                 "type": "object"
             },
+            "dtos.LogDTO": {
+                "properties": {
+                    "assetID": {
+                        "type": "string"
+                    },
+                    "assetName": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "logLevel": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "orgID": {
+                        "type": "string"
+                    },
+                    "projectID": {
+                        "type": "string"
+                    },
+                    "projectName": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetID",
+                    "assetName",
+                    "createdAt",
+                    "id",
+                    "logLevel",
+                    "message",
+                    "orgID",
+                    "projectID",
+                    "projectName"
+                ],
+                "type": "object"
+            },
             "dtos.LookupResponse": {
                 "properties": {
                     "asset": {
@@ -9144,13 +9182,7 @@
                 "enum": [
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "low",
-                    "high",
-                    "X",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9165,17 +9197,7 @@
                     "adjacent",
                     "local",
                     "physical",
-                    "X",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9191,15 +9213,7 @@
                     "none",
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9211,30 +9225,6 @@
             },
             "dtos.ModifiedRequirementLevel": {
                 "enum": [
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
                     "X",
                     "none",
                     "low",
@@ -9252,13 +9242,7 @@
                 "enum": [
                     "unchanged",
                     "changed",
-                    "X",
-                    "X",
-                    "unchanged",
-                    "changed",
-                    "X",
-                    "unchanged",
-                    "changed"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9269,12 +9253,6 @@
             },
             "dtos.ModifiedUserInteraction": {
                 "enum": [
-                    "X",
-                    "none",
-                    "required",
-                    "X",
-                    "none",
-                    "required",
                     "X",
                     "none",
                     "required"
@@ -9303,7 +9281,8 @@
                         "uniqueItems": false
                     },
                     "database_specific": {
-                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics"
+                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics",
+                        "description": "specific additional information, not standardized"
                     },
                     "details": {
                         "type": "string"
@@ -10314,6 +10293,25 @@
                 ],
                 "type": "object"
             },
+            "dtos.PermalinkResponse": {
+                "properties": {
+                    "assetSlug": {
+                        "type": "string"
+                    },
+                    "organizationSlug": {
+                        "type": "string"
+                    },
+                    "projectSlug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetSlug",
+                    "organizationSlug",
+                    "projectSlug"
+                ],
+                "type": "object"
+            },
             "dtos.PolicyDTO": {
                 "properties": {
                     "description": {
@@ -10541,7 +10539,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.ProjectDTO"
+                        "$ref": "#/components/schemas/dtos.ProjectDTO",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -10630,7 +10629,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.ProjectDTO"
+                        "$ref": "#/components/schemas/dtos.ProjectDTO",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -11047,24 +11047,6 @@
             },
             "dtos.RequirementLevel": {
                 "enum": [
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
                     "low",
                     "medium",
                     "high"
@@ -11631,7 +11613,12 @@
                         "uniqueItems": false
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     }
                 },
                 "required": [
@@ -11926,13 +11913,7 @@
                     "attachedComplianceComponent",
                     "removedComplianceComponent",
                     "detected",
-                    "rawRiskAssessmentUpdated",
-                    "accepted",
-                    "falsePositive",
-                    "reopened",
-                    "accepted",
-                    "falsePositive",
-                    "reopened"
+                    "rawRiskAssessmentUpdated"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -12358,7 +12339,6 @@
                 "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.Artifact": {
-                "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID",
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -12679,9 +12659,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -12762,7 +12739,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "project",
                     "projectId",
@@ -12895,7 +12871,8 @@
             "github_com_l3montree-dev_devguard_database_models.Attestation": {
                 "properties": {
                     "artifact": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact",
+                        "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID"
                     },
                     "artifactName": {
                         "type": "string"
@@ -13063,7 +13040,8 @@
                         "type": "string"
                     },
                     "target_cve_data": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE",
+                        "description": "TargetCVEData is populated by GORM nested preload. It is nil when the target\nCVE does not exist in this database — no DB-level FK constraint is added."
                     }
                 },
                 "required": [
@@ -14021,7 +13999,8 @@
             "github_com_l3montree-dev_devguard_database_models.VEXRule": {
                 "properties": {
                     "asset": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset",
+                        "description": "Relationships"
                     },
                     "assetId": {
                         "description": "Composite key components (for indexing and queries)",
@@ -14312,6 +14291,33 @@
                     "data": {
                         "items": {
                             "$ref": "#/components/schemas/dtos.ComponentOccurrenceDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pageSize": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "data",
+                    "page",
+                    "pageSize",
+                    "total"
+                ],
+                "type": "object"
+            },
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO": {
+                "properties": {
+                    "data": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.LogDTO"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14642,14 +14648,11 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
-                    60000000000,
-                    3600000000000
+                    60000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14677,14 +14680,11 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
-                    "Minute",
-                    "Hour"
+                    "Minute"
                 ]
             },
             "transformer.MinimalTree": {
@@ -18513,6 +18513,104 @@
                 ]
             }
         },
+        "/organizations/{organization}/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List logs",
+                "tags": [
+                    "Logs"
+                ]
+            }
+        },
         "/organizations/{organization}/members": {
             "get": {
                 "parameters": [
@@ -21074,6 +21172,104 @@
                 "summary": "Auto-setup the GitLab integration for an asset",
                 "tags": [
                     "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List logs",
+                "tags": [
+                    "Logs"
                 ]
             }
         },
@@ -27363,10 +27559,19 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/x-www-form-urlencoded": {
+                        "multipart/form-data": {
                             "schema": {
-                                "title": "file",
-                                "type": "file"
+                                "properties": {
+                                    "file": {
+                                        "description": "SBOM file",
+                                        "format": "binary",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ],
+                                "type": "object"
                             }
                         }
                     },
@@ -29372,6 +29577,104 @@
                 "summary": "Update webhook integration (project)",
                 "tags": [
                     "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List logs",
+                "tags": [
+                    "Logs"
                 ]
             }
         },
@@ -31667,6 +31970,64 @@
                 "summary": "Get recommended fixed version for a package",
                 "tags": [
                     "Vulnerabilities"
+                ]
+            }
+        },
+        "/resolve": {
+            "get": {
+                "description": "Resolves an organization, project or asset UUID to the slugs the frontend needs to build a human readable URL. Exactly one of the query parameters must be set.",
+                "parameters": [
+                    {
+                        "description": "Organization ID",
+                        "in": "query",
+                        "name": "orgid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project ID",
+                        "in": "query",
+                        "name": "projectid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset ID",
+                        "in": "query",
+                        "name": "assetid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.PermalinkResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Resolve a permalink",
+                "tags": [
+                    "Organizations"
                 ]
             }
         },

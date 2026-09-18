@@ -174,7 +174,7 @@ func (b *PostgreSQLBroker) processMessages(topic shared.PubSubChannel, conn *pgx
 		if err != nil {
 			b.listenerFailed.Store(true)
 			conn.Release()
-			monitoring.Alert("could not listen for notifications from PostgreSQL broker", err)
+			monitoring.Alert("could not listen for notifications from PostgreSQL broker", err, monitoring.AlertOptions{})
 			return
 		}
 		if notification != nil && notification.Channel == string(topic) {

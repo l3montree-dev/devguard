@@ -117,7 +117,7 @@ func main() {
 			if err := recover(); err != nil {
 				// This is a catch-all. To see the stack trace in GlitchTip open the Stacktrace below
 				sentry.CurrentHub().Recover(err)
-				monitoring.RecoverAndAlert("could not recover from panic in main", fmt.Errorf("panic: %v", err))
+				monitoring.RecoverAndAlert("could not recover from panic in main", fmt.Errorf("panic: %v", err), monitoring.AlertOptions{})
 				sentry.Flush(time.Second * 5)
 			}
 		}()
@@ -138,6 +138,7 @@ func main() {
 		daemons.Module,
 		fixedversion.Module,
 		fx.Invoke(func(routers router.Routers) {}),
+		fx.Invoke(monitoring.SetLogger),
 		fx.Invoke(func(lc fx.Lifecycle, encryptionService shared.DBEncryptionService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {

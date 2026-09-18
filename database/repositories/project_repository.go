@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type projectRepository struct {
@@ -27,6 +28,15 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),
 	}
+}
+
+func (g *projectRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Project, error) {
+	var result models.Project
+	err := g.GetDB(ctx, tx).Session(&gorm.Session{
+		Logger:               logger.Default.LogMode(logger.Silent),
+		FullSaveAssociations: false,
+	}).Model(models.Project{}).Where("ID = ?", id).First(&result).Error
+	return result, err
 }
 
 func (g *projectRepository) All(ctx context.Context, tx *gorm.DB) ([]models.Project, error) {
@@ -697,4 +707,22 @@ SELECT 1`
 		assetExternalEntityID, assetVersionName,
 		organizationID, providerID, projectExternalEntityID, artifactName,
 	).Error
+}
+
+func (g *projectRepository) GetOrgProjectSlugsByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) (string, string, error) {
+	var slugs struct {
+		OrgSlug     string `gorm:"column:org_slug"`
+		ProjectSlug string `gorm:"column:project_slug"`
+	}
+
+	query := "SELECT organizations.slug AS org_slug, projects.slug AS project_slug " +
+		"FROM projects " +
+		"JOIN organizations ON organizations.id = projects.organization_id " +
+		"WHERE projects.id = ?"
+
+	if err := g.GetDB(ctx, tx).Raw(query, projectID).First(&slugs).Error; err != nil {
+		return "", "", err
+	}
+
+	return slugs.OrgSlug, slugs.ProjectSlug, nil
 }
