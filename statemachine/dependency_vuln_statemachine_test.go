@@ -177,6 +177,38 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		assert.Len(t, diffResult.ExistingOnOtherBranches[0].EventsToCopy, 2)
 	})
 
+	t.Run("should take over the risk assessment of the vuln on other branch", func(t *testing.T) {
+		assetID := uuid.New()
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: "CVE-2023-0001",
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+					AssetID:          assetID,
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:          "CVE-2023-0001",
+				RiskAssessment: new(7.13),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					AssetID:          assetID,
+				},
+				Events: []models.VulnEvent{{Type: dtos.EventTypeDetected}},
+			},
+		}
+
+		diffResult := DiffVulnsBetweenBranches(utils.Map(foundVulnerabilities, utils.Ptr), utils.Map(existingDependencyVulns, utils.Ptr))
+
+		assert.Len(t, diffResult.ExistingOnOtherBranches, 1)
+		assert.Equal(t, 7.13, *diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.RiskAssessment)
+		assert.NotZero(t, diffResult.ExistingOnOtherBranches[0].CurrentBranchVuln.RiskRecalculatedAt)
+	})
+
 	t.Run("should identify new vulnerabilities not on other branch", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{

@@ -22,7 +22,7 @@ WITH duplicates AS (
     vuln_type,
     LAG(id) OVER (ORDER BY created_at) AS prev_id,
     ROW_NUMBER() OVER (
-      PARTITION BY type, vuln_id, vuln_type, justification, risk, compliance_component_id
+      PARTITION BY type, vuln_id, vuln_type, justification
       ORDER BY created_at
     ) AS row_num
   FROM public.vuln_events

@@ -61,7 +61,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context,
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, nil, false, userAgent)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev

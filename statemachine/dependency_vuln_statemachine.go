@@ -16,7 +16,6 @@
 package statemachine
 
 import (
-	"log/slog"
 	"slices"
 	"time"
 
@@ -175,6 +174,9 @@ func DiffVulnsBetweenBranches[T models.Vuln](
 		hash := currentVuln.CalculateAssetVersionIndependentHash()
 
 		if matchingVulns, existsElsewhere := otherBranchIndex[hash]; existsElsewhere {
+			// the risk only depends on cve, path and asset - so every matching vuln carries the same value
+			currentVuln.SetRawRiskAssessment(matchingVulns[0].GetRawRiskAssessment())
+			currentVuln.SetRiskRecalculatedAt(time.Now())
 			// This vuln exists on other branches - create a match
 			// make sure to update the state of the vulnerability accordingly.
 			// at least we are in the statemachine here.
@@ -273,20 +275,9 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		// Scans should not override user/VEX decisions.
 		currentState := vuln.GetState()
 		if currentState == dtos.VulnStateFixed || currentState == dtos.VulnStateFalsePositive || currentState == dtos.VulnStateAccepted {
-			// Still update risk assessment, but don't change state
-			if event.Risk != nil {
-				vuln.SetRawRiskAssessment(*event.Risk)
-				vuln.SetRiskRecalculatedAt(time.Now())
-			}
 			return
 		}
-		// Apply detected event for all other cases
-		f := vuln.GetRawRiskAssessment()
-		if event.Risk != nil {
-			f = *event.Risk
-		}
-		vuln.SetRawRiskAssessment(f)
-		vuln.SetRiskRecalculatedAt(time.Now())
+		// the risk itself is set on the vuln by the caller
 		vuln.SetState(dtos.VulnStateOpen)
 	case dtos.EventTypeAccepted:
 		vuln.SetState(dtos.VulnStateAccepted)
@@ -295,12 +286,8 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeMarkedForTransfer:
 		vuln.SetState(dtos.VulnStateMarkedForTransfer)
 	case dtos.EventTypeRawRiskAssessmentUpdated:
-		if event.Risk == nil {
-			slog.Error("risk assessment updated event without risk", "vulnEventID", event.ID)
-			return
-		}
-		vuln.SetRawRiskAssessment(*event.Risk)
-		vuln.SetRiskRecalculatedAt(time.Now())
+		// the risk itself is set on the vuln by the caller
+		return
 	case dtos.EventTypeImplemented:
 		vuln.SetState(dtos.VulnStateImplemented)
 	case dtos.EventTypeNotApplicable:

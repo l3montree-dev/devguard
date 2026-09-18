@@ -244,7 +244,7 @@ func (s *LicenseRiskService) UserDetectedLicenseRisks(ctx context.Context, tx sh
 	for i := range licenseRisks {
 		// ensure artifact association exists in the object
 		licenseRisks[i].Artifacts = append(licenseRisks[i].Artifacts, models.Artifact{ArtifactName: artifactName, AssetID: assetID, AssetVersionName: assetVersionName})
-		ev := models.NewDetectedEvent(licenseRisks[i].CalculateHash(), dtos.VulnTypeLicenseRisk, userID, nil, false, userAgent)
+		ev := models.NewDetectedEvent(licenseRisks[i].CalculateHash(), dtos.VulnTypeLicenseRisk, userID, false, userAgent)
 		statemachine.Apply(&licenseRisks[i], ev)
 		events[i] = ev
 	}

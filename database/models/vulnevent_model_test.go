@@ -11,19 +11,17 @@ import (
 )
 
 func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
-	t.Run("should store the new risk and other fields in the event", func(t *testing.T) {
+	t.Run("should store the fields in the event", func(t *testing.T) {
 		vulnID := uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 		userID := "user123"
 		justification := "justification text"
-		risk := 0.5
 
-		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification, risk)
+		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification)
 
 		assert.Equal(t, dtos.EventTypeRawRiskAssessmentUpdated, event.Type)
 		assert.Equal(t, vulnID, *event.DependencyVulnID)
 		assert.Equal(t, userID, event.UserID)
 		assert.Equal(t, justification, *event.Justification)
-		assert.Equal(t, risk, *event.Risk)
 	})
 }
 
@@ -44,28 +42,15 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 	})
-	t.Run("should update the risk assessment for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
-		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{
-			Type: dtos.EventTypeRawRiskAssessmentUpdated,
-			Risk: new(0.5),
-		}
+	t.Run("should keep the risk assessment and state of the vuln for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
+		vuln := models.DependencyVuln{RiskAssessment: new(0.5)}
+		vuln.State = dtos.VulnStateAccepted
+		event := models.VulnEvent{Type: dtos.EventTypeRawRiskAssessmentUpdated}
 
 		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, 0.5, vuln.GetRawRiskAssessment())
-	})
-
-	t.Run("should update RiskRecalculatedAt for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
-		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{
-			Type: dtos.EventTypeRawRiskAssessmentUpdated,
-			Risk: new(0.5),
-		}
-
-		statemachine.Apply(&vuln, event)
-
-		assert.NotZero(t, vuln.RiskRecalculatedAt)
+		assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
 	})
 	t.Run("should set state to open for EventTypeDetected", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
@@ -76,18 +61,6 @@ func TestVulnEvent_Apply(t *testing.T) {
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
 
-	t.Run("should update the RiskRecalculatedAt for EventTypeDetected", func(t *testing.T) {
-		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{
-			Type: dtos.EventTypeDetected,
-			Risk: new(0.5),
-		}
-
-		statemachine.Apply(&vuln, event)
-
-		assert.NotZero(t, vuln.RiskRecalculatedAt)
-	})
-
 	t.Run("should update the state to open on reopened event", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeReopened}
@@ -96,7 +69,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
-	t.Run("should keep the current risk for EventTypeDetected without risk", func(t *testing.T) {
+	t.Run("should keep the risk assessment of the vuln for EventTypeDetected", func(t *testing.T) {
 		vuln := models.DependencyVuln{RiskAssessment: new(0.7)}
 		event := models.VulnEvent{Type: dtos.EventTypeDetected}
 

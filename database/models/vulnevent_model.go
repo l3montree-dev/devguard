@@ -22,9 +22,6 @@ type VulnEvent struct {
 	UserID                   string                           `json:"userId"`
 	Justification            *string                          `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  dtos.MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-	Risk                     *float64                         `json:"risk" gorm:"column:risk;type:double precision;default:null;"`
-	ComplianceComponentID    *uuid.UUID                       `json:"complianceComponentId" gorm:"type:uuid;column:compliance_component_id;default:null;"`
-	ComplianceComponent      *ComplianceComponent             `json:"complianceComponent,omitempty" gorm:"foreignKey:ComplianceComponentID;references:UUID"`
 	OriginalAssetVersionName *string                          `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 	CreatedByVexRule         bool                             `json:"createdByVexRule" gorm:"column:created_by_vex_rule;default:false;not null"`
 	UserAgent                *string                          `json:"userAgent" gorm:"column:user_agent;type:text;default:null;"`
@@ -107,13 +104,6 @@ type VulnEventDetail struct {
 	URI              string `json:"uri"`
 }
 
-func (event VulnEvent) GetComplianceComponentTitle() *string {
-	if event.ComplianceComponent == nil {
-		return nil
-	}
-	return &event.ComplianceComponent.Title
-}
-
 func (event VulnEvent) TableName() string {
 	return "vuln_events"
 }
@@ -190,12 +180,11 @@ func NewLicenseDecisionEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID st
 	return ev
 }
 
-// risk is nil for vuln types without a risk calculation
-func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, risk *float64, createdByRule bool, userAgent *string) VulnEvent {
+// the risk itself is stored on the vuln - set it there before applying this event
+func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, createdByRule bool, userAgent *string) VulnEvent {
 	ev := VulnEvent{
 		Type:             dtos.EventTypeDetected,
 		UserID:           userID,
-		Risk:             risk,
 		CreatedByVexRule: createdByRule,
 		UserAgent:        userAgent,
 	}
@@ -214,12 +203,12 @@ func NewMitigateEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, j
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string, risk float64) VulnEvent {
+// the risk itself is stored on the vuln - set it there before applying this event
+func NewRawRiskAssessmentUpdatedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, justification string) VulnEvent {
 	event := VulnEvent{
 		Type:          dtos.EventTypeRawRiskAssessmentUpdated,
 		UserID:        userID,
 		Justification: &justification,
-		Risk:          &risk,
 	}
 	SetVulnIDOnEvent(&event, vulnID, vulnType)
 	return event
@@ -250,12 +239,11 @@ func NewNotApplicableEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID stri
 // NewAttachedComplianceComponentEvent records that a component was attached to
 // a compliance posture (an OSCAL by-component statement was created). This is
 // an audit-log entry only - it does not change the posture's state.
-func NewAttachedComplianceComponentEvent(vulnID uuid.UUID, userID string, complianceComponentID uuid.UUID, userAgent *string) VulnEvent {
+func NewAttachedComplianceComponentEvent(vulnID uuid.UUID, userID string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
-		Type:                  dtos.EventTypeAttachedComplianceComponent,
-		UserID:                userID,
-		ComplianceComponentID: &complianceComponentID,
-		UserAgent:             userAgent,
+		Type:      dtos.EventTypeAttachedComplianceComponent,
+		UserID:    userID,
+		UserAgent: userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
 	return ev
@@ -264,12 +252,11 @@ func NewAttachedComplianceComponentEvent(vulnID uuid.UUID, userID string, compli
 // NewRemovedComplianceComponentEvent records that a component was removed from
 // a compliance posture (its by-component statement was deleted). This is an
 // audit-log entry only - it does not change the posture's state.
-func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, complianceComponentID uuid.UUID, userAgent *string) VulnEvent {
+func NewRemovedComplianceComponentEvent(vulnID uuid.UUID, userID string, userAgent *string) VulnEvent {
 	ev := VulnEvent{
-		Type:                  dtos.EventTypeRemovedComplianceComponent,
-		UserID:                userID,
-		ComplianceComponentID: &complianceComponentID,
-		UserAgent:             userAgent,
+		Type:      dtos.EventTypeRemovedComplianceComponent,
+		UserID:    userID,
+		UserAgent: userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, dtos.VulnTypeCompliancePosture)
 	return ev
