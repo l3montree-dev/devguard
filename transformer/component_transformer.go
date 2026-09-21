@@ -134,6 +134,7 @@ func ComponentOccurrenceToDTO(m models.ComponentOccurrence) dtos.ComponentOccurr
 		AssetName:             m.AssetName,
 		AssetSlug:             m.AssetSlug,
 		AssetVersionName:      m.AssetVersionName,
+		AssetVersionSlug:      m.AssetVersionSlug,
 		ArtifactName:          m.ArtifactName,
 		ArtifactAssetVersion:  m.ArtifactAssetVersion,
 	}

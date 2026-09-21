@@ -232,33 +232,34 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 
 	// the window count is free here
 	if err := db.Raw(matches+`
-		, page AS (
-			SELECT *, COUNT(*) OVER () AS total_count
-			FROM matches
-			ORDER BY component_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC
-			LIMIT NULLIF(?, -1) OFFSET ?
-		)
-		SELECT
-			projects.id AS project_id,
-			projects.name AS project_name,
-			projects.slug AS project_slug,
-			assets.id AS asset_id,
-			assets.name AS asset_name,
-			assets.slug AS asset_slug,
-			page.asset_version_name AS asset_version_name,
-			page.component_id AS dependency_id,
-			page.artifact_name AS artifact_name,
-			page.asset_version_name AS artifact_asset_version_name,
-			page.total_count
-		FROM page
-		JOIN assets ON page.asset_id = assets.id
-		JOIN projects ON assets.project_id = projects.id
-		ORDER BY dependency_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC`,
+        , page AS (
+            SELECT *, COUNT(*) OVER () AS total_count
+            FROM matches
+            ORDER BY component_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC
+            LIMIT NULLIF(?, -1) OFFSET ?
+        )
+        SELECT
+            projects.id AS project_id,
+            projects.name AS project_name,
+            projects.slug AS project_slug,
+            assets.id AS asset_id,
+            assets.name AS asset_name,
+            assets.slug AS asset_slug,
+            page.asset_version_name AS asset_version_name,
+            asset_versions.slug AS asset_version_slug,
+            page.component_id AS dependency_id,
+            page.artifact_name AS artifact_name,
+            page.asset_version_name AS artifact_asset_version_name,
+            page.total_count
+        FROM page
+        JOIN assets ON page.asset_id = assets.id
+        JOIN projects ON assets.project_id = projects.id
+        JOIN asset_versions ON asset_versions.asset_id = page.asset_id AND asset_versions.name = page.asset_version_name
+        ORDER BY dependency_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC`,
 		append(args, limit, offset)...,
 	).Scan(&rows).Error; err != nil {
 		return shared.Paged[models.ComponentOccurrence]{}, err
 	}
-
 	var total int64
 	if len(rows) > 0 {
 		total = rows[0].TotalCount
