@@ -46,22 +46,24 @@
     eachSystem systems (
       system:
       let
-        unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
+        unstablePkgs = nixpkgs-unstable.legacyPackages.${system} // {
+          go = nixpkgs-unstable.legacyPackages.${system}.go_1_27;
+        };
         hostPkgs = nixpkgs.legacyPackages.${system} // {
-          inherit (unstablePkgs) buildGoModule;
+          buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
 
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGoModule;
+          buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGo127Module;
         };
         targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGoModule;
+          buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGo127Module;
         };
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix {
           inherit (hostPkgs)
-            buildGoModule
             lib
+            buildGoModule
             ;
           inherit self;
         };
