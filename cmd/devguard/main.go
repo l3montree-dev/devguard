@@ -117,7 +117,7 @@ func main() {
 			if err := recover(); err != nil {
 				// This is a catch-all. To see the stack trace in GlitchTip open the Stacktrace below
 				sentry.CurrentHub().Recover(err)
-				monitoring.RecoverAndAlert("could not recover from panic in main", fmt.Errorf("panic: %v", err), monitoring.AlertOptions{})
+				monitoring.RecoverAndAlert(context.Background(), nil, monitoring.AlertOptions{}, "could not recover from panic in main", fmt.Errorf("panic: %v", err))
 				sentry.Flush(time.Second * 5)
 			}
 		}()

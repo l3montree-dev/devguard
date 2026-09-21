@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -14,7 +15,7 @@ func recovermiddleware() echo.MiddlewareFunc {
 		return func(ctx echo.Context) (returnErr error) {
 			defer func() {
 				if r := recover(); r != nil {
-					monitoring.RecoverAndAlert("panic recovered in middleware", fmt.Errorf("%v", r), monitoring.AlertOptions{})
+					monitoring.RecoverAndAlert(context.Background(), nil, monitoring.AlertOptions{}, "panic recovered in middleware", fmt.Errorf("%v", r))
 
 					if r == http.ErrAbortHandler {
 						panic(r)

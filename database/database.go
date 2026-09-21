@@ -60,12 +60,12 @@ func (s *sentryLogger) alert(msg string, data ...any) {
 			if strings.Contains(err.Error(), "extended protocol limited to 65535 parameters") {
 				return
 			}
-			monitoring.Alert(msg, err, monitoring.AlertOptions{})
+			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{}, msg, err)
 		} else {
-			monitoring.Alert(msg, fmt.Errorf("%v", data[0]), monitoring.AlertOptions{})
+			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{}, msg, fmt.Errorf("%v", data[0]))
 		}
 	} else {
-		monitoring.Alert(msg, nil, monitoring.AlertOptions{})
+		monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{}, msg, nil)
 	}
 }
 

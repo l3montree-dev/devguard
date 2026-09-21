@@ -32,8 +32,6 @@ type AlertLogService interface {
 }
 
 type AlertOptions struct {
-	Ctx       context.Context
-	Tx        *gorm.DB
 	OrgID     uuid.UUID
 	ProjectID uuid.UUID
 	AssetID   uuid.UUID
@@ -45,24 +43,7 @@ func SetLogger(ls AlertLogService) {
 	logger = ls
 }
 
-// save the error to DB but do not log it to sentry
-func Error(message string, err error, opts AlertOptions) {
-	ctx := opts.Ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if logger == nil {
-		slog.Error("could not store error in database", "msg", "logger has not been set yet")
-		return
-	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, fmt.Sprintf("%s: %v", message, err))
-	if loggerErr != nil {
-		slog.Error("could not store error in database", "msg", message, "error", err)
-	}
-}
-
-// save the error to DB and log it to sentry
-func Alert(message string, err error, opts AlertOptions) {
+func Alert(message string, err error) {
 	// log it
 	evID := sentry.CurrentHub().CaptureException(errors.Wrap(err, message))
 	if evID == nil {
@@ -70,28 +51,9 @@ func Alert(message string, err error, opts AlertOptions) {
 	} else {
 		slog.Error("critical error encountered", "msg", message, "error", err, "id", *evID)
 	}
-	ctx := opts.Ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if logger == nil {
-		slog.Error("could not store error in database", "msg", "logger has not been set yet")
-		return
-	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, fmt.Sprintf("%s: %v", message, err))
-	if loggerErr != nil {
-		slog.Error("could not store error in database", "msg", message, "error", err)
-	}
 }
 
-func RecoverAndAlert(message string, err error, opts AlertOptions) {
-	evID := sentry.CurrentHub().Recover(err)
-	slog.Error("critical error encountered (recover)", "msg", message, "error", err, "id (<nil> if not sent to error tracking)", evID)
-	sentry.Flush(10 * time.Second)
-	ctx := opts.Ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func SaveAlertInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertOptions, message string, err error) {
 	if logger == nil {
 		slog.Error("could not store error in database", "msg", "logger has not been set yet")
 		return
@@ -100,14 +62,37 @@ func RecoverAndAlert(message string, err error, opts AlertOptions) {
 	if err != nil {
 		storedMsg = fmt.Sprintf("%s: %v", message, err)
 	}
-	loggerErr := logger.SaveLog(ctx, opts.Tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, storedMsg)
+	loggerErr := logger.SaveLog(ctx, tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, storedMsg)
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
 	}
 }
 
-func RecoverPanic(msg string, opts AlertOptions) {
+func AlertAndSaveInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertOptions, message string, err error) {
+	Alert(message, err)
+	SaveAlertInErrorLog(ctx, tx, opts, message, err)
+}
+
+func RecoverAndAlert(ctx context.Context, tx *gorm.DB, opts AlertOptions, message string, err error) {
+	evID := sentry.CurrentHub().Recover(err)
+	slog.Error("critical error encountered (recover)", "msg", message, "error", err, "id (<nil> if not sent to error tracking)", evID)
+	sentry.Flush(10 * time.Second)
+	if logger == nil {
+		slog.Error("could not store error in database", "msg", "logger has not been set yet")
+		return
+	}
+	storedMsg := message
+	if err != nil {
+		storedMsg = fmt.Sprintf("%s: %v", message, err)
+	}
+	loggerErr := logger.SaveLog(ctx, tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, storedMsg)
+	if loggerErr != nil {
+		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
+	}
+}
+
+func RecoverPanic(ctx context.Context, tx *gorm.DB, opts AlertOptions, msg string) {
 	if r := recover(); r != nil {
-		Alert(msg, fmt.Errorf("panic recovered: %v", r), opts)
+		AlertAndSaveInErrorLog(ctx, tx, opts, msg, fmt.Errorf("panic recovered: %v", r))
 	}
 }
