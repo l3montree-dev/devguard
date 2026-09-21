@@ -19,7 +19,6 @@ default:
   retry: 2
   
 .common: &common
-  devguard_asset_name: "$DEVGUARD_ASSET_NAME"
   devguard_api_url: "$DEVGUARD_API_URL"
   devguard_web_ui: "$DEVGUARD_WEB_UI"
   devguard_token: "$DEVGUARD_TOKEN"
@@ -34,6 +33,7 @@ include:
   - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
+      devguard_asset_name: "l3montree-cybersecurity/projects/devguard/assets/devguard"
       nix_target_amd64: "devguard-amd64"
       nix_target_arm64: "devguard-arm64"
       nix_impure: "true"
@@ -46,6 +46,7 @@ include:
   - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
+      devguard_asset_name: "l3montree-cybersecurity/projects/devguard/assets/devguard-scanner"
       image_suffix: "scanner"
       nix_target_amd64: "devguard-scanner-amd64"
       nix_target_arm64: "devguard-scanner-arm64"
@@ -60,6 +61,7 @@ include:
   - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
+      devguard_asset_name: "l3montree-cybersecurity/projects/devguard/assets/postgresql"
       image_suffix: "postgresql"
       nix_target_amd64: "postgresql-amd64"
       nix_target_arm64: "postgresql-arm64"
@@ -73,6 +75,7 @@ include:
   - remote: https://raw.githubusercontent.com/l3montree-dev/devguard-ci-components/refs/heads/main/templates/build-nix-multiarch.yml
     inputs:
       <<: *common
+      devguard_asset_name: "l3montree-cybersecurity/projects/devguard/assets/kratos"
       image_suffix: "kratos"
       nix_target_amd64: "kratos-amd64"
       nix_target_arm64: "kratos-arm64"
