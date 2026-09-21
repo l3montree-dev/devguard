@@ -262,12 +262,15 @@ func (componentController *ComponentController) SearchComponentOccurrences(ctx s
 	}))
 }
 
-// @Summary Search component occurrences within a organization
+// @Summary Search component occurrences within an organization
 // @Tags Components
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param search query string false "Search term"
 // @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
 // @Router /organizations/{organization}/components [get]
 func (componentController *ComponentController) SearchComponentOccurrencesByOrganization(ctx shared.Context) error {

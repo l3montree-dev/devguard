@@ -133,6 +133,7 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/organizations/:organization/compliance-postures/stats/":                                                                                       shared.RoleMember,
 	"GET /api/v1/organizations/:organization/config-files/:config-file/":                                                                                       shared.RoleMember,
 	"GET /api/v1/organizations/:organization/content-tree/":                                                                                                    shared.RoleMember,
+	"GET /api/v1/organizations/:organization/components/":                                                                                                      shared.RoleAdmin,
 	"GET /api/v1/organizations/:organization/csaf/openpgp/":                                                                                                    shared.RoleGuest,
 	"GET /api/v1/organizations/:organization/csaf/openpgp/:file/":                                                                                              shared.RoleGuest,
 	"GET /api/v1/organizations/:organization/csaf/provider-metadata.json/":                                                                                     shared.RoleGuest,

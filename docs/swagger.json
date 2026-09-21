@@ -14557,6 +14557,12 @@
                     1000000,
                     1000000000,
                     60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
@@ -14571,6 +14577,12 @@
                     "Hour",
                     "minDuration",
                     "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -17395,6 +17407,30 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -17420,7 +17456,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "summary": "Search component occurrences within a organization",
+                "summary": "Search component occurrences within an organization",
                 "tags": [
                     "Components"
                 ]
