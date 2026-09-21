@@ -3,8 +3,8 @@ name = "devguard-scanner-tools"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "semgrep==1.174.0",
-    "checkov==3.3.13",
+    "semgrep==1.177.0",
+    "checkov==3.3.17",
 ]
 
 [tool.uv]
@@ -14,10 +14,6 @@ exclude-newer = "7 days"
 # These constraints are enforced during `uv lock` and captured in uv.lock —
 # no manual Nix overrides needed.
 constraint-dependencies = [
-    "gitpython==3.1.59",
-    "cryptography>=50.0.0",
-    "requests>=2.34.2",
-    "h11>=0.16.0",
-    "ecdsa>=0.19.1",
-    "aiohttp>=3.14.3"
+    "gitpython==3.1.60",
+    "soupsieve==2.9.0",
 ]
