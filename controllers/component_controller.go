@@ -261,3 +261,41 @@ func (componentController *ComponentController) SearchComponentOccurrences(ctx s
 		return transformer.ComponentOccurrenceToDTO(occurrence)
 	}))
 }
+
+// @Summary Search component occurrences within a organization
+// @Tags Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
+// @Router /organizations/{organization}/components [get]
+func (componentController *ComponentController) SearchComponentOccurrencesByOrganization(ctx shared.Context) error {
+	organization := shared.GetOrg(ctx)
+
+	// get all child projects as well
+	projects, err := componentController.projectRepository.GetByOrgID(ctx.Request().Context(), nil, organization.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch child projects").WithInternal(err)
+	}
+
+	projectIDs := []uuid.UUID{}
+	for _, p := range projects {
+		projectIDs = append(projectIDs, p.ID)
+	}
+
+	pagedResp, err := componentController.componentRepository.SearchComponentOccurrencesByProject(
+		ctx.Request().Context(), nil,
+		projectIDs,
+		shared.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
+	)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not search components").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp.Map(func(occurrence models.ComponentOccurrence) any {
+		return transformer.ComponentOccurrenceToDTO(occurrence)
+	}))
+
+}
