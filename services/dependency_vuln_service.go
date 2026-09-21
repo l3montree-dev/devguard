@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/lib/pq"
 
 	"github.com/l3montree-dev/devguard/database/models"
 
@@ -226,6 +227,10 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 		return nil
 	}
 
+	vulnIDs := make([]string, len(vulnerabilities))
+	assetVersionNames := make([]string, len(vulnerabilities))
+	assetIDs := make([]string, len(vulnerabilities))
+
 	for i := range vulnerabilities {
 		filtered := make([]models.Artifact, 0, len(vulnerabilities[i].Artifacts))
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -234,10 +239,20 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 			}
 		}
 		vulnerabilities[i].Artifacts = filtered
-		if err := tx.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ? AND artifact_artifact_name = ? AND artifact_asset_version_name = ? AND artifact_asset_id = ?",
-			vulnerabilities[i].CalculateHash(), scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID).Error; err != nil {
-			return err
-		}
+
+		vulnIDs[i] = vulnerabilities[i].CalculateHash().String()
+		assetVersionNames[i] = vulnerabilities[i].AssetVersionName
+		assetIDs[i] = vulnerabilities[i].AssetID.String()
+	}
+
+	if err := tx.Exec(`DELETE FROM artifact_dependency_vulns adv
+		USING unnest(?::uuid[], ?::text[], ?::uuid[]) AS t(dependency_vuln_id, asset_version_name, asset_id)
+		WHERE adv.dependency_vuln_id = t.dependency_vuln_id
+			AND adv.artifact_asset_version_name = t.asset_version_name
+			AND adv.artifact_asset_id = t.asset_id
+			AND adv.artifact_artifact_name = ?`,
+		pq.Array(vulnIDs), pq.Array(assetVersionNames), pq.Array(assetIDs), scannerID).Error; err != nil {
+		return err
 	}
 	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, vulnerabilities)
 	if err != nil {
