@@ -348,7 +348,7 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			err = runner.assetRepository.Save(assetCtx, tx, &asset)
 			if err != nil {
 				tx.Rollback()
-				monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)")
+				monitoring.RecoverPanic(pipelineCtx, nil, monitoring.AlertOptions{}, "could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)")
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "save pipeline run failed")
 				span.End()

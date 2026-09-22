@@ -226,7 +226,7 @@ func (publicClient PublicClientImplementation) GetIdentityFromCookie(ctx context
 		}
 		if statusCode == 0 || statusCode >= 500 {
 			// alter if status Code is missing or not authentication related
-			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{}, "kratos: could not get identity from cookie", err)
+			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertOptions{}, "kratos: could not get identity from cookie", err)
 		} else if statusCode == 401 {
 			// cache unsuccessful verifications
 			publicClient.sessionCache.WriteToCache(cookie, session, err)
