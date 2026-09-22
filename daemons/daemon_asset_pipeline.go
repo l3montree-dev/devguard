@@ -672,22 +672,17 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 		slog.Info("successfully populated temporary table", "time", time.Since(start))
 
-		_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths;`)
+		_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths; DROP TABLE IF EXISTS new_dependency_vulns;`)
 		if err != nil {
 			return fmt.Errorf("could not drop table for vuln paths: %w", err)
 		}
 
 		_, err = tx.Exec(ctx, `
-	CREATE TABLE vuln_paths (
-		component_purl text,
-		path uuid[],
-		cve_id text,
-		fixed_version text,
-		asset_id uuid,
-		asset_version_name text,
-		artifact_name text,
-		source text
-	);`)
+			CREATE TABLE vuln_paths (
+				component_purl text,
+				root uuid,
+				path uuid[]
+			);`)
 		if err != nil {
 			return fmt.Errorf("could not create table for vuln paths: %w", err)
 		}
@@ -703,10 +698,8 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		start = time.Now()
 		var purlBatchSize = len(affectedPurls)
 		group := &errgroup.Group{}
-		totalVulns := 0
-		explodedPairs := 0
 		resultsChannel := make(chan purlPathResult)
-		// vulnPathColumns := []string{"component_purl", "path", "cve_id", "fixed_version", "asset_id", "asset_version_name", "artifact_name", "source"}
+		vulnPathColumns := []string{"component_purl", "root", "path"}
 		for start := 0; start < len(affectedPurls); start += purlBatchSize {
 			timer := time.Now()
 			end := min(start+purlBatchSize, len(affectedPurls))
@@ -721,40 +714,75 @@ func (runner *DaemonRunner) NewScanAsset() error {
 				close(resultsChannel)
 			}()
 
-			// consuming here means totalVulns is complete and race free once the range ends
+			const batchSize = 4000
+			rowsBuffer := make([]vulnPath, 0, batchSize*1.25) // 75% pctfree
 			for result := range resultsChannel {
-				totalVulns += len(result.Paths)
-				explodedPairs += len(result.ExplodedRoots)
+				purl := result.Purl
+				for _, root := range result.ExplodedRoots {
+					rowsBuffer = append(rowsBuffer, vulnPath{
+						Purl: purl,
+						Path: nil,
+						Root: root,
+					})
+				}
+
+				for _, path := range result.Paths {
+					rowsBuffer = append(rowsBuffer, vulnPath{
+						Purl: purl,
+						Path: path,
+						Root: path[len(path)-1],
+					})
+				}
+
+				if len(rowsBuffer) >= batchSize {
+					slog.Info("streaming batch to database", "amount", len(rowsBuffer))
+					_, err = conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromSlice(len(rowsBuffer), func(i int) ([]any, error) {
+						return []any{rowsBuffer[i].Purl, rowsBuffer[i].Root, rowsBuffer[i].Path}, nil
+					}))
+					if err != nil {
+						return fmt.Errorf("could not copy vuln paths into table: %w", err)
+					}
+					rowsBuffer = rowsBuffer[:0]
+				}
 			}
+
 			if groupErr != nil {
 				return fmt.Errorf("could not scan purl batch: %w", groupErr)
 			}
 
-			// copyRows := make([][]any, 0, len(vulnsPerSBOM))
-			// for sbom, vulns := range vulnsPerSBOM {
-			// 	for i := range vulns {
-			// 		copyRows = append(copyRows, []any{vulns[i].ComponentPurl, vulns[i].Path, vulns[i].CVE, vulns[i].FixedVersion, sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Source})
-			// 	}
-			// }
-
-			// _, err = conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromRows(copyRows))
-			// if err != nil {
-			// 	return fmt.Errorf("could not copy vuln paths into table: %w", err)
-			// }
-
 			slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer))
 		}
 
-		slog.Info("finished scanning all purls", "time", time.Since(start), "total vulns", totalVulns, "exploded pairs", explodedPairs)
+		slog.Info("finished scanning all purls", "time", time.Since(start))
+
+		start = time.Now()
+		// now materialize the new dependency vulns from the scan data
+		_, err = conn.Exec(ctx, `
+		CREATE TABLE public.new_dependency_vulns AS (
+			SELECT 
+				vp.component_purl, vp.path,
+				pm.fixed_version,cves.cve as cve_id, 
+				s.asset_id, s.asset_version_name, s.artifact_name , s.source
+			FROM vuln_paths vp
+			JOIN sboms s 
+				ON s.root_subtree_hash = vp.root
+			JOIN purl_mapping pm
+				ON pm.purl = vp.component_purl
+			JOIN cves
+				ON cves.id = pm.cve_id
+		);`)
+		if err != nil {
+			return fmt.Errorf("could not materialize new dependency vulns: %w", err)
+		}
+
+		// speed up artifact lookup queries
+		_, err = conn.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
+		if err != nil {
+			return fmt.Errorf("could not create index on vuln_path artifact lookup: %w", err)
+		}
+		slog.Info("finished materializing new dependency vulns", "time", time.Since(start))
 	} else {
 		slog.Info("vuln info already present, skipping scanning")
-	}
-	return nil
-
-	// speed up artifact lookup queries
-	_, err = conn.Exec(ctx, `CREATE INDEX IF NOT EXISTS artifact_lookup_idx ON public.vuln_paths (asset_id, asset_version_name, artifact_name);`)
-	if err != nil {
-		return fmt.Errorf("could not create index on vuln_path artifact lookup: %w", err)
 	}
 
 	startHandling := time.Now()
@@ -763,7 +791,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	rows, err := conn.Query(ctx, `
 		SELECT DISTINCT asset_id FROM dependency_vulns
 		UNION 
-		SELECT DISTINCT asset_id FROM vuln_paths;`)
+		SELECT DISTINCT asset_id FROM new_dependency_vulns;`)
 	if err != nil {
 		return err
 	}
@@ -793,6 +821,12 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	slog.Info("finished all handle scan results", "time", time.Since(startHandling))
 
 	return nil
+}
+
+type vulnPath struct {
+	Purl string
+	Root uuid.UUID
+	Path []uuid.UUID
 }
 
 func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *pgxpool.Conn, assetID uuid.UUID) error {
@@ -1065,7 +1099,7 @@ func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, conn *
     ) AS path_purls,
     vp.cve_id,
     vp.fixed_version
-	FROM vuln_paths vp
+	FROM new_dependency_vulns vp
 	WHERE vp.asset_id = $1
 	AND vp.asset_version_name = $2
 	AND vp.artifact_name = $3
@@ -1098,7 +1132,7 @@ func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, conn *
 func (runner *DaemonRunner) fetchPurlsInMultipleSBOMs(ctx context.Context, assetID uuid.UUID, assetVersionName, artifactName string) (map[string]struct{}, error) {
 	rows, err := runner.pgxpool.Query(ctx, `
 	SELECT component_purl
-	FROM vuln_paths
+	FROM new_dependency_vulns
 	WHERE asset_id = $1
 	AND asset_version_name = $2
 	AND artifact_name = $3
