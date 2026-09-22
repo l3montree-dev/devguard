@@ -44,7 +44,7 @@ func (controller *LogController) ListPaged(ctx shared.Context) error {
 	if err == nil {
 		assetID = &asset.ID
 	}
-	logs, err := controller.logService.ListPaged(ctx, nil, org.ID, projectID, assetID, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
+	logs, err := controller.logService.ListPaged(ctx, nil, &org.ID, projectID, assetID, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get logs").WithInternal(err)
 	}

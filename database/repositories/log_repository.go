@@ -24,7 +24,7 @@ func NewLogRepository(db *gorm.DB) *logRepository {
 // maxLogsPerScope defines how many log entries are kept per scope (asset, project or
 // organization). Whenever a new log is written, the oldest entries exceeding this limit
 // are deleted.
-const maxLogsPerScope = 50
+const maxLogsPerScope = 200
 
 func (r logRepository) Save(ctx context.Context, tx *gorm.DB, log *models.Log) error {
 	db := r.GetDB(ctx, tx)
@@ -66,11 +66,14 @@ func pruneScope(tx *gorm.DB, log *models.Log) error {
 		Delete(&models.Log{}).Error
 }
 
-func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
+func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
 	var count int64
 	logs := []dtos.LogDTO{}
 
-	q := r.Repository.GetDB(ctx, tx).Model(&models.Log{}).Where("logs.org_id = ?", orgID)
+	q := r.Repository.GetDB(ctx, tx).Model(&models.Log{})
+	if orgID != nil {
+		q = q.Where("logs.org_id = ?", *orgID)
+	}
 
 	switch {
 	case assetID != nil && projectID != nil:

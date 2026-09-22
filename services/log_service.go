@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -84,11 +83,7 @@ func (s logService) SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, 
 	return nil
 }
 
-func (s logService) ListPaged(ctx shared.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
-
-	if orgID == uuid.Nil {
-		return shared.Paged[dtos.LogDTO]{}, fmt.Errorf("orgID required")
-	}
+func (s logService) ListPaged(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
 
 	logs, err := s.logRepository.ListPaged(ctx.Request().Context(), tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	if err != nil {

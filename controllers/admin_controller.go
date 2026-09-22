@@ -50,6 +50,8 @@ type AdminController struct {
 	adminService    shared.AdminService
 	adminRepository shared.AdminRepository
 
+	logService shared.LogService
+
 	assetService      shared.AssetService
 	statisticsService shared.StatisticsService
 
@@ -66,6 +68,7 @@ func NewAdminController(
 	statisticsService shared.StatisticsService,
 	assetService shared.AssetService,
 	configService shared.ConfigService,
+	logService shared.LogService,
 	gitlabOAuth2 map[string]*gitlabint.GitlabOauth2Config,
 ) *AdminController {
 	return &AdminController{
@@ -75,6 +78,7 @@ func NewAdminController(
 		assetService:      assetService,
 		statisticsService: statisticsService,
 		configService:     configService,
+		logService:        logService,
 	}
 }
 
@@ -646,4 +650,23 @@ func extractMailFromRequest(ctx shared.Context) (string, error) {
 		return "", fmt.Errorf("mail is invalid")
 	}
 	return userID, nil
+}
+
+// @Summary Get logs
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param search query string false "Search term"
+// @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
+// @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
+// @Success 200 {object} shared.Paged[dtos.LogDTO]
+// @Router /admin/logs/ [get]
+func (controller *AdminController) GetLogs(ctx shared.Context) error {
+
+	logs, err := controller.logService.ListPaged(ctx, nil, nil, nil, nil, shared.GetPageInfo(ctx), ctx.QueryParam("search"), shared.GetFilterQuery(ctx), shared.GetSortQuery(ctx))
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get logs").WithInternal(err)
+	}
+	return ctx.JSON(200, logs)
 }

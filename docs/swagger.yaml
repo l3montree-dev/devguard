@@ -10824,8 +10824,6 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10836,7 +10834,6 @@ components:
       - 1000
       - 1000000
       - 1000000000
-      - 60000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -10855,8 +10852,6 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -10867,7 +10862,6 @@ components:
       - Microsecond
       - Millisecond
       - Second
-      - Minute
     transformer.MinimalTree:
       properties:
         dependencies:
@@ -11196,6 +11190,46 @@ paths:
       security:
       - AdminSignedAuth: []
       summary: Add an admin to an organization
+      tags:
+      - Admin
+  /admin/logs/:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search term
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Sort query, e.g. sort[createdAt]=desc
+        in: query
+        name: sort
+        schema:
+          type: string
+      - description: Filter query, e.g. filterQuery[logs.log_level][is]=error
+        in: query
+        name: filterQuery
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO'
+          description: OK
+      security:
+      - AdminSignedAuth: []
+      summary: Get logs
       tags:
       - Admin
   /admin/organizations/{orgID}/:
