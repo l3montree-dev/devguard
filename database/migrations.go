@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -24,6 +25,11 @@ var (
 	migratorErr      error
 	migrationDirty   bool
 )
+
+// statements that cannot run inside the migration transaction (e.g. VACUUM), run once after the migration with that version got committed
+var postMigrationStatements = map[uint][]string{
+	20260917123342: {"VACUUM FULL public.vuln_events"},
+}
 
 func getMigrator(gormDB shared.DB) (*migrate.Migrate, error) {
 	sqlDB, err := gormDB.DB()
@@ -152,7 +158,24 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 
 	migrationVersion, migrationDirty, migratorErr = uint(lastVersion), false, nil
 	slog.Info("migrations completed successfully")
+
+	runPostMigrationStatements(sqlDB, versions)
 	return nil
+}
+
+func runPostMigrationStatements(sqlDB *sql.DB, versions []uint) {
+	for _, v := range versions {
+		for _, statement := range postMigrationStatements[v] {
+			start := time.Now()
+			slog.Info("running post migration statement", "version", v, "statement", statement)
+			// the migration is already committed, a failure here only leaves unreclaimed space behind
+			if _, err := sqlDB.Exec(statement); err != nil {
+				slog.Error("post migration statement failed", "version", v, "statement", statement, "err", err)
+				continue
+			}
+			slog.Info("successfully finished post migration statement", "version", v, "statement", statement, "time", time.Since(start))
+		}
+	}
 }
 
 // pendingVersions returns every migration version after currentVersion (-1 = none applied yet), in order.

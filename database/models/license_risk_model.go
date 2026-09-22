@@ -46,17 +46,6 @@ func (licenseRisk *LicenseRisk) BeforeSave(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func (licenseRisk *LicenseRisk) GetArtifactNames() string {
-	artifactNames := ""
-	for _, artifact := range licenseRisk.Artifacts {
-		if artifactNames != "" {
-			artifactNames += ", "
-		}
-		artifactNames += artifact.ArtifactName
-	}
-	return artifactNames
-}
-
 func (licenseRisk LicenseRisk) CalculateAssetVersionIndependentHash() string {
 	return utils.HashString(licenseRisk.ComponentPurl)
 }

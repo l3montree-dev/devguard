@@ -16,7 +16,6 @@
 package statemachine
 
 import (
-	"log/slog"
 	"slices"
 	"time"
 
@@ -175,6 +174,9 @@ func DiffVulnsBetweenBranches[T models.Vuln](
 		hash := currentVuln.CalculateAssetVersionIndependentHash()
 
 		if matchingVulns, existsElsewhere := otherBranchIndex[hash]; existsElsewhere {
+			// the risk only depends on cve, path and asset - so every matching vuln carries the same value
+			currentVuln.SetRawRiskAssessment(matchingVulns[0].GetRawRiskAssessment())
+			currentVuln.SetRiskRecalculatedAt(time.Now())
 			// This vuln exists on other branches - create a match
 			// make sure to update the state of the vulnerability accordingly.
 			// at least we are in the statemachine here.
@@ -261,14 +263,8 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 func Apply(vuln models.Vuln, event models.VulnEvent) {
 	switch event.Type {
 	case dtos.EventTypeLicenseDecision:
-		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
-		if !ok {
-			slog.Error("could not parse final license decision", "vulnEventID", event.ID)
-			return
-		}
-		v := vuln.(*models.LicenseRisk)
-		v.SetFinalLicenseDecision(finalLicenseDecision)
-		v.SetState(dtos.VulnStateFixed)
+		// the decision itself lives on the license risk and is set by the caller
+		vuln.SetState(dtos.VulnStateFixed)
 	case dtos.EventTypeFixed:
 		vuln.SetState(dtos.VulnStateFixed)
 	case dtos.EventTypeReopened:
@@ -279,21 +275,9 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		// Scans should not override user/VEX decisions.
 		currentState := vuln.GetState()
 		if currentState == dtos.VulnStateFixed || currentState == dtos.VulnStateFalsePositive || currentState == dtos.VulnStateAccepted {
-			// Still update risk assessment, but don't change state
-			f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-			if ok {
-				vuln.SetRawRiskAssessment(f)
-				vuln.SetRiskRecalculatedAt(time.Now())
-			}
 			return
 		}
-		// Apply detected event for all other cases
-		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-		if !ok {
-			f = vuln.GetRawRiskAssessment()
-		}
-		vuln.SetRawRiskAssessment(f)
-		vuln.SetRiskRecalculatedAt(time.Now())
+		// the risk itself is set on the vuln by the caller
 		vuln.SetState(dtos.VulnStateOpen)
 	case dtos.EventTypeAccepted:
 		vuln.SetState(dtos.VulnStateAccepted)
@@ -302,13 +286,8 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 	case dtos.EventTypeMarkedForTransfer:
 		vuln.SetState(dtos.VulnStateMarkedForTransfer)
 	case dtos.EventTypeRawRiskAssessmentUpdated:
-		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
-		if !ok {
-			slog.Error("could not parse risk assessment", "vulnEventID", event.ID)
-			return
-		}
-		vuln.SetRawRiskAssessment(f)
-		vuln.SetRiskRecalculatedAt(time.Now())
+		// the risk itself is set on the vuln by the caller
+		return
 	case dtos.EventTypeImplemented:
 		vuln.SetState(dtos.VulnStateImplemented)
 	case dtos.EventTypeNotApplicable:

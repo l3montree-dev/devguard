@@ -191,12 +191,7 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 			return err
 		}
 
-		component, err := c.complianceComponentRepository.GetDetails(ctx.Request().Context(), tx, complianceComponentID)
-		if err != nil {
-			return err
-		}
-
-		ev := models.NewAttachedComplianceComponentEvent(compliancePosture.ID, shared.GetSession(ctx).GetActorName(), component.Title, &userAgent)
+		ev := models.NewAttachedComplianceComponentEvent(compliancePosture.ID, shared.GetSession(ctx).GetActorName(), &userAgent)
 		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, compliancePosture, &ev)
 	})
 	if err != nil {
@@ -333,7 +328,7 @@ func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) erro
 			return err
 		}
 
-		ev := models.NewRemovedComplianceComponentEvent(deleted.CompliancePostureID, shared.GetSession(ctx).GetActorName(), deleted.ComplianceComponentImplementsControl.ComplianceComponent.Title, &userAgent)
+		ev := models.NewRemovedComplianceComponentEvent(deleted.CompliancePostureID, shared.GetSession(ctx).GetActorName(), &userAgent)
 		return c.compliancePostureRepository.ApplyAndSave(ctx.Request().Context(), tx, &posture, &ev)
 	})
 	if err != nil {

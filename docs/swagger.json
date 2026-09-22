@@ -7474,6 +7474,9 @@
                     "assetVersionName": {
                         "type": "string"
                     },
+                    "assetVersionSlug": {
+                        "type": "string"
+                    },
                     "componentDependencyId": {
                         "type": "string"
                     },
@@ -7509,6 +7512,7 @@
                     "assetName",
                     "assetSlug",
                     "assetVersionName",
+                    "assetVersionSlug",
                     "componentDependencyId",
                     "componentPurl",
                     "componentVersion",
@@ -11821,10 +11825,6 @@
             },
             "dtos.VulnEventDTO": {
                 "properties": {
-                    "arbitraryJSONData": {
-                        "additionalProperties": {},
-                        "type": "object"
-                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -11875,7 +11875,6 @@
                     }
                 },
                 "required": [
-                    "arbitraryJSONData",
                     "createdAt",
                     "createdByVexRule",
                     "id",
@@ -14068,9 +14067,6 @@
             },
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
-                    "arbitraryJSONData": {
-                        "type": "string"
-                    },
                     "assetSignature": {
                         "description": "set instead of DependencyVulnID for a group event applying to every\nDependencyVuln sharing this AssetSignature.",
                         "type": "integer"
@@ -14125,7 +14121,6 @@
                     }
                 },
                 "required": [
-                    "arbitraryJSONData",
                     "assetSignature",
                     "compliancePostureId",
                     "createdAt",
@@ -14632,8 +14627,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14649,7 +14642,12 @@
                     1,
                     1000,
                     1000000,
-                    1000000000
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14661,8 +14659,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -14678,7 +14674,12 @@
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
-                    "Second"
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond"
                 ]
             },
             "transformer.MinimalTree": {
@@ -17550,6 +17551,72 @@
                 "summary": "Create a compliance statement for a component",
                 "tags": [
                     "Compliance Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/components": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Search component occurrences within an organization",
+                "tags": [
+                    "Components"
                 ]
             }
         },

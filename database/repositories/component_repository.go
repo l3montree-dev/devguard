@@ -176,39 +176,47 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 
 	db := c.GetDB(ctx, tx)
 
+	args := []any{pq.Array(projectIDs)}
+
+	// omit the LIKE if we have no search string
+	searchFilter := ""
+	if search != "" {
+		searchFilter = "AND LOWER(n.component_id) LIKE LOWER(?)"
+		args = append(args, "%"+search+"%")
+	}
+
 	// Walk every SBOM of the projects in scope, carrying only hashes. Stepping to
 	// the child hash rather than the parent's is what reaches leaves: a leaf has
 	// no outgoing edge, so it never appears as a subtree_hash. It also drops the
 	// root, which is the artifact rather than one of its dependencies.
-	const walk = `
-		WITH RECURSIVE walk AS (
-			SELECT s.asset_id, s.asset_version_name, s.artifact_name,
-			       e.direct_dependency_subtree_hash AS node_hash
+	//
+	// Keyed by root hash, not by asset version and artifact: identical trees
+	// share one root hash, so walking per sboms row re-expands the same subtree
+	// once per row. project_sboms is joined back afterwards.
+	matches := `
+		WITH RECURSIVE project_sboms AS (
+			SELECT DISTINCT s.asset_id, s.asset_version_name, s.artifact_name, s.root_subtree_hash
 			FROM sboms s
-			JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
 			JOIN assets a ON a.id = s.asset_id
 			WHERE a.project_id = ANY (?)
+		), roots AS (
+			SELECT DISTINCT root_subtree_hash FROM project_sboms
+		), walk AS (
+			SELECT r.root_subtree_hash AS root_hash,
+			       e.direct_dependency_subtree_hash AS node_hash
+			FROM roots r
+			JOIN sbom_merkle_edges e ON e.subtree_hash = r.root_subtree_hash
 		UNION
-			SELECT w.asset_id, w.asset_version_name, w.artifact_name,
-			       e.direct_dependency_subtree_hash
+			SELECT w.root_hash, e.direct_dependency_subtree_hash
 			FROM walk w
 			JOIN sbom_merkle_edges e ON e.subtree_hash = w.node_hash
-		)`
-
-	var total int64
-	if err := db.Raw(walk+`
-		SELECT COUNT(*) FROM (
-			SELECT DISTINCT w.asset_id, w.asset_version_name, w.artifact_name, n.component_id
+		), matches AS (
+			SELECT DISTINCT ps.asset_id, ps.asset_version_name, ps.artifact_name, n.component_id
 			FROM walk w
 			JOIN sbom_merkle_nodes n ON n.node_hash = w.node_hash
-			WHERE n.component_id ILIKE ? AND n.component_id LIKE 'pkg:%'
-		) matches`, pq.Array(projectIDs), "%"+search+"%").Scan(&total).Error; err != nil {
-		return shared.Paged[models.ComponentOccurrence]{}, err
-	}
-
-	if total == 0 {
-		return shared.NewPaged(pageInfo, 0, occurrences), nil
-	}
+			JOIN project_sboms ps ON ps.root_subtree_hash = w.root_hash
+			WHERE n.component_id LIKE 'pkg:%' ` + searchFilter + `
+		)`
 
 	limit, offset := -1, 0
 	if pageInfo.PageSize > 0 {
@@ -216,28 +224,53 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 		offset = (max(pageInfo.Page, 1) - 1) * pageInfo.PageSize
 	}
 
-	if err := db.Raw(walk+`
-		SELECT DISTINCT
-			projects.id AS project_id,
-			projects.name AS project_name,
-			projects.slug AS project_slug,
-			assets.id AS asset_id,
-			assets.name AS asset_name,
-			assets.slug AS asset_slug,
-			w.asset_version_name AS asset_version_name,
-			n.component_id AS dependency_id,
-			w.artifact_name AS artifact_name,
-			w.asset_version_name AS artifact_asset_version_name
-		FROM walk w
-		JOIN sbom_merkle_nodes n ON n.node_hash = w.node_hash
-		JOIN assets ON w.asset_id = assets.id
-		JOIN projects ON assets.project_id = projects.id
-		WHERE n.component_id ILIKE ? AND n.component_id LIKE 'pkg:%'
-		ORDER BY dependency_id ASC, asset_version_name ASC
-		LIMIT NULLIF(?, -1) OFFSET ?`,
-		pq.Array(projectIDs), "%"+search+"%", limit, offset,
-	).Scan(&occurrences).Error; err != nil {
+	type rowWithCount struct {
+		models.ComponentOccurrence
+		TotalCount int64
+	}
+	var rows []rowWithCount
+
+	// the window count is free here
+	if err := db.Raw(matches+`
+        , page AS (
+            SELECT *, COUNT(*) OVER () AS total_count
+            FROM matches
+            ORDER BY component_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC
+            LIMIT NULLIF(?, -1) OFFSET ?
+        )
+        SELECT
+            projects.id AS project_id,
+            projects.name AS project_name,
+            projects.slug AS project_slug,
+            assets.id AS asset_id,
+            assets.name AS asset_name,
+            assets.slug AS asset_slug,
+            page.asset_version_name AS asset_version_name,
+            asset_versions.slug AS asset_version_slug,
+            page.component_id AS dependency_id,
+            page.artifact_name AS artifact_name,
+            page.asset_version_name AS artifact_asset_version_name,
+            page.total_count
+        FROM page
+        JOIN assets ON page.asset_id = assets.id
+        JOIN projects ON assets.project_id = projects.id
+        JOIN asset_versions ON asset_versions.asset_id = page.asset_id AND asset_versions.name = page.asset_version_name
+        ORDER BY dependency_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC`,
+		append(args, limit, offset)...,
+	).Scan(&rows).Error; err != nil {
 		return shared.Paged[models.ComponentOccurrence]{}, err
+	}
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+		for _, r := range rows {
+			occurrences = append(occurrences, r.ComponentOccurrence)
+		}
+	} else if offset > 0 {
+		// overflow, calculate the count explicitly
+		if err := db.Raw(matches+`SELECT COUNT(*) FROM matches`, args...).Scan(&total).Error; err != nil {
+			return shared.Paged[models.ComponentOccurrence]{}, err
+		}
 	}
 
 	return shared.NewPaged(pageInfo, total, occurrences), nil
