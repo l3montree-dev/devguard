@@ -16,6 +16,7 @@
 package daemons
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	"maps"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -42,6 +44,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/errgroup"
 )
 
 type assetWithProjectAndOrg struct {
@@ -545,6 +548,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	if err != nil {
 		return err
 	}
+	vulnInfoExists = false
 	if !vulnInfoExists {
 
 		slog.Info("start collecting all dependencies")
@@ -697,37 +701,55 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 		slog.Info("start scanning affected purls", "amount", len(affectedPurls))
 		start = time.Now()
-		const purlBatchSize = 50
+		var purlBatchSize = len(affectedPurls)
+		group := &errgroup.Group{}
 		totalVulns := 0
-		vulnPathColumns := []string{"component_purl", "path", "cve_id", "fixed_version", "asset_id", "asset_version_name", "artifact_name", "source"}
+		explodedPairs := 0
+		resultsChannel := make(chan purlPathResult)
+		// vulnPathColumns := []string{"component_purl", "path", "cve_id", "fixed_version", "asset_id", "asset_version_name", "artifact_name", "source"}
 		for start := 0; start < len(affectedPurls); start += purlBatchSize {
 			timer := time.Now()
 			end := min(start+purlBatchSize, len(affectedPurls))
-			vulnsPerSBOM, err := runner.GetPathsForPurls(ctx, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
-			if err != nil {
-				return fmt.Errorf("could not get paths for purls: %w", err)
+			group.Go(func() error {
+				_, err = runner.GetPathsForPurls(ctx, resultsChannel, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
+				return err
+			})
+
+			var groupErr error
+			go func() {
+				groupErr = group.Wait()
+				close(resultsChannel)
+			}()
+
+			// consuming here means totalVulns is complete and race free once the range ends
+			for result := range resultsChannel {
+				totalVulns += len(result.Paths)
+				explodedPairs += len(result.ExplodedRoots)
+			}
+			if groupErr != nil {
+				return fmt.Errorf("could not scan purl batch: %w", groupErr)
 			}
 
-			copyRows := make([][]any, 0, len(vulnsPerSBOM))
-			for sbom, vulns := range vulnsPerSBOM {
-				for i := range vulns {
-					copyRows = append(copyRows, []any{vulns[i].ComponentPurl, vulns[i].Path, vulns[i].CVE, vulns[i].FixedVersion, sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Source})
-				}
-			}
+			// copyRows := make([][]any, 0, len(vulnsPerSBOM))
+			// for sbom, vulns := range vulnsPerSBOM {
+			// 	for i := range vulns {
+			// 		copyRows = append(copyRows, []any{vulns[i].ComponentPurl, vulns[i].Path, vulns[i].CVE, vulns[i].FixedVersion, sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Source})
+			// 	}
+			// }
 
-			_, err = conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromRows(copyRows))
-			if err != nil {
-				return fmt.Errorf("could not copy vuln paths into table: %w", err)
-			}
-			totalVulns += len(copyRows)
+			// _, err = conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromRows(copyRows))
+			// if err != nil {
+			// 	return fmt.Errorf("could not copy vuln paths into table: %w", err)
+			// }
 
-			slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer), "sboms", len(vulnsPerSBOM), "paths", len(copyRows))
+			slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer))
 		}
 
-		slog.Info("finished scanning all purls", "time", time.Since(start), "total vulns", totalVulns)
+		slog.Info("finished scanning all purls", "time", time.Since(start), "total vulns", totalVulns, "exploded pairs", explodedPairs)
 	} else {
 		slog.Info("vuln info already present, skipping scanning")
 	}
+	return nil
 
 	// speed up artifact lookup queries
 	_, err = conn.Exec(ctx, `CREATE INDEX IF NOT EXISTS artifact_lookup_idx ON public.vuln_paths (asset_id, asset_version_name, artifact_name);`)
@@ -1111,8 +1133,14 @@ type vulnIdentity struct {
 	FixedVersion  *string
 	Path          []string
 }
+type purlPathResult struct {
+	Purl  string
+	Paths [][]uuid.UUID // vulnerable node -> ... -> sbom root
+	// sboms reached by more than maxPathsPerRoot paths, none of their paths are kept
+	ExplodedRoots []uuid.UUID
+}
 
-func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string) (map[SBOM][]vulnIdentity, error) {
+func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, results chan purlPathResult, purls []string) (map[string][][]uuid.UUID, error) {
 	start := time.Now()
 	// calculate map size upper bound
 	row := runner.pgxpool.QueryRow(ctx, `SELECT COUNT(*) FROM sbom_merkle_nodes;`)
@@ -1123,31 +1151,49 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string
 		return nil, fmt.Errorf("could not query count of nodes: %w", err)
 	}
 
-	edgeRows, err := runner.pgxpool.Query(ctx, `SELECT subtree_hash,direct_dependency_subtree_hash FROM sbom_merkle_edges;`)
+	// leaf rows carry a NULL child and are no edges
+	edgeRows, err := runner.pgxpool.Query(ctx, `SELECT subtree_hash,direct_dependency_subtree_hash FROM sbom_merkle_edges WHERE direct_dependency_subtree_hash IS NOT NULL;`)
 	if err != nil {
 		return nil, fmt.Errorf("could not query paths for purls: %w", err)
 	}
 	defer edgeRows.Close()
 
-	// for each node lookup map for all parent nodes
-	edges := make(map[uuid.UUID]map[uuid.UUID]struct{}, count)
+	// nodes are mapped to dense ids so the traversal indexes slices instead of hashing uuids
+	nodeIDs := make(map[uuid.UUID]int32, count)
+	nodeHashes := make([]uuid.UUID, 0, count)
+	parents := make([][]int32, 0, count)
+	toNodeID := func(hash uuid.UUID) int32 {
+		id, ok := nodeIDs[hash]
+		if !ok {
+			id = int32(len(nodeHashes))
+			nodeIDs[hash] = id
+			nodeHashes = append(nodeHashes, hash)
+			parents = append(parents, nil)
+		}
+		return id
+	}
+
 	var parent, child uuid.UUID
 	for edgeRows.Next() {
 		err = edgeRows.Scan(&parent, &child)
 		if err != nil {
 			return nil, fmt.Errorf("could not scan edge: %w", err)
 		}
-
-		_, ok := edges[child]
-		if !ok {
-			edges[child] = map[uuid.UUID]struct{}{parent: struct{}{}}
-		} else {
-			edges[child][parent] = struct{}{}
-		}
+		childID := toNodeID(child)
+		parentID := toNodeID(parent)
+		parents[childID] = append(parents[childID], parentID)
 	}
 	edgeRows.Close()
 	if err := edgeRows.Err(); err != nil {
 		return nil, fmt.Errorf("could not scan rows: %w", err)
+	}
+
+	// order by hash so the traversal and the chosen paths do not depend on the row order of the queries
+	compareNodes := func(a, b int32) int {
+		return bytes.Compare(nodeHashes[a][:], nodeHashes[b][:])
+	}
+	for i := range parents {
+		slices.SortFunc(parents[i], compareNodes)
 	}
 
 	slog.Info("loaded SBOM into memory", "time", time.Since(start))
@@ -1161,22 +1207,29 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string
 	}
 	defer purlRows.Close()
 
-	purlToHash := make(map[string]uuid.UUID, len(purls))
+	// a purl has one node per distinct subtree, so it can map to multiple nodes
+	purlToNodes := make(map[string][]int32, len(purls))
 	var purl string
 	var hash uuid.UUID
 	for purlRows.Next() {
 		err = purlRows.Scan(&hash, &purl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not scan purl row: %w", err)
 		}
-		purlToHash[purl] = hash
+		// a node without edges can never reach a root
+		if id, ok := nodeIDs[hash]; ok {
+			purlToNodes[purl] = append(purlToNodes[purl], id)
+		}
 	}
 	purlRows.Close()
 	if err := purlRows.Err(); err != nil {
 		return nil, fmt.Errorf("could not scan purl rows: %w", err)
 	}
+	for _, nodes := range purlToNodes {
+		slices.SortFunc(nodes, compareNodes)
+	}
 
-	// lookup which nodes are
+	// lookup which nodes are root nodes
 	rootRows, err := runner.pgxpool.Query(ctx, `
 		SELECT node_hash
 		FROM sbom_merkle_nodes nodes 
@@ -1184,44 +1237,155 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, purls []string
 			SELECT FROM sboms s 
 			WHERE s.root_subtree_hash = nodes.node_hash
 		);`)
+	if err != nil {
+		return nil, fmt.Errorf("could not query root nodes: %w", err)
+	}
 	defer rootRows.Close()
 
 	var rootHash uuid.UUID
-	isNodeRoot := make(map[uuid.UUID]struct{})
+	isNodeRoot := make([]bool, len(nodeHashes))
 	for rootRows.Next() {
-		err = row.Scan(&rootHash)
+		err = rootRows.Scan(&rootHash)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not scan root row: %w", err)
 		}
-		isNodeRoot[rootHash] = struct{}{}
+		// roots outside the edge graph can never be reached
+		if id, ok := nodeIDs[rootHash]; ok {
+			isNodeRoot[id] = true
+		}
 	}
 	rootRows.Close()
 	err = rootRows.Err()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ran into error when reading root rows: %w", err)
 	}
 
-	pathsForPurls := make(map[string][]uuid.UUID, len(purls))
-	queue := make([]uuid.UUID, 0, count)
-	currentElement := 0
+	const maxQueueLength = 4000
+	queue := NewDynamicQueue[[]int32](maxQueueLength) // queue of paths
+	toHashes := func(path []int32) []uuid.UUID {
+		hashes := make([]uuid.UUID, len(path))
+		for i, id := range path {
+			hashes[i] = nodeHashes[id]
+		}
+		return hashes
+	}
+
 	for _, vulnerablePurl := range purls {
-		nodeHash, ok := purlToHash[vulnerablePurl]
-		if !ok {
-			panic("could not find hash for purl")
+		// paths stay ids until the purl is done, a root can still explode later on
+		pathsPerRoot := make(map[int32][][]int32)
+		explodedRoots := make(map[int32]struct{})
+		// seed with the vulnerable node itself so its direct parents get the root check as well
+		for _, nodeID := range purlToNodes[vulnerablePurl] {
+			queue.Append([]int32{nodeID})
 		}
 
-		edges, ok := edges[nodeHash]
-		if !ok {
-			slog.Info("no paths for purl,skipping")
-			continue
+		for {
+			next, ok := queue.Next()
+			if !ok {
+				// queue is empty continue with the next purl
+				break
+			}
+
+			for _, node := range parents[next[len(next)-1]] {
+				hasParents := len(parents[node]) > 0
+				recordable := false
+				if isNodeRoot[node] {
+					_, exploded := explodedRoots[node]
+					recordable = !exploded
+				}
+				if !recordable && !hasParents {
+					continue
+				}
+
+				// each path needs its own backing array otherwise siblings overwrite each other's last node
+				newPath := make([]int32, len(next), len(next)+1)
+				copy(newPath, next)
+				newPath = append(newPath, node)
+
+				// paths are vulnerable node -> ... -> root, the root is kept so the path can be mapped to its sboms
+				if recordable {
+					if len(pathsPerRoot[node]) == maxPathsPerRoot {
+						// path explosion, none of the paths into this sbom are kept
+						delete(pathsPerRoot, node)
+						explodedRoots[node] = struct{}{}
+					} else {
+						// paths are never modified after creation, so sharing newPath with the queue is safe
+						pathsPerRoot[node] = append(pathsPerRoot[node], newPath)
+					}
+				}
+				// a root can also be a subtree of another sbom, so only stop where there are no more parents
+				if hasParents {
+					queue.Append(newPath)
+				}
+			}
 		}
+		queue.Reset()
 
-		for edge := range maps.Keys(edges) {
-
+		// map iteration is random, sorting the roots by hash keeps the output order stable
+		result := purlPathResult{Purl: vulnerablePurl}
+		for _, root := range slices.SortedFunc(maps.Keys(pathsPerRoot), compareNodes) {
+			for _, path := range pathsPerRoot[root] {
+				result.Paths = append(result.Paths, toHashes(path))
+			}
 		}
-
+		for _, root := range slices.SortedFunc(maps.Keys(explodedRoots), compareNodes) {
+			result.ExplodedRoots = append(result.ExplodedRoots, nodeHashes[root])
+		}
+		results <- result
 	}
+
 	return nil, nil
+}
+
+const maxPathsPerRoot = 12
+
+type dynamicQueue[T any] struct {
+	MaxSize        int
+	Queue          []T
+	CurrentElement int
+}
+
+func NewDynamicQueue[T any](maxSize int) *dynamicQueue[T] {
+	return &dynamicQueue[T]{
+		MaxSize:        maxSize,
+		Queue:          make([]T, 0, maxSize),
+		CurrentElement: 0,
+	}
+}
+
+func (queue *dynamicQueue[T]) Next() (next T, ok bool) {
+	if queue.CurrentElement >= len(queue.Queue) {
+		return next, false
+	}
+	next = queue.Queue[queue.CurrentElement]
+	queue.CurrentElement++
+	queue.shrink()
+	return next, true
+}
+
+func (queue *dynamicQueue[T]) Append(element T) {
+	if len(queue.Queue) == queue.MaxSize {
+		slog.Warn("queue overflow")
+	}
+	queue.Queue = append(queue.Queue, element)
+}
+
+func (queue *dynamicQueue[T]) Reset() {
+	clear(queue.Queue)
+	queue.Queue = queue.Queue[:0]
+	queue.CurrentElement = 0
+}
+
+func (queue *dynamicQueue[T]) shrink() {
+	// compacting before half of the slice is consumed copies large queues over and over
+	if queue.CurrentElement <= queue.MaxSize/2 || queue.CurrentElement < len(queue.Queue)/2 {
+		return
+	}
+	// move the unread elements to the front and drop references to consumed ones so the GC can free them
+	remaining := copy(queue.Queue, queue.Queue[queue.CurrentElement:])
+	clear(queue.Queue[remaining:])
+	queue.Queue = queue.Queue[:remaining]
+	queue.CurrentElement = 0
 }
 
 func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
