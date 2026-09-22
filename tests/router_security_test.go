@@ -89,6 +89,7 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/.well-known/csaf-aggregator/aggregator.json/":                                                                                                 shared.RoleGuest,
 	"GET /api/v1/admin/":                                                                                                                                       shared.RoleOwner,
 	"GET /api/v1/admin/external-orgs/":                                                                                                                         shared.RoleOwner,
+	"GET /api/v1/admin/logs/":                                                                                                                                  shared.RoleOwner,
 	"GET /api/v1/admin/organizations/:orgID/":                                                                                                                  shared.RoleOwner,
 	"GET /api/v1/admin/settings/":                                                                                                                              shared.RoleOwner,
 	"GET /api/v1/admin/statistics/usage/":                                                                                                                      shared.RoleOwner,
