@@ -49,6 +49,9 @@
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system} // {
           go = nixpkgs-unstable.legacyPackages.${system}.go_1_27;
         };
+        go-mockery = nixpkgs-unstable.legacyPackages.${system}.go-mockery.override {
+          buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
+        };
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
@@ -251,7 +254,7 @@
             unstablePkgs.gotools
             unstablePkgs.gopls
             unstablePkgs.golangci-lint
-            unstablePkgs.go-mockery
+            go-mockery
             self.formatter.${system}
           ];
         };
