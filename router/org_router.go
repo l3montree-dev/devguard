@@ -39,6 +39,7 @@ func NewOrgRouter(
 	compliancePostureController *controllers.CompliancePostureController,
 	complianceComponentController *controllers.ComplianceComponentController,
 	policyController *controllers.PolicyController,
+	componentController *controllers.ComponentController,
 	integrationController *controllers.IntegrationController,
 	webhookIntegration *controllers.WebhookController,
 	externalEntityProviderService shared.ExternalEntityProviderService,
@@ -81,6 +82,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/components/", componentController.SearchComponentOccurrencesByOrganization, middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/compliance-postures/", compliancePostureController.OrgListPaged)
 	organizationRouter.GET("/compliance-postures/oscal/", compliancePostureController.OrgGetOSCAL)
 	organizationRouter.GET("/compliance-postures/stats/", compliancePostureController.OrgStats)

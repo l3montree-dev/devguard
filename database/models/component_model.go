@@ -310,6 +310,7 @@ type ComponentOccurrence struct {
 	AssetName             string    `json:"assetName" gorm:"column:asset_name"`
 	AssetSlug             string    `json:"assetSlug" gorm:"column:asset_slug"`
 	AssetVersionName      string    `json:"assetVersionName" gorm:"column:asset_version_name"`
+	AssetVersionSlug      string    `json:"assetVersionSlug" gorm:"column:asset_version_slug"`
 	ArtifactName          *string   `json:"artifactName" gorm:"column:artifact_name"`
 	ArtifactAssetVersion  *string   `json:"artifactAssetVersion" gorm:"column:artifact_asset_version_name"`
 }

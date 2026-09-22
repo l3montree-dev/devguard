@@ -79,4 +79,5 @@ type ComponentOccurrenceDTO struct {
 	ComponentVersion      *string `json:"componentVersion"`
 	ArtifactName          *string `json:"artifactName"`
 	ArtifactAssetVersion  *string `json:"artifactAssetVersion"`
+	AssetVersionSlug      string  `json:"assetVersionSlug"`
 }
