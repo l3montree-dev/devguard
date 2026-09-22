@@ -868,20 +868,26 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *
 }
 
 func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependencyVulns []models.DependencyVuln, artifactName, assetVersionName string, asset models.Asset) error {
-	existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersionName, asset.ID)
+	existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersionName, asset.ID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return err
 	}
 
-	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetNotFixedDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, asset.ID)
+	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+
+	// only newly discovered vulns are matched against other branches, so restrict the query to their signatures
+	newlyDiscoveredSignatures := make([]int64, len(diff.NewlyDiscovered))
+	for i := range diff.NewlyDiscovered {
+		newlyDiscoveredSignatures[i] = utils.HashToInt64(diff.NewlyDiscovered[i].CalculateAssetVersionIndependentHash())
+	}
+
+	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, asset.ID, newlyDiscoveredSignatures)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return err
 	}
 
-	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls, err := runner.fetchPurlsInMultipleSBOMs(ctx, asset.ID, assetVersionName, artifactName)
@@ -961,7 +967,9 @@ func (runner *DaemonRunner) DetectedDependencyVulns(ctx context.Context, tx pgx.
 	for i := range dependencyVulns {
 		depth := max(len(dependencyVulns[i].VulnerabilityPath), 1)
 		riskReport := vulndb.RawRisk(dependencyVulns[i].CVE, asset.Environmental, depth)
-		events[i] = models.NewDetectedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, riskReport, artifactName, false, userAgent)
+		events[i] = models.NewDetectedEvent(dependencyVulns[i].CalculateHash(), dtos.VulnTypeDependencyVuln, userID, false, userAgent)
+		dependencyVulns[i].SetRawRiskAssessment(riskReport.Risk)
+		dependencyVulns[i].RiskRecalculatedAt = time.Now()
 		statemachine.Apply(&dependencyVulns[i], events[i])
 	}
 
@@ -1018,14 +1026,14 @@ func copyDependencyVulns(ctx context.Context, tx pgx.Tx, vulns []models.Dependen
 
 func copyVulnEvents(ctx context.Context, tx pgx.Tx, events []models.VulnEvent) error {
 	now := time.Now()
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"vuln_events"}, []string{"created_at", "type", "user_id", "justification", "mechanical_justification", "arbitrary_json_data", "original_asset_version_name", "created_by_vex_rule", "dependency_vuln_id", "user_agent", "vex_rule_id", "asset_signature"}, pgx.CopyFromSlice(len(events), func(i int) ([]any, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"vuln_events"}, []string{"created_at", "type", "user_id", "justification", "mechanical_justification", "original_asset_version_name", "created_by_vex_rule", "dependency_vuln_id", "user_agent", "vex_rule_id", "asset_signature"}, pgx.CopyFromSlice(len(events), func(i int) ([]any, error) {
 		ev := events[i]
 		// events copied from other branches keep their original timestamp
 		createdAt := ev.CreatedAt
 		if createdAt.IsZero() {
 			createdAt = now
 		}
-		return []any{createdAt, string(ev.Type), ev.UserID, ev.Justification, string(ev.MechanicalJustification), ev.ArbitraryJSONData, ev.OriginalAssetVersionName, ev.CreatedByVexRule, ev.DependencyVulnID, ev.UserAgent, ev.VexRuleID, ev.AssetSignature}, nil
+		return []any{createdAt, string(ev.Type), ev.UserID, ev.Justification, string(ev.MechanicalJustification), ev.OriginalAssetVersionName, ev.CreatedByVexRule, ev.DependencyVulnID, ev.UserAgent, ev.VexRuleID, ev.AssetSignature}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy vuln events: %w", err)

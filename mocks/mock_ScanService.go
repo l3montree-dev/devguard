@@ -495,7 +495,6 @@ func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
-<<<<<<< HEAD
 // HandleScanResultForVulns provides a mock function for the type ScanService
 func (_mock *ScanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
@@ -555,12 +554,73 @@ type ScanService_HandleScanResultForVulns_Call struct {
 //   - forest normalize.MerkleForest
 //   - dependencyVulns []models.DependencyVuln
 //   - asset models.Asset
-func (_e *ScanService_Expecter) HandleScanResultForVulns(ctx interface{}, tx interface{}, userID interface{}, userAgent interface{}, artifactName interface{}, assetVersion interface{}, forest interface{}, dependencyVulns interface{}, asset interface{}) *ScanService_HandleScanResultForVulns_Call {
+func (_e *ScanService_Expecter) HandleScanResultForVulns(ctx any, tx any, userID any, userAgent any, artifactName any, assetVersion any, forest any, dependencyVulns any, asset any) *ScanService_HandleScanResultForVulns_Call {
 	return &ScanService_HandleScanResultForVulns_Call{Call: _e.mock.On("HandleScanResultForVulns", ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)}
 }
 
 func (_c *ScanService_HandleScanResultForVulns_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset)) *ScanService_HandleScanResultForVulns_Call {
-=======
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 *string
+		if args[3] != nil {
+			arg3 = args[3].(*string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 *models.AssetVersion
+		if args[5] != nil {
+			arg5 = args[5].(*models.AssetVersion)
+		}
+		var arg6 normalize.MerkleForest
+		if args[6] != nil {
+			arg6 = args[6].(normalize.MerkleForest)
+		}
+		var arg7 []models.DependencyVuln
+		if args[7] != nil {
+			arg7 = args[7].([]models.DependencyVuln)
+		}
+		var arg8 models.Asset
+		if args[8] != nil {
+			arg8 = args[8].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+			arg8,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_HandleScanResultForVulns_Call) Return(dependencyVulns1 []models.DependencyVuln, dependencyVulns2 []models.DependencyVuln, dependencyVulns3 []models.DependencyVuln, err error) *ScanService_HandleScanResultForVulns_Call {
+	_c.Call.Return(dependencyVulns1, dependencyVulns2, dependencyVulns3, err)
+	return _c
+}
+
+func (_c *ScanService_HandleScanResultForVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResultForVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IngestVEXRules provides a mock function for the type ScanService
 func (_mock *ScanService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
 	ret := _mock.Called(ctx, tx, asset, rules)
@@ -593,7 +653,6 @@ func (_e *ScanService_Expecter) IngestVEXRules(ctx any, tx any, asset any, rules
 }
 
 func (_c *ScanService_IngestVEXRules_Call) Run(run func(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule)) *ScanService_IngestVEXRules_Call {
->>>>>>> origin/main
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -603,35 +662,6 @@ func (_c *ScanService_IngestVEXRules_Call) Run(run func(ctx context.Context, tx 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-<<<<<<< HEAD
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 *string
-		if args[3] != nil {
-			arg3 = args[3].(*string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		var arg5 *models.AssetVersion
-		if args[5] != nil {
-			arg5 = args[5].(*models.AssetVersion)
-		}
-		var arg6 normalize.MerkleForest
-		if args[6] != nil {
-			arg6 = args[6].(normalize.MerkleForest)
-		}
-		var arg7 []models.DependencyVuln
-		if args[7] != nil {
-			arg7 = args[7].([]models.DependencyVuln)
-		}
-		var arg8 models.Asset
-		if args[8] != nil {
-			arg8 = args[8].(models.Asset)
-=======
 		var arg2 models.Asset
 		if args[2] != nil {
 			arg2 = args[2].(models.Asset)
@@ -639,34 +669,17 @@ func (_c *ScanService_IngestVEXRules_Call) Run(run func(ctx context.Context, tx 
 		var arg3 []models.VEXRule
 		if args[3] != nil {
 			arg3 = args[3].([]models.VEXRule)
->>>>>>> origin/main
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-<<<<<<< HEAD
-			arg4,
-			arg5,
-			arg6,
-			arg7,
-			arg8,
-=======
->>>>>>> origin/main
 		)
 	})
 	return _c
 }
 
-<<<<<<< HEAD
-func (_c *ScanService_HandleScanResultForVulns_Call) Return(dependencyVulns1 []models.DependencyVuln, dependencyVulns2 []models.DependencyVuln, dependencyVulns3 []models.DependencyVuln, err error) *ScanService_HandleScanResultForVulns_Call {
-	_c.Call.Return(dependencyVulns1, dependencyVulns2, dependencyVulns3, err)
-	return _c
-}
-
-func (_c *ScanService_HandleScanResultForVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResultForVulns_Call {
-=======
 func (_c *ScanService_IngestVEXRules_Call) Return(err error) *ScanService_IngestVEXRules_Call {
 	_c.Call.Return(err)
 	return _c
@@ -742,7 +755,6 @@ func (_c *ScanService_IngestVexFromExternalReferences_Call) Return(err error) *S
 }
 
 func (_c *ScanService_IngestVexFromExternalReferences_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset) error) *ScanService_IngestVexFromExternalReferences_Call {
->>>>>>> origin/main
 	_c.Call.Return(run)
 	return _c
 }

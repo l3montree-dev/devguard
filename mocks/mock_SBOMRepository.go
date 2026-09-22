@@ -1328,11 +1328,7 @@ type SBOMRepository_LoadTree_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - rootSubtreeHash uuid.UUID
-<<<<<<< HEAD
-func (_e *SBOMRepository_Expecter) LoadTree(ctx interface{}, tx interface{}, rootSubtreeHash interface{}) *SBOMRepository_LoadTree_Call {
-=======
 func (_e *SBOMRepository_Expecter) LoadTree(ctx any, tx any, rootSubtreeHash any) *SBOMRepository_LoadTree_Call {
->>>>>>> origin/main
 	return &SBOMRepository_LoadTree_Call{Call: _e.mock.On("LoadTree", ctx, tx, rootSubtreeHash)}
 }
 

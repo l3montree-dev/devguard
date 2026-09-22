@@ -357,7 +357,7 @@ type DaemonRunner_StartBenchmarkJobs_Call struct {
 // StartBenchmarkJobs is a helper method to define mock.On call
 //   - ctx context.Context
 //   - stages []string
-func (_e *DaemonRunner_Expecter) StartBenchmarkJobs(ctx interface{}, stages interface{}) *DaemonRunner_StartBenchmarkJobs_Call {
+func (_e *DaemonRunner_Expecter) StartBenchmarkJobs(ctx any, stages any) *DaemonRunner_StartBenchmarkJobs_Call {
 	return &DaemonRunner_StartBenchmarkJobs_Call{Call: _e.mock.On("StartBenchmarkJobs", ctx, stages)}
 }
 
