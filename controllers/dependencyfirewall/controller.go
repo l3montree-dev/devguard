@@ -247,6 +247,7 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	proxies["npm"] = registryURL + "/" + secret.String() + "/npm/"
 	proxies["go"] = registryURL + "/" + secret.String() + "/go/"
 	proxies["pypi"] = registryURL + "/" + secret.String() + "/pypi/simple/"
+	proxies["maven"] = registryURL + "/" + secret.String() + "/maven/"
 	// OCI: images are pulled via the root /v2/ endpoint so standard Docker clients work.
 	// Usage: docker pull <ociPrefix>/docker.io/library/nginx:latest
 	ociBaseURL := os.Getenv("OCI_REGISTRY_BASE_URL")
