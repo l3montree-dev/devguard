@@ -19,10 +19,19 @@ func NewComplianceComponentRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *ComplianceComponentRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &ComplianceComponentRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -77,7 +86,7 @@ type ComplianceComponentRepository_CreateStatement_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - statement models.ComplianceComponentImplementsControlStatement
-func (_e *ComplianceComponentRepository_Expecter) CreateStatement(ctx interface{}, tx interface{}, statement interface{}) *ComplianceComponentRepository_CreateStatement_Call {
+func (_e *ComplianceComponentRepository_Expecter) CreateStatement(ctx any, tx any, statement any) *ComplianceComponentRepository_CreateStatement_Call {
 	return &ComplianceComponentRepository_CreateStatement_Call{Call: _e.mock.On("CreateStatement", ctx, tx, statement)}
 }
 
@@ -151,7 +160,7 @@ type ComplianceComponentRepository_DeleteStatement_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - statementID uuid.UUID
-func (_e *ComplianceComponentRepository_Expecter) DeleteStatement(ctx interface{}, tx interface{}, statementID interface{}) *ComplianceComponentRepository_DeleteStatement_Call {
+func (_e *ComplianceComponentRepository_Expecter) DeleteStatement(ctx any, tx any, statementID any) *ComplianceComponentRepository_DeleteStatement_Call {
 	return &ComplianceComponentRepository_DeleteStatement_Call{Call: _e.mock.On("DeleteStatement", ctx, tx, statementID)}
 }
 
@@ -225,7 +234,7 @@ type ComplianceComponentRepository_GetDetails_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *ComplianceComponentRepository_Expecter) GetDetails(ctx interface{}, tx interface{}, id interface{}) *ComplianceComponentRepository_GetDetails_Call {
+func (_e *ComplianceComponentRepository_Expecter) GetDetails(ctx any, tx any, id any) *ComplianceComponentRepository_GetDetails_Call {
 	return &ComplianceComponentRepository_GetDetails_Call{Call: _e.mock.On("GetDetails", ctx, tx, id)}
 }
 
@@ -299,7 +308,7 @@ type ComplianceComponentRepository_ListAll_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - filter []shared.FilterQuery
-func (_e *ComplianceComponentRepository_Expecter) ListAll(ctx interface{}, tx interface{}, filter interface{}) *ComplianceComponentRepository_ListAll_Call {
+func (_e *ComplianceComponentRepository_Expecter) ListAll(ctx any, tx any, filter any) *ComplianceComponentRepository_ListAll_Call {
 	return &ComplianceComponentRepository_ListAll_Call{Call: _e.mock.On("ListAll", ctx, tx, filter)}
 }
 
@@ -375,7 +384,7 @@ type ComplianceComponentRepository_UpdateStatement_Call struct {
 //   - statementID uuid.UUID
 //   - implementationStatus string
 //   - description string
-func (_e *ComplianceComponentRepository_Expecter) UpdateStatement(ctx interface{}, tx interface{}, statementID interface{}, implementationStatus interface{}, description interface{}) *ComplianceComponentRepository_UpdateStatement_Call {
+func (_e *ComplianceComponentRepository_Expecter) UpdateStatement(ctx any, tx any, statementID any, implementationStatus any, description any) *ComplianceComponentRepository_UpdateStatement_Call {
 	return &ComplianceComponentRepository_UpdateStatement_Call{Call: _e.mock.On("UpdateStatement", ctx, tx, statementID, implementationStatus, description)}
 }
 

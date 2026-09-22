@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/sync/singleflight"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -360,4 +361,75 @@ func (s externalEntityProviderService) revokeAccessForRemovedAssets(ctx context.
 			}
 		}
 	}
+}
+
+func (s externalEntityProviderService) CollectGarbage(ctx context.Context) error {
+	// we need to inspect which project and which asset does not have any members anymore - if its part of an external entity provider
+	return s.assetRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
+		// WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
+		// those are org scoped roles - project roles have the format project::<project_id>|role::<role_name> and asset roles have the format asset::<asset_id>|role::<role_name>
+		// thus if we find an org admin or an org owner, those won't keep the project or asset alive
+
+		assetsDeleted := tx.Exec(`
+WITH RECURSIVE closure AS (
+    SELECT v0 AS start_user, v2 AS domain, v1 AS reached
+    FROM casbin_rule
+    WHERE ptype = 'g' AND v0 LIKE 'user::%'
+    UNION
+    SELECT c.start_user, c.domain, cr.v1
+    FROM closure c
+    JOIN casbin_rule cr ON cr.ptype = 'g' AND cr.v0 = c.reached AND cr.v2 = c.domain
+    WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
+),
+reachable_assets AS (
+    SELECT DISTINCT domain, (regexp_match(reached, '^asset::(.+)\|role::(member|admin)$'))[1] AS asset_id
+    FROM closure
+    WHERE reached LIKE 'asset::%|role::member' OR reached LIKE 'asset::%|role::admin'
+)
+DELETE FROM assets a
+USING projects p
+WHERE p.id = a.project_id
+AND a.external_entity_provider_id IS NOT NULL
+AND NOT EXISTS (
+    SELECT 1 FROM reachable_assets ra
+    WHERE ra.domain = 'domain::' || p.organization_id
+      AND ra.asset_id = a.id::text
+);
+		`)
+		if assetsDeleted.Error != nil {
+			return assetsDeleted.Error
+		}
+
+		projectsDeleted := tx.Exec(`
+WITH RECURSIVE closure AS (
+    SELECT v0 AS start_user, v2 AS domain, v1 AS reached
+    FROM casbin_rule
+    WHERE ptype = 'g' AND v0 LIKE 'user::%'
+    UNION
+    SELECT c.start_user, c.domain, cr.v1
+    FROM closure c
+    JOIN casbin_rule cr ON cr.ptype = 'g' AND cr.v0 = c.reached AND cr.v2 = c.domain
+    WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
+),
+reachable_projects AS (
+    SELECT DISTINCT domain, (regexp_match(reached, '^project::(.+)\|role::(member|admin)$'))[1] AS project_id
+    FROM closure
+    WHERE reached LIKE 'project::%|role::member' OR reached LIKE 'project::%|role::admin'
+)
+DELETE FROM projects p
+WHERE p.external_entity_provider_id IS NOT NULL
+AND NOT EXISTS (
+    SELECT 1 FROM reachable_projects rp
+    WHERE rp.domain = 'domain::' || p.organization_id
+      AND rp.project_id = p.id::text
+);
+		`)
+		if projectsDeleted.Error != nil {
+			return projectsDeleted.Error
+		}
+
+		slog.Info("collected garbage", "assetsDeleted", assetsDeleted.RowsAffected, "projectsDeleted", projectsDeleted.RowsAffected)
+
+		return nil
+	})
 }

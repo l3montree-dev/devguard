@@ -2,6 +2,90 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.14.2] - 2026-09-18
+
+### Changed
+
+- **`arbitraryJSONData` removed from vulnerability events** — the column held a free-form JSON blob per event that only ever duplicated data already stored on the vulnerability itself (risk report, scanner IDs, artifact names, ticket ID/URL, final license decision, compliance component title). It was the widest column of `vuln_events`, the largest table in DevGuard. It is now gone from the model, the DTO and the API responses, and the event constructors no longer take the values that fed it. This is a breaking API change: `arbitraryJSONData` is no longer part of `VulnEventDTO`
+  - The column is dropped by migration `20260917123342`, followed by a `VACUUM FULL public.vuln_events` to actually reclaim the space. Statements like this cannot run inside the migration transaction, so migrations now support post-migration statements, executed once after the migration of that version has been committed — a failure there is logged and leaves nothing but unreclaimed space behind
+  - Risk assessment and final license decision are set on the vulnerability by the caller before the event is applied, instead of being parsed back out of the event in `statemachine.Apply`
+  - Branch diffing carries both values over explicitly: a vulnerability detected on a new branch takes its risk from the matching vulnerability on another branch, and a license risk takes the decision from the branch with the most recent license decision event
+- **`/projects/{project}/components/` sped up** — `SearchComponentOccurrencesByProject` now walks the merkle tree keyed by distinct root hash rather than per `sboms` row, so asset versions and artifacts sharing an identical tree expand that subtree once instead of once per row, and the `sboms` rows are joined back afterwards. The total is taken from a window count over the same CTE instead of running the recursive walk a second time, the `LIKE` filter is omitted entirely when no search string is given, and paging is now deterministic (`component_id, asset_version_name, artifact_name, asset_id`)
+- **`/vulndb/cve-ecosystem-distribution/` sped up and its counts corrected** — both queries now cut the ecosystem to its reported prefix and deduplicate inside SQL rather than summing per-ecosystem counts in Go. A CVE listed under both `debian:11` and `debian:12` counted twice before and counts once now, and malicious packages are counted per package instead of per `malicious_affected_components` row. Ecosystem-less rows no longer produce an empty-string bucket
+
+## [v1.14.1] - 2026-09-17
+
+### Added
+
+- Log duration analysis in the `devguard-maint` CLI
+
+### Changed
+
+- **Vulnerability event feed query reworked** — `ReadEventsByAssetIDAndAssetVersionName` now drives the query from the vuln tables via `UNION ALL` instead of an `OR`-ed `ANY (...)` filter that seq-scanned `vuln_events`. The feed also covers license risks, compliance postures and advisories, pages deterministically (`created_at DESC, id DESC`), and counts separately from the page
+
+### Fixed
+
+- **Self-healing VEX rules** — a rule is re-applied when the vulnerability is no longer in the state the rule dictates, and a failed state or event write now aborts the scan instead of leaving vulns and their event history out of sync
+
+## [v1.14.0] - 2026-09-17
+
+### Added
+
+- **SBOM Merkle tree storage** — SBOMs are now stored and compared as a Merkle tree (nodes/edges tables, UUID-keyed hashes) instead of the old flat `component_dependencies` table, letting DevGuard detect unchanged subtrees and diff SBOMs without recomputing the whole graph. This includes a CycloneDX-to-Merkle-tree transformer, a new SBOM repository, transactional tree saves, a hash migration that backfills existing data into the new edges/nodes tables, and an index tuned for upward tree traversal (`idx_sbom_merkle_edges_child`, extended with `subtree_hash`). SBOM garbage collection now runs as a background job, and the old `component_dependencies` table has been dropped now that everything reads from the tree
+- **External entity garbage collection** — a new background daemon job deletes projects and assets belonging to external entity providers once they no longer have any member, cleaning up orphaned data left behind
+
+### Changed
+
+- **Major CVE query performance overhaul** — several hot database paths used for vulnerability scanning and listing were reworked to make better use of indices:
+  - Redundant shadow indexes were dropped and CVE pagination `Count` queries fixed
+  - The `idx_cve_affected_component_cve_id` index is now a btree index (was a hash index), matching the `IN` queries run against it
+  - A new ecosystem index on affected components lets that query avoid a broader scan, and the query itself no longer uses `ILIKE`
+  - New indices on `cves.date_published` and `cves.cvss` speed up paginated/sorted CVE listing
+  - `purl_comparer` now issues `UNION ALL` queries instead of `OR`-ed conditions, letting Postgres use indices per branch instead of falling back to a sequential scan
+- **Scan hot path optimized** — dependency vulnerability scanning no longer preloads all vuln events, and now only fetches other vulnerabilities matching the asset signature instead of the whole set, reducing memory and query cost per scan
+- `attachGroupEvent` moved to a repository-scoped method
+- Ticket state is only resolved when the affected dependency vulnerabilities array is non-empty, avoiding unnecessary provider calls
+- OTel metrics now trim the span name option in SQL
+- Removed the unused `componentId` parameter from the SBOM merkle tree build path
+
+### Fixed
+
+- **Purl epoch normalization for deb and rpm packages** — RPM packages are now included when prepending the epoch to a purl version, and a missing epoch now defaults to `0` for both deb and rpm purls, fixing missed vulnerability matches
+- Fixed a malformed database query caused by a missing `pg.Array` call in the compliance posture and dependency vuln repositories
+- Fixed project session permission logic incorrectly applied to non-project objects
+- Fixed wrong image tags being used in the `devguard-maint` CLI
+- Fixed the merge of supplementary SBOMs creating phantom components
+
+## [v1.13.7] - 2026-09-11
+
+### Added
+- Add an `--offline` flag to the `attest` command in `devguard-scanner`, allowing attestations to be generated without writing/pushing results.
+
+
+## [v1.13.6] - 2026-09-08
+
+### Changed
+
+- **Trailing-slash normalization now covers the OCI registry routes too** — `addTrailingSlash` exempted every `/v2/` path, because the OCI Distribution Spec routes were registered without a trailing slash and appending one made them stop matching. Those routes now carry the normalising slash like every other route in DevGuard, so the special case is gone and all requests take one path through the middleware. Image pulls are unaffected: the OCI proxy rebuilds the upstream request path from its route parameters, so the appended slash is never forwarded to docker.io, ghcr.io or quay.io
+- Regression coverage for the percent-encoded path fix shipped in v1.13.5 — `ResourceFetchMiddleware` is now tested against an organization slug carrying an encoded `@` (`%40test-org`), and the trailing-slash routing test exercises `/organizations/%40opencode` rather than an unescaped slug
+
+## [v1.13.5] - 2026-09-08
+
+### Fixed
+
+- **Routing of percent-encoded paths** — requests whose path carried a `%xx` escape were not matched against the intended route and fell through to a broader-scoped one, answering `403` or `404`. Echo's `AddTrailingSlash` middleware appends the normalising slash to `URL.Path` only, while echo's router matches on `URL.RawPath` whenever that field is set — which `net/url` does for every escaped path. DevGuard now normalises both fields. Most visibly this made organizations whose slug starts with `@` (the reserved external-entity-provider orgs, e.g. `/api/v1/organizations/%40opencode`) unreachable, returning a 404 in the web UI for logged-in members
+
+## [v1.13.4] - 2026-09-08
+
+### Fixed
+
+- **VEX ingest from an external SBOM URL** — the ingest path was reworked and moved into `scan_service`, fixing a bug where VEX statements attached to externally-hosted SBOMs weren't picked up during scanning
+- GitLab CI no longer builds Kratos and PostgreSQL images for `main`, reducing pipeline time
+
+### Changed
+
+- `python-tools` dependencies updated (`uv.lock` now includes `gitpython==3.1.59`)
+
 ## [v1.13.3] - 2026-09-02
 
 ### Added

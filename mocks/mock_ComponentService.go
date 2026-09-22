@@ -18,10 +18,19 @@ func NewComponentService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *ComponentService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &ComponentService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -73,7 +82,7 @@ type ComponentService_FetchComponentProject_Call struct {
 // FetchComponentProject is a helper method to define mock.On call
 //   - ctx context.Context
 //   - component models.Component
-func (_e *ComponentService_Expecter) FetchComponentProject(ctx interface{}, component interface{}) *ComponentService_FetchComponentProject_Call {
+func (_e *ComponentService_Expecter) FetchComponentProject(ctx any, component any) *ComponentService_FetchComponentProject_Call {
 	return &ComponentService_FetchComponentProject_Call{Call: _e.mock.On("FetchComponentProject", ctx, component)}
 }
 
@@ -144,7 +153,7 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 //   - assetVersion models.AssetVersion
 //   - artifactName *string
 //   - forceRefresh bool
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(ctx interface{}, tx interface{}, assetVersion interface{}, artifactName interface{}, forceRefresh interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(ctx any, tx any, assetVersion any, artifactName any, forceRefresh any) *ComponentService_GetAndSaveLicenseInformation_Call {
 	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", ctx, tx, assetVersion, artifactName, forceRefresh)}
 }
 
@@ -225,7 +234,7 @@ type ComponentService_GetLicense_Call struct {
 // GetLicense is a helper method to define mock.On call
 //   - ctx context.Context
 //   - component models.Component
-func (_e *ComponentService_Expecter) GetLicense(ctx interface{}, component interface{}) *ComponentService_GetLicense_Call {
+func (_e *ComponentService_Expecter) GetLicense(ctx any, component any) *ComponentService_GetLicense_Call {
 	return &ComponentService_GetLicense_Call{Call: _e.mock.On("GetLicense", ctx, component)}
 }
 
@@ -271,7 +280,7 @@ type ComponentService_RefreshComponentProjectInformation_Call struct {
 // RefreshComponentProjectInformation is a helper method to define mock.On call
 //   - ctx context.Context
 //   - project models.ComponentProject
-func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(ctx interface{}, project interface{}) *ComponentService_RefreshComponentProjectInformation_Call {
+func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(ctx any, project any) *ComponentService_RefreshComponentProjectInformation_Call {
 	return &ComponentService_RefreshComponentProjectInformation_Call{Call: _e.mock.On("RefreshComponentProjectInformation", ctx, project)}
 }
 

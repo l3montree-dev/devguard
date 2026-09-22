@@ -18,10 +18,19 @@ func NewCVERelationshipService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *CVERelationshipService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &CVERelationshipService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -76,7 +85,7 @@ type CVERelationshipService_CreateAliasRelationshipMapBatch_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - cveIDs []string
-func (_e *CVERelationshipService_Expecter) CreateAliasRelationshipMapBatch(ctx interface{}, tx interface{}, cveIDs interface{}) *CVERelationshipService_CreateAliasRelationshipMapBatch_Call {
+func (_e *CVERelationshipService_Expecter) CreateAliasRelationshipMapBatch(ctx any, tx any, cveIDs any) *CVERelationshipService_CreateAliasRelationshipMapBatch_Call {
 	return &CVERelationshipService_CreateAliasRelationshipMapBatch_Call{Call: _e.mock.On("CreateAliasRelationshipMapBatch", ctx, tx, cveIDs)}
 }
 
@@ -140,7 +149,7 @@ type CVERelationshipService_IsAlias_Call struct {
 //   - cveSource string
 //   - cveTarget string
 //   - cveMap models.CVEMap
-func (_e *CVERelationshipService_Expecter) IsAlias(ctx interface{}, cveSource interface{}, cveTarget interface{}, cveMap interface{}) *CVERelationshipService_IsAlias_Call {
+func (_e *CVERelationshipService_Expecter) IsAlias(ctx any, cveSource any, cveTarget any, cveMap any) *CVERelationshipService_IsAlias_Call {
 	return &CVERelationshipService_IsAlias_Call{Call: _e.mock.On("IsAlias", ctx, cveSource, cveTarget, cveMap)}
 }
 

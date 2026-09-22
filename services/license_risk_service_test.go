@@ -18,6 +18,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -69,6 +70,41 @@ func TestDeduplicateLicenseRisksByID(t *testing.T) {
 
 	t.Run("handles empty input", func(t *testing.T) {
 		assert.Empty(t, deduplicateLicenseRisksByID(nil))
+	})
+}
+
+func TestDiffLicenseRisksBetweenBranches(t *testing.T) {
+	assetID := uuid.New()
+
+	t.Run("takes the final license decision from the branch with the most recent license decision", func(t *testing.T) {
+		mainRisk := newLicenseRisk("pkg:npm/a@1.0.0", "main", assetID)
+		mainRisk.FinalLicenseDecision = new("MIT")
+		mainRisk.Events = []models.VulnEvent{{Type: dtos.EventTypeLicenseDecision, CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}}
+
+		developRisk := newLicenseRisk("pkg:npm/a@1.0.0", "develop", assetID)
+		developRisk.FinalLicenseDecision = new("Apache-2.0")
+		developRisk.Events = []models.VulnEvent{{Type: dtos.EventTypeLicenseDecision, CreatedAt: time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)}}
+
+		_, existingOnOtherBranch, _ := diffLicenseRisksBetweenBranches(
+			[]models.LicenseRisk{newLicenseRisk("pkg:npm/a@1.0.0", "feature", assetID)},
+			[]models.LicenseRisk{mainRisk, developRisk},
+		)
+
+		assert.Len(t, existingOnOtherBranch, 1)
+		assert.Equal(t, "Apache-2.0", *existingOnOtherBranch[0].FinalLicenseDecision)
+	})
+
+	t.Run("leaves the final license decision empty if no other branch made a decision", func(t *testing.T) {
+		mainRisk := newLicenseRisk("pkg:npm/a@1.0.0", "main", assetID)
+		mainRisk.Events = []models.VulnEvent{{Type: dtos.EventTypeDetected}}
+
+		_, existingOnOtherBranch, _ := diffLicenseRisksBetweenBranches(
+			[]models.LicenseRisk{newLicenseRisk("pkg:npm/a@1.0.0", "feature", assetID)},
+			[]models.LicenseRisk{mainRisk},
+		)
+
+		assert.Len(t, existingOnOtherBranch, 1)
+		assert.Nil(t, existingOnOtherBranch[0].FinalLicenseDecision)
 	})
 }
 

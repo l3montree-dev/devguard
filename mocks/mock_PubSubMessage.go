@@ -15,10 +15,19 @@ func NewPubSubMessage(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *PubSubMessage {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &PubSubMessage{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -116,8 +125,8 @@ func (_c *PubSubMessage_GetPayload_Call) Run(run func()) *PubSubMessage_GetPaylo
 	return _c
 }
 
-func (_c *PubSubMessage_GetPayload_Call) Return(stringToV map[string]any) *PubSubMessage_GetPayload_Call {
-	_c.Call.Return(stringToV)
+func (_c *PubSubMessage_GetPayload_Call) Return(stringToAnyMoqParam map[string]any) *PubSubMessage_GetPayload_Call {
+	_c.Call.Return(stringToAnyMoqParam)
 	return _c
 }
 

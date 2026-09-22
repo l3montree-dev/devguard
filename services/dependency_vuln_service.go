@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/lib/pq"
 
 	"github.com/l3montree-dev/devguard/database/models"
 
@@ -94,7 +95,7 @@ func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, userAgent)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
@@ -164,7 +165,9 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	for i, dependencyVuln := range dependencyVulns {
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
 		riskReport := vulndb.RawRisk(dependencyVuln.CVE, e, depth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, riskReport, artifactName, false, userAgent)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, false, userAgent)
+		dependencyVulns[i].SetRawRiskAssessment(riskReport.Risk)
+		dependencyVulns[i].RiskRecalculatedAt = time.Now()
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&dependencyVulns[i], ev)
 		events[i] = ev
@@ -224,6 +227,10 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 		return nil
 	}
 
+	vulnIDs := make([]string, len(vulnerabilities))
+	assetVersionNames := make([]string, len(vulnerabilities))
+	assetIDs := make([]string, len(vulnerabilities))
+
 	for i := range vulnerabilities {
 		filtered := make([]models.Artifact, 0, len(vulnerabilities[i].Artifacts))
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -232,10 +239,20 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 			}
 		}
 		vulnerabilities[i].Artifacts = filtered
-		if err := tx.Exec("DELETE FROM artifact_dependency_vulns WHERE dependency_vuln_id = ? AND artifact_artifact_name = ? AND artifact_asset_version_name = ? AND artifact_asset_id = ?",
-			vulnerabilities[i].CalculateHash(), scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID).Error; err != nil {
-			return err
-		}
+
+		vulnIDs[i] = vulnerabilities[i].CalculateHash().String()
+		assetVersionNames[i] = vulnerabilities[i].AssetVersionName
+		assetIDs[i] = vulnerabilities[i].AssetID.String()
+	}
+
+	if err := tx.Exec(`DELETE FROM artifact_dependency_vulns adv
+		USING unnest(?::uuid[], ?::text[], ?::uuid[]) AS t(dependency_vuln_id, asset_version_name, asset_id)
+		WHERE adv.dependency_vuln_id = t.dependency_vuln_id
+			AND adv.artifact_asset_version_name = t.asset_version_name
+			AND adv.artifact_asset_id = t.asset_id
+			AND adv.artifact_artifact_name = ?`,
+		pq.Array(vulnIDs), pq.Array(assetVersionNames), pq.Array(assetIDs), scannerID).Error; err != nil {
+		return err
 	}
 	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, vulnerabilities)
 	if err != nil {
@@ -261,7 +278,9 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 		newRiskAssessment := vulndb.RawRisk(dependencyVuln.CVE, env, depth)
 
 		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
-			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)
+			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification)
+			dependencyVulns[i].SetRawRiskAssessment(newRiskAssessment.Risk)
+			dependencyVulns[i].RiskRecalculatedAt = time.Now()
 			// apply the event on the dependencyVuln
 			statemachine.Apply(&dependencyVulns[i], ev)
 			events = append(events, ev)
@@ -321,17 +340,15 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 	case dtos.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames(), false, userAgent)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, false, userAgent)
 	case dtos.EventTypeDetected:
-		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dtos.RiskCalculationReport{
-			Risk: utils.OrDefault(dependencyVuln.RiskAssessment, 0),
-		}, "", false, userAgent)
+		ev = models.NewDetectedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, false, userAgent)
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:
 		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeFixed:
-		ev = models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames(), false, userAgent)
+		ev = models.NewFixedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, false, userAgent)
 	}
 
 	// Apply the event to the original vuln

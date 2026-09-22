@@ -17,10 +17,19 @@ func NewPubSubBroker(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *PubSubBroker {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &PubSubBroker{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -107,7 +116,7 @@ type PubSubBroker_Publish_Call struct {
 // Publish is a helper method to define mock.On call
 //   - ctx context.Context
 //   - message shared.PubSubMessage
-func (_e *PubSubBroker_Expecter) Publish(ctx interface{}, message interface{}) *PubSubBroker_Publish_Call {
+func (_e *PubSubBroker_Expecter) Publish(ctx any, message any) *PubSubBroker_Publish_Call {
 	return &PubSubBroker_Publish_Call{Call: _e.mock.On("Publish", ctx, message)}
 }
 
@@ -174,7 +183,7 @@ type PubSubBroker_Subscribe_Call struct {
 
 // Subscribe is a helper method to define mock.On call
 //   - topic shared.PubSubChannel
-func (_e *PubSubBroker_Expecter) Subscribe(topic interface{}) *PubSubBroker_Subscribe_Call {
+func (_e *PubSubBroker_Expecter) Subscribe(topic any) *PubSubBroker_Subscribe_Call {
 	return &PubSubBroker_Subscribe_Call{Call: _e.mock.On("Subscribe", topic)}
 }
 
@@ -191,8 +200,8 @@ func (_c *PubSubBroker_Subscribe_Call) Run(run func(topic shared.PubSubChannel))
 	return _c
 }
 
-func (_c *PubSubBroker_Subscribe_Call) Return(stringToVCh <-chan map[string]any, err error) *PubSubBroker_Subscribe_Call {
-	_c.Call.Return(stringToVCh, err)
+func (_c *PubSubBroker_Subscribe_Call) Return(stringToAnyMoqParamCh <-chan map[string]any, err error) *PubSubBroker_Subscribe_Call {
+	_c.Call.Return(stringToAnyMoqParamCh, err)
 	return _c
 }
 

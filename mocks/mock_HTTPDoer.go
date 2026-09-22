@@ -16,10 +16,19 @@ func NewHTTPDoer(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *HTTPDoer {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &HTTPDoer{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -72,7 +81,7 @@ type HTTPDoer_Do_Call struct {
 
 // Do is a helper method to define mock.On call
 //   - req *http.Request
-func (_e *HTTPDoer_Expecter) Do(req interface{}) *HTTPDoer_Do_Call {
+func (_e *HTTPDoer_Expecter) Do(req any) *HTTPDoer_Do_Call {
 	return &HTTPDoer_Do_Call{Call: _e.mock.On("Do", req)}
 }
 

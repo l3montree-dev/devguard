@@ -17,10 +17,19 @@ func NewPublicClient(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *PublicClient {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &PublicClient{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -72,7 +81,7 @@ type PublicClient_GetIdentityFromCookie_Call struct {
 // GetIdentityFromCookie is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cookie string
-func (_e *PublicClient_Expecter) GetIdentityFromCookie(ctx interface{}, cookie interface{}) *PublicClient_GetIdentityFromCookie_Call {
+func (_e *PublicClient_Expecter) GetIdentityFromCookie(ctx any, cookie any) *PublicClient_GetIdentityFromCookie_Call {
 	return &PublicClient_GetIdentityFromCookie_Call{Call: _e.mock.On("GetIdentityFromCookie", ctx, cookie)}
 }
 

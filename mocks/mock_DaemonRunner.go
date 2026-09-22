@@ -17,10 +17,19 @@ func NewDaemonRunner(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *DaemonRunner {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &DaemonRunner{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -38,6 +47,108 @@ func (_m *DaemonRunner) EXPECT() *DaemonRunner_Expecter {
 	return &DaemonRunner_Expecter{mock: &_m.Mock}
 }
 
+// CollectExternalEntityGarbage provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CollectExternalEntityGarbage")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_CollectExternalEntityGarbage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CollectExternalEntityGarbage'
+type DaemonRunner_CollectExternalEntityGarbage_Call struct {
+	*mock.Call
+}
+
+// CollectExternalEntityGarbage is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) CollectExternalEntityGarbage(ctx any) *DaemonRunner_CollectExternalEntityGarbage_Call {
+	return &DaemonRunner_CollectExternalEntityGarbage_Call{Call: _e.mock.On("CollectExternalEntityGarbage", ctx)}
+}
+
+func (_c *DaemonRunner_CollectExternalEntityGarbage_Call) Run(run func(ctx context.Context)) *DaemonRunner_CollectExternalEntityGarbage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_CollectExternalEntityGarbage_Call) Return(err error) *DaemonRunner_CollectExternalEntityGarbage_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_CollectExternalEntityGarbage_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_CollectExternalEntityGarbage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CollectSBOMGarbage provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) CollectSBOMGarbage(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CollectSBOMGarbage")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_CollectSBOMGarbage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CollectSBOMGarbage'
+type DaemonRunner_CollectSBOMGarbage_Call struct {
+	*mock.Call
+}
+
+// CollectSBOMGarbage is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) CollectSBOMGarbage(ctx any) *DaemonRunner_CollectSBOMGarbage_Call {
+	return &DaemonRunner_CollectSBOMGarbage_Call{Call: _e.mock.On("CollectSBOMGarbage", ctx)}
+}
+
+func (_c *DaemonRunner_CollectSBOMGarbage_Call) Run(run func(ctx context.Context)) *DaemonRunner_CollectSBOMGarbage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_CollectSBOMGarbage_Call) Return(err error) *DaemonRunner_CollectSBOMGarbage_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_CollectSBOMGarbage_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_CollectSBOMGarbage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RunAssetPipeline provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) RunAssetPipeline(ctx context.Context, forceAll bool) {
 	_mock.Called(ctx, forceAll)
@@ -52,7 +163,7 @@ type DaemonRunner_RunAssetPipeline_Call struct {
 // RunAssetPipeline is a helper method to define mock.On call
 //   - ctx context.Context
 //   - forceAll bool
-func (_e *DaemonRunner_Expecter) RunAssetPipeline(ctx interface{}, forceAll interface{}) *DaemonRunner_RunAssetPipeline_Call {
+func (_e *DaemonRunner_Expecter) RunAssetPipeline(ctx any, forceAll any) *DaemonRunner_RunAssetPipeline_Call {
 	return &DaemonRunner_RunAssetPipeline_Call{Call: _e.mock.On("RunAssetPipeline", ctx, forceAll)}
 }
 
@@ -109,7 +220,7 @@ type DaemonRunner_RunDaemonPipelineForAsset_Call struct {
 // RunDaemonPipelineForAsset is a helper method to define mock.On call
 //   - ctx context.Context
 //   - assetID uuid.UUID
-func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(ctx interface{}, assetID interface{}) *DaemonRunner_RunDaemonPipelineForAsset_Call {
+func (_e *DaemonRunner_Expecter) RunDaemonPipelineForAsset(ctx any, assetID any) *DaemonRunner_RunDaemonPipelineForAsset_Call {
 	return &DaemonRunner_RunDaemonPipelineForAsset_Call{Call: _e.mock.On("RunDaemonPipelineForAsset", ctx, assetID)}
 }
 
@@ -165,7 +276,7 @@ type DaemonRunner_RunVEXRuleRecommendationDaemon_Call struct {
 
 // RunVEXRuleRecommendationDaemon is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) RunVEXRuleRecommendationDaemon(ctx interface{}) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+func (_e *DaemonRunner_Expecter) RunVEXRuleRecommendationDaemon(ctx any) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
 	return &DaemonRunner_RunVEXRuleRecommendationDaemon_Call{Call: _e.mock.On("RunVEXRuleRecommendationDaemon", ctx)}
 }
 
@@ -205,7 +316,7 @@ type DaemonRunner_Start_Call struct {
 
 // Start is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) Start(ctx interface{}) *DaemonRunner_Start_Call {
+func (_e *DaemonRunner_Expecter) Start(ctx any) *DaemonRunner_Start_Call {
 	return &DaemonRunner_Start_Call{Call: _e.mock.On("Start", ctx)}
 }
 
@@ -302,7 +413,7 @@ type DaemonRunner_UpdateFixedVersions_Call struct {
 
 // UpdateFixedVersions is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) UpdateFixedVersions(ctx interface{}) *DaemonRunner_UpdateFixedVersions_Call {
+func (_e *DaemonRunner_Expecter) UpdateFixedVersions(ctx any) *DaemonRunner_UpdateFixedVersions_Call {
 	return &DaemonRunner_UpdateFixedVersions_Call{Call: _e.mock.On("UpdateFixedVersions", ctx)}
 }
 
@@ -353,7 +464,7 @@ type DaemonRunner_UpdateOpenSourceInsightInformation_Call struct {
 
 // UpdateOpenSourceInsightInformation is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation(ctx interface{}) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
+func (_e *DaemonRunner_Expecter) UpdateOpenSourceInsightInformation(ctx any) *DaemonRunner_UpdateOpenSourceInsightInformation_Call {
 	return &DaemonRunner_UpdateOpenSourceInsightInformation_Call{Call: _e.mock.On("UpdateOpenSourceInsightInformation", ctx)}
 }
 
@@ -404,7 +515,7 @@ type DaemonRunner_UpdateVulnDB_Call struct {
 
 // UpdateVulnDB is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) UpdateVulnDB(ctx interface{}) *DaemonRunner_UpdateVulnDB_Call {
+func (_e *DaemonRunner_Expecter) UpdateVulnDB(ctx any) *DaemonRunner_UpdateVulnDB_Call {
 	return &DaemonRunner_UpdateVulnDB_Call{Call: _e.mock.On("UpdateVulnDB", ctx)}
 }
 

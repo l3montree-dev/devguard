@@ -44,11 +44,14 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 		versionInterpretation = EcosystemSpecificVersion
 		normalizedVersion = purl.Version
 
-		// For Debian packages, prepend epoch from qualifier if present
+		// For Debian packages and RPM packages, prepend epoch from qualifier if present
 		// e.g., pkg:deb/debian/git@2.47.3-0+deb13u1?epoch=1 -> "1:2.47.3-0+deb13u1"
-		if purl.Type == "deb" {
+		if purl.Type == "deb" || purl.Type == "rpm" {
 			if epoch := qualifier.Map()["epoch"]; epoch != "" {
 				normalizedVersion = epoch + ":" + normalizedVersion
+			} else {
+				// If no epoch qualifier is present, prepend "0:" to the version
+				normalizedVersion = "0:" + normalizedVersion
 			}
 		}
 	} else {

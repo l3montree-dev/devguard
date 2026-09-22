@@ -157,11 +157,20 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 		if updatedVulns, events, applyErr = ApplyVEXRulesToVulns(ctx, existingRules, newState); applyErr != nil {
 			slog.Error("could not apply existing VEX rules to newly detected vulns", "err", applyErr)
 		} else if len(updatedVulns) > 0 {
+			// The state write and the event write have to stand or fall together. If
+			// only the events land, the vulns are stuck in their pre-rule state with
+			// an event history that says otherwise, and no later scan repairs it.
 			if err := s.dependencyVulnRepository.SaveBatch(ctx, tx, updatedVulns); err != nil {
 				slog.Error("could not save vulns updated by existing VEX rules", "err", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return nil, nil, nil, errors.Wrap(err, "could not save vulns updated by existing VEX rules")
 			}
 			if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
 				slog.Error("could not save events from existing VEX rules", "err", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return nil, nil, nil, errors.Wrap(err, "could not save events from existing VEX rules")
 			}
 		}
 	}
@@ -512,21 +521,60 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	return opened, closed, newState, nil
 }
 
+func (s *scanService) attachEventsTo(ctx context.Context, tx shared.DB, vulns []models.DependencyVuln) error {
+	if len(vulns) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, len(vulns))
+	for i := range vulns {
+		ids[i] = vulns[i].CalculateHash()
+	}
+
+	events, err := s.vulnEventRepository.GetEventsByDependencyVulnIDs(ctx, tx, ids)
+	if err != nil {
+		return err
+	}
+
+	// GetEventsByDependencyVulnIDs returns them ordered by created_at
+	byVuln := make(map[uuid.UUID][]models.VulnEvent, len(vulns))
+	for _, ev := range events {
+		if ev.DependencyVulnID == nil {
+			continue
+		}
+		byVuln[*ev.DependencyVulnID] = append(byVuln[*ev.DependencyVulnID], ev)
+	}
+	for i := range vulns {
+		vulns[i].Events = byVuln[ids[i]]
+	}
+	return nil
+}
+
 func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID)
+	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetNotFixedDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID)
+	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+
+	// Get the vulns from other branches that could match something newly discovered here.
+	//
+	// Only diff.NewlyDiscovered is ever compared against them, by asset version independent
+	// hash, so the query is restricted to exactly those signatures instead of loading every
+	// vuln of every other branch.
+	newlyDiscoveredSignatures := make([]int64, len(diff.NewlyDiscovered))
+	for i := range diff.NewlyDiscovered {
+		newlyDiscoveredSignatures[i] = utils.HashToInt64(diff.NewlyDiscovered[i].CalculateAssetVersionIndependentHash())
+	}
+
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID, newlyDiscoveredSignatures)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls := forest.ComponentsInMultipleSBOMs()
@@ -575,6 +623,16 @@ func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB
 	vulnsToReopen := utils.Filter(diff.Unchanged, func(dv models.DependencyVuln) bool {
 		return dv.State == dtos.VulnStateFixed
 	})
+
+	// These are the only vulns from the listing above whose event history is ever read:
+	// they are handed back as `opened`, and the third party integration serialises their
+	// events into its DTO. Loading them here - normally for a handful of vulns, rather
+	// than preloading every event of the whole asset version - keeps that payload intact.
+	if err := s.attachEventsTo(ctx, tx, vulnsToReopen); err != nil {
+		slog.Error("could not load events for reopened vulnerabilities", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
 	if err := s.dependencyVulnService.UserReopenedToOpen(ctx, tx, userID, userAgent, vulnsToReopen); err != nil {
 		slog.Error("error when trying to reopen previously fixed vulnerability")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -589,7 +647,7 @@ func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB
 	return append(utils.DereferenceSlice(branchDiff.NewToAllBranches), vulnsToReopen...), fixedVulns, v, nil
 }
 
-func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) (boms []normalize.SBOMSource, validURLs []string, invalidURLs []dtos.ExternalReferenceError) {
+func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, tx shared.DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) (boms []normalize.SBOMSource, invalidURLs []dtos.ExternalReferenceError) {
 
 	//check if the upstream urls are valid urls
 	for _, url := range upstreamURLs {
@@ -607,45 +665,12 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 			continue
 		}
 
-		var bom cyclonedx.BOM
-		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-		defer cancel()
-		// fetch the file from the url
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-
+		bom, err := fetchUpstreamURL(ctx, url)
 		if err != nil {
+			// reason is described by the functions error
 			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
 				URL:    url,
-				Reason: fmt.Sprintf("could not create request for url: %v", err),
-			})
-			continue
-		}
-
-		resp, err := utils.EgressClient.Do(req)
-		if err != nil || resp.StatusCode != 200 {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not fetch url or non 200 status code: %v", err),
-			})
-			continue
-		}
-		defer resp.Body.Close()
-
-		// download the url and check if it is a valid sbom
-		file, err := io.ReadAll(resp.Body)
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not read response body: %v", err),
-			})
-			continue
-		}
-
-		err = json.Unmarshal(file, &bom)
-		if err != nil {
-			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
-				URL:    url,
-				Reason: fmt.Sprintf("could not unmarshal response body into cyclonedx bom: %v", err),
+				Reason: err.Error(),
 			})
 			continue
 		}
@@ -662,12 +687,50 @@ func (s *scanService) FetchSbomsFromUpstream(ctx context.Context, artifactName s
 				continue
 			}
 
-			validURLs = append(validURLs, url)
+			if err := s.IngestVexFromExternalReferences(ctx, tx, &bom, asset); err != nil {
+				slog.Error("could not ingest vex from external references", "err", err)
+			}
+
+			// add the sbom prefix
 			boms = append(boms, normalize.SBOMSource{Source: url, SBOM: parsed})
+		} else {
+			invalidURLs = append(invalidURLs, dtos.ExternalReferenceError{
+				URL:    url,
+				Reason: "referenced document is not a valid SBOM",
+			})
 		}
 	}
 
-	return boms, validURLs, invalidURLs
+	return boms, invalidURLs
+}
+
+// fetches url inside a function to properly cancel ctx and close the response body
+func fetchUpstreamURL(ctx context.Context, url string) (cyclonedx.BOM, error) {
+	var bom cyclonedx.BOM
+	reqCtx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
+	if err != nil {
+		return bom, fmt.Errorf("could not create request for url: %w", err)
+	}
+
+	resp, err := utils.EgressClient.Do(req)
+	if err != nil {
+		return bom, fmt.Errorf("could not fetch url: %w", err)
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return bom, fmt.Errorf("non 200 status code when fetching url: %d", resp.StatusCode)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&bom)
+	if err != nil {
+		return bom, fmt.Errorf("could not parse bom to cyclone dx bom: %w", err)
+	}
+
+	return bom, nil
 }
 
 // sniffVexFormat detects the VEX document format from top-level JSON keys.
@@ -827,7 +890,7 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	})
 
 	// Fetch SBOMs and VEX reports from upstream
-	boms, _, _ := s.FetchSbomsFromUpstream(ctx, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
+	boms, _ := s.FetchSbomsFromUpstream(ctx, tx, asset, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
 
 	// Each upstream document is stored as the separate SBOM it is. Merging them
 	// first would collapse the sources' differing accounts of shared components,
@@ -958,4 +1021,32 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		AmountOpened:    len(vulnDTOs),
 		DependencyVulns: vulnDTOs,
 	}, nil
+}
+
+func (s *scanService) IngestVexFromExternalReferences(ctx context.Context, tx shared.DB, bom *cyclonedx.BOM, asset models.Asset) error {
+	externalURLs := []string{}
+	if bom.ExternalReferences != nil {
+		for _, ref := range *bom.ExternalReferences {
+			if ref.Type == cyclonedx.ERTypeExploitabilityStatement {
+				externalURLs = append(externalURLs, ref.URL)
+			}
+		}
+	}
+
+	if len(externalURLs) == 0 {
+		return nil
+	}
+
+	rules, valid, invalid := s.FetchVexFromUpstream(ctx, asset.ID, externalURLs)
+
+	if err := s.externalReferenceRepository.SaveBatch(ctx, tx, append(valid, invalid...)); err != nil {
+		slog.Error("could not store vex external reference", "err", err)
+		return err
+	}
+
+	if len(rules) == 0 {
+		return nil
+	}
+
+	return s.IngestVEXRules(ctx, tx, asset, rules)
 }

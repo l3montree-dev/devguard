@@ -38,7 +38,6 @@ func tree(children map[string][]string) *normalize.MerkleTree {
 	return normalize.BuildMerkleTree(
 		normalize.Adjacency{Children: children, ComponentIDs: map[string]string{}},
 		"root-ref",
-		normalize.MerkleRootID,
 	)
 }
 

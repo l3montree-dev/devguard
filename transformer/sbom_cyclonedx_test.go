@@ -2,9 +2,10 @@ package transformer
 
 import (
 	"encoding/json"
-	"github.com/l3montree-dev/devguard/normalize"
 	"os"
 	"testing"
+
+	"github.com/l3montree-dev/devguard/normalize"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
@@ -14,7 +15,7 @@ import (
 // buildTree assembles a tree the way the parser would, with the SBOM's direct
 // dependencies hanging off the parse root.
 func buildTree(children map[string][]string, artifactName string) *normalize.MerkleTree {
-	return normalize.BuildMerkleTree(normalize.Adjacency{Children: children}, merkleParseRoot, artifactName)
+	return normalize.BuildMerkleTree(normalize.Adjacency{Children: children}, merkleParseRoot)
 }
 
 func findDependency(bom *cdx.BOM, ref string) *cdx.Dependency {

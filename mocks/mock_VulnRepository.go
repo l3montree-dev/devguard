@@ -18,10 +18,19 @@ func NewVulnRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *VulnRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &VulnRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -66,7 +75,7 @@ type VulnRepository_ApplyAndSave_Call struct {
 //   - tx shared.DB
 //   - dependencyVuln models.Vuln
 //   - vulnEvent *models.VulnEvent
-func (_e *VulnRepository_Expecter) ApplyAndSave(ctx interface{}, tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *VulnRepository_ApplyAndSave_Call {
+func (_e *VulnRepository_Expecter) ApplyAndSave(ctx any, tx any, dependencyVuln any, vulnEvent any) *VulnRepository_ApplyAndSave_Call {
 	return &VulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", ctx, tx, dependencyVuln, vulnEvent)}
 }
 
@@ -145,7 +154,7 @@ type VulnRepository_FindByTicketID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - ticketID string
-func (_e *VulnRepository_Expecter) FindByTicketID(ctx interface{}, tx interface{}, ticketID interface{}) *VulnRepository_FindByTicketID_Call {
+func (_e *VulnRepository_Expecter) FindByTicketID(ctx any, tx any, ticketID any) *VulnRepository_FindByTicketID_Call {
 	return &VulnRepository_FindByTicketID_Call{Call: _e.mock.On("FindByTicketID", ctx, tx, ticketID)}
 }
 
@@ -217,7 +226,7 @@ type VulnRepository_GetOrgFromVuln_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vuln models.Vuln
-func (_e *VulnRepository_Expecter) GetOrgFromVuln(ctx interface{}, tx interface{}, vuln interface{}) *VulnRepository_GetOrgFromVuln_Call {
+func (_e *VulnRepository_Expecter) GetOrgFromVuln(ctx any, tx any, vuln any) *VulnRepository_GetOrgFromVuln_Call {
 	return &VulnRepository_GetOrgFromVuln_Call{Call: _e.mock.On("GetOrgFromVuln", ctx, tx, vuln)}
 }
 
@@ -280,7 +289,7 @@ type VulnRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vuln *models.Vuln
-func (_e *VulnRepository_Expecter) Save(ctx interface{}, tx interface{}, vuln interface{}) *VulnRepository_Save_Call {
+func (_e *VulnRepository_Expecter) Save(ctx any, tx any, vuln any) *VulnRepository_Save_Call {
 	return &VulnRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, vuln)}
 }
 
@@ -342,7 +351,7 @@ type VulnRepository_Transaction_Call struct {
 // Transaction is a helper method to define mock.On call
 //   - ctx context.Context
 //   - fn func(tx shared.DB) error
-func (_e *VulnRepository_Expecter) Transaction(ctx interface{}, fn interface{}) *VulnRepository_Transaction_Call {
+func (_e *VulnRepository_Expecter) Transaction(ctx any, fn any) *VulnRepository_Transaction_Call {
 	return &VulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", ctx, fn)}
 }
 

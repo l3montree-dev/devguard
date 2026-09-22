@@ -38,7 +38,7 @@ TRAEFIK_TAG=v3.7
 	defer func() { _ = os.Chdir(orig) }()
 
 	cl := &i.Changelog{}
-	if _, err := updateDockerDeployment("v2.0.1", "v2.0.3", cl); err != nil {
+	if _, err := updateDockerDeployment("v2.0.1", "v2.0.3", "v26.2.0", "16.15", cl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -47,8 +47,8 @@ TRAEFIK_TAG=v3.7
 
 	for _, want := range []string{
 		"DEVGUARD_API_TAG=v2.0.1",
-		"POSTGRESQL_TAG=v2.0.1",
-		"KRATOS_TAG=v2.0.1",
+		"POSTGRESQL_TAG=16.15",
+		"KRATOS_TAG=v26.2.0",
 		"DEVGUARD_WEB_TAG=v2.0.3",
 	} {
 		if !strings.Contains(content, want) {

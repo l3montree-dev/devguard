@@ -19,10 +19,19 @@ func NewGitlabIntegrationRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *GitlabIntegrationRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &GitlabIntegrationRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -66,7 +75,7 @@ type GitlabIntegrationRepository_Delete_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *GitlabIntegrationRepository_Expecter) Delete(ctx interface{}, tx interface{}, id interface{}) *GitlabIntegrationRepository_Delete_Call {
+func (_e *GitlabIntegrationRepository_Expecter) Delete(ctx any, tx any, id any) *GitlabIntegrationRepository_Delete_Call {
 	return &GitlabIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
@@ -140,7 +149,7 @@ type GitlabIntegrationRepository_FindByOrganizationID_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - orgID uuid.UUID
-func (_e *GitlabIntegrationRepository_Expecter) FindByOrganizationID(ctx interface{}, tx interface{}, orgID interface{}) *GitlabIntegrationRepository_FindByOrganizationID_Call {
+func (_e *GitlabIntegrationRepository_Expecter) FindByOrganizationID(ctx any, tx any, orgID any) *GitlabIntegrationRepository_FindByOrganizationID_Call {
 	return &GitlabIntegrationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", ctx, tx, orgID)}
 }
 
@@ -212,7 +221,7 @@ type GitlabIntegrationRepository_Read_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - id uuid.UUID
-func (_e *GitlabIntegrationRepository_Expecter) Read(ctx interface{}, tx interface{}, id interface{}) *GitlabIntegrationRepository_Read_Call {
+func (_e *GitlabIntegrationRepository_Expecter) Read(ctx any, tx any, id any) *GitlabIntegrationRepository_Read_Call {
 	return &GitlabIntegrationRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
@@ -275,7 +284,7 @@ type GitlabIntegrationRepository_Save_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - model *models.GitLabIntegration
-func (_e *GitlabIntegrationRepository_Expecter) Save(ctx interface{}, tx interface{}, model interface{}) *GitlabIntegrationRepository_Save_Call {
+func (_e *GitlabIntegrationRepository_Expecter) Save(ctx any, tx any, model any) *GitlabIntegrationRepository_Save_Call {
 	return &GitlabIntegrationRepository_Save_Call{Call: _e.mock.On("Save", ctx, tx, model)}
 }
 

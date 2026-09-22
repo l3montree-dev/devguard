@@ -18,10 +18,19 @@ func NewComparer(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *Comparer {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &Comparer{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -75,7 +84,7 @@ type Comparer_GetVulns_Call struct {
 // GetVulns is a helper method to define mock.On call
 //   - ctx context.Context
 //   - purls []packageurl.PackageURL
-func (_e *Comparer_Expecter) GetVulns(ctx interface{}, purls interface{}) *Comparer_GetVulns_Call {
+func (_e *Comparer_Expecter) GetVulns(ctx any, purls any) *Comparer_GetVulns_Call {
 	return &Comparer_GetVulns_Call{Call: _e.mock.On("GetVulns", ctx, purls)}
 }
 

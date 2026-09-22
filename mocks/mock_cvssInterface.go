@@ -14,10 +14,19 @@ func NewCvssInterface(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *CvssInterface {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &CvssInterface{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -112,7 +121,7 @@ type CvssInterface_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - key string
-func (_e *CvssInterface_Expecter) Get(key interface{}) *CvssInterface_Get_Call {
+func (_e *CvssInterface_Expecter) Get(key any) *CvssInterface_Get_Call {
 	return &CvssInterface_Get_Call{Call: _e.mock.On("Get", key)}
 }
 
@@ -164,7 +173,7 @@ type CvssInterface_Set_Call struct {
 // Set is a helper method to define mock.On call
 //   - key string
 //   - value string
-func (_e *CvssInterface_Expecter) Set(key interface{}, value interface{}) *CvssInterface_Set_Call {
+func (_e *CvssInterface_Expecter) Set(key any, value any) *CvssInterface_Set_Call {
 	return &CvssInterface_Set_Call{Call: _e.mock.On("Set", key, value)}
 }
 

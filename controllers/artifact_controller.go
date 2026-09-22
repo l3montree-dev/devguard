@@ -119,8 +119,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	userAgent := ctx.Request().UserAgent()
 
 	if err := ctx.Bind(&body); err != nil {
-		return err
+		return echo.NewHTTPError(400, "missing or invalid request body").WithInternal(err)
 	}
+
 	if err := dtos.V.Struct(&body); err != nil {
 		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
 	}
@@ -133,6 +134,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	tx := c.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
 	defer tx.Rollback()
+
 	//save the artifact
 	err := c.artifactRepository.Create(ctx.Request().Context(), tx, &artifact)
 	if err != nil {
@@ -143,9 +145,8 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, _, invalid := services.FetchSbomsFromUpstream(ctx.Request().Context(), artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), tx, asset, artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
 	if len(invalid) > 0 {
-		tx.Rollback()
 		return ctx.JSON(400, invalid)
 	}
 
@@ -164,7 +165,6 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	currentOwnerID := shared.GetSession(ctx).GetActorName()
 
 	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentOwnerID, &userAgent)
-
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after creating artifact", "err", err)
@@ -357,12 +357,12 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	// sources are now stored as plain strings (an upstream source is just its URL)
 	toAddUrls := toAdd
 
-	//check if the upstream urls are valid urls
-	boms, _, invalidURLs := services.FetchSbomsFromUpstream(reqCtx, artifactName, artifact.AssetVersionName, toAddUrls)
-	var vulns []models.DependencyVuln
-
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
+
+	//check if the upstream urls are valid urls
+	boms, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, tx, asset, artifactName, artifact.AssetVersionName, toAddUrls)
+	var vulns []models.DependencyVuln
 
 	// each newly configured source is stored as its own SBOM
 	for _, upstream := range boms {

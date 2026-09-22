@@ -14,10 +14,19 @@ func NewSlugger[T any](t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *Slugger[T] {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &Slugger[T]{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -103,7 +112,7 @@ type Slugger_Same_Call[T any] struct {
 
 // Same is a helper method to define mock.On call
 //   - v T
-func (_e *Slugger_Expecter[T]) Same(v interface{}) *Slugger_Same_Call[T] {
+func (_e *Slugger_Expecter[T]) Same(v any) *Slugger_Same_Call[T] {
 	return &Slugger_Same_Call[T]{Call: _e.mock.On("Same", v)}
 }
 
@@ -143,7 +152,7 @@ type Slugger_SetSlug_Call[T any] struct {
 
 // SetSlug is a helper method to define mock.On call
 //   - s string
-func (_e *Slugger_Expecter[T]) SetSlug(s interface{}) *Slugger_SetSlug_Call[T] {
+func (_e *Slugger_Expecter[T]) SetSlug(s any) *Slugger_SetSlug_Call[T] {
 	return &Slugger_SetSlug_Call[T]{Call: _e.mock.On("SetSlug", s)}
 }
 

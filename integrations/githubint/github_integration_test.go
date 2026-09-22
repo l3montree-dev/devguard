@@ -232,16 +232,6 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		componentRepository := mocks.NewComponentRepository(t)
 
-		expectedEvent := models.VulnEvent{
-			Type:   dtos.EventTypeMitigate,
-			UserID: "1",
-
-			ArbitraryJSONData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",
-
-			Justification: new("that is a justification"),
-		}
-		expectedEvent.GetArbitraryJSONData()
-
 		githubClientFactory := func(repoID string) (shared.GithubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 

@@ -15,10 +15,19 @@ func NewEcosystem(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *Ecosystem {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &Ecosystem{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -105,7 +114,7 @@ type Ecosystem_packageIdentifier_Call struct {
 // packageIdentifier is a helper method to define mock.On call
 //   - packageName string
 //   - version string
-func (_e *Ecosystem_Expecter) packageIdentifier(packageName interface{}, version interface{}) *Ecosystem_packageIdentifier_Call {
+func (_e *Ecosystem_Expecter) packageIdentifier(packageName any, version any) *Ecosystem_packageIdentifier_Call {
 	return &Ecosystem_packageIdentifier_Call{Call: _e.mock.On("packageIdentifier", packageName, version)}
 }
 
@@ -170,7 +179,7 @@ type Ecosystem_parsePackage_Call struct {
 
 // parsePackage is a helper method to define mock.On call
 //   - path string
-func (_e *Ecosystem_Expecter) parsePackage(path interface{}) *Ecosystem_parsePackage_Call {
+func (_e *Ecosystem_Expecter) parsePackage(path any) *Ecosystem_parsePackage_Call {
 	return &Ecosystem_parsePackage_Call{Call: _e.mock.On("parsePackage", path)}
 }
 
@@ -221,7 +230,7 @@ type Ecosystem_trimPrefix_Call struct {
 
 // trimPrefix is a helper method to define mock.On call
 //   - path string
-func (_e *Ecosystem_Expecter) trimPrefix(path interface{}) *Ecosystem_trimPrefix_Call {
+func (_e *Ecosystem_Expecter) trimPrefix(path any) *Ecosystem_trimPrefix_Call {
 	return &Ecosystem_trimPrefix_Call{Call: _e.mock.On("trimPrefix", path)}
 }
 
@@ -275,7 +284,7 @@ type Ecosystem_writeResponse_Call struct {
 //   - data []byte
 //   - path string
 //   - cached bool
-func (_e *Ecosystem_Expecter) writeResponse(c interface{}, data interface{}, path interface{}, cached interface{}) *Ecosystem_writeResponse_Call {
+func (_e *Ecosystem_Expecter) writeResponse(c any, data any, path any, cached any) *Ecosystem_writeResponse_Call {
 	return &Ecosystem_writeResponse_Call{Call: _e.mock.On("writeResponse", c, data, path, cached)}
 }
 

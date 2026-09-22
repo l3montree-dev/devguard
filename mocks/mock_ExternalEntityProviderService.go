@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
@@ -16,10 +18,19 @@ func NewExternalEntityProviderService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *ExternalEntityProviderService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &ExternalEntityProviderService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -35,6 +46,57 @@ type ExternalEntityProviderService_Expecter struct {
 
 func (_m *ExternalEntityProviderService) EXPECT() *ExternalEntityProviderService_Expecter {
 	return &ExternalEntityProviderService_Expecter{mock: &_m.Mock}
+}
+
+// CollectGarbage provides a mock function for the type ExternalEntityProviderService
+func (_mock *ExternalEntityProviderService) CollectGarbage(c context.Context) error {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CollectGarbage")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ExternalEntityProviderService_CollectGarbage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CollectGarbage'
+type ExternalEntityProviderService_CollectGarbage_Call struct {
+	*mock.Call
+}
+
+// CollectGarbage is a helper method to define mock.On call
+//   - c context.Context
+func (_e *ExternalEntityProviderService_Expecter) CollectGarbage(c any) *ExternalEntityProviderService_CollectGarbage_Call {
+	return &ExternalEntityProviderService_CollectGarbage_Call{Call: _e.mock.On("CollectGarbage", c)}
+}
+
+func (_c *ExternalEntityProviderService_CollectGarbage_Call) Run(run func(c context.Context)) *ExternalEntityProviderService_CollectGarbage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_CollectGarbage_Call) Return(err error) *ExternalEntityProviderService_CollectGarbage_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_CollectGarbage_Call) RunAndReturn(run func(c context.Context) error) *ExternalEntityProviderService_CollectGarbage_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // RefreshExternalEntityProviderProjects provides a mock function for the type ExternalEntityProviderService
@@ -63,7 +125,7 @@ type ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call st
 //   - ctx shared.Context
 //   - org models.Org
 //   - session shared.AuthSession
-func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, session interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx any, org any, session any) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, session)}
 }
 
@@ -135,7 +197,7 @@ type ExternalEntityProviderService_SyncOrgs_Call struct {
 
 // SyncOrgs is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c interface{}) *ExternalEntityProviderService_SyncOrgs_Call {
+func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c any) *ExternalEntityProviderService_SyncOrgs_Call {
 	return &ExternalEntityProviderService_SyncOrgs_Call{Call: _e.mock.On("SyncOrgs", c)}
 }
 
@@ -186,7 +248,7 @@ type ExternalEntityProviderService_TriggerOrgSync_Call struct {
 
 // TriggerOrgSync is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c interface{}) *ExternalEntityProviderService_TriggerOrgSync_Call {
+func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c any) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	return &ExternalEntityProviderService_TriggerOrgSync_Call{Call: _e.mock.On("TriggerOrgSync", c)}
 }
 
@@ -237,7 +299,7 @@ type ExternalEntityProviderService_TriggerSync_Call struct {
 
 // TriggerSync is a helper method to define mock.On call
 //   - c shared.Context
-func (_e *ExternalEntityProviderService_Expecter) TriggerSync(c interface{}) *ExternalEntityProviderService_TriggerSync_Call {
+func (_e *ExternalEntityProviderService_Expecter) TriggerSync(c any) *ExternalEntityProviderService_TriggerSync_Call {
 	return &ExternalEntityProviderService_TriggerSync_Call{Call: _e.mock.On("TriggerSync", c)}
 }
 

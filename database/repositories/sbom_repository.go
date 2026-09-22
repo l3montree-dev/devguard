@@ -55,6 +55,11 @@ func NewSBOMRepository(db *gorm.DB) *sbomRepository {
 // one per content revision. The superseded root's subtrees stay for the garbage
 // collector, since other SBOMs may still reference them.
 func (r *sbomRepository) SaveTree(ctx context.Context, tx *gorm.DB, sbom models.SBOM, tree *normalize.MerkleTree) error {
+	if tx == nil {
+		return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			return r.SaveTree(ctx, tx, sbom, tree)
+		})
+	}
 	db := r.GetDB(ctx, tx)
 
 	nodes := tree.Nodes()
@@ -261,43 +266,45 @@ func (r *sbomRepository) DeleteBySource(ctx context.Context, tx *gorm.DB, assetI
 // table can tell those apart from subtrees still shared by someone else, which
 // is why this is a mark and sweep rather than reference counting.
 //
-// Edges are swept before nodes: an edge references two node rows, so the nodes
-// cannot go first. The second sweep walks the already-pruned graph, which
-// reaches the same set - removing unreachable edges cannot disconnect anything
-// still reachable.
+// Edges and nodes are swept in one statement so both deletes see the same
+// snapshot. Two separate statements could disagree about reachability when an
+// SBOM row is deleted in between, and the node sweep would then violate the
+// edge-to-node foreign key. Foreign keys are checked at the end of the
+// statement, when every edge pointing at an unreachable node is already gone.
 //
 // It returns the number of deleted rows across both tables.
 func (r *sbomRepository) CollectGarbage(ctx context.Context, tx *gorm.DB) (int64, error) {
-	db := r.GetDB(ctx, tx)
+	var deleted struct {
+		Edges int64
+		Nodes int64
+	}
 
-	const reachable = `
+	err := r.GetDB(ctx, tx).Raw(`
 		WITH RECURSIVE reachable AS (
 			SELECT root_subtree_hash AS subtree_hash FROM sboms
 		UNION
 			SELECT e.direct_dependency_subtree_hash
 			FROM sbom_merkle_edges e
 			JOIN reachable r ON e.subtree_hash = r.subtree_hash
-		)`
-
-	edges := db.Exec(reachable + `
-		DELETE FROM sbom_merkle_edges e
-		WHERE NOT EXISTS (
-			SELECT 1 FROM reachable r WHERE r.subtree_hash = e.subtree_hash
+		), deleted_edges AS (
+			DELETE FROM sbom_merkle_edges e
+			WHERE NOT EXISTS (
+				SELECT 1 FROM reachable r WHERE r.subtree_hash = e.subtree_hash
+			)
+			RETURNING 1
+		), deleted_nodes AS (
+			DELETE FROM sbom_merkle_nodes n
+			WHERE NOT EXISTS (
+				SELECT 1 FROM reachable r WHERE r.subtree_hash = n.node_hash
+			)
+			RETURNING 1
 		)
-	`)
-	if edges.Error != nil {
-		return 0, errors.Wrap(edges.Error, "could not collect sbom edge garbage")
+		SELECT (SELECT COUNT(*) FROM deleted_edges) AS edges,
+		       (SELECT COUNT(*) FROM deleted_nodes) AS nodes
+	`).Scan(&deleted).Error
+	if err != nil {
+		return 0, errors.Wrap(err, "could not collect sbom garbage")
 	}
 
-	nodes := db.Exec(reachable + `
-		DELETE FROM sbom_merkle_nodes n
-		WHERE NOT EXISTS (
-			SELECT 1 FROM reachable r WHERE r.subtree_hash = n.node_hash
-		)
-	`)
-	if nodes.Error != nil {
-		return 0, errors.Wrap(nodes.Error, "could not collect sbom node garbage")
-	}
-
-	return edges.RowsAffected + nodes.RowsAffected, nil
+	return deleted.Edges + deleted.Nodes, nil
 }

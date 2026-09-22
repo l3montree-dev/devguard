@@ -11,25 +11,17 @@ import (
 )
 
 func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
-	t.Run("should store the old risk and other fields in the event", func(t *testing.T) {
+	t.Run("should store the fields in the event", func(t *testing.T) {
 		vulnID := uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 		userID := "user123"
 		justification := "justification text"
-		oldRisk := 0.5
-		report := dtos.RiskCalculationReport{
-			// populate with necessary fields
-		}
 
-		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification, &oldRisk, report)
+		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, dtos.VulnTypeDependencyVuln, userID, justification)
 
 		assert.Equal(t, dtos.EventTypeRawRiskAssessmentUpdated, event.Type)
 		assert.Equal(t, vulnID, *event.DependencyVulnID)
 		assert.Equal(t, userID, event.UserID)
 		assert.Equal(t, justification, *event.Justification)
-
-		arbitraryData := event.GetArbitraryJSONData()
-		assert.Equal(t, oldRisk, arbitraryData["oldRisk"])
-		// Add more assertions based on the fields in RiskCalculationReport
 	})
 }
 
@@ -50,28 +42,15 @@ func TestVulnEvent_Apply(t *testing.T) {
 
 		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 	})
-	t.Run("should update the risk assessment for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
-		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{
-			Type:              dtos.EventTypeRawRiskAssessmentUpdated,
-			ArbitraryJSONData: `{"risk": 0.5 }`,
-		}
+	t.Run("should keep the risk assessment and state of the vuln for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
+		vuln := models.DependencyVuln{RiskAssessment: new(0.5)}
+		vuln.State = dtos.VulnStateAccepted
+		event := models.VulnEvent{Type: dtos.EventTypeRawRiskAssessmentUpdated}
 
 		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, 0.5, vuln.GetRawRiskAssessment())
-	})
-
-	t.Run("should update RiskRecalculatedAt for EventTypeRawRiskAssessmentUpdated", func(t *testing.T) {
-		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{
-			Type:              dtos.EventTypeRawRiskAssessmentUpdated,
-			ArbitraryJSONData: `{"risk": 0.5 }`,
-		}
-
-		statemachine.Apply(&vuln, event)
-
-		assert.NotZero(t, vuln.RiskRecalculatedAt)
+		assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
 	})
 	t.Run("should set state to open for EventTypeDetected", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
@@ -82,18 +61,6 @@ func TestVulnEvent_Apply(t *testing.T) {
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
 
-	t.Run("should update the RiskRecalculatedAt for EventTypeDetected", func(t *testing.T) {
-		vuln := models.DependencyVuln{}
-		event := models.VulnEvent{
-			Type:              dtos.EventTypeDetected,
-			ArbitraryJSONData: `{"risk": 0.5 }`,
-		}
-
-		statemachine.Apply(&vuln, event)
-
-		assert.NotZero(t, vuln.RiskRecalculatedAt)
-	})
-
 	t.Run("should update the state to open on reopened event", func(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{Type: dtos.EventTypeReopened}
@@ -101,6 +68,23 @@ func TestVulnEvent_Apply(t *testing.T) {
 		statemachine.Apply(&vuln, event)
 
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
+	})
+	t.Run("should keep the risk assessment of the vuln for EventTypeDetected", func(t *testing.T) {
+		vuln := models.DependencyVuln{RiskAssessment: new(0.7)}
+		event := models.VulnEvent{Type: dtos.EventTypeDetected}
+
+		statemachine.Apply(&vuln, event)
+
+		assert.Equal(t, 0.7, vuln.GetRawRiskAssessment())
+	})
+	t.Run("should set state to fixed and keep the final license decision for EventTypeLicenseDecision", func(t *testing.T) {
+		licenseRisk := models.LicenseRisk{FinalLicenseDecision: new("MIT")}
+		event := models.VulnEvent{Type: dtos.EventTypeLicenseDecision}
+
+		statemachine.Apply(&licenseRisk, event)
+
+		assert.Equal(t, dtos.VulnStateFixed, licenseRisk.State)
+		assert.Equal(t, "MIT", *licenseRisk.FinalLicenseDecision)
 	})
 	t.Run("should set state to accepted for EventTypeAccepted", func(t *testing.T) {
 		vuln := models.DependencyVuln{}

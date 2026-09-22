@@ -104,7 +104,6 @@ func MerkleTreeFromCycloneDX(bom *cdx.BOM, artifactName string) (*normalize.Pars
 	tree := normalize.BuildMerkleTree(
 		normalize.Adjacency{Children: children, ComponentIDs: componentIDs},
 		merkleParseRoot,
-		normalize.MerkleRootID,
 	)
 	return &normalize.ParsedSBOM{Tree: tree, Components: components}, nil
 }

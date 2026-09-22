@@ -17,10 +17,19 @@ func NewEPSService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *EPSService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &EPSService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -73,7 +82,7 @@ type EPSService_Fetch_Call struct {
 
 // Fetch is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *EPSService_Expecter) Fetch(ctx interface{}) *EPSService_Fetch_Call {
+func (_e *EPSService_Expecter) Fetch(ctx any) *EPSService_Fetch_Call {
 	return &EPSService_Fetch_Call{Call: _e.mock.On("Fetch", ctx)}
 }
 

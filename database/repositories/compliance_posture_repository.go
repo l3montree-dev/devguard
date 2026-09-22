@@ -312,7 +312,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.FieldValue))
 		case f.Field == "framework" && f.Operator == "in":
 			subquery = subquery.Where(f.Where(group).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ANY (?))", pq.Array(f.FieldValue)))
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ANY (?))", pq.Array([]any{f.FieldValue})))
 		case f.Field == "has_component_coverage" && f.Operator == "is":
 			if fmt.Sprint(f.FieldValue) == "true" {
 				subquery = subquery.Where("EXISTS (SELECT 1 FROM compliance_component_implements_controls cic WHERE cic.framework_control_id = sub.framework_control_id)")
@@ -385,7 +385,7 @@ func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context
 				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ?)", f.FieldValue))
 		case f.Field == "framework" && f.Operator == "in":
 			subquery = subquery.Where(f.Where(group)).
-				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ANY (?))", pq.Array(f.FieldValue))
+				Or("framework_control_id IN (SELECT framework_control_id FROM mapped_controls WHERE related_framework = ANY (?))", pq.Array([]any{f.FieldValue}))
 		}
 	}
 

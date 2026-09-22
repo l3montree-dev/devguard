@@ -373,7 +373,7 @@ func TestKeepExistingVulnsClosed(t *testing.T) {
 			assert.NotNil(t, fpVuln, "should have found the vuln to mark as false positive")
 
 			dependencyVulnRepository := f.App.DependencyVulnRepository
-			fpEvent := models.NewFalsePositiveEvent(fpVuln.ID, fpVuln.GetType(), "abc", "this is a false positive", "", "artifact-fp-1", false, nil)
+			fpEvent := models.NewFalsePositiveEvent(fpVuln.ID, fpVuln.GetType(), "abc", "this is a false positive", "", false, nil)
 			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, fpVuln, &fpEvent)
 			assert.Nil(t, err)
 
@@ -438,9 +438,9 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 		return &vulns[0]
 	}
 
-	markFP := func(t *testing.T, repo shared.DependencyVulnRepository, vuln *models.DependencyVuln, artifact string) {
+	markFP := func(t *testing.T, repo shared.DependencyVulnRepository, vuln *models.DependencyVuln) {
 		t.Helper()
-		ev := models.NewFalsePositiveEvent(vuln.ID, vuln.GetType(), "user-abc", "false positive", "", artifact, false, nil)
+		ev := models.NewFalsePositiveEvent(vuln.ID, vuln.GetType(), "user-abc", "false positive", "", false, nil)
 		assert.Nil(t, repo.ApplyAndSave(context.Background(), nil, vuln, &ev))
 	}
 
@@ -477,7 +477,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
 			assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 
-			markFP(t, repo, vuln, "art")
+			markFP(t, repo, vuln)
 			reload(t, f.DB, vuln)
 			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 
@@ -551,7 +551,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
 			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
-			markFP(t, repo, vuln, "art")
+			markFP(t, repo, vuln)
 
 			for i := range 3 {
 				scan(t, ctrl, app, setupCtx, "art", "main", "main", emptySbom) // gone
@@ -584,7 +584,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			scan(t, ctrl, app, setupCtx, "art-a", "main", "main", sbomWithVulnerability)
 			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
-			markFP(t, repo, vuln, "art-a")
+			markFP(t, repo, vuln)
 
 			// different artifact scans empty
 			scan(t, ctrl, app, setupCtx, "art-b", "main", "main", emptySbom)
@@ -614,7 +614,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
 			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
-			markFP(t, repo, vuln, "art")
+			markFP(t, repo, vuln)
 
 			// different branch scans empty
 			scan(t, ctrl, app, setupCtx, "art", "feature-branch", "main", emptySbom)
@@ -648,7 +648,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
 			assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 
-			markFP(t, repo, vuln, "art-a")
+			markFP(t, repo, vuln)
 			reload(t, f.DB, vuln)
 			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 
@@ -686,7 +686,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
 			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 			vuln := loadVuln(t, f.DB, asset.ID, "main")
-			markFP(t, repo, vuln, "art")
+			markFP(t, repo, vuln)
 			reload(t, f.DB, vuln)
 			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 
@@ -753,7 +753,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 
 			// user marks FP (because they know it's not exploitable)
-			markFP(t, repo, vuln, "source")
+			markFP(t, repo, vuln)
 			reload(t, f.DB, vuln)
 			assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 
@@ -796,7 +796,7 @@ func TestUserAssessmentLifecycle(t *testing.T) {
 			scan(t, ctrl, app, setupCtx, "art", "main", "main", sbomWithVulnerability)
 			f.App.DaemonRunner.RunAssetPipeline(context.Background(), true)
 			mainVuln := loadVuln(t, f.DB, asset.ID, "main")
-			markFP(t, repo, mainVuln, "art")
+			markFP(t, repo, mainVuln)
 
 			// feature branch detects same vuln (inherits FP from main)
 			scan(t, ctrl, app, setupCtx, "art", "feature", "main", sbomWithVulnerability)
@@ -1521,7 +1521,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Len(t, vulns, 1)
 			branchDVuln := vulns[0]
 
-			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, "lifecycle-artifact-fp", false, nil)
+			fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", dtos.ComponentNotPresent, false, nil)
 			err = dependencyVulnRepository.ApplyAndSave(context.Background(), nil, &branchDVuln, &fpEvent)
 			assert.Nil(t, err)
 
@@ -2490,7 +2490,6 @@ func TestPathPatternRuleAppliedToNewVulns(t *testing.T) {
 	})
 }
 
-// TestTrivyDebianSBOMRescan reproduces the FK violation on component_dependencies.
 // When a component is missing from the components table (e.g. deleted externally,
 // or evicted by a concurrent transaction), a rescan must still succeed by
 // re-inserting the missing component before creating the dependency edge.

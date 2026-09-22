@@ -40,7 +40,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(ctx context.Context, tx
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, vuln.ScannerIDs, false, userAgent)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, false, userAgent)
 
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -61,7 +61,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(ctx context.Context,
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, dtos.RiskCalculationReport{}, scannerID, false, userAgent)
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, false, userAgent)
 		// apply the event on the dependencyVuln
 		statemachine.Apply(&firstPartyVulns[i], ev)
 		events[i] = ev
@@ -115,7 +115,7 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(ctx context.Context, t
 	case dtos.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs, false, userAgent)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, false, userAgent)
 	case dtos.EventTypeReopened:
 		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), dtos.VulnTypeFirstPartyVuln, userID, justification, false, userAgent)
 	case dtos.EventTypeComment:

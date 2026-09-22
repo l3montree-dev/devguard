@@ -174,11 +174,10 @@ func (vuln DependencyVuln) GetEvents() []VulnEvent {
 }
 
 type DependencyVulnRisk struct {
-	DependencyVulnID  uuid.UUID
-	CreatedAt         time.Time
-	ArbitraryJSONData string
-	Risk              float64
-	Type              dtos.VulnEventType
+	DependencyVulnID uuid.UUID
+	CreatedAt        time.Time
+	Risk             float64
+	Type             dtos.VulnEventType
 }
 
 func (vuln DependencyVuln) TableName() string {

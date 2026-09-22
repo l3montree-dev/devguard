@@ -2,6 +2,7 @@ package hashmigrations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -39,6 +40,10 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 	err := db.Where("key = ?", HashMigrationVersionKey).First(&config).Error
 
 	if shared.IsNotFound(err) {
+		// fresh install: the schema migrations still create the pre-split edge table
+		if err := rewireMerkleTreeRootsAndSplitNodes(pool); err != nil {
+			return fmt.Errorf("failed to split merkle edges on fresh install: %w", err)
+		}
 		config = models.Config{
 			Key: HashMigrationVersionKey,
 			Val: "4",
@@ -152,10 +157,12 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 				return fmt.Errorf("failed fixing artifact names in merkle subtree hashes (v8): %w", err)
 			}
 
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v8: %w", err)
+			// below 7, the v7 backfill still has to run and persists the version itself
+			if currentVersion >= 7 {
+				config.Val = strconv.Itoa(CurrentHashVersion)
+				if err := db.Save(&config).Error; err != nil {
+					return fmt.Errorf("failed to update hash migration version after v8: %w", err)
+				}
 			}
 
 			startVacuum := time.Now()
@@ -200,10 +207,8 @@ func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
 	slog.Info("start hash migration v8")
 	ctx := context.Background()
 
-	// The schema migration reshapes the edge table itself whenever it is empty,
-	// which covers fresh installs and anything that ran the v7 backfill on the
-	// new code. Only a table still carrying component_id has data in the old
-	// shape for this to rewrite.
+	// Only a table still carrying component_id is in the old shape. This keeps
+	// the function safe to re-run, e.g. when a later migration step failed.
 	var needsRewire bool
 	if err := pool.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -223,7 +228,12 @@ func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
 	if err != nil {
 		return fmt.Errorf("could not start transaction for v8: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	// Rollback after a successful Commit returns ErrTxClosed, which is expected
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("could not roll back v8 migration", "err", err)
+		}
+	}()
 
 	// drop unique constraint to temporarily allow duplicates inside the transaction
 	// also improves performance on DML operations
@@ -232,19 +242,6 @@ func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
 	if err != nil {
 		return fmt.Errorf("could not drop unique constraint on edges table: %w", err)
 	}
-
-	// first remove the component_id from root nodes
-	_, err = tx.Exec(ctx, `
-		UPDATE sbom_merkle_edges sm
-		SET component_id = $1
-		WHERE EXISTS (
-				SELECT FROM sboms s 
-				WHERE s.root_subtree_hash = sm.subtree_hash
-		);`, normalize.MerkleRootID)
-	if err != nil {
-		return fmt.Errorf("could not remove component_id from root edges: %w", err)
-	}
-	slog.Info("removed component_id from root nodes")
 
 	// now recalculate the hash based on only the subtree's hashes
 	rows, err := tx.Query(ctx, `
@@ -292,19 +289,23 @@ func rewireMerkleTreeRootsAndSplitNodes(pool *pgxpool.Pool) error {
 		i++
 	}
 
+	// copy the root rows instead of rewriting them: a legacy root hash can equal a
+	// real component's hash that other edges still point at. Pure roots become
+	// unreachable and are removed by the sbom garbage collector.
 	_, err = tx.Exec(ctx, `
-	UPDATE sbom_merkle_edges sm SET subtree_hash = sub.new_hash
-		FROM (
-			SELECT 
+	INSERT INTO sbom_merkle_edges (subtree_hash, component_id, direct_dependency_subtree_hash)
+		SELECT sub.new_hash, $3, sm.direct_dependency_subtree_hash
+		FROM sbom_merkle_edges sm
+		JOIN (
+			SELECT
 				UNNEST($1::uuid[]) as old_hash,
 				UNNEST($2::uuid[]) as new_hash
-		) as sub
-	WHERE sub.old_hash = sm.subtree_hash;
-	`, oldHashes, newHashes)
+		) as sub ON sub.old_hash = sm.subtree_hash;
+	`, oldHashes, newHashes, normalize.MerkleRootID)
 	if err != nil {
-		return fmt.Errorf("could not update edges root nodes: %w", err)
+		return fmt.Errorf("could not insert rehashed root edges: %w", err)
 	}
-	slog.Info("updated edges root nodes")
+	slog.Info("inserted rehashed root edges")
 
 	_, err = tx.Exec(ctx, `
 	UPDATE sboms s SET root_subtree_hash = sub.new_hash

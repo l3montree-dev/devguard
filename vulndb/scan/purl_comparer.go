@@ -311,34 +311,50 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 		originalVersions = append(originalVersions, c.matchCtx.OriginalVersion)
 	}
 
-	var conditions []string
 	args := []any{searchPurls, versions, originalVersions}
 
-	if predicate := repositories.BatchedVersionPredicate(shape.interpretation); predicate != "" {
-		conditions = append(conditions, predicate)
-	}
+	var ecosystemCondition string
 	if len(shape.ecosystemPattern) > 0 {
 		// numbered placeholder, so that GORM passes the arrays above through
 		// verbatim instead of expanding the slices into one placeholder per element
-		conditions = append(conditions, fmt.Sprintf("ac.ecosystem LIKE ANY($%d)", len(args)+1))
+		ecosystemCondition = fmt.Sprintf("ac.ecosystem LIKE ANY($%d)", len(args)+1)
 		args = append(args, pq.Array(shape.ecosystemPattern))
 	}
 
 	// Selecting the ids plus the columns the ecosystem specific version check
 	// needs keeps the joined result small - the rows are hydrated by a second
 	// query using preloads AFTER filtering
-	query := `SELECT q.purl, q.version, q.original_version, ac.id,
+	const selectList = `SELECT q.purl, q.version, ac.id,
 			ac.purl AS component_purl,
 			ac.version AS component_version,
 			ac.version_introduced AS component_version_introduced,
 			ac.version_fixed AS component_version_fixed
-		FROM affected_components ac
-		JOIN (
-			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version, unnest($3::text[]) AS original_version
-		) q ON ac.purl = q.purl`
-	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
+		FROM affected_components ac JOIN q ON ac.purl = q.purl`
+
+	// One branch per version predicate, combined with UNION ALL. The predicates are
+	// mutually exclusive, so this returns exactly the rows a single ORed WHERE would -
+	// duplicates included - while letting each branch use its own index.
+	branches := make([]string, 0, 2)
+	for _, predicate := range repositories.BatchedVersionPredicates(shape.interpretation) {
+		conditions := make([]string, 0, 2)
+		if predicate != "" {
+			conditions = append(conditions, predicate)
+		}
+		if ecosystemCondition != "" {
+			conditions = append(conditions, ecosystemCondition)
+		}
+
+		branch := selectList
+		if len(conditions) > 0 {
+			branch += " WHERE " + strings.Join(conditions, " AND ")
+		}
+		branches = append(branches, branch)
 	}
+
+	// The wanted packages are unnested once in a CTE so every branch joins the same rows.
+	query := `WITH q AS (
+			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version, unnest($3::text[]) AS original_version
+		) ` + strings.Join(branches, " UNION ALL ")
 
 	var matches []struct {
 		Purl            string

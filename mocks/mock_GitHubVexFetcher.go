@@ -17,10 +17,19 @@ func NewGitHubVexFetcher(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *GitHubVexFetcher {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &GitHubVexFetcher{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -75,7 +84,7 @@ type GitHubVexFetcher_FetchVexFromGitHub_Call struct {
 //   - ctx context.Context
 //   - targetURL string
 //   - targetBranch string
-func (_e *GitHubVexFetcher_Expecter) FetchVexFromGitHub(ctx interface{}, targetURL interface{}, targetBranch interface{}) *GitHubVexFetcher_FetchVexFromGitHub_Call {
+func (_e *GitHubVexFetcher_Expecter) FetchVexFromGitHub(ctx any, targetURL any, targetBranch any) *GitHubVexFetcher_FetchVexFromGitHub_Call {
 	return &GitHubVexFetcher_FetchVexFromGitHub_Call{Call: _e.mock.On("FetchVexFromGitHub", ctx, targetURL, targetBranch)}
 }
 

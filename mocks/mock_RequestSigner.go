@@ -16,10 +16,19 @@ func NewRequestSigner(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *RequestSigner {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &RequestSigner{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -62,7 +71,7 @@ type RequestSigner_AuthenticateRequestWithToken_Call struct {
 // AuthenticateRequestWithToken is a helper method to define mock.On call
 //   - token string
 //   - req *http.Request
-func (_e *RequestSigner_Expecter) AuthenticateRequestWithToken(token interface{}, req interface{}) *RequestSigner_AuthenticateRequestWithToken_Call {
+func (_e *RequestSigner_Expecter) AuthenticateRequestWithToken(token any, req any) *RequestSigner_AuthenticateRequestWithToken_Call {
 	return &RequestSigner_AuthenticateRequestWithToken_Call{Call: _e.mock.On("AuthenticateRequestWithToken", token, req)}
 }
 

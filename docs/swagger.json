@@ -732,7 +732,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "issuerName": {
                         "type": "string"
@@ -2459,7 +2460,6 @@
                 "type": "object"
             },
             "cyclonedx.Hash": {
-                "description": "New in 1.7",
                 "properties": {
                     "alg": {
                         "$ref": "#/components/schemas/cyclonedx.HashAlgorithm"
@@ -3636,7 +3636,8 @@
                         "uniqueItems": false
                     },
                     "manufacture": {
-                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
+                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity",
+                        "description": "Deprecated: Use Component Manufacturer instead."
                     },
                     "manufacturer": {
                         "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
@@ -3712,7 +3713,6 @@
                 "type": "object"
             },
             "cyclonedx.OrganizationalEntity": {
-                "description": "Deprecated: Use Component Manufacturer instead.",
                 "properties": {
                     "address": {
                         "$ref": "#/components/schemas/cyclonedx.PostalAddress"
@@ -4016,7 +4016,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "format": {
                         "type": "string"
@@ -7485,6 +7486,9 @@
                     "assetVersionName": {
                         "type": "string"
                     },
+                    "assetVersionSlug": {
+                        "type": "string"
+                    },
                     "componentDependencyId": {
                         "type": "string"
                     },
@@ -7520,6 +7524,7 @@
                     "assetName",
                     "assetSlug",
                     "assetVersionName",
+                    "assetVersionSlug",
                     "componentDependencyId",
                     "componentPurl",
                     "componentVersion",
@@ -7639,7 +7644,12 @@
                         "type": "string"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType",
+                        "enum": [
+                            "cyclonedx",
+                            "csaf",
+                            "openvex"
+                        ]
                     },
                     "url": {
                         "type": "string"
@@ -7685,7 +7695,12 @@
                         "type": "string"
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     },
                     "justification": {
                         "type": "string"
@@ -7782,7 +7797,6 @@
                 "type": "object"
             },
             "dtos.DatabaseSpecifics": {
-                "description": "specific additional information, not standardized",
                 "properties": {
                     "cwe_ids": {
                         "description": "array of cwe ids associated with this vulnerability",
@@ -8455,10 +8469,7 @@
                     "cyclonedx",
                     "csaf",
                     "openvex",
-                    "unknown",
-                    "cyclonedx",
-                    "csaf",
-                    "openvex"
+                    "unknown"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9144,13 +9155,7 @@
                 "enum": [
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "low",
-                    "high",
-                    "X",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9165,17 +9170,7 @@
                     "adjacent",
                     "local",
                     "physical",
-                    "X",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9191,15 +9186,7 @@
                     "none",
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9211,30 +9198,6 @@
             },
             "dtos.ModifiedRequirementLevel": {
                 "enum": [
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
                     "X",
                     "none",
                     "low",
@@ -9252,13 +9215,7 @@
                 "enum": [
                     "unchanged",
                     "changed",
-                    "X",
-                    "X",
-                    "unchanged",
-                    "changed",
-                    "X",
-                    "unchanged",
-                    "changed"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9269,12 +9226,6 @@
             },
             "dtos.ModifiedUserInteraction": {
                 "enum": [
-                    "X",
-                    "none",
-                    "required",
-                    "X",
-                    "none",
-                    "required",
                     "X",
                     "none",
                     "required"
@@ -9303,7 +9254,8 @@
                         "uniqueItems": false
                     },
                     "database_specific": {
-                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics"
+                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics",
+                        "description": "specific additional information, not standardized"
                     },
                     "details": {
                         "type": "string"
@@ -10541,7 +10493,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.ProjectDTO"
+                        "$ref": "#/components/schemas/dtos.ProjectDTO",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -10630,7 +10583,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.ProjectDTO"
+                        "$ref": "#/components/schemas/dtos.ProjectDTO",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -11047,24 +11001,6 @@
             },
             "dtos.RequirementLevel": {
                 "enum": [
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
                     "low",
                     "medium",
                     "high"
@@ -11631,7 +11567,12 @@
                         "uniqueItems": false
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     }
                 },
                 "required": [
@@ -11834,10 +11775,6 @@
             },
             "dtos.VulnEventDTO": {
                 "properties": {
-                    "arbitraryJSONData": {
-                        "additionalProperties": {},
-                        "type": "object"
-                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -11888,7 +11825,6 @@
                     }
                 },
                 "required": [
-                    "arbitraryJSONData",
                     "createdAt",
                     "createdByVexRule",
                     "id",
@@ -11926,13 +11862,7 @@
                     "attachedComplianceComponent",
                     "removedComplianceComponent",
                     "detected",
-                    "rawRiskAssessmentUpdated",
-                    "accepted",
-                    "falsePositive",
-                    "reopened",
-                    "accepted",
-                    "falsePositive",
-                    "reopened"
+                    "rawRiskAssessmentUpdated"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -12358,7 +12288,6 @@
                 "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.Artifact": {
-                "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID",
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -12821,13 +12750,6 @@
                     "assetId": {
                         "type": "string"
                     },
-                    "components": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -12874,7 +12796,6 @@
                     "artifacts",
                     "asset",
                     "assetId",
-                    "components",
                     "createdAt",
                     "defaultBranch",
                     "dependencyVulns",
@@ -12903,7 +12824,8 @@
             "github_com_l3montree-dev_devguard_database_models.Attestation": {
                 "properties": {
                     "artifact": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact",
+                        "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID"
                     },
                     "artifactName": {
                         "type": "string"
@@ -13071,7 +12993,8 @@
                         "type": "string"
                     },
                     "target_cve_data": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE",
+                        "description": "TargetCVEData is populated by GORM nested preload. It is nil when the target\nCVE does not exist in this database — no DB-level FK constraint is added."
                     }
                 },
                 "required": [
@@ -13086,13 +13009,6 @@
                 "properties": {
                     "componentType": {
                         "$ref": "#/components/schemas/dtos.ComponentType"
-                    },
-                    "dependsOn": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.ComponentDependency"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
                     },
                     "id": {
                         "description": "ID might be a PURL - but not always. Sometimes it is a file path to a binary or a \"fake node\" we are adding during normalization",
@@ -13116,50 +13032,12 @@
                 },
                 "required": [
                     "componentType",
-                    "dependsOn",
                     "id",
                     "isLicenseOverwritten",
                     "license",
                     "project",
                     "projectId",
                     "published"
-                ],
-                "type": "object"
-            },
-            "github_com_l3montree-dev_devguard_database_models.ComponentDependency": {
-                "properties": {
-                    "assetId": {
-                        "type": "string"
-                    },
-                    "assetVersion": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
-                    },
-                    "assetVersionName": {
-                        "description": "Foreign key fields for AssetVersion relationship",
-                        "type": "string"
-                    },
-                    "component": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component"
-                    },
-                    "componentPurl": {
-                        "description": "will be ROOT for direct dependencies",
-                        "type": "string"
-                    },
-                    "dependency": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Component"
-                    },
-                    "dependencyPurl": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "assetId",
-                    "assetVersion",
-                    "assetVersionName",
-                    "component",
-                    "componentPurl",
-                    "dependency",
-                    "dependencyPurl"
                 ],
                 "type": "object"
             },
@@ -14074,7 +13952,8 @@
             "github_com_l3montree-dev_devguard_database_models.VEXRule": {
                 "properties": {
                     "asset": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset",
+                        "description": "Relationships"
                     },
                     "assetId": {
                         "description": "Composite key components (for indexing and queries)",
@@ -14142,9 +14021,6 @@
             },
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
-                    "arbitraryJSONData": {
-                        "type": "string"
-                    },
                     "assetSignature": {
                         "description": "set instead of DependencyVulnID for a group event applying to every\nDependencyVuln sharing this AssetSignature.",
                         "type": "integer"
@@ -14199,7 +14075,6 @@
                     }
                 },
                 "required": [
-                    "arbitraryJSONData",
                     "assetSignature",
                     "compliancePostureId",
                     "createdAt",
@@ -14592,31 +14467,6 @@
                 ],
                 "type": "object"
             },
-            "normalize.MinimalTree": {
-                "properties": {
-                    "dependencies": {
-                        "additionalProperties": {
-                            "items": {
-                                "type": "string"
-                            },
-                            "type": "array"
-                        },
-                        "type": "object"
-                    },
-                    "nodes": {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    }
-                },
-                "required": [
-                    "dependencies",
-                    "nodes"
-                ],
-                "type": "object"
-            },
             "normalize.PurlMatchContext": {
                 "properties": {
                     "howToInterpretVersionString": {
@@ -14704,24 +14554,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14733,7 +14565,16 @@
                     1000000,
                     1000000000,
                     60000000000,
-                    3600000000000
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14745,24 +14586,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -14774,8 +14597,42 @@
                     "Millisecond",
                     "Second",
                     "Minute",
-                    "Hour"
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond"
                 ]
+            },
+            "transformer.MinimalTree": {
+                "properties": {
+                    "dependencies": {
+                        "additionalProperties": {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        "type": "object"
+                    },
+                    "nodes": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "dependencies",
+                    "nodes"
+                ],
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -17554,6 +17411,72 @@
                 "summary": "Create a compliance statement for a component",
                 "tags": [
                     "Compliance Components"
+                ]
+            }
+        },
+        "/organizations/{organization}/components": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Search component occurrences within an organization",
+                "tags": [
+                    "Components"
                 ]
             }
         },
@@ -24747,7 +24670,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/normalize.MinimalTree"
+                                    "$ref": "#/components/schemas/transformer.MinimalTree"
                                 }
                             }
                         },
@@ -27428,10 +27351,19 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/x-www-form-urlencoded": {
+                        "multipart/form-data": {
                             "schema": {
-                                "title": "file",
-                                "type": "file"
+                                "properties": {
+                                    "file": {
+                                        "description": "SBOM file",
+                                        "format": "binary",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ],
+                                "type": "object"
                             }
                         }
                     },

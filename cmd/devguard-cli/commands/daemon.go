@@ -236,6 +236,26 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("deps dev information updated", "duration", time.Since(start))
 			}
 
+			if emptyOrContains(selectedDaemons, "sbomGarbageCollection") {
+				start = time.Now()
+				err := runner.CollectSBOMGarbage(context.Background())
+				if err != nil {
+					slog.Error("could not run SBOM garbage collection", "err", err)
+					return
+				}
+				slog.Info("SBOM garbage collection completed", "duration", time.Since(start))
+			}
+
+			if emptyOrContains(selectedDaemons, "externalEntityGarbageCollection") {
+				start = time.Now()
+				err := runner.CollectExternalEntityGarbage(context.Background())
+				if err != nil {
+					slog.Error("could not run external entity garbage collection", "err", err)
+					return
+				}
+				slog.Info("external entity garbage collection completed", "duration", time.Since(start))
+			}
+
 			if emptyOrContains(selectedDaemons, "vulndb") {
 				start = time.Now()
 				if err := runner.UpdateVulnDB(context.Background()); err != nil {

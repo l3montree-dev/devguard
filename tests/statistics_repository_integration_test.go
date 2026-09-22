@@ -109,7 +109,8 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 	}
 	require.NoError(t, db.Create(&releaseItem).Error)
 
-	repo := repositories.NewStatisticsRepository(db)
+	dependecyVulnRepo := repositories.NewDependencyVulnRepository(db)
+	repo := repositories.NewStatisticsRepository(db, dependecyVulnRepo)
 	result, err := repo.AverageRemediationTimesForRelease(context.Background(), nil, release.ID)
 
 	require.NoError(t, err)
@@ -197,7 +198,8 @@ func TestAverageRemediationTimesForRelease(t *testing.T) {
 	}
 	require.NoError(t, db.Create(&releaseItem).Error)
 
-	repo := repositories.NewStatisticsRepository(db)
+	dependecyVulnRepo := repositories.NewDependencyVulnRepository(db)
+	repo := repositories.NewStatisticsRepository(db, dependecyVulnRepo)
 	result, err := repo.AverageRemediationTimesForRelease(context.Background(), nil, release.ID)
 
 	require.NoError(t, err)

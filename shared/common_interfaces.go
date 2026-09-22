@@ -47,6 +47,8 @@ type DaemonRunner interface {
 	UpdateVulnDB(ctx context.Context) error
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
 	RunVEXRuleRecommendationDaemon(ctx context.Context) error
+	CollectSBOMGarbage(ctx context.Context) error
+	CollectExternalEntityGarbage(ctx context.Context) error
 
 	Start(ctx context.Context)
 	StartBenchmarkJobs(ctx context.Context, stages []string)
@@ -299,7 +301,7 @@ type DependencyVulnRepository interface {
 	GetDefaultDependencyVulnsByOrgIDPaged(ctx context.Context, tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIDPaged(ctx context.Context, tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDependencyVulnsByAssetVersionPagedAndFlat(ctx context.Context, tx DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	ListByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	ListByAssetAndAssetVersionWithoutEvents(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(ctx context.Context, tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	ApplyGroupEventAndSave(ctx context.Context, tx DB, assetSignature int64, vulnEvent *models.VulnEvent) error
@@ -308,13 +310,14 @@ type DependencyVulnRepository interface {
 	ListUnfixedByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(ctx context.Context, tx DB, orgID uuid.UUID, pURL string, cveID string) (dtos.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(ctx context.Context, tx DB, assetID uuid.UUID, state dtos.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
-	GetNotFixedDependencyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, assetSignatures []int64) ([]models.DependencyVuln, error)
 	GetAllVulnsByArtifact(ctx context.Context, tx DB, artifact models.Artifact) ([]models.DependencyVuln, error)
 	GetAllVulnsForTagsAndDefaultBranchInAsset(ctx context.Context, tx DB, assetID uuid.UUID, excludedStates []dtos.VulnState) ([]models.DependencyVuln, error)
 	// regardless of path. Used for applying status changes to all instances of a CVE+component combination.
 	FindByCVEAndComponentPurl(ctx context.Context, tx DB, assetID uuid.UUID, cveID string, componentPurl string) ([]models.DependencyVuln, error)
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 	GetByVexRuleID(ctx context.Context, tx DB, vexRuleID string) ([]models.DependencyVuln, error)
+	AttachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error
 }
 
 type FirstPartyVulnRepository interface {
@@ -438,6 +441,7 @@ type ExternalEntityProviderService interface {
 	TriggerOrgSync(c Context) error
 	SyncOrgs(c Context) ([]*models.Org, error)
 	TriggerSync(c Context) error
+	CollectGarbage(c context.Context) error
 }
 
 type ProjectService interface {
@@ -548,10 +552,12 @@ type ScanService interface {
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)
 	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)
-	FetchSbomsFromUpstream(ctx context.Context, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []string, []dtos.ExternalReferenceError)
+	FetchSbomsFromUpstream(ctx context.Context, tx DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
 	ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.BOM) (dtos.ScanResponse, error)
 	ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error)
+	IngestVexFromExternalReferences(ctx context.Context, tx DB, bom *cyclonedx.BOM, asset models.Asset) error
+	IngestVEXRules(ctx context.Context, tx DB, asset models.Asset, rules []models.VEXRule) error
 }
 
 type ConfigRepository interface {
@@ -574,6 +580,7 @@ type VulnEventRepository interface {
 	ReadAssetEventsByVulnID(ctx context.Context, tx DB, vulnID uuid.UUID, vulnType dtos.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx DB, assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 	GetSecurityRelevantEventsForVulnIDs(ctx context.Context, tx DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)
+	GetEventsByDependencyVulnIDs(ctx context.Context, tx DB, vulnIDs []uuid.UUID) ([]models.VulnEvent, error)
 	CountByVexRuleIDs(ctx context.Context, tx DB, ruleIDs []string) (map[string]int, error)
 	GetLastEventBeforeTimestamp(ctx context.Context, tx DB, vulnID uuid.UUID, time time.Time) (models.VulnEvent, error)
 	DeleteEventByID(ctx context.Context, tx DB, eventID string) error

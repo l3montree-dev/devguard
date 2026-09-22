@@ -62,11 +62,18 @@ func (g *gormPatRepository) DeleteUnscoped(ctx context.Context, tx *gorm.DB, id 
 	return nil
 }
 
+
+const lastUsedResolution = time.Minute
+
 // MarkAsLastUsedNowByID scopes by id only: id is the PAT's own ID, resolved from a token the
 // caller already presented and that was matched by fingerprint (proof of possession), not from
 // a raw user-suppliable path param.
 func (g *gormPatRepository) MarkAsLastUsedNowByID(ctx context.Context, tx *gorm.DB, id uuid.UUID) error {
-	return g.GetDB(ctx, tx).Model(&models.PAT{}).Where("id = ?", id).Update("last_used_at", time.Now()).Error // nosemgrep: bola-repository-update-missing-tenant-scope
+	now := time.Now()
+	return g.GetDB(ctx, tx).Model(&models.PAT{}).
+		Where("id = ?", id).
+		Where("last_used_at IS NULL OR last_used_at < ?", now.Add(-lastUsedResolution)).
+		Update("last_used_at", now).Error // nosemgrep: bola-repository-update-missing-tenant-scope
 }
 
 func (g *gormPatRepository) DeleteByFingerprint(ctx context.Context, tx *gorm.DB, fingerprint string) error {
