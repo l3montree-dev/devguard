@@ -56,12 +56,8 @@
           buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
 
-        targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGo127Module;
-        };
-        targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGo127Module;
-        };
+        targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux;
+        targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux;
         # this is only done to satisfy the expected structure in the container hardening work
         binaries = import ./nix/devguard.nix {
           inherit (hostPkgs)
@@ -72,6 +68,7 @@
         };
         ociImagesAmd64 = import ./nix/oci.nix {
           pkgs = targetPkgsAmd64;
+          buildGo127Module = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGo127Module;
           inherit
             self
             pyproject-nix
@@ -81,6 +78,7 @@
         };
         ociImagesArm64 = import ./nix/oci.nix {
           pkgs = targetPkgsArm64;
+          buildGo127Module = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGo127Module;
           inherit
             self
             pyproject-nix

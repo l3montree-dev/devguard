@@ -4,16 +4,21 @@
   pyproject-nix,
   uv2nix,
   pyproject-build-systems,
+  # devguard's own source requires a newer Go than the vendored security
+  # tools below (trivy/gitleaks/crane/kratos) - those must keep building
+  # with whatever Go version their own nixpkgs derivation pins, so this is
+  # passed in separately rather than overriding `pkgs.buildGoModule` wholesale.
+  buildGo127Module ? pkgs.buildGoModule,
 }:
 rec {
   devguardBinaries = import ./devguard.nix {
     inherit self;
     inherit (pkgs)
-      buildGoModule
       lib
       runCommand
       jq
       ;
+    buildGoModule = buildGo127Module;
     trivy = trivyFromSource.package;
   };
 
