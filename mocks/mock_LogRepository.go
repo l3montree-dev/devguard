@@ -21,10 +21,19 @@ func NewLogRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *LogRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &LogRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -43,7 +52,7 @@ func (_m *LogRepository) EXPECT() *LogRepository_Expecter {
 }
 
 // ListPaged provides a mock function for the type LogRepository
-func (_mock *LogRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
+func (_mock *LogRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
 	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
@@ -52,15 +61,15 @@ func (_mock *LogRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID uu
 
 	var r0 shared.Paged[dtos.LogDTO]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.LogDTO], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.LogDTO], error)); ok {
 		return returnFunc(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.LogDTO]); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.LogDTO]); ok {
 		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[dtos.LogDTO])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
 		r1 = returnFunc(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
@@ -76,7 +85,7 @@ type LogRepository_ListPaged_Call struct {
 // ListPaged is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx *gorm.DB
-//   - orgID uuid.UUID
+//   - orgID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - assetID *uuid.UUID
 //   - pageInfo shared.PageInfo
@@ -87,7 +96,7 @@ func (_e *LogRepository_Expecter) ListPaged(ctx any, tx any, orgID any, projectI
 	return &LogRepository_ListPaged_Call{Call: _e.mock.On("ListPaged", ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)}
 }
 
-func (_c *LogRepository_ListPaged_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *LogRepository_ListPaged_Call {
+func (_c *LogRepository_ListPaged_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *LogRepository_ListPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -97,9 +106,9 @@ func (_c *LogRepository_ListPaged_Call) Run(run func(ctx context.Context, tx *go
 		if args[1] != nil {
 			arg1 = args[1].(*gorm.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*uuid.UUID)
 		}
 		var arg3 *uuid.UUID
 		if args[3] != nil {
@@ -145,7 +154,7 @@ func (_c *LogRepository_ListPaged_Call) Return(paged shared.Paged[dtos.LogDTO], 
 	return _c
 }
 
-func (_c *LogRepository_ListPaged_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error)) *LogRepository_ListPaged_Call {
+func (_c *LogRepository_ListPaged_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error)) *LogRepository_ListPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
