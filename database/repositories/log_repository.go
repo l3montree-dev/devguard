@@ -90,12 +90,13 @@ func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.U
 		)`, *projectID)
 	}
 
-	q = q.Joins("LEFT JOIN projects p ON p.id = logs.project_id").
+	q = q.Joins("LEFT JOIN organizations o ON o.id = logs.org_id").
+		Joins("LEFT JOIN projects p ON p.id = logs.project_id").
 		Joins("LEFT JOIN assets a ON a.id = logs.asset_id")
 
 	if search != "" {
 		searchPattern := "%" + search + "%"
-		q = q.Where("logs.message ILIKE ? OR p.name ILIKE ? OR a.name ILIKE ?", searchPattern, searchPattern, searchPattern)
+		q = q.Where("logs.message ILIKE ? OR p.name ILIKE ? OR a.name ILIKE ? OR o.name ILIKE ?", searchPattern, searchPattern, searchPattern, searchPattern)
 	}
 
 	for _, f := range filter {
@@ -108,7 +109,7 @@ func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.U
 	}
 
 	findQuery := q.Session(&gorm.Session{}).
-		Select("logs.*, p.name AS project_name, a.name AS asset_name")
+		Select("logs.* , o.name AS org_name, p.name AS project_name, a.name AS asset_name")
 
 	if len(sort) > 0 {
 		for _, s := range sort {
