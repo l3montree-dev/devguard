@@ -32,10 +32,12 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 
 func (g *projectRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Project, error) {
 	var result models.Project
-	err := g.GetDB(ctx, tx).Session(&gorm.Session{
+	db := g.GetDB(ctx, tx).Session(&gorm.Session{
 		Logger:               logger.Default.LogMode(logger.Silent),
 		FullSaveAssociations: false,
-	}).Model(models.Project{}).Where("id = ?", id).First(&result).Error
+	}).Model(models.Project{}).Where("id = ?", id)
+	db = withOwnershipScope(ctx, db, models.Project{})
+	err := db.First(&result).Error
 	return result, err
 }
 
