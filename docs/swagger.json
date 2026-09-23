@@ -14631,25 +14631,38 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
-                    60000000000
+                    60000000000,
+                    3600000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14661,25 +14674,38 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
-                    "Minute"
+                    "Minute",
+                    "Hour"
                 ]
             },
             "transformer.MinimalTree": {
@@ -18654,22 +18680,6 @@
                         }
                     },
                     {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
                         "description": "Page number",
                         "in": "query",
                         "name": "page",
@@ -18733,7 +18743,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "summary": "List logs",
+                "summary": "List organization logs",
                 "tags": [
                     "Logs"
                 ]
@@ -21319,6 +21329,7 @@
                         "description": "Project slug",
                         "in": "path",
                         "name": "projectSlug",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -21327,6 +21338,7 @@
                         "description": "Asset slug",
                         "in": "path",
                         "name": "assetSlug",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -21395,7 +21407,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "summary": "List logs",
+                "summary": "List asset logs",
                 "tags": [
                     "Logs"
                 ]
@@ -29724,14 +29736,7 @@
                         "description": "Project slug",
                         "in": "path",
                         "name": "projectSlug",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -29800,7 +29805,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "summary": "List logs",
+                "summary": "List project logs",
                 "tags": [
                     "Logs"
                 ]
