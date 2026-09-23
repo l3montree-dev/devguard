@@ -184,6 +184,7 @@ type AssetRepository interface {
 	ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadWithProjects(ctx context.Context, tx *gorm.DB, id []uuid.UUID) ([]models.Asset, error)
 	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
+	ReadInProjectTree(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, rootProjectID uuid.UUID) (models.Asset, error)
 	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
 }
 
