@@ -383,3 +383,18 @@ func (repository *assetRepository) GetOrgProjectAssetSlugsByAssetID(ctx context.
 
 	return slugs.OrgSlug, slugs.ProjectSlug, slugs.AssetSlug, nil
 }
+
+func (repository *assetRepository) ReadInProjectTree(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, rootProjectID uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	err := repository.GetDB(ctx, tx).
+		Where("id = ?", assetID).
+		Where(`project_id IN (
+			WITH RECURSIVE proj_tree AS (
+				SELECT id FROM projects WHERE id = ?
+				UNION ALL
+				SELECT p.id FROM projects p JOIN proj_tree pt ON p.parent_id = pt.id
+			) SELECT id FROM proj_tree
+		)`, rootProjectID).
+		First(&asset).Error
+	return asset, err
+}
