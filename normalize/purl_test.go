@@ -29,25 +29,25 @@ func TestParsePurlForMatching(t *testing.T) {
 		assert.Equal(t, SemanticVersionString, ctx.HowToInterpretVersionString)
 	})
 
+	t.Run("debian package without epoch should use version as-is", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:deb/debian/git@2.47.3-0+deb13u1?arch=amd64")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
+		assert.Equal(t, "2.47.3-0+deb13u1", ctx.NormalizedVersion)
+	})
+
+	t.Run("debian package with epoch already in version should use version as-is", func(t *testing.T) {
+		p, _ := packageurl.FromString("pkg:deb/debian/zlib@1:1.3.dfsg+really1.3.1-1+b1")
+		ctx := ParsePurlForMatching(p)
+		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
+		assert.Equal(t, "1:1.3.dfsg+really1.3.1-1+b1", ctx.NormalizedVersion)
+	})
+
 	t.Run("debian package with epoch qualifier should prepend epoch to version", func(t *testing.T) {
 		p, _ := packageurl.FromString("pkg:deb/debian/git@2.47.3-0+deb13u1?arch=amd64&epoch=1")
 		ctx := ParsePurlForMatching(p)
 		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
 		assert.Equal(t, "1:2.47.3-0+deb13u1", ctx.NormalizedVersion)
-	})
-
-	t.Run("debian package with epoch 0 should prepend epoch to version", func(t *testing.T) {
-		p, _ := packageurl.FromString("pkg:deb/debian/curl@8.0.0-1?epoch=0")
-		ctx := ParsePurlForMatching(p)
-		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
-		assert.Equal(t, "0:8.0.0-1", ctx.NormalizedVersion)
-	})
-
-	t.Run("debian package without epoch qualifier should prepend epoch 0 to version", func(t *testing.T) {
-		p, _ := packageurl.FromString("pkg:deb/debian/curl@8.0.0-1")
-		ctx := ParsePurlForMatching(p)
-		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
-		assert.Equal(t, "0:8.0.0-1", ctx.NormalizedVersion)
 	})
 
 	t.Run("rpm package with epoch qualifier should prepend epoch to version", func(t *testing.T) {
@@ -58,11 +58,11 @@ func TestParsePurlForMatching(t *testing.T) {
 		assert.Equal(t, "1:5.0.17-2.el8", ctx.NormalizedVersion)
 	})
 
-	t.Run("rpm package without epoch qualifier should prepend epoch 0 to version", func(t *testing.T) {
+	t.Run("rpm package without epoch qualifier should use version as-is", func(t *testing.T) {
 		p, _ := packageurl.FromString("pkg:rpm/centos/bash@5.0.17-2.el8?arch=x86_64")
 		ctx := ParsePurlForMatching(p)
 		assert.Equal(t, EcosystemSpecificVersion, ctx.HowToInterpretVersionString)
-		assert.Equal(t, "0:5.0.17-2.el8", ctx.NormalizedVersion)
+		assert.Equal(t, "5.0.17-2.el8", ctx.NormalizedVersion)
 	})
 
 }
