@@ -447,6 +447,7 @@ func fillParams(path string, seed seededResources) string {
 		"assetSlug":        seed.assetSlug,
 		"assetVersionSlug": seed.assetVersionSlug,
 		"secret":           seed.dependencyProxySecret,
+		"package":          "six",
 	}
 	filled := echoParamNameRe.ReplaceAllStringFunc(path, func(m string) string {
 		name := strings.TrimPrefix(m, ":")
