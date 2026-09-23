@@ -547,120 +547,108 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer conn.Release()
 
-	row := conn.QueryRow(ctx, `SELECT COUNT(*)>0 FROM information_schema.tables 
-			WHERE table_catalog = 'devguard'
-			AND table_schema = 'public'
-			AND table_name = 'new_dependency_vulns';`)
-	var vulnInfoExists bool
-	err = row.Scan(&vulnInfoExists)
+	slog.Info("start collecting all dependencies")
+	start := time.Now()
+	purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_nodes;`)
 	if err != nil {
 		return err
 	}
 
-	if !vulnInfoExists {
-
-		slog.Info("start collecting all dependencies")
-		start := time.Now()
-		purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_nodes;`)
+	allDependencies := make([]packageurl.PackageURL, 0, 15_000)
+	rawPurlsByCanonical := make(map[string][]string, 15_000)
+	var purl string
+	var parsedPurl packageurl.PackageURL
+	for purlRows.Next() {
+		err = purlRows.Scan(&purl)
 		if err != nil {
 			return err
 		}
-
-		allDependencies := make([]packageurl.PackageURL, 0, 15_000)
-		rawPurlsByCanonical := make(map[string][]string, 15_000)
-		var purl string
-		var parsedPurl packageurl.PackageURL
-		for purlRows.Next() {
-			err = purlRows.Scan(&purl)
-			if err != nil {
-				return err
-			}
-			parsedPurl, err = packageurl.FromString(purl)
-			if err != nil {
-				continue
-			}
-			canonicalPurl := parsedPurl.String()
-			if _, ok := rawPurlsByCanonical[canonicalPurl]; !ok {
-				allDependencies = append(allDependencies, parsedPurl)
-			}
-			rawPurlsByCanonical[canonicalPurl] = append(rawPurlsByCanonical[canonicalPurl], purl)
-		}
-		purlRows.Close()
-		if err := purlRows.Err(); err != nil {
-			return err
-		}
-		slog.Info("finished reading all dependencies", "amount", len(allDependencies), "time", time.Since(start))
-
-		purlMatcher := scan.NewPurlComparer(runner.db, new(int(0)), scan.WithPreloads())
-
-		slog.Info("start matching purls to affected components")
-		start = time.Now()
-		candidates, err := purlMatcher.GetAffectedComponentsBatch(ctx, allDependencies)
+		parsedPurl, err = packageurl.FromString(purl)
 		if err != nil {
-			return fmt.Errorf("could not match purls: %w", err)
+			continue
 		}
-		slog.Info("finished matching purls to affected components", "candidates", len(candidates), "time", time.Since(start))
-
-		allDependencies = nil
-		// represents a row in the temporary pivot table
-		type purlAffectedComponent struct {
-			purl                string
-			affectedComponentID int64
-			fixedVersion        *string
+		canonicalPurl := parsedPurl.String()
+		if _, ok := rawPurlsByCanonical[canonicalPurl]; !ok {
+			allDependencies = append(allDependencies, parsedPurl)
 		}
+		rawPurlsByCanonical[canonicalPurl] = append(rawPurlsByCanonical[canonicalPurl], purl)
+	}
+	purlRows.Close()
+	if err := purlRows.Err(); err != nil {
+		return err
+	}
+	slog.Info("finished reading all dependencies", "amount", len(allDependencies), "time", time.Since(start))
 
-		purlAffectedComponents := make([]purlAffectedComponent, 0, len(candidates))
-		isPurlAffected := make(map[string]struct{}, len(candidates)/2)
-		for _, candidate := range candidates {
-			if len(candidate.Components) == 0 {
-				continue
-			}
-			for _, rawPurl := range rawPurlsByCanonical[candidate.Purl.String()] {
-				isPurlAffected[rawPurl] = struct{}{}
-				for i := range candidate.Components {
-					fixed := candidate.Components[i].SemverFixed
-					if fixed == nil {
-						fixed = candidate.Components[i].VersionFixed
-					}
-					purlAffectedComponents = append(purlAffectedComponents, purlAffectedComponent{
-						purl:                rawPurl,
-						affectedComponentID: candidate.Components[i].ID,
-						fixedVersion:        fixed,
-					})
+	purlMatcher := scan.NewPurlComparer(runner.db, new(int(0)), scan.WithPreloads())
+
+	slog.Info("start matching purls to affected components")
+	start = time.Now()
+	candidates, err := purlMatcher.GetAffectedComponentsBatch(ctx, allDependencies)
+	if err != nil {
+		return fmt.Errorf("could not match purls: %w", err)
+	}
+	slog.Info("finished matching purls to affected components", "candidates", len(candidates), "time", time.Since(start))
+
+	allDependencies = nil
+	// represents a row in the temporary pivot table
+	type purlAffectedComponent struct {
+		purl                string
+		affectedComponentID int64
+		fixedVersion        *string
+	}
+
+	purlAffectedComponents := make([]purlAffectedComponent, 0, len(candidates))
+	isPurlAffected := make(map[string]struct{}, len(candidates)/2)
+	for _, candidate := range candidates {
+		if len(candidate.Components) == 0 {
+			continue
+		}
+		for _, rawPurl := range rawPurlsByCanonical[candidate.Purl.String()] {
+			isPurlAffected[rawPurl] = struct{}{}
+			for i := range candidate.Components {
+				fixed := candidate.Components[i].SemverFixed
+				if fixed == nil {
+					fixed = candidate.Components[i].VersionFixed
 				}
+				purlAffectedComponents = append(purlAffectedComponents, purlAffectedComponent{
+					purl:                rawPurl,
+					affectedComponentID: candidate.Components[i].ID,
+					fixedVersion:        fixed,
+				})
 			}
 		}
+	}
 
-		tx, err := conn.Begin(ctx)
-		if err != nil {
-			return err
-		}
-		defer tx.Rollback(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-		// make that temporary when not testing
-		_, err = tx.Exec(ctx, `
+	// make that temporary when not testing
+	_, err = tx.Exec(ctx, `
 	CREATE TABLE purl_mapping (
 		purl text,
 		affected_component_id bigint,
 		fixed_version text
 	);`)
-		if err != nil {
-			return fmt.Errorf("could not create temp table for purl Mapping: %w", err)
-		}
+	if err != nil {
+		return fmt.Errorf("could not create temp table for purl Mapping: %w", err)
+	}
 
-		start = time.Now()
-		slog.Info("start copying into temporary table")
-		// use canonical purls to ensure consistent matching
-		purlMemo := make(map[string]string, len(rawPurlsByCanonical))
-		_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
-			return []any{canonicalPurl(purlAffectedComponents[i].purl, purlMemo), purlAffectedComponents[i].affectedComponentID, purlAffectedComponents[i].fixedVersion}, nil
-		}))
-		if err != nil {
-			return fmt.Errorf("could not copy rows into temporary table: %w", err)
-		}
+	start = time.Now()
+	slog.Info("start copying into temporary table")
+	// use canonical purls to ensure consistent matching
+	purlMemo := make(map[string]string, len(rawPurlsByCanonical))
+	_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
+		return []any{canonicalPurl(purlAffectedComponents[i].purl, purlMemo), purlAffectedComponents[i].affectedComponentID, purlAffectedComponents[i].fixedVersion}, nil
+	}))
+	if err != nil {
+		return fmt.Errorf("could not copy rows into temporary table: %w", err)
+	}
 
-		// precompute the join to the cve ids
-		_, err = tx.Exec(ctx, `
+	// precompute the join to the cve ids
+	_, err = tx.Exec(ctx, `
 	CREATE TABLE purl_to_cves AS (
 		SELECT DISTINCT pm.purl,pm.fixed_version, cac.cve_id 
 		FROM purl_mapping pm 
@@ -670,114 +658,114 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	
 	DROP TABLE public.purl_mapping;
 	ALTER TABLE public.purl_to_cves RENAME TO purl_mapping;`)
-		if err != nil {
-			return fmt.Errorf("could not convert affected component mapping to cve id mapping: %w", err)
-		}
+	if err != nil {
+		return fmt.Errorf("could not convert affected component mapping to cve id mapping: %w", err)
+	}
 
-		_, err = tx.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 	CREATE INDEX ON public.purl_mapping (purl,cve_id,fixed_version);`)
-		if err != nil {
-			return fmt.Errorf("could not enforce primary key on purl_mapping table: %w", err)
-		}
+	if err != nil {
+		return fmt.Errorf("could not enforce primary key on purl_mapping table: %w", err)
+	}
 
-		slog.Info("successfully populated temporary table", "time", time.Since(start))
+	slog.Info("successfully populated temporary table", "time", time.Since(start))
 
-		_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths; DROP TABLE IF EXISTS new_dependency_vulns;`)
-		if err != nil {
-			return fmt.Errorf("could not drop table for vuln paths: %w", err)
-		}
+	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths; DROP TABLE IF EXISTS new_dependency_vulns;`)
+	if err != nil {
+		return fmt.Errorf("could not drop table for vuln paths: %w", err)
+	}
 
-		_, err = tx.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 			CREATE TABLE vuln_paths (
 				component_purl text,
 				root uuid,
 				path uuid[]
 			);`)
-		if err != nil {
-			return fmt.Errorf("could not create table for vuln paths: %w", err)
+	if err != nil {
+		return fmt.Errorf("could not create table for vuln paths: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	affectedPurls := utils.DeduplicateSlice(purlAffectedComponents, func(purl purlAffectedComponent) string { return purl.purl })
+
+	slog.Info("start scanning affected purls", "amount", len(affectedPurls))
+	start = time.Now()
+	var purlBatchSize = len(affectedPurls)
+	group := &errgroup.Group{}
+	resultsChannel := make(chan purlPathResult)
+	vulnPathColumns := []string{"component_purl", "root", "path"}
+	for start := 0; start < len(affectedPurls); start += purlBatchSize {
+		timer := time.Now()
+		end := min(start+purlBatchSize, len(affectedPurls))
+		group.Go(func() error {
+			_, err := runner.GetPathsForPurls(ctx, resultsChannel, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
+			return err
+		})
+
+		var groupErr error
+		go func() {
+			groupErr = group.Wait()
+			close(resultsChannel)
+		}()
+
+		const batchSize = 4000
+		rowsBuffer := make([]vulnPath, 0, batchSize*1.25) // 75% pctfree
+		copyRows := func() error {
+			_, err := conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromSlice(len(rowsBuffer), func(i int) ([]any, error) {
+				return []any{rowsBuffer[i].Purl, rowsBuffer[i].Root, rowsBuffer[i].Path}, nil
+			}))
+			rowsBuffer = rowsBuffer[:0]
+			return err
 		}
-
-		err = tx.Commit(ctx)
-		if err != nil {
-			panic(err)
-		}
-
-		affectedPurls := utils.DeduplicateSlice(purlAffectedComponents, func(purl purlAffectedComponent) string { return purl.purl })
-
-		slog.Info("start scanning affected purls", "amount", len(affectedPurls))
-		start = time.Now()
-		var purlBatchSize = len(affectedPurls)
-		group := &errgroup.Group{}
-		resultsChannel := make(chan purlPathResult)
-		vulnPathColumns := []string{"component_purl", "root", "path"}
-		for start := 0; start < len(affectedPurls); start += purlBatchSize {
-			timer := time.Now()
-			end := min(start+purlBatchSize, len(affectedPurls))
-			group.Go(func() error {
-				_, err := runner.GetPathsForPurls(ctx, resultsChannel, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
-				return err
-			})
-
-			var groupErr error
-			go func() {
-				groupErr = group.Wait()
-				close(resultsChannel)
-			}()
-
-			const batchSize = 4000
-			rowsBuffer := make([]vulnPath, 0, batchSize*1.25) // 75% pctfree
-			copyRows := func() error {
-				_, err := conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromSlice(len(rowsBuffer), func(i int) ([]any, error) {
-					return []any{rowsBuffer[i].Purl, rowsBuffer[i].Root, rowsBuffer[i].Path}, nil
-				}))
-				rowsBuffer = rowsBuffer[:0]
-				return err
-			}
-			for result := range resultsChannel {
-				purl := canonicalPurl(result.Purl, purlMemo)
-				for _, root := range result.ExplodedRoots {
-					rowsBuffer = append(rowsBuffer, vulnPath{
-						Purl: purl,
-						Path: nil,
-						Root: root,
-					})
-				}
-
-				for _, path := range result.Paths {
-					rowsBuffer = append(rowsBuffer, vulnPath{
-						Purl: purl,
-						Path: toStoredPath(path),
-						Root: path[len(path)-1],
-					})
-				}
-
-				if len(rowsBuffer) >= batchSize {
-					slog.Info("streaming batch to database", "amount", len(rowsBuffer))
-					if err := copyRows(); err != nil {
-						return fmt.Errorf("could not copy vuln paths into table: %w", err)
-					}
-				}
+		for result := range resultsChannel {
+			purl := canonicalPurl(result.Purl, purlMemo)
+			for _, root := range result.ExplodedRoots {
+				rowsBuffer = append(rowsBuffer, vulnPath{
+					Purl: purl,
+					Path: nil,
+					Root: root,
+				})
 			}
 
-			if groupErr != nil {
-				return fmt.Errorf("could not scan purl batch: %w", groupErr)
+			for _, path := range result.Paths {
+				rowsBuffer = append(rowsBuffer, vulnPath{
+					Purl: purl,
+					Path: toStoredPath(path),
+					Root: path[len(path)-1],
+				})
 			}
 
-			// copy the remaining rows as well
-			if len(rowsBuffer) > 0 {
+			if len(rowsBuffer) >= batchSize {
+				slog.Info("streaming batch to database", "amount", len(rowsBuffer))
 				if err := copyRows(); err != nil {
 					return fmt.Errorf("could not copy vuln paths into table: %w", err)
 				}
 			}
-
-			slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer))
 		}
 
-		slog.Info("finished scanning all purls", "time", time.Since(start))
+		if groupErr != nil {
+			return fmt.Errorf("could not scan purl batch: %w", groupErr)
+		}
 
-		start = time.Now()
-		// now materialize the new dependency vulns from the scan data
-		_, err = conn.Exec(ctx, `
+		// copy the remaining rows as well
+		if len(rowsBuffer) > 0 {
+			if err := copyRows(); err != nil {
+				return fmt.Errorf("could not copy vuln paths into table: %w", err)
+			}
+		}
+
+		slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer))
+	}
+
+	slog.Info("finished scanning all purls", "time", time.Since(start))
+
+	start = time.Now()
+	// now materialize the new dependency vulns from the scan data
+	_, err = conn.Exec(ctx, `
 		CREATE TABLE public.new_dependency_vulns AS (
 			SELECT 
 				vp.component_purl, vp.path,
@@ -791,19 +779,16 @@ func (runner *DaemonRunner) NewScanAsset() error {
 			JOIN cves
 				ON cves.id = pm.cve_id
 		);`)
-		if err != nil {
-			return fmt.Errorf("could not materialize new dependency vulns: %w", err)
-		}
-
-		// speed up artifact lookup queries
-		_, err = conn.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
-		if err != nil {
-			return fmt.Errorf("could not create index on vuln_path artifact lookup: %w", err)
-		}
-		slog.Info("finished materializing new dependency vulns", "time", time.Since(start))
-	} else {
-		slog.Info("vuln info already present, skipping scanning")
+	if err != nil {
+		return fmt.Errorf("could not materialize new dependency vulns: %w", err)
 	}
+
+	// speed up artifact lookup queries
+	_, err = conn.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
+	if err != nil {
+		return fmt.Errorf("could not create index on vuln_path artifact lookup: %w", err)
+	}
+	slog.Info("finished materializing new dependency vulns", "time", time.Since(start))
 
 	startHandling := time.Now()
 
@@ -829,15 +814,16 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	rows.Close()
 
 	slog.Info("start handling scan results for assets", "number of assets", len(assetIDs))
+	start = time.Now()
 	for i, assetID := range assetIDs {
-		start := time.Now()
 		err = runner.handleScanResultForAsset(ctx, conn, assetID)
 		if err != nil {
-			return fmt.Errorf("could not handle scan result: %w", err)
+			slog.Error("could not handle scan result for asset", "err", err, "asset", assetID)
+		} else if i+1%10 == 0 {
+			slog.Info(fmt.Sprintf("finished asset %d/%d", i+1, len(assetIDs)), "batchTime", time.Since(start))
+			start = time.Now()
 		}
-		slog.Info(fmt.Sprintf("finished asset %d/%d", i, len(assetIDs)), "time", time.Since(start))
 	}
-
 	slog.Info("finished all handle scan results", "time", time.Since(startHandling))
 
 	return nil
@@ -890,19 +876,20 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *
 	for _, assetVersion := range assetVersions {
 		existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, asset.ID)
 		if err != nil {
-			slog.Error("could not get existing dependencyVulns", "err", err)
-			return err
+			slog.Error("could not get existing dependencyVulns", "err", err, "assetVersion", assetVersion)
+			continue
 		}
 
 		for _, artifact := range assetVersion.Artifacts {
 			foundVulns, err := runner.FetchNewVulnsForArtifact(ctx, conn, artifact)
 			if err != nil {
-				return fmt.Errorf("could not query found vulns for artifact: %w", err)
+				slog.Error("could not query found vulns for artifact", "err", err, "artifact", artifact.ArtifactName)
+				continue
 			}
 
 			existingDependencyVulns, err = runner.HandleScanResultBatch(ctx, foundVulns, existingDependencyVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
 			if err != nil {
-				return fmt.Errorf("could not handle scan results: %w", err)
+				slog.Error("could not handle scan results", "err", err, "artifact", artifact.ArtifactName)
 			}
 		}
 	}
