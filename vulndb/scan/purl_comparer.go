@@ -324,7 +324,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	// Selecting the ids plus the columns the ecosystem specific version check
 	// needs keeps the joined result small - the rows are hydrated by a second
 	// query using preloads AFTER filtering
-	const selectList = `SELECT q.purl, q.version, ac.id,
+	const selectList = `SELECT q.purl, q.version, q.original_version, ac.id,
 			ac.purl AS component_purl,
 			ac.version AS component_version,
 			ac.version_introduced AS component_version_introduced,

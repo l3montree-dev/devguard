@@ -35,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
@@ -549,13 +550,13 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	row := conn.QueryRow(ctx, `SELECT COUNT(*)>0 FROM information_schema.tables 
 			WHERE table_catalog = 'devguard'
 			AND table_schema = 'public'
-			AND table_name = 'vuln_paths';`)
+			AND table_name = 'new_dependency_vulns';`)
 	var vulnInfoExists bool
 	err = row.Scan(&vulnInfoExists)
 	if err != nil {
 		return err
 	}
-	vulnInfoExists = false
+
 	if !vulnInfoExists {
 
 		slog.Info("start collecting all dependencies")
@@ -649,8 +650,10 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 		start = time.Now()
 		slog.Info("start copying into temporary table")
+		// use canonical purls to ensure consistent matching
+		purlMemo := make(map[string]string, len(rawPurlsByCanonical))
 		_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
-			return []any{purlAffectedComponents[i].purl, purlAffectedComponents[i].affectedComponentID, purlAffectedComponents[i].fixedVersion}, nil
+			return []any{canonicalPurl(purlAffectedComponents[i].purl, purlMemo), purlAffectedComponents[i].affectedComponentID, purlAffectedComponents[i].fixedVersion}, nil
 		}))
 		if err != nil {
 			return fmt.Errorf("could not copy rows into temporary table: %w", err)
@@ -711,7 +714,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 			timer := time.Now()
 			end := min(start+purlBatchSize, len(affectedPurls))
 			group.Go(func() error {
-				_, err = runner.GetPathsForPurls(ctx, resultsChannel, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
+				_, err := runner.GetPathsForPurls(ctx, resultsChannel, utils.Map(affectedPurls[start:end], func(pac purlAffectedComponent) string { return pac.purl }))
 				return err
 			})
 
@@ -723,8 +726,15 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 			const batchSize = 4000
 			rowsBuffer := make([]vulnPath, 0, batchSize*1.25) // 75% pctfree
+			copyRows := func() error {
+				_, err := conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromSlice(len(rowsBuffer), func(i int) ([]any, error) {
+					return []any{rowsBuffer[i].Purl, rowsBuffer[i].Root, rowsBuffer[i].Path}, nil
+				}))
+				rowsBuffer = rowsBuffer[:0]
+				return err
+			}
 			for result := range resultsChannel {
-				purl := result.Purl
+				purl := canonicalPurl(result.Purl, purlMemo)
 				for _, root := range result.ExplodedRoots {
 					rowsBuffer = append(rowsBuffer, vulnPath{
 						Purl: purl,
@@ -736,25 +746,28 @@ func (runner *DaemonRunner) NewScanAsset() error {
 				for _, path := range result.Paths {
 					rowsBuffer = append(rowsBuffer, vulnPath{
 						Purl: purl,
-						Path: path,
+						Path: toStoredPath(path),
 						Root: path[len(path)-1],
 					})
 				}
 
 				if len(rowsBuffer) >= batchSize {
 					slog.Info("streaming batch to database", "amount", len(rowsBuffer))
-					_, err = conn.CopyFrom(ctx, pgx.Identifier{"vuln_paths"}, vulnPathColumns, pgx.CopyFromSlice(len(rowsBuffer), func(i int) ([]any, error) {
-						return []any{rowsBuffer[i].Purl, rowsBuffer[i].Root, rowsBuffer[i].Path}, nil
-					}))
-					if err != nil {
+					if err := copyRows(); err != nil {
 						return fmt.Errorf("could not copy vuln paths into table: %w", err)
 					}
-					rowsBuffer = rowsBuffer[:0]
 				}
 			}
 
 			if groupErr != nil {
 				return fmt.Errorf("could not scan purl batch: %w", groupErr)
+			}
+
+			// copy the remaining rows as well
+			if len(rowsBuffer) > 0 {
+				if err := copyRows(); err != nil {
+					return fmt.Errorf("could not copy vuln paths into table: %w", err)
+				}
 			}
 
 			slog.Info(fmt.Sprintf("finished scanning batch %d out of %f", start/purlBatchSize, math.Ceil(float64(len(affectedPurls))/float64(purlBatchSize))), "time", time.Since(timer))
@@ -836,6 +849,32 @@ type vulnPath struct {
 	Path []uuid.UUID
 }
 
+// convert BFS result (purl to root) to dependency vuln path (first non root to purl)
+func toStoredPath(path []uuid.UUID) []uuid.UUID {
+	stored := make([]uuid.UUID, 0, len(path)-1)
+	for i := len(path) - 2; i >= 0; i-- {
+		stored = append(stored, path[i])
+	}
+	return stored
+}
+
+// convert to canonical purl to ensure consistency with scan function
+func canonicalPurl(raw string, memo map[string]string) string {
+	if canonical, ok := memo[raw]; ok {
+		return canonical
+	}
+
+	canonical := raw
+	if parsed, err := packageurl.FromString(raw); err == nil {
+		if unescaped, err := normalize.PURLToString(parsed); err == nil {
+			canonical = unescaped
+		}
+	}
+
+	memo[raw] = canonical
+	return canonical
+}
+
 func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *pgxpool.Conn, assetID uuid.UUID) error {
 	assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx, nil, assetID)
 	if err != nil {
@@ -849,31 +888,29 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *
 	}
 
 	for _, assetVersion := range assetVersions {
+		existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, asset.ID)
+		if err != nil {
+			slog.Error("could not get existing dependencyVulns", "err", err)
+			return err
+		}
+
 		for _, artifact := range assetVersion.Artifacts {
-			foundVulns, err := runner.fetchNewVulnsForArtifact(ctx, conn, artifact)
+			foundVulns, err := runner.FetchNewVulnsForArtifact(ctx, conn, artifact)
 			if err != nil {
 				return fmt.Errorf("could not query found vulns for artifact: %w", err)
 			}
-			slog.Info("finished fetching vulns, start handling results", "amount", len(foundVulns))
 
-			start := time.Now()
-			err = runner.HandleScanResultBatch(ctx, foundVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
+			existingDependencyVulns, err = runner.HandleScanResultBatch(ctx, foundVulns, existingDependencyVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
 			if err != nil {
 				return fmt.Errorf("could not handle scan results: %w", err)
 			}
-			slog.Info("handled scan result", "time", time.Since(start))
 		}
 	}
 	return nil
 }
 
-func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependencyVulns []models.DependencyVuln, artifactName, assetVersionName string, asset models.Asset) error {
-	existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersionName, asset.ID)
-	if err != nil {
-		slog.Error("could not get existing dependencyVulns", "err", err)
-		return err
-	}
-
+// returns the new state so the other artifacts do not operate on stale data
+func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependencyVulns, existingDependencyVulns []models.DependencyVuln, artifactName, assetVersionName string, asset models.Asset) ([]models.DependencyVuln, error) {
 	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 
 	// only newly discovered vulns are matched against other branches, so restrict the query to their signatures
@@ -885,14 +922,14 @@ func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependenc
 	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, asset.ID, newlyDiscoveredSignatures)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
-		return err
+		return nil, err
 	}
 
 	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
 	// this means, that another source is still saying, its part of this artifact
 	unfixablePurls, err := runner.fetchPurlsInMultipleSBOMs(ctx, asset.ID, assetVersionName, artifactName)
 	if err != nil {
-		return fmt.Errorf("could not fetch purls in multiple sboms: %w", err)
+		return nil, fmt.Errorf("could not fetch purls in multiple sboms: %w", err)
 	}
 	filterPredicate := func(dv models.DependencyVuln) bool {
 		_, ok := unfixablePurls[dv.ComponentPurl]
@@ -901,7 +938,7 @@ func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependenc
 
 	tx, err := runner.pgxpool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("could not begin transaction: %w", err)
+		return nil, fmt.Errorf("could not begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -913,31 +950,70 @@ func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, dependenc
 	// this way we preserve the event history
 	if err := runner.DetectedExistingVulnOnDifferentBranch(ctx, tx, artifactName, branchDiff.ExistingOnOtherBranches, asset); err != nil {
 		slog.Error("error when trying to add events for existing vulnerability on different branch")
-		return err
+		return nil, err
 	}
 	// We can create the newly found one without checking anything
 	if err := runner.DetectedDependencyVulns(ctx, tx, "system", nil, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), asset); err != nil {
-		return err
+		return nil, err
 	}
 
 	err = runner.DetectedDependencyVulnInAnotherArtifact(ctx, tx, diff.NewInArtifact, artifactName)
 	if err != nil {
 		slog.Error("error when trying to associate new artifact to vulnerabilities")
-		return err
+		return nil, err
 	}
 
 	err = runner.DidNotDetectDependencyVulnInArtifactAnymore(ctx, tx, fixedOnThisArtifactName, artifactName)
 	if err != nil {
 		slog.Error("error when trying to remove artifact association from vulnerabilities")
-		return err
+		return nil, err
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return fmt.Errorf("could not commit transaction: %w", err)
+		return nil, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
-	return nil
+	created := append(utils.DereferenceSlice(branchDiff.NewToAllBranches), utils.Map(branchDiff.ExistingOnOtherBranches, func(match statemachine.BranchVulnMatch[*models.DependencyVuln]) models.DependencyVuln {
+		return *match.CurrentBranchVuln
+	})...)
+
+	return applyBatchToSnapshot(existingDependencyVulns, created, diff.NewInArtifact, fixedOnThisArtifactName, artifactName), nil
+}
+
+// applyBatchToSnapshot mirrors the writes of one artifact onto the in memory snapshot
+func applyBatchToSnapshot(snapshot, created, addedToArtifact, removedFromArtifact []models.DependencyVuln, artifactName string) []models.DependencyVuln {
+	added := vulnIDSet(addedToArtifact)
+	removed := vulnIDSet(removedFromArtifact)
+	if len(added) == 0 && len(removed) == 0 {
+		return append(snapshot, created...)
+	}
+
+	for i := range snapshot {
+		id := snapshot[i].CalculateHash()
+		if _, ok := added[id]; ok {
+			snapshot[i].Artifacts = append(snapshot[i].Artifacts, models.Artifact{
+				ArtifactName:     artifactName,
+				AssetVersionName: snapshot[i].AssetVersionName,
+				AssetID:          snapshot[i].AssetID,
+			})
+		}
+		if _, ok := removed[id]; ok {
+			snapshot[i].Artifacts = slices.DeleteFunc(snapshot[i].Artifacts, func(artifact models.Artifact) bool {
+				return artifact.ArtifactName == artifactName
+			})
+		}
+	}
+
+	return append(snapshot, created...)
+}
+
+func vulnIDSet(vulns []models.DependencyVuln) map[uuid.UUID]struct{} {
+	ids := make(map[uuid.UUID]struct{}, len(vulns))
+	for i := range vulns {
+		ids[vulns[i].CalculateHash()] = struct{}{}
+	}
+	return ids
 }
 
 func (runner *DaemonRunner) DetectedExistingVulnOnDifferentBranch(ctx context.Context, tx pgx.Tx, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], asset models.Asset) error {
@@ -1100,7 +1176,7 @@ func (runner *DaemonRunner) DidNotDetectDependencyVulnInArtifactAnymore(ctx cont
 	return err
 }
 
-func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, conn *pgxpool.Conn, artifact models.Artifact) ([]models.DependencyVuln, error) {
+func (runner *DaemonRunner) FetchNewVulnsForArtifact(ctx context.Context, conn *pgxpool.Conn, artifact models.Artifact) ([]models.DependencyVuln, error) {
 	// the vuln id only hashes cve and path, so rows differing only in fixed_version (multiple affected components) must collapse into one vuln
 	rows, err := conn.Query(ctx, `
 	SELECT DISTINCT ON (vp.cve_id, path_purls)
@@ -1353,7 +1429,8 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, results chan p
 
 				// paths are vulnerable node -> ... -> root, the root is kept so the path can be mapped to its sboms
 				if recordable {
-					if len(pathsPerRoot[node]) == maxPathsPerRoot {
+
+					if len(pathsPerRoot[node]) >= maxPathsPerRoot {
 						// path explosion, none of the paths into this sbom are kept
 						delete(pathsPerRoot, node)
 						explodedRoots[node] = struct{}{}
@@ -1386,7 +1463,7 @@ func (runner *DaemonRunner) GetPathsForPurls(ctx context.Context, results chan p
 	return nil, nil
 }
 
-const maxPathsPerRoot = 12
+const maxPathsPerRoot = 11
 
 type dynamicQueue[T any] struct {
 	MaxSize        int

@@ -27,8 +27,8 @@ import (
 // development database. A testcontainer database is useless here: it is created
 // from migrations only, so there would be no dependencies to match.
 //
-// NewScanAsset creates purl_mapping and commits, so the table is dropped before
-// every iteration - untimed, outside the measurement.
+// NewScanAsset skips the scan while new_dependency_vulns exists, so the scan
+// tables are dropped before every iteration - untimed, outside the measurement.
 //
 //	go test -run=^$ -bench=BenchmarkNewScanAsset -benchtime=1x -timeout=30m \
 //		-cpuprofile=cpu.prof -memprofile=mem.prof ./tests/
@@ -76,8 +76,8 @@ func BenchmarkNewScanAsset(b *testing.B) {
 	iterations := 0
 	for b.Loop() {
 		b.StopTimer()
-		if _, err := pool.Exec(context.Background(), `DROP TABLE IF EXISTS purl_mapping`); err != nil {
-			b.Fatalf("could not drop purl_mapping: %v", err)
+		if _, err := pool.Exec(context.Background(), `DROP TABLE IF EXISTS purl_mapping, vuln_paths, new_dependency_vulns`); err != nil {
+			b.Fatalf("could not drop scan tables: %v", err)
 		}
 		b.StartTimer()
 
