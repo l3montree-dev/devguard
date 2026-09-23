@@ -35,11 +35,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const pypiRegistry = "https://pypi.org"
+const (
+	pypiRegistry = "https://pypi.org"
+	pypiFilesURL = "https://files.pythonhosted.org"
+)
 
 var (
-	pypiProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?pypi(?:/|$)`)
-	pypiFilenameRe    = regexp.MustCompile(`^([a-zA-Z0-9_-]+)-([0-9\.]+[a-zA-Z0-9\.]*)(?:-|\.).*$`)
+	pypiProxyPrefixRe   = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?pypi(?:/|$)`)
+	pypiFilenameRe      = regexp.MustCompile(`^(.+?)-(\d[^-]*?)(?:-.+\.whl|\.zip|\.tar(?:\.gz|\.bz2|\.xz|\.lz|\.lzma)?|\.t[bgx]z|\.tlz)$`)
+	pypiNameSeparatorRe = regexp.MustCompile(`[-_.]+`)
+	pypiAbsoluteURLRe   = regexp.MustCompile(`(?:https?:)?//[^/"'\s]+/`)
 )
 
 // PythonDependencyProxyController handles PyPI dependency proxy requests.
@@ -70,10 +75,14 @@ func (pypiEcosystem) parsePackage(path string) (string, string) {
 		filename := filepath.Base(path)
 		matches := pypiFilenameRe.FindStringSubmatch(filename)
 		if len(matches) > 2 {
-			return matches[1], matches[2]
+			return normalizePyPIName(matches[1]), matches[2]
 		}
 	}
 	return "", ""
+}
+
+func normalizePyPIName(name string) string {
+	return strings.ToLower(pypiNameSeparatorRe.ReplaceAllString(name, "-"))
 }
 
 func (pypiEcosystem) packageIdentifier(packageName, version string) string {
@@ -163,7 +172,13 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
-	if blocked, reason := d.checkMaliciousPackage(ctx, pypi, requestPath); blocked {
+	packageName, version := pypi.parsePackage(requestPath)
+	status, reason, err := d.checkMalicious(ctx, pypi, packageName, version)
+	if err != nil {
+		slog.Error("Error checking malicious package", "proxy", "pypi", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
+	}
+	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "pypi", "path", requestPath, "reason", reason)
 		d.cache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
@@ -174,7 +189,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 			slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
 			if configs.MinReleaseAge > 0 {
 				if !entry.releaseTime.IsZero() {
-					if time.Since(entry.releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+					if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 						return d.blockTooNewPackage(c, pypi, requestPath, entry.releaseTime, configs.MinReleaseAge)
 					}
 					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
@@ -191,7 +206,18 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, requestPath, c.Request().Header)
+	var releaseTime time.Time
+	if configs.MinReleaseAge > 0 && packageName != "" {
+		_, releaseTime, _ = d.fetchPyPIReleaseTime(ctx, packageName, version)
+		if releaseTime.IsZero() {
+			return d.blockNotAllowedPackage(c, pypi, requestPath, fmt.Sprintf("Release time of package %s@%s could not be determined", packageName, version))
+		}
+		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
+			return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
+		}
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, pypi, pypiFilesURL, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -204,7 +230,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if err := d.cache.Set(cacheKey, cacheValue{data: data}); err != nil {
+	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
 	}
 
@@ -215,7 +241,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	return pypi.writeResponse(c, data, requestPath, false)
 }
 
-// ProxyPyPISimple handles PyPI /simple/ metadata requests, resolving the latest version before checking rules.
+// ProxyPyPISimple handles PyPI /simple/ metadata requests.
 // Route: GET /pypi/simple/:package
 // @Summary Proxy PyPI simple index metadata
 // @Tags Dependency Firewall
@@ -227,7 +253,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 // @Router /dependency-proxy/pypi/simple/{package} [get]
 // @Router /dependency-proxy/{secret}/pypi/simple/{package} [get]
 func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) error {
-	configs, err := d.GetDependencyProxyConfigs(c)
+	_, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
 		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
@@ -258,6 +284,16 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
+	status, reason, err := d.checkMalicious(ctx, pypi, pkgName, "")
+	if err != nil {
+		slog.Error("Error checking malicious package", "proxy", "pypi", "error", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
+	}
+	if status != 0 {
+		slog.Warn("Blocked malicious package", "proxy", "pypi", "path", requestPath, "reason", reason)
+		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
+	}
+
 	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, requestPath, c.Request().Header)
 	if err != nil {
 		span.RecordError(err)
@@ -271,36 +307,11 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	// Fetch the PyPI JSON API to resolve version and release time before checking rules —
-	// same pattern as npm metadata: check allowlist and malicious DB with the resolved version.
-	resolvedVersion, releaseTime, ok := d.fetchPyPILatestVersionAndReleaseTime(ctx, pkgName)
-	if ok {
-		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, pypi, pkgName+"@"+resolvedVersion, configs)
-		if notAllowed {
-			slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
-			return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
-		}
-
-		status, reason, err := d.checkMalicious(ctx, pypi, pkgName, resolvedVersion)
-		if err != nil {
-			slog.Error("Error checking malicious package", "proxy", "pypi", "error", err)
-			return echo.NewHTTPError(500, "failed to check if package is malicious").WithInternal(err)
-		}
-		if status != 0 {
-			slog.Warn("Blocked malicious package after version resolution", "proxy", "pypi", "package", pkgName, "version", resolvedVersion, "reason", reason)
-			return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
-		}
-
-		if configs.MinReleaseAge > 0 {
-			if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
-			}
-		}
-	}
-
 	if contentType := headers.Get("Content-Type"); contentType != "" {
 		c.Response().Header().Set("Content-Type", contentType)
 	}
+
+	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(pypiProxyPrefixRe.FindString(c.Request().URL.Path)))
 
 	return pypi.writeResponse(c, data, requestPath, false)
 }
@@ -367,11 +378,11 @@ func (d *PythonDependencyProxyController) ExtractPyPIReleaseTime(data []byte, ve
 	return version, t, true
 }
 
-// fetchPyPILatestVersionAndReleaseTime fetches the PyPI JSON API and returns the resolved version and its release time.
-func (d *PythonDependencyProxyController) fetchPyPILatestVersionAndReleaseTime(ctx context.Context, pkgName string) (string, time.Time, bool) {
+// fetchPyPIReleaseTime fetches the PyPI JSON API and returns the resolved version and its release time.
+func (d *PythonDependencyProxyController) fetchPyPIReleaseTime(ctx context.Context, pkgName, version string) (string, time.Time, bool) {
 	data, _, statusCode, err := d.fetchPyPIFromUpstream(ctx, "/pypi/"+pkgName+"/json", http.Header{})
 	if err != nil || statusCode != http.StatusOK {
 		return "", time.Time{}, false
 	}
-	return d.ExtractPyPIReleaseTime(data, "")
+	return d.ExtractPyPIReleaseTime(data, version)
 }
