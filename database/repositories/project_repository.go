@@ -35,7 +35,7 @@ func (g *projectRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB
 	err := g.GetDB(ctx, tx).Session(&gorm.Session{
 		Logger:               logger.Default.LogMode(logger.Silent),
 		FullSaveAssociations: false,
-	}).Model(models.Project{}).Where("ID = ?", id).First(&result).Error
+	}).Model(models.Project{}).Where("id = ?", id).First(&result).Error
 	return result, err
 }
 
@@ -66,7 +66,7 @@ func (g *projectRepository) GetProjectByAssetID(ctx context.Context, tx *gorm.DB
 
 func (g *projectRepository) GetByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("ID = ANY (?)", pq.Array(projectIDs)).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("id = ANY (?)", pq.Array(projectIDs)).Find(&projects).Error
 	return projects, err
 }
 
