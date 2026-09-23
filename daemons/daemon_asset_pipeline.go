@@ -124,7 +124,7 @@ func failStage(rootCtx context.Context, stageSpan trace.Span, err error) {
 func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 	go func() {
 		for assetWithDetails := range input {
-			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{}, fmt.Sprintf("pipeline error for asset %s: %v", assetWithDetails.asset.ID, assetWithDetails.err), assetWithDetails.err)
+			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{AssetID: assetWithDetails.asset.ID}, fmt.Sprintf("pipeline error for asset %s", assetWithDetails.asset.ID), assetWithDetails.err)
 
 			asset := assetWithDetails.asset
 			asset.PipelineLastRun = time.Now()

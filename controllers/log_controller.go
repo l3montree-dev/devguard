@@ -14,14 +14,12 @@ func NewLogController(logService shared.LogService) *LogController {
 	return &LogController{logService: logService}
 }
 
-// @Summary List logs
+// @Summary List organization logs
 // @Tags Logs
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param projectSlug path string false "Project slug"
-// @Param assetSlug path string false "Asset slug"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
 // @Param search query string false "Search term"
@@ -29,9 +27,48 @@ func NewLogController(logService shared.LogService) *LogController {
 // @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
 // @Success 200 {object} shared.Paged[dtos.LogDTO]
 // @Router /organizations/{organization}/logs/ [get]
+func (controller *LogController) ListPagedForOrganization(ctx shared.Context) error {
+	return controller.listPaged(ctx)
+}
+
+// @Summary List project logs
+// @Tags Logs
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param search query string false "Search term"
+// @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
+// @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
+// @Success 200 {object} shared.Paged[dtos.LogDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/logs/ [get]
+func (controller *LogController) ListPagedForProject(ctx shared.Context) error {
+	return controller.listPaged(ctx)
+}
+
+// @Summary List asset logs
+// @Tags Logs
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param search query string false "Search term"
+// @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
+// @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
+// @Success 200 {object} shared.Paged[dtos.LogDTO]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/ [get]
-func (controller *LogController) ListPaged(ctx shared.Context) error {
+func (controller *LogController) ListPagedForAsset(ctx shared.Context) error {
+	return controller.listPaged(ctx)
+}
+
+func (controller *LogController) listPaged(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 
 	var projectID *uuid.UUID

@@ -37,6 +37,17 @@ type AlertOptions struct {
 	AssetID   uuid.UUID
 }
 
+func nilIfZero(id uuid.UUID) *uuid.UUID {
+	if id == uuid.Nil {
+		return nil
+	}
+	return &id
+}
+
+func (opts AlertOptions) ids() (*uuid.UUID, *uuid.UUID, *uuid.UUID) {
+	return nilIfZero(opts.OrgID), nilIfZero(opts.ProjectID), nilIfZero(opts.AssetID)
+}
+
 var logger AlertLogService
 
 func SetLogger(ls AlertLogService) {
@@ -62,7 +73,8 @@ func SaveAlertInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertOptions, me
 	if err != nil {
 		storedMsg = fmt.Sprintf("%s: %v", message, err)
 	}
-	loggerErr := logger.SaveLog(ctx, tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, storedMsg)
+	orgID, projectID, assetID := opts.ids()
+	loggerErr := logger.SaveLog(ctx, tx, orgID, projectID, assetID, storedMsg)
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
 	}
@@ -85,7 +97,8 @@ func RecoverAndAlert(ctx context.Context, tx *gorm.DB, opts AlertOptions, messag
 	if err != nil {
 		storedMsg = fmt.Sprintf("%s: %v", message, err)
 	}
-	loggerErr := logger.SaveLog(ctx, tx, &opts.OrgID, &opts.ProjectID, &opts.AssetID, storedMsg)
+	orgID, projectID, assetID := opts.ids()
+	loggerErr := logger.SaveLog(ctx, tx, orgID, projectID, assetID, storedMsg)
 	if loggerErr != nil {
 		slog.Error("could not store error in database", "msg", message, "err", loggerErr)
 	}
