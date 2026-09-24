@@ -62,27 +62,35 @@ func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*git
 	}, nil
 }
 
+const installationReposPerPage = 100
+
 func fetchAllRepos(ctx context.Context, client githubClient) ([]*github.Repository, error) {
-	result, _, err := client.Apps.ListRepos(ctx, &github.ListOptions{
-		Page:    1,
-		PerPage: 100,
-	})
+	var repos []*github.Repository
 
-	if err != nil {
-		return nil, err
-	}
-
-	repos := result.Repositories
-	// check if there is more to fetch
-	for len(repos) < *result.TotalCount {
-		result, _, err = client.Apps.ListRepos(ctx, &github.ListOptions{
-			Page:    len(repos) / 100,
-			PerPage: 100,
+	// GitHub pagination is 1-indexed, so the page to ask for is simply the one
+	// after the page we just read.
+	for page := 1; ; page++ {
+		result, _, err := client.Apps.ListRepos(ctx, &github.ListOptions{
+			Page:    page,
+			PerPage: installationReposPerPage,
 		})
 		if err != nil {
 			return nil, err
 		}
+
+		// A page that yields nothing means there is nothing left to fetch.
+		// Without this, an installation whose total_count is larger than the
+		// number of repositories it actually hands out keeps this loop - and the
+		// request that triggered it - running forever.
+		if len(result.Repositories) == 0 {
+			break
+		}
+
 		repos = append(repos, result.Repositories...)
+
+		if result.TotalCount == nil || len(repos) >= *result.TotalCount {
+			break
+		}
 	}
 
 	return repos, nil
