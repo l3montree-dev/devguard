@@ -34,6 +34,11 @@ func TestGoEcosystem(t *testing.T) {
 				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/go/github.com/foo/bar",
 				expected: "github.com/foo/bar",
 			},
+			{
+				name:     "trailing slash is trimmed",
+				path:     "/api/v1/dependency-proxy/go/github.com/foo/bar/",
+				expected: "github.com/foo/bar",
+			},
 		}
 
 		for _, tc := range cases {
