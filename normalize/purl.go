@@ -51,6 +51,7 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 				normalizedVersion = epoch + ":" + normalizedVersion
 			}
 			// If no epoch qualifier is present, don't prepend anything, just use the version as is, maybe the version is already in the correct format with epoch, e.g., "1:2.47.3-0+deb13u1"
+			// Ref: https://github.com/l3montree-dev/devguard/issues/3084
 
 		}
 	} else {
