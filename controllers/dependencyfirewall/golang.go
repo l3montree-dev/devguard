@@ -56,7 +56,7 @@ var golang goEcosystem
 func (goEcosystem) name() string { return "go" }
 
 func (goEcosystem) trimPrefix(path string) string {
-	return trimWithRegex(path, goProxyPrefixRe)
+	return strings.TrimRight(trimWithRegex(path, goProxyPrefixRe), "/")
 }
 
 func (goEcosystem) parsePackage(path string) (string, string) {
@@ -183,7 +183,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
 			if configs.MinReleaseAge > 0 {
 				if !entry.releaseTime.IsZero() {
-					if time.Since(entry.releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+					if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 						return d.blockTooNewPackage(c, eco, requestPath, entry.releaseTime, configs.MinReleaseAge)
 					}
 					span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
@@ -217,7 +217,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 
 	// Check MinReleaseAge for .info responses only — other file types don't carry timestamp data.
 	if configs.MinReleaseAge > 0 && hasReleaseTime && strings.HasSuffix(requestPath, ".info") {
-		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, eco, requestPath, releaseTime, configs.MinReleaseAge)
 		}
 	}
@@ -280,7 +280,7 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 	}
 
 	if configs.MinReleaseAge > 0 && hasReleaseTime && resolvedVersion != "" {
-		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, eco, requestPath, releaseTime, configs.MinReleaseAge)
 		}
 	}
