@@ -60,7 +60,7 @@ func BenchmarkNewScanAsset(b *testing.B) {
 		b.Fatalf("failed to install query counter: %v", err)
 	}
 
-	app, _ := NewTestAppWithT(b, db, pool, &TestAppOptions{SuppressLogs: true})
+	app, _ := NewTestAppWithT(b, db, pool, &TestAppOptions{SuppressLogs: true, DryRunIntegrations: true})
 	fixture := &TestFixture{T: b, App: app, DB: db, Pool: pool}
 	runner := fixture.CreateDaemonRunner()
 

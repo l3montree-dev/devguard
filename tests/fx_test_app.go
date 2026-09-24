@@ -131,6 +131,10 @@ type TestAppOptions struct {
 	SuppressLogs bool
 	// Custom broker (if nil, a default in-memory broker will be provided)
 	Broker shared.PubSubBroker
+	// Wrap the integration aggregate so no ticket or webhook ever reaches a real
+	// external system. Tests running against the development database need this:
+	// that data is a production dump, webhook urls included.
+	DryRunIntegrations bool
 }
 
 // NewTestApp creates a test application with all dependencies wired via FX
@@ -183,6 +187,12 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fxOptions = append(fxOptions, fx.Decorate(func(cs shared.ComponentService) shared.ComponentService {
 			mockCS := createMockedComponentService(t, cs)
 			return mockCS
+		}))
+	}
+
+	if opts.DryRunIntegrations {
+		fxOptions = append(fxOptions, fx.Decorate(func(aggregate shared.IntegrationAggregate) shared.IntegrationAggregate {
+			return integrations.NewDryRunIntegration(aggregate)
 		}))
 	}
 

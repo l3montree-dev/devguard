@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -98,8 +99,10 @@ func (d *dryRunIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRepo
 	return d.real.ListRepositories(ctx)
 }
 
+// events reach webhooks and ticket creation, so they are a mutation as much as CreateIssue is
 func (d *dryRunIntegration) HandleEvent(ctx context.Context, event any, userAgent *string) error {
-	return d.real.HandleEvent(ctx, event, userAgent)
+	slog.Info("[DRY-RUN] would dispatch event", "event", fmt.Sprintf("%T", event))
+	return nil
 }
 
 func (d *dryRunIntegration) GetID() shared.IntegrationID {
