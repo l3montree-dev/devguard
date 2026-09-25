@@ -169,7 +169,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
 		if configs.MinReleaseAge > 0 {
 			if !entry.releaseTime.IsZero() {
-				if time.Since(entry.releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+				if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 					return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
 				}
 				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
@@ -201,7 +201,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	_, releaseTime := d.ExtractNPMVersionAndReleaseTimeFromMetadata(data)
 
 	if configs.MinReleaseAge > 0 {
-		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
 		}
 	}
@@ -299,7 +299,7 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	}
 
 	if configs.MinReleaseAge > 0 && packageName != "" {
-		if time.Since(releaseTime) > time.Duration(configs.MinReleaseAge)*time.Hour {
+		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
 		}
 	}
