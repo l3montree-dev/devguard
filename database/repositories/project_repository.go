@@ -543,8 +543,11 @@ func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, extern
 	UPDATE projects p
 	SET parent_id = parent.id
 	FROM projects parent
-	WHERE p.external_entity_parent_id = parent.external_entity_id
-  	AND p.id != parent.id;`).Error
+	WHERE p.external_entity_provider_id = ?
+	AND parent.external_entity_provider_id = p.external_entity_provider_id
+	AND p.external_entity_parent_id = parent.external_entity_id
+	AND p.id != parent.id
+	AND p.parent_id IS DISTINCT FROM parent.id;`, externalProviderID).Error
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to set parent ids: %w", err)
