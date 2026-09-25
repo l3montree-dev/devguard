@@ -563,19 +563,21 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer sbomRows.Close()
 
-	sbomSnapshot := make(map[uuid.UUID][]uuid.UUID, 4000)
+	snapshot := make(sbomSnapshot, 4000)
 	var artifact, rootHash uuid.UUID
 	for sbomRows.Next() {
 		err = sbomRows.Scan(&artifact, &rootHash)
 		if err != nil {
 			return fmt.Errorf("could not scan sbom row: %w", err)
 		}
-		sbomSnapshot[artifact] = append(sbomSnapshot[artifact], rootHash)
+		snapshot[artifact] = append(snapshot[artifact], rootHash)
 	}
 	sbomRows.Close()
 	if err := sbomRows.Err(); err != nil {
 		return fmt.Errorf("error when scanning sbom rows: %w", err)
 	}
+
+	jobFilter := NewJobFilter(snapshot)
 
 	slog.Info("start collecting all dependencies")
 	start := time.Now()
@@ -845,28 +847,23 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	// get all assets which actually need processing
 	rows, err := conn.Query(ctx, `
-		SELECT DISTINCT asset_id FROM new_dependency_vulns;`)
+		SELECT DISTINCT asset_id, asset_version_name, artifact_name 
+		FROM new_dependency_vulns;`)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
-	assetIDs := make([]uuid.UUID, 0, 500)
-	var id uuid.UUID
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return fmt.Errorf("could not scan asset id from query: %w", err)
-		}
-		assetIDs = append(assetIDs, id)
+	err = jobFilter.SetUpLookUpMaps(rows)
+	if err != nil {
+		return fmt.Errorf("could not populate job filter lookup maps: %w", err)
 	}
-	rows.Close()
+	assetIDs := jobFilter.GetAssetsIDs()
 
 	slog.Info("start handling scan results for assets", "number of assets", len(assetIDs))
 	start = time.Now()
 	cache := newScanRunCache()
 	for i, assetID := range assetIDs {
-		err = runner.handleScanResultForAsset(ctx, sbomSnapshot, conn, assetID, cache)
+		err = runner.handleScanResultForAsset(ctx, jobFilter, conn, assetID, cache)
 		if err != nil {
 			slog.Error("could not handle scan result for asset", "err", err, "asset", assetID)
 		} else if (i+1)%10 == 0 {
@@ -875,6 +872,24 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		}
 	}
 	slog.Info("finished all handle scan results", "time", time.Since(startHandling))
+
+	start = time.Now()
+	slog.Info("cleaning up orphan vulns")
+	cmd, err := conn.Exec(ctx, `
+	WITH orphan_vulns AS (
+		UPDATE public.dependency_vulns dv
+		SET state = 'fixed'
+		WHERE NOT EXISTS (SELECT FROM cves c WHERE c.cve = dv.cve_id)
+			AND dv.state <> 'fixed' 
+		RETURNING dv.id
+	)
+	INSERT INTO vuln_events (type, user_id, dependency_vuln_id)
+	SELECT 'fixed', 'system-orphan', id
+	FROM orphan_vulns;`)
+	if err != nil {
+		return fmt.Errorf("could clean up orphan vulns: %w", err)
+	}
+	slog.Info("finished cleaning up orphan vulns", "affectedRows", cmd.RowsAffected(), "time", time.Since(start))
 
 	return nil
 }
@@ -983,7 +998,7 @@ func (runner *DaemonRunner) hydrateCVEs(ctx context.Context, vulns []models.Depe
 	return nil
 }
 
-func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, sbomSnapshot map[uuid.UUID][]uuid.UUID, conn *pgxpool.Conn, assetID uuid.UUID, cache *scanRunCache) error {
+func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter *jobFilter, conn *pgxpool.Conn, assetID uuid.UUID, cache *scanRunCache) error {
 	assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx, nil, assetID)
 	if err != nil {
 		return fmt.Errorf("could not fetch asset versions for asset: %w", err)
@@ -998,14 +1013,17 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, sbomSn
 	// a failing asset version is rolled back on its own and must not block the others
 	errs := make([]error, 0)
 	for _, assetVersion := range assetVersions {
-		if err := runner.handleScanResultForAssetVersion(ctx, conn, sbomSnapshot, asset, assetVersion, cache); err != nil {
+		if !filter.needToProcessIdentity(assetVersion) {
+			continue
+		}
+		if err := runner.handleScanResultForAssetVersion(ctx, conn, filter, asset, assetVersion, cache); err != nil {
 			errs = append(errs, fmt.Errorf("asset version %s: %w", assetVersion.Name, err))
 		}
 	}
 	return errors.Join(errs...)
 }
 
-func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, sbomSnapshot map[uuid.UUID][]uuid.UUID, asset models.Asset, assetVersion models.AssetVersion, cache *scanRunCache) error {
+func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, filter *jobFilter, asset models.Asset, assetVersion models.AssetVersion, cache *scanRunCache) error {
 	if len(assetVersion.Artifacts) == 0 {
 		return nil
 	}
@@ -1016,7 +1034,7 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	}
 	defer tx.Rollback(ctx)
 
-	artifacts := filterStaleArtifacts(ctx, sbomSnapshot, assetVersion, tx)
+	artifacts := filter.filterStaleArtifacts(ctx, assetVersion, tx)
 	if len(artifacts) == 0 {
 		slog.Warn("no artifacts survived the filter", "asset version", assetVersion.Name, "assetID", assetVersion.AssetID)
 		return nil
@@ -1026,6 +1044,9 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	createdInAssetVersion := make(map[uuid.UUID]struct{})
 	opened := make(map[string][]models.DependencyVuln, len(artifacts))
 	for _, artifact := range artifacts {
+		if !filter.needToProcessIdentity(artifact) {
+			continue
+		}
 		// a savepoint per artifact: a failing artifact is undone without aborting the asset version transaction
 		savepoint, err := tx.Begin(ctx)
 		if err != nil {
@@ -1050,7 +1071,7 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 
 	// dry runs are rolled back by the deferred rollback
 	if runner.debugOptions.DryRun {
-		slog.Info("[DRY-RUN] rolled back scan results", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifacts", len(artifacts))
+		// slog.Info("[DRY-RUN] rolled back scan results", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifacts", len(artifacts))
 	} else if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not commit scan results: %w", err)
 	}
@@ -1062,7 +1083,80 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	return nil
 }
 
-func filterStaleArtifacts(ctx context.Context, sbomSnapshot map[uuid.UUID][]uuid.UUID, assetVersion models.AssetVersion, tx pgx.Tx) []models.Artifact {
+type sbomSnapshot map[uuid.UUID][]uuid.UUID
+type assetVersionKey struct {
+	assetID          uuid.UUID
+	assetVersionName string
+}
+
+type artifactKey struct {
+	assetID                        uuid.UUID
+	assetVersionName, artifactName string
+}
+
+type jobFilter struct {
+	sbomSnapshot    sbomSnapshot
+	assetMap        map[uuid.UUID]struct{}
+	assetVersionMap map[assetVersionKey]struct{}
+	artifactMap     map[artifactKey]struct{}
+}
+
+func NewJobFilter(snapshot sbomSnapshot) *jobFilter {
+	return &jobFilter{
+		sbomSnapshot: snapshot,
+	}
+}
+
+func (filter *jobFilter) GetAssetsIDs() []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(filter.assetMap))
+	for id := range filter.assetMap {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (filter *jobFilter) SetUpLookUpMaps(rows pgx.Rows) error {
+	defer rows.Close()
+	assetMap := make(map[uuid.UUID]struct{}, 777)
+	assetVersionMap := make(map[assetVersionKey]struct{}, 2000)
+	artifactMap := make(map[artifactKey]struct{}, 3000)
+
+	var assetID uuid.UUID
+	var assetVersionName, artifactName string
+	for rows.Next() {
+		err := rows.Scan(&assetID, &assetVersionName, &artifactName)
+		if err != nil {
+			return err
+		}
+		assetMap[assetID] = struct{}{}
+		assetVersionMap[assetVersionKey{assetVersionName: assetVersionName, assetID: assetID}] = struct{}{}
+		artifactMap[artifactKey{assetID: assetID, assetVersionName: assetVersionName, artifactName: artifactName}] = struct{}{}
+	}
+
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	filter.assetMap = assetMap
+	filter.assetVersionMap = assetVersionMap
+	filter.artifactMap = artifactMap
+	return nil
+}
+
+func (filter *jobFilter) needToProcessIdentity(identity any) (ok bool) {
+	switch v := identity.(type) {
+	case models.Asset:
+		_, ok = filter.assetMap[v.ID]
+	case models.AssetVersion:
+		_, ok = filter.assetVersionMap[assetVersionKey{assetID: v.AssetID, assetVersionName: v.Name}]
+	case models.Artifact:
+		_, ok = filter.artifactMap[artifactKey{assetID: v.AssetID, assetVersionName: v.AssetVersionName, artifactName: v.ArtifactName}]
+	}
+	return
+}
+
+func (filter *jobFilter) filterStaleArtifacts(ctx context.Context, assetVersion models.AssetVersion, tx pgx.Tx) []models.Artifact {
 	artifacts := assetVersion.Artifacts
 	if len(artifacts) == 0 {
 		return []models.Artifact{}
@@ -1104,7 +1198,7 @@ func filterStaleArtifacts(ctx context.Context, sbomSnapshot map[uuid.UUID][]uuid
 artifactLoop:
 	for artifactKey, currentRoots := range currentState {
 
-		snapshotRoots, ok := sbomSnapshot[artifactKey.ArtifactHash]
+		snapshotRoots, ok := filter.sbomSnapshot[artifactKey.ArtifactHash]
 		if !ok {
 			// artifact did not exist before so data is stale
 			continue
