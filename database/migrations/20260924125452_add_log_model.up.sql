@@ -7,3 +7,4 @@ CREATE TABLE IF NOT EXISTS public.logs (
     log_level text,
     message text
 );
+ALTER TABLE public.assets DROP COLUMN IF EXISTS pipeline_error;

@@ -1,1 +1,0 @@
-ALTER TABLE public.assets DROP COLUMN IF EXISTS pipeline_error;
