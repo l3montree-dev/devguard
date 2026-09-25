@@ -18,7 +18,6 @@ package daemons
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -549,28 +548,34 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer conn.Release()
 
+	// a second run would drop the scratch tables of this one, the session lock is released before the conn goes back to the pool
+	lockKey := utils.HashToInt64("daemon.NewScanAsset")
+	var locked bool
+	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1);`, lockKey).Scan(&locked); err != nil {
+		return fmt.Errorf("could not acquire scan lock: %w", err)
+	}
+	if !locked {
+		return errors.New("another scan is already running")
+	}
+	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1);`, lockKey)
+
 	slog.Info("snapshotting sboms table")
 
-	sbomRows, err := conn.Query(ctx, `
-		SELECT MD5(
-			s.artifact_name || 
-			s.asset_version_name || 
-			s.asset_id::text)::uuid as artifact, 
-		s.root_subtree_hash 
-		FROM sboms s;`)
+	sbomRows, err := conn.Query(ctx, sbomFingerprintQuery+` GROUP BY asset_id, asset_version_name;`)
 	if err != nil {
 		return fmt.Errorf("could not snapshot sboms table: %w", err)
 	}
 	defer sbomRows.Close()
 
-	snapshot := make(sbomSnapshot, 4000)
-	var artifact, rootHash uuid.UUID
+	snapshot := make(sbomSnapshot, 2000)
+	var key assetVersionKey
+	var fingerprint string
 	for sbomRows.Next() {
-		err = sbomRows.Scan(&artifact, &rootHash)
+		err = sbomRows.Scan(&key.assetID, &key.assetVersionName, &fingerprint)
 		if err != nil {
 			return fmt.Errorf("could not scan sbom row: %w", err)
 		}
-		snapshot[artifact] = append(snapshot[artifact], rootHash)
+		snapshot[key] = fingerprint
 	}
 	sbomRows.Close()
 	if err := sbomRows.Err(); err != nil {
@@ -659,6 +664,12 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer tx.Rollback(ctx)
 
+	// the scratch tables of the previous run are kept until now for debugging
+	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS purl_mapping, purl_to_cves, vuln_paths, new_dependency_vulns;`)
+	if err != nil {
+		return fmt.Errorf("could not drop scratch tables of the previous run: %w", err)
+	}
+
 	// make that temporary when not testing
 	_, err = tx.Exec(ctx, `
 	CREATE TABLE purl_mapping (
@@ -708,11 +719,6 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 
 	slog.Info("successfully populated temporary table", "time", time.Since(start))
-
-	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS vuln_paths; DROP TABLE IF EXISTS new_dependency_vulns;`)
-	if err != nil {
-		return fmt.Errorf("could not drop table for vuln paths: %w", err)
-	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -1034,16 +1040,26 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	}
 	defer tx.Rollback(ctx)
 
-	artifacts := filter.filterStaleArtifacts(ctx, assetVersion, tx)
-	if len(artifacts) == 0 {
-		slog.Warn("no artifacts survived the filter", "asset version", assetVersion.Name, "assetID", assetVersion.AssetID)
+	// uploads write their sbom and scan results in one transaction, so blocking sbom writes serializes them with this asset version
+	_, err = tx.Exec(ctx, `SET LOCAL lock_timeout = '10s'; LOCK TABLE sboms IN SHARE MODE;`)
+	if err != nil {
+		return fmt.Errorf("could not lock sboms: %w", err)
+	}
+
+	unchanged, err := filter.assetVersionUnchanged(ctx, tx, assetVersion)
+	if err != nil {
+		return fmt.Errorf("could not check sbom fingerprint: %w", err)
+	}
+	if !unchanged {
+		// the upload that changed it already scanned it, the next run picks up anything left
+		slog.Info("sboms changed during scan, skipping asset version", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 		return nil
 	}
 
 	// new_dependency_vulns was diffed before this run wrote anything, so a vuln shared by several artifacts is new for each of them
 	createdInAssetVersion := make(map[uuid.UUID]struct{})
-	opened := make(map[string][]models.DependencyVuln, len(artifacts))
-	for _, artifact := range artifacts {
+	opened := make(map[string][]models.DependencyVuln, len(assetVersion.Artifacts))
+	for _, artifact := range assetVersion.Artifacts {
 		if !filter.needToProcessIdentity(artifact) {
 			continue
 		}
@@ -1083,7 +1099,13 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	return nil
 }
 
-type sbomSnapshot map[uuid.UUID][]uuid.UUID
+// sbomFingerprintQuery hashes the sboms of each asset version, every upload rewrites its row with a new updated_at
+const sbomFingerprintQuery = `
+	SELECT asset_id, asset_version_name,
+		md5(string_agg(concat_ws('/', artifact_name, source, root_subtree_hash, updated_at), ',' ORDER BY artifact_name, source))
+	FROM sboms`
+
+type sbomSnapshot map[assetVersionKey]string
 type assetVersionKey struct {
 	assetID          uuid.UUID
 	assetVersionName string
@@ -1156,74 +1178,26 @@ func (filter *jobFilter) needToProcessIdentity(identity any) (ok bool) {
 	return
 }
 
-func (filter *jobFilter) filterStaleArtifacts(ctx context.Context, assetVersion models.AssetVersion, tx pgx.Tx) []models.Artifact {
-	artifacts := assetVersion.Artifacts
-	if len(artifacts) == 0 {
-		return []models.Artifact{}
+// assetVersionUnchanged must run while sboms is locked, otherwise an upload could still commit after the check
+func (filter *jobFilter) assetVersionUnchanged(ctx context.Context, tx pgx.Tx, assetVersion models.AssetVersion) (bool, error) {
+	snapshotFingerprint, ok := filter.sbomSnapshot[assetVersionKey{assetID: assetVersion.AssetID, assetVersionName: assetVersion.Name}]
+	if !ok {
+		return false, nil
 	}
 
-	freshArtifacts := make([]models.Artifact, 0, len(artifacts))
-
-	rootRows, err := tx.Query(ctx, `
-		SELECT artifact_name, root_subtree_hash 
-		FROM sboms s
-		WHERE s.asset_version_name = $1
-		AND s.asset_id = $2;`, assetVersion.Name, assetVersion.AssetID)
+	var key assetVersionKey
+	var fingerprint string
+	err := tx.QueryRow(ctx, sbomFingerprintQuery+`
+		WHERE asset_id = $1 AND asset_version_name = $2
+		GROUP BY asset_id, asset_version_name;`, assetVersion.AssetID, assetVersion.Name).Scan(&key.assetID, &key.assetVersionName, &fingerprint)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// all sboms of the asset version were deleted
+		return false, nil
+	}
 	if err != nil {
-		return freshArtifacts
+		return false, err
 	}
-	defer rootRows.Close()
-
-	type mapKey struct {
-		ArtifactHash uuid.UUID
-		ArtifactName string
-	}
-
-	var root uuid.UUID
-	var artifact string
-	currentState := make(map[mapKey][]uuid.UUID, len(artifacts))
-	for rootRows.Next() {
-		err = rootRows.Scan(&artifact, &root)
-		if err != nil {
-			return freshArtifacts
-		}
-		artifactHash := md5.Sum([]byte(artifact + assetVersion.Name + assetVersion.AssetID.String()))
-		currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}] = append(currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}], root)
-	}
-	rootRows.Close()
-	if err := rootRows.Err(); err != nil {
-		return freshArtifacts
-	}
-
-artifactLoop:
-	for artifactKey, currentRoots := range currentState {
-
-		snapshotRoots, ok := filter.sbomSnapshot[artifactKey.ArtifactHash]
-		if !ok {
-			// artifact did not exist before so data is stale
-			continue
-		}
-
-		// check if all current sboms already existed
-		for _, current := range currentRoots {
-			if !slices.Contains(snapshotRoots, current) {
-				continue artifactLoop
-			}
-		}
-
-		// and vice versa
-		for _, snapshot := range snapshotRoots {
-			if !slices.Contains(currentRoots, snapshot) {
-				continue artifactLoop
-			}
-		}
-		freshArtifacts = append(freshArtifacts, models.Artifact{
-			ArtifactName:     artifactKey.ArtifactName,
-			AssetVersionName: assetVersion.Name,
-			AssetID:          assetVersion.AssetID,
-		})
-	}
-	return freshArtifacts
+	return fingerprint == snapshotFingerprint, nil
 }
 
 // handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
