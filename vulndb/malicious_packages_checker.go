@@ -57,7 +57,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
 		"pypi":      {"fake-malicious-pypi-package"},
-		"maven":     {"com.fake:malicious-package"},
+		"maven":     {"com.fake/malicious-package"},
 		"crates.io": {"fake-malicious-crate"},
 		"oci":       {"fake-org/malicious-image"},
 	}
@@ -130,7 +130,12 @@ func (c *MaliciousPackageChecker) GetMaliciousComponents(ctx context.Context, ec
 		return nil, fmt.Errorf("packageName is required to check if a package is malicious")
 	}
 
-	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+	ecosystem = strings.ToLower(ecosystem)
+	if ecosystem != "maven" && ecosystem != "go" {
+		packageName = strings.ToLower(packageName)
+	}
+
+	purl := fmt.Sprintf("pkg:%s/%s", ecosystem, packageName)
 
 	// Parse to normalize
 	parsedPurl, err := packageurl.FromString(purl)
