@@ -63,8 +63,7 @@ func (repository *assetVersionRepository) Read(ctx context.Context, tx *gorm.DB,
 func (repository *assetVersionRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
 	err := repository.GetDB(ctx, tx).Session(&gorm.Session{
-		Logger:               logger.Default.LogMode(logger.Silent),
-		FullSaveAssociations: false,
+		Logger: logger.Default.LogMode(logger.Silent),
 	}).First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
 }

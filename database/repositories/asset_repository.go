@@ -72,8 +72,7 @@ func (repository *assetRepository) prepareUniqueSlugs(ctx context.Context, tx *g
 func (repository *assetRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
 	db := repository.GetDB(ctx, tx).Session(&gorm.Session{
-		Logger:               logger.Default.LogMode(logger.Silent),
-		FullSaveAssociations: false,
+		Logger: logger.Default.LogMode(logger.Silent),
 	}).Preload("Project").Where("id = ?", id)
 	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
 		db = db.Scopes(autoOwnershipScope(asset, ids))
