@@ -660,9 +660,9 @@ func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param orgid query string false "Organization ID"
-// @Param projectid query string false "Project ID"
-// @Param assetid query string false "Asset ID"
+// @Param orgId query string false "Organization ID"
+// @Param projectId query string false "Project ID"
+// @Param assetId query string false "Asset ID"
 // @Success 200 {object} dtos.PermalinkResponse
 // @Router /resolve [get]
 func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
