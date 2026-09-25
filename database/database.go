@@ -77,13 +77,13 @@ func (s *sentryLogger) Trace(ctx context.Context, begin time.Time, fc func() (st
 }
 
 // getDSN builds a PostgreSQL connection string from parameters
-func getDSN(host, user, password, dbname, port string) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname)
+func getDSN(host, user, password, dbname, port, sslMode string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, password, host, port, dbname, sslMode)
 }
 
 func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
 	// create a connection pool with increased connections for parallel processing
-	config, err := pgxpool.ParseConfig(getDSN(cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port))
+	config, err := pgxpool.ParseConfig(getDSN(cfg.Host, cfg.User, cfg.Password, cfg.DBName, cfg.Port, cfg.SSLMode))
 	if err != nil {
 		panic("could not parse pgx pool config")
 	}

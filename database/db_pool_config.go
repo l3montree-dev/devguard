@@ -19,6 +19,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // PoolConfig holds database connection pool configuration
@@ -29,6 +31,7 @@ type PoolConfig struct {
 	Host     string
 	Port     string
 	DBName   string
+	SSLMode  string `validate:"oneof=disable require"` // "disable" or "require"
 
 	MaxOpenConns    int32
 	MinConns        int32
@@ -62,17 +65,22 @@ func GetPoolConfigFromEnv() PoolConfig {
 		Host:     os.Getenv("POSTGRES_HOST"),
 		Port:     os.Getenv("POSTGRES_PORT"),
 		DBName:   os.Getenv("POSTGRES_DB"),
+		SSLMode:  os.Getenv("POSTGRES_SSL_MODE"),
+	}
+	// if SSLMode is not set, default to "disable"
+	if cfg.SSLMode == "" {
+		cfg.SSLMode = "disable"
 	}
 
 	// Allow override via environment variables
 	if maxOpen := os.Getenv("DB_MAX_OPEN_CONNS"); maxOpen != "" {
-		if val, err := strconv.Atoi(maxOpen); err == nil && val > 0 {
+		if val, err := strconv.ParseInt(maxOpen, 10, 32); err == nil && val > 0 {
 			cfg.MaxOpenConns = int32(val)
 		}
 	}
 
 	if minConns := os.Getenv("DB_MIN_CONNS"); minConns != "" {
-		if val, err := strconv.Atoi(minConns); err == nil && val >= 0 {
+		if val, err := strconv.ParseInt(minConns, 10, 32); err == nil && val >= 0 {
 			cfg.MinConns = int32(val)
 		}
 	}
@@ -87,6 +95,12 @@ func GetPoolConfigFromEnv() PoolConfig {
 		if val, err := time.ParseDuration(idleTime); err == nil {
 			cfg.ConnMaxIdleTime = val
 		}
+	}
+
+	// validate SSLMode
+	validator := validator.New()
+	if err := validator.Struct(&cfg); err != nil {
+		panic("invalid database pool configuration: " + err.Error())
 	}
 
 	return cfg
