@@ -18,6 +18,7 @@ package daemons
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -548,6 +549,34 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer conn.Release()
 
+	slog.Info("snapshotting sboms table")
+
+	sbomRows, err := conn.Query(ctx, `
+		SELECT MD5(
+			s.artifact_name || 
+			s.asset_version_name || 
+			s.asset_id::text)::uuid as artifact, 
+		s.root_subtree_hash 
+		FROM sboms s;`)
+	if err != nil {
+		return fmt.Errorf("could not snapshot sboms table: %w", err)
+	}
+	defer sbomRows.Close()
+
+	sbomSnapshot := make(map[uuid.UUID][]uuid.UUID, 4000)
+	var artifact, rootHash uuid.UUID
+	for sbomRows.Next() {
+		err = sbomRows.Scan(&artifact, &rootHash)
+		if err != nil {
+			return fmt.Errorf("could not scan sbom row: %w", err)
+		}
+		sbomSnapshot[artifact] = append(sbomSnapshot[artifact], rootHash)
+	}
+	sbomRows.Close()
+	if err := sbomRows.Err(); err != nil {
+		return fmt.Errorf("error when scanning sbom rows: %w", err)
+	}
+
 	slog.Info("start collecting all dependencies")
 	start := time.Now()
 	purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_nodes;`)
@@ -630,7 +659,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	// make that temporary when not testing
 	_, err = tx.Exec(ctx, `
-	CREATE TEMP TABLE purl_mapping (
+	CREATE TABLE purl_mapping (
 		purl text,
 		affected_component_id bigint,
 		fixed_version text
@@ -654,7 +683,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	// precompute the join to the cve ids
 	_, err = tx.Exec(ctx, `
-	CREATE TEMP TABLE purl_to_cves AS (
+	CREATE TABLE purl_to_cves AS (
 		SELECT DISTINCT pm.purl,pm.fixed_version, cac.cve_id 
 		FROM purl_mapping pm 
 		JOIN cve_affected_component cac
@@ -695,7 +724,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	defer scanTx.Rollback(ctx)
 
 	_, err = scanTx.Exec(ctx, `
-			CREATE TEMP TABLE vuln_paths (
+			CREATE TABLE vuln_paths (
 				component_purl text,
 				root uuid,
 				path uuid[]
@@ -770,7 +799,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	start = time.Now()
 	// now materialize the new dependency vulns from the scan data
 	_, err = scanTx.Exec(ctx, `
-		CREATE TEMP TABLE public.new_dependency_vulns AS (
+		CREATE TABLE public.new_dependency_vulns AS (
 			SELECT 
 				vp.component_purl, vp.path,
 				pm.fixed_version,cves.cve as cve_id, 
@@ -790,7 +819,13 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	// speed up artifact lookup queries
 	_, err = scanTx.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
 	if err != nil {
-		return fmt.Errorf("could not create index on vuln_path artifact lookup: %w", err)
+		return fmt.Errorf("could not create index on new_dependency_vulns artifact lookup: %w", err)
+	}
+
+	// speed up artifact lookup queries on sboms
+	_, err = scanTx.Exec(ctx, `CREATE INDEX IF NOT EXISTS artifact_lookup_idx ON public.sboms (asset_id, asset_version_name, artifact_name);`)
+	if err != nil {
+		return fmt.Errorf("could not create index on sboms artifact lookup: %w", err)
 	}
 
 	err = scanTx.Commit(ctx)
@@ -827,7 +862,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	start = time.Now()
 	cache := newScanRunCache()
 	for i, assetID := range assetIDs {
-		err = runner.handleScanResultForAsset(ctx, conn, assetID, cache)
+		err = runner.handleScanResultForAsset(ctx, sbomSnapshot, conn, assetID, cache)
 		if err != nil {
 			slog.Error("could not handle scan result for asset", "err", err, "asset", assetID)
 		} else if (i+1)%10 == 0 {
@@ -923,7 +958,7 @@ func (runner *DaemonRunner) hydrateCVEs(ctx context.Context, vulns []models.Depe
 	return nil
 }
 
-func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *pgxpool.Conn, assetID uuid.UUID, cache *scanRunCache) error {
+func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, sbomSnapshot map[uuid.UUID][]uuid.UUID, conn *pgxpool.Conn, assetID uuid.UUID, cache *scanRunCache) error {
 	assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx, nil, assetID)
 	if err != nil {
 		return fmt.Errorf("could not fetch asset versions for asset: %w", err)
@@ -935,50 +970,152 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, conn *
 		return fmt.Errorf("could not fetch asset details: %w", err)
 	}
 
+	// a failing asset version is rolled back on its own and must not block the others
+	errs := make([]error, 0)
 	for _, assetVersion := range assetVersions {
-		existingDependencyVulns, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, asset.ID)
-		if err != nil {
-			slog.Error("could not get existing dependencyVulns", "err", err, "assetVersion", assetVersion)
-			continue
-		}
-
-		assetVersionTx, err := conn.Begin(ctx)
-		if err != nil {
-			return fmt.Errorf("could not start transaction for asset version: %w", err)
-		}
-		defer assetVersionTx.Rollback(ctx)
-
-		for _, artifact := range assetVersion.Artifacts {
-			foundVulns, err := runner.FetchNewVulnsForArtifact(ctx, assetVersionTx, artifact)
-			if err != nil {
-				slog.Error("could not query found vulns for artifact", "err", err, "artifact", artifact.ArtifactName)
-				assetVersionTx.Rollback(ctx)
-				continue
-			}
-
-			if err := runner.hydrateCVEs(ctx, foundVulns, cache.cves); err != nil {
-				slog.Error("could not load cve details for artifact", "err", err, "artifact", artifact.ArtifactName)
-				assetVersionTx.Rollback(ctx)
-				continue
-			}
-
-			var opened []models.DependencyVuln
-			existingDependencyVulns, opened, err = runner.HandleScanResultBatch(ctx, assetVersionTx, foundVulns, existingDependencyVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
-			if err != nil {
-				slog.Error("could not handle scan results", "err", err, "artifact", artifact.ArtifactName)
-				assetVersionTx.Rollback(ctx)
-				continue
-			}
-
-			runner.notifyDependencyVulnsDetected(ctx, cache, asset, assetVersion, artifact.ArtifactName, opened)
-		}
-
-		err = assetVersionTx.Commit(ctx)
-		if err != nil {
-			panic(err)
+		if err := runner.handleScanResultForAssetVersion(ctx, conn, sbomSnapshot, asset, assetVersion, cache); err != nil {
+			errs = append(errs, fmt.Errorf("asset version %s: %w", assetVersion.Name, err))
 		}
 	}
+	return errors.Join(errs...)
+}
+
+func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, sbomSnapshot map[uuid.UUID][]uuid.UUID, asset models.Asset, assetVersion models.AssetVersion, cache *scanRunCache) error {
+	filterStaleArtifacts := func(assetVersion models.AssetVersion, tx pgx.Tx) []models.Artifact {
+		artifacts := assetVersion.Artifacts
+		if len(artifacts) == 0 {
+			return []models.Artifact{}
+		}
+
+		freshArtifacts := make([]models.Artifact, 0, len(artifacts))
+
+		rootRows, err := tx.Query(ctx, `
+		SELECT artifact_name, root_subtree_hash 
+		FROM sboms s
+		WHERE s.asset_version_name = $1
+		AND s.asset_id = $2;`, assetVersion.Name, assetVersion.AssetID)
+		if err != nil {
+			return freshArtifacts
+		}
+		defer rootRows.Close()
+
+		type mapKey struct {
+			ArtifactHash uuid.UUID
+			ArtifactName string
+		}
+
+		var root uuid.UUID
+		var artifact string
+		currentState := make(map[mapKey][]uuid.UUID, len(artifacts))
+		for rootRows.Next() {
+			err = rootRows.Scan(&artifact, &root)
+			if err != nil {
+				return freshArtifacts
+			}
+			artifactHash := md5.Sum([]byte(artifact + assetVersion.Name + assetVersion.AssetID.String()))
+			currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}] = append(currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}], root)
+		}
+		rootRows.Close()
+		if err := rootRows.Err(); err != nil {
+			return freshArtifacts
+		}
+
+	artifactLoop:
+		for artifactKey, currentRoots := range currentState {
+
+			snapshotRoots, ok := sbomSnapshot[artifactKey.ArtifactHash]
+			if !ok {
+				// artifact did not exist before so data is stale
+				continue
+			}
+
+			// check if all current sboms already existed
+			for _, current := range currentRoots {
+				if !slices.Contains(snapshotRoots, current) {
+					continue artifactLoop
+				}
+			}
+
+			// and vice versa
+			for _, snapshot := range snapshotRoots {
+				if !slices.Contains(currentRoots, snapshot) {
+					continue artifactLoop
+				}
+			}
+			freshArtifacts = append(freshArtifacts, models.Artifact{
+				ArtifactName:     artifactKey.ArtifactName,
+				AssetVersionName: assetVersion.Name,
+				AssetID:          assetVersion.AssetID,
+			})
+		}
+		return freshArtifacts
+	}
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	artifacts := filterStaleArtifacts(assetVersion, tx)
+	if len(artifacts) == 0 {
+		slog.Warn("no artifacts survived the filter", "asset version", assetVersion.Name, "assetID", assetVersion.AssetID)
+		return nil
+	}
+
+	existing, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, asset.ID)
+	if err != nil {
+		return fmt.Errorf("could not get existing dependency vulns: %w", err)
+	}
+
+	opened := make(map[string][]models.DependencyVuln, len(artifacts))
+	for _, artifact := range artifacts {
+		// a savepoint per artifact: a failing artifact is undone without aborting the asset version transaction
+		savepoint, err := tx.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("could not create savepoint for artifact %s: %w", artifact.ArtifactName, err)
+		}
+		next, artifactOpened, err := runner.handleArtifact(ctx, savepoint, artifact, existing, asset, cache)
+		if err != nil {
+			slog.Error("could not handle scan results", "err", err, "artifact", artifact.ArtifactName, "assetVersion", assetVersion.Name)
+			if err := savepoint.Rollback(ctx); err != nil {
+				return fmt.Errorf("could not roll back savepoint for artifact %s: %w", artifact.ArtifactName, err)
+			}
+			continue // existing keeps the state from before this artifact
+		}
+		if err := savepoint.Commit(ctx); err != nil {
+			return fmt.Errorf("could not release savepoint for artifact %s: %w", artifact.ArtifactName, err)
+		}
+		existing = next
+		opened[artifact.ArtifactName] = artifactOpened
+	}
+
+	// dry runs are rolled back by the deferred rollback
+	if runner.debugOptions.DryRun {
+		slog.Info("[DRY-RUN] rolled back scan results", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifacts", len(artifacts))
+	} else if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("could not commit scan results: %w", err)
+	}
+
+	// only notify after the commit, otherwise subscribers could be told about vulns that were rolled back
+	for artifactName, vulns := range opened {
+		runner.notifyDependencyVulnsDetected(ctx, cache, asset, assetVersion, artifactName, vulns)
+	}
 	return nil
+}
+
+// handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
+func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, existingDependencyVulns []models.DependencyVuln, asset models.Asset, cache *scanRunCache) (snapshot []models.DependencyVuln, opened []models.DependencyVuln, err error) {
+	foundVulns, err := runner.FetchNewVulnsForArtifact(ctx, tx, artifact)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not query found vulns for artifact: %w", err)
+	}
+
+	if err := runner.hydrateCVEs(ctx, foundVulns, cache.cves); err != nil {
+		return nil, nil, fmt.Errorf("could not load cve details for artifact: %w", err)
+	}
+
+	return runner.HandleScanResultBatch(ctx, tx, foundVulns, existingDependencyVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
 }
 
 // returns the new state so the other artifacts do not operate on stale data
