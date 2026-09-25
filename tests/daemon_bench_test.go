@@ -21,14 +21,17 @@ import (
 	"runtime/metrics"
 	"testing"
 	"time"
+
+	"github.com/l3montree-dev/devguard/daemons"
 )
 
 // BenchmarkNewScanAsset runs DaemonRunner.NewScanAsset against the local
 // development database. A testcontainer database is useless here: it is created
 // from migrations only, so there would be no dependencies to match.
 //
-// NewScanAsset skips the scan while new_dependency_vulns exists, so the scan
-// tables are dropped before every iteration - untimed, outside the measurement.
+// The runner is in dry run mode, so every iteration diffs against the same
+// stored vulns. The scan tables are dropped before every iteration - untimed,
+// outside the measurement.
 //
 //	go test -run=^$ -bench=BenchmarkNewScanAsset -benchtime=1x -timeout=30m \
 //		-cpuprofile=cpu.prof -memprofile=mem.prof ./tests/
@@ -63,6 +66,8 @@ func BenchmarkNewScanAsset(b *testing.B) {
 	app, _ := NewTestAppWithT(b, db, pool, &TestAppOptions{SuppressLogs: true, DryRunIntegrations: true})
 	fixture := &TestFixture{T: b, App: app, DB: db, Pool: pool}
 	runner := fixture.CreateDaemonRunner()
+	// without it the first iteration commits the found vulns and every later one finds nothing new
+	runner.SetDebugOptions(daemons.DebugOptions{DryRun: true})
 
 	sampler := startHeapSampler(20 * time.Millisecond)
 	runtime.GC()

@@ -688,6 +688,9 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		FROM purl_mapping pm 
 		JOIN cve_affected_component cac
 		ON cac.affected_component_id = pm.affected_component_id
+		JOIN cves 
+		ON cves.id = cac.cve_id
+		AND cves.withdrawn IS NULL
 	);
 	
 	DROP TABLE public.purl_mapping;
@@ -799,19 +802,22 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	start = time.Now()
 	// now materialize the new dependency vulns from the scan data
 	_, err = scanTx.Exec(ctx, `
-		CREATE TABLE public.new_dependency_vulns AS (
-			SELECT 
-				vp.component_purl, vp.path,
-				pm.fixed_version,cves.cve as cve_id, 
-				s.asset_id, s.asset_version_name, s.artifact_name , s.source
-			FROM vuln_paths vp
-			JOIN sboms s 
-				ON s.root_subtree_hash = vp.root
-			JOIN purl_mapping pm
-				ON pm.purl = vp.component_purl
-			JOIN cves
-				ON cves.id = pm.cve_id
-		);`)
+		CREATE TABLE public.new_dependency_vulns AS
+		WITH found AS (`+scanResultsQuery+`)
+		-- only keep what is not yet associated with the artifact, the vuln itself may already exist
+		SELECT DISTINCT ON (f.id, f.artifact_name)
+			f.id, f.component_purl, f.path_purls, f.fixed_version, f.cve_id,
+			f.asset_id, f.asset_version_name, f.artifact_name,
+			dv.id IS NOT NULL AS already_exists
+		FROM found f
+		LEFT JOIN dependency_vulns dv ON dv.id = f.id
+		WHERE NOT EXISTS (
+			SELECT FROM artifact_dependency_vulns adv
+			WHERE adv.dependency_vuln_id = f.id
+			AND adv.artifact_artifact_name = f.artifact_name
+			AND adv.artifact_asset_version_name = f.asset_version_name
+			AND adv.artifact_asset_id = f.asset_id)
+		ORDER BY f.id, f.artifact_name, f.fixed_version NULLS LAST;`)
 	if err != nil {
 		return fmt.Errorf("could not materialize new dependency vulns: %w", err)
 	}
@@ -839,8 +845,6 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	// get all assets which actually need processing
 	rows, err := conn.Query(ctx, `
-		SELECT DISTINCT asset_id FROM dependency_vulns
-		UNION 
 		SELECT DISTINCT asset_id FROM new_dependency_vulns;`)
 	if err != nil {
 		return err
@@ -874,6 +878,27 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	return nil
 }
+
+// scanResultsQuery resolves the scanned vuln paths into dependency vulns, one row per fixed version
+const scanResultsQuery = `
+	SELECT p.component_purl, p.path_purls, pm.fixed_version, cves.cve AS cve_id,
+		s.asset_id, s.asset_version_name, s.artifact_name,
+		-- the id must match DependencyVuln.CalculateHash byte for byte
+		substring(encode(sha256(convert_to(
+			cves.cve || '/' || s.asset_version_name || '/' || s.asset_id::text || '/' || array_to_string(p.path_purls, ','),
+		'UTF8')), 'hex'), 1, 32)::uuid AS id
+	FROM (
+		SELECT vp.component_purl, vp.root,
+			ARRAY(
+				SELECT n.component_id
+				FROM UNNEST(vp.path) WITH ORDINALITY AS u(node_hash, ord)
+				JOIN sbom_merkle_nodes n ON n.node_hash = u.node_hash
+				ORDER BY u.ord) AS path_purls
+		FROM vuln_paths vp
+	) p
+	JOIN sboms s ON s.root_subtree_hash = p.root
+	JOIN purl_mapping pm ON pm.purl = p.component_purl
+	JOIN cves ON cves.id = pm.cve_id`
 
 type vulnPath struct {
 	Purl string
@@ -981,74 +1006,8 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, sbomSn
 }
 
 func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, sbomSnapshot map[uuid.UUID][]uuid.UUID, asset models.Asset, assetVersion models.AssetVersion, cache *scanRunCache) error {
-	filterStaleArtifacts := func(assetVersion models.AssetVersion, tx pgx.Tx) []models.Artifact {
-		artifacts := assetVersion.Artifacts
-		if len(artifacts) == 0 {
-			return []models.Artifact{}
-		}
-
-		freshArtifacts := make([]models.Artifact, 0, len(artifacts))
-
-		rootRows, err := tx.Query(ctx, `
-		SELECT artifact_name, root_subtree_hash 
-		FROM sboms s
-		WHERE s.asset_version_name = $1
-		AND s.asset_id = $2;`, assetVersion.Name, assetVersion.AssetID)
-		if err != nil {
-			return freshArtifacts
-		}
-		defer rootRows.Close()
-
-		type mapKey struct {
-			ArtifactHash uuid.UUID
-			ArtifactName string
-		}
-
-		var root uuid.UUID
-		var artifact string
-		currentState := make(map[mapKey][]uuid.UUID, len(artifacts))
-		for rootRows.Next() {
-			err = rootRows.Scan(&artifact, &root)
-			if err != nil {
-				return freshArtifacts
-			}
-			artifactHash := md5.Sum([]byte(artifact + assetVersion.Name + assetVersion.AssetID.String()))
-			currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}] = append(currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}], root)
-		}
-		rootRows.Close()
-		if err := rootRows.Err(); err != nil {
-			return freshArtifacts
-		}
-
-	artifactLoop:
-		for artifactKey, currentRoots := range currentState {
-
-			snapshotRoots, ok := sbomSnapshot[artifactKey.ArtifactHash]
-			if !ok {
-				// artifact did not exist before so data is stale
-				continue
-			}
-
-			// check if all current sboms already existed
-			for _, current := range currentRoots {
-				if !slices.Contains(snapshotRoots, current) {
-					continue artifactLoop
-				}
-			}
-
-			// and vice versa
-			for _, snapshot := range snapshotRoots {
-				if !slices.Contains(currentRoots, snapshot) {
-					continue artifactLoop
-				}
-			}
-			freshArtifacts = append(freshArtifacts, models.Artifact{
-				ArtifactName:     artifactKey.ArtifactName,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
-			})
-		}
-		return freshArtifacts
+	if len(assetVersion.Artifacts) == 0 {
+		return nil
 	}
 
 	tx, err := conn.Begin(ctx)
@@ -1057,17 +1016,14 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	}
 	defer tx.Rollback(ctx)
 
-	artifacts := filterStaleArtifacts(assetVersion, tx)
+	artifacts := filterStaleArtifacts(ctx, sbomSnapshot, assetVersion, tx)
 	if len(artifacts) == 0 {
 		slog.Warn("no artifacts survived the filter", "asset version", assetVersion.Name, "assetID", assetVersion.AssetID)
 		return nil
 	}
 
-	existing, err := runner.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, asset.ID)
-	if err != nil {
-		return fmt.Errorf("could not get existing dependency vulns: %w", err)
-	}
-
+	// new_dependency_vulns was diffed before this run wrote anything, so a vuln shared by several artifacts is new for each of them
+	createdInAssetVersion := make(map[uuid.UUID]struct{})
 	opened := make(map[string][]models.DependencyVuln, len(artifacts))
 	for _, artifact := range artifacts {
 		// a savepoint per artifact: a failing artifact is undone without aborting the asset version transaction
@@ -1075,18 +1031,20 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 		if err != nil {
 			return fmt.Errorf("could not create savepoint for artifact %s: %w", artifact.ArtifactName, err)
 		}
-		next, artifactOpened, err := runner.handleArtifact(ctx, savepoint, artifact, existing, asset, cache)
+		artifactOpened, err := runner.handleArtifact(ctx, savepoint, artifact, createdInAssetVersion, asset, cache)
 		if err != nil {
 			slog.Error("could not handle scan results", "err", err, "artifact", artifact.ArtifactName, "assetVersion", assetVersion.Name)
 			if err := savepoint.Rollback(ctx); err != nil {
 				return fmt.Errorf("could not roll back savepoint for artifact %s: %w", artifact.ArtifactName, err)
 			}
-			continue // existing keeps the state from before this artifact
+			continue // createdInAssetVersion is only extended once the savepoint is released
 		}
 		if err := savepoint.Commit(ctx); err != nil {
 			return fmt.Errorf("could not release savepoint for artifact %s: %w", artifact.ArtifactName, err)
 		}
-		existing = next
+		for i := range artifactOpened {
+			createdInAssetVersion[artifactOpened[i].CalculateHash()] = struct{}{}
+		}
 		opened[artifact.ArtifactName] = artifactOpened
 	}
 
@@ -1104,79 +1062,138 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	return nil
 }
 
-// handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
-func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, existingDependencyVulns []models.DependencyVuln, asset models.Asset, cache *scanRunCache) (snapshot []models.DependencyVuln, opened []models.DependencyVuln, err error) {
-	foundVulns, err := runner.FetchNewVulnsForArtifact(ctx, tx, artifact)
+func filterStaleArtifacts(ctx context.Context, sbomSnapshot map[uuid.UUID][]uuid.UUID, assetVersion models.AssetVersion, tx pgx.Tx) []models.Artifact {
+	artifacts := assetVersion.Artifacts
+	if len(artifacts) == 0 {
+		return []models.Artifact{}
+	}
+
+	freshArtifacts := make([]models.Artifact, 0, len(artifacts))
+
+	rootRows, err := tx.Query(ctx, `
+		SELECT artifact_name, root_subtree_hash 
+		FROM sboms s
+		WHERE s.asset_version_name = $1
+		AND s.asset_id = $2;`, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not query found vulns for artifact: %w", err)
+		return freshArtifacts
+	}
+	defer rootRows.Close()
+
+	type mapKey struct {
+		ArtifactHash uuid.UUID
+		ArtifactName string
 	}
 
-	if err := runner.hydrateCVEs(ctx, foundVulns, cache.cves); err != nil {
-		return nil, nil, fmt.Errorf("could not load cve details for artifact: %w", err)
+	var root uuid.UUID
+	var artifact string
+	currentState := make(map[mapKey][]uuid.UUID, len(artifacts))
+	for rootRows.Next() {
+		err = rootRows.Scan(&artifact, &root)
+		if err != nil {
+			return freshArtifacts
+		}
+		artifactHash := md5.Sum([]byte(artifact + assetVersion.Name + assetVersion.AssetID.String()))
+		currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}] = append(currentState[mapKey{ArtifactHash: artifactHash, ArtifactName: artifact}], root)
+	}
+	rootRows.Close()
+	if err := rootRows.Err(); err != nil {
+		return freshArtifacts
 	}
 
-	return runner.HandleScanResultBatch(ctx, tx, foundVulns, existingDependencyVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
+artifactLoop:
+	for artifactKey, currentRoots := range currentState {
+
+		snapshotRoots, ok := sbomSnapshot[artifactKey.ArtifactHash]
+		if !ok {
+			// artifact did not exist before so data is stale
+			continue
+		}
+
+		// check if all current sboms already existed
+		for _, current := range currentRoots {
+			if !slices.Contains(snapshotRoots, current) {
+				continue artifactLoop
+			}
+		}
+
+		// and vice versa
+		for _, snapshot := range snapshotRoots {
+			if !slices.Contains(currentRoots, snapshot) {
+				continue artifactLoop
+			}
+		}
+		freshArtifacts = append(freshArtifacts, models.Artifact{
+			ArtifactName:     artifactKey.ArtifactName,
+			AssetVersionName: assetVersion.Name,
+			AssetID:          assetVersion.AssetID,
+		})
+	}
+	return freshArtifacts
 }
 
-// returns the new state so the other artifacts do not operate on stale data
-func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, tx pgx.Tx, dependencyVulns, existingDependencyVulns []models.DependencyVuln, artifactName, assetVersionName string, asset models.Asset) (snapshot []models.DependencyVuln, opened []models.DependencyVuln, err error) {
-	diff := statemachine.DiffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
-
-	// only newly discovered vulns are matched against other branches, so restrict the query to their signatures
-	newlyDiscoveredSignatures := make([]int64, len(diff.NewlyDiscovered))
-	for i := range diff.NewlyDiscovered {
-		newlyDiscoveredSignatures[i] = utils.HashToInt64(diff.NewlyDiscovered[i].CalculateAssetVersionIndependentHash())
+// handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
+func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *scanRunCache) (opened []models.DependencyVuln, err error) {
+	newVulns, existingVulns, err := runner.FetchNewVulnsForArtifact(ctx, tx, artifact)
+	if err != nil {
+		return nil, fmt.Errorf("could not query found vulns for artifact: %w", err)
 	}
 
-	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, asset.ID, newlyDiscoveredSignatures)
+	// a previous artifact of this asset version already created these, they only need the association
+	newVulns = slices.DeleteFunc(newVulns, func(vuln models.DependencyVuln) bool {
+		if _, ok := createdInAssetVersion[vuln.CalculateHash()]; !ok {
+			return false
+		}
+		vuln.Artifacts = nil
+		existingVulns = append(existingVulns, vuln)
+		return true
+	})
+
+	if err := runner.hydrateCVEs(ctx, newVulns, cache.cves); err != nil {
+		return nil, fmt.Errorf("could not load cve details for artifact: %w", err)
+	}
+
+	return runner.HandleScanResultBatch(ctx, tx, newVulns, existingVulns, artifact.ArtifactName, artifact.AssetVersionName, asset)
+}
+
+// newVulns do not exist on this asset version yet, existingVulns exist but are not associated with the artifact
+func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, tx pgx.Tx, newVulns, existingVulns []models.DependencyVuln, artifactName, assetVersionName string, asset models.Asset) (opened []models.DependencyVuln, err error) {
+	// only new vulns are matched against other branches, so restrict the query to their signatures
+	newSignatures := make([]int64, len(newVulns))
+	for i := range newVulns {
+		newSignatures[i] = utils.HashToInt64(newVulns[i].CalculateAssetVersionIndependentHash())
+	}
+
+	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, assetVersionName, asset.ID, newSignatures)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
-		return nil, nil, err
+		return nil, err
 	}
 
-	// remove from fixed vulns and fixed on this artifact name all vulns, that have more than a single path to them
-	// this means, that another source is still saying, its part of this artifact
-	unfixablePurls, err := fetchPurlsInMultipleSBOMs(ctx, tx, asset.ID, assetVersionName, artifactName)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not fetch purls in multiple sboms: %w", err)
-	}
-	filterPredicate := func(dv models.DependencyVuln) bool {
-		_, ok := unfixablePurls[dv.ComponentPurl]
-		return !ok
-	}
-
-	fixedOnThisArtifactName := utils.Filter(diff.RemovedFromArtifact, filterPredicate)
-
-	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(diff.NewlyDiscovered, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
+	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(newVulns, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
 
 	// make sure to first create a user detected event for vulnerabilities with just upstream events
 	// this way we preserve the event history
 	if err := runner.DetectedExistingVulnOnDifferentBranch(ctx, tx, artifactName, branchDiff.ExistingOnOtherBranches, asset); err != nil {
 		slog.Error("error when trying to add events for existing vulnerability on different branch")
-		return nil, nil, err
+		return nil, err
 	}
 	// We can create the newly found one without checking anything
 	if err := runner.DetectedDependencyVulns(ctx, tx, "system", nil, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), asset); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	err = runner.DetectedDependencyVulnInAnotherArtifact(ctx, tx, diff.NewInArtifact, artifactName)
+	err = runner.DetectedDependencyVulnInAnotherArtifact(ctx, tx, existingVulns, artifactName)
 	if err != nil {
 		slog.Error("error when trying to associate new artifact to vulnerabilities")
-		return nil, nil, err
-	}
-
-	err = runner.DidNotDetectDependencyVulnInArtifactAnymore(ctx, tx, fixedOnThisArtifactName, artifactName)
-	if err != nil {
-		slog.Error("error when trying to remove artifact association from vulnerabilities")
-		return nil, nil, err
+		return nil, err
 	}
 
 	created := append(utils.DereferenceSlice(branchDiff.NewToAllBranches), utils.Map(branchDiff.ExistingOnOtherBranches, func(match statemachine.BranchVulnMatch[*models.DependencyVuln]) models.DependencyVuln {
 		return *match.CurrentBranchVuln
 	})...)
 
-	return applyBatchToSnapshot(existingDependencyVulns, created, diff.NewInArtifact, fixedOnThisArtifactName, artifactName), created, nil
+	return created, nil
 }
 
 func (runner *DaemonRunner) notifyDependencyVulnsDetected(ctx context.Context, cache *scanRunCache, asset models.Asset, assetVersion models.AssetVersion, artifactName string, opened []models.DependencyVuln) {
@@ -1186,7 +1203,6 @@ func (runner *DaemonRunner) notifyDependencyVulnsDetected(ctx context.Context, c
 
 	// make sure to swallow if wrapper doesn't work
 	if runner.debugOptions.DryRun {
-		slog.Info("[DRY-RUN] would dispatch dependency vulns detected event", "artifact", artifactName, "amount", len(opened))
 		return
 	}
 
@@ -1234,41 +1250,6 @@ func (runner *DaemonRunner) projectAndOrgFor(ctx context.Context, cache *scanRun
 	}
 
 	return project, org, nil
-}
-
-// applyBatchToSnapshot mirrors the writes of one artifact onto the in memory snapshot
-func applyBatchToSnapshot(snapshot, created, addedToArtifact, removedFromArtifact []models.DependencyVuln, artifactName string) []models.DependencyVuln {
-	added := vulnIDSet(addedToArtifact)
-	removed := vulnIDSet(removedFromArtifact)
-	if len(added) == 0 && len(removed) == 0 {
-		return append(snapshot, created...)
-	}
-
-	for i := range snapshot {
-		id := snapshot[i].CalculateHash()
-		if _, ok := added[id]; ok {
-			snapshot[i].Artifacts = append(snapshot[i].Artifacts, models.Artifact{
-				ArtifactName:     artifactName,
-				AssetVersionName: snapshot[i].AssetVersionName,
-				AssetID:          snapshot[i].AssetID,
-			})
-		}
-		if _, ok := removed[id]; ok {
-			snapshot[i].Artifacts = slices.DeleteFunc(snapshot[i].Artifacts, func(artifact models.Artifact) bool {
-				return artifact.ArtifactName == artifactName
-			})
-		}
-	}
-
-	return append(snapshot, created...)
-}
-
-func vulnIDSet(vulns []models.DependencyVuln) map[uuid.UUID]struct{} {
-	ids := make(map[uuid.UUID]struct{}, len(vulns))
-	for i := range vulns {
-		ids[vulns[i].CalculateHash()] = struct{}{}
-	}
-	return ids
 }
 
 func (runner *DaemonRunner) DetectedExistingVulnOnDifferentBranch(ctx context.Context, tx pgx.Tx, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], asset models.Asset) error {
@@ -1431,74 +1412,71 @@ func (runner *DaemonRunner) DidNotDetectDependencyVulnInArtifactAnymore(ctx cont
 	return err
 }
 
-func (runner *DaemonRunner) FetchNewVulnsForArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact) ([]models.DependencyVuln, error) {
-	// the vuln id only hashes cve and path, so rows differing only in fixed_version (multiple affected components) must collapse into one vuln
+// newVulns do not exist on the asset version yet, existingVulns only lack the association with the artifact
+func (runner *DaemonRunner) FetchNewVulnsForArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact) (newVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, err error) {
 	rows, err := tx.Query(ctx, `
-	SELECT DISTINCT ON (vp.cve_id, path_purls)
-    vp.component_purl,
-    ARRAY(
-        SELECT nodes.component_id
-        FROM UNNEST(vp.path) WITH ORDINALITY AS u(node_hash, ord)
-        JOIN sbom_merkle_nodes nodes
-        ON nodes.node_hash = u.node_hash
-        ORDER BY u.ord
-    ) AS path_purls,
-    vp.cve_id,
-    vp.fixed_version
-	FROM new_dependency_vulns vp
-	WHERE vp.asset_id = $1
-	AND vp.asset_version_name = $2
-	AND vp.artifact_name = $3
-	ORDER BY vp.cve_id, path_purls, vp.fixed_version NULLS LAST;`, artifact.AssetID, artifact.AssetVersionName, artifact.ArtifactName)
+	SELECT component_purl, path_purls, cve_id, fixed_version, already_exists
+	FROM new_dependency_vulns
+	WHERE asset_id = $1
+	AND asset_version_name = $2
+	AND artifact_name = $3;`, artifact.AssetID, artifact.AssetVersionName, artifact.ArtifactName)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	newVulns = make([]models.DependencyVuln, 0, 100)
+	existingVulns = make([]models.DependencyVuln, 0, 100)
+	var alreadyExists bool
+	for rows.Next() {
+		var vuln models.DependencyVuln
+		err = rows.Scan(&vuln.ComponentPurl, &vuln.VulnerabilityPath, &vuln.CVEID, &vuln.ComponentFixedVersion, &alreadyExists)
+		if err != nil {
+			return nil, nil, err
+		}
+		vuln.CVE = &models.CVE{CVE: vuln.CVEID}
+		vuln.AssetID = artifact.AssetID
+		vuln.AssetVersionName = artifact.AssetVersionName
+		if alreadyExists {
+			existingVulns = append(existingVulns, vuln)
+			continue
+		}
+		// copyDependencyVulns creates the artifact association from this
+		vuln.Artifacts = []models.Artifact{artifact}
+		newVulns = append(newVulns, vuln)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	return newVulns, existingVulns, nil
+}
+
+// FetchScanResultsForArtifact returns everything the last scan found for the artifact, regardless of what is already stored
+func (runner *DaemonRunner) FetchScanResultsForArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact) ([]models.DependencyVuln, error) {
+	rows, err := tx.Query(ctx, `
+	SELECT DISTINCT ON (f.id) f.component_purl, f.path_purls, f.cve_id, f.fixed_version
+	FROM (`+scanResultsQuery+`) f
+	WHERE f.asset_id = $1
+	AND f.asset_version_name = $2
+	AND f.artifact_name = $3
+	ORDER BY f.id, f.fixed_version NULLS LAST;`, artifact.AssetID, artifact.AssetVersionName, artifact.ArtifactName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	dependencyVulns := make([]models.DependencyVuln, 0, 1000)
-	var vuln models.DependencyVuln
+	vulns := make([]models.DependencyVuln, 0, 100)
 	for rows.Next() {
+		var vuln models.DependencyVuln
 		err = rows.Scan(&vuln.ComponentPurl, &vuln.VulnerabilityPath, &vuln.CVEID, &vuln.ComponentFixedVersion)
 		if err != nil {
 			return nil, err
 		}
-		vuln.CVE = &models.CVE{CVE: vuln.CVEID}
-		vuln.Artifacts = []models.Artifact{artifact}
 		vuln.AssetID = artifact.AssetID
 		vuln.AssetVersionName = artifact.AssetVersionName
-		dependencyVulns = append(dependencyVulns, vuln)
+		vulns = append(vulns, vuln)
 	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-	return dependencyVulns, nil
-}
-
-func fetchPurlsInMultipleSBOMs(ctx context.Context, tx pgx.Tx, assetID uuid.UUID, assetVersionName, artifactName string) (map[string]struct{}, error) {
-	rows, err := tx.Query(ctx, `
-	SELECT component_purl
-	FROM new_dependency_vulns
-	WHERE asset_id = $1
-	AND asset_version_name = $2
-	AND artifact_name = $3
-	GROUP BY component_purl
-	HAVING COUNT(DISTINCT source) > 1;`, assetID, assetVersionName, artifactName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	purls := make(map[string]struct{})
-	var purl string
-	for rows.Next() {
-		err = rows.Scan(&purl)
-		if err != nil {
-			return nil, err
-		}
-		purls[purl] = struct{}{}
-	}
-	return purls, rows.Err()
+	return vulns, rows.Err()
 }
 
 type purlPathResult struct {
@@ -1520,7 +1498,9 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	}
 
 	// leaf rows carry a NULL child and are no edges
-	edgeRows, err := tx.Query(ctx, `SELECT subtree_hash,direct_dependency_subtree_hash FROM sbom_merkle_edges WHERE direct_dependency_subtree_hash IS NOT NULL;`)
+	edgeRows, err := tx.Query(ctx, `
+		SELECT subtree_hash,direct_dependency_subtree_hash 
+		FROM sbom_merkle_edges;`)
 	if err != nil {
 		return nil, fmt.Errorf("could not query paths for purls: %w", err)
 	}
@@ -1733,9 +1713,6 @@ func (queue *dynamicQueue[T]) Next() (next T, ok bool) {
 }
 
 func (queue *dynamicQueue[T]) Append(element T) {
-	if len(queue.Queue) == queue.MaxSize {
-		slog.Warn("queue overflow")
-	}
 	queue.Queue = append(queue.Queue, element)
 }
 
