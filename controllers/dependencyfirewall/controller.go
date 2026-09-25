@@ -362,13 +362,19 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 	if packageName == "" {
 		return false, ""
 	}
-	packageIdentifier := eco.packageIdentifier(packageName, version)
+	blocked, matchedRule := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
+	if blocked {
+		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+	}
+	return false, ""
+}
 
-	// Rules are applied in order like gitignore: last matching rule wins.
-	// A rule prefixed with "!" negates the match (allowlist).
+// matchRules applies the rules in order like gitignore: last matching rule wins.
+// A rule prefixed with "!" negates the match (allowlist).
+func matchRules(packageIdentifier string, rules []string) (bool, string) {
 	blocked := false
 	matchedRule := ""
-	for _, rule := range configs.Rules {
+	for _, rule := range rules {
 		negate := strings.HasPrefix(rule, "!")
 		pattern := strings.TrimPrefix(rule, "!")
 
@@ -377,11 +383,7 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 			matchedRule = rule
 		}
 	}
-
-	if blocked {
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
-	}
-	return false, ""
+	return blocked, matchedRule
 }
 
 func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecosystem, packageName, version string) (int, string, error) {
