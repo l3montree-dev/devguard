@@ -49,24 +49,24 @@ func (s *sentryLogger) Error(ctx context.Context, msg string, data ...any) {
 }
 
 func (s *sentryLogger) alert(msg string, data ...any) {
+	var err error
 	if len(data) > 0 {
-		err, ok := data[0].(error)
-		if ok {
+		if e, ok := data[0].(error); ok {
 			// check if record not found error
-			if shared.IsNotFound(err) {
+			if shared.IsNotFound(e) {
 				return
 			}
 			// SaveBatch expects this error when a batch is too large for the
-			if strings.Contains(err.Error(), "extended protocol limited to 65535 parameters") {
+			if strings.Contains(e.Error(), "extended protocol limited to 65535 parameters") {
 				return
 			}
-			monitoring.Alert(msg, err)
+			err = e
 		} else {
-			monitoring.Alert(msg, fmt.Errorf("%v", data[0]))
+			err = fmt.Errorf("%v", data[0])
 		}
-	} else {
-		monitoring.Alert(msg, nil)
 	}
+	// only report, never persist, since this is a logger for the database layer, and we don't want to create a circular dependency
+	monitoring.Alert(msg, err)
 }
 
 func (s *sentryLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {

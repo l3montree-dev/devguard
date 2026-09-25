@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type projectRepository struct {
@@ -27,6 +28,17 @@ func NewProjectRepository(db *gorm.DB) *projectRepository {
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),
 	}
+}
+
+func (g *projectRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Project, error) {
+	var result models.Project
+	db := g.GetDB(ctx, tx).Session(&gorm.Session{
+		Logger:               logger.Default.LogMode(logger.Silent),
+		FullSaveAssociations: false,
+	}).Model(models.Project{}).Where("id = ?", id)
+	db = withOwnershipScope(ctx, db, models.Project{})
+	err := db.First(&result).Error
+	return result, err
 }
 
 func (g *projectRepository) All(ctx context.Context, tx *gorm.DB) ([]models.Project, error) {
@@ -56,7 +68,7 @@ func (g *projectRepository) GetProjectByAssetID(ctx context.Context, tx *gorm.DB
 
 func (g *projectRepository) GetByProjectIDs(ctx context.Context, tx *gorm.DB, projectIDs []uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("ID = ANY (?)", pq.Array(projectIDs)).Find(&projects).Error
+	err := g.GetDB(ctx, tx).Model(&models.Project{}).Where("id = ANY (?)", pq.Array(projectIDs)).Find(&projects).Error
 	return projects, err
 }
 
@@ -700,4 +712,22 @@ SELECT 1`
 		assetExternalEntityID, assetVersionName,
 		organizationID, providerID, projectExternalEntityID, artifactName,
 	).Error
+}
+
+func (g *projectRepository) GetOrgProjectSlugsByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) (string, string, error) {
+	var slugs struct {
+		OrgSlug     string `gorm:"column:org_slug"`
+		ProjectSlug string `gorm:"column:project_slug"`
+	}
+
+	query := "SELECT organizations.slug AS org_slug, projects.slug AS project_slug " +
+		"FROM projects " +
+		"JOIN organizations ON organizations.id = projects.organization_id " +
+		"WHERE projects.id = ?"
+
+	if err := g.GetDB(ctx, tx).Raw(query, projectID).First(&slugs).Error; err != nil {
+		return "", "", err
+	}
+
+	return slugs.OrgSlug, slugs.ProjectSlug, nil
 }

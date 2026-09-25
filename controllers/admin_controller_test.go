@@ -61,6 +61,7 @@ type adminTestDeps struct {
 	statisticsService *mocks.StatisticsService
 	assetService      *mocks.AssetService
 	configService     *mocks.ConfigService
+	logService        *mocks.LogService
 	gitlabOAuth2      map[string]*gitlabint.GitlabOauth2Config
 }
 
@@ -73,6 +74,7 @@ func newAdminController(d adminTestDeps) *AdminController {
 		d.statisticsService,
 		d.assetService,
 		d.configService,
+		d.logService,
 		d.gitlabOAuth2,
 	)
 }
@@ -88,6 +90,7 @@ func setupMocks(t *testing.T) adminTestDeps {
 		statisticsService: mocks.NewStatisticsService(t),
 		assetService:      mocks.NewAssetService(t),
 		configService:     mocks.NewConfigService(t),
+		logService:        mocks.NewLogService(t),
 	}
 
 	// By default: no previous trigger → cooldown passes

@@ -45,6 +45,7 @@ func NewProjectRouter(
 	componentController *controllers.ComponentController,
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 	patController *controllers.PatController,
+	logController *controllers.LogController,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -56,6 +57,7 @@ func NewProjectRouter(
 	projectRouter.GET("/resources/", projectController.ListSubProjectsAndAssets)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/logs/", logController.ListPagedForProject, middlewares.NeededScope([]string{"scan"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead))
 	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	projectRouter.GET("/compliance-postures/", compliancePostureController.ProjectListPaged)
 	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.ProjectGetOSCAL)

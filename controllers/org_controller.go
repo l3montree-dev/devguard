@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,6 +44,8 @@ type OrgController struct {
 	projectService         shared.ProjectService
 	invitationRepository   shared.InvitationRepository
 	adminService           shared.AdminService
+	projectRepository      shared.ProjectRepository
+	assetRepository        shared.AssetRepository
 }
 
 func isInvitationExpired(invite models.Invitation) bool {
@@ -49,7 +53,7 @@ func isInvitationExpired(invite models.Invitation) bool {
 	return now.After(invite.CreatedAt.Add(expiryDuration))
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService) *OrgController {
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
@@ -57,6 +61,8 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 		projectService:         projectService,
 		invitationRepository:   invitationRepository,
 		adminService:           adminService,
+		projectRepository:      projectRepository,
+		assetRepository:        assetRepository,
 	}
 }
 
@@ -646,4 +652,135 @@ func (controller *OrgController) RevokeInvitation(ctx shared.Context) error {
 	}
 
 	return ctx.NoContent(200)
+}
+
+// @Summary Resolve a permalink
+// @Description Resolves an organization, project or asset UUID to the slugs the frontend needs to build a human readable URL. Exactly one of the query parameters must be set.
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param orgid query string false "Organization ID"
+// @Param projectid query string false "Project ID"
+// @Param assetid query string false "Asset ID"
+// @Success 200 {object} dtos.PermalinkResponse
+// @Router /resolve [get]
+func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
+	reqCtx := ctx.Request().Context()
+	session := shared.GetSession(ctx)
+
+	orgID := ctx.QueryParam("orgId")
+	projectID := ctx.QueryParam("projectId")
+	assetID := ctx.QueryParam("assetId")
+
+	switch {
+	case assetID != "":
+		id, err := uuid.Parse(assetID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse asset id").WithInternal(err)
+		}
+
+		// the asset carries its project (and through it the organization), which
+		// is what the rbac check below needs - a permalink must never disclose
+		// slugs of an asset the session cannot read.
+		asset, err := controller.assetRepository.ReadWithProject(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "asset not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve asset").WithInternal(err)
+		}
+
+		rbac := controller.rbacProvider.GetDomainRBAC(asset.Project.OrganizationID.String())
+		allowed, err := rbac.IsAllowedInAsset(reqCtx, &asset, session, shared.ObjectAsset, shared.ActionRead)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
+		}
+		if !allowed {
+			slog.Warn("access denied in ResolvePermalink", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "assetID", id)
+			return echo.NewHTTPError(404, "asset not found")
+		}
+
+		organizationSlug, projectSlug, assetSlug, err := controller.assetRepository.GetOrgProjectAssetSlugsByAssetID(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "asset not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve asset").WithInternal(err)
+		}
+
+		return ctx.JSON(200, dtos.PermalinkResponse{
+			OrganizationSlug: organizationSlug,
+			ProjectSlug:      projectSlug,
+			AssetSlug:        assetSlug,
+		})
+	case projectID != "":
+		id, err := uuid.Parse(projectID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse project id").WithInternal(err)
+		}
+
+		project, err := controller.projectRepository.Read(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "project not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve project").WithInternal(err)
+		}
+
+		if !project.IsPublic {
+			// same source of truth the project listing uses: the projects the
+			// session holds a role in.
+			rbac := controller.rbacProvider.GetDomainRBAC(project.OrganizationID.String())
+			projectIDs, err := rbac.GetAllProjectsForSession(reqCtx, session)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+			}
+			if !slices.Contains(projectIDs, id.String()) {
+				slog.Warn("access denied in ResolvePermalink", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "projectID", id)
+				return echo.NewHTTPError(404, "project not found")
+			}
+		}
+
+		organizationSlug, projectSlug, err := controller.projectRepository.GetOrgProjectSlugsByProjectID(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "project not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve project").WithInternal(err)
+		}
+
+		return ctx.JSON(200, dtos.PermalinkResponse{
+			OrganizationSlug: organizationSlug,
+			ProjectSlug:      projectSlug,
+		})
+	default:
+		id, err := uuid.Parse(orgID)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse organization id").WithInternal(err)
+		}
+
+		organization, err := controller.organizationRepository.GetOrgByID(reqCtx, nil, id)
+		if err != nil {
+			if shared.IsNotFound(err) {
+				return echo.NewHTTPError(404, "organization not found")
+			}
+			return echo.NewHTTPError(500, "could not resolve organization").WithInternal(err)
+		}
+
+		if !organization.IsPublic {
+			// same source of truth the organization listing uses: the domains the
+			// session is a member of.
+			domains, err := controller.rbacProvider.DomainsOfSession(session)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)
+			}
+			if !slices.Contains(domains, id.String()) {
+				slog.Warn("access denied in ResolvePermalink", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organizationID", id)
+				return echo.NewHTTPError(404, "organization not found")
+			}
+		}
+
+		return ctx.JSON(200, dtos.PermalinkResponse{OrganizationSlug: organization.Slug})
+	}
 }

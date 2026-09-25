@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type assetVersionRepository struct {
@@ -56,6 +57,14 @@ func (repository *assetVersionRepository) All(ctx context.Context, tx *gorm.DB) 
 func (repository *assetVersionRepository) Read(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
 	err := repository.GetDB(ctx, tx).First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
+	return asset, err
+}
+
+func (repository *assetVersionRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+	var asset models.AssetVersion
+	err := repository.GetDB(ctx, tx).Session(&gorm.Session{
+		Logger: logger.Default.LogMode(logger.Silent),
+	}).First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
 }
 

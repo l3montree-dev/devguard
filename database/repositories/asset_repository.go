@@ -26,6 +26,7 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 type assetRepository struct {
@@ -66,6 +67,18 @@ func (repository *assetRepository) prepareUniqueSlugs(ctx context.Context, tx *g
 	}
 
 	return nil
+}
+
+func (repository *assetRepository) ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	db := repository.GetDB(ctx, tx).Session(&gorm.Session{
+		Logger: logger.Default.LogMode(logger.Silent),
+	}).Preload("Project").Where("id = ?", id)
+	if ids, ok := shared.OwnershipScopeFromCtx(ctx); ok {
+		db = db.Scopes(autoOwnershipScope(asset, ids))
+	}
+	err := db.First(&asset).Error
+	return asset, err
 }
 
 func (repository *assetRepository) ReadWithProject(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error) {
@@ -368,4 +381,19 @@ func (repository *assetRepository) GetOrgProjectAssetSlugsByAssetID(ctx context.
 	}
 
 	return slugs.OrgSlug, slugs.ProjectSlug, slugs.AssetSlug, nil
+}
+
+func (repository *assetRepository) ReadInProjectTree(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, rootProjectID uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	err := repository.GetDB(ctx, tx).
+		Where("id = ?", assetID).
+		Where(`project_id IN (
+			WITH RECURSIVE proj_tree AS (
+				SELECT id FROM projects WHERE id = ?
+				UNION ALL
+				SELECT p.id FROM projects p JOIN proj_tree pt ON p.parent_id = pt.id
+			) SELECT id FROM proj_tree
+		)`, rootProjectID).
+		First(&asset).Error
+	return asset, err
 }
