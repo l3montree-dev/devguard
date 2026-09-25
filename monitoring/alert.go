@@ -31,7 +31,7 @@ type AlertLogService interface {
 	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error
 }
 
-type AlertOptions struct {
+type AlertContext struct {
 	OrgID     uuid.UUID
 	ProjectID uuid.UUID
 	AssetID   uuid.UUID
@@ -44,7 +44,7 @@ func nilIfZero(id uuid.UUID) *uuid.UUID {
 	return &id
 }
 
-func (opts AlertOptions) ids() (*uuid.UUID, *uuid.UUID, *uuid.UUID) {
+func (opts AlertContext) ids() (*uuid.UUID, *uuid.UUID, *uuid.UUID) {
 	return nilIfZero(opts.OrgID), nilIfZero(opts.ProjectID), nilIfZero(opts.AssetID)
 }
 
@@ -64,7 +64,7 @@ func Alert(message string, err error) {
 	}
 }
 
-func SaveAlertInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertOptions, message string, err error) {
+func saveAlertInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertContext, message string, err error) {
 	if logger == nil {
 		slog.Error("could not store error in database", "msg", "logger has not been set yet")
 		return
@@ -80,12 +80,12 @@ func SaveAlertInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertOptions, me
 	}
 }
 
-func AlertAndSaveInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertOptions, message string, err error) {
+func AlertAndSaveInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertContext, message string, err error) {
 	Alert(message, err)
-	SaveAlertInErrorLog(ctx, tx, opts, message, err)
+	saveAlertInErrorLog(ctx, tx, opts, message, err)
 }
 
-func RecoverAndAlert(ctx context.Context, tx *gorm.DB, opts AlertOptions, message string, err error) {
+func RecoverAndAlertAndSaveInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertContext, message string, err error) {
 	evID := sentry.CurrentHub().Recover(err)
 	slog.Error("critical error encountered (recover)", "msg", message, "error", err, "id (<nil> if not sent to error tracking)", evID)
 	sentry.Flush(10 * time.Second)
@@ -104,7 +104,7 @@ func RecoverAndAlert(ctx context.Context, tx *gorm.DB, opts AlertOptions, messag
 	}
 }
 
-func RecoverPanic(ctx context.Context, tx *gorm.DB, opts AlertOptions, msg string) {
+func RecoverPanicAndSaveInErrorLog(ctx context.Context, tx *gorm.DB, opts AlertContext, msg string) {
 	if r := recover(); r != nil {
 		AlertAndSaveInErrorLog(ctx, tx, opts, msg, fmt.Errorf("panic recovered: %v", r))
 	}

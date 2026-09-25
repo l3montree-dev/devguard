@@ -116,7 +116,7 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 					membersCache.Add(orgID, membersCacheEntry{users: users, fetchedAt: time.Now()})
 					return users, nil
 				}); err != nil {
-					monitoring.AlertAndSaveInErrorLog(reqCtx, nil, monitoring.AlertOptions{}, "could not revalidate organization members in background", err)
+					monitoring.AlertAndSaveInErrorLog(reqCtx, nil, monitoring.AlertContext{}, "could not revalidate organization members in background", err)
 				}
 			}()
 			return entry.users, nil
@@ -127,7 +127,7 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 	v, err, _ := membersFetchGroup.Do(orgID.String(), func() (any, error) {
 		users, err := fetchMembersOfOrganization(reqCtx, organization, accessControl, authAdminClient, thirdPartyIntegrations)
 		if err != nil {
-			monitoring.AlertAndSaveInErrorLog(reqCtx, nil, monitoring.AlertOptions{}, "could not fetch organization members", err)
+			monitoring.AlertAndSaveInErrorLog(reqCtx, nil, monitoring.AlertContext{}, "could not fetch organization members", err)
 			return nil, err
 		}
 		membersCache.Add(orgID, membersCacheEntry{users: users, fetchedAt: time.Now()})

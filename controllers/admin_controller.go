@@ -625,7 +625,7 @@ func (controller *AdminController) runDaemonSSE(
 
 	// Run synchronously inside the HTTP handler so the SSE stream stays open.
 	func() {
-		defer monitoring.RecoverPanic(ctx.Request().Context(), nil, monitoring.AlertOptions{}, "admin: panic in "+configKey)
+		defer monitoring.RecoverPanicAndSaveInErrorLog(ctx.Request().Context(), nil, monitoring.AlertContext{}, "admin: panic in "+configKey)
 		if err := fn(sse); err != nil {
 			slog.Error("admin: daemon failed", "key", configKey, "actor", ownerID, "actorType", string(ownerType), "err", err)
 			sse.sendError(err.Error())

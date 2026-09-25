@@ -404,8 +404,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 			}
 
 			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion, &userAgent); err != nil {
-				slog.Warn("could not sync tickets", "err", err)
-				monitoring.SaveAlertInErrorLog(linkedCtx, nil, monitoring.AlertOptions{
+				monitoring.AlertAndSaveInErrorLog(linkedCtx, nil, monitoring.AlertContext{
 					OrgID:     org.ID,
 					ProjectID: project.ID,
 					AssetID:   asset.ID,

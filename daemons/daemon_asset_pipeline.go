@@ -124,7 +124,7 @@ func failStage(rootCtx context.Context, stageSpan trace.Span, err error) {
 func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 	go func() {
 		for assetWithDetails := range input {
-			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{AssetID: assetWithDetails.asset.ID}, fmt.Sprintf("pipeline error for asset %s", assetWithDetails.asset.ID), assetWithDetails.err)
+			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{AssetID: assetWithDetails.asset.ID}, fmt.Sprintf("pipeline error for asset %s", assetWithDetails.asset.ID), assetWithDetails.err)
 
 			asset := assetWithDetails.asset
 			asset.PipelineLastRun = time.Now()
@@ -132,7 +132,7 @@ func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 			err := runner.assetRepository.Save(context.Background(), tx, &asset)
 			if err != nil {
 				tx.Rollback()
-				monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{AssetID: assetWithDetails.asset.ID}, "could not save pipeline error to asset", err)
+				monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{AssetID: assetWithDetails.asset.ID}, "could not save pipeline error to asset", err)
 				continue
 			}
 			if runner.debugOptions.DryRun {
@@ -149,13 +149,13 @@ func (runner *DaemonRunner) FetchAllAssetIDs(ctx context.Context) <-chan uuid.UU
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(ctx, nil, monitoring.AlertOptions{}, "fetch all asset ids panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "fetch all asset ids panic")
 		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
 		err := runner.assetRepository.GetDB(ctx, nil).Model(&models.Asset{}).Select("ID").Find(&assets).Error
 		if err != nil {
-			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertOptions{}, "could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
+			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
 		for _, asset := range assets {
 			out <- asset.ID
@@ -170,13 +170,13 @@ func (runner *DaemonRunner) FetchAssetIDs(ctx context.Context) <-chan uuid.UUID 
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(ctx, nil, monitoring.AlertOptions{}, "fetch asset ids panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "fetch asset ids panic")
 		}()
 		var assets []models.Asset
 		// fetch ALL asset ids from the database
 		err := runner.assetRepository.GetDB(ctx, nil).Model(&models.Asset{}).Where("pipeline_last_run < ?", time.Now().Add(-12*time.Hour)).Select("ID").Find(&assets).Error
 		if err != nil {
-			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertOptions{}, "could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
+			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not fetch asset ids. Cannot run runner. This is critical since all background jobs will be stuck.", err)
 		}
 		for _, asset := range assets {
 			out <- asset.ID
@@ -190,7 +190,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "resolve fixed versions panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "resolve fixed versions panic")
 		}()
 		for assetWithDetails := range input {
 			if !runner.stageEnabled("ResolveFixedVersions") {
@@ -268,7 +268,7 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(pipelineCtx, nil, monitoring.AlertOptions{}, "fetch asset details panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(pipelineCtx, nil, monitoring.AlertContext{}, "fetch asset details panic")
 		}()
 		for assetID := range input {
 			// create a root span per asset that will parent all downstream stage spans
@@ -348,7 +348,7 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			err = runner.assetRepository.Save(assetCtx, tx, &asset)
 			if err != nil {
 				tx.Rollback()
-				monitoring.RecoverPanic(pipelineCtx, nil, monitoring.AlertOptions{}, "could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)")
+				monitoring.RecoverPanicAndSaveInErrorLog(pipelineCtx, nil, monitoring.AlertContext{}, "could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)")
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "save pipeline run failed")
 				span.End()
@@ -385,7 +385,7 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "sync tickets panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "sync tickets panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -465,7 +465,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "resolve differences in ticket state panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "resolve differences in ticket state panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -531,11 +531,11 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "scan panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "scan panic")
 		}()
 		frontendURL := os.Getenv("FRONTEND_URL")
 		if frontendURL == "" {
-			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertOptions{}, "FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
+			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
 		}
 
 		for assetWithDetails := range input {
@@ -615,7 +615,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "sync upstream panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "sync upstream panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -712,7 +712,7 @@ func (runner *DaemonRunner) ApplyVEXRules(input <-chan assetWithProjectAndOrg, e
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "apply vex rules panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "apply vex rules panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -790,7 +790,7 @@ func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, er
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "collect stats panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "collect stats panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -842,7 +842,7 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "recalculate risk for vulnerabilities panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "recalculate risk for vulnerabilities panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -904,7 +904,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "auto reopen tickets panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "auto reopen tickets panic")
 		}()
 
 		for assetWithDetails := range input {
@@ -974,7 +974,7 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 	go func() {
 		defer func() {
 			close(out)
-			monitoring.RecoverPanic(context.Background(), nil, monitoring.AlertOptions{}, "delete old asset versions panic")
+			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "delete old asset versions panic")
 		}()
 
 		for assetWithDetails := range input {

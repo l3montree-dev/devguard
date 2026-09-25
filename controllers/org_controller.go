@@ -669,9 +669,9 @@ func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	session := shared.GetSession(ctx)
 
-	orgID := ctx.QueryParam("orgid")
-	projectID := ctx.QueryParam("projectid")
-	assetID := ctx.QueryParam("assetid")
+	orgID := ctx.QueryParam("orgId")
+	projectID := ctx.QueryParam("projectId")
+	assetID := ctx.QueryParam("assetId")
 
 	switch {
 	case assetID != "":

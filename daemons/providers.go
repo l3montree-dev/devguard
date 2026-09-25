@@ -200,7 +200,7 @@ func (runner *DaemonRunner) tick() {
 		runner.runDaemons(tickCtx)
 		runner.RunAssetPipeline(tickCtx, false)
 		if err := tickCtx.Err(); err != nil {
-			monitoring.AlertAndSaveInErrorLog(tickCtx, nil, monitoring.AlertOptions{}, "error during daemon tick", err)
+			monitoring.AlertAndSaveInErrorLog(tickCtx, nil, monitoring.AlertContext{}, "error during daemon tick", err)
 		}
 		cancel()
 	} else {
