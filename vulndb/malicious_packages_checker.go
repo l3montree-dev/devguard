@@ -59,7 +59,16 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 		"pypi":      {"fake-malicious-pypi-package"},
 		"maven":     {"com.fake:malicious-package"},
 		"crates.io": {"fake-malicious-crate"},
-		"oci":       {"fake-org/malicious-image"},
+		// OCI names are fully qualified image references, as the OCI proxy looks them up.
+		"oci": {"docker.io/fake-org/malicious-image"},
+	}
+	fakePurl := func(ecosystem, pkgName string) string {
+		if ecosystem == "oci" {
+			// pkg:oci/malicious-image?repository_url=docker.io/fake-org/malicious-image
+			purl := normalize.OCIPurlFromImageReference(pkgName)
+			return purl.ToString()
+		}
+		return fmt.Sprintf("pkg:%s/%s", ecosystem, pkgName)
 	}
 
 	packages := make([]models.MaliciousPackage, 0)
@@ -78,7 +87,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 						Package: dtos.Package{
 							Ecosystem: ecosystem,
 							Name:      pkgName,
-							Purl:      fmt.Sprintf("pkg:%s/%s", ecosystem, pkgName),
+							Purl:      fakePurl(ecosystem, pkgName),
 						},
 						Versions: []string{},
 					},
@@ -130,13 +139,21 @@ func (c *MaliciousPackageChecker) GetMaliciousComponents(ctx context.Context, ec
 		return nil, fmt.Errorf("packageName is required to check if a package is malicious")
 	}
 
-	purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+	var parsedPurl packageurl.PackageURL
+	if strings.EqualFold(ecosystem, packageurl.TypeOCI) {
+		// OCI package names are fully qualified image references (docker.io/library/nginx);
+		// the spec-conform purl carries them in the repository_url qualifier.
+		parsedPurl = normalize.OCIPurlFromImageReference(packageName)
+	} else {
+		purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
 
-	// Parse to normalize
-	parsedPurl, err := packageurl.FromString(purl)
-	if err != nil {
-		slog.Debug("Failed to parse purl", "purl", purl, "error", err)
-		return nil, fmt.Errorf("failed to parse purl: %w", err)
+		// Parse to normalize
+		var err error
+		parsedPurl, err = packageurl.FromString(purl)
+		if err != nil {
+			slog.Debug("Failed to parse purl", "purl", purl, "error", err)
+			return nil, fmt.Errorf("failed to parse purl: %w", err)
+		}
 	}
 
 	// Query database using purl matching (similar to PurlComparer)

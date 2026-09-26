@@ -434,14 +434,21 @@ func (d *DependencyProxyController) maliciousReason(ctx context.Context, package
 	return reason
 }
 
-func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string) {
+// checkMaliciousPackage checks the package and version parsed from path against the
+// malicious package database. Database errors are returned, so callers fail closed.
+func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string, error) {
 	packageName, version := eco.parsePackage(path)
 	status, reason, err := d.checkMalicious(ctx, eco, packageName, version)
 	if err != nil {
-		slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
-		return false, ""
+		return false, "", err
 	}
-	return status != 0, reason
+	return status != 0, reason, nil
+}
+
+// maliciousCheckFailed answers a request whose malicious package check could not be completed.
+func maliciousCheckFailed(eco ecosystem, err error) error {
+	slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
+	return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
 }
 
 func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco ecosystem, path, reason string) error {

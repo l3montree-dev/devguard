@@ -95,3 +95,48 @@ func TestAssetName(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestOCIPurlMatching(t *testing.T) {
+	t.Run("builds a spec-conform purl from an image reference", func(t *testing.T) {
+		p := OCIPurlFromImageReference("docker.io/Fake-Org/Malicious-Image")
+		assert.Equal(t, "", p.Namespace)
+		assert.Equal(t, "malicious-image", p.Name)
+		assert.Equal(t, "docker.io/fake-org/malicious-image", p.Qualifiers.Map()["repository_url"])
+	})
+
+	t.Run("keeps repository_url in the matching key", func(t *testing.T) {
+		p, err := packageurl.FromString("pkg:oci/nginx@sha256:abc?repository_url=https://Docker.io/library/nginx/&tag=latest&arch=amd64")
+		assert.NoError(t, err)
+
+		expected := "pkg:oci/nginx?repository_url=docker.io/library/nginx"
+		assert.Equal(t, expected, ParsePurlForMatching(p).SearchPurl)
+		assert.Equal(t, expected, ToPurlWithoutVersion(p))
+	})
+
+	t.Run("storage and lookup produce the same key", func(t *testing.T) {
+		stored, err := packageurl.FromString(func() string {
+			p := OCIPurlFromImageReference("docker.io/fake-org/malicious-image")
+			return p.ToString()
+		}())
+		assert.NoError(t, err)
+		assert.Equal(t, ToPurlWithoutVersion(stored), ParsePurlForMatching(OCIPurlFromImageReference("docker.io/fake-org/malicious-image")).SearchPurl)
+	})
+
+	t.Run("images on other registries or paths get a different key", func(t *testing.T) {
+		a := ParsePurlForMatching(OCIPurlFromImageReference("docker.io/fake-org/malicious-image")).SearchPurl
+		b := ParsePurlForMatching(OCIPurlFromImageReference("ghcr.io/someone/malicious-image")).SearchPurl
+		assert.NotEqual(t, a, b)
+	})
+
+	t.Run("oci purl without repository_url matches by name", func(t *testing.T) {
+		p, err := packageurl.FromString("pkg:oci/nginx@sha256:abc?tag=latest")
+		assert.NoError(t, err)
+		assert.Equal(t, "pkg:oci/nginx", ParsePurlForMatching(p).SearchPurl)
+	})
+
+	t.Run("other types still drop all qualifiers", func(t *testing.T) {
+		p, err := packageurl.FromString("pkg:deb/debian/git@2.47.3?arch=amd64&repository_url=example.com")
+		assert.NoError(t, err)
+		assert.Equal(t, "pkg:deb/debian/git", ToPurlWithoutVersion(p))
+	})
+}

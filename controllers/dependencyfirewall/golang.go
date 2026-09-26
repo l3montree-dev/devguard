@@ -179,7 +179,11 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
-	if blocked, reason := d.checkMaliciousPackage(ctx, eco, requestPath); blocked {
+	blocked, reason, err := d.checkMaliciousPackage(ctx, eco, requestPath)
+	if err != nil {
+		return maliciousCheckFailed(eco, err)
+	}
+	if blocked {
 		slog.Warn("Blocked malicious package", "proxy", "go", "path", requestPath, "reason", reason)
 		d.cache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
