@@ -46,6 +46,9 @@ func TestPyPIParsePackage(t *testing.T) {
 		{"/packages/ab/cd/Zope.Interface-6.0.tar.gz", "zope-interface", "6.0"},
 		{"/packages/ab/cd/python-dateutil-2.9.0.post0.tar.gz", "python-dateutil", "2.9.0.post0"},
 		{"/packages/ab/cd/six-1.0.tar.bz2", "six", "1.0"},
+		// PEP 658 core metadata files belong to the distribution they describe
+		{"/packages/ea/03/92d3/requests-2.11.1-py2.py3-none-any.whl.metadata", "requests", "2.11.1"},
+		{"/packages/ab/cd/charset_normalizer-3.5.1-cp313-cp313-macosx_10_13_universal2.whl.metadata", "charset-normalizer", "3.5.1"},
 	}
 
 	for _, tc := range cases {

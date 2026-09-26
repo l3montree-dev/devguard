@@ -362,13 +362,19 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 	if packageName == "" {
 		return false, ""
 	}
-	packageIdentifier := eco.packageIdentifier(packageName, version)
+	blocked, matchedRule := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
+	if blocked {
+		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+	}
+	return false, ""
+}
 
-	// Rules are applied in order like gitignore: last matching rule wins.
-	// A rule prefixed with "!" negates the match (allowlist).
+// matchRules applies the rules in order like gitignore: last matching rule wins.
+// A rule prefixed with "!" negates the match (allowlist).
+func matchRules(packageIdentifier string, rules []string) (bool, string) {
 	blocked := false
 	matchedRule := ""
-	for _, rule := range configs.Rules {
+	for _, rule := range rules {
 		negate := strings.HasPrefix(rule, "!")
 		pattern := strings.TrimPrefix(rule, "!")
 
@@ -377,11 +383,7 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 			matchedRule = rule
 		}
 	}
-
-	if blocked {
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
-	}
-	return false, ""
+	return blocked, matchedRule
 }
 
 func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecosystem, packageName, version string) (int, string, error) {
@@ -432,14 +434,21 @@ func (d *DependencyProxyController) maliciousReason(ctx context.Context, package
 	return reason
 }
 
-func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string) {
+// checkMaliciousPackage checks the package and version parsed from path against the
+// malicious package database. Database errors are returned, so callers fail closed.
+func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string, error) {
 	packageName, version := eco.parsePackage(path)
 	status, reason, err := d.checkMalicious(ctx, eco, packageName, version)
 	if err != nil {
-		slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
-		return false, ""
+		return false, "", err
 	}
-	return status != 0, reason
+	return status != 0, reason, nil
+}
+
+// maliciousCheckFailed answers a request whose malicious package check could not be completed.
+func maliciousCheckFailed(eco ecosystem, err error) error {
+	slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
+	return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
 }
 
 func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco ecosystem, path, reason string) error {
