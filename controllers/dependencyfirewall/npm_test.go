@@ -158,7 +158,7 @@ func TestFilterNPMMetadataVersions(t *testing.T) {
 	}
 
 	t.Run("removes too new versions and repoints latest", func(t *testing.T) {
-		filtered, removed, err := FilterNPMMetadataVersions(jsonData, keepOld)
+		filtered, removed, err := filterNPMMetadataVersions(jsonData, keepOld)
 		require.NoError(t, err)
 		assert.Equal(t, 2, removed)
 
@@ -179,7 +179,7 @@ func TestFilterNPMMetadataVersions(t *testing.T) {
 	})
 
 	t.Run("returns the original document when nothing is removed", func(t *testing.T) {
-		filtered, removed, err := FilterNPMMetadataVersions(jsonData, func(string, time.Time) bool { return true })
+		filtered, removed, err := filterNPMMetadataVersions(jsonData, func(string, time.Time) bool { return true })
 		require.NoError(t, err)
 		assert.Equal(t, 0, removed)
 		assert.Equal(t, jsonData, filtered)
@@ -187,14 +187,14 @@ func TestFilterNPMMetadataVersions(t *testing.T) {
 
 	t.Run("treats versions without publish time as not kept", func(t *testing.T) {
 		data := []byte(`{"dist-tags":{"latest":"1.0.0"},"versions":{"1.0.0":{}}}`)
-		filtered, removed, err := FilterNPMMetadataVersions(data, keepOld)
+		filtered, removed, err := filterNPMMetadataVersions(data, keepOld)
 		require.NoError(t, err)
 		assert.Equal(t, 1, removed)
 		assert.JSONEq(t, `{"dist-tags":{},"versions":{}}`, string(filtered))
 	})
 
 	t.Run("returns an error for malformed metadata", func(t *testing.T) {
-		_, _, err := FilterNPMMetadataVersions([]byte(`not json`), keepOld)
+		_, _, err := filterNPMMetadataVersions([]byte(`not json`), keepOld)
 		assert.Error(t, err)
 	})
 }

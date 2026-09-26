@@ -346,7 +346,7 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	// instead of failing on the tarball download.
 	if configs.MinReleaseAge > 0 || len(configs.Rules) > 0 {
 		minAge := time.Duration(configs.MinReleaseAge) * time.Hour
-		filtered, removed, err := FilterNPMMetadataVersions(data, func(version string, published time.Time) bool {
+		filtered, removed, err := filterNPMMetadataVersions(data, func(version string, published time.Time) bool {
 			if configs.MinReleaseAge > 0 && (published.IsZero() || time.Since(published) < minAge) {
 				return false
 			}
@@ -497,12 +497,12 @@ func (d *NPMDependencyProxyController) ExtractNPMReleaseTimeFromMetadata(data []
 	return metadata.Time[version], nil
 }
 
-// FilterNPMMetadataVersions removes every version for which keep returns false from a full
+// filterNPMMetadataVersions removes every version for which keep returns false from a full
 // npm package document (versions + time) and repoints dist-tags that referenced a removed
 // version: "latest" moves to the highest remaining stable version, other tags are dropped.
 // All other fields are passed through untouched. It returns the rewritten document and the
 // number of removed versions; when nothing is removed the original bytes are returned.
-func FilterNPMMetadataVersions(data []byte, keep func(version string, published time.Time) bool) ([]byte, int, error) {
+func filterNPMMetadataVersions(data []byte, keep func(version string, published time.Time) bool) ([]byte, int, error) {
 	var doc map[string]json.RawMessage
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return nil, 0, fmt.Errorf("failed to parse npm metadata: %w", err)
