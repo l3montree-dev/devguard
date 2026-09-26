@@ -305,6 +305,8 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
+	// we can check if ALL versions of this package are basically malicious
+	// if so, we have an early return
 	status, reason, err := d.checkMalicious(ctx, pypi, pkgName, "")
 	if err != nil {
 		slog.Error("Error checking malicious package", "proxy", "pypi", "error", err)
@@ -332,7 +334,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 	}
 
 	if config.MinReleaseAge > 0 || len(config.Rules) > 0 {
-
 		minAge := time.Duration(config.MinReleaseAge) * time.Hour
 		data, err = filterPyPiSimpleIndex(data, func(version string, published time.Time) bool {
 			if config.MinReleaseAge > 0 && (published.IsZero() || time.Since(published) < minAge) {
@@ -431,7 +432,7 @@ func (d *PythonDependencyProxyController) fetchPyPIFromUpstream(ctx context.Cont
 
 // ExtractPyPIReleaseTime parses a PyPI JSON API response and returns the resolved version and its upload time.
 // If version is empty, it uses info.version (the current release).
-func (d *PythonDependencyProxyController) ExtractPyPIReleaseTime(data []byte, version string) (time.Time, error) {
+func extractPyPIReleaseTime(data []byte, version string) (time.Time, error) {
 	var metadata struct {
 		Info struct {
 			Version string `json:"version"`
@@ -474,5 +475,5 @@ func (d *PythonDependencyProxyController) fetchPyPIReleaseTime(ctx context.Conte
 	if statusCode != http.StatusOK {
 		return time.Time{}, fmt.Errorf("upstream returned status %d for release metadata", statusCode)
 	}
-	return d.ExtractPyPIReleaseTime(data, version)
+	return extractPyPIReleaseTime(data, version)
 }
