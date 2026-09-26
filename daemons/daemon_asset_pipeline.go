@@ -49,6 +49,43 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// -----------------------------------------------------------------------------------
+//
+//	Types
+//
+// -----------------------------------------------------------------------------------
+
+// represents a row in the temporary pivot table
+type purlAffectedComponent struct {
+	purl                string
+	affectedComponentID int64
+	fixedVersion        *string
+}
+
+type vulnPath struct {
+	Purl string
+	Root uuid.UUID
+	Path []uuid.UUID
+}
+
+type sbomSnapshot map[assetVersionKey]string
+type assetVersionKey struct {
+	assetID          uuid.UUID
+	assetVersionName string
+}
+
+type artifactKey struct {
+	assetID                        uuid.UUID
+	assetVersionName, artifactName string
+}
+
+type purlPathResult struct {
+	Purl  string
+	Paths [][]uuid.UUID // vulnerable node -> ... -> sbom root
+	// sboms reached by more than maxPathsPerRoot paths, none of their paths are kept
+	ExplodedRoots []uuid.UUID
+}
+
 type assetWithProjectAndOrg struct {
 	ctx           context.Context // carries the root pipeline.asset span
 	asset         models.Asset
@@ -62,11 +99,180 @@ type pipelineError struct {
 	err   error
 }
 
+// -----------------------------------------------------------------------------------
+//
+//	Data Structures - Dynamic Queue
+//
+// -----------------------------------------------------------------------------------
+
+type dynamicQueue[T any] struct {
+	MaxSize        int
+	Queue          []T
+	CurrentElement int
+}
+
+func NewDynamicQueue[T any](maxSize int) *dynamicQueue[T] {
+	return &dynamicQueue[T]{
+		MaxSize:        maxSize,
+		Queue:          make([]T, 0, maxSize),
+		CurrentElement: 0,
+	}
+}
+
+func (queue *dynamicQueue[T]) Next() (next T, ok bool) {
+	if queue.CurrentElement >= len(queue.Queue) {
+		return next, false
+	}
+	next = queue.Queue[queue.CurrentElement]
+	queue.CurrentElement++
+	queue.shrink()
+	return next, true
+}
+
+func (queue *dynamicQueue[T]) Append(element T) {
+	queue.Queue = append(queue.Queue, element)
+}
+
+func (queue *dynamicQueue[T]) Reset() {
+	clear(queue.Queue)
+	queue.Queue = queue.Queue[:0]
+	queue.CurrentElement = 0
+}
+
+func (queue *dynamicQueue[T]) shrink() {
+	// compacting before half of the slice is consumed copies large queues over and over
+	if queue.CurrentElement <= queue.MaxSize/2 || queue.CurrentElement < len(queue.Queue)/2 {
+		return
+	}
+	// move the unread elements to the front and drop references to consumed ones so the GC can free them
+	remaining := copy(queue.Queue, queue.Queue[queue.CurrentElement:])
+	clear(queue.Queue[remaining:])
+	queue.Queue = queue.Queue[:remaining]
+	queue.CurrentElement = 0
+}
+
+// -----------------------------------------------------------------------------------
+//
+//	Data Structures - Job Filter
+//
+// -----------------------------------------------------------------------------------
+type jobFilter struct {
+	sbomSnapshot    sbomSnapshot
+	assetMap        map[uuid.UUID]struct{}
+	assetVersionMap map[assetVersionKey]struct{}
+	artifactMap     map[artifactKey]struct{}
+}
+
+func newJobFilter(snapshot sbomSnapshot) *jobFilter {
+	return &jobFilter{
+		sbomSnapshot: snapshot,
+	}
+}
+
+// get all the unique asset ids which need handling
+func (filter *jobFilter) getAssetsIDs() []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(filter.assetMap))
+	for id := range filter.assetMap {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// build lookup maps on asset, asset version and artifact level
+func (filter *jobFilter) setUpLookUpMaps(rows pgx.Rows) error {
+	defer rows.Close()
+	assetMap := make(map[uuid.UUID]struct{}, 777)
+	assetVersionMap := make(map[assetVersionKey]struct{}, 2000)
+	artifactMap := make(map[artifactKey]struct{}, 3000)
+
+	var assetID uuid.UUID
+	var assetVersionName, artifactName string
+	for rows.Next() {
+		err := rows.Scan(&assetID, &assetVersionName, &artifactName)
+		if err != nil {
+			return err
+		}
+		assetMap[assetID] = struct{}{}
+		assetVersionMap[assetVersionKey{assetVersionName: assetVersionName, assetID: assetID}] = struct{}{}
+		artifactMap[artifactKey{assetID: assetID, assetVersionName: assetVersionName, artifactName: artifactName}] = struct{}{}
+	}
+
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	filter.assetMap = assetMap
+	filter.assetVersionMap = assetVersionMap
+	filter.artifactMap = artifactMap
+	return nil
+}
+
+// returns false if the identity does not need to be processed
+func (filter *jobFilter) shouldProcess(identity any) (ok bool) {
+	switch v := identity.(type) {
+	case models.AssetVersion:
+		_, ok = filter.assetVersionMap[assetVersionKey{assetID: v.AssetID, assetVersionName: v.Name}]
+	case models.Artifact:
+		_, ok = filter.artifactMap[artifactKey{assetID: v.AssetID, assetVersionName: v.AssetVersionName, artifactName: v.ArtifactName}]
+	}
+	return
+}
+
+// assetVersionUnchanged must run while sboms is locked, otherwise an upload could still commit after the check
+func (filter *jobFilter) assetVersionUnchanged(ctx context.Context, tx pgx.Tx, assetVersion models.AssetVersion) (bool, error) {
+	snapshotFingerprint, ok := filter.sbomSnapshot[assetVersionKey{assetID: assetVersion.AssetID, assetVersionName: assetVersion.Name}]
+	if !ok {
+		return false, nil
+	}
+
+	var key assetVersionKey
+	var fingerprint string
+	err := tx.QueryRow(ctx, sbomFingerprintQuery+`
+		WHERE asset_id = $1 AND asset_version_name = $2
+		GROUP BY asset_id, asset_version_name;`, assetVersion.AssetID, assetVersion.Name).Scan(&key.assetID, &key.assetVersionName, &fingerprint)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// all sboms of the asset version were deleted
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return fingerprint == snapshotFingerprint, nil
+}
+
+// -----------------------------------------------------------------------------------
+//
+//	Data Structures - Scan Cache
+//
+// -----------------------------------------------------------------------------------
+type scanRunCache struct {
+	cves     map[string]*models.CVE
+	projects map[uuid.UUID]models.Project
+	orgs     map[uuid.UUID]models.Org
+}
+
+func newScanRunCache() *scanRunCache {
+	return &scanRunCache{
+		cves:     make(map[string]*models.CVE, 15_000),
+		projects: make(map[uuid.UUID]models.Project),
+		orgs:     make(map[uuid.UUID]models.Org),
+	}
+}
+
+// -----------------------------------------------------------------------------------
+//
+//	Asset Pipeline - Controller Functions
+//
+// -----------------------------------------------------------------------------------
+
 func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
+	err := runner.NewScanAsset()
+	if err != nil {
+		errChan <- pipelineError{err: err}
+	}
 	ch := runner.FetchAssetDetails(ctx, idsChan, errChan)
 	ch = runner.DeleteOldAssetVersions(ch, errChan)
-	// scan asset will apply all vex rules
-	ch = runner.ScanAsset(ch, errChan)
 	ch = runner.SyncUpstream(ch, errChan)
 	ch = runner.ApplyVEXRules(ch, errChan)
 	ch = runner.AutoReopenTickets(ch, errChan)
@@ -136,6 +342,10 @@ func failStage(rootCtx context.Context, stageSpan trace.Span, err error) {
 func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 	go func() {
 		for assetWithDetails := range input {
+			if assetWithDetails.asset.ID == uuid.Nil {
+				monitoring.Alert(fmt.Sprintf("pipeline error when scanning: %v", assetWithDetails.err), assetWithDetails.err)
+			}
+
 			monitoring.Alert(fmt.Sprintf("pipeline error for asset %s: %v", assetWithDetails.asset.ID, assetWithDetails.err), assetWithDetails.err)
 
 			asset := assetWithDetails.asset
@@ -198,6 +408,12 @@ func (runner *DaemonRunner) FetchAssetIDs(ctx context.Context) <-chan uuid.UUID 
 	}()
 	return out
 }
+
+// -----------------------------------------------------------------------------------
+//
+//	Data Structures - Stages
+//
+// -----------------------------------------------------------------------------------
 
 func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
@@ -548,47 +764,119 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer conn.Release()
 
-	// a second run would drop the scratch tables of this one, the session lock is released before the conn goes back to the pool
+	snapshot, unlock, err := ensureIsolation(ctx, conn)
+	if err != nil {
+		return fmt.Errorf("could not ensure isolation of scan: %w", err)
+	}
+	// deferred after conn.Release so the lock is released before the conn goes back to the pool
+	defer unlock()
+
+	jobFilter := newJobFilter(snapshot)
+
+	err = runner.scanAllSBOMS(ctx, conn)
+	if err != nil {
+		return fmt.Errorf("could not scan SBOMs: %w", err)
+	}
+
+	err = runner.handleScanResults(ctx, conn, jobFilter)
+	if err != nil {
+		return fmt.Errorf("could not handle scan results: %w", err)
+	}
+
+	err = cleanUpOrphanVulns(ctx, conn)
+	if err != nil {
+		return fmt.Errorf("could not clean up orphan vulns: %w", err)
+	}
+
+	return nil
+}
+
+// executes all prerequisites for isolation of the scan
+// takes the single run lock, which the caller must release with unlock, and snapshots the sboms to detect concurrent changes
+func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnapshot, unlock func(), err error) {
 	lockKey := utils.HashToInt64("daemon.NewScanAsset")
 	var locked bool
 	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1);`, lockKey).Scan(&locked); err != nil {
-		return fmt.Errorf("could not acquire scan lock: %w", err)
+		return nil, nil, fmt.Errorf("could not acquire scan lock: %w", err)
 	}
 	if !locked {
-		return errors.New("another scan is already running")
+		return nil, nil, fmt.Errorf("another scan is already running")
 	}
-	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1);`, lockKey)
+	unlock = func() {
+		conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1);`, lockKey)
+	}
+	defer func() {
+		if err != nil {
+			unlock()
+		}
+	}()
 
 	slog.Info("snapshotting sboms table")
 
 	sbomRows, err := conn.Query(ctx, sbomFingerprintQuery+` GROUP BY asset_id, asset_version_name;`)
 	if err != nil {
-		return fmt.Errorf("could not snapshot sboms table: %w", err)
+		return nil, nil, fmt.Errorf("could not snapshot sboms table: %w", err)
 	}
 	defer sbomRows.Close()
 
-	snapshot := make(sbomSnapshot, 2000)
+	snapshot = make(sbomSnapshot, 2000)
 	var key assetVersionKey
 	var fingerprint string
 	for sbomRows.Next() {
 		err = sbomRows.Scan(&key.assetID, &key.assetVersionName, &fingerprint)
 		if err != nil {
-			return fmt.Errorf("could not scan sbom row: %w", err)
+			return nil, nil, fmt.Errorf("could not scan sbom row: %w", err)
 		}
 		snapshot[key] = fingerprint
 	}
 	sbomRows.Close()
 	if err := sbomRows.Err(); err != nil {
-		return fmt.Errorf("error when scanning sbom rows: %w", err)
+		return nil, nil, fmt.Errorf("error when scanning sbom rows: %w", err)
+	}
+	return snapshot, unlock, nil
+}
+
+// scan all SBOMS for affected components and compute the new dependency vulns from that
+func (runner *DaemonRunner) scanAllSBOMS(ctx context.Context, conn *pgxpool.Conn) error {
+	purlAffectedComponents, err := runner.computeAffectedPurls(ctx, conn)
+	if err != nil {
+		return fmt.Errorf("could not compute affected purls: %w", err)
 	}
 
-	jobFilter := NewJobFilter(snapshot)
+	affectedPurls := utils.DeduplicateSlice(purlAffectedComponents, func(purl purlAffectedComponent) string { return purl.purl })
 
+	purlMemo, err := runner.savePurlMappingToDatabase(ctx, conn, purlAffectedComponents)
+	if err != nil {
+		return fmt.Errorf("could not save purl mapping to database: %w", err)
+	}
+
+	slog.Info("start scanning affected purls", "amount", len(affectedPurls))
+
+	scanTx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("could not start scan transaction: %w", err)
+	}
+	defer scanTx.Rollback(ctx)
+
+	err = runner.ScanAndStreamVulnPaths(ctx, scanTx, affectedPurls, purlMemo)
+	if err != nil {
+		return fmt.Errorf("could not scan and stream sboms: %w", err)
+	}
+
+	err = runner.materializeNewDependencyVulns(ctx, scanTx)
+	if err != nil {
+		return fmt.Errorf("could not materialize new dependency vulns: %w", err)
+	}
+
+	return nil
+}
+
+func (runner *DaemonRunner) computeAffectedPurls(ctx context.Context, conn *pgxpool.Conn) ([]purlAffectedComponent, error) {
 	slog.Info("start collecting all dependencies")
 	start := time.Now()
 	purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_nodes;`)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	allDependencies := make([]packageurl.PackageURL, 0, 15_000)
@@ -598,7 +886,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	for purlRows.Next() {
 		err = purlRows.Scan(&purl)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		parsedPurl, err = packageurl.FromString(purl)
 		if err != nil {
@@ -612,7 +900,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	purlRows.Close()
 	if err := purlRows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	slog.Info("finished reading all dependencies", "amount", len(allDependencies), "time", time.Since(start))
 
@@ -622,26 +910,16 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	start = time.Now()
 	candidates, err := purlMatcher.GetAffectedComponentsBatch(ctx, allDependencies)
 	if err != nil {
-		return fmt.Errorf("could not match purls: %w", err)
+		return nil, fmt.Errorf("could not match purls: %w", err)
 	}
 	slog.Info("finished matching purls to affected components", "candidates", len(candidates), "time", time.Since(start))
 
-	allDependencies = nil
-	// represents a row in the temporary pivot table
-	type purlAffectedComponent struct {
-		purl                string
-		affectedComponentID int64
-		fixedVersion        *string
-	}
-
 	purlAffectedComponents := make([]purlAffectedComponent, 0, len(candidates))
-	isPurlAffected := make(map[string]struct{}, len(candidates)/2)
 	for _, candidate := range candidates {
 		if len(candidate.Components) == 0 {
 			continue
 		}
 		for _, rawPurl := range rawPurlsByCanonical[candidate.Purl.String()] {
-			isPurlAffected[rawPurl] = struct{}{}
 			for i := range candidate.Components {
 				fixed := candidate.Components[i].SemverFixed
 				if fixed == nil {
@@ -655,19 +933,20 @@ func (runner *DaemonRunner) NewScanAsset() error {
 			}
 		}
 	}
+	return purlAffectedComponents, nil
+}
 
-	affectedPurls := utils.DeduplicateSlice(purlAffectedComponents, func(purl purlAffectedComponent) string { return purl.purl })
-
+func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn *pgxpool.Conn, purlAffectedComponents []purlAffectedComponent) (map[string]string, error) {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
 	// the scratch tables of the previous run are kept until now for debugging
 	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS purl_mapping, purl_to_cves, vuln_paths, new_dependency_vulns;`)
 	if err != nil {
-		return fmt.Errorf("could not drop scratch tables of the previous run: %w", err)
+		return nil, fmt.Errorf("could not drop scratch tables of the previous run: %w", err)
 	}
 
 	// make that temporary when not testing
@@ -678,23 +957,23 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		fixed_version text
 	);`)
 	if err != nil {
-		return fmt.Errorf("could not create temp table for purl Mapping: %w", err)
+		return nil, fmt.Errorf("could not create temp table for purl Mapping: %w", err)
 	}
 
-	start = time.Now()
+	start := time.Now()
 	slog.Info("start copying into temporary table")
 	// use canonical purls to ensure consistent matching
-	purlMemo := make(map[string]string, len(rawPurlsByCanonical))
+	purlMemo := make(map[string]string, len(purlAffectedComponents))
 	_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
 		return []any{canonicalPurl(purlAffectedComponents[i].purl, purlMemo), purlAffectedComponents[i].affectedComponentID, purlAffectedComponents[i].fixedVersion}, nil
 	}))
 	if err != nil {
-		return fmt.Errorf("could not copy rows into temporary table: %w", err)
+		return nil, fmt.Errorf("could not copy rows into temporary table: %w", err)
 	}
 
-	purlAffectedComponents = nil
-
-	// precompute the join to the cve ids
+	//  join the cve information at this point so we have access to it later
+	// also filter out withdrawn cves
+	// then replace the purl mapping table with the new one
 	_, err = tx.Exec(ctx, `
 	CREATE TABLE purl_to_cves AS (
 		SELECT DISTINCT pm.purl,pm.fixed_version, cac.cve_id 
@@ -709,32 +988,28 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	DROP TABLE public.purl_mapping;
 	ALTER TABLE public.purl_to_cves RENAME TO purl_mapping;`)
 	if err != nil {
-		return fmt.Errorf("could not convert affected component mapping to cve id mapping: %w", err)
+		return nil, fmt.Errorf("could not convert affected component mapping to cve id mapping: %w", err)
 	}
 
+	// build an index on both columns for index only scans
 	_, err = tx.Exec(ctx, `
 	CREATE INDEX ON public.purl_mapping (purl,cve_id,fixed_version);`)
 	if err != nil {
-		return fmt.Errorf("could not enforce primary key on purl_mapping table: %w", err)
+		return nil, fmt.Errorf("could not build purl mapping index: %w", err)
 	}
 
 	slog.Info("successfully populated temporary table", "time", time.Since(start))
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("could not commit purl mapping results: %w", err)
 	}
+	return purlMemo, nil
+}
 
-	slog.Info("start scanning affected purls", "amount", len(affectedPurls))
-	start = time.Now()
-
-	scanTx, err := conn.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("could not start scan transaction: %w", err)
-	}
-	defer scanTx.Rollback(ctx)
-
-	_, err = scanTx.Exec(ctx, `
+func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx pgx.Tx, affectedPurls []purlAffectedComponent, purlMemo map[string]string) error {
+	start := time.Now()
+	_, err := scanTx.Exec(ctx, `
 			CREATE TABLE vuln_paths (
 				component_purl text,
 				root uuid,
@@ -749,8 +1024,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	vulnPathColumns := []string{"component_purl", "root", "path"}
 
 	group.Go(func() error {
-		_, err := runner.ScanAffectedPurls(ctx, scanTx, resultsChannel, utils.Map(affectedPurls, func(pac purlAffectedComponent) string { return pac.purl }))
-		return err
+		return runner.ScanAffectedPurls(ctx, scanTx, resultsChannel, utils.Map(affectedPurls, func(pac purlAffectedComponent) string { return pac.purl }))
 	})
 
 	var groupErr error
@@ -806,10 +1080,15 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 
 	slog.Info("finished scanning all purls", "time", time.Since(start))
+	return nil
+}
 
-	start = time.Now()
-	// now materialize the new dependency vulns from the scan data
-	_, err = scanTx.Exec(ctx, `
+// materialize the new dependency vulns from the scanned vuln paths
+// compute the diff between new and old state to only save whats new
+// join all the necessary information, filter existing vulns
+func (runner *DaemonRunner) materializeNewDependencyVulns(ctx context.Context, scanTx pgx.Tx) error {
+	start := time.Now()
+	_, err := scanTx.Exec(ctx, `
 		CREATE TABLE public.new_dependency_vulns AS
 		WITH found AS (`+scanResultsQuery+`)
 		-- only keep what is not yet associated with the artifact, the vuln itself may already exist
@@ -830,7 +1109,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		return fmt.Errorf("could not materialize new dependency vulns: %w", err)
 	}
 
-	// speed up artifact lookup queries
+	// speed up artifact lookup queries on new dependency vuln state
 	_, err = scanTx.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
 	if err != nil {
 		return fmt.Errorf("could not create index on new_dependency_vulns artifact lookup: %w", err)
@@ -844,14 +1123,16 @@ func (runner *DaemonRunner) NewScanAsset() error {
 
 	err = scanTx.Commit(ctx)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not commit scan transaction: %w", err)
 	}
 
 	slog.Info("finished materializing new dependency vulns", "time", time.Since(start))
+	return nil
+}
 
-	startHandling := time.Now()
-
-	// get all assets which actually need processing
+// compute and handle the state differences between the existing and new dependency vulnerabilities
+func (runner *DaemonRunner) handleScanResults(ctx context.Context, conn *pgxpool.Conn, jobFilter *jobFilter) error {
+	// only the artifacts present in the new vulns need processing
 	rows, err := conn.Query(ctx, `
 		SELECT DISTINCT asset_id, asset_version_name, artifact_name 
 		FROM new_dependency_vulns;`)
@@ -859,14 +1140,16 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		return err
 	}
 
-	err = jobFilter.SetUpLookUpMaps(rows)
+	// filter all artifacts which did not change
+	err = jobFilter.setUpLookUpMaps(rows)
 	if err != nil {
 		return fmt.Errorf("could not populate job filter lookup maps: %w", err)
 	}
-	assetIDs := jobFilter.GetAssetsIDs()
+	assetIDs := jobFilter.getAssetsIDs()
 
 	slog.Info("start handling scan results for assets", "number of assets", len(assetIDs))
-	start = time.Now()
+	startHandling := time.Now()
+	start := time.Now()
 	cache := newScanRunCache()
 	for i, assetID := range assetIDs {
 		err = runner.handleScanResultForAsset(ctx, jobFilter, conn, assetID, cache)
@@ -878,9 +1161,14 @@ func (runner *DaemonRunner) NewScanAsset() error {
 		}
 	}
 	slog.Info("finished all handle scan results", "time", time.Since(startHandling))
+	return nil
+}
 
-	start = time.Now()
+func cleanUpOrphanVulns(ctx context.Context, conn *pgxpool.Conn) error {
+	orphanStart := time.Now()
 	slog.Info("cleaning up orphan vulns")
+
+	// fix all vulns where the cve does not exists anymore and create the respective event
 	cmd, err := conn.Exec(ctx, `
 	WITH orphan_vulns AS (
 		UPDATE public.dependency_vulns dv
@@ -895,8 +1183,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	if err != nil {
 		return fmt.Errorf("could clean up orphan vulns: %w", err)
 	}
-	slog.Info("finished cleaning up orphan vulns", "affectedRows", cmd.RowsAffected(), "time", time.Since(start))
-
+	slog.Info("finished cleaning up orphan vulns", "affectedRows", cmd.RowsAffected(), "time", time.Since(orphanStart))
 	return nil
 }
 
@@ -921,89 +1208,6 @@ const scanResultsQuery = `
 	JOIN purl_mapping pm ON pm.purl = p.component_purl
 	JOIN cves ON cves.id = pm.cve_id`
 
-type vulnPath struct {
-	Purl string
-	Root uuid.UUID
-	Path []uuid.UUID
-}
-
-// convert BFS result (purl to root) to dependency vuln path (first non root to purl)
-func toStoredPath(path []uuid.UUID) []uuid.UUID {
-	stored := make([]uuid.UUID, 0, len(path)-1)
-	for i := len(path) - 2; i >= 0; i-- {
-		stored = append(stored, path[i])
-	}
-	return stored
-}
-
-// convert to canonical purl to ensure consistency with scan function
-func canonicalPurl(raw string, memo map[string]string) string {
-	if canonical, ok := memo[raw]; ok {
-		return canonical
-	}
-
-	canonical := raw
-	if parsed, err := packageurl.FromString(raw); err == nil {
-		if unescaped, err := normalize.PURLToString(parsed); err == nil {
-			canonical = unescaped
-		}
-	}
-
-	memo[raw] = canonical
-	return canonical
-}
-
-// cache common lookups between assets
-type scanRunCache struct {
-	cves     map[string]*models.CVE
-	projects map[uuid.UUID]models.Project
-	orgs     map[uuid.UUID]models.Org
-}
-
-func newScanRunCache() *scanRunCache {
-	return &scanRunCache{
-		cves:     make(map[string]*models.CVE, 15_000),
-		projects: make(map[uuid.UUID]models.Project),
-		orgs:     make(map[uuid.UUID]models.Org),
-	}
-}
-
-// cves need to be fetched in addition so we can calculate the risk
-func (runner *DaemonRunner) hydrateCVEs(ctx context.Context, vulns []models.DependencyVuln, cache map[string]*models.CVE) error {
-	missing := make([]string, 0)
-	for i := range vulns {
-		if _, ok := cache[vulns[i].CVEID]; !ok {
-			// a cve the vulndb does not know stays nil, so it is looked up only once
-			cache[vulns[i].CVEID] = nil
-			missing = append(missing, vulns[i].CVEID)
-		}
-	}
-
-	if len(missing) > 0 {
-		cves, err := runner.cveRepository.FindCVEs(ctx, nil, missing)
-		if err != nil {
-			return err
-		}
-		// FindCVEs matches case insensitively, so the ids are mapped back the same way
-		found := make(map[string]*models.CVE, len(cves))
-		for i := range cves {
-			found[strings.ToLower(cves[i].CVE)] = &cves[i]
-		}
-		for _, id := range missing {
-			if cve, ok := found[strings.ToLower(id)]; ok {
-				cache[id] = cve
-			}
-		}
-	}
-
-	for i := range vulns {
-		if cve := cache[vulns[i].CVEID]; cve != nil {
-			vulns[i].CVE = cve
-		}
-	}
-	return nil
-}
-
 func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter *jobFilter, conn *pgxpool.Conn, assetID uuid.UUID, cache *scanRunCache) error {
 	assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx, nil, assetID)
 	if err != nil {
@@ -1019,7 +1223,7 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter
 	// a failing asset version is rolled back on its own and must not block the others
 	errs := make([]error, 0)
 	for _, assetVersion := range assetVersions {
-		if !filter.needToProcessIdentity(assetVersion) {
+		if !filter.shouldProcess(assetVersion) {
 			continue
 		}
 		if err := runner.handleScanResultForAssetVersion(ctx, conn, filter, asset, assetVersion, cache); err != nil {
@@ -1060,7 +1264,7 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	createdInAssetVersion := make(map[uuid.UUID]struct{})
 	opened := make(map[string][]models.DependencyVuln, len(assetVersion.Artifacts))
 	for _, artifact := range assetVersion.Artifacts {
-		if !filter.needToProcessIdentity(artifact) {
+		if !filter.shouldProcess(artifact) {
 			continue
 		}
 		// a savepoint per artifact: a failing artifact is undone without aborting the asset version transaction
@@ -1086,10 +1290,10 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	}
 
 	// dry runs are rolled back by the deferred rollback
-	if runner.debugOptions.DryRun {
-		// slog.Info("[DRY-RUN] rolled back scan results", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "artifacts", len(artifacts))
-	} else if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("could not commit scan results: %w", err)
+	if !runner.debugOptions.DryRun {
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("could not commit scan results: %w", err)
+		}
 	}
 
 	// only notify after the commit, otherwise subscribers could be told about vulns that were rolled back
@@ -1099,106 +1303,12 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	return nil
 }
 
-// sbomFingerprintQuery hashes the sboms of each asset version, every upload rewrites its row with a new updated_at
+// sbomFingerprintQuery hashes the sboms of each asset version
+// this helps detecting race conditions
 const sbomFingerprintQuery = `
 	SELECT asset_id, asset_version_name,
 		md5(string_agg(concat_ws('/', artifact_name, source, root_subtree_hash, updated_at), ',' ORDER BY artifact_name, source))
 	FROM sboms`
-
-type sbomSnapshot map[assetVersionKey]string
-type assetVersionKey struct {
-	assetID          uuid.UUID
-	assetVersionName string
-}
-
-type artifactKey struct {
-	assetID                        uuid.UUID
-	assetVersionName, artifactName string
-}
-
-type jobFilter struct {
-	sbomSnapshot    sbomSnapshot
-	assetMap        map[uuid.UUID]struct{}
-	assetVersionMap map[assetVersionKey]struct{}
-	artifactMap     map[artifactKey]struct{}
-}
-
-func NewJobFilter(snapshot sbomSnapshot) *jobFilter {
-	return &jobFilter{
-		sbomSnapshot: snapshot,
-	}
-}
-
-func (filter *jobFilter) GetAssetsIDs() []uuid.UUID {
-	ids := make([]uuid.UUID, 0, len(filter.assetMap))
-	for id := range filter.assetMap {
-		ids = append(ids, id)
-	}
-	return ids
-}
-
-func (filter *jobFilter) SetUpLookUpMaps(rows pgx.Rows) error {
-	defer rows.Close()
-	assetMap := make(map[uuid.UUID]struct{}, 777)
-	assetVersionMap := make(map[assetVersionKey]struct{}, 2000)
-	artifactMap := make(map[artifactKey]struct{}, 3000)
-
-	var assetID uuid.UUID
-	var assetVersionName, artifactName string
-	for rows.Next() {
-		err := rows.Scan(&assetID, &assetVersionName, &artifactName)
-		if err != nil {
-			return err
-		}
-		assetMap[assetID] = struct{}{}
-		assetVersionMap[assetVersionKey{assetVersionName: assetVersionName, assetID: assetID}] = struct{}{}
-		artifactMap[artifactKey{assetID: assetID, assetVersionName: assetVersionName, artifactName: artifactName}] = struct{}{}
-	}
-
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	filter.assetMap = assetMap
-	filter.assetVersionMap = assetVersionMap
-	filter.artifactMap = artifactMap
-	return nil
-}
-
-func (filter *jobFilter) needToProcessIdentity(identity any) (ok bool) {
-	switch v := identity.(type) {
-	case models.Asset:
-		_, ok = filter.assetMap[v.ID]
-	case models.AssetVersion:
-		_, ok = filter.assetVersionMap[assetVersionKey{assetID: v.AssetID, assetVersionName: v.Name}]
-	case models.Artifact:
-		_, ok = filter.artifactMap[artifactKey{assetID: v.AssetID, assetVersionName: v.AssetVersionName, artifactName: v.ArtifactName}]
-	}
-	return
-}
-
-// assetVersionUnchanged must run while sboms is locked, otherwise an upload could still commit after the check
-func (filter *jobFilter) assetVersionUnchanged(ctx context.Context, tx pgx.Tx, assetVersion models.AssetVersion) (bool, error) {
-	snapshotFingerprint, ok := filter.sbomSnapshot[assetVersionKey{assetID: assetVersion.AssetID, assetVersionName: assetVersion.Name}]
-	if !ok {
-		return false, nil
-	}
-
-	var key assetVersionKey
-	var fingerprint string
-	err := tx.QueryRow(ctx, sbomFingerprintQuery+`
-		WHERE asset_id = $1 AND asset_version_name = $2
-		GROUP BY asset_id, asset_version_name;`, assetVersion.AssetID, assetVersion.Name).Scan(&key.assetID, &key.assetVersionName, &fingerprint)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// all sboms of the asset version were deleted
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return fingerprint == snapshotFingerprint, nil
-}
 
 // handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
 func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *scanRunCache) (opened []models.DependencyVuln, err error) {
@@ -1456,30 +1566,6 @@ func (runner *DaemonRunner) DetectedDependencyVulnInAnotherArtifact(ctx context.
 	return err
 }
 
-func (runner *DaemonRunner) DidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifactName string) error {
-	if len(vulnerabilities) == 0 {
-		return nil
-	}
-
-	assetVersionNames := make([]string, len(vulnerabilities))
-	assetIDs := make([]uuid.UUID, len(vulnerabilities))
-	dependencyVulnIDs := make([]uuid.UUID, len(vulnerabilities))
-	for i := range vulnerabilities {
-		assetVersionNames[i] = vulnerabilities[i].AssetVersionName
-		assetIDs[i] = vulnerabilities[i].AssetID
-		dependencyVulnIDs[i] = vulnerabilities[i].CalculateHash()
-	}
-
-	_, err := tx.Exec(ctx, `DELETE FROM artifact_dependency_vulns adv
-				USING UNNEST($2::text[], $3::uuid[], $4::uuid[]) AS u(asset_version_name, asset_id, dependency_vuln_id)
-				WHERE adv.artifact_artifact_name = $1
-				AND adv.artifact_asset_version_name = u.asset_version_name
-				AND adv.artifact_asset_id = u.asset_id
-				AND adv.dependency_vuln_id = u.dependency_vuln_id;`, artifactName, assetVersionNames, assetIDs, dependencyVulnIDs)
-
-	return err
-}
-
 // newVulns do not exist on the asset version yet, existingVulns only lack the association with the artifact
 func (runner *DaemonRunner) FetchNewVulnsForArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact) (newVulns []models.DependencyVuln, existingVulns []models.DependencyVuln, err error) {
 	rows, err := tx.Query(ctx, `
@@ -1547,14 +1633,7 @@ func (runner *DaemonRunner) FetchScanResultsForArtifact(ctx context.Context, tx 
 	return vulns, rows.Err()
 }
 
-type purlPathResult struct {
-	Purl  string
-	Paths [][]uuid.UUID // vulnerable node -> ... -> sbom root
-	// sboms reached by more than maxPathsPerRoot paths, none of their paths are kept
-	ExplodedRoots []uuid.UUID
-}
-
-func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, results chan purlPathResult, purls []string) (map[string][][]uuid.UUID, error) {
+func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, results chan purlPathResult, purls []string) error {
 	start := time.Now()
 	// calculate map size upper bound
 	row := tx.QueryRow(ctx, `SELECT COUNT(*) FROM sbom_merkle_nodes;`)
@@ -1562,7 +1641,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	var count int
 	err := row.Scan(&count)
 	if err != nil {
-		return nil, fmt.Errorf("could not query count of nodes: %w", err)
+		return fmt.Errorf("could not query count of nodes: %w", err)
 	}
 
 	// leaf rows carry a NULL child and are no edges
@@ -1570,7 +1649,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 		SELECT subtree_hash,direct_dependency_subtree_hash 
 		FROM sbom_merkle_edges;`)
 	if err != nil {
-		return nil, fmt.Errorf("could not query paths for purls: %w", err)
+		return fmt.Errorf("could not query paths for purls: %w", err)
 	}
 	defer edgeRows.Close()
 
@@ -1593,7 +1672,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	for edgeRows.Next() {
 		err = edgeRows.Scan(&parent, &child)
 		if err != nil {
-			return nil, fmt.Errorf("could not scan edge: %w", err)
+			return fmt.Errorf("could not scan edge: %w", err)
 		}
 		childID := toNodeID(child)
 		parentID := toNodeID(parent)
@@ -1601,7 +1680,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	}
 	edgeRows.Close()
 	if err := edgeRows.Err(); err != nil {
-		return nil, fmt.Errorf("could not scan rows: %w", err)
+		return fmt.Errorf("could not scan rows: %w", err)
 	}
 
 	// order by hash so the traversal and the chosen paths do not depend on the row order of the queries
@@ -1619,7 +1698,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 		FROM sbom_merkle_nodes
 		WHERE component_id = ANY($1)`, purls)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch hash to purl mapping: %w", err)
+		return fmt.Errorf("could not fetch hash to purl mapping: %w", err)
 	}
 	defer purlRows.Close()
 
@@ -1630,7 +1709,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	for purlRows.Next() {
 		err = purlRows.Scan(&hash, &purl)
 		if err != nil {
-			return nil, fmt.Errorf("could not scan purl row: %w", err)
+			return fmt.Errorf("could not scan purl row: %w", err)
 		}
 		// a node without edges can never reach a root
 		if id, ok := nodeIDs[hash]; ok {
@@ -1639,7 +1718,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	}
 	purlRows.Close()
 	if err := purlRows.Err(); err != nil {
-		return nil, fmt.Errorf("could not scan purl rows: %w", err)
+		return fmt.Errorf("could not scan purl rows: %w", err)
 	}
 	for _, nodes := range purlToNodes {
 		slices.SortFunc(nodes, compareNodes)
@@ -1654,7 +1733,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 			WHERE s.root_subtree_hash = nodes.node_hash
 		);`)
 	if err != nil {
-		return nil, fmt.Errorf("could not query root nodes: %w", err)
+		return fmt.Errorf("could not query root nodes: %w", err)
 	}
 	defer rootRows.Close()
 
@@ -1663,7 +1742,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	for rootRows.Next() {
 		err = rootRows.Scan(&rootHash)
 		if err != nil {
-			return nil, fmt.Errorf("could not scan root row: %w", err)
+			return fmt.Errorf("could not scan root row: %w", err)
 		}
 		// roots outside the edge graph can never be reached
 		if id, ok := nodeIDs[rootHash]; ok {
@@ -1673,7 +1752,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	rootRows.Close()
 	err = rootRows.Err()
 	if err != nil {
-		return nil, fmt.Errorf("ran into error when reading root rows: %w", err)
+		return fmt.Errorf("ran into error when reading root rows: %w", err)
 	}
 
 	const maxQueueLength = 4000
@@ -1751,135 +1830,10 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 		results <- result
 	}
 
-	return nil, nil
+	return nil
 }
 
 const maxPathsPerRoot = 11
-
-type dynamicQueue[T any] struct {
-	MaxSize        int
-	Queue          []T
-	CurrentElement int
-}
-
-func NewDynamicQueue[T any](maxSize int) *dynamicQueue[T] {
-	return &dynamicQueue[T]{
-		MaxSize:        maxSize,
-		Queue:          make([]T, 0, maxSize),
-		CurrentElement: 0,
-	}
-}
-
-func (queue *dynamicQueue[T]) Next() (next T, ok bool) {
-	if queue.CurrentElement >= len(queue.Queue) {
-		return next, false
-	}
-	next = queue.Queue[queue.CurrentElement]
-	queue.CurrentElement++
-	queue.shrink()
-	return next, true
-}
-
-func (queue *dynamicQueue[T]) Append(element T) {
-	queue.Queue = append(queue.Queue, element)
-}
-
-func (queue *dynamicQueue[T]) Reset() {
-	clear(queue.Queue)
-	queue.Queue = queue.Queue[:0]
-	queue.CurrentElement = 0
-}
-
-func (queue *dynamicQueue[T]) shrink() {
-	// compacting before half of the slice is consumed copies large queues over and over
-	if queue.CurrentElement <= queue.MaxSize/2 || queue.CurrentElement < len(queue.Queue)/2 {
-		return
-	}
-	// move the unread elements to the front and drop references to consumed ones so the GC can free them
-	remaining := copy(queue.Queue, queue.Queue[queue.CurrentElement:])
-	clear(queue.Queue[remaining:])
-	queue.Queue = queue.Queue[:remaining]
-	queue.CurrentElement = 0
-}
-
-func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
-	out := make(chan assetWithProjectAndOrg)
-
-	go func() {
-		defer func() {
-			close(out)
-			monitoring.RecoverPanic("scan panic")
-		}()
-		frontendURL := os.Getenv("FRONTEND_URL")
-		if frontendURL == "" {
-			monitoring.Alert("FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
-		}
-
-		for assetWithDetails := range input {
-			if !runner.stageEnabled("ScanAsset") {
-				out <- assetWithDetails
-				continue
-			}
-			assetVersions := assetWithDetails.assetVersions
-			asset := assetWithDetails.asset
-			project := assetWithDetails.project
-			org := assetWithDetails.org
-			slog.Info("start scanning asset versions", "amount", len(assetVersions))
-			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.scan")
-			errs := make([]error, 0)
-			for i := range assetVersions {
-				start := time.Now()
-				artifacts := assetVersions[i].Artifacts
-				for _, artifact := range artifacts {
-					// each artifact's SBOMs are loaded on their own - there is no
-					// shared asset-version graph to scope out of any more
-					bom, err := runner.assetVersionService.LoadArtifactSBOMs(stageCtx, nil, assetVersions[i], artifact.ArtifactName)
-					if err != nil {
-						slog.Error("failed to load sboms", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-						errs = append(errs, err)
-						continue
-					}
-
-					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-
-					opened, closed, newState, err := runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system", nil)
-
-					// an artifact with no SBOMs is not an error - it just has
-					// nothing to scan, and ScanNormalizedSBOM returns early
-					if err != nil {
-						tx.Rollback()
-						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-						errs = append(errs, err)
-						continue
-					}
-
-					if runner.debugOptions.DryRun {
-						tx.Rollback()
-
-						slog.Info("[DRY-RUN] finished", "open", len(opened), "closed", len(closed), "newState", len(newState))
-
-					} else {
-						tx.Commit()
-					}
-
-				}
-				slog.Info(fmt.Sprintf("scanned asset version %d/%d", i, len(assetVersions)), "time", time.Since(start), "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-			}
-			if len(errs) > 0 {
-				joined := errors.Join(errs...)
-				failStage(assetWithDetails.ctx, span, joined)
-				errChan <- pipelineError{
-					asset: asset,
-					err:   fmt.Errorf("could not scan asset: %v", joined),
-				}
-				continue
-			}
-			span.End()
-			out <- assetWithDetails
-		}
-	}()
-	return out
-}
 
 func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
@@ -2321,4 +2275,72 @@ func (runner *DaemonRunner) StartBenchmarkJobs(ctx context.Context, stages []str
 	runner.collectErrors(errChan)
 
 	runner.runPipeline(ctx, runner.FetchAllAssetIDs(ctx), errChan)
+}
+
+// -----------------------------------------------------------------------------------
+//
+//	Helper Functions
+//
+// -----------------------------------------------------------------------------------
+
+// convert BFS result (purl to root) to dependency vuln path (first non root to purl)
+func toStoredPath(path []uuid.UUID) []uuid.UUID {
+	stored := make([]uuid.UUID, 0, len(path)-1)
+	for i := len(path) - 2; i >= 0; i-- {
+		stored = append(stored, path[i])
+	}
+	return stored
+}
+
+// convert to canonical purl to ensure consistency with scan function
+func canonicalPurl(raw string, memo map[string]string) string {
+	if canonical, ok := memo[raw]; ok {
+		return canonical
+	}
+
+	canonical := raw
+	if parsed, err := packageurl.FromString(raw); err == nil {
+		if unescaped, err := normalize.PURLToString(parsed); err == nil {
+			canonical = unescaped
+		}
+	}
+
+	memo[raw] = canonical
+	return canonical
+}
+
+// cves need to be fetched in addition so we can calculate the risk
+func (runner *DaemonRunner) hydrateCVEs(ctx context.Context, vulns []models.DependencyVuln, cache map[string]*models.CVE) error {
+	missing := make([]string, 0)
+	for i := range vulns {
+		if _, ok := cache[vulns[i].CVEID]; !ok {
+			// a cve the vulndb does not know stays nil, so it is looked up only once
+			cache[vulns[i].CVEID] = nil
+			missing = append(missing, vulns[i].CVEID)
+		}
+	}
+
+	if len(missing) > 0 {
+		cves, err := runner.cveRepository.FindCVEs(ctx, nil, missing)
+		if err != nil {
+			return err
+		}
+		// FindCVEs matches case insensitively, so the ids are mapped back the same way
+		found := make(map[string]*models.CVE, len(cves))
+		for i := range cves {
+			found[strings.ToLower(cves[i].CVE)] = &cves[i]
+		}
+		for _, id := range missing {
+			if cve, ok := found[strings.ToLower(id)]; ok {
+				cache[id] = cve
+			}
+		}
+	}
+
+	for i := range vulns {
+		if cve := cache[vulns[i].CVEID]; cve != nil {
+			vulns[i].CVE = cve
+		}
+	}
+	return nil
 }
