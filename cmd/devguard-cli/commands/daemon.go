@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
@@ -155,6 +156,7 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 		fx.NopLogger,
 		database.Module,
 		fx.Provide(database.NewPostgreSQLBroker),
+		events.Module,
 		repositories.Module,
 		services.ServiceModule,
 		accesscontrol.AccessControlModule,
@@ -207,6 +209,7 @@ func triggerDaemon(selectedDaemons []string) error {
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.NopLogger,
 		database.Module,
+		events.Module,
 		fx.Provide(database.NewPostgreSQLBroker),
 		// Include all the standard modules
 		repositories.Module,

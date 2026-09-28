@@ -32,8 +32,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/events/eventbroker"
-	"github.com/l3montree-dev/devguard/events/workers"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -128,11 +127,8 @@ func main() {
 	app := fx.New(
 		fx.WithLogger(func() fxevent.Logger { return &fxErrorLogger{} }),
 		fx.Supply(database.GetPoolConfigFromEnv()),
-		fx.Supply(
-			fx.Annotate(database.GetRiverPoolConfigFromEnv(), fx.ResultTags(`name:"river"`)),
-		),
-		fx.Provide(workers.SetupWorkers),
 		fx.Provide(api.NewServer),
+		events.Module,
 		database.Module,
 		repositories.Module,
 		controllers.ControllerModule,
@@ -177,12 +173,6 @@ func main() {
 				},
 			})
 		}),
-		fx.Invoke(
-			fx.Annotate(
-				eventbroker.SetupRiver,
-				fx.ParamTags(`name:"river"`, ``),
-			),
-		),
 	)
 
 	app.Run()
