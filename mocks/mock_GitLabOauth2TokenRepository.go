@@ -18,10 +18,19 @@ func NewGitLabOauth2TokenRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *GitLabOauth2TokenRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &GitLabOauth2TokenRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }

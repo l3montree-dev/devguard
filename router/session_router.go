@@ -40,6 +40,7 @@ func NewSessionRouter(
 	patController *controllers.PatController,
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
+	organizationRepository shared.OrganizationRepository,
 	casbinRBACProvider shared.RBACProvider,
 	orgService shared.OrgService,
 	assetVersionRepository shared.AssetVersionRepository,
@@ -56,6 +57,8 @@ func NewSessionRouter(
 	sessionRouter.GET("/whoami/", controllers.Whoami)
 	sessionRouter.GET("/integrations/repositories/", integrationController.SessionListRepositories)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, middlewares.NeededScope([]string{"manage"}))
+
+	sessionRouter.GET("/resolve/", orgController.ResolvePermalink)
 
 	/**
 	Following routes are asset routes which are registered on sessionRouter because of fast access.

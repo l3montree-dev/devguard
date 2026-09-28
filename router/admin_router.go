@@ -42,6 +42,8 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 	adminRouter.GET("/users/:userID/", adminController.GetUserInformation)
 	adminRouter.PATCH("/assets/:assetID/", adminController.UpdateAsset)
 
+	adminRouter.GET("/logs/", adminController.GetLogs)
+
 	adminRouter.GET("/statistics/usage/", adminController.GetInstanceUsageStatistics)
 	adminRouter.GET("/statistics/vulnerabilities/", adminController.GetInstanceVulnStatistics)
 	adminRouter.PATCH("/settings/", adminController.UpdateInstanceSettings)

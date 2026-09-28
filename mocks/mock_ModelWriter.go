@@ -17,10 +17,19 @@ func NewModelWriter[ID any, T utils.Tabler, Tx any](t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *ModelWriter[ID, T, Tx] {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &ModelWriter[ID, T, Tx]{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }

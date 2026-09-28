@@ -447,7 +447,11 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
 
-	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, requestPath); blocked {
+	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, requestPath)
+	if err != nil {
+		return maliciousCheckFailed(ociEco, err)
+	}
+	if blocked {
 		return d.blockMaliciousPackage(c, ociEco, requestPath, reason, http.StatusForbidden)
 	}
 
@@ -574,6 +578,16 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
 
+	// A blob digest does not identify a tag, so only images flagged as malicious in all
+	// versions can be blocked here - checked before the cache to prevent cache poisoning.
+	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)
+	if err != nil {
+		return maliciousCheckFailed(ociEco, err)
+	}
+	if blocked {
+		return d.blockMaliciousPackage(c, ociEco, requestPath, reason, http.StatusForbidden)
+	}
+
 	cacheKey := "oci/blob/" + ociSafeCachePath(requestPath)
 	if err := d.cache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "oci", "path", requestPath, "error", err)
@@ -690,7 +704,11 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 	if notAllowed, reason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs); notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
-	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, fqImageName); blocked {
+	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)
+	if err != nil {
+		return maliciousCheckFailed(ociEco, err)
+	}
+	if blocked {
 		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason, http.StatusForbidden)
 	}
 
@@ -755,7 +773,11 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 	if notAllowed, reason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs); notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
-	if blocked, reason := d.checkMaliciousPackage(ctx, ociEco, fqImageName); blocked {
+	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)
+	if err != nil {
+		return maliciousCheckFailed(ociEco, err)
+	}
+	if blocked {
 		return d.blockMaliciousPackage(c, ociEco, fqImageName, reason, http.StatusForbidden)
 	}
 

@@ -472,5 +472,12 @@ func TestCheckVersion(t *testing.T) {
 			assert.NoError(t, err)
 			assert.True(t, result)
 		})
+
+		t.Run("deb version with epoch", func(t *testing.T) {
+			fixed := "1:1.2.8.dfsg-4"
+			result, err := normalize.CheckVersionInRange(nil, nil, &fixed, "1:1.3.dfsg+really1.3.1-1+b1", "deb")
+			assert.NoError(t, err)
+			assert.False(t, result)
+		})
 	})
 }

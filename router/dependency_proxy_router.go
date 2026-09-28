@@ -13,6 +13,10 @@ type DependencyProxyRouter struct {
 }
 
 func registerNPMRoutes(group *echo.Group, npmController *dependencyfirewall.NPMDependencyProxyController) {
+	// NPM registry API: audits, signing keys and attestations (`npm audit`, `npm audit signatures`).
+	// The static "-" segment takes precedence over the :package param routes below.
+	group.GET("/npm/-/*", npmController.ProxyNPMRegistryAPI)
+	group.POST("/npm/-/*", npmController.ProxyNPMRegistryAPI)
 	// NPM tarballs: unscoped (lodash/-/lodash-4.17.21.tgz) and scoped (@babel/core/-/@babel/core-7.0.0.tgz)
 	group.GET("/npm/:package/-/*", npmController.ProxyNPMTarball)
 	group.GET("/npm/:scope/:name/-/*", npmController.ProxyNPMTarball)
@@ -21,8 +25,6 @@ func registerNPMRoutes(group *echo.Group, npmController *dependencyfirewall.NPMD
 	group.GET("/npm/:package/", npmController.ProxyNPMMetadata)
 	group.GET("/npm/:scope/:name", npmController.ProxyNPMMetadata)
 	group.GET("/npm/:scope/:name/", npmController.ProxyNPMMetadata)
-	// NPM audit
-	group.POST("/npm/*", npmController.ProxyNPMAudit)
 }
 
 func registerGoRoutes(group *echo.Group, goController *dependencyfirewall.GoDependencyProxyController) {

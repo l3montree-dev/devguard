@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -9,12 +10,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func recovermiddleware() echo.MiddlewareFunc {
+func recoverMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) (returnErr error) {
 			defer func() {
 				if r := recover(); r != nil {
-					monitoring.RecoverAndAlert("panic recovered in middleware", fmt.Errorf("%v", r))
+					monitoring.RecoverAndAlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "panic recovered in middleware", fmt.Errorf("%v", r))
 
 					if r == http.ErrAbortHandler {
 						panic(r)

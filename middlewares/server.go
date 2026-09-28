@@ -83,7 +83,7 @@ func registerMiddlewares(e *echo.Echo) {
 
 	e.Use(logger())
 
-	e.Use(recovermiddleware())
+	e.Use(recoverMiddleware())
 
 	e.HTTPErrorHandler = func(err error, ctx echo.Context) {
 		// do the logging straight inside the error handler

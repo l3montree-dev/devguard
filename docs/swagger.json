@@ -6037,9 +6037,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -6104,7 +6101,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "projectId",
                     "refs",
@@ -6195,9 +6191,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -6263,7 +6256,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "projectId",
                     "refs",
@@ -6354,9 +6346,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -6425,7 +6414,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "projectId",
                     "refs",
@@ -8987,6 +8975,53 @@
                 ],
                 "type": "object"
             },
+            "dtos.LogDTO": {
+                "properties": {
+                    "assetID": {
+                        "type": "string"
+                    },
+                    "assetName": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "logLevel": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "orgID": {
+                        "type": "string"
+                    },
+                    "orgName": {
+                        "type": "string"
+                    },
+                    "projectID": {
+                        "type": "string"
+                    },
+                    "projectName": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetID",
+                    "assetName",
+                    "createdAt",
+                    "id",
+                    "logLevel",
+                    "message",
+                    "orgID",
+                    "orgName",
+                    "projectID",
+                    "projectName"
+                ],
+                "type": "object"
+            },
             "dtos.LookupResponse": {
                 "properties": {
                     "asset": {
@@ -10263,6 +10298,25 @@
                     "expiryDateUnix",
                     "pubKey",
                     "scopes"
+                ],
+                "type": "object"
+            },
+            "dtos.PermalinkResponse": {
+                "properties": {
+                    "assetSlug": {
+                        "type": "string"
+                    },
+                    "organizationSlug": {
+                        "type": "string"
+                    },
+                    "projectSlug": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetSlug",
+                    "organizationSlug",
+                    "projectSlug"
                 ],
                 "type": "object"
             },
@@ -12608,9 +12662,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineError": {
-                        "type": "string"
-                    },
                     "pipelineLastRun": {
                         "type": "string"
                     },
@@ -12691,7 +12742,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineError",
                     "pipelineLastRun",
                     "project",
                     "projectId",
@@ -14262,6 +14312,33 @@
                 ],
                 "type": "object"
             },
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO": {
+                "properties": {
+                    "data": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.LogDTO"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "pageSize": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "data",
+                    "page",
+                    "pageSize",
+                    "total"
+                ],
+                "type": "object"
+            },
             "github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO": {
                 "properties": {
                     "data": {
@@ -14554,27 +14631,38 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
-                    1000000
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14586,27 +14674,38 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
-                    "Millisecond"
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour"
                 ]
             },
             "transformer.MinimalTree": {
@@ -15122,6 +15221,73 @@
                     }
                 ],
                 "summary": "Add an admin to an organization",
+                "tags": [
+                    "Admin"
+                ]
+            }
+        },
+        "/admin/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "AdminSignedAuth": []
+                    }
+                ],
+                "summary": "Get logs",
                 "tags": [
                     "Admin"
                 ]
@@ -18501,6 +18667,88 @@
                 ]
             }
         },
+        "/organizations/{organization}/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List organization logs",
+                "tags": [
+                    "Logs"
+                ]
+            }
+        },
         "/organizations/{organization}/members": {
             "get": {
                 "parameters": [
@@ -21062,6 +21310,106 @@
                 "summary": "Auto-setup the GitLab integration for an asset",
                 "tags": [
                     "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List asset logs",
+                "tags": [
+                    "Logs"
                 ]
             }
         },
@@ -29372,6 +29720,97 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/logs/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Page number",
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Page size",
+                        "in": "query",
+                        "name": "pageSize",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Search term",
+                        "in": "query",
+                        "name": "search",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Sort query, e.g. sort[createdAt]=desc",
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Filter query, e.g. filterQuery[logs.log_level][is]=error",
+                        "in": "query",
+                        "name": "filterQuery",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List project logs",
+                "tags": [
+                    "Logs"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/members": {
             "get": {
                 "parameters": [
@@ -31664,6 +32103,64 @@
                 "summary": "Get recommended fixed version for a package",
                 "tags": [
                     "Vulnerabilities"
+                ]
+            }
+        },
+        "/resolve": {
+            "get": {
+                "description": "Resolves an organization, project or asset UUID to the slugs the frontend needs to build a human readable URL. Exactly one of the query parameters must be set.",
+                "parameters": [
+                    {
+                        "description": "Organization ID",
+                        "in": "query",
+                        "name": "orgid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project ID",
+                        "in": "query",
+                        "name": "projectid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset ID",
+                        "in": "query",
+                        "name": "assetid",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.PermalinkResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Resolve a permalink",
+                "tags": [
+                    "Organizations"
                 ]
             }
         },

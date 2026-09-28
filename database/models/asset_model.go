@@ -59,7 +59,6 @@ type Asset struct {
 	SharesInformation        bool                `json:"shareInformation" gorm:"default:false;not null;"`
 
 	PipelineLastRun time.Time `json:"pipelineLastRun" gorm:"type:timestamp with time zone;"`
-	PipelineError   *string   `json:"pipelineError" gorm:"type:text;"`
 
 	State AssetState `json:"state" gorm:"type:text;default:'active';not null;"`
 }

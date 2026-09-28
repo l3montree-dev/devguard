@@ -19,10 +19,19 @@ func NewModelReader[ID any, T utils.Tabler, Tx any](t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *ModelReader[ID, T, Tx] {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &ModelReader[ID, T, Tx]{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }

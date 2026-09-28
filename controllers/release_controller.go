@@ -458,11 +458,12 @@ func (h *ReleaseController) Create(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
-	if err := h.validateReleaseItemRefs(c.Request().Context(), req.Items); err != nil {
+	project := shared.GetProject(c)
+
+	if err := h.validateReleaseItemRefs(c.Request().Context(), project.GetID(), req.Items); err != nil {
 		return err
 	}
 
-	project := shared.GetProject(c)
 	model := transformer.ReleaseCreateRequestToModel(req, project.GetID())
 
 	if err := h.service.Create(c.Request().Context(), &model); err != nil {
@@ -503,7 +504,7 @@ func (h *ReleaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
-	if err := h.validateReleaseItemRefs(c.Request().Context(), req.Items); err != nil {
+	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), req.Items); err != nil {
 		return err
 	}
 
@@ -574,7 +575,7 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
-	if err := h.validateReleaseItemRefs(c.Request().Context(), []dtos.ReleaseItemDTO{dto}); err != nil {
+	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), []dtos.ReleaseItemDTO{dto}); err != nil {
 		return err
 	}
 
@@ -598,7 +599,12 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 // items (a child release, or an asset) belongs to the caller's tenant before it is persisted.
 // Without this check a user could embed a release or asset belonging to a different
 // organization/project into their own release merely by knowing its UUID.
-func (h *ReleaseController) validateReleaseItemRefs(ctx context.Context, items []dtos.ReleaseItemDTO) error {
+//
+// Assets are accepted from the whole project tree below projectID, not just from projectID
+// itself - the very set ListCandidates offers. A plain assetRepository.Read would apply the
+// ownership scope, which pins the asset to the exact project from the path and therefore
+// rejects every candidate that lives in a child project.
+func (h *ReleaseController) validateReleaseItemRefs(ctx context.Context, projectID uuid.UUID, items []dtos.ReleaseItemDTO) error {
 	for _, it := range items {
 		if it.ChildReleaseID != nil {
 			if _, err := h.service.Read(ctx, *it.ChildReleaseID); err != nil {
@@ -606,7 +612,7 @@ func (h *ReleaseController) validateReleaseItemRefs(ctx context.Context, items [
 			}
 		}
 		if it.AssetID != nil {
-			if _, err := h.assetRepository.Read(ctx, nil, *it.AssetID); err != nil {
+			if _, err := h.assetRepository.ReadInProjectTree(ctx, nil, *it.AssetID, projectID); err != nil {
 				return echo.NewHTTPError(400, "invalid asset id").WithInternal(err)
 			}
 		}

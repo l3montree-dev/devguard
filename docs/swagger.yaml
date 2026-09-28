@@ -4494,8 +4494,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         projectId:
@@ -4546,7 +4544,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - projectId
       - refs
@@ -4611,8 +4608,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         projectId:
@@ -4664,7 +4659,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - projectId
       - refs
@@ -4729,8 +4723,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         projectId:
@@ -4784,7 +4776,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - projectId
       - refs
@@ -6651,6 +6642,40 @@ components:
       - assetId
       - assetVersionName
       type: object
+    dtos.LogDTO:
+      properties:
+        assetID:
+          type: string
+        assetName:
+          type: string
+        createdAt:
+          type: string
+        id:
+          type: string
+        logLevel:
+          type: string
+        message:
+          type: string
+        orgID:
+          type: string
+        orgName:
+          type: string
+        projectID:
+          type: string
+        projectName:
+          type: string
+      required:
+      - assetID
+      - assetName
+      - createdAt
+      - id
+      - logLevel
+      - message
+      - orgID
+      - orgName
+      - projectID
+      - projectName
+      type: object
     dtos.LookupResponse:
       properties:
         asset:
@@ -7587,6 +7612,19 @@ components:
       - expiryDateUnix
       - pubKey
       - scopes
+      type: object
+    dtos.PermalinkResponse:
+      properties:
+        assetSlug:
+          type: string
+        organizationSlug:
+          type: string
+        projectSlug:
+          type: string
+      required:
+      - assetSlug
+      - organizationSlug
+      - projectSlug
       type: object
     dtos.PolicyDTO:
       properties:
@@ -9313,8 +9351,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineError:
-          type: string
         pipelineLastRun:
           type: string
         project:
@@ -9379,7 +9415,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineError
       - pipelineLastRun
       - project
       - projectId
@@ -10551,6 +10586,25 @@ components:
       - pageSize
       - total
       type: object
+    github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/dtos.LogDTO'
+          type: array
+          uniqueItems: false
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      required:
+      - data
+      - page
+      - pageSize
+      - total
+      type: object
     github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO:
       properties:
         data:
@@ -10761,27 +10815,38 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -10792,27 +10857,38 @@ components:
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
+      - Second
+      - Minute
+      - Hour
     transformer.MinimalTree:
       properties:
         dependencies:
@@ -11141,6 +11217,46 @@ paths:
       security:
       - AdminSignedAuth: []
       summary: Add an admin to an organization
+      tags:
+      - Admin
+  /admin/logs/:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search term
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Sort query, e.g. sort[createdAt]=desc
+        in: query
+        name: sort
+        schema:
+          type: string
+      - description: Filter query, e.g. filterQuery[logs.log_level][is]=error
+        in: query
+        name: filterQuery
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO'
+          description: OK
+      security:
+      - AdminSignedAuth: []
+      summary: Get logs
       tags:
       - Admin
   /admin/organizations/{orgID}/:
@@ -13084,6 +13200,54 @@ paths:
       summary: Revoke an organization invitation
       tags:
       - Organizations
+  /organizations/{organization}/logs/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search term
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Sort query, e.g. sort[createdAt]=desc
+        in: query
+        name: sort
+        schema:
+          type: string
+      - description: Filter query, e.g. filterQuery[logs.log_level][is]=error
+        in: query
+        name: filterQuery
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List organization logs
+      tags:
+      - Logs
   /organizations/{organization}/members:
     get:
       parameters:
@@ -14551,6 +14715,66 @@ paths:
       summary: Auto-setup the GitLab integration for an asset
       tags:
       - Integrations
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search term
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Sort query, e.g. sort[createdAt]=desc
+        in: query
+        name: sort
+        schema:
+          type: string
+      - description: Filter query, e.g. filterQuery[logs.log_level][is]=error
+        in: query
+        name: filterQuery
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List asset logs
+      tags:
+      - Logs
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/members/:
     get:
       parameters:
@@ -19556,6 +19780,60 @@ paths:
       summary: Create webhook integration (project)
       tags:
       - Webhooks
+  /organizations/{organization}/projects/{projectSlug}/logs/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Page number
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Search term
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Sort query, e.g. sort[createdAt]=desc
+        in: query
+        name: sort
+        schema:
+          type: string
+      - description: Filter query, e.g. filterQuery[logs.log_level][is]=error
+        in: query
+        name: filterQuery
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List project logs
+      tags:
+      - Logs
   /organizations/{organization}/projects/{projectSlug}/members:
     get:
       parameters:
@@ -20962,6 +21240,41 @@ paths:
       summary: Get recommended fixed version for a package
       tags:
       - Vulnerabilities
+  /resolve:
+    get:
+      description: Resolves an organization, project or asset UUID to the slugs the
+        frontend needs to build a human readable URL. Exactly one of the query parameters
+        must be set.
+      parameters:
+      - description: Organization ID
+        in: query
+        name: orgid
+        schema:
+          type: string
+      - description: Project ID
+        in: query
+        name: projectid
+        schema:
+          type: string
+      - description: Asset ID
+        in: query
+        name: assetid
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.PermalinkResponse'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Resolve a permalink
+      tags:
+      - Organizations
   /sarif-scan:
     post:
       deprecated: true

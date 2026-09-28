@@ -44,6 +44,7 @@ func NewOrgRouter(
 	webhookIntegration *controllers.WebhookController,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	externalEntityProviderController *controllers.ExternalEntityProviderController,
+	logController *controllers.LogController,
 	orgService shared.OrgService,
 	gitlabOauth2Integrations map[string]*gitlabint.GitlabOauth2Config,
 	casbinRBACProvider shared.RBACProvider,
@@ -72,6 +73,7 @@ func NewOrgRouter(
 
 	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
 
+	organizationRouter.GET("/logs/", logController.ListPagedForOrganization, middlewares.NeededScope([]string{"scan"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead))
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	organizationRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetOrgDependencyProxyURLs)
 	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))

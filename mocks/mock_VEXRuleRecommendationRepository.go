@@ -21,10 +21,19 @@ func NewVEXRuleRecommendationRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *VEXRuleRecommendationRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &VEXRuleRecommendationRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
