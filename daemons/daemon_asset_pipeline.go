@@ -764,6 +764,8 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	}
 	defer conn.Release()
 
+	start := time.Now()
+
 	snapshot, unlock, err := ensureIsolation(ctx, conn)
 	if err != nil {
 		return fmt.Errorf("could not ensure isolation of scan: %w", err)
@@ -787,6 +789,7 @@ func (runner *DaemonRunner) NewScanAsset() error {
 	if err != nil {
 		return fmt.Errorf("could not clean up orphan vulns: %w", err)
 	}
+	slog.Info("successfully finished scan background job", "time", time.Since(start))
 
 	return nil
 }
@@ -872,8 +875,6 @@ func (runner *DaemonRunner) scanAllSBOMS(ctx context.Context, conn *pgxpool.Conn
 }
 
 func (runner *DaemonRunner) computeAffectedPurls(ctx context.Context, conn *pgxpool.Conn) ([]purlAffectedComponent, error) {
-	slog.Info("start collecting all dependencies")
-	start := time.Now()
 	purlRows, err := conn.Query(ctx, `SELECT DISTINCT component_id FROM sbom_merkle_nodes;`)
 	if err != nil {
 		return nil, err
@@ -902,12 +903,12 @@ func (runner *DaemonRunner) computeAffectedPurls(ctx context.Context, conn *pgxp
 	if err := purlRows.Err(); err != nil {
 		return nil, err
 	}
-	slog.Info("finished reading all dependencies", "amount", len(allDependencies), "time", time.Since(start))
+	slog.Info("finished reading all dependencies", "amount", len(allDependencies))
 
 	purlMatcher := scan.NewPurlComparer(runner.db, new(int(0)), scan.WithPreloads())
 
 	slog.Info("start matching purls to affected components")
-	start = time.Now()
+	start := time.Now()
 	candidates, err := purlMatcher.GetAffectedComponentsBatch(ctx, allDependencies)
 	if err != nil {
 		return nil, fmt.Errorf("could not match purls: %w", err)
@@ -1021,6 +1022,8 @@ func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx p
 		return fmt.Errorf("could not create table for vuln paths: %w", err)
 	}
 
+	slog.Info("start scanning purls and streaming to database", "purl count", len(affectedPurls))
+
 	group := &errgroup.Group{}
 	resultsChannel := make(chan purlPathResult)
 	vulnPathColumns := []string{"component_purl", "root", "path"}
@@ -1063,7 +1066,6 @@ func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx p
 		}
 
 		if len(rowsBuffer) >= batchSize {
-			slog.Info("streaming batch to database", "amount", len(rowsBuffer))
 			if err := copyRows(); err != nil {
 				return fmt.Errorf("could not copy vuln paths into table: %w", err)
 			}
@@ -1081,7 +1083,7 @@ func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx p
 		}
 	}
 
-	slog.Info("finished scanning all purls", "time", time.Since(start))
+	slog.Info("finished scanning purls and streaming paths", "time", time.Since(start))
 	return nil
 }
 
@@ -1089,6 +1091,8 @@ func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx p
 // compute the diff between new and old state to only save whats new
 // join all the necessary information, filter existing vulns
 func (runner *DaemonRunner) materializeNewDependencyVulns(ctx context.Context, scanTx pgx.Tx) error {
+	slog.Info("start building new dependency vulns from paths and affected components mapping")
+
 	start := time.Now()
 	_, err := scanTx.Exec(ctx, `
 		CREATE TABLE public.new_dependency_vulns AS
@@ -1157,12 +1161,12 @@ func (runner *DaemonRunner) handleScanResults(ctx context.Context, conn *pgxpool
 		err = runner.handleScanResultForAsset(ctx, jobFilter, conn, assetID, cache)
 		if err != nil {
 			slog.Error("could not handle scan result for asset", "err", err, "asset", assetID)
-		} else if (i+1)%10 == 0 {
+		} else if (i+1)%25 == 0 {
 			slog.Info(fmt.Sprintf("finished asset %d/%d", i+1, len(assetIDs)), "batchTime", time.Since(start))
 			start = time.Now()
 		}
 	}
-	slog.Info("finished all handle scan results", "time", time.Since(startHandling))
+	slog.Info("finished handling all scan results", "time", time.Since(startHandling))
 	return nil
 }
 
@@ -1377,7 +1381,7 @@ func (runner *DaemonRunner) HandleScanResultBatch(ctx context.Context, tx pgx.Tx
 }
 
 func (runner *DaemonRunner) notifyDependencyVulnsDetected(ctx context.Context, cache *scanRunCache, asset models.Asset, assetVersion models.AssetVersion, artifactName string, opened []models.DependencyVuln) {
-	if len(opened) == 0 || !(assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
+	if len(opened) == 0 || (!assetVersion.DefaultBranch && assetVersion.Type != models.AssetVersionTag) {
 		return
 	}
 
@@ -1636,7 +1640,6 @@ func (runner *DaemonRunner) FetchScanResultsForArtifact(ctx context.Context, tx 
 }
 
 func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, results chan purlPathResult, purls []string) error {
-	start := time.Now()
 	// calculate map size upper bound
 	row := tx.QueryRow(ctx, `SELECT COUNT(*) FROM sbom_merkle_nodes;`)
 
@@ -1692,8 +1695,6 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 	for i := range parents {
 		slices.SortFunc(parents[i], compareNodes)
 	}
-
-	slog.Info("loaded SBOM into memory", "time", time.Since(start))
 
 	purlRows, err := tx.Query(ctx, `
 		SELECT node_hash, component_id 

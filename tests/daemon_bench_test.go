@@ -85,6 +85,7 @@ func BenchmarkNewScanAsset(b *testing.B) {
 			b.Fatalf("could not drop scan tables: %v", err)
 		}
 		b.StartTimer()
+		runner.SetDebugOptions(daemons.DebugOptions{DryRun: true})
 
 		if err := runner.NewScanAsset(); err != nil {
 			b.Fatalf("NewScanAsset failed: %v", err)
