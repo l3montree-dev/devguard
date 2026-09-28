@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -164,23 +166,15 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	}
 
 	// Tarballs are immutable once published to npm, so a hash-verified hit
-	// never needs a freshness check — it's valid forever.
+	// never needs a freshness check — it's valid forever. Tarballs are only
+	// cached together with their release time, so it is always set here.
 	if entry, ok := d.cache.Get(cacheKey); ok {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
-		if configs.MinReleaseAge > 0 {
-			if !entry.releaseTime.IsZero() {
-				if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-					return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
-				}
-				span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-				return npm.writeResponse(c, entry.data, requestPath, true)
-			}
-			// No cached release time — fall through to upstream to retrieve it.
-			slog.Debug("No cached release time for MinReleaseAge check, refetching", "proxy", "npm", "path", requestPath)
-		} else {
-			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			return npm.writeResponse(c, entry.data, requestPath, true)
+		if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
+			return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
 		}
+		span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+		return npm.writeResponse(c, entry.data, requestPath, true)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
@@ -198,16 +192,23 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	_, releaseTime := d.ExtractNPMVersionAndReleaseTimeFromMetadata(data)
-
-	if configs.MinReleaseAge > 0 {
-		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
+	// The tarball itself carries no publish date - it lives in the package metadata.
+	// Always resolve it, even without MinReleaseAge: the cache is shared across proxy
+	// secrets, so an entry stored for one config must be checkable under another.
+	releaseTime, err := d.fetchNPMReleaseTime(ctx, packageName, version)
+	if err != nil {
+		slog.Warn("Could not determine release time", "proxy", "npm", "package", packageName, "version", version, "error", err)
+		if configs.MinReleaseAge > 0 {
+			// Fail closed: without a publish date the MinReleaseAge policy cannot be verified.
+			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not determine release time of %s@%s", packageName, version))
+		}
+	} else {
+		if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
 		}
-	}
-
-	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
-		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
+		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+			slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
+		}
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
@@ -215,6 +216,58 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	}
 
 	return npm.writeResponse(c, data, requestPath, false)
+}
+
+type npmMetadataCacheEntry struct {
+	data        []byte
+	contentType string
+}
+
+// npmMetadata is a short-lived, size-bounded cache for npm package documents. A single
+// `npm install` hits the same document for the metadata request and again for every
+// tarball MinReleaseAge check; full documents can be several MB.
+var npmMetadata = utils.NewTTLCache[string](5*time.Minute, 256*1024*1024, func(e npmMetadataCacheEntry) int {
+	return len(e.data)
+})
+
+// fetchPackageMetadata returns the full (non-abbreviated) npm package document.
+// Only successful responses are cached.
+func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context, packageName string) ([]byte, http.Header, int, error) {
+	cacheKey := "npm/metadata/" + packageName
+	if entry, ok := npmMetadata.Get(cacheKey); ok {
+		slog.Debug("Cache hit for metadata", "proxy", "npm", "package", packageName)
+		headers := http.Header{}
+		headers.Set("Content-Type", entry.contentType)
+		return entry.data, headers, http.StatusOK, nil
+	}
+
+	data, headers, status, err := d.fetchFromUpstream(ctx, npm, npmRegistry, "/"+packageName, nil, nil)
+	if err != nil {
+		return nil, nil, status, fmt.Errorf("failed to fetch metadata from upstream: %w", err)
+	}
+	if status == http.StatusOK {
+		npmMetadata.Set(cacheKey, npmMetadataCacheEntry{data: data, contentType: headers.Get("Content-Type")})
+	}
+	return data, headers, status, nil
+}
+
+// fetchNPMReleaseTime returns the publish time of packageName@version from the package metadata.
+func (d *NPMDependencyProxyController) fetchNPMReleaseTime(ctx context.Context, packageName, version string) (time.Time, error) {
+	metadata, _, status, err := d.fetchPackageMetadata(ctx, packageName)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if status != http.StatusOK {
+		return time.Time{}, fmt.Errorf("upstream returned status %d for package metadata", status)
+	}
+	releaseTime, err := d.ExtractNPMReleaseTimeFromMetadata(metadata, version)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if releaseTime.IsZero() {
+		return time.Time{}, fmt.Errorf("no release time for version %s in package metadata", version)
+	}
+	return releaseTime, nil
 }
 
 // ProxyNPMMetadata handles metadata / version-resolution npm requests (no explicit version in path).
@@ -275,8 +328,7 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
-	// Fetch from upstream — we need the metadata to resolve the version before we can check rules.
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, npmRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -289,19 +341,26 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	resolvedVersion, releaseTime := d.ExtractNPMVersionAndReleaseTimeFromMetadata(data)
-
-	// Check allowlist before malicious DB to avoid false positives on explicitly allowed packages.
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, npm, packageName+"@"+resolvedVersion, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "npm", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, npm, requestPath, notAllowedReason)
-	}
-
-	if configs.MinReleaseAge > 0 && packageName != "" {
-		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
+	// Hide versions the tarball endpoint would reject anyway (too new or blocked by a
+	// rule), so the client resolves its semver range to a version it can actually install
+	// instead of failing on the tarball download.
+	if configs.MinReleaseAge > 0 || len(configs.Rules) > 0 {
+		minAge := time.Duration(configs.MinReleaseAge) * time.Hour
+		filtered, removed, err := filterNPMMetadataVersions(data, func(version string, published time.Time) bool {
+			if configs.MinReleaseAge > 0 && (published.IsZero() || time.Since(published) < minAge) {
+				return false
+			}
+			blocked, _ := matchRules(npm.packageIdentifier(packageName, version), configs.Rules)
+			return !blocked
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadGateway, "Failed to parse package metadata from upstream").WithInternal(err)
 		}
+		if removed > 0 {
+			slog.Info("Filtered npm metadata", "proxy", "npm", "package", packageName, "removedVersions", removed)
+			span.SetAttributes(attribute.Int("proxy.filtered_versions", removed))
+		}
+		data = filtered
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
@@ -311,116 +370,221 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	return npm.writeResponse(c, data, requestPath, false)
 }
 
-// @Summary Proxy npm audit request
+// ProxyNPMRegistryAPI passes npm registry API requests (every path below /-/) through
+// to upstream: audits (POST /-/npm/v1/security/advisories/bulk, /-/npm/v1/security/audits/quick),
+// signing keys (GET /-/npm/v1/keys) and attestations (GET /-/npm/v1/attestations/<pkg>@<version>)
+// used by `npm audit signatures`. These carry no package contents, so no firewall checks apply.
+// @Summary Proxy npm registry API request
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
 // @Param secret path string false "dependency proxy secret"
 // @Success 200 {object} map[string]interface{}
-// @Router /dependency-proxy/npm/{path} [post]
-// @Router /dependency-proxy/{secret}/npm/{path} [post]
-func (d *NPMDependencyProxyController) ProxyNPMAudit(c shared.Context) error {
+// @Router /dependency-proxy/npm/-/{path} [get]
+// @Router /dependency-proxy/npm/-/{path} [post]
+// @Router /dependency-proxy/{secret}/npm/-/{path} [get]
+// @Router /dependency-proxy/{secret}/npm/-/{path} [post]
+func (d *NPMDependencyProxyController) ProxyNPMRegistryAPI(c shared.Context) error {
 	requestPath := npm.trimPrefix(c.Request().URL.Path)
+	method := c.Request().Method
 
-	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm-audit",
+	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm-registry-api",
 		trace.WithAttributes(
-			attribute.String("proxy.ecosystem", "npm-audit"),
+			attribute.String("proxy.ecosystem", "npm"),
+			attribute.String("proxy.type", "registry-api"),
 			attribute.String("proxy.path", requestPath),
+			attribute.String("http.method", method),
 		),
 	)
 	defer span.End()
 	c.SetRequest(c.Request().WithContext(ctx))
 
-	slog.Info("Proxy npm audit request", "method", c.Request().Method, "path", requestPath, "contentType", c.Request().Header.Get("Content-Type"))
-
-	bodyBytes, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		slog.Error("Error reading request body", "proxy", "npm-audit", "error", err)
-		return echo.NewHTTPError(http.StatusBadRequest, "Failed to read request body")
+	var body []byte
+	switch method {
+	case http.MethodGet, http.MethodHead:
+	case http.MethodPost:
+		var err error
+		body, err = io.ReadAll(c.Request().Body)
+		if err != nil {
+			slog.Error("Error reading request body", "proxy", "npm", "error", err)
+			return echo.NewHTTPError(http.StatusBadRequest, "Failed to read request body")
+		}
+	default:
+		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
 	}
 
-	slog.Info("Forwarding npm audit request", "path", requestPath, "bodySize", len(bodyBytes), "body", string(bodyBytes)[:min(len(bodyBytes), 500)])
+	slog.Info("Proxy request", "proxy", "npm", "type", "registry-api", "method", method, "path", requestPath, "bodySize", len(body))
 
-	data, headers, statusCode, err := d.fetchNPMAuditFromUpstream(ctx, requestPath, c.Request().Header, bodyBytes)
+	data, headers, statusCode, err := d.fetchNPMRegistryAPIFromUpstream(ctx, method, requestPath, c.Request().URL.RawQuery, c.Request().Header, body)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		slog.Error("Error fetching from upstream", "proxy", "npm-audit", "error", err)
+		slog.Error("Error fetching from upstream", "proxy", "npm", "error", err)
 		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
 	}
 
 	return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 }
 
-func (d *NPMDependencyProxyController) fetchNPMAuditFromUpstream(ctx context.Context, requestPath string, headers http.Header, bodyBytes []byte) ([]byte, http.Header, int, error) {
+// fetchNPMRegistryAPIFromUpstream forwards a registry API request including the
+// headers npm relies on (body encoding for audits, Accept for content negotiation).
+func (d *NPMDependencyProxyController) fetchNPMRegistryAPIFromUpstream(ctx context.Context, method, requestPath, rawQuery string, headers http.Header, body []byte) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
-	url, err := url.JoinPath(npmRegistry, requestPath)
+	upstreamURL, err := url.JoinPath(npmRegistry, requestPath)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
 	}
-	slog.Info("Fetching npm audit from upstream", "url", url, "bodySize", len(bodyBytes))
+	if rawQuery != "" {
+		upstreamURL += "?" + rawQuery
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, upstreamURL, bodyReader)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	if contentType := headers.Get("Content-Type"); contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	} else {
-		req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		if contentType := headers.Get("Content-Type"); contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		} else {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		if contentEncoding := headers.Get("Content-Encoding"); contentEncoding != "" {
+			req.Header.Set("Content-Encoding", contentEncoding)
+		}
+		req.ContentLength = int64(len(body))
 	}
-	req.ContentLength = int64(len(bodyBytes))
-
-	if contentEncoding := headers.Get("Content-Encoding"); contentEncoding != "" {
-		req.Header.Set("Content-Encoding", contentEncoding)
+	for _, name := range []string{"User-Agent", "Accept", "Accept-Encoding"} {
+		if value := headers.Get(name); value != "" {
+			req.Header.Set(name, value)
+		}
 	}
-	if userAgent := headers.Get("User-Agent"); userAgent != "" {
-		req.Header.Set("User-Agent", userAgent)
-	}
-	if accept := headers.Get("Accept"); accept != "" {
-		req.Header.Set("Accept", accept)
-	}
-	if acceptEncoding := headers.Get("Accept-Encoding"); acceptEncoding != "" {
-		req.Header.Set("Accept-Encoding", acceptEncoding)
-	}
-
-	slog.Debug("Upstream request headers", "Content-Type", req.Header.Get("Content-Type"), "Content-Length", req.ContentLength, "Content-Encoding", req.Header.Get("Content-Encoding"))
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		slog.Error("Failed to fetch from npm registry", "error", err, "url", url)
 		return nil, nil, 0, fmt.Errorf("failed to fetch: %w", err)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		slog.Error("Failed to read response body", "error", err, "statusCode", resp.StatusCode)
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	slog.Info("Upstream response", "statusCode", resp.StatusCode, "responseSize", len(data))
 	if resp.StatusCode >= 400 {
-		slog.Error("Upstream error response", "statusCode", resp.StatusCode, "body", string(data)[:min(len(data), 1000)])
+		slog.Warn("Upstream error response", "proxy", "npm", "method", method, "url", upstreamURL, "statusCode", resp.StatusCode)
 	}
 
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-// ExtractNPMVersionAndReleaseTimeFromMetadata parses NPM package metadata JSON and extracts the latest version and its release time.
-func (d *NPMDependencyProxyController) ExtractNPMVersionAndReleaseTimeFromMetadata(data []byte) (string, time.Time) {
+// ExtractNPMReleaseTimeFromMetadata parses NPM package metadata JSON and returns the publish
+// time of the given version. A zero time is returned when the version has no publish time.
+func (d *NPMDependencyProxyController) ExtractNPMReleaseTimeFromMetadata(data []byte, version string) (time.Time, error) {
 	var metadata struct {
-		DistTags struct {
-			Latest string `json:"latest"`
-		} `json:"dist-tags"`
 		Time map[string]time.Time `json:"time"`
 	}
 
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		slog.Debug("Failed to parse NPM metadata", "error", err)
-		return "", time.Time{}
+		return time.Time{}, err
 	}
 
-	return metadata.DistTags.Latest, metadata.Time[metadata.DistTags.Latest]
+	return metadata.Time[version], nil
+}
+
+// filterNPMMetadataVersions removes every version for which keep returns false from a full
+// npm package document (versions + time) and repoints dist-tags that referenced a removed
+// version: "latest" moves to the highest remaining stable version, other tags are dropped.
+// All other fields are passed through untouched. It returns the rewritten document and the
+// number of removed versions; when nothing is removed the original bytes are returned.
+func filterNPMMetadataVersions(data []byte, keep func(version string, published time.Time) bool) ([]byte, int, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return nil, 0, fmt.Errorf("failed to parse npm metadata: %w", err)
+	}
+
+	var versions map[string]json.RawMessage
+	if raw, ok := doc["versions"]; ok {
+		if err := json.Unmarshal(raw, &versions); err != nil {
+			return nil, 0, fmt.Errorf("failed to parse npm metadata versions: %w", err)
+		}
+	}
+	var times map[string]json.RawMessage
+	if raw, ok := doc["time"]; ok {
+		if err := json.Unmarshal(raw, &times); err != nil {
+			return nil, 0, fmt.Errorf("failed to parse npm metadata time: %w", err)
+		}
+	}
+
+	removed := 0
+	for version := range versions {
+		var published time.Time
+		if raw, ok := times[version]; ok {
+			_ = json.Unmarshal(raw, &published) // unparsable time stays zero
+		}
+		if !keep(version, published) {
+			delete(versions, version)
+			delete(times, version)
+			removed++
+		}
+	}
+	if removed == 0 {
+		return data, 0, nil
+	}
+
+	var distTags map[string]string
+	if raw, ok := doc["dist-tags"]; ok {
+		if err := json.Unmarshal(raw, &distTags); err != nil {
+			return nil, 0, fmt.Errorf("failed to parse npm metadata dist-tags: %w", err)
+		}
+	}
+	for tag, version := range distTags {
+		if _, ok := versions[version]; ok {
+			continue
+		}
+		delete(distTags, tag)
+		if tag == "latest" {
+			if replacement := highestStableNPMVersion(versions); replacement != "" {
+				distTags[tag] = replacement
+			}
+		}
+	}
+
+	for key, value := range map[string]any{"versions": versions, "time": times, "dist-tags": distTags} {
+		if _, ok := doc[key]; !ok {
+			continue
+		}
+		raw, err := json.Marshal(value)
+		if err != nil {
+			return nil, 0, err
+		}
+		doc[key] = raw
+	}
+
+	out, err := json.Marshal(doc)
+	if err != nil {
+		return nil, 0, err
+	}
+	return out, removed, nil
+}
+
+// highestStableNPMVersion returns the highest non-prerelease semver version, or "" if none exists.
+func highestStableNPMVersion(versions map[string]json.RawMessage) string {
+	var best *semver.Version
+	bestRaw := ""
+	for raw := range versions {
+		v, err := semver.NewVersion(raw)
+		if err != nil || v.Prerelease() != "" {
+			continue
+		}
+		if best == nil || v.GreaterThan(best) {
+			best, bestRaw = v, raw
+		}
+	}
+	return bestRaw
 }

@@ -67,7 +67,7 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 
 	// Create search key (purl without version)
 	purl.Version = ""
-	purl.Qualifiers = nil
+	purl.Qualifiers = matchingQualifiers(purl)
 	searchPurl, err := PURLToString(purl)
 	if err != nil {
 		slog.Warn("failed to unescape purl for matching", "purl", purl.ToString(), "err", err)
@@ -86,13 +86,50 @@ func ParsePurlForMatching(purl packageurl.PackageURL) *PurlMatchContext {
 
 func ToPurlWithoutVersion(purl packageurl.PackageURL) string {
 	purl.Version = ""
-	purl.Qualifiers = nil
+	purl.Qualifiers = matchingQualifiers(purl)
 	purlString, err := PURLToString(purl)
 	if err != nil {
 		slog.Warn("failed to unescape purl without version", "purl", purl.ToString(), "err", err)
 		return purl.ToString()
 	}
 	return purlString
+}
+
+// matchingQualifiers returns the qualifiers that are part of a purl's identity for
+// database matching. For most types that is none. OCI purls are the exception: per the
+// purl spec the name is only the last path segment and the image location lives in the
+// repository_url qualifier - without it, every "nginx" on any registry would match.
+func matchingQualifiers(purl packageurl.PackageURL) packageurl.Qualifiers {
+	if purl.Type != packageurl.TypeOCI {
+		return nil
+	}
+	repositoryURL := NormalizeOCIRepositoryURL(purl.Qualifiers.Map()["repository_url"])
+	if repositoryURL == "" {
+		return nil
+	}
+	return packageurl.QualifiersFromMap(map[string]string{"repository_url": repositoryURL})
+}
+
+// NormalizeOCIRepositoryURL brings an OCI repository_url qualifier into its matching form:
+// lowercase, without scheme and trailing slash (e.g. "docker.io/library/nginx").
+func NormalizeOCIRepositoryURL(repositoryURL string) string {
+	repositoryURL = strings.ToLower(strings.TrimSpace(repositoryURL))
+	repositoryURL = strings.TrimPrefix(repositoryURL, "https://")
+	repositoryURL = strings.TrimPrefix(repositoryURL, "http://")
+	return strings.TrimRight(repositoryURL, "/")
+}
+
+// OCIPurlFromImageReference returns the spec-conform purl of a fully qualified image
+// reference without tag or digest, e.g. "docker.io/library/nginx" ->
+// pkg:oci/nginx?repository_url=docker.io/library/nginx.
+func OCIPurlFromImageReference(imageReference string) packageurl.PackageURL {
+	repositoryURL := NormalizeOCIRepositoryURL(imageReference)
+	name := repositoryURL
+	if idx := strings.LastIndex(repositoryURL, "/"); idx != -1 {
+		name = repositoryURL[idx+1:]
+	}
+	return *packageurl.NewPackageURL(packageurl.TypeOCI, "", name, "",
+		packageurl.QualifiersFromMap(map[string]string{"repository_url": repositoryURL}), "")
 }
 
 // ref: https://github.com/google/osv.dev/blob/a751ceb26522f093edf26c0ad167cfd0967716d9/osv/purl_helpers.py

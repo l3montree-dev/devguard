@@ -158,6 +158,10 @@ func main() {
 		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
+					if os.Getenv("DISABLE_DAEMONS") == "true" {
+						slog.Info("background daemons are disabled via DISABLE_DAEMONS environment variable")
+						return nil
+					}
 					go daemonRunner.Start(ctx) // start in background
 					return nil
 				},
