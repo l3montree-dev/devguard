@@ -20,6 +20,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/lib/pq"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
@@ -63,7 +64,7 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 			searchPurls = append(searchPurls, s)
 		}
 	}
-	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl IN ?", searchPurls)
+	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl = ANY(?)", pq.Array(searchPurls))
 	query = BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
 
 	err := query.Order("id").Find(&components).Error
