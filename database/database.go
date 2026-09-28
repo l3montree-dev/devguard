@@ -92,6 +92,8 @@ func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
 	config.MaxConns = cfg.MaxOpenConns
 	config.MinConns = cfg.MinConns
 	config.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	// a killed client cannot abort its own statements, the server then stops them within seconds instead of running them to the end with all their locks held
+	config.ConnConfig.RuntimeParams["client_connection_check_interval"] = "5s"
 
 	ctx := context.Background()
 

@@ -80,12 +80,7 @@ func BenchmarkNewScanAsset(b *testing.B) {
 
 	iterations := 0
 	for b.Loop() {
-		b.StopTimer()
-		if _, err := pool.Exec(context.Background(), `DROP TABLE IF EXISTS purl_mapping, vuln_paths, new_dependency_vulns`); err != nil {
-			b.Fatalf("could not drop scan tables: %v", err)
-		}
-		b.StartTimer()
-		runner.SetDebugOptions(daemons.DebugOptions{DryRun: true})
+		runner.SetDebugOptions(daemons.DebugOptions{DryRun: false})
 
 		if err := runner.NewScanAsset(context.Background()); err != nil {
 			b.Fatalf("NewScanAsset failed: %v", err)
@@ -105,11 +100,7 @@ func BenchmarkNewScanAsset(b *testing.B) {
 	b.ReportMetric(float64(queries.Calls())/float64(iterations), "db_calls/op")
 	b.ReportMetric(float64(queries.Duration().Milliseconds())/float64(iterations), "db_ms/op")
 
-	var mappedRows int64
-	if err := db.Raw(`SELECT count(*) FROM vuln_paths;`).Scan(&mappedRows).Error; err != nil {
-		b.Fatalf("could not count vuln_paths rows: %v", err)
-	}
-	b.Logf("%d iteration(s) over %d dependencies produced %d vuln_path rows", iterations, dependencies, mappedRows)
+	b.Logf("%d iteration(s) over %d dependencies", iterations, dependencies)
 	for _, line := range queries.Report(10, iterations) {
 		b.Logf("%s", line)
 	}

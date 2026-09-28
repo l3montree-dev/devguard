@@ -772,16 +772,18 @@ func (runner *DaemonRunner) NewScanAsset(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Release()
+	// the scan session is closed instead of reused, ending it releases the advisory lock, drops the temp tables and rolls back whatever an aborted run left open
+	defer func() {
+		conn.Conn().Close(context.Background())
+		conn.Release()
+	}()
 
 	start := time.Now()
 
-	snapshot, unlock, err := ensureIsolation(ctx, conn)
+	snapshot, err := ensureIsolation(ctx, conn)
 	if err != nil {
 		return fmt.Errorf("could not ensure isolation of scan: %w", err)
 	}
-	// deferred after conn.Release so the lock is released before the conn goes back to the pool
-	defer unlock()
 
 	jobFilter := newJobFilter(snapshot)
 
@@ -809,30 +811,22 @@ func (runner *DaemonRunner) NewScanAsset(ctx context.Context) error {
 var errScanAlreadyRunning = errors.New("another scan is already running")
 
 // executes all prerequisites for isolation of the scan
-// takes the single run lock, which the caller must release with unlock, and snapshots the sboms to detect concurrent changes
-func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnapshot, unlock func(), err error) {
+// takes the single run lock, it lives as long as the session, and snapshots the sboms to detect concurrent changes
+func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnapshot, err error) {
 	lockKey := utils.HashToInt64("daemon.NewScanAsset")
 	var locked bool
 	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1);`, lockKey).Scan(&locked); err != nil {
-		return nil, nil, fmt.Errorf("could not acquire scan lock: %w", err)
+		return nil, fmt.Errorf("could not acquire scan lock: %w", err)
 	}
 	if !locked {
-		return nil, nil, errScanAlreadyRunning
+		return nil, errScanAlreadyRunning
 	}
-	unlock = func() {
-		conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1);`, lockKey)
-	}
-	defer func() {
-		if err != nil {
-			unlock()
-		}
-	}()
 
 	slog.Info("snapshotting sboms table")
 
 	sbomRows, err := conn.Query(ctx, sbomFingerprintQuery+` GROUP BY asset_id, asset_version_name;`)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not snapshot sboms table: %w", err)
+		return nil, fmt.Errorf("could not snapshot sboms table: %w", err)
 	}
 	defer sbomRows.Close()
 
@@ -842,15 +836,15 @@ func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnap
 	for sbomRows.Next() {
 		err = sbomRows.Scan(&key.assetID, &key.assetVersionName, &fingerprint)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not scan sbom row: %w", err)
+			return nil, fmt.Errorf("could not scan sbom row: %w", err)
 		}
 		snapshot[key] = fingerprint
 	}
 	sbomRows.Close()
 	if err := sbomRows.Err(); err != nil {
-		return nil, nil, fmt.Errorf("error when scanning sbom rows: %w", err)
+		return nil, fmt.Errorf("error when scanning sbom rows: %w", err)
 	}
-	return snapshot, unlock, nil
+	return snapshot, nil
 }
 
 // scan all SBOMS for affected components and compute the new dependency vulns from that
@@ -958,19 +952,13 @@ func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn 
 	}
 	defer tx.Rollback(ctx)
 
-	// the scratch tables of the previous run are kept until now for debugging
-	_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS purl_mapping, purl_to_cves, vuln_paths, new_dependency_vulns;`)
-	if err != nil {
-		return nil, fmt.Errorf("could not drop scratch tables of the previous run: %w", err)
-	}
-
-	// make that temporary when not testing
+	// only needed to build purl_mapping, the session scoped temp tables are dropped when the scan session closes
 	_, err = tx.Exec(ctx, `
-	CREATE TABLE purl_mapping (
+	CREATE TEMP TABLE purl_affected_components (
 		purl text,
 		affected_component_id bigint,
 		fixed_version text
-	);`)
+	) ON COMMIT DROP;`)
 	if err != nil {
 		return nil, fmt.Errorf("could not create temp table for purl Mapping: %w", err)
 	}
@@ -979,7 +967,7 @@ func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn 
 	slog.Info("start copying into temporary table")
 	// use canonical purls to ensure consistent matching
 	purlMemo := make(map[string]string, len(purlAffectedComponents))
-	_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
+	_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_affected_components"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
 		purl := canonicalPurl(purlAffectedComponents[i].purl, purlMemo)
 		// the scan service adds the "v" prefix of the purl version as well
 		return []any{purl, purlAffectedComponents[i].affectedComponentID, normalize.FixFixedVersion(purl, purlAffectedComponents[i].fixedVersion)}, nil
@@ -990,40 +978,23 @@ func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn 
 
 	//  join the cve information at this point so we have access to it later
 	// also filter out withdrawn cves
-	// then replace the purl mapping table with the new one
 	_, err = tx.Exec(ctx, `
-	CREATE TABLE purl_to_cves AS (
-		WITH mapped AS (
-			SELECT DISTINCT pm.purl, pm.fixed_version, cac.cve_id, cves.cve
-			FROM purl_mapping pm
-			JOIN cve_affected_component cac
-			ON cac.affected_component_id = pm.affected_component_id
-			JOIN cves
-			ON cves.id = cac.cve_id
-			AND cves.withdrawn IS NULL
-		)
-		SELECT m.purl, m.fixed_version, m.cve_id
-		FROM mapped m
-		-- same rule as the scan service: an alias target is dropped, of two mutual aliases the smaller cve is kept
-		WHERE NOT EXISTS (
-			SELECT FROM mapped o
-			JOIN cve_relationships r ON r.source_cve = o.cve AND r.target_cve = m.cve AND r.relationship_type = 'alias'
-			WHERE o.purl = m.purl AND o.cve <> m.cve
-			AND NOT (m.cve < o.cve AND EXISTS (
-				SELECT FROM cve_relationships back
-				WHERE back.source_cve = m.cve AND back.target_cve = o.cve AND back.relationship_type = 'alias'))
-		)
-	);
-	
-	DROP TABLE public.purl_mapping;
-	ALTER TABLE public.purl_to_cves RENAME TO purl_mapping;`)
+	CREATE TEMP TABLE purl_mapping AS (
+		SELECT DISTINCT pac.purl,pac.fixed_version, cac.cve_id
+		FROM purl_affected_components pac
+		JOIN cve_affected_component cac
+		ON cac.affected_component_id = pac.affected_component_id
+		JOIN cves
+		ON cves.id = cac.cve_id
+		AND cves.withdrawn IS NULL
+	);`)
 	if err != nil {
 		return nil, fmt.Errorf("could not convert affected component mapping to cve id mapping: %w", err)
 	}
 
 	// build an index on both columns for index only scans
 	_, err = tx.Exec(ctx, `
-	CREATE INDEX ON public.purl_mapping (purl,cve_id,fixed_version);`)
+	CREATE INDEX ON purl_mapping (purl,cve_id,fixed_version);`)
 	if err != nil {
 		return nil, fmt.Errorf("could not build purl mapping index: %w", err)
 	}
@@ -1040,7 +1011,7 @@ func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn 
 func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx pgx.Tx, affectedPurls []purlAffectedComponent, purlMemo map[string]string) error {
 	start := time.Now()
 	_, err := scanTx.Exec(ctx, `
-			CREATE TABLE vuln_paths (
+			CREATE TEMP TABLE vuln_paths (
 				component_purl text,
 				root uuid,
 				path uuid[]
@@ -1127,10 +1098,9 @@ func (runner *DaemonRunner) materializeNewDependencyVulns(ctx context.Context, s
 	slog.Info("start building new dependency vulns from paths and affected components mapping")
 
 	start := time.Now()
-	_, err := scanTx.Exec(ctx, `
-		CREATE TABLE public.new_dependency_vulns AS
+	materialized, err := scanTx.Exec(ctx, `
+		CREATE TEMP TABLE new_dependency_vulns AS
 		WITH found AS (`+scanResultsQuery+`)
-		-- only keep what is not yet associated with the artifact, the vuln itself may already exist
 		SELECT DISTINCT ON (f.id, f.artifact_name)
 			f.id, f.component_purl, f.path_purls, f.fixed_version, f.cve_id,
 			f.asset_id, f.asset_version_name, f.artifact_name,
@@ -1149,7 +1119,7 @@ func (runner *DaemonRunner) materializeNewDependencyVulns(ctx context.Context, s
 	}
 
 	// speed up artifact lookup queries on new dependency vuln state
-	_, err = scanTx.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON public.new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
+	_, err = scanTx.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
 	if err != nil {
 		return fmt.Errorf("could not create index on new_dependency_vulns artifact lookup: %w", err)
 	}
@@ -1159,7 +1129,7 @@ func (runner *DaemonRunner) materializeNewDependencyVulns(ctx context.Context, s
 		return fmt.Errorf("could not commit scan transaction: %w", err)
 	}
 
-	slog.Info("finished materializing new dependency vulns", "time", time.Since(start))
+	slog.Info("finished materializing new dependency vulns", "newVulns", materialized.RowsAffected(), "time", time.Since(start))
 	return nil
 }
 
@@ -1653,6 +1623,7 @@ func (runner *DaemonRunner) FetchNewVulnsForArtifact(ctx context.Context, tx pgx
 }
 
 // FetchScanResultsForArtifact returns everything the last scan found for the artifact, regardless of what is already stored
+// the scan tables are temp tables, so tx must belong to the scan session
 func (runner *DaemonRunner) FetchScanResultsForArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact) ([]models.DependencyVuln, error) {
 	rows, err := tx.Query(ctx, `
 	SELECT DISTINCT ON (f.id) f.component_purl, f.path_purls, f.cve_id, f.fixed_version
