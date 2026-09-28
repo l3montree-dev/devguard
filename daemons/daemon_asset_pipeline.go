@@ -267,7 +267,7 @@ func newScanRunCache() *scanRunCache {
 // -----------------------------------------------------------------------------------
 
 func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
-	err := runner.NewScanAsset()
+	err := runner.NewScanAsset(ctx)
 	if err != nil {
 		errChan <- pipelineError{err: err}
 	}
@@ -756,8 +756,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 	return out
 }
 
-func (runner *DaemonRunner) NewScanAsset() error {
-	ctx := context.Background()
+func (runner *DaemonRunner) NewScanAsset(ctx context.Context) error {
 	conn, err := runner.pgxpool.Acquire(ctx)
 	if err != nil {
 		return err
@@ -1178,7 +1177,7 @@ func cleanUpOrphanVulns(ctx context.Context, conn *pgxpool.Conn) error {
 	cmd, err := conn.Exec(ctx, `
 	WITH orphan_vulns AS (
 		UPDATE public.dependency_vulns dv
-		SET state = 'fixed'
+		SET state = 'fixed', last_state_change = now()
 		WHERE NOT EXISTS (SELECT FROM cves c WHERE c.cve = dv.cve_id)
 			AND dv.state <> 'fixed' 
 		RETURNING dv.id
