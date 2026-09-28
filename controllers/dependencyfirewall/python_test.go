@@ -40,6 +40,12 @@ func TestPyPIParsePackage(t *testing.T) {
 		expectedVersion string
 	}{
 		{"/simple/requests/", "requests", ""},
+		// PEP 503: name normalization must apply to /simple/ lookups too, otherwise a
+		// firewall rule written against the normalized name can be bypassed by using
+		// an equivalent, unnormalized spelling in the request path.
+		{"/simple/Typing_Extensions/", "typing-extensions", ""},
+		{"/simple/TYPING--EXTENSIONS/", "typing-extensions", ""},
+		{"/simple/chartkit.core/", "chartkit-core", ""},
 		{"/packages/ab/cd/requests-2.31.0-py3-none-any.whl", "requests", "2.31.0"},
 		{"/packages/ab/cd/requests-2.31.0-py3-none-any.whl/", "requests", "2.31.0"},
 		{"/packages/ab/cd/requests-2.32.3.tar.gz", "requests", "2.32.3"},

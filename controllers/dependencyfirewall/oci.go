@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -69,6 +70,10 @@ func (ociEcosystem) name() string { return "oci" }
 
 func (ociEcosystem) trimPrefix(path string) string {
 	return trimWithRegex(path, ociProxyPrefixRe)
+}
+
+func (ociEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	return semverMatchesVersion(comp, version)
 }
 
 // parsePackage extracts the fully-qualified image name (registry/image) and

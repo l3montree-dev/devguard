@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -106,6 +105,56 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 			affectedComponents = append(affectedComponents, transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)...)
 		}
 	}
+
+	// The packages above are flagged for all versions, which lets a bare
+	// "install <name>" be blocked before any version is resolved (see
+	// checkMalicious in controller.go: it only blocks unconditionally when a
+	// component affects all versions, and otherwise defers until a version is
+	// known). That can't exercise the actual version-comparison logic, so each
+	// ecosystem also gets a second fake package flagged at a specific version,
+	// "v1.0.0", to prove equivalent-but-differently-spelled versions are
+	// recognized as equal once a version is known (e.g. semver's "v1.0.0" vs
+	// "1.0.0", or PEP 440's "v1.0.0" vs "1.0.0.0").
+	versionedTestPackages := map[string]string{
+		"npm":  "fake-malicious-npm-package-versioned",
+		"go":   "github.com/fake-org/malicious-package-versioned",
+		"pypi": "fake-malicious-pypi-package-versioned",
+		// OCI tags are compared as versions too, so a distinct fake image lets
+		// callers test tag-equivalence (e.g. "1.0.0" vs "v1.0.0") without
+		// disturbing the "any tag is blocked" fixture above.
+		"oci": "docker.io/fake-org/malicious-image-versioned",
+	}
+	for ecosystem, pkgName := range versionedTestPackages {
+		normalizedPkgName := strings.NewReplacer("/", "-", "@", "-", ":", "-", ".", "-").Replace(pkgName)
+		fakeID := fmt.Sprintf("MAL-FAKE-TEST-%s-%s", strings.ToUpper(ecosystem), strings.ToUpper(normalizedPkgName))
+		fakeEntry := &dtos.OSV{
+			ID:      fakeID,
+			Summary: fmt.Sprintf("Fake malicious %s package (specific version) for testing", ecosystem),
+			Details: "This is a fake malicious package entry, flagged at a specific version, used for testing version-comparison logic in the dependency proxy",
+			Affected: []dtos.Affected{
+				{
+					Package: dtos.Package{
+						Ecosystem: ecosystem,
+						Name:      pkgName,
+						Purl:      fakePurl(ecosystem, pkgName),
+					},
+					Versions: []string{"v1.0.0"},
+				},
+			},
+			Published: time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
+			Modified:  time.Date(2024, 3, 22, 0, 0, 0, 0, time.UTC),
+		}
+		osvEntries = append(osvEntries, OSVEntry{OSV: fakeEntry, ModifiedTimestamp: fakeEntry.Modified})
+		packages = append(packages, models.MaliciousPackage{
+			ID:        fakeID,
+			Summary:   fakeEntry.Summary,
+			Details:   fakeEntry.Details,
+			Published: fakeEntry.Published,
+			Modified:  fakeEntry.Published,
+		})
+		affectedComponents = append(affectedComponents, transformer.MaliciousAffectedComponentFromOSV(fakeEntry, fakeID)...)
+	}
+
 	return packages, affectedComponents, osvEntries
 }
 
@@ -167,66 +216,4 @@ func (c *MaliciousPackageChecker) GetMaliciousComponents(ctx context.Context, ec
 
 func (c *MaliciousPackageChecker) GetMaliciousPackage(ctx context.Context, id string) (models.MaliciousPackage, error) {
 	return c.repository.GetMaliciousPackageByID(ctx, nil, id)
-}
-
-func MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
-	if comp.AffectsAllVersions() || version == "" {
-		return false
-	}
-
-	if comp.Version != nil {
-		if *comp.Version == version {
-			return true
-		}
-		requested, err := normalize.ConvertToSemver(version)
-		if err != nil {
-			return false
-		}
-		stored, err := normalize.ConvertToSemver(*comp.Version)
-		if err != nil {
-			return false
-		}
-		// A version list entry carries no range, so this is the final answer.
-		return stored == requested
-	}
-
-	if comp.SemverIntroduced == nil && comp.SemverFixed == nil {
-		return false
-	}
-
-	v, err := parseSemver(version)
-	if err != nil {
-		slog.Debug("could not parse version for malicious range match", "version", version, "error", err)
-		return false
-	}
-
-	if comp.SemverIntroduced != nil {
-		introduced, err := semver.ParseTolerant(*comp.SemverIntroduced)
-		if err != nil {
-			return false
-		}
-		if v.LT(introduced) {
-			return false
-		}
-	}
-
-	if comp.SemverFixed != nil {
-		fixed, err := semver.ParseTolerant(*comp.SemverFixed)
-		if err != nil {
-			return false
-		}
-		if v.GTE(fixed) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func parseSemver(version string) (semver.Version, error) {
-	normalized, err := normalize.ConvertToSemver(version)
-	if err != nil {
-		return semver.Version{}, err
-	}
-	return semver.ParseTolerant(normalized)
 }
