@@ -98,6 +98,9 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 			// Run the daemon pipeline for this specific asset
 			runner := f.CreateDaemonRunner()
+			// the scan is a separate job, the pipeline only runs the per asset stages
+			err = runner.NewScanAsset(context.Background())
+			assert.NoError(t, err)
 			err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 			assert.NoError(t, err)
 
@@ -487,6 +490,9 @@ func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
 
 		// Run the pipeline
 		runner := f.CreateDaemonRunner()
+		// the scan is a separate job, the pipeline only runs the per asset stages
+		err = runner.NewScanAsset(context.Background())
+		assert.NoError(t, err)
 		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
 
@@ -656,6 +662,9 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 
 			// Run the pipeline
 			runner := f.CreateDaemonRunner()
+			// the scan is a separate job, the pipeline only runs the per asset stages
+			err = runner.NewScanAsset(context.Background())
+			assert.NoError(t, err)
 			err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 			assert.NoError(t, err)
 

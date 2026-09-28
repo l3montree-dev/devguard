@@ -266,11 +266,8 @@ func newScanRunCache() *scanRunCache {
 //
 // -----------------------------------------------------------------------------------
 
+// runPipeline only runs the concurrent per asset stages, the global scan runs before it (see runScan)
 func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
-	err := runner.NewScanAsset(ctx)
-	if err != nil {
-		errChan <- pipelineError{err: err}
-	}
 	ch := runner.FetchAssetDetails(ctx, idsChan, errChan)
 	ch = runner.DeleteOldAssetVersions(ch, errChan)
 	ch = runner.SyncUpstream(ch, errChan)
@@ -294,12 +291,30 @@ func (runner *DaemonRunner) RunAssetPipeline(ctx context.Context, forceAll bool)
 	runner.collectErrors(errChan)
 	var idsChan <-chan uuid.UUID
 	if forceAll {
+		// scheduled runs scan hourly in runDaemons, a forced run of every asset scans right away
+		if err := runner.runScan(ctx); err != nil {
+			monitoring.Alert("could not scan sboms", err)
+		}
 		idsChan = runner.FetchAllAssetIDs(ctx)
 	} else {
 		idsChan = runner.FetchAssetIDs(ctx)
 	}
 
 	runner.runPipeline(ctx, idsChan, errChan)
+}
+
+// runScan runs the global scan synchronously, it must finish before the per asset stages so they see the new vulns
+func (runner *DaemonRunner) runScan(ctx context.Context) error {
+	if !runner.stageEnabled("ScanAsset") {
+		return nil
+	}
+	err := runner.NewScanAsset(ctx)
+	if errors.Is(err, errScanAlreadyRunning) {
+		// the running scan covers the same sboms
+		slog.Info("skipping scan, another scan is already running")
+		return nil
+	}
+	return err
 }
 
 func (runner *DaemonRunner) RunDaemonPipelineForAsset(ctx context.Context, assetID uuid.UUID) error {
@@ -342,10 +357,6 @@ func failStage(rootCtx context.Context, stageSpan trace.Span, err error) {
 func (runner *DaemonRunner) collectErrors(input <-chan pipelineError) {
 	go func() {
 		for assetWithDetails := range input {
-			if assetWithDetails.asset.ID == uuid.Nil {
-				monitoring.Alert(fmt.Sprintf("pipeline error when scanning: %v", assetWithDetails.err), assetWithDetails.err)
-			}
-
 			monitoring.Alert(fmt.Sprintf("pipeline error for asset %s: %v", assetWithDetails.asset.ID, assetWithDetails.err), assetWithDetails.err)
 
 			asset := assetWithDetails.asset
@@ -779,19 +790,23 @@ func (runner *DaemonRunner) NewScanAsset(ctx context.Context) error {
 		return fmt.Errorf("could not scan SBOMs: %w", err)
 	}
 
-	err = runner.handleScanResults(ctx, conn, jobFilter)
-	if err != nil {
-		return fmt.Errorf("could not handle scan results: %w", err)
+	// failed assets are retried by the next run, they must not stop the orphan clean up
+	handleErr := runner.handleScanResults(ctx, conn, jobFilter)
+
+	if !runner.debugOptions.DryRun {
+		if err := cleanUpOrphanVulns(ctx, conn); err != nil {
+			return errors.Join(handleErr, fmt.Errorf("could not clean up orphan vulns: %w", err))
+		}
+	}
+	if handleErr != nil {
+		return fmt.Errorf("could not handle scan results: %w", handleErr)
 	}
 
-	err = cleanUpOrphanVulns(ctx, conn)
-	if err != nil {
-		return fmt.Errorf("could not clean up orphan vulns: %w", err)
-	}
 	slog.Info("successfully finished scan background job", "time", time.Since(start))
-
 	return nil
 }
+
+var errScanAlreadyRunning = errors.New("another scan is already running")
 
 // executes all prerequisites for isolation of the scan
 // takes the single run lock, which the caller must release with unlock, and snapshots the sboms to detect concurrent changes
@@ -802,7 +817,7 @@ func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnap
 		return nil, nil, fmt.Errorf("could not acquire scan lock: %w", err)
 	}
 	if !locked {
-		return nil, nil, fmt.Errorf("another scan is already running")
+		return nil, nil, errScanAlreadyRunning
 	}
 	unlock = func() {
 		conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1);`, lockKey)
@@ -1156,16 +1171,29 @@ func (runner *DaemonRunner) handleScanResults(ctx context.Context, conn *pgxpool
 	startHandling := time.Now()
 	start := time.Now()
 	cache := newScanRunCache()
+	failed := 0
 	for i, assetID := range assetIDs {
 		err = runner.handleScanResultForAsset(ctx, jobFilter, conn, assetID, cache)
 		if err != nil {
+			failed++
 			slog.Error("could not handle scan result for asset", "err", err, "asset", assetID)
 		} else if (i+1)%25 == 0 {
 			slog.Info(fmt.Sprintf("finished asset %d/%d", i+1, len(assetIDs)), "batchTime", time.Since(start))
 			start = time.Now()
 		}
 	}
-	slog.Info("finished handling all scan results", "time", time.Since(startHandling))
+	slog.Info("finished handling all scan results", "time", time.Since(startHandling), "failed", failed)
+
+	// the asset pipeline runs right after the scan, making these assets due there applies vex rules, tickets and stats to the new vulns
+	if !runner.debugOptions.DryRun && len(assetIDs) > 0 {
+		if _, err := conn.Exec(ctx, `UPDATE assets SET pipeline_last_run = to_timestamp(0) WHERE id = ANY($1);`, assetIDs); err != nil {
+			return fmt.Errorf("could not mark scanned assets for the asset pipeline: %w", err)
+		}
+	}
+
+	if failed > 0 {
+		return fmt.Errorf("%d of %d assets failed, see the logs for details", failed, len(assetIDs))
+	}
 	return nil
 }
 
@@ -2274,6 +2302,9 @@ func (runner *DaemonRunner) StartBenchmarkJobs(ctx context.Context, stages []str
 	errChan := make(chan pipelineError, 100)
 	runner.collectErrors(errChan)
 
+	if err := runner.runScan(ctx); err != nil {
+		monitoring.Alert("could not scan sboms", err)
+	}
 	runner.runPipeline(ctx, runner.FetchAllAssetIDs(ctx), errChan)
 }
 

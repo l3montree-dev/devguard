@@ -87,7 +87,7 @@ func BenchmarkNewScanAsset(b *testing.B) {
 		b.StartTimer()
 		runner.SetDebugOptions(daemons.DebugOptions{DryRun: true})
 
-		if err := runner.NewScanAsset(); err != nil {
+		if err := runner.NewScanAsset(context.Background()); err != nil {
 			b.Fatalf("NewScanAsset failed: %v", err)
 		}
 		iterations++
