@@ -1028,6 +1028,12 @@ func (runner *DaemonRunner) ScanAndStreamVulnPaths(ctx context.Context, scanTx p
 	resultsChannel := make(chan purlPathResult)
 	vulnPathColumns := []string{"component_purl", "root", "path"}
 
+	defer func() {
+		// drain the channel so we don't leak the producer go routine on failures
+		for range resultsChannel {
+		}
+	}()
+
 	group.Go(func() error {
 		return runner.ScanAffectedPurls(ctx, scanTx, resultsChannel, utils.Map(affectedPurls, func(pac purlAffectedComponent) string { return pac.purl }))
 	})
@@ -1121,12 +1127,6 @@ func (runner *DaemonRunner) materializeNewDependencyVulns(ctx context.Context, s
 		return fmt.Errorf("could not create index on new_dependency_vulns artifact lookup: %w", err)
 	}
 
-	// speed up artifact lookup queries on sboms
-	_, err = scanTx.Exec(ctx, `CREATE INDEX IF NOT EXISTS artifact_lookup_idx ON public.sboms (asset_id, asset_version_name, artifact_name);`)
-	if err != nil {
-		return fmt.Errorf("could not create index on sboms artifact lookup: %w", err)
-	}
-
 	err = scanTx.Commit(ctx)
 	if err != nil {
 		return fmt.Errorf("could not commit scan transaction: %w", err)
@@ -1183,8 +1183,8 @@ func cleanUpOrphanVulns(ctx context.Context, conn *pgxpool.Conn) error {
 			AND dv.state <> 'fixed' 
 		RETURNING dv.id
 	)
-	INSERT INTO vuln_events (type, user_id, dependency_vuln_id)
-	SELECT 'fixed', 'system-orphan', id
+	INSERT INTO vuln_events (created_at, type, user_id, dependency_vuln_id)
+	SELECT now(),'fixed', 'system-orphan', id
 	FROM orphan_vulns;`)
 	if err != nil {
 		return fmt.Errorf("could clean up orphan vulns: %w", err)
