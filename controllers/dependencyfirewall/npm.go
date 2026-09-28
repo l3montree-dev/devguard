@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -44,6 +45,10 @@ func (npmEcosystem) name() string { return "npm" }
 
 func (npmEcosystem) trimPrefix(path string) string {
 	return trimWithRegex(path, npmProxyPrefixRe)
+}
+
+func (npmEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	return semverMatchesVersion(comp, version)
 }
 
 func (npmEcosystem) parsePackage(path string) (string, string) {
