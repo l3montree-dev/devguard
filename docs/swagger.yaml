@@ -10815,32 +10815,17 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10857,32 +10842,17 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -11615,6 +11585,49 @@ paths:
       summary: Proxy Go module requests
       tags:
       - Dependency Firewall
+  /dependency-proxy/{secret}/npm/-/{path}:
+    get:
+      parameters:
+      - description: dependency proxy secret
+        in: path
+        name: secret
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+      security:
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Proxy npm registry API request
+      tags:
+      - Dependency Firewall
+    post:
+      parameters:
+      - description: dependency proxy secret
+        in: path
+        name: secret
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+      security:
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Proxy npm registry API request
+      tags:
+      - Dependency Firewall
   /dependency-proxy/{secret}/npm/{package}:
     get:
       parameters:
@@ -11686,28 +11699,6 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Proxy npm tarball download
-      tags:
-      - Dependency Firewall
-  /dependency-proxy/{secret}/npm/{path}:
-    post:
-      parameters:
-      - description: dependency proxy secret
-        in: path
-        name: secret
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                additionalProperties: {}
-                type: object
-          description: OK
-      security:
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Proxy npm audit request
       tags:
       - Dependency Firewall
   /dependency-proxy/{secret}/npm/{scope}/{name}:
@@ -11873,6 +11864,49 @@ paths:
       summary: Proxy Go module requests
       tags:
       - Dependency Firewall
+  /dependency-proxy/npm/-/{path}:
+    get:
+      parameters:
+      - description: dependency proxy secret
+        in: path
+        name: secret
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+      security:
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Proxy npm registry API request
+      tags:
+      - Dependency Firewall
+    post:
+      parameters:
+      - description: dependency proxy secret
+        in: path
+        name: secret
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+      security:
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Proxy npm registry API request
+      tags:
+      - Dependency Firewall
   /dependency-proxy/npm/{package}:
     get:
       parameters:
@@ -11944,28 +11978,6 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Proxy npm tarball download
-      tags:
-      - Dependency Firewall
-  /dependency-proxy/npm/{path}:
-    post:
-      parameters:
-      - description: dependency proxy secret
-        in: path
-        name: secret
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                additionalProperties: {}
-                type: object
-          description: OK
-      security:
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Proxy npm audit request
       tags:
       - Dependency Firewall
   /dependency-proxy/npm/{scope}/{name}:
@@ -21248,17 +21260,17 @@ paths:
       parameters:
       - description: Organization ID
         in: query
-        name: orgid
+        name: orgId
         schema:
           type: string
       - description: Project ID
         in: query
-        name: projectid
+        name: projectId
         schema:
           type: string
       - description: Asset ID
         in: query
-        name: assetid
+        name: assetId
         schema:
           type: string
       responses:
