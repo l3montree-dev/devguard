@@ -22,6 +22,8 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/events/eventbroker"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -177,17 +179,6 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		context.Background(),
 		trace.SpanFromContext(ctx.Request().Context()),
 	)
-	// update the license information in the background
-	c.FireAndForget(func() {
-		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifact.ArtifactName), false)
-		if err != nil {
-			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
-		} else {
-			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		}
-	})
-
 	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
 		c.FireAndForget(func() {
 			// Export the updated graph back to CycloneDX format for the event
@@ -223,12 +214,14 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 		}
 	})
 
-	c.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
+	if err := eventbroker.PublishEvent(linkedCtx, nil, events.ArtifactCreated, events.ArtifactCreatedPayload{
+		ArtifactName:     artifact.ArtifactName,
+		AssetVersionName: artifact.AssetVersionName,
+		AssetID:          asset.ID,
+		CreatedAt:        utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt),
+	}); err != nil {
+		slog.Error("could not publish artifact created event", "err", err)
+	}
 
 	return ctx.JSON(201, transformer.ArtifactModelToDTO(artifact))
 }
