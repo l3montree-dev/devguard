@@ -200,8 +200,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	packageName, version := maven.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, maven, packageName, version)
 	if err != nil {
-		slog.Error("Error checking malicious package", "proxy", "maven", "error", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
+		return maliciousCheckFailed(maven, err)
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "maven", "path", requestPath, "status", status, "reason", reason)
@@ -319,12 +318,11 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 
 	status, reason, err := d.checkMalicious(ctx, maven, packageName, version)
 	if err != nil {
-		slog.Error("Error checking malicious package", "proxy", "maven", "error", err)
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
+		return maliciousCheckFailed(maven, err)
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "maven", "package", packageName, "version", version, "reason", reason)
-		return d.blockMaliciousPackage(c, maven, requestPath, reason, http.StatusForbidden)
+		return d.blockMaliciousPackage(c, maven, requestPath, reason, status)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
