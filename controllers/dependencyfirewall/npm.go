@@ -184,19 +184,6 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, npmRegistry, requestPath, c.Request().Header, nil)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		slog.Error("Error fetching from upstream", "proxy", "npm", "error", err)
-		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
-	}
-
-	if statusCode != http.StatusOK {
-		slog.Debug("Upstream returned non-OK status", "proxy", "npm", "status", statusCode)
-		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
-	}
-
 	// The tarball itself carries no publish date - it lives in the package metadata.
 	// Always resolve it, even without MinReleaseAge: the cache is shared across proxy
 	// secrets, so an entry stored for one config must be checkable under another.
@@ -211,9 +198,23 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
 		}
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
-			slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
-		}
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, npmRegistry, requestPath, c.Request().Header, nil)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		slog.Error("Error fetching from upstream", "proxy", "npm", "error", err)
+		return echo.NewHTTPError(http.StatusBadGateway, "Failed to fetch from upstream")
+	}
+
+	if statusCode != http.StatusOK {
+		slog.Debug("Upstream returned non-OK status", "proxy", "npm", "status", statusCode)
+		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
+	}
+
+	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
