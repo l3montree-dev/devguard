@@ -993,13 +993,26 @@ func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn 
 	// then replace the purl mapping table with the new one
 	_, err = tx.Exec(ctx, `
 	CREATE TABLE purl_to_cves AS (
-		SELECT DISTINCT pm.purl,pm.fixed_version, cac.cve_id 
-		FROM purl_mapping pm 
-		JOIN cve_affected_component cac
-		ON cac.affected_component_id = pm.affected_component_id
-		JOIN cves 
-		ON cves.id = cac.cve_id
-		AND cves.withdrawn IS NULL
+		WITH mapped AS (
+			SELECT DISTINCT pm.purl, pm.fixed_version, cac.cve_id, cves.cve
+			FROM purl_mapping pm
+			JOIN cve_affected_component cac
+			ON cac.affected_component_id = pm.affected_component_id
+			JOIN cves
+			ON cves.id = cac.cve_id
+			AND cves.withdrawn IS NULL
+		)
+		SELECT m.purl, m.fixed_version, m.cve_id
+		FROM mapped m
+		-- same rule as the scan service: an alias target is dropped, of two mutual aliases the smaller cve is kept
+		WHERE NOT EXISTS (
+			SELECT FROM mapped o
+			JOIN cve_relationships r ON r.source_cve = o.cve AND r.target_cve = m.cve AND r.relationship_type = 'alias'
+			WHERE o.purl = m.purl AND o.cve <> m.cve
+			AND NOT (m.cve < o.cve AND EXISTS (
+				SELECT FROM cve_relationships back
+				WHERE back.source_cve = m.cve AND back.target_cve = o.cve AND back.relationship_type = 'alias'))
+		)
 	);
 	
 	DROP TABLE public.purl_mapping;
@@ -1201,12 +1214,13 @@ func cleanUpOrphanVulns(ctx context.Context, conn *pgxpool.Conn) error {
 	orphanStart := time.Now()
 	slog.Info("cleaning up orphan vulns")
 
-	// fix all vulns where the cve does not exists anymore and create the respective event
+	// fix all vulns where the cve does not exist anymore or was withdrawn and create the respective event
+	// system scans never fix vulns otherwise, but both cases are a definite statement of the vulndb
 	cmd, err := conn.Exec(ctx, `
 	WITH orphan_vulns AS (
 		UPDATE public.dependency_vulns dv
 		SET state = 'fixed', last_state_change = now()
-		WHERE NOT EXISTS (SELECT FROM cves c WHERE c.cve = dv.cve_id)
+		WHERE NOT EXISTS (SELECT FROM cves c WHERE c.cve = dv.cve_id AND c.withdrawn IS NULL)
 			AND dv.state <> 'fixed' 
 		RETURNING dv.id
 	)
