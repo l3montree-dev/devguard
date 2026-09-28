@@ -82,7 +82,7 @@ type artifactKey struct {
 type purlPathResult struct {
 	Purl  string
 	Paths [][]uuid.UUID // vulnerable node -> ... -> sbom root
-	// sboms reached by more than maxPathsPerRoot paths, none of their paths are kept
+	// sboms reached by more than normalize.MaxPathsPerSBOM paths, none of their paths are kept
 	ExplodedRoots []uuid.UUID
 }
 
@@ -965,7 +965,9 @@ func (runner *DaemonRunner) savePurlMappingToDatabase(ctx context.Context, conn 
 	// use canonical purls to ensure consistent matching
 	purlMemo := make(map[string]string, len(purlAffectedComponents))
 	_, err = tx.CopyFrom(ctx, pgx.Identifier{"purl_mapping"}, []string{"purl", "affected_component_id", "fixed_version"}, pgx.CopyFromSlice(len(purlAffectedComponents), func(i int) ([]any, error) {
-		return []any{canonicalPurl(purlAffectedComponents[i].purl, purlMemo), purlAffectedComponents[i].affectedComponentID, purlAffectedComponents[i].fixedVersion}, nil
+		purl := canonicalPurl(purlAffectedComponents[i].purl, purlMemo)
+		// the scan service adds the "v" prefix of the purl version as well
+		return []any{purl, purlAffectedComponents[i].affectedComponentID, normalize.FixFixedVersion(purl, purlAffectedComponents[i].fixedVersion)}, nil
 	}))
 	if err != nil {
 		return nil, fmt.Errorf("could not copy rows into temporary table: %w", err)
@@ -1800,7 +1802,7 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 				// paths are vulnerable node -> ... -> root, the root is kept so the path can be mapped to its sboms
 				if recordable {
 
-					if len(pathsPerRoot[node]) >= maxPathsPerRoot {
+					if len(pathsPerRoot[node]) >= normalize.MaxPathsPerSBOM {
 						// path explosion, none of the paths into this sbom are kept
 						delete(pathsPerRoot, node)
 						explodedRoots[node] = struct{}{}
@@ -1832,8 +1834,6 @@ func (runner *DaemonRunner) ScanAffectedPurls(ctx context.Context, tx pgx.Tx, re
 
 	return nil
 }
-
-const maxPathsPerRoot = 11
 
 func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)

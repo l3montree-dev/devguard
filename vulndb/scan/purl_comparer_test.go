@@ -19,12 +19,14 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 )
 
 func mustParsePurl(t *testing.T, purl string) packageurl.PackageURL {
@@ -209,6 +211,30 @@ func TestDeduplicateByAlias(t *testing.T) {
 		assert.True(t, cveIDs["CVE-2024-1111"])
 		assert.False(t, cveIDs["CVE-2024-3333"])
 		assert.False(t, cveIDs["CVE-2024-2222"])
+	})
+}
+
+func TestVulnsFromAffectedComponents(t *testing.T) {
+	t.Run("a withdrawn cve is skipped and does not hide its alias", func(t *testing.T) {
+		// CVE-2024-1111 --alias--> CVE-2024-2222, but CVE-2024-1111 was withdrawn
+		withdrawn := datatypes.Date(time.Now())
+		component := models.AffectedComponent{
+			CVE: []models.CVE{
+				{
+					CVE:       "CVE-2024-1111",
+					Withdrawn: &withdrawn,
+					Relationships: []models.CVERelationship{
+						{SourceCVE: "CVE-2024-1111", TargetCVE: "CVE-2024-2222", RelationshipType: "alias"},
+					},
+				},
+				{CVE: "CVE-2024-2222"},
+			},
+		}
+
+		result := vulnsFromAffectedComponents(mustParsePurl(t, "pkg:npm/lodash@1.0.0"), []models.AffectedComponent{component})
+
+		require.Len(t, result, 1)
+		assert.Equal(t, "CVE-2024-2222", result[0].CVEID)
 	})
 }
 

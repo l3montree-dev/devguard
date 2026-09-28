@@ -428,6 +428,10 @@ func vulnsFromAffectedComponents(purl packageurl.PackageURL, affectedComponents 
 	// transform the affected packages to the vulnInPackage struct
 	for _, affectedComponent := range affectedComponents {
 		for _, cve := range affectedComponent.CVE {
+			// the daemon scan filters withdrawn cves as well
+			if cve.Withdrawn != nil {
+				continue
+			}
 			fixed := affectedComponent.SemverFixed
 			if fixed == nil {
 				fixed = affectedComponent.VersionFixed
