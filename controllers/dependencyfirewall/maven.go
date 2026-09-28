@@ -38,6 +38,11 @@ const mavenRegistry = "https://repo1.maven.org/maven2"
 var (
 	mavenProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?maven(?:/|$)`)
 	mavenVersionDirRe  = regexp.MustCompile(`^\d[A-Za-z0-9._+-]*$|-SNAPSHOT$`)
+
+	mavenVersionsBlockRe = regexp.MustCompile(`(?s)<versions>(.*?)</versions>`)
+	mavenVersionRe       = regexp.MustCompile(`<version>([^<]*)</version>`)
+	mavenLatestRe        = regexp.MustCompile(`<latest>[^<]*</latest>`)
+	mavenReleaseRe       = regexp.MustCompile(`<release>[^<]*</release>`)
 )
 
 // MavenDependencyProxyController handles Maven dependency proxy requests.
@@ -194,7 +199,11 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	}
 
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
-	if blocked, reason := d.checkMaliciousPackage(ctx, maven, requestPath); blocked {
+	blocked, reason, err := d.checkMaliciousPackage(ctx, maven, requestPath)
+	if err != nil {
+		return maliciousCheckFailed(maven, err)
+	}
+	if blocked {
 		slog.Warn("Blocked malicious package", "proxy", "maven", "path", requestPath, "reason", reason)
 		d.cache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, maven, requestPath, reason, http.StatusForbidden)
@@ -203,6 +212,9 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	if d.cache.Fresh(cacheKey, mavenCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "maven", "path", requestPath)
+			if entry.contentType != "" {
+				c.Response().Header().Set("Content-Type", entry.contentType)
+			}
 			if configs.MinReleaseAge > 0 {
 				if !entry.releaseTime.IsZero() {
 					if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
@@ -236,7 +248,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	}
 
 	releaseTime := mavenReleaseTime(headers)
-	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "maven", "error", err)
 	}
 
@@ -372,5 +384,128 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 		c.Response().Header().Set("Content-Type", contentType)
 	}
 
+	// Hide versions the explicit-version endpoint would reject anyway (too new or blocked
+	// by a rule), so Maven resolves to a version it can actually download.
+	if version == "" && (configs.MinReleaseAge > 0 || len(configs.Rules) > 0) {
+		filtered, removed := filterMavenMetadata(data,
+			time.Duration(configs.MinReleaseAge)*time.Hour,
+			func(v string) (time.Time, error) { return d.fetchMavenReleaseTime(ctx, packageName, v) },
+			func(v string) bool {
+				blocked, _ := matchRules(maven.packageIdentifier(packageName, v), configs.Rules)
+				return !blocked
+			},
+		)
+		if removed > 0 {
+			slog.Info("Filtered maven version list", "proxy", "maven", "package", packageName, "removedVersions", removed)
+			span.SetAttributes(attribute.Int("proxy.filtered_versions", removed))
+		}
+		data = filtered
+	}
+
 	return maven.writeResponse(c, data, requestPath, false)
+}
+
+// fetchMavenReleaseTime returns the publish time of packageName@version, preferring the
+// cached copy. Maven Central has no metadata API for this, so the Last-Modified header of
+// the version's POM is the only source. The POM is used rather than the JAR because it is
+// small and always exists, even for pom-packaging artifacts. The cache key matches the one
+// proxyMavenPackage uses, so a POM that was proxied normally is reused here.
+func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version string) (time.Time, error) {
+	groupID, artifactID, ok := strings.Cut(packageName, "/")
+	if !ok {
+		return time.Time{}, fmt.Errorf("invalid maven coordinates %q", packageName)
+	}
+	pomPath := fmt.Sprintf("%s/%s/%s/%s-%s.pom",
+		strings.ReplaceAll(groupID, ".", "/"), artifactID, version, artifactID, version)
+
+	cacheKey := "maven/" + pomPath
+	if entry, ok := d.cache.Get(cacheKey); ok && !entry.releaseTime.IsZero() {
+		return entry.releaseTime, nil
+	}
+
+	data, headers, statusCode, err := d.fetchMavenFromUpstream(ctx, pomPath, http.Header{})
+	if err != nil {
+		return time.Time{}, err
+	}
+	if statusCode != http.StatusOK {
+		return time.Time{}, fmt.Errorf("upstream returned status %d for %s", statusCode, pomPath)
+	}
+	releaseTime := mavenReleaseTime(headers)
+	if releaseTime.IsZero() {
+		return time.Time{}, fmt.Errorf("no Last-Modified header for %s", pomPath)
+	}
+	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
+		slog.Warn("Failed to cache response", "proxy", "maven", "error", err)
+	}
+	return releaseTime, nil
+}
+
+// filterMavenMetadata removes versions from a maven-metadata.xml document. Versions for
+// which allowed returns false are dropped. With a minimum age, versions are checked from
+// the newest downwards until the first one that is old enough - Maven Central appends new
+// releases to the end of the list, so it is already in chronological order and no version
+// comparison is needed. Older versions are kept without fetching their release time.
+// <latest> and <release> are rewritten to the newest remaining version, so LATEST and
+// RELEASE cannot resolve to a version the artifact endpoint would then block.
+func filterMavenMetadata(data []byte, minAge time.Duration, releaseTime func(version string) (time.Time, error), allowed func(version string) bool) ([]byte, int) {
+	block := mavenVersionsBlockRe.FindSubmatchIndex(data)
+	if block == nil {
+		return data, 0
+	}
+
+	var versions []string
+	for _, m := range mavenVersionRe.FindAllSubmatch(data[block[2]:block[3]], -1) {
+		versions = append(versions, string(m[1]))
+	}
+
+	keep := make(map[string]bool, len(versions))
+	candidates := make([]string, 0, len(versions))
+	for _, v := range versions {
+		if allowed(v) {
+			keep[v] = true
+			candidates = append(candidates, v)
+		}
+	}
+
+	if minAge > 0 {
+		for i := len(candidates) - 1; i >= 0; i-- {
+			t, err := releaseTime(candidates[i])
+			if err == nil && time.Since(t) >= minAge {
+				break
+			}
+			delete(keep, candidates[i])
+		}
+	}
+
+	out := make([]string, 0, len(keep))
+	for _, v := range versions {
+		if keep[v] {
+			out = append(out, v)
+		}
+	}
+	removed := len(versions) - len(out)
+	if removed == 0 {
+		return data, 0
+	}
+
+	rebuilt := "<versions/>"
+	if len(out) > 0 {
+		rebuilt = "<versions>\n      <version>" +
+			strings.Join(out, "</version>\n      <version>") +
+			"</version>\n    </versions>"
+	}
+	result := make([]byte, 0, len(data))
+	result = append(result, data[:block[0]]...)
+	result = append(result, rebuilt...)
+	result = append(result, data[block[1]:]...)
+
+	if len(out) == 0 {
+		result = mavenLatestRe.ReplaceAll(result, nil)
+		result = mavenReleaseRe.ReplaceAll(result, nil)
+	} else {
+		newest := out[len(out)-1]
+		result = mavenLatestRe.ReplaceAll(result, []byte("<latest>"+newest+"</latest>"))
+		result = mavenReleaseRe.ReplaceAll(result, []byte("<release>"+newest+"</release>"))
+	}
+	return result, removed
 }
