@@ -1930,18 +1930,24 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				tx.Commit()
 			}
 
+			rescannedArtifacts := 0
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-					if _, _, err := runner.scanService.SyncArtifactUpstreamSBOMSources(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
+					// unchanged sboms are skipped, the global scan already covers new cves for them
+					rescanned, err := runner.scanService.SyncArtifactUpstreamSBOMSourcesIfChanged(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil)
+					if err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()
 						continue
 					}
 
-					slog.Info("synced upstream for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+					if rescanned {
+						rescannedArtifacts++
+						slog.Info("synced changed upstream sboms for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+					}
 
 					if runner.debugOptions.DryRun {
 						tx.Rollback()
@@ -1950,6 +1956,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 					}
 				}
 			}
+			span.SetAttributes(attribute.Int("artifacts.rescanned", rescannedArtifacts))
 			if len(errs) > 0 {
 				joined := errors.Join(errs...)
 				failStage(assetWithDetails.ctx, span, joined)

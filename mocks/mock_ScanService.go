@@ -1147,6 +1147,114 @@ func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) RunAndReturn(run fun
 	return _c
 }
 
+// SyncArtifactUpstreamSBOMSourcesIfChanged provides a mock function for the type ScanService
+func (_mock *ScanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncArtifactUpstreamSBOMSourcesIfChanged")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (bool, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) bool); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) error); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncArtifactUpstreamSBOMSourcesIfChanged'
+type ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call struct {
+	*mock.Call
+}
+
+// SyncArtifactUpstreamSBOMSourcesIfChanged is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - artifact models.Artifact
+//   - userID string
+//   - userAgent *string
+func (_e *ScanService_Expecter) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx any, tx any, org any, project any, asset any, assetVersion any, artifact any, userID any, userAgent any) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	return &ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call{Call: _e.mock.On("SyncArtifactUpstreamSBOMSourcesIfChanged", ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)}
+}
+
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string)) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.Org
+		if args[2] != nil {
+			arg2 = args[2].(models.Org)
+		}
+		var arg3 models.Project
+		if args[3] != nil {
+			arg3 = args[3].(models.Project)
+		}
+		var arg4 models.Asset
+		if args[4] != nil {
+			arg4 = args[4].(models.Asset)
+		}
+		var arg5 models.AssetVersion
+		if args[5] != nil {
+			arg5 = args[5].(models.AssetVersion)
+		}
+		var arg6 models.Artifact
+		if args[6] != nil {
+			arg6 = args[6].(models.Artifact)
+		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
+		}
+		var arg8 *string
+		if args[8] != nil {
+			arg8 = args[8].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+			arg8,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Return(b bool, err error) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error)) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VexRulesFromDocument provides a mock function for the type ScanService
 func (_mock *ScanService) VexRulesFromDocument(bytes []byte, s string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error) {
 	ret := _mock.Called(bytes, s)
