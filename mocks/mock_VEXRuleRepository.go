@@ -818,6 +818,80 @@ func (_c *VEXRuleRepository_FindByID_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// FindOpenVexRulesByAssetIDs provides a mock function for the type VEXRuleRepository
+func (_mock *VEXRuleRepository) FindOpenVexRulesByAssetIDs(ctx context.Context, tx shared.DB, assetIDs []uuid.UUID) ([]models.VEXRule, error) {
+	ret := _mock.Called(ctx, tx, assetIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindOpenVexRulesByAssetIDs")
+	}
+
+	var r0 []models.VEXRule
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.VEXRule, error)); ok {
+		return returnFunc(ctx, tx, assetIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.VEXRule); ok {
+		r0 = returnFunc(ctx, tx, assetIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.VEXRule)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindOpenVexRulesByAssetIDs'
+type VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call struct {
+	*mock.Call
+}
+
+// FindOpenVexRulesByAssetIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetIDs []uuid.UUID
+func (_e *VEXRuleRepository_Expecter) FindOpenVexRulesByAssetIDs(ctx any, tx any, assetIDs any) *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call {
+	return &VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call{Call: _e.mock.On("FindOpenVexRulesByAssetIDs", ctx, tx, assetIDs)}
+}
+
+func (_c *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call) Run(run func(ctx context.Context, tx shared.DB, assetIDs []uuid.UUID)) *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call) Return(vEXRules []models.VEXRule, err error) *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call {
+	_c.Call.Return(vEXRules, err)
+	return _c
+}
+
+func (_c *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetIDs []uuid.UUID) ([]models.VEXRule, error)) *VEXRuleRepository_FindOpenVexRulesByAssetIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function for the type VEXRuleRepository
 func (_mock *VEXRuleRepository) GetDB(ctx context.Context, db shared.DB) shared.DB {
 	ret := _mock.Called(ctx, db)
