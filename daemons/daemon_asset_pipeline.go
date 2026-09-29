@@ -341,6 +341,36 @@ func (runner *DaemonRunner) RunDaemonPipelineForAsset(ctx context.Context, asset
 	return pErr.err
 }
 
+// RunDaemonPipelineForAssets runs the per asset stages for the given assets and returns the last error of every failed asset
+func (runner *DaemonRunner) RunDaemonPipelineForAssets(ctx context.Context, assetIDs []uuid.UUID) map[uuid.UUID]error {
+	idsChan := make(chan uuid.UUID)
+	go func() {
+		defer close(idsChan)
+		for _, assetID := range assetIDs {
+			idsChan <- assetID
+		}
+	}()
+
+	// utils.TeeChannel drops values while a receiver is busy, so errors are forwarded to the collector instead
+	failed := make(map[uuid.UUID]error)
+	errChan := make(chan pipelineError)
+	collectChan := make(chan pipelineError, 100)
+	runner.collectErrors(collectChan)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer close(collectChan)
+		for pErr := range errChan {
+			failed[pErr.asset.ID] = pErr.err
+			collectChan <- pErr
+		}
+	}()
+	runner.runPipeline(ctx, idsChan, errChan)
+	<-done
+
+	return failed
+}
+
 // failStage records err on both the stage span and the root pipeline.asset span, then ends both.
 // Call this on every error path before sending to errChan.
 func failStage(rootCtx context.Context, stageSpan trace.Span, err error) {
