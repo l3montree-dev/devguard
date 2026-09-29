@@ -20,6 +20,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/lib/pq"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
@@ -53,7 +54,17 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 	var components []models.MaliciousAffectedComponent
 
 	// Build query using shared helper functions
-	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl = ?", matchCtx.SearchPurl)
+	searchPurls := []string{matchCtx.SearchPurl}
+	if purl.Type == packageurl.TypeOCI {
+		// Entries without repository_url name an image regardless of its location.
+		nameOnly := purl
+		nameOnly.Version = ""
+		nameOnly.Qualifiers = nil
+		if s, err := normalize.PURLToString(nameOnly); err == nil && s != matchCtx.SearchPurl {
+			searchPurls = append(searchPurls, s)
+		}
+	}
+	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl = ANY(?)", pq.Array(searchPurls))
 	query = BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
 
 	err := query.Order("id").Find(&components).Error

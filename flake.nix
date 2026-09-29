@@ -52,6 +52,20 @@
         go-mockery = nixpkgs-unstable.legacyPackages.${system}.go-mockery.override {
           buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
+        go-swag =
+          (nixpkgs-unstable.legacyPackages.${system}.go-swag.override {
+            buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
+          }).overrideAttrs
+            (_old: {
+              version = "2.0.0-rc6";
+              src = nixpkgs-unstable.legacyPackages.${system}.fetchFromGitHub {
+                owner = "swaggo";
+                repo = "swag";
+                rev = "v2.0.0-rc6";
+                sha256 = "sha256-ieHbfpcmBJgt1Q1mNvHUsjqv0oJ0Ihv1Jl0/zyRjEVc=";
+              };
+              vendorHash = "sha256-s4DdnXGPhML80gWVRVqLhKdPZxoguWOI2tjYOTOJzlk=";
+            });
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
@@ -253,6 +267,7 @@
             unstablePkgs.gopls
             unstablePkgs.golangci-lint
             go-mockery
+            go-swag
             self.formatter.${system}
           ];
         };

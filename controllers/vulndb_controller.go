@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/config"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -196,8 +197,9 @@ func (c *VulnDBController) PURLInspect(ctx shared.Context) error {
 	}
 
 	var maliciousPackage *dtos.OSV
+	eco := dependencyfirewall.EcosystemFromString(purl.Type)
 	for _, comp := range maliciousComponents {
-		if !comp.AffectsAllVersions() && !vulndb.MatchesVersion(comp, purl.Version) {
+		if !comp.AffectsAllVersions() && !eco.MatchesVersion(comp, purl.Version) {
 			continue
 		}
 		pkg, err := c.maliciousPackageChecker.GetMaliciousPackage(ctx.Request().Context(), comp.MaliciousPackageID)

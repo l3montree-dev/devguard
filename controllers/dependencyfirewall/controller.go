@@ -32,7 +32,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -41,22 +40,6 @@ import (
 )
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
-
-// ecosystem abstracts the per-protocol behavior needed by the shared proxy logic.
-type ecosystem interface {
-	// name returns the identifier used in log fields and cache subdirectories.
-	name() string
-	// trimPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix.
-	trimPrefix(path string) string
-	// parsePackage extracts the package name and version from the cleaned request path.
-	parsePackage(path string) (packageName, version string)
-	// packageIdentifier builds the string that firewall rules are matched against.
-	// Most ecosystems use PURL format (pkg:<eco>/<name>@<version>).
-	// OCI uses plain image reference format (registry/image:tag).
-	packageIdentifier(packageName, version string) string
-	// writeResponse writes the proxied payload to the HTTP response.
-	writeResponse(c shared.Context, data []byte, path string, cached bool) error
-}
 
 // trimWithRegex is a shared helper for ecosystem.trimPrefix implementations.
 func trimWithRegex(path string, re *regexp.Regexp) string {
@@ -362,13 +345,19 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 	if packageName == "" {
 		return false, ""
 	}
-	packageIdentifier := eco.packageIdentifier(packageName, version)
+	blocked, matchedRule := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
+	if blocked {
+		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+	}
+	return false, ""
+}
 
-	// Rules are applied in order like gitignore: last matching rule wins.
-	// A rule prefixed with "!" negates the match (allowlist).
+// matchRules applies the rules in order like gitignore: last matching rule wins.
+// A rule prefixed with "!" negates the match (allowlist).
+func matchRules(packageIdentifier string, rules []string) (bool, string) {
 	blocked := false
 	matchedRule := ""
-	for _, rule := range configs.Rules {
+	for _, rule := range rules {
 		negate := strings.HasPrefix(rule, "!")
 		pattern := strings.TrimPrefix(rule, "!")
 
@@ -377,11 +366,7 @@ func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, 
 			matchedRule = rule
 		}
 	}
-
-	if blocked {
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
-	}
-	return false, ""
+	return blocked, matchedRule
 }
 
 func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecosystem, packageName, version string) (int, string, error) {
@@ -406,7 +391,7 @@ func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecos
 	}
 
 	for _, comp := range components {
-		if vulndb.MatchesVersion(comp, version) {
+		if eco.MatchesVersion(comp, version) {
 			return http.StatusForbidden, d.maliciousReason(ctx, packageName, version, comp), nil
 		}
 	}
@@ -432,14 +417,21 @@ func (d *DependencyProxyController) maliciousReason(ctx context.Context, package
 	return reason
 }
 
-func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string) {
+// checkMaliciousPackage checks the package and version parsed from path against the
+// malicious package database. Database errors are returned, so callers fail closed.
+func (d *DependencyProxyController) checkMaliciousPackage(ctx context.Context, eco ecosystem, path string) (bool, string, error) {
 	packageName, version := eco.parsePackage(path)
 	status, reason, err := d.checkMalicious(ctx, eco, packageName, version)
 	if err != nil {
-		slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
-		return false, ""
+		return false, "", err
 	}
-	return status != 0, reason
+	return status != 0, reason, nil
+}
+
+// maliciousCheckFailed answers a request whose malicious package check could not be completed.
+func maliciousCheckFailed(eco ecosystem, err error) error {
+	slog.Error("Error checking malicious package", "proxy", eco.name(), "error", err)
+	return echo.NewHTTPError(http.StatusInternalServerError, "failed to check if package is malicious").WithInternal(err)
 }
 
 func (d *DependencyProxyController) blockNotAllowedPackage(c shared.Context, eco ecosystem, path, reason string) error {

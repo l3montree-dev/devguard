@@ -134,18 +134,16 @@ type AssetDTO struct {
 
 	AssetVersions []AssetVersionDTO `json:"refs"`
 
-	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
-	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
+	ExternalEntityProviderID *string   `json:"externalEntityProviderId,omitempty"`
+	ExternalEntityID         *string   `json:"externalEntityId,omitempty"`
+	PipelineLastRun          time.Time `json:"pipelineLastRun"`
 
-	RepositoryProvider              *string   `json:"repositoryProvider,omitempty"`
-	IsPublic                        bool      `json:"isPublic"`
-	ParanoidMode                    bool      `json:"paranoidMode"`
-	SharesInformation               bool      `json:"sharesInformation"`
-	CentralDependencyVulnManagement bool      `json:"centralDependencyVulnManagement"`
-	PipelineLastRun                 time.Time `json:"pipelineLastRun"`
-	PipelineError                   *string   `json:"pipelineError,omitempty"`
-
-	State string `json:"state"`
+	RepositoryProvider              *string `json:"repositoryProvider,omitempty"`
+	IsPublic                        bool    `json:"isPublic"`
+	ParanoidMode                    bool    `json:"paranoidMode"`
+	SharesInformation               bool    `json:"sharesInformation"`
+	CentralDependencyVulnManagement bool    `json:"centralDependencyVulnManagement"`
+	State                           string  `json:"state"`
 }
 
 type AssetWithSecretsDTO struct {

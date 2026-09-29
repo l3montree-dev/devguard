@@ -70,7 +70,7 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	vexRules, err := c.vexRuleRepository.FindByAssetIDs(reqCtx, nil, sessionAssetIDs)
+	vexRules, err := c.vexRuleRepository.FindOpenVexRulesByAssetIDs(reqCtx, nil, sessionAssetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
@@ -126,7 +126,7 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
 
-	vexRules, err := c.vexRuleRepository.FindByAssetIDs(reqCtx, nil, sessionAssetIDs)
+	vexRules, err := c.vexRuleRepository.FindOpenVexRulesByAssetIDs(reqCtx, nil, sessionAssetIDs)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
