@@ -196,6 +196,34 @@ func TestProxyPyPISimpleBlocksMaliciousBeforeUpstreamFetch(t *testing.T) {
 	}
 }
 
+func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
+	
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/pypi/simple/Typing_Extensions/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("package")
+	c.SetParamValues("Typing_Extensions")
+
+	checker := mocks.NewMaliciousPackageChecker(t)
+	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "typing-extensions").Return([]models.MaliciousAffectedComponent{{MaliciousPackageID: "MAL-1"}}, nil)
+	checker.EXPECT().GetMaliciousPackage(mock.Anything, "MAL-1").Return(models.MaliciousPackage{}, nil)
+
+	ctrl := &PythonDependencyProxyController{
+		DependencyProxyController: &DependencyProxyController{
+			maliciousChecker: checker,
+			client:           &http.Client{Transport: simpleIndexTransport{}},
+		},
+	}
+
+	if err := ctrl.ProxyPyPISimple(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, rec.Code)
+	}
+}
+
 func TestProxyPyPIPackageFailsClosedOnMaliciousCheckError(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/pypi/packages/ab/cd/requests-2.32.3.tar.gz/", nil)
