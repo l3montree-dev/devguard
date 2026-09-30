@@ -2,18 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v1.15.0] - 2026-09-30
 
 ### Added
 
-- **Error log storage** — asset and project errors are now persisted as logs instead of only being emitted to stdout, with the actual error details stored alongside each entry. Log listing supports search, filter and sort, is available at the org level with project/asset names joined in, and can list a project's logs without requiring an asset scope. Access control middleware now guards the log endpoints, and storage is capped at 50 logs per scope (org/project/asset), pruning the oldest entries on insert
-- **Permalink resolve endpoint** — `GET /resolve/` turns an org, project or asset UUID into its slug path (`OrganizationSlug`/`ProjectSlug`/`AssetSlug`), so the frontend can resolve a permalink without already knowing the slug. Access control is enforced: an asset is checked via `IsAllowedInAsset`, project/org lookups go through the caller's RBAC roles, and a UUID the caller has no access to now returns `404` rather than leaking its existence
+- **Error log storage** — asset and project errors are now persisted as logs instead of only being emitted to stdout, with the actual error details stored alongside each entry. Log listing supports search, filter and sort, is available at the org level with project/asset names joined in, and can list a project's logs without requiring an asset scope.
+- **Permalink resolve endpoint** — `GET /resolve/` turns an org, project or asset UUID into its slug path (`OrganizationSlug`/`ProjectSlug`/`AssetSlug`), so the frontend can resolve a link without already knowing the slug.
 - **Org-wide dependency search** — `GET /organizations/{organization}/components` searches component occurrences across every project in an organization, reusing the existing per-project search against the full list of child project IDs
 - **`minReleaseAge` enforcement extended to Go and PyPI proxies** — the Go module proxy and the PyPI simple index/tarball proxy now block packages younger than the configured minimum release age, matching the existing npm behavior
-- **`POSTGRES_SSL_MODE` environment variable** — defaults to `disable` (unchanged behavior), can be set to `require`
-- **`DISABLE_DAEMONS` environment variable** — skips starting background daemon jobs, for running API-only instances
+- `POSTGRES_SSL_MODE` environment variable — defaults to `disable` (unchanged behavior), can be set to `require`
+- `DISABLE_DAEMONS` environment variable — skips starting background daemon jobs, for running API-only instances
 - Timestamps added to SARIF, VEX and CycloneDX SBOM export output
-- Asset version slug added to component occurrence responses
 
 ### Changed
 
