@@ -130,52 +130,37 @@ func (g *cveRepository) Save(ctx context.Context, tx *gorm.DB, cve *models.CVE) 
 	).Save(cve).Error
 }
 
-const ecosystemSemiJoin = `EXISTS (
-	SELECT 1 FROM cve_affected_component jc
-	JOIN affected_components ac ON ac.id = jc.affected_component_id
-	WHERE jc.cve_id = cves.id AND LOWER(ac.ecosystem) LIKE LOWER(?)
+// cve_ecosystem is a materialized view of the distinct (cve_id, ecosystem) pairs
+// behind cve_affected_component - 389k rows instead of 13.7M. Filtering through
+// it keeps the ecosystem prefix an index-only range scan instead of hash joining
+// the full join table against affected_components on every request.
+// ImportRC refreshes it after each vulndb import.
+const ecosystemSemiJoin = `cves.id IN (
+	SELECT cve_id FROM cve_ecosystem WHERE ecosystem LIKE LOWER(?)
 )`
 
-func applyFilters(q *gorm.DB, filter []shared.FilterQuery, semiJoin bool) (*gorm.DB, bool) {
-	hasEcosystemJoin := false
+func applyFilters(q *gorm.DB, filter []shared.FilterQuery) *gorm.DB {
 	for _, f := range filter {
 		if f.Field == "ecosystem" {
-			if semiJoin {
-				q = q.Where(ecosystemSemiJoin, f.FieldValue)
-				continue
-			}
-			if !hasEcosystemJoin {
-				q = q.Joins("JOIN cve_affected_component ON cve_affected_component.cve_id = cves.id").
-					Joins("JOIN affected_components ON affected_components.id = cve_affected_component.affected_component_id")
-				hasEcosystemJoin = true
-			}
-
-			q = q.Where("LOWER(affected_components.ecosystem) LIKE LOWER(?)", f.FieldValue)
+			q = q.Where(ecosystemSemiJoin, f.FieldValue)
 		} else {
 			q = f.Where(q)
 		}
 	}
-	return q, hasEcosystemJoin
+	return q
 }
 
 func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageInfo shared.PageInfo, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.CVE], error) {
 	var count int64
 	var cves = []models.CVE{}
 
-	q := g.GetDB(ctx, tx).Model(&models.CVE{})
-	q, _ = applyFilters(q, filter, true)
+	q := applyFilters(g.GetDB(ctx, tx).Model(&models.CVE{}), filter)
 	if err := q.Count(&count).Error; err != nil {
 		return shared.Paged[models.CVE]{}, err
 	}
 
 	// get all cves
-	q = pageInfo.ApplyOnDB(g.GetDB(ctx, tx))
-	q, hasEcosystemJoin := applyFilters(q, filter, false)
-	if hasEcosystemJoin {
-		// same fan-out as above, but here every CVE column is selected, so the
-		// de-duplication has to be a bare SELECT DISTINCT over all of them
-		q = q.Distinct()
-	}
+	q = applyFilters(pageInfo.ApplyOnDB(g.GetDB(ctx, tx)), filter)
 
 	// apply sorting
 	if len(sort) > 0 {
@@ -186,7 +171,7 @@ func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageI
 		q = q.Order("date_last_modified desc")
 	}
 
-	err := q.Preload("AffectedComponents").Preload("Exploits").Find(&cves).Error
+	err := q.Preload("Exploits").Find(&cves).Error
 	if err != nil {
 		return shared.Paged[models.CVE]{}, err
 	}
