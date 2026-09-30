@@ -7166,7 +7166,7 @@ components:
     dtos.OrgOverview:
       properties:
         averageAgeOfDependencies:
-          type: integer
+          type: number
         averageOpenCodeRisksPerProject:
           type: number
         averageRemediationTimes:
