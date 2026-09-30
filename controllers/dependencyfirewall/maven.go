@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -56,6 +57,8 @@ func NewMavenDependencyProxyController(controller *DependencyProxyController) *M
 type mavenEcosystem struct{}
 
 var maven mavenEcosystem
+
+var _ ecosystem = mavenEcosystem{}
 
 func (mavenEcosystem) name() string { return "maven" }
 
@@ -97,6 +100,10 @@ func (mavenEcosystem) packageIdentifier(packageName, version string) string {
 		return fmt.Sprintf("pkg:maven/%s@%s", packageName, version)
 	}
 	return fmt.Sprintf("pkg:maven/%s", packageName)
+}
+
+func (mavenEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	return semverMatchesVersion(comp, version)
 }
 
 // mavenCacheTTL returns how long a cached maven package file stays fresh.
