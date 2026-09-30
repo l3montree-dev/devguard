@@ -33,6 +33,35 @@ type composerRootResponse struct {
 
 type composerP2Document struct {
 	Packages map[string][]json.RawMessage `json:"packages"`
+	Minified string                       `json:"minified"`
+}
+
+func expandComposerVersions(entries []json.RawMessage, minified string) ([]json.RawMessage, error) {
+	if minified != "composer/2.0" {
+		return entries, nil
+	}
+
+	expanded := make([]json.RawMessage, 0, len(entries))
+	current := map[string]json.RawMessage{}
+	for _, entry := range entries {
+		var diff map[string]json.RawMessage
+		if err := json.Unmarshal(entry, &diff); err != nil {
+			return nil, err
+		}
+		for key, value := range diff {
+			if string(value) == `"__unset"` {
+				delete(current, key)
+			} else {
+				current[key] = value
+			}
+		}
+		full, err := json.Marshal(current)
+		if err != nil {
+			return nil, err
+		}
+		expanded = append(expanded, full)
+	}
+	return expanded, nil
 }
 
 var composerProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?composer(?:/|$)`)
@@ -56,7 +85,7 @@ var composer composerEcosystem
 func (composerEcosystem) name() string { return "composer" }
 
 func (composerEcosystem) trimPrefix(path string) string {
-	return trimWithRegex(path, composerProxyPrefixRe)
+	return strings.TrimSuffix(trimWithRegex(path, composerProxyPrefixRe), "/")
 }
 
 func isComposerPackageName(name string) bool {
@@ -65,7 +94,7 @@ func isComposerPackageName(name string) bool {
 }
 
 func (composerEcosystem) parsePackage(path string) (string, string) {
-	path = strings.TrimPrefix(path, "/")
+	path = strings.Trim(path, "/")
 	if rest, ok := strings.CutPrefix(path, "p2/"); ok {
 		name := strings.TrimSuffix(rest, ".json")
 		name = strings.TrimSuffix(name, "~dev")
@@ -140,7 +169,7 @@ func (d *ComposerDependencyProxyController) proxyComposerRoot(c shared.Context) 
 		return err
 	}
 
-	path := c.Request().URL.Path
+	path := strings.TrimSuffix(c.Request().URL.Path, "/")
 
 	if !strings.HasSuffix(path, "packages.json") {
 		return echo.NewHTTPError(http.StatusNotFound, "Failed to find status")
@@ -364,9 +393,17 @@ func filterComposerMetadata(data []byte, proxyBaseURL string, minAge time.Durati
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return nil, 0, fmt.Errorf("could not decode composer metadata: %w", err)
 	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, 0, fmt.Errorf("could not decode composer metadata: %w", err)
+	}
 
 	removed := 0
-	for name, entries := range doc.Packages {
+	for name, minifiedEntries := range doc.Packages {
+		entries, err := expandComposerVersions(minifiedEntries, doc.Minified)
+		if err != nil {
+			return nil, 0, fmt.Errorf("could not expand version entries of %s: %w", name, err)
+		}
 		kept := make([]json.RawMessage, 0, len(entries))
 
 		for _, entry := range entries {
@@ -438,7 +475,14 @@ func filterComposerMetadata(data []byte, proxyBaseURL string, minAge time.Durati
 		doc.Packages[name] = kept
 	}
 
-	out, err := json.Marshal(doc)
+	packages, err := json.Marshal(doc.Packages)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not encode composer metadata: %w", err)
+	}
+	raw["packages"] = packages
+	delete(raw, "minified")
+
+	out, err := json.Marshal(raw)
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not encode composer metadata: %w", err)
 	}
@@ -461,7 +505,12 @@ func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Cont
 		return "", time.Time{}, fmt.Errorf("could not decode composer metadata: %w", err)
 	}
 
-	for _, entry := range doc.Packages[packageName] {
+	entries, err := expandComposerVersions(doc.Packages[packageName], doc.Minified)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("could not expand version entries of %s: %w", packageName, err)
+	}
+
+	for _, entry := range entries {
 		var fields struct {
 			Version string `json:"version"`
 			Time    string `json:"time"`

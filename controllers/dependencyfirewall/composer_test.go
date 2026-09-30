@@ -39,6 +39,11 @@ func TestComposerEcosystem(t *testing.T) {
 				expected: "p2/monolog/monolog.json",
 			},
 			{
+				name:     "with trailing slash",
+				path:     "/api/v1/dependency-proxy/composer/p2/monolog/monolog.json/",
+				expected: "p2/monolog/monolog.json",
+			},
+			{
 				name:     "without trailing path",
 				path:     "/api/v1/dependency-proxy/composer",
 				expected: "",
@@ -91,6 +96,17 @@ func TestComposerEcosystem(t *testing.T) {
 				path:    "dist/symfony/console/6.4.0-beta1.zip",
 				pkg:     "symfony/console",
 				version: "6.4.0-beta1",
+			},
+			{
+				name: "metadata with trailing slash",
+				path: "p2/monolog/monolog.json/",
+				pkg:  "monolog/monolog",
+			},
+			{
+				name:    "dist with trailing slash",
+				path:    "dist/monolog/monolog/3.5.0.zip/",
+				pkg:     "monolog/monolog",
+				version: "3.5.0",
 			},
 			{
 				name: "root packages file",
