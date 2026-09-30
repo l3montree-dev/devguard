@@ -14636,12 +14636,18 @@
                     1000000,
                     1000000000,
                     60000000000,
+                    3600000000000,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
                     1,
                     1000,
                     1000000,
@@ -14664,12 +14670,18 @@
                     "Millisecond",
                     "Second",
                     "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -15799,6 +15811,44 @@
                 ]
             }
         },
+        "/dependency-proxy/composer/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Composer repository request",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
         "/dependency-proxy/go": {
             "get": {
                 "parameters": [
@@ -16281,6 +16331,44 @@
                     }
                 ],
                 "summary": "Proxy PyPI simple index metadata",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/dependency-proxy/{secret}/composer/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Composer repository request",
                 "tags": [
                     "Dependency Firewall"
                 ]
