@@ -383,6 +383,7 @@ type VEXRuleRepository interface {
 	All(ctx context.Context, tx DB) ([]models.VEXRule, error)
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.VEXRule, error)
 	FindByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.VEXRule, error)
+	FindOpenVexRulesByAssetIDs(ctx context.Context, tx DB, assetIDs []uuid.UUID) ([]models.VEXRule, error)
 	FindByAssetIDPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[models.VEXRule], error)
 	FindByID(ctx context.Context, tx DB, id string) (models.VEXRule, error)
 	FindByAssetAndVexSource(ctx context.Context, tx DB, assetID uuid.UUID, vexSource string) ([]models.VEXRule, error)

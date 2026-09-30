@@ -23,6 +23,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -227,6 +228,7 @@ func ForestToCycloneDX(f normalize.MerkleForest, metadata normalize.BOMMetadata,
 		BOMFormat:   "CycloneDX",
 		Version:     1,
 		Metadata: &cdx.Metadata{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
 				BOMRef:     rootName,
 				Name:       rootName,

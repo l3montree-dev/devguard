@@ -27,7 +27,6 @@ import (
 	"regexp"
 
 	"github.com/in-toto/go-witness/attestation"
-	envAttestor "github.com/in-toto/go-witness/attestation/environment"
 	"github.com/in-toto/go-witness/attestation/git"
 	githubAttestor "github.com/in-toto/go-witness/attestation/github"
 	gitlabAttestor "github.com/in-toto/go-witness/attestation/gitlab"
@@ -92,7 +91,6 @@ func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, erro
 	var attestors = []attestation.Attestor{
 		gitlabAttestor.New(),
 		githubAttestor.New(),
-		envAttestor.New(),
 		git.New(),
 	}
 

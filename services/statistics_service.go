@@ -692,7 +692,7 @@ func (s *statisticsService) computeOrgStatistics(ctx context.Context, orgID uuid
 		AverageOpenCodeRisksPerProject: res.GetValue(9).(float32),
 		TopEcosystems:                  res.GetValue(10).([]dtos.EcosystemUsage),
 		MaliciousPackages:              res.GetValue(11).([]dtos.MaliciousPackageInOrg),
-		AverageAgeOfDependencies:       res.GetValue(12).(time.Duration),
+		AverageAgeOfDependencies:       res.GetValue(12).(time.Duration).Seconds(),
 		AverageRemediationTimes:        res.GetValue(13).(dtos.AverageRemediationTimes),
 		RemediationTypeDistribution:    remediationTypeDistribution,
 	}

@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -43,6 +44,63 @@ type Ecosystem_Expecter struct {
 
 func (_m *Ecosystem) EXPECT() *Ecosystem_Expecter {
 	return &Ecosystem_Expecter{mock: &_m.Mock}
+}
+
+// MatchesVersion provides a mock function for the type Ecosystem
+func (_mock *Ecosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	ret := _mock.Called(comp, version)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MatchesVersion")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(models.MaliciousAffectedComponent, string) bool); ok {
+		r0 = returnFunc(comp, version)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// Ecosystem_MatchesVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MatchesVersion'
+type Ecosystem_MatchesVersion_Call struct {
+	*mock.Call
+}
+
+// MatchesVersion is a helper method to define mock.On call
+//   - comp models.MaliciousAffectedComponent
+//   - version string
+func (_e *Ecosystem_Expecter) MatchesVersion(comp any, version any) *Ecosystem_MatchesVersion_Call {
+	return &Ecosystem_MatchesVersion_Call{Call: _e.mock.On("MatchesVersion", comp, version)}
+}
+
+func (_c *Ecosystem_MatchesVersion_Call) Run(run func(comp models.MaliciousAffectedComponent, version string)) *Ecosystem_MatchesVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 models.MaliciousAffectedComponent
+		if args[0] != nil {
+			arg0 = args[0].(models.MaliciousAffectedComponent)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Ecosystem_MatchesVersion_Call) Return(b bool) *Ecosystem_MatchesVersion_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *Ecosystem_MatchesVersion_Call) RunAndReturn(run func(comp models.MaliciousAffectedComponent, version string) bool) *Ecosystem_MatchesVersion_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // name provides a mock function for the type Ecosystem
