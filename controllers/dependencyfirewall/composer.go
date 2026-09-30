@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -120,6 +121,10 @@ func (composerEcosystem) packageIdentifier(packageName, version string) string {
 		return fmt.Sprintf("pkg:composer/%s@%s", packageName, version)
 	}
 	return fmt.Sprintf("pkg:composer/%s", packageName)
+}
+
+func (composerEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	return semverMatchesVersion(comp, version)
 }
 
 func (composerEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
