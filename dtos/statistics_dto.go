@@ -272,7 +272,7 @@ type OrgOverview struct {
 	TopEcosystems                  []EcosystemUsage `json:"topEcosystems"`
 
 	MaliciousPackages        []MaliciousPackageInOrg `json:"maliciousPackages"`
-	AverageAgeOfDependencies time.Duration           `json:"averageAgeOfDependencies" swaggertype:"integer"`
+	AverageAgeOfDependencies float64                 `json:"averageAgeOfDependencies"`
 	AverageRemediationTimes  AverageRemediationTimes `json:"averageRemediationTimes"`
 
 	RemediationTypeDistribution RemediationTypeDistribution `json:"remediationTypeDistribution"`

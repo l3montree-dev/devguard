@@ -32,7 +32,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -41,22 +40,6 @@ import (
 )
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
-
-// ecosystem abstracts the per-protocol behavior needed by the shared proxy logic.
-type ecosystem interface {
-	// name returns the identifier used in log fields and cache subdirectories.
-	name() string
-	// trimPrefix strips the /api/v1/dependency-proxy/[secret/]<ecosystem> prefix.
-	trimPrefix(path string) string
-	// parsePackage extracts the package name and version from the cleaned request path.
-	parsePackage(path string) (packageName, version string)
-	// packageIdentifier builds the string that firewall rules are matched against.
-	// Most ecosystems use PURL format (pkg:<eco>/<name>@<version>).
-	// OCI uses plain image reference format (registry/image:tag).
-	packageIdentifier(packageName, version string) string
-	// writeResponse writes the proxied payload to the HTTP response.
-	writeResponse(c shared.Context, data []byte, path string, cached bool) error
-}
 
 // trimWithRegex is a shared helper for ecosystem.trimPrefix implementations.
 func trimWithRegex(path string, re *regexp.Regexp) string {
@@ -409,7 +392,7 @@ func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecos
 	}
 
 	for _, comp := range components {
-		if vulndb.MatchesVersion(comp, version) {
+		if eco.MatchesVersion(comp, version) {
 			return http.StatusForbidden, d.maliciousReason(ctx, packageName, version, comp), nil
 		}
 	}

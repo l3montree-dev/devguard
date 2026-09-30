@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -168,6 +169,7 @@ func CycloneDXVEXFromVulnerabilities(vulns []cdx.Vulnerability, metadata normali
 		BOMFormat:   "CycloneDX",
 		Version:     1,
 		Metadata: &cdx.Metadata{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &rootComponent,
 		},
 		Components:         &components,

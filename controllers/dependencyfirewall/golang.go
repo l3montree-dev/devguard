@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -59,6 +60,10 @@ func (goEcosystem) name() string { return "go" }
 
 func (goEcosystem) trimPrefix(path string) string {
 	return strings.TrimRight(trimWithRegex(path, goProxyPrefixRe), "/")
+}
+
+func (goEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	return semverMatchesVersion(comp, version)
 }
 
 func (goEcosystem) parsePackage(path string) (string, string) {

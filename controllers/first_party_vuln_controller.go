@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -323,6 +324,12 @@ func (c *FirstPartyVulnController) Sarif(ctx shared.Context) error {
 				},
 			},
 			Results: make([]sarif.Result, 0),
+			Invocations: []sarif.Invocation{
+				{
+					ExecutionSuccessful: true,
+					StartTimeUtc:        new(time.Now().UTC()),
+				},
+			},
 		}
 
 		addedRuleIDs := make(map[string]bool)

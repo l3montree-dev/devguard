@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	pep440 "github.com/aquasecurity/go-pep440-version"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -67,10 +69,52 @@ func (pypiEcosystem) trimPrefix(path string) string {
 	return trimWithRegex(path, pypiProxyPrefixRe)
 }
 
+func (pypiEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, version string) bool {
+	// pypi doesn't use semver - it uses PEP 440 versioning, which is not fully compatible with semver.
+	if comp.AffectsAllVersions() {
+		return true
+	}
+
+	requested, err := pep440.Parse(version)
+	if err != nil {
+		return true // if we cannot parse the version, we assume it is affected to be safe
+	}
+
+	if comp.Version != nil {
+		// parse as pep440 and compare
+		stored, err := pep440.Parse(*comp.Version)
+		if err != nil {
+			return true // if we cannot parse the stored version, we assume it is affected to be safe
+		}
+		return stored.Equal(requested)
+	}
+
+	if comp.SemverIntroduced != nil {
+		introduced, err := pep440.Parse(*comp.SemverIntroduced)
+		if err != nil {
+			return true // if we cannot parse the introduced version, we assume it is affected to be safe
+		}
+		if requested.LessThan(introduced) {
+			return false
+		}
+	}
+
+	if comp.SemverFixed != nil {
+		fixed, err := pep440.Parse(*comp.SemverFixed)
+		if err != nil {
+			return true // if we cannot parse the fixed version, we assume it is affected to be safe
+		}
+		if requested.GreaterThanOrEqual(fixed) {
+			return false
+		}
+	}
+	return true
+}
+
 func (pypiEcosystem) parsePackage(path string) (string, string) {
 	path = strings.TrimPrefix(path, "/")
 	if after, ok := strings.CutPrefix(path, "simple/"); ok {
-		return strings.TrimSuffix(after, "/"), ""
+		return normalizePyPIName(strings.TrimSuffix(after, "/")), ""
 	} else if strings.HasPrefix(path, "packages/") {
 
 		filename := strings.TrimSuffix(filepath.Base(path), ".metadata")
@@ -283,7 +327,8 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
-	pkgName := c.Param("package")
+	
+	pkgName := normalizePyPIName(c.Param("package"))
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.pypi",

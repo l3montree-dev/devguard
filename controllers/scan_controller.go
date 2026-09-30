@@ -889,6 +889,12 @@ func firstPartyVulnsToSARIF(scannerID string, vulns []models.FirstPartyVuln) sar
 			},
 		},
 		Results: make([]sarif.Result, 0),
+		Invocations: []sarif.Invocation{
+			{
+				ExecutionSuccessful: true,
+				StartTimeUtc:        new(time.Now().UTC()),
+			},
+		},
 	}
 
 	addedRuleIDs := make(map[string]bool)
