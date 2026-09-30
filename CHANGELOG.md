@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Error log storage** — asset and project errors are now persisted as logs instead of only being emitted to stdout, with the actual error details stored alongside each entry. Log listing supports search, filter and sort, is available at the org level with project/asset names joined in, and can list a project's logs without requiring an asset scope. Access control middleware now guards the log endpoints, and storage is capped at 50 logs per scope (org/project/asset), pruning the oldest entries on insert
+- **Permalink resolve endpoint** — `GET /resolve/` turns an org, project or asset UUID into its slug path (`OrganizationSlug`/`ProjectSlug`/`AssetSlug`), so the frontend can resolve a permalink without already knowing the slug. Access control is enforced: an asset is checked via `IsAllowedInAsset`, project/org lookups go through the caller's RBAC roles, and a UUID the caller has no access to now returns `404` rather than leaking its existence
+- **Org-wide dependency search** — `GET /organizations/{organization}/components` searches component occurrences across every project in an organization, reusing the existing per-project search against the full list of child project IDs
+- **`minReleaseAge` enforcement extended to Go and PyPI proxies** — the Go module proxy and the PyPI simple index/tarball proxy now block packages younger than the configured minimum release age, matching the existing npm behavior
+- **`POSTGRES_SSL_MODE` environment variable** — defaults to `disable` (unchanged behavior), can be set to `require`
+- **`DISABLE_DAEMONS` environment variable** — skips starting background daemon jobs, for running API-only instances
+- Timestamps added to SARIF, VEX and CycloneDX SBOM export output
+- Asset version slug added to component occurrence responses
+
+### Changed
+
+- **PyPI downloads routed through the firewall** — tarball fetches now go through `files.pythonhosted.org`, malicious-package and `minReleaseAge` checks are performed from the filename before falling back to the PyPI JSON API for release time, and requests fail closed once `MinReleaseAge` is configured and a release time cannot be determined. The `/simple/` index route now runs the malicious-package check itself instead of deferring it to version resolution, and rewrites absolute URLs in the returned index HTML to keep subsequent requests routed through the proxy
+- **PyPI package name normalization** — package names are normalized (lowercased, `-`/`_`/`.` collapsed to `-`) before being matched against the database, so requests like `Typing_Extensions` correctly match `typing-extensions`
+- **Python version comparison is now PEP440-aware** — rule and allowlist evaluation for the Python ecosystem no longer uses naive semver-style comparison; the same comparison interface is shared across the npm, Go and OCI ecosystems
+- **OCI purl matching keeps the registry qualifier** — building a purl match key for OCI images previously stripped all qualifiers, which meant an image name like `nginx` matched the same database entry regardless of registry. A normalized `repository_url` qualifier is now retained, since an OCI purl's name is only the last path segment. `MinReleaseAge` does not apply to OCI images, since registries have no reliable publish timestamp
+- **npm tarball proxy checks release time before downloading** — `ProxyNPMTarball` now resolves and checks the package's release time before fetching the tarball body from upstream, instead of downloading first and discarding blocked packages afterwards. A TTL cache was added for metadata lookups, and npm audit signature support was added
+- **Batched deletion of resolved dependency vulnerabilities** — `UserDidNotDetectDependencyVulnInArtifactAnymore` now deletes resolved `artifact_dependency_vulns` in a single batched statement instead of one `DELETE` per vulnerability
+- **PAT `last_used_at` updates throttled** — the timestamp is now only written if at least a minute has passed since the last update, reducing write amplification on PAT-authenticated requests
+- Added database indexes to speed up dashboard loading (asset/asset-version lookups on compliance postures, advisories, vuln events, artifact risk history and dependency vulns)
+- Upgraded to Go 1.27.1
+
+### Fixed
+
+- **PyPI `minReleaseAge` comparison was inverted for cached responses** — packages younger than the configured minimum release age were being let through while older ones were incorrectly blocked
+- **VEX rule recommendations no longer consider closed rules** — `VexRuleRecommendationController` was recommending against VEX rules that had already been closed or expired ([#3042](https://github.com/l3montree-dev/devguard/issues/3042))
+- Fixed artifact distribution across assets in the bundled GitHub Action and GitLab CI templates
+
 ## [v1.14.2] - 2026-09-18
 
 ### Changed
