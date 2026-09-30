@@ -130,10 +130,20 @@ func (g *cveRepository) Save(ctx context.Context, tx *gorm.DB, cve *models.CVE) 
 	).Save(cve).Error
 }
 
-func applyFilters(q *gorm.DB, filter []shared.FilterQuery) (*gorm.DB, bool) {
+const ecosystemSemiJoin = `EXISTS (
+	SELECT 1 FROM cve_affected_component jc
+	JOIN affected_components ac ON ac.id = jc.affected_component_id
+	WHERE jc.cve_id = cves.id AND LOWER(ac.ecosystem) LIKE LOWER(?)
+)`
+
+func applyFilters(q *gorm.DB, filter []shared.FilterQuery, semiJoin bool) (*gorm.DB, bool) {
 	hasEcosystemJoin := false
 	for _, f := range filter {
 		if f.Field == "ecosystem" {
+			if semiJoin {
+				q = q.Where(ecosystemSemiJoin, f.FieldValue)
+				continue
+			}
 			if !hasEcosystemJoin {
 				q = q.Joins("JOIN cve_affected_component ON cve_affected_component.cve_id = cves.id").
 					Joins("JOIN affected_components ON affected_components.id = cve_affected_component.affected_component_id")
@@ -153,19 +163,14 @@ func (g *cveRepository) FindAllListPaged(ctx context.Context, tx *gorm.DB, pageI
 	var cves = []models.CVE{}
 
 	q := g.GetDB(ctx, tx).Model(&models.CVE{})
-	q, hasEcosystemJoin := applyFilters(q, filter)
-	if hasEcosystemJoin {
-		// Count CVEs, not join rows. Naming the column matters: a bare Distinct()
-		// leaves Statement.Selects empty, and Count() then emits a plain count(*)
-		q = q.Distinct("cves.id")
-	}
+	q, _ = applyFilters(q, filter, true)
 	if err := q.Count(&count).Error; err != nil {
 		return shared.Paged[models.CVE]{}, err
 	}
 
 	// get all cves
 	q = pageInfo.ApplyOnDB(g.GetDB(ctx, tx))
-	q, hasEcosystemJoin = applyFilters(q, filter)
+	q, hasEcosystemJoin := applyFilters(q, filter, false)
 	if hasEcosystemJoin {
 		// same fan-out as above, but here every CVE column is selected, so the
 		// de-duplication has to be a bare SELECT DISTINCT over all of them
