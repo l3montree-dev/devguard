@@ -16,4 +16,5 @@ exclude-newer = "7 days"
 constraint-dependencies = [
     "gitpython==3.1.60",
     "soupsieve==2.9.0",
+    "urllib3==2.8.0",
 ]
