@@ -63,14 +63,7 @@ rec {
   # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
   dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {
-    inherit (pkgs)
-      lib
-      postgresql_16
-      fetchurl
-      stdenv
-      runCommand
-      jq
-      ;
+    inherit pkgs;
   };
   pythonTools = import ./python-tools.nix {
     inherit (pkgs)
@@ -222,15 +215,7 @@ rec {
       tag = "16";
 
       contents = [
-        pkgs.cacert
-        pkgs.glibcLocales # en_US.UTF-8 locale support
         postgresql.psql
-        postgresql.entrypoint
-        postgresql.config
-        postgresql.sbom
-        pkgs.bash
-        pkgs.coreutils
-        pkgs.gnutar
       ]
       ++ (if debug then [ pkgs.busybox ] else [ ]);
 
