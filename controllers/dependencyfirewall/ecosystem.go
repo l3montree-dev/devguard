@@ -116,6 +116,8 @@ func EcosystemFromString(eco string) ecosystem {
 		return goEcosystem{}
 	case "oci":
 		return ociEcosystem{}
+	case "composer":
+		return composerEcosystem{}
 	default:
 		return nil
 	}
