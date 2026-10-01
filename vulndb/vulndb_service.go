@@ -565,6 +565,12 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 	// flush the purl comparer cache since its values are now outdated
 	service.purlComparer.FlushCache()
 
+	refreshStart := time.Now()
+	if _, err := conn.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY cve_ecosystem"); err != nil {
+		return fmt.Errorf("could not refresh cve_ecosystem: %w", err)
+	}
+	slog.Info("refreshed cve_ecosystem", "took", time.Since(refreshStart))
+
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
 }

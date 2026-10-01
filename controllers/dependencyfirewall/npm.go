@@ -213,8 +213,10 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
-		slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
+	if !releaseTime.IsZero() {
+		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+			slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
+		}
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
