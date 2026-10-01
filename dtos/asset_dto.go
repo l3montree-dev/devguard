@@ -185,7 +185,7 @@ type AssetCreateRequest struct {
 	ModifiedIntegrity          ModifiedRequirementLevel   `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
 	ModifiedAvailability       ModifiedRequirementLevel   `json:"modifiedAvailability" validate:"omitempty,oneof=X none low high"`
 
-	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
+	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab ''"` // either null or github or gitlab, etc.
 }
 
 type AssetPatchRequest struct {
@@ -219,7 +219,7 @@ type AssetPatchRequest struct {
 
 	WebhookSecret *string `json:"webhookSecret"`
 
-	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
+	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab ''"` // either null or github or gitlab, etc.
 	IsPublic           *bool   `json:"isPublic"`
 	ParanoidMode       *bool   `json:"paranoidMode"`
 
