@@ -234,7 +234,7 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 		asset.VulnAutoReopenAfterDays = assetPatch.VulnAutoReopenAfterDays
 	}
 
-	if assetPatch.RepositoryProvider != nil {
+	if assetPatch.RepositoryProvider != nil && *assetPatch.RepositoryProvider != "" {
 		updated = true
 		if *assetPatch.RepositoryProvider == "" {
 			asset.RepositoryProvider = nil
