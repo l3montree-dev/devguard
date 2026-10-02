@@ -45,25 +45,25 @@ func TestDebEcosystem(t *testing.T) {
 			{
 				name:            "simple package",
 				path:            "debian/pool/main/c/curl/curl_8.14.1-2+deb13u5_arm64.deb",
-				expectedName:    "curl",
+				expectedName:    "debian/curl",
 				expectedVersion: "8.14.1-2+deb13u5",
 			},
 			{
 				name:            "binary name differs from source name",
 				path:            "debian/pool/main/k/krb5/libkrb5-3_1.21.3-5+deb13u1_arm64.deb",
-				expectedName:    "libkrb5-3",
+				expectedName:    "debian/libkrb5-3",
 				expectedVersion: "1.21.3-5+deb13u1",
 			},
 			{
 				name:            "architecture all",
 				path:            "debian/pool/main/b/bash-completion/bash-completion_2.16.0-7_all.deb",
-				expectedName:    "bash-completion",
+				expectedName:    "debian/bash-completion",
 				expectedVersion: "2.16.0-7",
 			},
 			{
 				name:            "security repository with tilde",
 				path:            "debian-security/pool/updates/main/o/openssl/openssl_3.5.7-1~deb13u3_arm64.deb",
-				expectedName:    "openssl",
+				expectedName:    "debian/openssl",
 				expectedVersion: "3.5.7-1~deb13u3",
 			},
 			{

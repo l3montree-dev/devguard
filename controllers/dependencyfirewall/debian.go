@@ -43,7 +43,7 @@ var _ ecosystem = debEcosystem{}
 func (debEcosystem) name() string { return "deb" }
 
 func (debEcosystem) trimPrefix(path string) string {
-	return trimWithRegex(path, debProxyPrefixRe)
+	return strings.TrimSuffix(trimWithRegex(path, debProxyPrefixRe), "/")
 }
 
 func (debEcosystem) parsePackage(path string) (string, string) {
@@ -62,15 +62,14 @@ func (debEcosystem) parsePackage(path string) (string, string) {
 		return "", ""
 	}
 
-	return packageSegments[0], packageSegments[1]
-
+	return "debian/" + packageSegments[0], packageSegments[1]
 }
 
 func (debEcosystem) packageIdentifier(packageName, pkgVersion string) string {
 	if pkgVersion != "" {
-		return fmt.Sprintf("pkg:deb/debian/%s@%s", packageName, pkgVersion)
+		return fmt.Sprintf("pkg:deb/%s@%s", packageName, pkgVersion)
 	}
-	return fmt.Sprintf("pkg:deb/debian/%s", packageName)
+	return fmt.Sprintf("pkg:deb/%s", packageName)
 }
 
 func (debEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, v string) bool {
@@ -142,7 +141,7 @@ func (debEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 // @Router /dependency-proxy/deb/{path} [get]
 // @Router /dependency-proxy/{secret}/deb/{path} [get]
 func (d *DebDependencyProxyController) ProxyDeb(c shared.Context) error {
-	if strings.HasSuffix(c.Request().URL.Path, ".deb") {
+	if strings.HasSuffix(strings.TrimSuffix(c.Request().URL.Path, "/"), ".deb") {
 		return d.proxyDebPackage(c)
 	}
 	return d.proxyDebMetadata(c)
