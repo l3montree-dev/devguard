@@ -56,7 +56,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 		"npm":       {"fake-malicious-npm-package", "@fake-org/malicious-package"},
 		"go":        {"github.com/fake-org/malicious-package"},
 		"pypi":      {"fake-malicious-pypi-package"},
-		"maven":     {"com.fake:malicious-package"},
+		"maven":     {"com.fake/malicious-package"},
 		"crates.io": {"fake-malicious-crate"},
 		// OCI names are fully qualified image references, as the OCI proxy looks them up.
 		"oci": {"docker.io/fake-org/malicious-image"},
@@ -194,7 +194,12 @@ func (c *MaliciousPackageChecker) GetMaliciousComponents(ctx context.Context, ec
 		// the spec-conform purl carries them in the repository_url qualifier.
 		parsedPurl = normalize.OCIPurlFromImageReference(packageName)
 	} else {
-		purl := fmt.Sprintf("pkg:%s/%s", strings.ToLower(ecosystem), strings.ToLower(packageName))
+		ecosystem = strings.ToLower(ecosystem)
+		if ecosystem != "maven" && ecosystem != "go" {
+			packageName = strings.ToLower(packageName)
+		}
+
+		purl := fmt.Sprintf("pkg:%s/%s", ecosystem, packageName)
 
 		// Parse to normalize
 		var err error

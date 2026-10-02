@@ -522,6 +522,7 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
+          description: New in 1.7
         issuerName:
           type: string
         notValidAfter:
@@ -1853,7 +1854,6 @@ components:
       - workflows
       type: object
     cyclonedx.Hash:
-      description: New in 1.7
       properties:
         alg:
           $ref: '#/components/schemas/cyclonedx.HashAlgorithm'
@@ -2730,6 +2730,7 @@ components:
           uniqueItems: false
         manufacture:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+          description: 'Deprecated: Use Component Manufacturer instead.'
         manufacturer:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         properties:
@@ -2783,7 +2784,6 @@ components:
       - phone
       type: object
     cyclonedx.OrganizationalEntity:
-      description: 'Deprecated: Use Component Manufacturer instead.'
       properties:
         address:
           $ref: '#/components/schemas/cyclonedx.PostalAddress'
@@ -3004,6 +3004,7 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
+          description: New in 1.7
         format:
           type: string
         id:
@@ -5670,6 +5671,10 @@ components:
           type: string
         type:
           $ref: '#/components/schemas/dtos.ExternalReferenceType'
+          enum:
+          - cyclonedx
+          - csaf
+          - openvex
         url:
           type: string
       required:
@@ -5702,6 +5707,10 @@ components:
           type: string
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
+          enum:
+          - accepted
+          - falsePositive
+          - reopened
         justification:
           type: string
         mechanicalJustification:
@@ -5771,7 +5780,6 @@ components:
       - waitDuration
       type: object
     dtos.DatabaseSpecifics:
-      description: specific additional information, not standardized
       properties:
         cwe_ids:
           description: array of cwe ids associated with this vulnerability
@@ -6266,9 +6274,6 @@ components:
       - csaf
       - openvex
       - unknown
-      - cyclonedx
-      - csaf
-      - openvex
       type: string
       x-enum-varnames:
       - ExternalReferenceTypeCycloneDX
@@ -6793,12 +6798,6 @@ components:
       - low
       - high
       - X
-      - X
-      - low
-      - high
-      - X
-      - low
-      - high
       type: string
       x-enum-varnames:
       - MACLow
@@ -6811,16 +6810,6 @@ components:
       - local
       - physical
       - X
-      - X
-      - network
-      - adjacent
-      - local
-      - physical
-      - X
-      - network
-      - adjacent
-      - local
-      - physical
       type: string
       x-enum-varnames:
       - MAVNetwork
@@ -6834,14 +6823,6 @@ components:
       - low
       - high
       - X
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
       type: string
       x-enum-varnames:
       - MPRNone
@@ -6850,30 +6831,6 @@ components:
       - MPRNotDefined
     dtos.ModifiedRequirementLevel:
       enum:
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
       - X
       - none
       - low
@@ -6889,12 +6846,6 @@ components:
       - unchanged
       - changed
       - X
-      - X
-      - unchanged
-      - changed
-      - X
-      - unchanged
-      - changed
       type: string
       x-enum-varnames:
       - MSUnchanged
@@ -6902,12 +6853,6 @@ components:
       - MSNotDefined
     dtos.ModifiedUserInteraction:
       enum:
-      - X
-      - none
-      - required
-      - X
-      - none
-      - required
       - X
       - none
       - required
@@ -6930,6 +6875,7 @@ components:
           uniqueItems: false
         database_specific:
           $ref: '#/components/schemas/dtos.DatabaseSpecifics'
+          description: specific additional information, not standardized
         details:
           type: string
         id:
@@ -7844,6 +7790,7 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.ProjectDTO'
+          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -7910,6 +7857,7 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.ProjectDTO'
+          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -8209,24 +8157,6 @@ components:
       type: object
     dtos.RequirementLevel:
       enum:
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
       - low
       - medium
       - high
@@ -8642,6 +8572,10 @@ components:
           uniqueItems: false
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
+          enum:
+          - accepted
+          - falsePositive
+          - reopened
       required:
       - celExpression
       - eventType
@@ -8862,12 +8796,6 @@ components:
       - removedComplianceComponent
       - detected
       - rawRiskAssessmentUpdated
-      - accepted
-      - falsePositive
-      - reopened
-      - accepted
-      - falsePositive
-      - reopened
       type: string
       x-enum-varnames:
       - EventTypeFixed
@@ -9191,8 +9119,6 @@ components:
       - versionStart
       type: object
     github_com_l3montree-dev_devguard_database_models.Artifact:
-      description: 'Ensure foreign key field order matches Artifact primary key: ArtifactName,
-        AssetVersionName, AssetID'
       properties:
         artifactName:
           type: string
@@ -9591,6 +9517,8 @@ components:
       properties:
         artifact:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
+          description: 'Ensure foreign key field order matches Artifact primary key:
+            ArtifactName, AssetVersionName, AssetID'
         artifactName:
           type: string
         assetId:
@@ -9715,6 +9643,9 @@ components:
           type: string
         target_cve_data:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
+          description: |-
+            TargetCVEData is populated by GORM nested preload. It is nil when the target
+            CVE does not exist in this database — no DB-level FK constraint is added.
       required:
       - relationship_type
       - source_cve
@@ -10425,6 +10356,7 @@ components:
       properties:
         asset:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
+          description: Relationships
         assetId:
           description: Composite key components (for indexing and queries)
           type: string
@@ -10883,6 +10815,16 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10899,10 +10841,28 @@ components:
       - 1000
       - 1000000
       - 1000000000
-      - 60000000000
-      - 3600000000000
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
       type: integer
       x-enum-varnames:
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
       - minDuration
       - maxDuration
       - Nanosecond
@@ -10921,14 +10881,10 @@ components:
       - Microsecond
       - Millisecond
       - Second
-      - Minute
-      - Hour
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
-      - Minute
-      - Hour
     transformer.MinimalTree:
       properties:
         dependencies:
@@ -11655,6 +11611,27 @@ paths:
       summary: Proxy Go module requests
       tags:
       - Dependency Firewall
+  /dependency-proxy/{secret}/maven/{path}:
+    get:
+      parameters:
+      - description: dependency proxy secret
+        in: path
+        name: secret
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+          description: OK
+      security:
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Proxy Maven repository request
+      tags:
+      - Dependency Firewall
   /dependency-proxy/{secret}/npm/-/{path}:
     get:
       parameters:
@@ -11932,6 +11909,27 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Proxy Go module requests
+      tags:
+      - Dependency Firewall
+  /dependency-proxy/maven/{path}:
+    get:
+      parameters:
+      - description: dependency proxy secret
+        in: path
+        name: secret
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+          description: OK
+      security:
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Proxy Maven repository request
       tags:
       - Dependency Firewall
   /dependency-proxy/npm/-/{path}:
@@ -18658,10 +18656,16 @@ paths:
           type: string
       requestBody:
         content:
-          application/x-www-form-urlencoded:
+          multipart/form-data:
             schema:
-              title: file
-              type: file
+              properties:
+                file:
+                  description: SBOM file
+                  format: binary
+                  type: string
+              required:
+              - file
+              type: object
         description: SBOM file
         required: true
       responses:
