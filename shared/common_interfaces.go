@@ -25,6 +25,7 @@ import (
 	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/riverqueue/river"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -978,4 +979,8 @@ const (
 type InstanceSettings struct {
 	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
 	BearerTokenAuthDisabled bool `json:"bearerTokenAuthDisabled"`
+}
+
+type RiverInstance interface {
+	Publish(ctx context.Context, args river.JobArgs, opts *river.InsertOpts, errorHandler func(error))
 }

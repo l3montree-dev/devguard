@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -61,6 +62,14 @@ func migrateDB() {
 		fx.New(
 			fx.NopLogger,
 			fx.Supply(db),
+			fx.Provide(
+				fx.Annotate(
+					database.NewPgxConnPool,
+					fx.ParamTags(`name:"river"`),
+					fx.ResultTags(`name:"river"`),
+				),
+			),
+			events.Module,
 			fx.Provide(fx.Annotate(database.NewPostgreSQLBroker, fx.As(new(shared.PubSubBroker)))),
 			fx.Provide(database.NewPostgreSQLBroker),
 			fx.Provide(api.NewServer),

@@ -18,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"github.com/l3montree-dev/devguard/workers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -52,6 +53,7 @@ type VulnDBService struct {
 	pool              *pgxpool.Pool
 	ghVexFetcher      shared.GitHubVexFetcher
 	purlComparer      *scan.PurlComparer // used to flush the cache after import
+	riverInstance     shared.RiverInstance
 }
 
 func NewVulnDBService(
@@ -64,6 +66,7 @@ func NewVulnDBService(
 	ghVexFetcher shared.GitHubVexFetcher,
 	pool *pgxpool.Pool,
 	purlComparer *scan.PurlComparer,
+	riverInstance shared.RiverInstance,
 ) *VulnDBService {
 	return &VulnDBService{
 		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
@@ -78,6 +81,7 @@ func NewVulnDBService(
 		pool:              pool,
 		ghVexFetcher:      ghVexFetcher,
 		purlComparer:      purlComparer,
+		riverInstance:     riverInstance,
 	}
 }
 
@@ -564,6 +568,7 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 
 	// flush the purl comparer cache since its values are now outdated
 	service.purlComparer.FlushCache()
+	service.riverInstance.Publish(ctx, workers.VulnDBUpdateArgs{}, nil, nil)
 
 	refreshStart := time.Now()
 	if _, err := conn.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY cve_ecosystem"); err != nil {
