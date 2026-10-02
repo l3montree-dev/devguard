@@ -41,6 +41,11 @@ func registerPyPIRoutes(group *echo.Group, pythonController *dependencyfirewall.
 	group.GET("/pypi/packages/*", pythonController.ProxyPyPIPackage)
 }
 
+func registerMavenRoutes(group *echo.Group, mavenController *dependencyfirewall.MavenDependencyProxyController) {
+	// Maven packages and metadata share one path tree
+	group.GET("/maven/*", mavenController.ProxyMaven)
+}
+
 func registerDebRoutes(group *echo.Group, debController *dependencyfirewall.DebDependencyProxyController) {
 	group.GET("/deb/*", debController.ProxyDeb)
 }
@@ -50,6 +55,7 @@ func NewDependencyProxyRouter(
 	npmController *dependencyfirewall.NPMDependencyProxyController,
 	goController *dependencyfirewall.GoDependencyProxyController,
 	pythonController *dependencyfirewall.PythonDependencyProxyController,
+	mavenController *dependencyfirewall.MavenDependencyProxyController,
 	debController *dependencyfirewall.DebDependencyProxyController,
 ) DependencyProxyRouter {
 	group := apiV1Group.Group.Group("/dependency-proxy")
@@ -57,6 +63,7 @@ func NewDependencyProxyRouter(
 	registerNPMRoutes(group, npmController)
 	registerGoRoutes(group, goController)
 	registerPyPIRoutes(group, pythonController)
+	registerMavenRoutes(group, mavenController)
 	registerDebRoutes(group, debController)
 
 	// Secret-scoped routes (used without DevGuard authentication)
@@ -65,6 +72,7 @@ func NewDependencyProxyRouter(
 	registerNPMRoutes(secretGroup, npmController)
 	registerGoRoutes(secretGroup, goController)
 	registerPyPIRoutes(secretGroup, pythonController)
+	registerMavenRoutes(secretGroup, mavenController)
 	registerDebRoutes(secretGroup, debController)
 
 	return DependencyProxyRouter{Group: group}
