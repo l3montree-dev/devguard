@@ -24,7 +24,7 @@ rec {
     "github.com/go-jose/go-jose/v3" = "v3.0.5";
     "go.opentelemetry.io/otel/sdk" = "v1.45.0";
     "go.opentelemetry.io/otel" = "v1.45.0";
-    "google.golang.org/grpc" = "v1.83.1";
+    "google.golang.org/grpc" = "v1.83.2";
     "go.mongodb.org/mongo-driver" = "v1.17.9";
     "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp" = "v1.45.0";
     "github.com/slack-go/slack" = "v0.29.0";
@@ -57,7 +57,7 @@ rec {
       # a `go mod download`-style module cache has each dependency's own
       # go.mod, which is what's actually needed.
       proxyVendor = true;
-      vendorHash = "sha256-52aCWgaBC/RkR2Oi67Gx53q4B6xkwl1YjZGIn3jJEkA=";
+      vendorHash = "sha256-km3F7IDvv4n/v8NjUEDaKysbf+4v6y0O7gpIuEPULW8=";
       buildFlags = [ "-trimpath" ]; # compiler-level flag, mirrors Makefile FLAGS
       doCheck = false;
       env = {
