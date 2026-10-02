@@ -58,6 +58,7 @@ func buildFakePackages() ([]models.MaliciousPackage, []models.MaliciousAffectedC
 		"pypi":      {"fake-malicious-pypi-package"},
 		"maven":     {"com.fake/malicious-package"},
 		"crates.io": {"fake-malicious-crate"},
+		"composer":  {"fake-org/malicious-package"},
 		// OCI names are fully qualified image references, as the OCI proxy looks them up.
 		"oci": {"docker.io/fake-org/malicious-image"},
 	}
