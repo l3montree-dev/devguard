@@ -161,7 +161,7 @@ rec {
       devguardBinaries.devguardScannerSBOM
       semgrepSBOM
       pythonTools.sbom
-      pkgs.jq
+      pkgs.pkgsStatic.jq
       pkgs.gettext
       pkgs.busybox
       pkgs.git
@@ -172,6 +172,12 @@ rec {
       chmod 1777 tmp
       # Ensure this path exists in all CI environments for stable layer output.
       mkdir -p nix/var/nix/builds
+      # Static binaries as regular files at stable paths, so other images can copy them without knowing the store paths
+      # e.g. COPY --from=ghcr.io/l3montree-dev/devguard/scanner:<version> /usr/local/bin/jq /jq
+      mkdir -p usr/local/bin
+      cp ${pkgs.pkgsStatic.jq.bin}/bin/jq usr/local/bin/jq
+      cp ${craneFromSource.package}/bin/crane usr/local/bin/crane
+      cp ${devguardBinaries.devguardScanner}/bin/devguard-scanner usr/local/bin/devguard-scanner
     '';
 
     config = {
