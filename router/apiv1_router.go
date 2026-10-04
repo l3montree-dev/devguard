@@ -38,6 +38,7 @@ func NewAPIV1Router(srv api.Server,
 	csafController *controllers.CSAFController,
 	scanController *controllers.ScanController,
 	dependencyVulnController *controllers.DependencyVulnController,
+	slsaController *controllers.SLSAController,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
 	assetRepository shared.AssetRepository,
@@ -66,6 +67,7 @@ func NewAPIV1Router(srv api.Server,
 	apiV1Router.GET("/health/", systemController.Health)
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
+	apiV1Router.GET("/slsa/public-key/", slsaController.PublicKey)
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	apiV1Router.POST("/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticated)
 	apiV1Router.POST("/sarif-scan-unauthenticated/", scanController.FirstPartyVulnScanUnauthenticated)

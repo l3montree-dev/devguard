@@ -146,4 +146,5 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewLogController),
 
 	fx.Provide(NewAdvisoryController),
+	fx.Provide(NewSLSAController),
 )

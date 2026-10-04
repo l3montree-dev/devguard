@@ -38,6 +38,7 @@ func NewSessionRouter(
 	scanController *controllers.ScanController,
 	attestationController *controllers.AttestationController,
 	patController *controllers.PatController,
+	slsaController *controllers.SLSAController,
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	organizationRepository shared.OrganizationRepository,
@@ -59,6 +60,7 @@ func NewSessionRouter(
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, middlewares.NeededScope([]string{"manage"}))
 
 	sessionRouter.GET("/resolve/", orgController.ResolvePermalink)
+	sessionRouter.POST("/slsa/build-provenance/", slsaController.BuildProvenance)
 
 	/**
 	Following routes are asset routes which are registered on sessionRouter because of fast access.
