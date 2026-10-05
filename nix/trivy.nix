@@ -1,33 +1,29 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/tr/trivy/package.nix
 {
-  lib,
-  buildGoModule,
-  fetchFromGitHub,
-  installShellFiles,
-  runCommand,
-  jq,
+  pkgs,
+  buildGo127Module ? pkgs.buildGo127Module,
 }:
 
 let
   pname = "trivy";
-  version = "0.74.0";
+  version = "0.75.0";
   modulePurl = "pkg:golang/github.com/aquasecurity/trivy";
 
-  src = fetchFromGitHub {
+  src = pkgs.fetchFromGitHub {
     owner = "aquasecurity";
     repo = "trivy";
     rev = "v${version}";
-    hash = "sha256-OXOT8qwqh8Gy+IJcvBza5nai5bvNMcAMeeT+b2zuWDg=";
+    hash = "sha256-z0QMnaHSoHR2eHFFWOFHn7EJV0QfQYSSTQ4Q7Q31QbQ=";
   };
 
-  package = buildGoModule {
+  package = buildGo127Module {
     inherit pname version src;
 
     # vendor hash differs across Linux and Darwin builds — bypass the source
     # vendor dir entirely and fetch modules via the Go module proxy.
     proxyVendor = true;
-    vendorHash = "sha256-ajXgC6CCw0IaS/e3k0wGNIUOs9mTBIEuV21ZnwZj7SQ=";
+    vendorHash = "sha256-idc2wjjPVTRW9cImD/o40I+xdSzDwO7vEv2SB03FYl0=";
 
     subPackages = [ "cmd/trivy" ];
 
@@ -45,7 +41,7 @@ let
       "-X=github.com/aquasecurity/trivy/pkg/version/app.ver=${version}"
     ];
 
-    nativeBuildInputs = [ installShellFiles ];
+    nativeBuildInputs = [ pkgs.installShellFiles ];
 
     postInstall = "";
 
@@ -54,14 +50,14 @@ let
     meta = {
       description = "A comprehensive and versatile security scanner";
       homepage = "https://github.com/aquasecurity/trivy";
-      license = lib.licenses.asl20;
+      license = pkgs.lib.licenses.asl20;
       mainProgram = "trivy";
     };
   };
 
   # Uses its own freshly-built binary to scan its own source - no external
   # trivy dependency needed, unlike gitleaks.nix/crane.nix.
-  mkToolSBOM = (import ./sbom-lib.nix { inherit lib runCommand jq; }).mkToolSBOM { trivy = package; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { trivy = package; };
 
   # Trivy's own repo is full of testdata fixtures for its analyzer tests
   # (poetry.lock, package-lock.json, go.mod, ...) pinned to arbitrary,
@@ -69,7 +65,7 @@ let
   # dependencies of the trivy binary itself. Excluded from the SBOM scan
   # source only - the actual build still uses the unfiltered `src`.
   # Another issue is that since we are not having sbom merkle trees implemented in devguard, this will override any patches we are doing to python packages (https://github.com/l3montree-dev/devguard/issues/2780)
-  sbomSrc = lib.cleanSourceWith {
+  sbomSrc = pkgs.lib.cleanSourceWith {
     inherit src;
     filter = path: _type: builtins.match ".*/testdata(/.*)?" path == null;
   };

@@ -1,14 +1,6 @@
 {
-  buildGoModule,
-  lib,
-  fetchFromGitHub,
-  go,
-  # optional: only needed to build devguardScannerSBOM (passed explicitly
-  # from oci.nix). The plain "binaries" call site in flake.nix never
-  # references that attribute, so it's fine for these to stay null there.
-  runCommand ? null,
-  jq ? null,
-  trivy ? null,
+  pkgs,
+  trivy,
 }:
 rec {
   version = "v26.2.0";
@@ -30,8 +22,8 @@ rec {
     "github.com/slack-go/slack" = "v0.29.0";
   };
 
-  goModPatchScript = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
+  goModPatchScript = pkgs.lib.concatStringsSep "\n" (
+    pkgs.lib.mapAttrsToList (
       modulePath: ver: "go mod edit -replace ${modulePath}=${modulePath}@${ver}"
     ) goModPatches
   );
@@ -39,7 +31,7 @@ rec {
   # Only include files that affect the Go build output — Go sources, modules,
   # vendored deps, and directories used by //go:embed directives.
   # Excludes nix/, flake.nix, docs, etc. so those changes don't bust the cache.
-  src = fetchFromGitHub {
+  src = pkgs.fetchFromGitHub {
     owner = "ory";
     repo = "kratos";
     rev = version;
@@ -47,7 +39,7 @@ rec {
   };
 
   kratos =
-    (buildGoModule {
+    (pkgs.buildGoModule {
       pname = "kratos";
       inherit version src ldflags;
       # Fetch modules via the Go module proxy instead of vendoring: a plain
@@ -83,7 +75,7 @@ rec {
         };
       });
 
-  mkToolSBOM = (import ./sbom-lib.nix { inherit lib runCommand jq; }).mkToolSBOM { inherit trivy; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { inherit trivy; };
 
   kratosSBOM = mkToolSBOM {
     toolName = "kratos";
@@ -101,7 +93,7 @@ rec {
 
         find . -mindepth 2 \( -name go.mod -o -name go.sum \) -delete
       '';
-    extraNativeBuildInputs = [ go ];
+    extraNativeBuildInputs = [ pkgs.go ];
     modulePurl = "pkg:golang/github.com/ory/kratos";
     binaries = [
       {

@@ -1,12 +1,7 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/gi/gitleaks/package.nix
 {
-  lib,
-  buildGoModule,
-  fetchFromGitHub,
-  installShellFiles,
-  runCommand,
-  jq,
+  pkgs,
   trivy,
 }:
 
@@ -15,14 +10,14 @@ let
   version = "8.30.1";
   modulePurl = "pkg:golang/github.com/zricethezav/gitleaks/v8";
 
-  src = fetchFromGitHub {
+  src = pkgs.fetchFromGitHub {
     owner = "gitleaks";
     repo = "gitleaks";
     rev = "v${version}";
     hash = "sha256-PpMquYyXNN6KFwN/efY5+gr+4IhSKPoAy2M/rcqfW5k=";
   };
 
-  package = buildGoModule {
+  package =pkgs.buildGoModule {
     inherit pname version src;
 
     proxyVendor = true;
@@ -35,7 +30,7 @@ let
       "-X github.com/gitleaks/gitleaks/v8/cmd.Version=v${version}"
     ];
 
-    nativeBuildInputs = [ installShellFiles ];
+    nativeBuildInputs = [ pkgs.installShellFiles ];
 
     postInstall = "";
     env = {
@@ -44,7 +39,7 @@ let
 
     doCheck = false;
 
-    meta = with lib; {
+    meta = with pkgs.lib; {
       description = "Scan git repos (or files) for secrets";
       homepage = "https://github.com/gitleaks/gitleaks";
       license = licenses.mit;
@@ -52,7 +47,7 @@ let
     };
   };
 
-  mkToolSBOM = (import ./sbom-lib.nix { inherit lib runCommand jq; }).mkToolSBOM { inherit trivy; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { inherit trivy; };
 in
 {
   inherit package;

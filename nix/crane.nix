@@ -1,28 +1,24 @@
 # Upstream nixpkgs definition:
 # https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/by-name/go/go-containerregistry/package.nix
 {
-  lib,
-  buildGoModule,
-  fetchFromGitHub,
-  installShellFiles,
-  runCommand,
-  jq,
+  pkgs,
   trivy,
+  buildGo127Module ? pkgs.buildGo127Module,
 }:
 
 let
   pname = "crane";
-  version = "0.22.0";
+  version = "0.22.1";
   modulePurl = "pkg:golang/github.com/google/go-containerregistry";
 
-  src = fetchFromGitHub {
+  src = pkgs.fetchFromGitHub {
     owner = "google";
     repo = "go-containerregistry";
     rev = "v${version}";
-    hash = "sha256-RA+LfxVI5vVspCQTlLSgFxxfp9JnGCFBQlY6A9DSkH4=";
+    hash = "sha256-OxywOhruteTqkCVhTvWuxMqx7HQfPoSZM+mEXVihUl4=";
   };
 
-  package = buildGoModule {
+  package = buildGo127Module {
     inherit pname version src;
 
     # Source tree includes a vendor/ directory, but that only records
@@ -46,13 +42,13 @@ let
     env = {
       CGO_ENABLED = 0;
     };
-    nativeBuildInputs = [ installShellFiles ];
+    nativeBuildInputs = [ pkgs.installShellFiles ];
 
     postInstall = "";
 
     doCheck = false;
 
-    meta = with lib; {
+    meta = with pkgs.lib; {
       description = "A tool for interacting with remote images and registries";
       homepage = "https://github.com/google/go-containerregistry";
       license = licenses.asl20;
@@ -60,7 +56,7 @@ let
     };
   };
 
-  mkToolSBOM = (import ./sbom-lib.nix { inherit lib runCommand jq; }).mkToolSBOM { inherit trivy; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { inherit trivy; };
 in
 {
   inherit package;

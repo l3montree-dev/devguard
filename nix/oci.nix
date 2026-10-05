@@ -22,38 +22,17 @@ rec {
     trivy = trivyFromSource.package;
   };
 
-  args = {
-    inherit (pkgs)
-      lib
-      buildGoModule
-      fetchFromGitHub
-      runCommand
-      jq
-      ;
-  };
-
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
   trivyFromSource = import ./trivy.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-    }
+    { inherit pkgs buildGo127Module; }
   );
 
   craneFromSource = import ./crane.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-      trivy = trivyFromSource.package;
-    }
+    { inherit pkgs buildGo127Module; trivy = trivyFromSource.package; }
   );
   gitleaksFromSource = import ./gitleaks.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-      trivy = trivyFromSource.package;
-    }
+    { inherit pkgs; trivy = trivyFromSource.package; }
   );
 
   common = import ./common.nix {
@@ -78,10 +57,9 @@ rec {
     inherit uv2nix pyproject-nix pyproject-build-systems;
   };
   kratosFromSource = import ./kratos.nix (
-    args
-    // {
+    { 
+      inherit pkgs;
       trivy = trivyFromSource.package;
-      inherit (pkgs) go;
     }
   );
 
