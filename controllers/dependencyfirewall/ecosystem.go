@@ -120,6 +120,8 @@ func EcosystemFromString(eco string) ecosystem {
 		return mavenEcosystem{}
 	case "composer":
 		return composerEcosystem{}
+	case "deb":
+		return debEcosystem{}
 	default:
 		return nil
 	}
