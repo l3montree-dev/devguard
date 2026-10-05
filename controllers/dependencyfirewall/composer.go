@@ -260,7 +260,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	if err := checkComposerDistHost(distURL); err != nil {
 		span.RecordError(err)
 		slog.Warn("Blocked dist url", "proxy", "composer", "package", packageName, "version", version, "url", distURL, "error", err)
-		return echo.NewHTTPError(http.StatusForbidden, err.Error())
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("blocked dist url: %v", err))
 	}
 
 	if configs.MinReleaseAge > 0 {
