@@ -153,6 +153,7 @@ func init() {
 		NewContainerScanningCommand(),
 		NewCleanCommand(),
 		NewAttestCommand(),
+		NewProvenanceCommand(),
 		NewInspectCommand(),
 		NewSignCommand(),
 		NewSecretScanningCommand(),

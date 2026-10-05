@@ -16,7 +16,6 @@
 package intotocmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -68,13 +67,7 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		// save to file
-		b, err := json.Marshal(provenance)
-		if err != nil {
-			return err
-		}
-
-		err = os.WriteFile(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step), b, 0644)
+		err = os.WriteFile(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step), provenance, 0644)
 		if err != nil {
 			return err
 		}

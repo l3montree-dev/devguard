@@ -175,7 +175,7 @@ func newTestSLSAController(t *testing.T, issuer *testOIDCIssuer, rekorURL string
 	keyPath := filepath.Join(t.TempDir(), "devguard-signing-key.pem")
 	require.NoError(t, os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), 0600))
 
-	t.Setenv("INTOTO_PRIVATE_KEY_PATH", keyPath)
+	t.Setenv("SLSA_PRIVATE_KEY_PATH", keyPath)
 	t.Setenv("SLSA_OIDC_AUDIENCE", testAudience)
 	t.Setenv("SLSA_OIDC_TRUSTED_ISSUERS", "")
 	t.Setenv("SLSA_REKOR_URL", rekorURL)
