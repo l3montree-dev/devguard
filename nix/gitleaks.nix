@@ -17,7 +17,7 @@ let
     hash = "sha256-PpMquYyXNN6KFwN/efY5+gr+4IhSKPoAy2M/rcqfW5k=";
   };
 
-  package =pkgs.buildGoModule {
+  package = pkgs.buildGoModule {
     inherit pname version src;
 
     proxyVendor = true;
@@ -47,7 +47,9 @@ let
     };
   };
 
-  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { inherit trivy; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM {
+    inherit trivy;
+  };
 in
 {
   inherit package;

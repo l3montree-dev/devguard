@@ -57,7 +57,9 @@ let
 
   # Uses its own freshly-built binary to scan its own source - no external
   # trivy dependency needed, unlike gitleaks.nix/crane.nix.
-  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { trivy = package; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM {
+    trivy = package;
+  };
 
   # Trivy's own repo is full of testdata fixtures for its analyzer tests
   # (poetry.lock, package-lock.json, go.mod, ...) pinned to arbitrary,

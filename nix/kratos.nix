@@ -75,7 +75,9 @@ rec {
         };
       });
 
-  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM { inherit trivy; };
+  mkToolSBOM = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkToolSBOM {
+    inherit trivy;
+  };
 
   kratosSBOM = mkToolSBOM {
     toolName = "kratos";
