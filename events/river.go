@@ -54,15 +54,18 @@ func SetupRiver(dbPool *pgxpool.Pool, workers *river.Workers) (*river.Client[pgx
 	}
 
 	if err := client.Start(context.Background()); err != nil {
-		return nil, fmt.Errorf("could not start river client: %w", err)
+		return nil, fmt.Errorf("could not start river client: %w", database.WrapConnError(database.GetRiverPoolConfigFromEnv(), err))
 	}
 
 	return client, nil
 }
 
 func (r RiverInstance) Publish(ctx context.Context, args river.JobArgs, opts *river.InsertOpts, errorHandler func(error)) {
+	if r.riverClient == nil {
+		slog.Error("could not publish event and store job in river queue, river client ist missing")
+		return
+	}
 	_, err := r.riverClient.Insert(ctx, args, opts)
-	slog.Info("Inserted Job")
 	if err != nil {
 		if errorHandler != nil {
 			errorHandler(err)

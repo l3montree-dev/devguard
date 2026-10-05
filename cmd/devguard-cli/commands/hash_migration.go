@@ -61,7 +61,14 @@ func runMigrations() error {
 	}
 	slog.Info("schema migrations completed successfully")
 
-	// Step 2: Run hash migrations (requires full dependency graph)
+	slog.Info("running river queue migrations...")
+	if err := hashmigrations.RunRiverMigrations(); err != nil {
+		slog.Error("river migration failed", "err", err)
+		return err
+	}
+	slog.Info("river queue migrations completed successfully")
+
+	// Step 3: Run hash migrations (requires full dependency graph)
 	var migrationErr error
 
 	app := fx.New(

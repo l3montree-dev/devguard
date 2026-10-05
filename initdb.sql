@@ -16,7 +16,7 @@
 CREATE EXTENSION IF NOT EXISTS semver;
 
 CREATE DATABASE kratos;
-CREATE USER kratos PASSWORD 'change-me-definitely-when-not-testing';
+CREATE USER kratos PASSWORD 'change-me-definitely-when-not-testing-kratos';
 GRANT ALL PRIVILEGES ON DATABASE kratos to kratos;
 
 \c kratos
@@ -25,7 +25,7 @@ GRANT USAGE, CREATE ON SCHEMA public TO kratos;
 
 
 CREATE DATABASE river;
-CREATE USER river PASSWORD 'change-me-definitely-when-not-testing';
+CREATE USER river PASSWORD 'change-me-definitely-when-not-testing-river';
 GRANT ALL PRIVILEGES ON DATABASE river to river;
 
 \c river

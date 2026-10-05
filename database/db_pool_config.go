@@ -117,6 +117,11 @@ func GetRiverPoolConfigFromEnv() PoolConfig {
 		Host:            os.Getenv("POSTGRES_HOST"),
 		Port:            os.Getenv("POSTGRES_PORT"),
 		DBName:          os.Getenv("RIVER_POSTGRES_DB"),
+		SSLMode:         os.Getenv("POSTGRES_SSL_MODE"),
+	}
+	// if SSLMode is not set, default to "disable"
+	if cfg.SSLMode == "" {
+		cfg.SSLMode = "disable"
 	}
 	return cfg
 }
