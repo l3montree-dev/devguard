@@ -16,6 +16,8 @@
 package dependencyfirewall
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 )
@@ -110,5 +112,30 @@ func TestCacheEvictsLeastRecentlyUsedWhenOverCapacity(t *testing.T) {
 	}
 	if _, ok := c.Get("b"); !ok {
 		t.Fatal("expected most recently inserted entry to survive")
+	}
+}
+
+func TestBypassCache(t *testing.T) {
+	tests := []struct {
+		name   string
+		header map[string]string
+		want   bool
+	}{
+		{"none", nil, false},
+		{"no-cache", map[string]string{"Cache-Control": "no-cache"}, true},
+		{"no-store mixed case", map[string]string{"Cache-Control": "max-age=0, No-Store"}, true},
+		{"max-age only", map[string]string{"Cache-Control": "max-age=60"}, false},
+		{"pragma", map[string]string{"Pragma": "no-cache"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			for k, v := range tt.header {
+				r.Header.Set(k, v)
+			}
+			if got := bypassCache(r); got != tt.want {
+				t.Fatalf("bypassCache() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

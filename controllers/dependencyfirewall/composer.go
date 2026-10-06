@@ -236,7 +236,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		return d.blockMaliciousPackage(c, composer, requestPath, reason, status)
 	}
 
-	if d.cache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
+	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "composer", "path", requestPath)
 			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {

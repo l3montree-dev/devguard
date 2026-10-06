@@ -215,7 +215,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 		return d.blockMaliciousPackage(c, maven, requestPath, reason, status)
 	}
 
-	if d.cache.Fresh(cacheKey, mavenCacheTTL(requestPath)) {
+	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, mavenCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "maven", "path", requestPath)
 			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {

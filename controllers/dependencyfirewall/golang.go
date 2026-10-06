@@ -194,7 +194,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 	}
 
-	if d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
+	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
 			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {

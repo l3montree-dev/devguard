@@ -173,7 +173,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	// Tarballs are immutable once published to npm, so a hash-verified hit
 	// never needs a freshness check — it's valid forever. Tarballs are only
 	// cached together with their release time, so it is always set here.
-	if entry, ok := d.cache.Get(cacheKey); ok {
+	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
 		if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)

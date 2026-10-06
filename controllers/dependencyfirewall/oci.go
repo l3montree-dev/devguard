@@ -466,7 +466,7 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid image path")
 	}
 
-	if method == http.MethodGet && d.ociManifestFresh(cacheKey, requestPath) {
+	if method == http.MethodGet && !bypassCache(c.Request()) && d.ociManifestFresh(cacheKey, requestPath) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			if entry.contentType != "" {
@@ -600,7 +600,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	}
 
 	// Blobs are content-addressed and immutable; serve from cache unconditionally once present.
-	if method == http.MethodGet {
+	if method == http.MethodGet && !bypassCache(c.Request()) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			c.Response().Header().Set("Content-Type", "application/octet-stream")

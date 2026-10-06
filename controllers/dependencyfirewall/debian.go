@@ -247,7 +247,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 		return d.blockMaliciousPackage(c, deb, requestPath, reason, status)
 	}
 
-	if d.cache.Fresh(cacheKey, debCacheTTL) {
+	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, debCacheTTL) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "deb", "path", requestPath)
 			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
