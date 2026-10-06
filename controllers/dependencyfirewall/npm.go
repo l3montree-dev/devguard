@@ -126,6 +126,11 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	orgCache, err := d.caches.forOrg(configs.OrgID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	requestPath := npm.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm",
@@ -146,7 +151,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	slog.Info("Proxy request", "proxy", "npm", "type", "tarball", "method", c.Request().Method, "path", requestPath)
 
 	cacheKey := "npm/tarball/" + requestPath
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := orgCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "npm", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -166,14 +171,14 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "npm", "path", requestPath, "status", status, "reason", reason)
-		d.cache.Remove(cacheKey)
+		orgCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
 	// Tarballs are immutable once published to npm, so a hash-verified hit
 	// never needs a freshness check — it's valid forever. Tarballs are only
 	// cached together with their release time, so it is always set here.
-	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
+	if entry, ok := orgCache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
 		if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
@@ -214,7 +219,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	}
 
 	if !releaseTime.IsZero() {
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+		if err := orgCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
 		}
 	}

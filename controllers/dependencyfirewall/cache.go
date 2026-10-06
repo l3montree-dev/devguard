@@ -25,6 +25,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // cacheValue is the payload stored under a cache key. releaseTime,
@@ -66,6 +68,40 @@ func newCache(basePath string, sizeInMB int) *cache {
 		cache:       make(map[string]cacheEntry),
 		lru:         make(map[string]time.Time),
 	}
+}
+
+type orgCaches struct {
+	mu       sync.Mutex
+	basePath string
+	sizeMB   int
+	caches   map[uuid.UUID]*cache
+}
+
+func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
+	return &orgCaches{
+		basePath: baseDir,
+		sizeMB:   sizeInMB,
+		caches:   make(map[uuid.UUID]*cache),
+	}
+}
+
+func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
+	if orgID == uuid.Nil {
+		return nil, fmt.Errorf("no orgID found")
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	e, exists := o.caches[orgID]
+	if exists {
+		return e, nil
+	}
+	path := filepath.Join(o.basePath, orgID.String())
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return nil, err
+	}
+	c := newCache(path, o.sizeMB)
+	o.caches[orgID] = c
+	return c, nil
 }
 
 func (c *cache) Get(key string) (cacheValue, bool) {
