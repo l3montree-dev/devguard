@@ -209,14 +209,19 @@
         # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
         # without rebuilding and untarring a whole OCI image just to check
         # one file.
+        # Built from the image set matching the evaluating system: the sources
+        # are read at eval time (builtins.path), which forces their fetch
+        # derivations to build, and that fails on a mismatched platform.
+        sbomImages = if system == "x86_64-linux" then ociImagesAmd64 else ociImagesArm64;
+
         sbomOutputs = {
-          devguard-scanner-sbom = ociImagesArm64.devguardBinaries.devguardScannerSBOM;
-          devguard-sbom = ociImagesArm64.devguardBinaries.devguardSBOM;
-          devguard-cli-sbom = ociImagesArm64.devguardBinaries.devguardCLISBOM;
-          crane-sbom = ociImagesArm64.craneFromSource.sbom;
-          gitleaks-sbom = ociImagesArm64.gitleaksFromSource.sbom;
-          trivy-sbom = ociImagesArm64.trivyFromSource.sbom;
-          kratos-sbom = ociImagesArm64.kratosFromSource.kratosSBOM;
+          devguard-scanner-sbom = sbomImages.devguardBinaries.devguardScannerSBOM;
+          devguard-sbom = sbomImages.devguardBinaries.devguardSBOM;
+          devguard-cli-sbom = sbomImages.devguardBinaries.devguardCLISBOM;
+          crane-sbom = sbomImages.craneFromSource.sbom;
+          gitleaks-sbom = sbomImages.gitleaksFromSource.sbom;
+          trivy-sbom = sbomImages.trivyFromSource.sbom;
+          kratos-sbom = sbomImages.kratosFromSource.kratosSBOM;
         };
 
         arm64Packages = {
