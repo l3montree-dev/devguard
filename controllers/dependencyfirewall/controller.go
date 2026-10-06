@@ -18,6 +18,7 @@ package dependencyfirewall
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -246,11 +247,10 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 }
 
 // LoadConfigsBySecret resolves DependencyProxyConfigs for a secret string.
-// An empty secret returns empty (permissive) configs without error.
 func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret string) (DependencyProxyConfigs, error) {
 	var configs DependencyProxyConfigs
 	if secret == "" {
-		return configs, nil
+		return configs, errors.New("invalid dependency proxy secret: empty")
 	}
 	uuidSecret, err := uuid.Parse(secret)
 	if err != nil {

@@ -65,7 +65,7 @@ func expandComposerVersions(entries []json.RawMessage, minified string) ([]json.
 	return expanded, nil
 }
 
-var composerProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?composer(?:/|$)`)
+var composerProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/composer(?:/|$)`)
 
 // ComposerDependencyProxyController handles php dependency proxy requests.
 // It embeds DependencyProxyController to reuse shared helpers and state.
@@ -152,9 +152,8 @@ func (composerEcosystem) writeResponse(c shared.Context, data []byte, path strin
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Success 200 {file} binary
-// @Router /dependency-proxy/composer/{path} [get]
 // @Router /dependency-proxy/{secret}/composer/{path} [get]
 func (d *ComposerDependencyProxyController) ProxyComposer(c shared.Context) error {
 	path := composer.trimPrefix(c.Request().URL.Path)

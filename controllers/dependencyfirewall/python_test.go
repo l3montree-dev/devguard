@@ -74,11 +74,6 @@ func TestPyPIEcosystemTrimPrefix(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "without secret",
-			path:     "/api/v1/dependency-proxy/pypi/simple/requests/",
-			expected: "simple/requests/",
-		},
-		{
 			name:     "with secret",
 			path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/pypi/simple/requests/",
 			expected: "simple/requests/",
@@ -91,6 +86,23 @@ func TestPyPIEcosystemTrimPrefix(t *testing.T) {
 				t.Fatalf("expected %q, got %q", tc.expected, got)
 			}
 		})
+	}
+}
+
+const testProxySecret = "550e8400-e29b-41d4-a716-446655440000"
+
+func newSecretScopedController(t *testing.T) *DependencyProxyController {
+	t.Helper()
+	assetID := uuid.New()
+
+	proxyService := mocks.NewDependencyProxySecretService(t)
+	proxyService.EXPECT().GetModelBySecret(mock.Anything, uuid.MustParse(testProxySecret)).Return("asset", assetID, nil)
+	assetRepository := mocks.NewAssetRepository(t)
+	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{}, nil)
+
+	return &DependencyProxyController{
+		dependencyProxyService: proxyService,
+		assetRepository:        assetRepository,
 	}
 }
 
@@ -119,25 +131,25 @@ func TestProxyPyPISimpleRewritesFileURLs(t *testing.T) {
 		expected    string
 	}{
 		{
-			name:        "html without secret",
-			path:        "/api/v1/dependency-proxy/pypi/simple/requests/",
+			name:        "html",
+			path:        "/api/v1/dependency-proxy/" + testProxySecret + "/pypi/simple/requests/",
 			contentType: "text/html",
 			upstream:    `<a href="https://files.pythonhosted.org/packages/ab/cd/requests-2.31.0-py3-none-any.whl#sha256=abc">requests-2.31.0-py3-none-any.whl</a>`,
-			expected:    `<a href="/api/v1/dependency-proxy/pypi/packages/ab/cd/requests-2.31.0-py3-none-any.whl#sha256=abc">requests-2.31.0-py3-none-any.whl</a>`,
+			expected:    `<a href="/api/v1/dependency-proxy/` + testProxySecret + `/pypi/packages/ab/cd/requests-2.31.0-py3-none-any.whl#sha256=abc">requests-2.31.0-py3-none-any.whl</a>`,
 		},
 		{
-			name:        "json with secret",
-			path:        "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/pypi/simple/requests/",
+			name:        "json",
+			path:        "/api/v1/dependency-proxy/" + testProxySecret + "/pypi/simple/requests/",
 			contentType: "application/vnd.pypi.simple.v1+json",
 			upstream:    `{"files":[{"url":"https://files.pythonhosted.org/packages/ab/cd/requests-2.31.0-py3-none-any.whl"}]}`,
-			expected:    `{"files":[{"url":"/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/pypi/packages/ab/cd/requests-2.31.0-py3-none-any.whl"}]}`,
+			expected:    `{"files":[{"url":"/api/v1/dependency-proxy/` + testProxySecret + `/pypi/packages/ab/cd/requests-2.31.0-py3-none-any.whl"}]}`,
 		},
 		{
 			name:        "scheme-relative and foreign host",
-			path:        "/api/v1/dependency-proxy/pypi/simple/requests/",
+			path:        "/api/v1/dependency-proxy/" + testProxySecret + "/pypi/simple/requests/",
 			contentType: "text/html",
 			upstream:    `<a href="//files.pythonhosted.org/packages/ab/cd/a.whl">a</a><a href="https://evil.example/b.whl">b</a>`,
-			expected:    `<a href="/api/v1/dependency-proxy/pypi/packages/ab/cd/a.whl">a</a><a href="/api/v1/dependency-proxy/pypi/b.whl">b</a>`,
+			expected:    `<a href="/api/v1/dependency-proxy/` + testProxySecret + `/pypi/packages/ab/cd/a.whl">a</a><a href="/api/v1/dependency-proxy/` + testProxySecret + `/pypi/b.whl">b</a>`,
 		},
 	}
 
@@ -147,18 +159,16 @@ func TestProxyPyPISimpleRewritesFileURLs(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-			c.SetParamNames("package")
-			c.SetParamValues("requests")
+			c.SetParamNames("secret", "package")
+			c.SetParamValues(testProxySecret, "requests")
 
 			checker := mocks.NewMaliciousPackageChecker(t)
 			checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, nil)
 
-			ctrl := &PythonDependencyProxyController{
-				DependencyProxyController: &DependencyProxyController{
-					maliciousChecker: checker,
-					client:           &http.Client{Transport: simpleIndexTransport{contentType: tc.contentType, body: tc.upstream}},
-				},
-			}
+			d := newSecretScopedController(t)
+			d.maliciousChecker = checker
+			d.client = &http.Client{Transport: simpleIndexTransport{contentType: tc.contentType, body: tc.upstream}}
+			ctrl := &PythonDependencyProxyController{DependencyProxyController: d}
 			if err := ctrl.ProxyPyPISimple(c); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -171,22 +181,20 @@ func TestProxyPyPISimpleRewritesFileURLs(t *testing.T) {
 
 func TestProxyPyPISimpleBlocksMaliciousBeforeUpstreamFetch(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/pypi/simple/fake-malicious-pypi-package/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/simple/fake-malicious-pypi-package/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetParamNames("package")
-	c.SetParamValues("fake-malicious-pypi-package")
+	c.SetParamNames("secret", "package")
+	c.SetParamValues(testProxySecret, "fake-malicious-pypi-package")
 
 	checker := mocks.NewMaliciousPackageChecker(t)
 	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "fake-malicious-pypi-package").Return([]models.MaliciousAffectedComponent{{MaliciousPackageID: "MAL-1"}}, nil)
 	checker.EXPECT().GetMaliciousPackage(mock.Anything, "MAL-1").Return(models.MaliciousPackage{}, nil)
 
-	ctrl := &PythonDependencyProxyController{
-		DependencyProxyController: &DependencyProxyController{
-			maliciousChecker: checker,
-			client:           &http.Client{Transport: simpleIndexTransport{}},
-		},
-	}
+	d := newSecretScopedController(t)
+	d.maliciousChecker = checker
+	d.client = &http.Client{Transport: simpleIndexTransport{}}
+	ctrl := &PythonDependencyProxyController{DependencyProxyController: d}
 
 	if err := ctrl.ProxyPyPISimple(c); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -197,24 +205,21 @@ func TestProxyPyPISimpleBlocksMaliciousBeforeUpstreamFetch(t *testing.T) {
 }
 
 func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
-	
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/pypi/simple/Typing_Extensions/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/simple/Typing_Extensions/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetParamNames("package")
-	c.SetParamValues("Typing_Extensions")
+	c.SetParamNames("secret", "package")
+	c.SetParamValues(testProxySecret, "Typing_Extensions")
 
 	checker := mocks.NewMaliciousPackageChecker(t)
 	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "typing-extensions").Return([]models.MaliciousAffectedComponent{{MaliciousPackageID: "MAL-1"}}, nil)
 	checker.EXPECT().GetMaliciousPackage(mock.Anything, "MAL-1").Return(models.MaliciousPackage{}, nil)
 
-	ctrl := &PythonDependencyProxyController{
-		DependencyProxyController: &DependencyProxyController{
-			maliciousChecker: checker,
-			client:           &http.Client{Transport: simpleIndexTransport{}},
-		},
-	}
+	d := newSecretScopedController(t)
+	d.maliciousChecker = checker
+	d.client = &http.Client{Transport: simpleIndexTransport{}}
+	ctrl := &PythonDependencyProxyController{DependencyProxyController: d}
 
 	if err := ctrl.ProxyPyPISimple(c); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -226,19 +231,19 @@ func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
 
 func TestProxyPyPIPackageFailsClosedOnMaliciousCheckError(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/pypi/packages/ab/cd/requests-2.32.3.tar.gz/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/packages/ab/cd/requests-2.32.3.tar.gz/", nil)
 	c := e.NewContext(req, httptest.NewRecorder())
+	c.SetParamNames("secret")
+	c.SetParamValues(testProxySecret)
 
 	checker := mocks.NewMaliciousPackageChecker(t)
 	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, errors.New("db down"))
 
-	ctrl := &PythonDependencyProxyController{
-		DependencyProxyController: &DependencyProxyController{
-			maliciousChecker: checker,
-			cache:            newCache(t.TempDir(), 10),
-			client:           &http.Client{Transport: simpleIndexTransport{}},
-		},
-	}
+	d := newSecretScopedController(t)
+	d.maliciousChecker = checker
+	d.cache = newCache(t.TempDir(), 10)
+	d.client = &http.Client{Transport: simpleIndexTransport{}}
+	ctrl := &PythonDependencyProxyController{DependencyProxyController: d}
 
 	err := ctrl.ProxyPyPIPackage(c)
 	httpErr, ok := err.(*echo.HTTPError)

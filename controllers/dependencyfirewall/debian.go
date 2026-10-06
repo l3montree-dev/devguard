@@ -22,7 +22,7 @@ const (
 	debCacheTTL = 168 * time.Hour
 )
 
-var debProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?deb(?:/|$)`)
+var debProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/deb(?:/|$)`)
 
 // DEBDependencyProxyController handles debian dependency proxy requests.
 // It embeds DependencyProxyController to reuse shared helpers and state.
@@ -136,9 +136,8 @@ func (debEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Success 200 {file} binary
-// @Router /dependency-proxy/deb/{path} [get]
 // @Router /dependency-proxy/{secret}/deb/{path} [get]
 func (d *DebDependencyProxyController) ProxyDeb(c shared.Context) error {
 	if strings.HasSuffix(strings.TrimSuffix(c.Request().URL.Path, "/"), ".deb") {

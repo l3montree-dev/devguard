@@ -35,7 +35,7 @@ import (
 const mavenRegistry = "https://repo1.maven.org/maven2"
 
 var (
-	mavenProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?maven(?:/|$)`)
+	mavenProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/maven(?:/|$)`)
 	mavenVersionDirRe  = regexp.MustCompile(`^\d[A-Za-z0-9._+-]*$|-SNAPSHOT$`)
 
 	mavenVersionsBlockRe = regexp.MustCompile(`(?s)<versions>(.*?)</versions>`)
@@ -153,9 +153,8 @@ func mavenContentType(path string) string {
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Success 200 {file} binary
-// @Router /dependency-proxy/maven/{path} [get]
 // @Router /dependency-proxy/{secret}/maven/{path} [get]
 func (d *MavenDependencyProxyController) ProxyMaven(c shared.Context) error {
 	if strings.Contains(c.Request().URL.Path, "maven-metadata.xml") {

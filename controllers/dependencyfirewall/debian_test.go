@@ -3,17 +3,12 @@ package dependencyfirewall
 import "testing"
 
 func TestDebEcosystem(t *testing.T) {
-	t.Run("trimPrefix with and without secret", func(t *testing.T) {
+	t.Run("trimPrefix", func(t *testing.T) {
 		cases := []struct {
 			name     string
 			path     string
 			expected string
 		}{
-			{
-				name:     "without secret",
-				path:     "/api/v1/dependency-proxy/deb/debian/dists/trixie/InRelease",
-				expected: "debian/dists/trixie/InRelease",
-			},
 			{
 				name:     "with secret",
 				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/deb/debian/dists/trixie/InRelease",
@@ -21,7 +16,7 @@ func TestDebEcosystem(t *testing.T) {
 			},
 			{
 				name:     "url encoded version is decoded",
-				path:     "/api/v1/dependency-proxy/deb/debian/pool/main/c/curl/curl_8.14.1-2%2bdeb13u5_arm64.deb",
+				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/deb/debian/pool/main/c/curl/curl_8.14.1-2%2bdeb13u5_arm64.deb",
 				expected: "debian/pool/main/c/curl/curl_8.14.1-2+deb13u5_arm64.deb",
 			},
 		}

@@ -13,4 +13,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-GOPATH=/tmp/go-proxy-test/gopath GOMODCACHE=/tmp/go-proxy-test/pkg/mod GOPROXY="http://localhost:8080/api/v1/dependency-proxy/go" go get github.com/fake-org/malicious-package
+GOPATH=/tmp/go-proxy-test/gopath GOMODCACHE=/tmp/go-proxy-test/pkg/mod GOPROXY="http://localhost:8080/api/v1/dependency-proxy/${DEVGUARD_PROXY_SECRET:?set DEVGUARD_PROXY_SECRET}/go" go get github.com/fake-org/malicious-package
