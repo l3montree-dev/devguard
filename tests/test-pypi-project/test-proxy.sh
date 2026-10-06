@@ -17,4 +17,4 @@
 
 python3 -m venv venv
 source venv/bin/activate
-PIP_INDEX_URL="http://localhost:8080/api/v1/dependency-proxy/pypi/simple" PIP_TRUSTED_HOST="localhost" python3 -m pip install -r requirements.txt
+PIP_INDEX_URL="http://localhost:8080/api/v1/dependency-proxy/${DEVGUARD_PROXY_SECRET:?set DEVGUARD_PROXY_SECRET}/pypi/simple" PIP_TRUSTED_HOST="localhost" python3 -m pip install -r requirements.txt

@@ -16,27 +16,13 @@
 package router
 
 import (
-	"os"
-
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/labstack/echo/v4"
 )
 
-// ociPublicProxyEnabled reports whether the unauthenticated /v2/<registry>/...
-// routes should be registered. Defaults to enabled; set
-// DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED=false to lock the proxy down to
-// secret-scoped routes only.
-func ociPublicProxyEnabled() bool {
-	return os.Getenv("DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED") != "false"
-}
-
 // OCIRegistryRouter exposes the OCI Distribution Spec v2 API at the root /v2/ path
 // so that standard Docker clients can pull images without any special configuration.
-//
-// Unauthenticated (no custom firewall rules applied):
-//
-//	docker pull <host>/docker.io/library/nginx:latest
 //
 // Secret-scoped (custom rules enforced; MinReleaseAge does not apply to OCI images,
 // registries expose no reliable publish time):
@@ -46,13 +32,7 @@ func ociPublicProxyEnabled() bool {
 // Docker resolves these as registry=<host> and sends:
 //
 //	GET /v2/                                                       (version check)
-//	GET /v2/docker.io/library/nginx/manifests/latest               (unauthenticated)
 //	GET /v2/<secret>/docker.io/library/nginx/manifests/latest      (secret-scoped)
-//
-// Routing note: to avoid ambiguity, no-secret routes cover 1- and 2-segment image
-// names while secret routes cover 2- and 3-segment image names (shifted by one).
-// In practice this means all real Docker Hub and ghcr.io images (e.g.
-// library/nginx, org/repo) work in both modes.
 type OCIRegistryRouter struct {
 	*echo.Group
 }
@@ -63,29 +43,6 @@ func NewOCIRegistryRouter(srv api.Server, ociController *dependencyfirewall.OCID
 	// Version check — Docker always sends this first.
 	v2.GET("/", ociController.ProxyOCIVersionCheck)
 	v2.HEAD("/", ociController.ProxyOCIVersionCheck)
-
-	// ── Unauthenticated routes ──────────────────────────────────────────────
-	// No secret in path; GetDependencyProxyConfigs returns empty config (no rules).
-	// Malicious-package and path-traversal checks still run.
-	// Operators can disable these routes entirely via
-	// DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED=false.
-	if ociPublicProxyEnabled() {
-		// 1-segment image: docker.io/nginx
-		v2.GET("/:registry/:image/manifests/:reference/", ociController.ProxyOCIManifest)
-		v2.HEAD("/:registry/:image/manifests/:reference/", ociController.ProxyOCIManifest)
-		v2.GET("/:registry/:image/blobs/:digest/", ociController.ProxyOCIBlob)
-		v2.HEAD("/:registry/:image/blobs/:digest/", ociController.ProxyOCIBlob)
-		v2.GET("/:registry/:image/tags/list/", ociController.ProxyOCITagsList)
-		v2.GET("/:registry/:image/referrers/:digest/", ociController.ProxyOCIReferrers)
-
-		// 2-segment image: docker.io/library/nginx
-		v2.GET("/:registry/:namespace/:image/manifests/:reference/", ociController.ProxyOCIManifest)
-		v2.HEAD("/:registry/:namespace/:image/manifests/:reference/", ociController.ProxyOCIManifest)
-		v2.GET("/:registry/:namespace/:image/blobs/:digest/", ociController.ProxyOCIBlob)
-		v2.HEAD("/:registry/:namespace/:image/blobs/:digest/", ociController.ProxyOCIBlob)
-		v2.GET("/:registry/:namespace/:image/tags/list/", ociController.ProxyOCITagsList)
-		v2.GET("/:registry/:namespace/:image/referrers/:digest/", ociController.ProxyOCIReferrers)
-	}
 
 	// ── Secret-scoped routes ────────────────────────────────────────────────
 	// Secret is the first path segment; custom firewall rules are loaded for
