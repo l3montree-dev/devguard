@@ -53,8 +53,8 @@ func trimWithRegex(path string, re *regexp.Regexp) string {
 
 type DependencyProxyCache struct {
 	CacheDir string
-	// MaxSizeMB bounds the size of the in-memory-tracked, disk-backed package
-	// cache. Defaults to 1024 (1GB) if unset.
+	// MaxSizeMB bounds the size of each organization's in-memory-tracked,
+	// disk-backed package cache. Defaults to 1024 (1GB) per organization if unset.
 	MaxSizeMB int
 }
 

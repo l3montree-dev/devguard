@@ -47,9 +47,9 @@ func ProvideDependencyProxyCache() dependencyfirewall.DependencyProxyCache {
 
 	maxSizeMB := os.Getenv("DEPENDENCY_PROXY_CACHE_MAX_SIZE_MB")
 	if maxSizeMB != "" {
-		slog.Info("Using custom dependency proxy cache max size", "size", maxSizeMB)
+		slog.Info("Using custom dependency proxy cache max size per organization", "size", maxSizeMB)
 	} else {
-		slog.Info("Using default dependency proxy cache max size", "size", "1024MB")
+		slog.Info("Using default dependency proxy cache max size per organization", "size", "1024MB")
 		maxSizeMB = "1024"
 	}
 
