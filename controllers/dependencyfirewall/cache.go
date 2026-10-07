@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -78,6 +79,18 @@ type orgCaches struct {
 }
 
 func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
+	entries, _ := os.ReadDir(baseDir)
+	ecosystemList := []string{"npm_", "pypi_", "go_", "maven_", "composer_", "deb_", "oci_"}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			if slices.ContainsFunc(ecosystemList, func(p string) bool { return strings.HasPrefix(entry.Name(), p) }) {
+				if err := os.Remove(filepath.Join(baseDir, entry.Name())); err != nil {
+					slog.Warn("failed to remove entry in cache", "error", err)
+				}
+			}
+		}
+	}
+
 	return &orgCaches{
 		basePath: baseDir,
 		sizeMB:   sizeInMB,
@@ -96,6 +109,9 @@ func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
 		return e, nil
 	}
 	path := filepath.Join(o.basePath, orgID.String())
+	if err := os.RemoveAll(path); err != nil {
+		return nil, err
+	}
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
