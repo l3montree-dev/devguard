@@ -51,9 +51,21 @@ type cacheEntry struct {
 	storedAt    time.Time
 }
 
+type CacheStats struct {
+	SizeBytes int64 `json:"sizeBytes"`
+	MaxBytes  int64 `json:"maxBytes"`
+	Entries   int   `json:"entries"`
+	Hits      int   `json:"hits"`
+	Misses    int   `json:"misses"`
+	Evictions int   `json:"evictions"`
+}
+
 type cache struct {
 	mu          sync.Mutex
 	currentSize int
+	hits        int
+	misses      int
+	evictions   int
 	// maxSize is the maximum size of the cache in bytes.
 	maxSize  int
 	basePath string
@@ -120,9 +132,28 @@ func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
 	return c, nil
 }
 
+func (o *orgCaches) Stats() CacheStats {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	totalStats := CacheStats{}
+	for _, c := range o.caches {
+		s := c.Stats()
+		totalStats.SizeBytes += s.SizeBytes
+		totalStats.MaxBytes += s.MaxBytes
+		totalStats.Entries += s.Entries
+		totalStats.Hits += s.Hits
+		totalStats.Misses += s.Misses
+		totalStats.Evictions += s.Evictions
+	}
+	return totalStats
+}
+
 func (c *cache) Get(key string) (cacheValue, bool) {
 	c.mu.Lock()
 	e, exists := c.cache[key]
+	if !exists {
+		c.misses++
+	}
 	c.mu.Unlock()
 	if !exists {
 		return cacheValue{}, false
@@ -144,6 +175,7 @@ func (c *cache) Get(key string) (cacheValue, bool) {
 	c.mu.Lock()
 	// Update the LRU map to mark this entry as recently used
 	c.lru[key] = time.Now()
+	c.hits++
 	c.mu.Unlock()
 	return cacheValue{
 		data:        content,
@@ -232,6 +264,7 @@ func (c *cache) Set(key string, v cacheValue) error {
 		if oldestKey == "" {
 			break // No more entries to evict
 		}
+		c.evictions++
 		c.removeLocked(oldestKey)
 	}
 
@@ -290,4 +323,17 @@ func bypassCache(r *http.Request) bool {
 		}
 	}
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("Pragma")), "no-cache")
+}
+
+func (c *cache) Stats() CacheStats {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return CacheStats{
+		SizeBytes: int64(c.currentSize),
+		MaxBytes:  int64(c.maxSize),
+		Entries:   len(c.cache),
+		Hits:      c.hits,
+		Misses:    c.misses,
+		Evictions: c.evictions,
+	}
 }

@@ -167,6 +167,32 @@ func (d *DependencyProxyController) GetOrgDependencyProxyURLs(ctx shared.Context
 	return d.GetDependencyProxyURLs(ctx)
 }
 
+// @Summary Get organization dependency proxy cache statistics
+// @Tags Dependency Firewall
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "organization slug"
+// @Success 200 {object} dependencyfirewall.CacheStats
+// @Router /organizations/{organization}/dependency-proxy/cache-stats/ [get]
+func (d *DependencyProxyController) GetOrgCacheStats(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
+	e, err := d.caches.forOrg(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get cache stats for org").WithInternal(err)
+	}
+	return ctx.JSON(http.StatusOK, e.Stats())
+}
+
+// @Summary Get instance-wide dependency proxy cache statistics
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} dependencyfirewall.CacheStats
+// @Router /admin/statistics/dependency-proxy-cache/ [get]
+func (d *DependencyProxyController) GetInstanceCacheStats(ctx shared.Context) error {
+	return ctx.JSON(http.StatusOK, d.caches.Stats())
+}
+
 // @Summary Get project dependency proxy URLs
 // @Tags Dependency Firewall
 // @Security CookieAuth
