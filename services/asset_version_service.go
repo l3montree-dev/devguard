@@ -100,9 +100,17 @@ func preferMarkdown(text sarif.MultiformatMessageString) string {
 // unchanged rescan re-inserts rows that collide on the primary key and change
 // nothing, while a changed one inserts only the subtrees that actually differ.
 func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
+	if err := s.StoreSBOM(ctx, tx, assetVersion, artifactName, source, parsed); err != nil {
+		return nil, err
+	}
+	return s.LoadArtifactSBOMs(ctx, tx, assetVersion, artifactName)
+}
+
+// StoreSBOM is UpdateSBOM without reloading the artifact's SBOMs, for callers storing several sources before a single load
+func (s *assetVersionService) StoreSBOM(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) error {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
+		return fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
 	// component metadata stays in the components table, keyed by purl
@@ -111,7 +119,7 @@ func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org 
 		components = append(components, models.Component{ID: id})
 	}
 	if err := s.componentRepository.CreateBatch(ctx, tx, components); err != nil {
-		return nil, errors.Wrap(err, "could not create components")
+		return errors.Wrap(err, "could not create components")
 	}
 
 	if err := s.sbomRepository.SaveTree(ctx, tx, models.SBOM{
@@ -120,10 +128,9 @@ func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org 
 		ArtifactName:     artifactName,
 		Source:           source,
 	}, parsed.Tree); err != nil {
-		return nil, errors.Wrap(err, "could not store sbom")
+		return errors.Wrap(err, "could not store sbom")
 	}
-
-	return s.LoadArtifactSBOMs(ctx, tx, assetVersion, artifactName)
+	return nil
 }
 
 // LoadComponentMetadata fetches the metadata needed to render a forest as a

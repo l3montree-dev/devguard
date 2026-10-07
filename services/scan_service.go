@@ -474,7 +474,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.handleScanResult(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	opened, closed, newState, err = s.HandleScanResultForVulns(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -550,7 +550,7 @@ func (s *scanService) attachEventsTo(ctx context.Context, tx shared.DB, vulns []
 	return nil
 }
 
-func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -588,7 +588,6 @@ func (s *scanService) handleScanResult(ctx context.Context, tx shared.DB, userID
 	})
 	fixedOnThisArtifactName := utils.Filter(diff.RemovedFromArtifact, filterPredicate)
 
-	// newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(diff.NewlyDiscovered, existingVulnsOnOtherBranch)
 	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(diff.NewlyDiscovered, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
 
 	// make sure to first create a user detected event for vulnerabilities with just upstream events
@@ -875,10 +874,31 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	userID string,
 	userAgent *string,
 ) (normalize.MerkleForest, []models.DependencyVuln, error) {
+	if _, err := s.storeChangedUpstreamSBOMs(ctx, tx, org, project, asset, assetVersion, artifact); err != nil {
+		return nil, nil, err
+	}
+	return s.scanArtifactSBOMs(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+}
+
+// SyncArtifactUpstreamSBOMSourcesIfChanged only rescans the artifact when an upstream SBOM changed.
+// New CVEs in unchanged SBOMs are picked up by the global daemon scan.
+func (s *scanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error) {
+	changed, err := s.storeChangedUpstreamSBOMs(ctx, tx, org, project, asset, assetVersion, artifact)
+	if err != nil || !changed {
+		return false, err
+	}
+	if _, _, err := s.scanArtifactSBOMs(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// storeChangedUpstreamSBOMs refetches the upstream SBOMs of the artifact and stores the ones whose content changed
+func (s *scanService) storeChangedUpstreamSBOMs(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact) (changed bool, err error) {
 	sboms, err := s.assetVersionService.ListSBOMs(ctx, nil, assetVersion, artifact.ArtifactName)
 	if err != nil {
 		slog.Error("failed to fetch sbom sources", "error", err, "artifactName", artifact.ArtifactName)
-		return nil, nil, fmt.Errorf("failed to fetch sbom sources: %w", err)
+		return false, fmt.Errorf("failed to fetch sbom sources: %w", err)
 	}
 
 	// only upstream sources can be re-fetched; a local scan's source is not a URL
@@ -889,6 +909,14 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	}), func(el string) string {
 		return el
 	})
+	if len(sbomUpstreamURLs) == 0 {
+		return false, nil
+	}
+
+	storedRoots := make(map[string]uuid.UUID, len(sboms))
+	for _, sbom := range sboms {
+		storedRoots[sbom.Source] = sbom.RootSubtreeHash
+	}
 
 	// Fetch SBOMs and VEX reports from upstream
 	boms, _ := s.FetchSbomsFromUpstream(ctx, tx, asset, artifact.ArtifactName, assetVersion.Name, sbomUpstreamURLs)
@@ -897,22 +925,20 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	// first would collapse the sources' differing accounts of shared components,
 	// which is exactly what the content-addressed storage exists to keep apart.
 	for _, upstream := range boms {
-		if _, err := s.assetVersionService.UpdateSBOM(
-			ctx,
-			tx,
-			org,
-			project,
-			asset,
-			assetVersion,
-			artifact.ArtifactName,
-			upstream.Source,
-			upstream.SBOM,
-		); err != nil {
-			slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "source", upstream.Source)
-			return nil, nil, fmt.Errorf("failed to update sbom: %w", err)
+		// the tree is content addressed, rewriting an identical one would only bump updated_at and trip the daemon scan's fingerprint check
+		if root, ok := storedRoots[upstream.Source]; ok && root == upstream.SBOM.Tree.Root {
+			continue
 		}
+		if err := s.assetVersionService.StoreSBOM(ctx, tx, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
+			slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "source", upstream.Source)
+			return false, fmt.Errorf("failed to update sbom: %w", err)
+		}
+		changed = true
 	}
+	return changed, nil
+}
 
+func (s *scanService) scanArtifactSBOMs(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error) {
 	// An origin that failed to fetch keeps its previous SBOM rather than being
 	// dropped, so a transient network error cannot silently empty an artifact.
 	// Removing a source stays an explicit action.

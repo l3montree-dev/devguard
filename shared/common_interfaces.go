@@ -51,6 +51,7 @@ type DaemonRunner interface {
 	CollectExternalEntityGarbage(ctx context.Context) error
 
 	Start(ctx context.Context)
+	StartBenchmarkJobs(ctx context.Context, stages []string)
 }
 
 type FixedVersionResolver interface {
@@ -508,6 +509,7 @@ type AssetVersionService interface {
 	BuildVeX(ctx context.Context, tx DB, metadata normalize.BOMMetadata, asset models.Asset, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln) *cyclonedx.BOM
 	GetAssetVersionsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error)
+	StoreSBOM(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) error
 	LoadArtifactSBOMs(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName string) (normalize.MerkleForest, error)
 	ListSBOMs(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName string) ([]models.SBOM, error)
 	LoadSBOM(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName, source string) (normalize.MerkleForest, error)
@@ -553,8 +555,10 @@ type FirstPartyVulnService interface {
 type ScanService interface {
 	ScanNormalizedSBOM(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, forest normalize.MerkleForest, userID string, userAgent *string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	HandleScanResultForVulns(ctx context.Context, tx DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
 	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)
+	SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error)
 	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)
 	FetchSbomsFromUpstream(ctx context.Context, tx DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
