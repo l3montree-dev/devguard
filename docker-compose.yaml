@@ -12,7 +12,7 @@ services:
     - "5432:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 0.5s
+      interval: 10s
       timeout: 5s
       retries: 5
     volumes:
