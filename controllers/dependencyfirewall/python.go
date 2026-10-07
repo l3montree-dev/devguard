@@ -38,15 +38,15 @@ import (
 )
 
 const (
-	pypiRegistry = "https://pypi.org"
-	pypiFilesURL = "https://files.pythonhosted.org"
+	pypiRegistry  = "https://pypi.org"
+	pypiFilesHost = "files.pythonhosted.org"
 )
 
 var (
 	pypiProxyPrefixRe   = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?pypi(?:/|$)`)
 	pypiFilenameRe      = regexp.MustCompile(`^(.+?)-(\d[^-]*?)(?:-.+\.whl|\.zip|\.tar(?:\.gz|\.bz2|\.xz|\.lz|\.lzma)?|\.t[bgx]z|\.tlz)$`)
 	pypiNameSeparatorRe = regexp.MustCompile(`[-_.]+`)
-	pypiAbsoluteURLRe   = regexp.MustCompile(`(?:https?:)?//[^/"'\s]+/`)
+	pypiAbsoluteURLRe   = regexp.MustCompile(`(?:https?:)?//[^"'\s#]*/`)
 )
 
 // PythonDependencyProxyController handles PyPI dependency proxy requests.
@@ -238,12 +238,14 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	// Always resolve the release time, even without MinReleaseAge: the cache is shared
 	// across proxy secrets, so an entry stored for one config must be checkable under
 	// another. Files are only cached together with a known release time.
-	releaseTime, releaseTimeErr := time.Time{}, fmt.Errorf("could not determine package and version from path")
-	if packageName != "" {
-		releaseTime, releaseTimeErr = d.fetchPyPIReleaseTime(ctx, packageName, version)
+	fileURL, releaseTime, err := d.resolvePyPIFile(ctx, configs.getRegistry(pypi, pypiRegistry), packageName, filepath.Base(requestPath))
+	if err != nil {
+		span.RecordError(err)
+		slog.Warn("Could not resolve file url", "proxy", "pypi", "package", packageName, "version", version, "error", err)
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("could not resolve %s", requestPath))
 	}
-	if releaseTimeErr != nil {
-		slog.Warn("Could not determine release time", "proxy", "pypi", "package", packageName, "version", version, "error", releaseTimeErr)
+	if releaseTime.IsZero() {
+		slog.Warn("Could not determine release time", "proxy", "pypi", "package", packageName, "version", version)
 		if configs.MinReleaseAge > 0 {
 			// Fail closed: without a publish date the MinReleaseAge policy cannot be verified.
 			return d.blockNotAllowedPackage(c, pypi, requestPath, fmt.Sprintf("Release time of package %s@%s could not be determined", packageName, version))
@@ -252,7 +254,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
 	}
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, pypi, pypiFilesURL, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, pypi, fileURL, "", c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -265,7 +267,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if releaseTimeErr == nil {
+	if !releaseTime.IsZero() {
 		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
 		}
@@ -327,7 +329,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
-	
 	pkgName := normalizePyPIName(c.Param("package"))
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
 
@@ -364,7 +365,7 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 	headers := c.Request().Header
 	headers.Set("Accept", "application/vnd.pypi.simple.v1+json")
 
-	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, requestPath, headers)
+	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, config.getRegistry(pypi, pypiRegistry), requestPath, headers)
 
 	if err != nil {
 		span.RecordError(err)
@@ -397,7 +398,7 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		c.Response().Header().Set("Content-Type", contentType)
 	}
 
-	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(pypiProxyPrefixRe.FindString(c.Request().URL.Path)))
+	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(pypiProxyPrefixRe.FindString(c.Request().URL.Path)+"packages/"))
 
 	return pypi.writeResponse(c, data, requestPath, false)
 }
@@ -441,9 +442,9 @@ func filterPyPiSimpleIndex(data []byte, keep func(version string, published time
 	return filteredData, nil
 }
 
-func (d *PythonDependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
+func (d *PythonDependencyProxyController) fetchPyPIFromUpstream(ctx context.Context, registry, requestPath string, headers http.Header) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
-	url, err := url.JoinPath(pypiRegistry, requestPath)
+	url, err := url.JoinPath(registry, requestPath)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
 	}
@@ -475,50 +476,59 @@ func (d *PythonDependencyProxyController) fetchPyPIFromUpstream(ctx context.Cont
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-// ExtractPyPIReleaseTime parses a PyPI JSON API response and returns the resolved version and its upload time.
-// If version is empty, it uses info.version (the current release).
-func extractPyPIReleaseTime(data []byte, version string) (time.Time, error) {
-	var metadata struct {
-		Info struct {
-			Version string `json:"version"`
-		} `json:"info"`
-		Releases map[string][]struct {
-			UploadTime string `json:"upload_time_iso_8601"`
-		} `json:"releases"`
+func (d *PythonDependencyProxyController) resolvePyPIFile(ctx context.Context, registry, packageName, filename string) (string, time.Time, error) {
+	if packageName == "" {
+		return "", time.Time{}, fmt.Errorf("could not determine package from %s", filename)
 	}
-	if err := json.Unmarshal(data, &metadata); err != nil {
-		return time.Time{}, err
-	}
-	if version == "" {
-		version = metadata.Info.Version
-	}
-	files, ok := metadata.Releases[version]
-	if !ok || len(files) == 0 {
-		return time.Time{}, fmt.Errorf("version %s not found in PyPI metadata", version)
-	}
-	// A version's release time is its earliest upload - wheels are often uploaded later
-	// than the sdist. The simple index filter uses the same definition per file.
-	var earliest time.Time
-	for _, file := range files {
-		t, err := time.Parse(time.RFC3339Nano, file.UploadTime)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("failed to parse upload time for version %s: %w", version, err)
-		}
-		if earliest.IsZero() || t.Before(earliest) {
-			earliest = t
-		}
-	}
-	return earliest, nil
-}
 
-// fetchPyPIReleaseTime fetches the PyPI JSON API and returns the resolved version and its release time.
-func (d *PythonDependencyProxyController) fetchPyPIReleaseTime(ctx context.Context, pkgName, version string) (time.Time, error) {
-	data, _, statusCode, err := d.fetchPyPIFromUpstream(ctx, "/pypi/"+pkgName+"/json", http.Header{})
+	indexURL, err := url.JoinPath(registry, "simple", packageName, "/")
 	if err != nil {
-		return time.Time{}, err
+		return "", time.Time{}, err
+	}
+	data, _, statusCode, err := d.fetchPyPIFromUpstream(ctx, registry, "simple/"+packageName, http.Header{"Accept": {"application/vnd.pypi.simple.v1+json"}})
+	if err != nil {
+		return "", time.Time{}, err
 	}
 	if statusCode != http.StatusOK {
-		return time.Time{}, fmt.Errorf("upstream returned status %d for release metadata", statusCode)
+		return "", time.Time{}, fmt.Errorf("upstream returned status %d for simple index of %s", statusCode, packageName)
 	}
-	return extractPyPIReleaseTime(data, version)
+
+	var index pySimple
+	if err := json.Unmarshal(data, &index); err != nil {
+		return "", time.Time{}, fmt.Errorf("could not decode simple index of %s: %w", packageName, err)
+	}
+
+	name, isMetadata := strings.CutSuffix(filename, ".metadata")
+	_, version := pypi.parsePackage("packages/" + name)
+	var fileURL string
+	var released time.Time
+	for _, file := range index.Files {
+		if file.Filename == name {
+			fileURL = file.URL
+		}
+		if _, v := pypi.parsePackage("packages/" + file.Filename); v == version && !file.UploadTime.IsZero() && (released.IsZero() || file.UploadTime.Before(released)) {
+			released = file.UploadTime
+		}
+	}
+	if fileURL == "" {
+		return "", time.Time{}, fmt.Errorf("%s not found in simple index of %s", name, packageName)
+	}
+
+	base, err := url.Parse(indexURL)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	resolved, err := base.Parse(fileURL)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	resolved.Fragment = ""
+	if isMetadata {
+		resolved.Path += ".metadata"
+	}
+
+	if err := checkDistHost(resolved.String(), pypiFilesHost, base.Hostname()); err != nil {
+		return "", time.Time{}, err
+	}
+	return resolved.String(), released, nil
 }
