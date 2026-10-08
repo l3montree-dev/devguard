@@ -539,14 +539,15 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 		if opts.Debug {
 			showImportDebug(ctx, tx, workingDir, failingTables)
 		}
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "vulndb integrity check failed", err)
+
+		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "vulndb import failed", err)
 		span.SetAttributes(
 			attribute.StringSlice("vulndb.failing_tables", failingTables),
 		)
 		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
-			return fmt.Errorf("integrity validation failed and rollback failed: %w (rollback error: %v)", err, rbErr)
+			return fmt.Errorf("vulndb import failed and rollback failed: %w (rollback error: %v)", err, rbErr)
 		}
-		return fmt.Errorf("integrity validation failed: %w", err)
+		return fmt.Errorf("vulndb import failed: %w", err)
 	}
 
 	slog.Info("successfully passed integrity validation", "importTimestamp", integrity.ImportTimestamp)

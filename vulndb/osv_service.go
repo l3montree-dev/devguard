@@ -124,13 +124,27 @@ var liveTableSpecs = func() []syncSpec {
 }()
 
 // computeDiffFromStage is Phase 1: builds _diff_del_*, _diff_ins_*, _diff_upd_* temp
-// tables by running EXCEPT queries between the live table and its staging counterpart.
+// tables by anti-joining the live table against its staging counterpart.
 // Only AccessShareLock is held on the live table during this phase.
+//
+// The diffs are deliberately NOT written as EXCEPT: PostgreSQL plans EXCEPT as a
+// HashSetOp, which cannot spill to disk and ignores work_mem. On the ~17M row
+// cve_affected_component table a single EXCEPT allocated ~2.4 GB in one backend and
+// got the database OOM-killed. NOT EXISTS plans as a merge/hash anti join, which
+// streams over the key indexes (or spills in batches) and stays within work_mem.
 func computeDiffFromStage(ctx context.Context, tx pgx.Tx, spec syncSpec) error {
 	keysCSV := strings.Join(spec.keyCols, ", ")
 	tmpDel := "_diff_del_" + spec.live
 	tmpIns := "_diff_ins_" + spec.live
 	tmpUpd := "_diff_upd_" + spec.live
+
+	liveKeys := make([]string, len(spec.keyCols))
+	joinParts := make([]string, len(spec.keyCols))
+	for i, k := range spec.keyCols {
+		liveKeys[i] = "_l." + k
+		joinParts[i] = fmt.Sprintf("_s.%s = _l.%s", k, k)
+	}
+	joinCond := strings.Join(joinParts, " AND ")
 
 	t := time.Now()
 
@@ -140,34 +154,35 @@ func computeDiffFromStage(ctx context.Context, tx pgx.Tx, spec syncSpec) error {
 		return fmt.Errorf("computeDiffFromStage index (%s): %w", spec.live, err)
 	}
 
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`ANALYZE %s`, spec.stage)); err != nil {
+		return fmt.Errorf("computeDiffFromStage analyze (%s): %w", spec.live, err)
+	}
+
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		CREATE TEMP TABLE %s ON COMMIT DROP AS
-		SELECT %s FROM %s EXCEPT SELECT %s FROM %s
-	`, tmpDel, keysCSV, spec.live, keysCSV, spec.stage)); err != nil {
+		SELECT %s FROM %s _l
+		WHERE NOT EXISTS (SELECT 1 FROM %s _s WHERE %s)
+	`, tmpDel, strings.Join(liveKeys, ", "), spec.live, spec.stage, joinCond)); err != nil {
 		return fmt.Errorf("computeDiffFromStage del (%s): %w", spec.live, err)
 	}
 
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		CREATE TEMP TABLE %s ON COMMIT DROP AS
-		SELECT %s FROM %s
-		WHERE (%s) IN (SELECT %s FROM %s EXCEPT SELECT %s FROM %s)
+		SELECT %s FROM %s _s
+		WHERE NOT EXISTS (SELECT 1 FROM %s _l WHERE %s)
 	`, tmpIns,
 		strings.Join(spec.insertSelectExprs, ", "), spec.stage,
-		keysCSV, keysCSV, spec.stage, keysCSV, spec.live,
+		spec.live, joinCond,
 	)); err != nil {
 		return fmt.Errorf("computeDiffFromStage ins (%s): %w", spec.live, err)
 	}
 
 	if spec.contentHashCol != "" {
-		joinParts := make([]string, len(spec.keyCols))
-		for i, k := range spec.keyCols {
-			joinParts[i] = fmt.Sprintf("_s.%s = _l.%s", k, k)
-		}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`
 			CREATE TEMP TABLE %s ON COMMIT DROP AS
 			SELECT _s.* FROM %s _s JOIN %s _l ON %s WHERE _l.%s != _s.%s
 		`, tmpUpd, spec.stage, spec.live,
-			strings.Join(joinParts, " AND "),
+			joinCond,
 			spec.contentHashCol, spec.contentHashCol,
 		)); err != nil {
 			return fmt.Errorf("computeDiffFromStage upd (%s): %w", spec.live, err)
@@ -981,7 +996,8 @@ func AddIndexesAndConstraints(ctx context.Context, tx pgx.Tx) error {
 	slog.Info("start building indexes and re-adding constraints")
 	totalStart := time.Now()
 	_, err := tx.Exec(ctx, `
-	SET LOCAL maintenance_work_mem = '4GB';
+	-- kept well below the 8Gi memory limit of the postgres pod in the helm chart
+	SET LOCAL maintenance_work_mem = '1GB';
 	SET LOCAL max_parallel_maintenance_workers = 8;
 	SET LOCAL max_parallel_workers = 16;
 	SET LOCAL max_parallel_workers_per_gather = 8;
