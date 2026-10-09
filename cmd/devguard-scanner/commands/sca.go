@@ -40,6 +40,53 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
+	if config.RuntimeBaseConfig.UpstreamPURL != "" {
+		upstreamPURL, err := packageurl.FromString(config.RuntimeBaseConfig.UpstreamPURL)
+		if err != nil {
+			return err
+		}
+		err = utils.ValidatePurlFields(upstreamPURL)
+		if err != nil {
+			return err
+		}
+		if upstreamPURL.Version == "" {
+			slog.Warn(fmt.Sprintf("upstreamPURL should contain a version: %s", upstreamPURL))
+		}
+		upstreamPURLString := upstreamPURL.String()
+		var confidence float32 = 1.0
+		bom.Components = new(append(*bom.Components, cyclonedx.Component{
+			Type:       cyclonedx.ComponentTypeApplication,
+			Name:       upstreamPURLString,
+			BOMRef:     upstreamPURLString,
+			PackageURL: upstreamPURLString,
+			Version:    upstreamPURL.Version,
+			Evidence: &cyclonedx.Evidence{
+				Identity: &cyclonedx.EvidenceIdentityChoice{
+					Identities: &[]cyclonedx.EvidenceIdentity{
+						{
+							Methods: &[]cyclonedx.EvidenceIdentityMethod{
+								{Technique: cyclonedx.EvidenceIdentityTechniqueOther, Confidence: &confidence, Value: "user-declared"},
+							},
+						},
+					},
+				},
+			},
+			Pedigree: &cyclonedx.Pedigree{
+				Ancestors: &[]cyclonedx.Component{
+					cyclonedx.Component{
+						ExternalReferences: &[]cyclonedx.ExternalReference{
+							{Type: cyclonedx.ERTypeVCS, URL: config.RuntimeBaseConfig.UpstreamVCS},
+						},
+					},
+				},
+			},
+		}))
+	}
+
+	return nil
+}
+
 // extract filename from path or return directory if path points to a directory
 // second return argument is true if it's a directory and false is it's a file
 func maybeGetFileName(path string) (string, bool) {
@@ -565,6 +612,11 @@ func scanExternalImage(ctx context.Context) error {
 		return err
 	}
 
+	err = addSupplementaryUpstreamPURLManually(bom)
+	if err != nil {
+		return fmt.Errorf("invalid --upstreamPURL %q: %w", config.RuntimeBaseConfig.UpstreamPURL, err)
+	}
+
 	if err := discoverAndMergeSupplementarySBOMs(bom, func() ([]*cyclonedx.BOM, error) {
 		img, err := scanner.LoadRemoteImage(ctx, config.RuntimeBaseConfig.Image)
 		if err != nil {
@@ -740,6 +792,11 @@ func scanLocalFilePath(ctx context.Context) error {
 		bom, err := scanner.BomFromBytes(file)
 		if err != nil {
 			return err
+		}
+
+		err = addSupplementaryUpstreamPURLManually(bom)
+		if err != nil {
+			return fmt.Errorf("invalid --upstreamPURL %q: %w", config.RuntimeBaseConfig.UpstreamPURL, err)
 		}
 
 		if err := discoverAndMergeSupplementarySBOMs(bom, func() ([]*cyclonedx.BOM, error) {
