@@ -16,95 +16,130 @@
 package dependencyfirewall
 
 import (
-	"context"
-	"strings"
 	"testing"
+	"time"
+
+	"github.com/l3montree-dev/devguard/packagerules"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestParseDependencyProxyConfigs(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantRules int
+		wantErr   bool
+	}{
+		{
+			name: "valid rules",
+			input: `rules:
+  - name: block-new
+    action: deny
+    expr: now() - timestamp(pkg.releasedAt) < duration("120h")
+  - name: allow-trusted
+    action: allow
+    expr: pkg.name == "trusted"
+`,
+			wantRules: 2,
+		},
+		{
+			name:      "empty config",
+			input:     "",
+			wantRules: 0,
+		},
+		{
+			name: "invalid expression",
+			input: `rules:
+  - name: broken
+    action: deny
+    expr: pkg.name ==
+`,
+			wantErr: true,
+		},
+		{
+			name: "invalid action",
+			input: `rules:
+  - name: broken
+    action: foo
+    expr: pkg.name == "x"
+`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configs, err := parseDependencyProxyConfigs(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Len(t, configs.Rules, tt.wantRules)
+		})
+	}
+}
 
 func TestCheckNotAllowedPackage(t *testing.T) {
 	d := &DependencyProxyController{}
 
-	testCases := []struct {
-		name               string
-		eco                ecosystem
-		path               string
-		rules              []string
-		expectedBlocked    bool
-		expectedReasonPart string
+	configs, err := parseDependencyProxyConfigs(`rules:
+  - name: block-new
+    action: deny
+    expr: now() - timestamp(pkg.releasedAt) < duration("120h")
+  - name: allow-trusted
+    action: allow
+    expr: pkg.name == "trusted"
+`)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		pkg         packagerules.Package
+		wantBlocked bool
+		wantReason  string
 	}{
 		{
-			name:               "blocks matching package and version",
-			eco:                npm,
-			path:               "/lodash/-/lodash-4.17.21.tgz",
-			rules:              []string{"pkg:npm/lodash@4.17.21"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:npm/lodash@4.17.21",
+			name:        "blocks new package",
+			pkg:         packagerules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-time.Hour)},
+			wantBlocked: true,
+			wantReason:  "block-new",
 		},
 		{
-			name:               "last matching negate rule allows package",
-			eco:                npm,
-			path:               "/react/-/react-17.0.0.tgz",
-			rules:              []string{"*", "!pkg:npm/react@17.0.0"},
-			expectedBlocked:    false,
-			expectedReasonPart: "",
+			name:        "allows old package",
+			pkg:         packagerules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-30 * 24 * time.Hour)},
+			wantBlocked: false,
 		},
 		{
-			name:               "blocks npm tarball path matching wildcard version rule",
-			eco:                npm,
-			path:               "/left-pad/-/left-pad-1.3.0.tgz",
-			rules:              []string{"pkg:npm/left-pad@*"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:npm/left-pad@*",
+			name:        "allow rule overrides deny",
+			pkg:         packagerules.Package{Name: "trusted", ReleasedAt: time.Now().Add(-time.Hour)},
+			wantBlocked: false,
 		},
 		{
-			name:               "returns not blocked for unresolvable package path",
-			eco:                npm,
-			path:               "/",
-			rules:              []string{"*"},
-			expectedBlocked:    false,
-			expectedReasonPart: "",
-		},
-		{
-			name:               "blocks matching go module prefix",
-			eco:                golang,
-			path:               "/github.com/some/module/@v/v1.2.3.info",
-			rules:              []string{"pkg:go/github.com/some/module*"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:go/github.com/some/module*",
-		},
-		{
-			name:               "blocks matching pypi simple package",
-			eco:                pypi,
-			path:               "/simple/requests/",
-			rules:              []string{"pkg:pypi/requests*"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:pypi/requests*",
+			name:        "fails closed on evaluation error",
+			pkg:         packagerules.Package{Name: "lodash"},
+			wantBlocked: true,
+			wantReason:  "block-new",
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			blocked, reason := d.CheckNotAllowedPackage(
-				context.Background(),
-				tc.eco,
-				tc.path,
-				DependencyProxyConfigs{Rules: tc.rules},
-			)
-
-			if blocked != tc.expectedBlocked {
-				t.Fatalf("expected blocked=%v, got blocked=%v (reason=%q)", tc.expectedBlocked, blocked, reason)
-			}
-
-			if tc.expectedReasonPart == "" {
-				if reason != "" {
-					t.Fatalf("expected empty reason, got %q", reason)
-				}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blocked, reason := d.CheckNotAllowedPackage(tt.pkg, configs)
+			assert.Equal(t, tt.wantBlocked, blocked)
+			if tt.wantReason == "" {
+				assert.Empty(t, reason)
 				return
 			}
-
-			if !strings.Contains(reason, tc.expectedReasonPart) {
-				t.Fatalf("expected reason to contain %q, got %q", tc.expectedReasonPart, reason)
-			}
+			assert.Contains(t, reason, tt.wantReason)
 		})
 	}
+}
+
+func TestCheckNotAllowedPackageWithoutRules(t *testing.T) {
+	d := &DependencyProxyController{}
+	blocked, reason := d.CheckNotAllowedPackage(packagerules.Package{Name: "lodash"}, DependencyProxyConfigs{})
+	assert.False(t, blocked)
+	assert.Empty(t, reason)
 }

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -119,6 +120,10 @@ func (goEcosystem) writeResponse(c shared.Context, data []byte, path string, cac
 	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), data)
 }
 
+func goPackage(module, version string, releasedAt time.Time) packagerules.Package {
+	return packagerules.Package{Name: module, Version: version, Ecosystem: "golang", Purl: golang.packageIdentifier(module, version), ReleasedAt: releasedAt, Registry: goProxyURL}
+}
+
 // @Summary Proxy Go module requests
 // @Tags Dependency Firewall
 // @Security PATAuth
@@ -177,12 +182,6 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, eco, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	blocked, reason, err := d.checkMaliciousPackage(ctx, eco, requestPath)
 	if err != nil {
@@ -194,12 +193,21 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 	}
 
+	moduleName, version := golang.parsePackage(requestPath)
+	releaseTime, err := d.fetchGoReleaseTime(ctx, moduleName, version)
+	if err != nil {
+		slog.Warn("Could not determine release time", "proxy", "go", "module", moduleName, "version", version, "error", err)
+	}
+
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(goPackage(moduleName, version, releaseTime), configs)
+	if notAllowed {
+		slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
+		return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
+	}
+
 	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
-			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, eco, requestPath, entry.releaseTime, configs.MinReleaseAge)
-			}
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			return eco.writeResponse(c, entry.data, requestPath, true)
 		}
@@ -220,28 +228,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	moduleName, version := golang.parsePackage(requestPath)
-	var releaseTime time.Time
-	var releaseTimeErr error
-	if strings.HasSuffix(requestPath, ".info") {
-		if _, t, ok := extractGoVersionAndReleaseTime(data); ok {
-			releaseTime = t
-		} else {
-			releaseTimeErr = fmt.Errorf("no release time in .info response")
-		}
-	} else {
-		releaseTime, releaseTimeErr = d.fetchGoReleaseTime(ctx, moduleName, version)
-	}
-	if releaseTimeErr != nil {
-		slog.Warn("Could not determine release time", "proxy", "go", "module", moduleName, "version", version, "error", releaseTimeErr)
-		if configs.MinReleaseAge > 0 {
-			// Fail closed: without a publish date the MinReleaseAge policy cannot be verified.
-			return d.blockNotAllowedPackage(c, eco, requestPath, fmt.Sprintf("Release time of module %s@%s could not be determined", moduleName, version))
-		}
-	} else {
-		if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, eco, requestPath, releaseTime, configs.MinReleaseAge)
-		}
+	if !releaseTime.IsZero() {
 		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "go", "error", err)
 		}
@@ -289,15 +276,12 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 
 	// Hide versions the explicit-version endpoint would reject anyway (too new or blocked
 	// by a rule), so `go get` resolves to a version it can actually download.
-	if strings.HasSuffix(requestPath, "/@v/list") && (configs.MinReleaseAge > 0 || len(configs.Rules) > 0) {
-		filtered, removed := filterGoVersionList(data,
-			time.Duration(configs.MinReleaseAge)*time.Hour,
-			func(version string) (time.Time, error) { return d.fetchGoReleaseTime(ctx, packageName, version) },
-			func(version string) bool {
-				blocked, _ := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
-				return !blocked
-			},
-		)
+	if strings.HasSuffix(requestPath, "/@v/list") && len(configs.Rules) > 0 {
+		filtered, removed := filterGoVersionList(data, func(version string) bool {
+			releaseTime, _ := d.fetchGoReleaseTime(ctx, packageName, version)
+			blocked, _ := d.CheckNotAllowedPackage(goPackage(packageName, version, releaseTime), configs)
+			return !blocked
+		})
 		if removed > 0 {
 			slog.Info("Filtered go version list", "proxy", "go", "module", packageName, "removedVersions", removed)
 			span.SetAttributes(attribute.Int("proxy.filtered_versions", removed))
@@ -305,10 +289,10 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 		data = filtered
 	}
 
-	resolvedVersion, releaseTime, hasReleaseTime := extractGoVersionAndReleaseTime(data)
+	resolvedVersion, releaseTime, _ := extractGoVersionAndReleaseTime(data)
 
 	if resolvedVersion != "" {
-		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, eco, packageName+"@"+resolvedVersion, configs)
+		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(goPackage(packageName, resolvedVersion, releaseTime), configs)
 		if notAllowed {
 			slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
 			return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
@@ -322,12 +306,6 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 		if status != 0 {
 			slog.Warn("Blocked malicious package after version resolution", "proxy", "go", "package", packageName, "version", resolvedVersion, "reason", reason)
 			return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
-		}
-	}
-
-	if configs.MinReleaseAge > 0 && hasReleaseTime && resolvedVersion != "" {
-		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, eco, requestPath, releaseTime, configs.MinReleaseAge)
 		}
 	}
 
@@ -384,13 +362,10 @@ func (d *GoDependencyProxyController) fetchGoReleaseTime(ctx context.Context, mo
 	return releaseTime, nil
 }
 
-// filterGoVersionList filters an @v/list response (one version per line). Versions for
-// which allowed returns false are removed. With a minimum age, versions are checked from
-// the highest semver downwards until the first one that is old enough: that is the
-// version `go get` resolves to. Lower versions are kept without fetching their release
-// time - modules can have hundreds of versions, and the explicit-version endpoint still
-// enforces the minimum age for each of them on download.
-func filterGoVersionList(data []byte, minAge time.Duration, releaseTime func(version string) (time.Time, error), allowed func(version string) bool) ([]byte, int) {
+// filterGoVersionList filters an @v/list response (one version per line). Versions are
+// checked from the highest semver downwards until the first allowed one: that is the
+// version `go get` resolves to.
+func filterGoVersionList(data []byte, allowed func(version string) bool) ([]byte, int) {
 	var versions []string
 	for line := range strings.SplitSeq(string(data), "\n") {
 		if v := strings.TrimSpace(line); v != "" {
@@ -399,25 +374,17 @@ func filterGoVersionList(data []byte, minAge time.Duration, releaseTime func(ver
 	}
 
 	keep := make(map[string]bool, len(versions))
-	candidates := make([]string, 0, len(versions))
 	for _, v := range versions {
-		if allowed(v) {
-			keep[v] = true
-			candidates = append(candidates, v)
-		}
+		keep[v] = true
 	}
 
-	if minAge > 0 {
-		sorted := slices.Clone(candidates)
-		slices.SortFunc(sorted, func(a, b string) int { return semver.Compare(b, a) })
-		for _, v := range sorted {
-			t, err := releaseTime(v)
-			if err == nil && time.Since(t) >= minAge {
-				break
-			}
-			// too new or unknown release time: `go get` must not resolve to it
-			delete(keep, v)
+	sorted := slices.Clone(versions)
+	slices.SortFunc(sorted, func(a, b string) int { return semver.Compare(b, a) })
+	for _, v := range sorted {
+		if allowed(v) {
+			break
 		}
+		delete(keep, v)
 	}
 
 	out := make([]string, 0, len(keep))

@@ -17,7 +17,6 @@ package dependencyfirewall
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"gopkg.in/yaml.v3"
 )
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
@@ -59,8 +60,7 @@ type DependencyProxyCache struct {
 }
 
 type DependencyProxyConfigs struct {
-	Rules         []string `json:"rules"`
-	MinReleaseAge int      `json:"minReleaseAge"` // in hours
+	Rules []packagerules.CompiledRule
 }
 
 type DependencyProxyController struct {
@@ -292,23 +292,27 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 		if !ok {
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
-		var raw struct {
-			Rules         string `json:"rules"`
-			MinReleaseAge int    `json:"minReleaseAge"`
-		}
-		if err := json.Unmarshal([]byte(s), &raw); err != nil {
-			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
-		}
-		configs.MinReleaseAge = raw.MinReleaseAge
-		for line := range strings.SplitSeq(raw.Rules, "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" && !strings.HasPrefix(line, "#") {
-				configs.Rules = append(configs.Rules, line)
-			}
-		}
+		return parseDependencyProxyConfigs(s)
 	}
 
 	return configs, nil
+}
+
+func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
+	var cfg struct {
+		Rules []packagerules.Rule `yaml:"rules"`
+	}
+
+	if err := yaml.Unmarshal([]byte(s), &cfg); err != nil {
+		return DependencyProxyConfigs{}, fmt.Errorf("failed to parse yaml: %w", err)
+	}
+
+	compiledRules, err := packagerules.CompileRules(cfg.Rules)
+	if err != nil {
+		return DependencyProxyConfigs{}, fmt.Errorf("failed to compile rules: %w", err)
+	}
+
+	return DependencyProxyConfigs{Rules: compiledRules}, nil
 }
 
 // GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
@@ -316,60 +320,17 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
 }
+func (d *DependencyProxyController) CheckNotAllowedPackage(pkg packagerules.Package, configs DependencyProxyConfigs) (bool, string) {
+	blocked, ruleName, err := packagerules.Evaluate(configs.Rules, pkg)
+	if err != nil {
+		return true, fmt.Sprintf("failed to evaluate rule %s: %v", ruleName, err)
+	}
 
-// matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.
-func matchPattern(pattern, str string) bool {
-	parts := strings.Split(pattern, "*")
-	if len(parts) == 1 {
-		return str == pattern
-	}
-	if parts[0] != "" && !strings.HasPrefix(str, parts[0]) {
-		return false
-	}
-	if parts[len(parts)-1] != "" && !strings.HasSuffix(str, parts[len(parts)-1]) {
-		return false
-	}
-	rest := str
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
-		idx := strings.Index(rest, part)
-		if idx == -1 {
-			return false
-		}
-		rest = rest[idx+len(part):]
-	}
-	return true
-}
-
-func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, eco ecosystem, path string, configs DependencyProxyConfigs) (bool, string) {
-	packageName, version := eco.parsePackage(path)
-	if packageName == "" {
-		return false, ""
-	}
-	blocked, matchedRule := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
 	if blocked {
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+		return blocked, fmt.Sprintf("%s is not allowed by rule %s", pkg.Name, ruleName)
 	}
+
 	return false, ""
-}
-
-// matchRules applies the rules in order like gitignore: last matching rule wins.
-// A rule prefixed with "!" negates the match (allowlist).
-func matchRules(packageIdentifier string, rules []string) (bool, string) {
-	blocked := false
-	matchedRule := ""
-	for _, rule := range rules {
-		negate := strings.HasPrefix(rule, "!")
-		pattern := strings.TrimPrefix(rule, "!")
-
-		if matchPattern(pattern, packageIdentifier) {
-			blocked = !negate
-			matchedRule = rule
-		}
-	}
-	return blocked, matchedRule
 }
 
 func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecosystem, packageName, version string) (int, string, error) {

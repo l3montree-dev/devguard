@@ -44,7 +44,7 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 	assetRepository := mocks.NewAssetRepository(t)
 	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{
 		ConfigFiles: databasetypes.JSONB{
-			"dependency-proxy-configs": fmt.Sprintf(`{"rules":"","minReleaseAge":%d}`, minReleaseAge),
+			"dependency-proxy-configs": fmt.Sprintf("rules:\n  - name: min-release-age\n    action: deny\n    expr: now() - timestamp(pkg.releasedAt) < duration(\"%dh\")\n", minReleaseAge),
 		},
 	}, nil).Maybe()
 

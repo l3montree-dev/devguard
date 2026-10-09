@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -81,49 +80,6 @@ func TestNPMEcosystem(t *testing.T) {
 	})
 }
 
-func TestDependencyProxyControllerExtractNPMVersion(t *testing.T) {
-	tempDir := t.TempDir()
-
-	config := DependencyProxyCache{
-		CacheDir: tempDir,
-	}
-
-	checker, err := vulndb.NewMaliciousPackageChecker(nil)
-	require.NoError(t, err)
-
-	controller := NewDependencyProxyController(nil, config, checker, nil, nil, nil)
-	npmController := NewNPMDependencyProxyController(controller)
-
-	t.Run("Extract release time of the requested version", func(t *testing.T) {
-		metadata := map[string]any{
-			"name": "test-package",
-			"time": map[string]string{
-				"created": "2020-01-01T00:00:00.000Z",
-				"1.2.3":   "2021-02-03T04:05:06.000Z",
-				"2.0.0":   "2022-01-01T00:00:00.000Z",
-			},
-		}
-
-		jsonData, err := json.Marshal(metadata)
-		require.NoError(t, err)
-
-		releaseTime, err := npmController.ExtractNPMReleaseTimeFromMetadata(jsonData, "1.2.3")
-		require.NoError(t, err)
-		assert.Equal(t, time.Date(2021, 2, 3, 4, 5, 6, 0, time.UTC), releaseTime.UTC())
-	})
-
-	t.Run("Return an error for malformed metadata", func(t *testing.T) {
-		_, err := npmController.ExtractNPMReleaseTimeFromMetadata([]byte(`{"time": "invalid"}`), "1.2.3")
-		assert.Error(t, err)
-	})
-
-	t.Run("Return zero time when the version is unknown", func(t *testing.T) {
-		releaseTime, err := npmController.ExtractNPMReleaseTimeFromMetadata([]byte(`{"name": "test-package"}`), "1.2.3")
-		require.NoError(t, err)
-		assert.True(t, releaseTime.IsZero())
-	})
-}
-
 func TestFilterNPMMetadataVersions(t *testing.T) {
 	now := time.Now()
 	old := now.Add(-72 * time.Hour).UTC().Format(time.RFC3339)
@@ -153,11 +109,11 @@ func TestFilterNPMMetadataVersions(t *testing.T) {
 	jsonData, err := json.Marshal(metadata)
 	require.NoError(t, err)
 
-	keepOld := func(_ string, published time.Time) bool {
-		return !published.IsZero() && time.Since(published) >= 48*time.Hour
+	keepOld := func(version string) bool {
+		return version != "2.0.0" && version != "3.0.0-beta.1"
 	}
 
-	t.Run("removes too new versions and repoints latest", func(t *testing.T) {
+	t.Run("removes rejected versions and repoints latest", func(t *testing.T) {
 		filtered, removed, err := filterNPMMetadataVersions(jsonData, keepOld)
 		require.NoError(t, err)
 		assert.Equal(t, 2, removed)
@@ -179,15 +135,15 @@ func TestFilterNPMMetadataVersions(t *testing.T) {
 	})
 
 	t.Run("returns the original document when nothing is removed", func(t *testing.T) {
-		filtered, removed, err := filterNPMMetadataVersions(jsonData, func(string, time.Time) bool { return true })
+		filtered, removed, err := filterNPMMetadataVersions(jsonData, func(string) bool { return true })
 		require.NoError(t, err)
 		assert.Equal(t, 0, removed)
 		assert.Equal(t, jsonData, filtered)
 	})
 
-	t.Run("treats versions without publish time as not kept", func(t *testing.T) {
+	t.Run("drops dist-tags of removed versions", func(t *testing.T) {
 		data := []byte(`{"dist-tags":{"latest":"1.0.0"},"versions":{"1.0.0":{}}}`)
-		filtered, removed, err := filterNPMMetadataVersions(data, keepOld)
+		filtered, removed, err := filterNPMMetadataVersions(data, func(string) bool { return false })
 		require.NoError(t, err)
 		assert.Equal(t, 1, removed)
 		assert.JSONEq(t, `{"dist-tags":{},"versions":{}}`, string(filtered))
@@ -205,4 +161,53 @@ func keys[V any](m map[string]V) []string {
 		result = append(result, k)
 	}
 	return result
+}
+
+func TestExtractNPMVersionFromMetadata(t *testing.T) {
+	metadata := map[string]any{
+		"name": "test-package",
+		"versions": map[string]any{
+			"1.0.0": map[string]any{
+				"_npmUser": map[string]any{
+					"name": "paul",
+				},
+			},
+			"1.0.1": map[string]any{
+				"_npmUser": map[string]any{
+					"name": "alice",
+				},
+			},
+			"1.0.2": map[string]any{
+				"_npmUser": map[string]any{
+					"name": "paul",
+				},
+			},
+		},
+		"time": map[string]any{
+			"1.0.0": "2020-01-01T00:00:00Z",
+			"1.0.1": "2021-01-01T00:00:00Z",
+			"1.0.2": "2022-01-01T00:00:00Z",
+		},
+	}
+	data, err := json.Marshal(metadata)
+	assert.NoError(t, err)
+
+	var tests = []struct {
+		name    string
+		version string
+		want    bool
+	}{
+		{name: "no publisher before", version: "1.0.0", want: false},
+		{name: "publisher changed", version: "1.0.1", want: true},
+		{name: "publisher changed again", version: "1.0.2", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkg, err := ExtractNPMPackageFromMetadata(data, tt.version)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, pkg.Publisher.ChangedSinceLastVersion)
+		})
+	}
 }
