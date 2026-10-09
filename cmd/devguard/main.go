@@ -32,6 +32,7 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -128,6 +129,7 @@ func main() {
 		fx.WithLogger(func() fxevent.Logger { return &fxErrorLogger{} }),
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
+		events.Module,
 		database.Module,
 		repositories.Module,
 		controllers.ControllerModule,

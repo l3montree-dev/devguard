@@ -105,3 +105,23 @@ func GetPoolConfigFromEnv() PoolConfig {
 
 	return cfg
 }
+
+func GetRiverPoolConfigFromEnv() PoolConfig {
+	cfg := PoolConfig{
+		MaxOpenConns:    25,
+		ConnMaxLifetime: 4 * time.Hour,
+		ConnMaxIdleTime: 15 * time.Minute,
+		MinConns:        5,
+		User:            os.Getenv("RIVER_POSTGRES_USER"),
+		Password:        os.Getenv("RIVER_POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		DBName:          os.Getenv("RIVER_POSTGRES_DB"),
+		SSLMode:         os.Getenv("POSTGRES_SSL_MODE"),
+	}
+	// if SSLMode is not set, default to "disable"
+	if cfg.SSLMode == "" {
+		cfg.SSLMode = "disable"
+	}
+	return cfg
+}

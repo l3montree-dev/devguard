@@ -25,4 +25,11 @@ var Module = fx.Options(
 	fx.Provide(NewPgxConnPool),
 	fx.Provide(NewGormDB),
 	fx.Provide(fx.Annotate(NewPostgreSQLBroker, fx.As(new(shared.PubSubBroker)))),
+	fx.Provide(
+		fx.Annotate(
+			NewPgxConnPool,
+			fx.ParamTags(`name:"river"`),
+			fx.ResultTags(`name:"river"`),
+		),
+	),
 )

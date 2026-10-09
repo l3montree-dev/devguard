@@ -25,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
@@ -44,8 +45,9 @@ type TestApp struct {
 	fx.In
 
 	// Core infrastructure
-	DB     shared.DB
-	Broker shared.PubSubBroker
+	DB            shared.DB
+	Broker        shared.PubSubBroker
+	RiverInstance shared.RiverInstance
 
 	// Services
 	ConfigService            shared.ConfigService
@@ -150,6 +152,12 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fx.Provide(func() shared.DB { return db }),
 		// Provide the connection pool
 		fx.Provide(func() *pgxpool.Pool { return pool }),
+		fx.Provide(
+			fx.Annotate(
+				func() *pgxpool.Pool { return pool },
+				fx.ResultTags(`name:"river"`),
+			),
+		),
 
 		// Provide broker
 		fx.Provide(func() shared.PubSubBroker {
@@ -160,6 +168,7 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 			return &noopBroker{}
 		}),
 		// Use the same modules as production
+		events.Module,
 		repositories.Module,
 		services.ServiceModule,
 		fixedversion.Module,

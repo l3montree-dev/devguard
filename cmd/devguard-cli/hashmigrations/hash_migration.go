@@ -22,6 +22,8 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
 	"github.com/package-url/packageurl-go"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivermigrate"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -1173,5 +1175,29 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 	}
 
 	slog.Info("Vulnerability path hash migration (v3) completed successfully")
+	return nil
+}
+
+// runRiverMigrations applies pending River Queue migrations (the tables
+// river's job/queue client needs) against the river database. This is the
+// programmatic equivalent of running `river migrate-up` via the river CLI.
+func RunRiverMigrations() error {
+	cfg := database.GetRiverPoolConfigFromEnv()
+
+	pool := database.NewPgxConnPool(cfg)
+	defer pool.Close()
+
+	migrator, err := rivermigrate.New(riverpgxv5.New(pool), nil)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	if _, err := migrator.Migrate(ctx, rivermigrate.DirectionUp, nil); err != nil {
+		return fmt.Errorf("river migration failed: %w", database.WrapConnError(cfg, err))
+	}
+
 	return nil
 }

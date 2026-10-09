@@ -2,12 +2,14 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -107,6 +109,29 @@ func NewPgxConnPool(cfg PoolConfig) *pgxpool.Pool {
 	)
 
 	return pool
+}
+
+// WrapConnError adds the connection details (never the password) to a
+// connection/query error, and for common Postgres auth/catalog failures
+// gives a specific hint about what's misconfigured. Postgres reports a
+// missing role the same way as a wrong password (SQLSTATE 28P01) to avoid
+// leaking valid usernames, so those two cases can't be told apart here.
+func WrapConnError(cfg PoolConfig, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "28000", "28P01": // invalid_authorization_specification / invalid_password
+			return fmt.Errorf("postgres rejected user %q - either it does not exist or the password is wrong (host %s:%s): %w", cfg.User, cfg.Host, cfg.Port, err)
+		case "3D000": // invalid_catalog_name
+			return fmt.Errorf("postgres database %q does not exist (host %s:%s): %w", cfg.DBName, cfg.Host, cfg.Port, err)
+		}
+	}
+
+	return fmt.Errorf("failed connecting as user %q to database %q on %s:%s: %w", cfg.User, cfg.DBName, cfg.Host, cfg.Port, err)
 }
 
 // NewGormDB creates a GORM instance using an existing *pgxpool.Pool

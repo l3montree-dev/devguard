@@ -10,23 +10,59 @@ services:
     env_file: .env
     ports:
     - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
     - postgres:/var/lib/postgresql/data
     - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
     tmpfs: /run/postgresql:rw,uid=999,gid=999
     # command: ["postgres", "-c", "log_statement=all"] # enable to log all queries into the log
 
+  river-migrate:
+    image: ghcr.io/l3montree-dev/devguard/postgresql:16.15
+    shm_size: 1g
+    env_file: .env
+    environment:
+      PGHOST: postgresql
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    command:
+      - bash
+      - -c
+      - |
+        psql -v ON_ERROR_STOP=1 \
+          -v river_user="${RIVER_POSTGRES_USER}" \
+          -v river_db="${RIVER_POSTGRES_DB}" \
+          -v river_password="${RIVER_POSTGRES_PASSWORD}" <<'SQL'
+        SELECT format('CREATE USER %I PASSWORD %L', :'river_user', :'river_password')
+        WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'river_user')
+        \gexec
+
+        SELECT format('CREATE DATABASE %I OWNER %I', :'river_db', :'river_user')
+        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'river_db')
+        \gexec
+
+        \c :"river_db"
+        GRANT USAGE, CREATE ON SCHEMA public TO :"river_user";
+        SQL
 
   kratos-migrate:
     image: ghcr.io/l3montree-dev/devguard/kratos:v26.2.0
     depends_on:
-    - postgresql
+      - postgresql
     environment:
-    - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
+      - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
     volumes:
-    - type: bind
-      source: ./.kratos
-      target: /etc/config/kratos
+      - type: bind
+        source: ./.kratos
+        target: /etc/config/kratos
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
   kratos:
@@ -35,24 +71,24 @@ services:
     #   dockerfile: ../kratos/.docker/Dockerfile-build
     image: ghcr.io/l3montree-dev/devguard/kratos:v26.2.0
     depends_on:
-    - kratos-migrate
-    - postgresql
+      - kratos-migrate
+      - postgresql
     ports:
-    - '4433:4433' # public
-    - '4434:4434' # admin
+      - "4433:4433" # public
+      - "4434:4434" # admin
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
     environment:
-    - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
-    - LOG_LEVEL=trace
+      - DSN=postgres://kratos:change-me-definitely-when-not-testing@postgresql:5432/kratos?sslmode=disable
+      - LOG_LEVEL=trace
     volumes:
-    - type: bind
-      source: ./.kratos
-      target: /etc/config/kratos
+      - type: bind
+        source: ./.kratos
+        target: /etc/config/kratos
   jaeger:
     image: jaegertracing/jaeger:2.16.0
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
       - "16686:16686" # Jaeger UI
 
 volumes:

@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
@@ -60,13 +61,21 @@ func runMigrations() error {
 	}
 	slog.Info("schema migrations completed successfully")
 
-	// Step 2: Run hash migrations (requires full dependency graph)
+	slog.Info("running river queue migrations...")
+	if err := hashmigrations.RunRiverMigrations(); err != nil {
+		slog.Error("river migration failed", "err", err)
+		return err
+	}
+	slog.Info("river queue migrations completed successfully")
+
+	// Step 3: Run hash migrations (requires full dependency graph)
 	var migrationErr error
 
 	app := fx.New(
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.NopLogger,
 		database.Module,
+		events.Module,
 		fx.Provide(database.NewPostgreSQLBroker),
 		repositories.Module,
 		services.ServiceModule,
