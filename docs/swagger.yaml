@@ -152,6 +152,28 @@ components:
       - description
       - implementationStatus
       type: object
+    controllers_dependencyfirewall.CacheStats:
+      properties:
+        entries:
+          type: integer
+        evictions:
+          type: integer
+        hits:
+          type: integer
+        maxBytes:
+          type: integer
+        misses:
+          type: integer
+        sizeBytes:
+          type: integer
+      required:
+      - entries
+      - evictions
+      - hits
+      - maxBytes
+      - misses
+      - sizeBytes
+      type: object
     cyclonedx.Advisory:
       properties:
         title:
@@ -10854,18 +10876,6 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -10894,18 +10904,6 @@ components:
       - Hour
       - minDuration
       - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -11339,6 +11337,20 @@ paths:
       security:
       - AdminSignedAuth: []
       summary: Update instance settings
+      tags:
+      - Admin
+  /admin/statistics/dependency-proxy-cache/:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers_dependencyfirewall.CacheStats'
+          description: OK
+      security:
+      - AdminSignedAuth: []
+      summary: Get instance-wide dependency proxy cache statistics
       tags:
       - Admin
   /admin/statistics/usage/:
@@ -13002,6 +13014,29 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Get organization dependency proxy URLs
+      tags:
+      - Dependency Firewall
+  /organizations/{organization}/dependency-proxy/cache-stats/:
+    get:
+      parameters:
+      - description: organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers_dependencyfirewall.CacheStats'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get organization dependency proxy cache statistics
       tags:
       - Dependency Firewall
   /organizations/{organization}/dependency-vulns:

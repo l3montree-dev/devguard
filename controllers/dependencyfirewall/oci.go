@@ -113,11 +113,11 @@ func (ociEcosystem) packageIdentifier(packageName, version string) string {
 // Digest-pinned manifests are immutable (verified by content hash on every
 // read), so they never expire; tag-based manifests get a 1 hour TTL since the
 // tag can move to point at different content at any time.
-func (d *DependencyProxyController) ociManifestFresh(cacheKey, requestPath string) bool {
+func (d *DependencyProxyController) ociManifestFresh(cacheKey, requestPath string, orgCache *cache) bool {
 	if strings.Contains(requestPath, "/manifests/sha256_") {
 		return true
 	}
-	return d.cache.Fresh(cacheKey, time.Hour)
+	return orgCache.Fresh(cacheKey, time.Hour)
 }
 
 func (ociEcosystem) writeResponse(c shared.Context, data []byte, path string, cached bool) error {
@@ -418,6 +418,11 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	orgCache, err := d.caches.forOrg(configs.OrgID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
 	if !isAllowedRegistry(registry) {
 		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
@@ -461,13 +466,13 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	}
 
 	cacheKey := "oci/manifest/" + ociSafeCachePath(requestPath)
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := orgCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "oci", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid image path")
 	}
 
-	if method == http.MethodGet && !bypassCache(c.Request()) && d.ociManifestFresh(cacheKey, requestPath) {
-		if entry, ok := d.cache.Get(cacheKey); ok {
+	if method == http.MethodGet && !bypassCache(c.Request()) && d.ociManifestFresh(cacheKey, requestPath, orgCache) {
+		if entry, ok := orgCache.Get(cacheKey); ok {
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			if entry.contentType != "" {
 				c.Response().Header().Set("Content-Type", entry.contentType)
@@ -502,7 +507,7 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 	}
 
 	if method == http.MethodGet && len(data) > 0 {
-		if err := d.cache.Set(cacheKey, cacheValue{
+		if err := orgCache.Set(cacheKey, cacheValue{
 			data:        data,
 			contentType: headers.Get("Content-Type"),
 			digest:      headers.Get("Docker-Content-Digest"),
@@ -550,6 +555,11 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	orgCache, err := d.caches.forOrg(configs.OrgID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	registry, fqImageName, upstreamImagePath := imageParamsFromContext(c)
 	if !isAllowedRegistry(registry) {
 		return echo.NewHTTPError(http.StatusBadRequest, "registry not allowed")
@@ -594,14 +604,14 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	}
 
 	cacheKey := "oci/blob/" + ociSafeCachePath(requestPath)
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := orgCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "oci", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid image path")
 	}
 
 	// Blobs are content-addressed and immutable; serve from cache unconditionally once present.
 	if method == http.MethodGet && !bypassCache(c.Request()) {
-		if entry, ok := d.cache.Get(cacheKey); ok {
+		if entry, ok := orgCache.Get(cacheKey); ok {
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			c.Response().Header().Set("Content-Type", "application/octet-stream")
 			c.Response().Header().Set("Docker-Content-Digest", digest)
@@ -648,7 +658,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 				return echo.NewHTTPError(http.StatusBadGateway, "upstream blob digest mismatch")
 			}
 		}
-		if err := d.cache.Set(cacheKey, cacheValue{data: data}); err != nil {
+		if err := orgCache.Set(cacheKey, cacheValue{data: data}); err != nil {
 			slog.Warn("Failed to cache OCI blob", "proxy", "oci", "error", err)
 		}
 	}

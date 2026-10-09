@@ -76,6 +76,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/logs/", logController.ListPagedForOrganization, middlewares.NeededScope([]string{"scan"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead))
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	organizationRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetOrgDependencyProxyURLs)
+	organizationRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetOrgCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderController.TriggerSync)
 	organizationRouter.GET("/settings/", orgController.AdminSettings, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))

@@ -17,6 +17,7 @@ package router
 
 import (
 	"github.com/l3montree-dev/devguard/controllers"
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/middlewares"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -26,7 +27,7 @@ type AdminRouter struct {
 	*echo.Group
 }
 
-func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminController, patService shared.PersonalAccessTokenService) AdminRouter {
+func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminController, patService shared.PersonalAccessTokenService, dependencyProxyController *dependencyfirewall.DependencyProxyController) AdminRouter {
 	adminRouter := apiV1Router.Group.Group("/admin",
 		middlewares.InstanceAdminMiddleware(patService),
 	)
@@ -44,6 +45,7 @@ func NewAdminRouter(apiV1Router APIV1Router, adminController *controllers.AdminC
 
 	adminRouter.GET("/logs/", adminController.GetLogs)
 
+	adminRouter.GET("/statistics/dependency-proxy-cache/", dependencyProxyController.GetInstanceCacheStats)
 	adminRouter.GET("/statistics/usage/", adminController.GetInstanceUsageStatistics)
 	adminRouter.GET("/statistics/vulnerabilities/", adminController.GetInstanceVulnStatistics)
 	adminRouter.PATCH("/settings/", adminController.UpdateInstanceSettings)
