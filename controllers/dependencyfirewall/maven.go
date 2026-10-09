@@ -231,7 +231,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, configs.getRegistry(maven, mavenRegistry), requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -334,7 +334,9 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, requestPath, c.Request().Header, nil)
+	registry := configs.getRegistry(maven, mavenRegistry)
+
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -356,7 +358,9 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 	if version == "" && (configs.MinReleaseAge > 0 || len(configs.Rules) > 0) {
 		filtered, removed := filterMavenMetadata(data,
 			time.Duration(configs.MinReleaseAge)*time.Hour,
-			func(v string) (time.Time, error) { return d.fetchMavenReleaseTime(ctx, packageName, v) },
+			func(v string) (time.Time, error) {
+				return d.fetchMavenReleaseTime(ctx, packageName, v, registry)
+			},
 			func(v string) bool {
 				blocked, _ := matchRules(maven.packageIdentifier(packageName, v), configs.Rules)
 				return !blocked
@@ -377,7 +381,7 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 // the version's POM is the only source. The POM is used rather than the JAR because it is
 // small and always exists, even for pom-packaging artifacts. The cache key matches the one
 // proxyMavenPackage uses, so a POM that was proxied normally is reused here.
-func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version string) (time.Time, error) {
+func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version, registry string) (time.Time, error) {
 	groupID, artifactID, ok := strings.Cut(packageName, "/")
 	if !ok {
 		return time.Time{}, fmt.Errorf("invalid maven coordinates %q", packageName)
@@ -390,7 +394,7 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 		return entry.releaseTime, nil
 	}
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, pomPath, http.Header{}, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, pomPath, http.Header{}, nil)
 	if err != nil {
 		return time.Time{}, err
 	}

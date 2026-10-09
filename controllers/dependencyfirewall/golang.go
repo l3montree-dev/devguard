@@ -207,7 +207,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, goProxyURL, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, configs.getRegistry(golang, goProxyURL), requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -230,7 +230,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 			releaseTimeErr = fmt.Errorf("no release time in .info response")
 		}
 	} else {
-		releaseTime, releaseTimeErr = d.fetchGoReleaseTime(ctx, moduleName, version)
+		releaseTime, releaseTimeErr = d.fetchGoReleaseTime(ctx, moduleName, version, configs.getRegistry(golang, goProxyURL))
 	}
 	if releaseTimeErr != nil {
 		slog.Warn("Could not determine release time", "proxy", "go", "module", moduleName, "version", version, "error", releaseTimeErr)
@@ -273,8 +273,10 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, status)
 	}
 
+	registry := configs.getRegistry(golang, goProxyURL)
+
 	// Fetch from upstream — we need the response to resolve the version before we can check rules.
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, goProxyURL, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -292,7 +294,9 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 	if strings.HasSuffix(requestPath, "/@v/list") && (configs.MinReleaseAge > 0 || len(configs.Rules) > 0) {
 		filtered, removed := filterGoVersionList(data,
 			time.Duration(configs.MinReleaseAge)*time.Hour,
-			func(version string) (time.Time, error) { return d.fetchGoReleaseTime(ctx, packageName, version) },
+			func(version string) (time.Time, error) {
+				return d.fetchGoReleaseTime(ctx, packageName, version, registry)
+			},
 			func(version string) bool {
 				blocked, _ := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
 				return !blocked
@@ -360,14 +364,14 @@ func (d *GoDependencyProxyController) proxyGoSumDB(c shared.Context, ctx context
 // fetchGoReleaseTime returns the release time of module@version from the version's .info
 // file, preferring the cached copy. A fetched .info is cached as well, so the explicit
 // .info request and the version list filtering share it.
-func (d *GoDependencyProxyController) fetchGoReleaseTime(ctx context.Context, moduleName, version string) (time.Time, error) {
+func (d *GoDependencyProxyController) fetchGoReleaseTime(ctx context.Context, moduleName, version, registry string) (time.Time, error) {
 	infoPath := moduleName + "/@v/" + version + ".info"
 	cacheKey := "go/" + infoPath
 	if entry, ok := d.cache.Get(cacheKey); ok && !entry.releaseTime.IsZero() {
 		return entry.releaseTime, nil
 	}
 
-	data, _, statusCode, err := d.fetchFromUpstream(ctx, golang, goProxyURL, infoPath, http.Header{}, nil)
+	data, _, statusCode, err := d.fetchFromUpstream(ctx, golang, registry, infoPath, http.Header{}, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
