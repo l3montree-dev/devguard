@@ -580,7 +580,7 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 	if configID == dtos.DependencyProxyConfigFileID {
 		if err := dtos.ValidateConfigFile(body); err != nil {
-			return err
+			return echo.NewHTTPError(400, err.Error())
 		}
 	}
 

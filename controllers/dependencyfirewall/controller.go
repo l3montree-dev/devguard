@@ -37,7 +37,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"gopkg.in/yaml.v3"
 )
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
@@ -299,20 +298,11 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 }
 
 func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
-	var cfg struct {
-		Rules []packagerules.Rule `yaml:"rules"`
-	}
-
-	if err := yaml.Unmarshal([]byte(s), &cfg); err != nil {
-		return DependencyProxyConfigs{}, fmt.Errorf("failed to parse yaml: %w", err)
-	}
-
-	compiledRules, err := packagerules.CompileRules(cfg.Rules)
+	rules, err := packagerules.ParseConfig(s)
 	if err != nil {
-		return DependencyProxyConfigs{}, fmt.Errorf("failed to compile rules: %w", err)
+		return DependencyProxyConfigs{}, err
 	}
-
-	return DependencyProxyConfigs{Rules: compiledRules}, nil
+	return DependencyProxyConfigs{Rules: rules}, nil
 }
 
 // GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
