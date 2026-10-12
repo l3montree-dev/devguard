@@ -47,19 +47,19 @@ import (
 	"go.uber.org/fx"
 )
 
-// BenchmarkNewScanAsset runs DaemonRunner.NewScanAsset against the local
+// BenchmarkScanAllAssets runs DaemonRunner.ScanAllAssets against the local
 // development database. A testcontainer database is useless here: it is created
 // from migrations only, so there would be no dependencies to match.
 //
 // The runner is in dry run mode, so every iteration diffs against the same
 // stored vulns.
 //
-//	go test -run=^$ -bench=BenchmarkNewScanAsset -benchtime=1x -timeout=30m \
+//	go test -run=^$ -bench=BenchmarkScanAllAssets -benchtime=1x -timeout=30m \
 //		-cpuprofile=cpu.prof -memprofile=mem.prof ./tests/
 //
 //	go tool pprof -http=:8080 cpu.prof
 //	go tool pprof -http=:8081 -sample_index=alloc_space mem.prof
-func BenchmarkNewScanAsset(b *testing.B) {
+func BenchmarkScanAllAssets(b *testing.B) {
 	db, pool, cleanup := initDevDatabase()
 	b.Cleanup(cleanup)
 
@@ -103,8 +103,8 @@ func BenchmarkNewScanAsset(b *testing.B) {
 	for b.Loop() {
 		runner.SetDebugOptions(daemons.DebugOptions{DryRun: false})
 
-		if err := runner.NewScanAsset(context.Background()); err != nil {
-			b.Fatalf("NewScanAsset failed: %v", err)
+		if err := runner.ScanAllAssets(context.Background()); err != nil {
+			b.Fatalf("ScanAllAssets failed: %v", err)
 		}
 		iterations++
 	}

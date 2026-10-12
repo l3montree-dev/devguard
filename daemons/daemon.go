@@ -132,7 +132,7 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 
 	// right after the vulndb import, the fixed version jobs and the asset pipeline work on the vulns it creates
 	if err := runner.maybeRunAndMark(ctx, "vulndb.scan", func() error {
-		return runner.runScan(ctx)
+		return runner.ScanAllAssets(ctx)
 	}); err != nil {
 		monitoring.Alert("could not scan sboms", err)
 	}
