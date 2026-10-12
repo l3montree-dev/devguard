@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -229,12 +230,6 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, deb, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, pkgVersion := deb.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, deb, packageName, pkgVersion)
@@ -309,4 +304,8 @@ func debReleaseTime(headers http.Header) time.Time {
 		return time.Time{}
 	}
 	return t
+}
+
+func debPackage(packageName, version string, releasedAt time.Time) packagerules.Package {
+	return packagerules.Package{Name: packageName, Version: version, Ecosystem: "deb", Purl: deb.packageIdentifier(packageName, version), ReleasedAt: releasedAt, Registry: debRegistry}
 }
