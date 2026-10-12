@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,5 +47,69 @@ func TestHasVersionedDescendant(t *testing.T) {
 		}
 		children := dependencyChildrenByRef(&deps)
 		assert.False(t, hasVersionedDescendant("a", children, map[string]bool{}))
+	})
+}
+
+func newUpstreamTestBOM() *cyclonedx.BOM {
+	return &cyclonedx.BOM{
+		Metadata:   &cyclonedx.Metadata{Component: &cyclonedx.Component{BOMRef: "root"}},
+		Components: &[]cyclonedx.Component{},
+		Dependencies: &[]cyclonedx.Dependency{
+			{Ref: "root", Dependencies: &[]string{}},
+		},
+	}
+}
+
+func TestAddSupplementaryUpstreamPURLManually(t *testing.T) {
+	origPURL, origVCS := config.RuntimeBaseConfig.UpstreamPURL, config.RuntimeBaseConfig.UpstreamVCS
+	t.Cleanup(func() {
+		config.RuntimeBaseConfig.UpstreamPURL, config.RuntimeBaseConfig.UpstreamVCS = origPURL, origVCS
+	})
+
+	t.Run("no-op when no upstream purls are configured", func(t *testing.T) {
+		config.RuntimeBaseConfig.UpstreamPURL, config.RuntimeBaseConfig.UpstreamVCS = nil, nil
+		bom := newUpstreamTestBOM()
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom))
+		assert.Empty(t, *bom.Components)
+	})
+
+	t.Run("adds a component per purl and links each to the root", func(t *testing.T) {
+		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:golang/example.org/a@v1.0.0", "pkg:npm/b@2.0.0"}
+		config.RuntimeBaseConfig.UpstreamVCS = nil
+		bom := newUpstreamTestBOM()
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom))
+
+		assert.Len(t, *bom.Components, 2)
+		assert.Equal(t, "pkg:golang/example.org/a@v1.0.0", (*bom.Components)[0].PackageURL)
+		assert.Equal(t, "v1.0.0", (*bom.Components)[0].Version)
+		assert.Equal(t, cyclonedx.ComponentTypeApplication, (*bom.Components)[0].Type)
+		assert.Nil(t, (*bom.Components)[0].Pedigree)
+		assert.Equal(t, []string{"pkg:golang/example.org/a@v1.0.0", "pkg:npm/b@2.0.0"}, *(*bom.Dependencies)[0].Dependencies)
+	})
+
+	t.Run("maps VCS values to purls by index", func(t *testing.T) {
+		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0"}
+		config.RuntimeBaseConfig.UpstreamVCS = []string{"git:github.com/org/a.git@main"}
+		bom := newUpstreamTestBOM()
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom))
+
+		assert.Len(t, *bom.Components, 2)
+		first := (*bom.Components)[0]
+		assert.NotNil(t, first.Pedigree)
+		refs := *(*first.Pedigree.Ancestors)[0].ExternalReferences
+		assert.Equal(t, "git:github.com/org/a.git@main", refs[0].URL)
+		assert.Nil(t, (*bom.Components)[1].Pedigree)
+	})
+
+	t.Run("errors on a purl without a version", func(t *testing.T) {
+		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:npm/a"}
+		config.RuntimeBaseConfig.UpstreamVCS = nil
+		assert.Error(t, addSupplementaryUpstreamPURLManually(newUpstreamTestBOM()))
+	})
+
+	t.Run("errors on an invalid purl", func(t *testing.T) {
+		config.RuntimeBaseConfig.UpstreamPURL = []string{"not-a-purl"}
+		config.RuntimeBaseConfig.UpstreamVCS = nil
+		assert.Error(t, addSupplementaryUpstreamPURLManually(newUpstreamTestBOM()))
 	})
 }
