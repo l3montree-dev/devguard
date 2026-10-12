@@ -98,6 +98,12 @@ func TestNPMMinReleaseAgeOnCacheHit(t *testing.T) {
 			d, secret := newMinReleaseAgeController(t, 24)
 			controller := NewNPMDependencyProxyController(d)
 
+			npmMetadata.Set("npm/metadata/lodash", npmMetadataCacheEntry{
+				data:        []byte(fmt.Sprintf(`{"name":"lodash","time":{"4.17.21":%q}}`, time.Now().Add(-tc.releaseAge).UTC().Format(time.RFC3339))),
+				contentType: "application/json",
+			})
+			t.Cleanup(func() { npmMetadata.Delete("npm/metadata/lodash") })
+
 			requestPath := "/lodash/-/lodash-4.17.21.tgz"
 			if err := d.cache.Set("npm/tarball"+requestPath, cacheValue{
 				data:        []byte("tarball"),
@@ -169,7 +175,7 @@ func assertTooNewBlocked(t *testing.T, rec *httptest.ResponseRecorder, expectedS
 		t.Fatalf("expected status %d, got %d (body: %s)", expectedStatus, rec.Code, rec.Body.String())
 	}
 
-	blocked := rec.Header().Get("X-Too-New-Package") == "blocked"
+	blocked := rec.Header().Get("X-Not-Allowed-Package") == "blocked"
 	if blocked != expectBlocked {
 		t.Fatalf("expected blocked=%v, got blocked=%v (body: %s)", expectBlocked, blocked, rec.Body.String())
 	}

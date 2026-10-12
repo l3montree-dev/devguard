@@ -320,6 +320,18 @@ func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
 }
+
+func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) packagerules.Package {
+	return packagerules.Package{
+		Name:       name,
+		Version:    version,
+		Ecosystem:  eco.name(),
+		Purl:       eco.packageIdentifier(name, version),
+		Registry:   registry,
+		ReleasedAt: releasedAt,
+	}
+}
+
 func (d *DependencyProxyController) CheckNotAllowedPackage(pkg packagerules.Package, configs DependencyProxyConfigs) (bool, string) {
 	blocked, ruleName, err := packagerules.Evaluate(configs.Rules, pkg)
 	if err != nil {
@@ -452,35 +464,6 @@ func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, eco 
 	return c.JSON(status, map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the malicious package firewall",
-		"reason":  reason,
-		"path":    path,
-		"blocked": true,
-	})
-}
-
-func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, eco ecosystem, path string, releaseTime time.Time, minReleaseAge int) error {
-	span := trace.SpanFromContext(c.Request().Context())
-	span.SetAttributes(attribute.Bool("proxy.too_new_blocked", true))
-	span.SetStatus(codes.Error, "package too new")
-
-	c.Response().Header().Set("X-Too-New-Package", "blocked")
-
-	packageName, _ := eco.parsePackage(path)
-	if packageName == "" {
-		packageName = "unknown"
-	}
-	span.SetAttributes(attribute.String("proxy.package", packageName))
-
-	reason := fmt.Sprintf("Package %s was released %s ago, which is less than the required minimum of %d hours",
-		packageName,
-		time.Since(releaseTime).Round(time.Minute),
-		minReleaseAge,
-	)
-	slog.Warn("BLOCKED TOO NEW PACKAGE", "path", path, "reason", reason)
-
-	return c.JSON(http.StatusForbidden, map[string]any{
-		"error":   "Forbidden",
-		"message": "This package has been blocked because it was released too recently",
 		"reason":  reason,
 		"path":    path,
 		"blocked": true,

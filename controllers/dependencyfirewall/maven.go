@@ -197,12 +197,6 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, maven, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, maven, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, version := maven.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, maven, packageName, version)
@@ -218,8 +212,10 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, mavenCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "maven", "path", requestPath)
-			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, maven, requestPath, entry.releaseTime, configs.MinReleaseAge)
+			notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, version, entry.releaseTime), configs)
+			if notAllowed {
+				slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
+				return d.blockNotAllowedPackage(c, maven, requestPath, notAllowedReason)
 			}
 			if entry.contentType != "" {
 				c.Response().Header().Set("Content-Type", entry.contentType)
@@ -245,15 +241,15 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	}
 
 	releaseTime := mavenReleaseTime(headers)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, version, releaseTime), configs)
+	if notAllowed {
+		slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
+		return d.blockNotAllowedPackage(c, maven, requestPath, notAllowedReason)
+	}
+
 	if releaseTime.IsZero() {
 		slog.Warn("Could not determine release time", "proxy", "maven", "package", packageName, "version", version)
-		if configs.MinReleaseAge > 0 {
-			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not determine release time of %s@%s", packageName, version))
-		}
 	} else {
-		if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, maven, requestPath, releaseTime, configs.MinReleaseAge)
-		}
 		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "maven", "error", err)
 		}
@@ -315,14 +311,6 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 
 	packageName, version := maven.parsePackage(requestPath)
 
-	if version != "" {
-		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, maven, requestPath, configs)
-		if notAllowed {
-			slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
-			return d.blockNotAllowedPackage(c, maven, requestPath, notAllowedReason)
-		}
-	}
-
 	status, reason, err := d.checkMalicious(ctx, maven, packageName, version)
 	if err != nil {
 		return maliciousCheckFailed(maven, err)
@@ -353,15 +341,12 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 
 	// Hide versions the explicit-version endpoint would reject anyway (too new or blocked
 	// by a rule), so Maven resolves to a version it can actually download.
-	if version == "" && (configs.MinReleaseAge > 0 || len(configs.Rules) > 0) {
-		filtered, removed := filterMavenMetadata(data,
-			time.Duration(configs.MinReleaseAge)*time.Hour,
-			func(v string) (time.Time, error) { return d.fetchMavenReleaseTime(ctx, packageName, v) },
-			func(v string) bool {
-				blocked, _ := matchRules(maven.packageIdentifier(packageName, v), configs.Rules)
-				return !blocked
-			},
-		)
+	if version == "" && len(configs.Rules) > 0 {
+		filtered, removed := filterMavenMetadata(data, func(v string) bool {
+			releaseTime, _ := d.fetchMavenReleaseTime(ctx, packageName, v)
+			blocked, _ := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, v, releaseTime), configs)
+			return !blocked
+		})
 		if removed > 0 {
 			slog.Info("Filtered maven version list", "proxy", "maven", "package", packageName, "removedVersions", removed)
 			span.SetAttributes(attribute.Int("proxy.filtered_versions", removed))
@@ -407,14 +392,14 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 	return releaseTime, nil
 }
 
-// filterMavenMetadata removes versions from a maven-metadata.xml document. Versions for
-// which allowed returns false are dropped. With a minimum age, versions are checked from
-// the newest downwards until the first one that is old enough - Maven Central appends new
+// filterMavenMetadata removes versions from a maven-metadata.xml document. Versions are
+// checked from the newest downwards until the first allowed one - Maven Central appends new
 // releases to the end of the list, so it is already in chronological order and no version
-// comparison is needed. Older versions are kept without fetching their release time.
+// comparison is needed. Older versions are kept without checking them, the artifact
+// endpoint still enforces the rules for each of them on download.
 // <latest> and <release> are rewritten to the newest remaining version, so LATEST and
 // RELEASE cannot resolve to a version the artifact endpoint would then block.
-func filterMavenMetadata(data []byte, minAge time.Duration, releaseTime func(version string) (time.Time, error), allowed func(version string) bool) ([]byte, int) {
+func filterMavenMetadata(data []byte, allowed func(version string) bool) ([]byte, int) {
 	block := mavenVersionsBlockRe.FindSubmatchIndex(data)
 	if block == nil {
 		return data, 0
@@ -426,22 +411,15 @@ func filterMavenMetadata(data []byte, minAge time.Duration, releaseTime func(ver
 	}
 
 	keep := make(map[string]bool, len(versions))
-	candidates := make([]string, 0, len(versions))
 	for _, v := range versions {
-		if allowed(v) {
-			keep[v] = true
-			candidates = append(candidates, v)
-		}
+		keep[v] = true
 	}
 
-	if minAge > 0 {
-		for i := len(candidates) - 1; i >= 0; i-- {
-			t, err := releaseTime(candidates[i])
-			if err == nil && time.Since(t) >= minAge {
-				break
-			}
-			delete(keep, candidates[i])
+	for i := len(versions) - 1; i >= 0; i-- {
+		if allowed(versions[i]) {
+			break
 		}
+		delete(keep, versions[i])
 	}
 
 	out := make([]string, 0, len(keep))

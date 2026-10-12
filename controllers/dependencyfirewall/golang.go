@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -120,10 +119,6 @@ func (goEcosystem) writeResponse(c shared.Context, data []byte, path string, cac
 	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), data)
 }
 
-func goPackage(module, version string, releasedAt time.Time) packagerules.Package {
-	return packagerules.Package{Name: module, Version: version, Ecosystem: "golang", Purl: golang.packageIdentifier(module, version), ReleasedAt: releasedAt, Registry: goProxyURL}
-}
-
 // @Summary Proxy Go module requests
 // @Tags Dependency Firewall
 // @Security PATAuth
@@ -199,7 +194,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		slog.Warn("Could not determine release time", "proxy", "go", "module", moduleName, "version", version, "error", err)
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(goPackage(moduleName, version, releaseTime), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, moduleName, version, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
@@ -279,7 +274,7 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 	if strings.HasSuffix(requestPath, "/@v/list") && len(configs.Rules) > 0 {
 		filtered, removed := filterGoVersionList(data, func(version string) bool {
 			releaseTime, _ := d.fetchGoReleaseTime(ctx, packageName, version)
-			blocked, _ := d.CheckNotAllowedPackage(goPackage(packageName, version, releaseTime), configs)
+			blocked, _ := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, packageName, version, releaseTime), configs)
 			return !blocked
 		})
 		if removed > 0 {
@@ -292,7 +287,7 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 	resolvedVersion, releaseTime, _ := extractGoVersionAndReleaseTime(data)
 
 	if resolvedVersion != "" {
-		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(goPackage(packageName, resolvedVersion, releaseTime), configs)
+		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, packageName, resolvedVersion, releaseTime), configs)
 		if notAllowed {
 			slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
 			return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)

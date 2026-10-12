@@ -200,12 +200,6 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, pypi, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, version := pypi.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, pypi, packageName, version)
@@ -219,38 +213,27 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 	}
 
-	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
-		slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
-		if configs.MinReleaseAge > 0 {
-			if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, pypi, requestPath, entry.releaseTime, configs.MinReleaseAge)
-			}
-			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			return pypi.writeResponse(c, entry.data, requestPath, true)
-		} else {
-			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			return pypi.writeResponse(c, entry.data, requestPath, true)
-		}
-	}
-
-	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
-
-	// Always resolve the release time, even without MinReleaseAge: the cache is shared
-	// across proxy secrets, so an entry stored for one config must be checkable under
-	// another. Files are only cached together with a known release time.
 	releaseTime, releaseTimeErr := time.Time{}, fmt.Errorf("could not determine package and version from path")
 	if packageName != "" {
 		releaseTime, releaseTimeErr = d.fetchPyPIReleaseTime(ctx, packageName, version)
 	}
 	if releaseTimeErr != nil {
 		slog.Warn("Could not determine release time", "proxy", "pypi", "package", packageName, "version", version, "error", releaseTimeErr)
-		if configs.MinReleaseAge > 0 {
-			// Fail closed: without a publish date the MinReleaseAge policy cannot be verified.
-			return d.blockNotAllowedPackage(c, pypi, requestPath, fmt.Sprintf("Release time of package %s@%s could not be determined", packageName, version))
-		}
-	} else if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-		return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
 	}
+
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(pypi, pypiRegistry, packageName, version, releaseTime), configs)
+	if notAllowed {
+		slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
+		return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
+	}
+
+	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
+		slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
+		span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+		return pypi.writeResponse(c, entry.data, requestPath, true)
+	}
+
+	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	data, headers, statusCode, err := d.fetchFromUpstream(ctx, pypi, pypiFilesURL, requestPath, c.Request().Header, nil)
 	if err != nil {
@@ -327,7 +310,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
-	
 	pkgName := normalizePyPIName(c.Param("package"))
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
 
@@ -378,13 +360,9 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if config.MinReleaseAge > 0 || len(config.Rules) > 0 {
-		minAge := time.Duration(config.MinReleaseAge) * time.Hour
+	if len(config.Rules) > 0 {
 		data, err = filterPyPiSimpleIndex(data, func(version string, published time.Time) bool {
-			if config.MinReleaseAge > 0 && (published.IsZero() || time.Since(published) < minAge) {
-				return false
-			}
-			blocked, _ := matchRules(pypi.packageIdentifier(pkgName, version), config.Rules)
+			blocked, _ := d.CheckNotAllowedPackage(newPackage(pypi, pypiRegistry, pkgName, version, published), config)
 			return !blocked
 		})
 		if err != nil {

@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -370,10 +369,6 @@ func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context,
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-func ociPackage(name, version string) packagerules.Package {
-	return packagerules.Package{Name: name, Version: version, Ecosystem: "oci", Purl: ociEco.packageIdentifier(name, version)}
-}
-
 // ProxyOCIVersionCheck handles the OCI Distribution Spec v2 version check.
 // Route: GET|HEAD /oci/v2/
 // @Summary OCI Distribution Spec v2 version check
@@ -452,7 +447,7 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "manifest", "method", method, "image", fqImageName, "reference", reference)
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ociPackage(fqImageName, reference), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, reference, time.Time{}), configs)
 	if notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
@@ -583,7 +578,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	slog.Info("Proxy request", "proxy", "oci", "type", "blob", "method", method, "image", fqImageName, "digest", digest)
 
 	// Blobs are image-scoped; check the fully-qualified image name against rules.
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ociPackage(fqImageName, ""), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, "", time.Time{}), configs)
 	if notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
@@ -711,7 +706,7 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "referrers", "image", fqImageName, "digest", digest)
 
-	if notAllowed, reason := d.CheckNotAllowedPackage(ociPackage(fqImageName, ""), configs); notAllowed {
+	if notAllowed, reason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, "", time.Time{}), configs); notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
 	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)
@@ -780,7 +775,7 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "tags/list", "image", fqImageName)
 
-	if notAllowed, reason := d.CheckNotAllowedPackage(ociPackage(fqImageName, ""), configs); notAllowed {
+	if notAllowed, reason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, "", time.Time{}), configs); notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
 	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)

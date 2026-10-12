@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -244,7 +243,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("blocked dist url: %v", err))
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(composerPackage(packageName, version, releaseTime), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(composer, composerMetadataRegistry, packageName, version, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "composer", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, composer, requestPath, notAllowedReason)
@@ -342,7 +341,7 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 	}
 
 	filtered, removed, err := filterComposerMetadata(data, composerProxyBaseURL(c), func(v string, released time.Time) bool {
-		blocked, _ := d.CheckNotAllowedPackage(composerPackage(packageName, v, released), configs)
+		blocked, _ := d.CheckNotAllowedPackage(newPackage(composer, composerMetadataRegistry, packageName, v, released), configs)
 		return !blocked
 	})
 	if err != nil {
@@ -541,8 +540,4 @@ func composerCacheTTL(requestPath string) time.Duration {
 		return 168 * time.Hour // 7 days
 	}
 	return 1 * time.Hour
-}
-
-func composerPackage(packageName, version string, releasedAt time.Time) packagerules.Package {
-	return packagerules.Package{Name: packageName, Version: version, Ecosystem: "composer", Purl: composer.packageIdentifier(packageName, version), ReleasedAt: releasedAt, Registry: composerMetadataRegistry}
 }
