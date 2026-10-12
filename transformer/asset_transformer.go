@@ -16,6 +16,9 @@
 package transformer
 
 import (
+	"os"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -45,7 +48,23 @@ func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDT
 	}
 }
 
+func getBotUserLinkForExternalProvider(providerID string) *string {
+	userID := os.Getenv("GITLAB_" + strings.ToUpper(providerID) + "_BOTUSERID")
+	baseURL := os.Getenv("GITLAB_" + strings.ToUpper(providerID) + "_BASEURL")
+	if userID != "" && baseURL != "" {
+		link := baseURL + "/-/u/" + userID
+		return &link
+	}
+	return nil
+}
+
 func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
+	// if its an external provider
+	var botUserLink *string
+	if asset.ExternalEntityProviderID != nil {
+		// we can inspect the env variables to get the bot user link for the external provider
+		botUserLink = getBotUserLinkForExternalProvider(*asset.ExternalEntityProviderID)
+	}
 	return dtos.AssetDTO{
 		ID:                           asset.ID,
 		Name:                         asset.Name,
@@ -63,6 +82,7 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
 		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
 		ExternalEntityID:             asset.ExternalEntityID,
+		ExternalBotUserLink:          botUserLink,
 		PipelineLastRun:              asset.PipelineLastRun,
 		RepositoryProvider:           asset.RepositoryProvider,
 		IsPublic:                     asset.IsPublic,

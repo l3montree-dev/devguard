@@ -106,11 +106,12 @@ func main() {
 	shared.LoadConfig() // nolint: errcheck
 	shared.InitLogger()
 
+	if sampleRate := tracesSampleRate(); sampleRate > 0 {
+		initTracer(sampleRate)
+	}
+
 	if os.Getenv("ERROR_TRACKING_DSN") != "" {
 		initSentry()
-		if sampleRate := tracesSampleRate(); sampleRate > 0 {
-			initTracer(sampleRate)
-		}
 
 		// Catch panics
 		defer func() {
@@ -310,7 +311,8 @@ func initTracer(sampleRate float64) {
 	opts := []sdktrace.TracerProviderOption{
 		// ParentBased honors the sampled flag from an incoming traceparent header, so a specific
 		// request can be force-traced regardless of the ratio by setting the flag to 01:
-		//   curl -H "traceparent: 00-$(openssl rand -hex 16)-$(openssl rand -hex 8)-01" <url>
+		// traceID="00-$(openssl rand -hex 16)-$(openssl rand -hex 8)-01" && curl -sSg -w '\n' -H "traceparent: $traceID" '<url>'; printf 'jaeger trace: %s\n' "${traceID:3:32}"
+
 		sdktrace.WithSampler(sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampleRate))),
 		sdktrace.WithResource(res),
 	}

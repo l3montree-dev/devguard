@@ -22,39 +22,18 @@ rec {
     trivy = trivyFromSource.package;
   };
 
-  args = {
-    inherit (pkgs)
-      lib
-      buildGoModule
-      fetchFromGitHub
-      runCommand
-      jq
-      ;
-  };
-
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
-  trivyFromSource = import ./trivy.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-    }
-  );
+  trivyFromSource = import ./trivy.nix { inherit pkgs buildGo127Module; };
 
-  craneFromSource = import ./crane.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-      trivy = trivyFromSource.package;
-    }
-  );
-  gitleaksFromSource = import ./gitleaks.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-      trivy = trivyFromSource.package;
-    }
-  );
+  craneFromSource = import ./crane.nix {
+    inherit pkgs buildGo127Module;
+    trivy = trivyFromSource.package;
+  };
+  gitleaksFromSource = import ./gitleaks.nix {
+    inherit pkgs;
+    trivy = trivyFromSource.package;
+  };
 
   common = import ./common.nix {
     inherit self;
@@ -63,14 +42,7 @@ rec {
   # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
   dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;
   postgresql = import ./postgresql.nix {
-    inherit (pkgs)
-      lib
-      postgresql_16
-      fetchurl
-      stdenv
-      runCommand
-      jq
-      ;
+    inherit pkgs;
   };
   pythonTools = import ./python-tools.nix {
     inherit (pkgs)
@@ -84,13 +56,10 @@ rec {
     # passed explicitly from flake.nix
     inherit uv2nix pyproject-nix pyproject-build-systems;
   };
-  kratosFromSource = import ./kratos.nix (
-    args
-    // {
-      trivy = trivyFromSource.package;
-      inherit (pkgs) go;
-    }
-  );
+  kratosFromSource = import ./kratos.nix {
+    inherit pkgs;
+    trivy = trivyFromSource.package;
+  };
 
   # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each
   # own their own supplementary SBOM via nix/sbom-lib.nix), semgrep ships a
@@ -222,15 +191,7 @@ rec {
       tag = "16";
 
       contents = [
-        pkgs.cacert
-        pkgs.glibcLocales # en_US.UTF-8 locale support
         postgresql.psql
-        postgresql.entrypoint
-        postgresql.config
-        postgresql.sbom
-        pkgs.bash
-        pkgs.coreutils
-        pkgs.gnutar
       ]
       ++ (if debug then [ pkgs.busybox ] else [ ]);
 

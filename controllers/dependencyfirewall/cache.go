@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -222,4 +223,19 @@ func (c *cache) keyToPath(key string) (string, error) {
 
 func (c *cache) writeToDisk(path string, content []byte) error {
 	return os.WriteFile(path, content, 0644)
+}
+
+// bypassCache reports whether the client asked for a fresh upstream response
+// via "Cache-Control: no-cache" / "no-store" (or the legacy "Pragma: no-cache").
+// The response is still written to the cache so later requests benefit.
+func bypassCache(r *http.Request) bool {
+	for _, v := range r.Header.Values("Cache-Control") {
+		for _, d := range strings.Split(v, ",") {
+			switch strings.ToLower(strings.TrimSpace(d)) {
+			case "no-cache", "no-store":
+				return true
+			}
+		}
+	}
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get("Pragma")), "no-cache")
 }

@@ -219,7 +219,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 	}
 
-	if entry, ok := d.cache.Get(cacheKey); ok {
+	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
 		if configs.MinReleaseAge > 0 {
 			if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {

@@ -5992,6 +5992,9 @@
                     "enableTicketRange": {
                         "type": "boolean"
                     },
+                    "externalBotUserLink": {
+                        "type": "string"
+                    },
                     "externalEntityId": {
                         "type": "string"
                     },
@@ -6086,6 +6089,7 @@
                     "cvssAutomaticTicketThreshold",
                     "description",
                     "enableTicketRange",
+                    "externalBotUserLink",
                     "externalEntityId",
                     "externalEntityProviderId",
                     "id",
@@ -6138,6 +6142,9 @@
                     },
                     "enableTicketRange": {
                         "type": "boolean"
+                    },
+                    "externalBotUserLink": {
+                        "type": "string"
                     },
                     "externalEntityId": {
                         "type": "string"
@@ -6240,6 +6247,7 @@
                     "cvssAutomaticTicketThreshold",
                     "description",
                     "enableTicketRange",
+                    "externalBotUserLink",
                     "externalEntityId",
                     "externalEntityProviderId",
                     "id",
@@ -6293,6 +6301,9 @@
                     },
                     "enableTicketRange": {
                         "type": "boolean"
+                    },
+                    "externalBotUserLink": {
+                        "type": "string"
                     },
                     "externalEntityId": {
                         "type": "string"
@@ -6398,6 +6409,7 @@
                     "cvssAutomaticTicketThreshold",
                     "description",
                     "enableTicketRange",
+                    "externalBotUserLink",
                     "externalEntityId",
                     "externalEntityProviderId",
                     "id",
@@ -9688,7 +9700,7 @@
             "dtos.OrgOverview": {
                 "properties": {
                     "averageAgeOfDependencies": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "averageOpenCodeRisksPerProject": {
                         "type": "number"
@@ -14631,11 +14643,36 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
                     1,
                     1000,
                     1000000,
@@ -14659,11 +14696,36 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -15799,6 +15861,82 @@
                 ]
             }
         },
+        "/dependency-proxy/composer/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Composer repository request",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/dependency-proxy/deb/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Debian repository request",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
         "/dependency-proxy/go": {
             "get": {
                 "parameters": [
@@ -15870,6 +16008,44 @@
                     }
                 ],
                 "summary": "Proxy Go module requests",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/dependency-proxy/maven/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Maven repository request",
                 "tags": [
                     "Dependency Firewall"
                 ]
@@ -16286,6 +16462,82 @@
                 ]
             }
         },
+        "/dependency-proxy/{secret}/composer/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Composer repository request",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/dependency-proxy/{secret}/deb/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Debian repository request",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
         "/dependency-proxy/{secret}/go": {
             "get": {
                 "parameters": [
@@ -16357,6 +16609,44 @@
                     }
                 ],
                 "summary": "Proxy Go module requests",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/dependency-proxy/{secret}/maven/{path}": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "dependency proxy secret",
+                        "in": "path",
+                        "name": "secret",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "file"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Proxy Maven repository request",
                 "tags": [
                     "Dependency Firewall"
                 ]
