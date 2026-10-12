@@ -297,11 +297,20 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	return configs, nil
 }
 
+var compiledRulesCache = utils.NewTTLCache[string, []packagerules.CompiledRule](10*time.Minute, 1000, nil)
+
 func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
+	if rules, ok := compiledRulesCache.Get(s); ok {
+		return DependencyProxyConfigs{Rules: rules}, nil
+	}
+
 	rules, err := packagerules.ParseConfig(s)
 	if err != nil {
 		return DependencyProxyConfigs{}, err
 	}
+
+	compiledRulesCache.Set(s, rules)
+
 	return DependencyProxyConfigs{Rules: rules}, nil
 }
 
