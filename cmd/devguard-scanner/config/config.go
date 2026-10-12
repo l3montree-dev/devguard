@@ -86,8 +86,8 @@ type baseConfig struct {
 	Architecture    string `json:"architecture" mapstructure:"architecture"`
 	ImageVariant    string `json:"imageVariant" mapstructure:"imageVariant"`
 
-	UpstreamPURL string `json:"upstreamPURL" mapstructure:"upstreamPURL"`
-	UpstreamVCS  string `json:"upstreamVCS" mapstructure:"upstreamVCS"`
+	UpstreamPURL []string `json:"upstreamPURL" mapstructure:"upstreamPURL"`
+	UpstreamVCS  []string `json:"upstreamVCS" mapstructure:"upstreamVCS"`
 }
 
 type InTotoConfig struct {

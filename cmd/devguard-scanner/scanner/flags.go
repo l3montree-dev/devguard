@@ -82,9 +82,8 @@ func AddDependencyVulnsScanFlags(cmd *cobra.Command) {
 func AddSupplementarySBOMFlags(cmd *cobra.Command) {
 	cmd.Flags().String("sbomPath", "/sboms", "Path to scan for supplementary SBOM json files to merge into the scan results. A directory when scanning a path, an absolute path inside the image filesystem when scanning a container image. Each supplementary SBOM's root component name must match the exact in-image/in-project path of the application it describes, so that DevGuard can attach it under the right node and silence the 'unresolved application' warning for it.")
 	cmd.Flags().String("sbomOutputPath", "", "If set, write the final (merged) SBOM to this file path in addition to uploading it.")
-	cmd.Flags().String("upstreamPURL", "", "Provide a supplementary component to help the scanner resolve unindentified dependencies. Must be used together with the --upstreamVCS flag")
-	cmd.Flags().String("upstreamVCS", "", "Provide VCS information for the supplementary component. Must be used together with the --upstreamPURL flag")
-	cmd.MarkFlagsRequiredTogether("upstreamPURL", "upstreamVCS")
+	cmd.Flags().StringArray("upstreamPURL", nil, "Add a user declared component to the SBOM. This makes sense when scanning a container image that contains a vendored dependency, or when scanning a project that has a vendored dependency. Regular SCA scanners have a lot of trouble identifying components which are not listed in any package managing manifest.")
+	cmd.Flags().StringArray("upstreamVCS", nil, "Provide VCS information for the supplementary component. Must be used together with the --upstreamPURL flag. Arguments are mapped by index, so the first --upstreamVCS value corresponds to the first --upstreamPURL value, and so on. The VCS information should be in the format 'vcsType:vcsURL@vcsRevision', e.g. 'git:github.com/l3montree-dev/devguard.git@main'.")
 }
 
 func AddFirstPartyVulnsScanFlags(cmd *cobra.Command) {
