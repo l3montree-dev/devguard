@@ -160,7 +160,7 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Con
 	}
 
 	// a license risk names its component in the same field a dependency vuln does
-	if err := page.Select("e.*, COALESCE(dv.cve_id, cp.framework_control_id) AS cve_id, COALESCE(dv.component_purl, lr.component_purl) AS component_purl, fv.uri").
+	if err := page.Select("e.*, COALESCE(dv.cve_id, cp.framework_control_id) AS resource_identifier, COALESCE(dv.component_purl, lr.component_purl) AS component_purl, fv.uri").
 		Scan(&events).Error; err != nil {
 		return shared.Paged[models.VulnEventDetail]{}, err
 	}

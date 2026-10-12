@@ -99,7 +99,7 @@ type VulnEventDetail struct {
 
 	AssetVersionName string `json:"assetVersionName" gorm:"column:asset_version_name"`
 	Slug             string `json:"assetVersionSlug" gorm:"column:slug"`
-	CVEID            string `json:"cveID" gorm:"column:cve_id"`
+	ResourceIdentifier            string `json:"resource_identifier" gorm:"column:resource_identifier"`
 	ComponentPurl    string `json:"packageName"`
 	URI              string `json:"uri"`
 }

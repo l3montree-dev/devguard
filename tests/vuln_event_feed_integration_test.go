@@ -157,7 +157,7 @@ func TestVulnEventFeedScopesToItsAssetVersion(t *testing.T) {
 		assert.Equal(t, mainEvent, result.Data[0].ID)
 		assert.NotEqual(t, otherEvent, result.Data[0].ID,
 			"an event belonging to another asset version must not leak into this feed")
-		assert.Equal(t, cve.CVE, result.Data[0].CVEID, "the dependency_vulns detail join must still populate cve_id")
+		assert.Equal(t, cve.CVE, result.Data[0].ResourceIdentifier, "the dependency_vulns detail join must still populate cve_id")
 	})
 }
 
@@ -228,7 +228,7 @@ func TestVulnEventFeedIncludesEveryKindOfVuln(t *testing.T) {
 		}
 
 		require.Contains(t, byType, dtos.VulnTypeDependencyVuln)
-		assert.Equal(t, cve.CVE, byType[dtos.VulnTypeDependencyVuln].CVEID)
+		assert.Equal(t, cve.CVE, byType[dtos.VulnTypeDependencyVuln].ResourceIdentifier)
 		assert.Equal(t, "pkg:npm/kinds-dependency@1.0.0", byType[dtos.VulnTypeDependencyVuln].ComponentPurl)
 
 		require.Contains(t, byType, dtos.VulnTypeLicenseRisk, "license risk events were missing from the feed entirely")
