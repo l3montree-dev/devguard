@@ -271,8 +271,16 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 
 	// Hide versions the explicit-version endpoint would reject anyway (too new or blocked
 	// by a rule), so `go get` resolves to a version it can actually download.
-	if strings.HasSuffix(requestPath, "/@v/list") && len(configs.Rules) > 0 {
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, eco.name(), packageName)
+	if err != nil {
+		return maliciousCheckFailed(eco, err)
+	}
+
+	if strings.HasSuffix(requestPath, "/@v/list") && (len(configs.Rules) > 0 || len(malicious) > 0) {
 		filtered, removed := filterGoVersionList(data, func(version string) bool {
+			if isMaliciousVersion(eco, malicious, version) {
+				return false
+			}
 			releaseTime, _ := d.fetchGoReleaseTime(ctx, packageName, version)
 			blocked, _ := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, packageName, version, releaseTime), configs)
 			return !blocked

@@ -360,8 +360,16 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if len(config.Rules) > 0 {
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, pypi.name(), pkgName)
+	if err != nil {
+		return maliciousCheckFailed(pypi, err)
+	}
+
+	if len(config.Rules) > 0 || len(malicious) > 0 {
 		data, err = filterPyPiSimpleIndex(data, func(version string, published time.Time) bool {
+			if isMaliciousVersion(pypi, malicious, version) {
+				return false
+			}
 			blocked, _ := d.CheckNotAllowedPackage(newPackage(pypi, pypiRegistry, pkgName, version, published), config)
 			return !blocked
 		})

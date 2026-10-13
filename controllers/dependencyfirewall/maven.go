@@ -341,8 +341,16 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 
 	// Hide versions the explicit-version endpoint would reject anyway (too new or blocked
 	// by a rule), so Maven resolves to a version it can actually download.
-	if version == "" && len(configs.Rules) > 0 {
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, maven.name(), packageName)
+	if err != nil {
+		return maliciousCheckFailed(maven, err)
+	}
+
+	if version == "" && (len(configs.Rules) > 0 || len(malicious) > 0) {
 		filtered, removed := filterMavenMetadata(data, func(v string) bool {
+			if isMaliciousVersion(maven, malicious, v) {
+				return false
+			}
 			releaseTime, _ := d.fetchMavenReleaseTime(ctx, packageName, v)
 			blocked, _ := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, v, releaseTime), configs)
 			return !blocked

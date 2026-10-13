@@ -332,12 +332,20 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	// Hide versions the tarball endpoint would reject anyway (too new or blocked by a
 	// rule), so the client resolves its semver range to a version it can actually install
 	// instead of failing on the tarball download.
-	if len(configs.Rules) > 0 {
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, npm.name(), packageName)
+	if err != nil {
+		return maliciousCheckFailed(npm, err)
+	}
+
+	if len(configs.Rules) > 0 || len(malicious) > 0 {
 		m, err := parseNPMMetadata(data)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadGateway, "Failed to parse package metadata from upstream").WithInternal(err)
 		}
 		filtered, removed, err := filterNPMMetadataVersions(data, func(version string) bool {
+			if isMaliciousVersion(npm, malicious, version) {
+				return false
+			}
 			pkg := m.toPackage(version)
 			pkg.Registry = npmRegistry
 			blocked, _ := d.CheckNotAllowedPackage(pkg, configs)

@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -372,6 +373,12 @@ func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecos
 	}
 
 	return 0, "", nil
+}
+
+func isMaliciousVersion(eco ecosystem, components []models.MaliciousAffectedComponent, version string) bool {
+	return slices.ContainsFunc(components, func(comp models.MaliciousAffectedComponent) bool {
+		return eco.MatchesVersion(comp, version)
+	})
 }
 
 func (d *DependencyProxyController) maliciousReason(ctx context.Context, packageName, version string, comp models.MaliciousAffectedComponent) string {

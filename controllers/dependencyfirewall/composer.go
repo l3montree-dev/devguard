@@ -340,7 +340,15 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, composer.name(), packageName)
+	if err != nil {
+		return maliciousCheckFailed(composer, err)
+	}
+
 	filtered, removed, err := filterComposerMetadata(data, composerProxyBaseURL(c), func(v string, released time.Time) bool {
+		if isMaliciousVersion(composer, malicious, v) {
+			return false
+		}
 		blocked, _ := d.CheckNotAllowedPackage(newPackage(composer, composerMetadataRegistry, packageName, v, released), configs)
 		return !blocked
 	})
