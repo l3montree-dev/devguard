@@ -157,10 +157,9 @@ func TestVulnEventFeedScopesToItsAssetVersion(t *testing.T) {
 		assert.Equal(t, mainEvent, result.Data[0].ID)
 		assert.NotEqual(t, otherEvent, result.Data[0].ID,
 			"an event belonging to another asset version must not leak into this feed")
-		assert.Equal(t, cve.CVE, result.Data[0].ResourceIdentifier, "the dependency_vulns detail join must still populate cve_id")
+		assert.Equal(t, cve.CVE, result.Data[0].ResourceIdentifier, "the dependency_vulns detail join must still populate resource_identifier")
 	})
 }
-
 
 func TestVulnEventFeedIncludesEveryKindOfVuln(t *testing.T) {
 	t.Parallel()

@@ -97,11 +97,11 @@ func SetVulnIDOnEvent(event *VulnEvent, vulnID uuid.UUID, vulnType dtos.VulnType
 type VulnEventDetail struct {
 	VulnEvent
 
-	AssetVersionName string `json:"assetVersionName" gorm:"column:asset_version_name"`
-	Slug             string `json:"assetVersionSlug" gorm:"column:slug"`
-	ResourceIdentifier            string `json:"resource_identifier" gorm:"column:resource_identifier"`
-	ComponentPurl    string `json:"packageName"`
-	URI              string `json:"uri"`
+	AssetVersionName   string `json:"assetVersionName" gorm:"column:asset_version_name"`
+	Slug               string `json:"assetVersionSlug" gorm:"column:slug"`
+	ResourceIdentifier string `json:"resourceIdentifier" gorm:"column:resource_identifier"`
+	ComponentPurl      string `json:"packageName"`
+	URI                string `json:"uri"`
 }
 
 func (event VulnEvent) TableName() string {
