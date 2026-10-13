@@ -294,4 +294,5 @@ type InstanceUsageStatistics struct {
 	NumberOfAssetVersions                 int `gorm:"column:number_of_asset_versions"`
 	NumberOfTicketSyncedProjects          int `gorm:"column:number_of_ticket_synced_projects"`
 	NumberOfProjectsWithGitlabIntegration int `gorm:"column:number_of_projects_with_gitlab_integration"`
+	NumberOfAssetsWithSBOM                int `gorm:"column:number_of_assets_with_sbom"`
 }
