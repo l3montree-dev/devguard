@@ -26,6 +26,5 @@ const (
 	StageApplyVEXRules                     = "ApplyVEXRules"
 	StageCollectStats                      = "CollectStats"
 	StageRecalculateRiskForVulnerabilities = "RecalculateRiskForVulnerabilities"
-	StageAutoReopenTickets                 = "AutoReopenTickets"
 	StageDeleteOldAssetVersions            = "DeleteOldAssetVersions"
 )

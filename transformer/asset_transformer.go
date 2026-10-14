@@ -78,12 +78,10 @@ func AssetModelToDTO(asset models.Asset) dtos.Asset {
 		SigningPubKey:                asset.SigningPubKey,
 		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
 		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
-		VulnAutoReopenAfterDays:      asset.VulnAutoReopenAfterDays,
 		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
 		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
 		ExternalEntityID:             asset.ExternalEntityID,
 		ExternalBotUserLink:          botUserLink,
-		PipelineLastRun:              asset.PipelineLastRun,
 		RepositoryProvider:           asset.RepositoryProvider,
 		IsPublic:                     asset.IsPublic,
 		ParanoidMode:                 asset.ParanoidMode,
@@ -247,11 +245,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 			asset.WebhookSecret = &webhookUUID
 
 		}
-	}
-
-	if assetPatch.VulnAutoReopenAfterDays != nil {
-		updated = true
-		asset.VulnAutoReopenAfterDays = assetPatch.VulnAutoReopenAfterDays
 	}
 
 	if assetPatch.RepositoryProvider != nil && *assetPatch.RepositoryProvider != "" {

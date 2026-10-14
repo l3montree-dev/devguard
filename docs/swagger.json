@@ -5946,9 +5946,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "projectId": {
                         "type": "string"
                     },
@@ -5982,9 +5979,6 @@
                     },
                     "state": {
                         "type": "string"
-                    },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -6011,7 +6005,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "projectId",
                     "refs",
                     "repositoryId",
@@ -6021,8 +6014,7 @@
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
-                    "state",
-                    "vulnAutoReopenAfterDays"
+                    "state"
                 ],
                 "type": "object"
             },
@@ -6209,9 +6201,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "projectId": {
                         "type": "string"
                     },
@@ -6245,9 +6234,6 @@
                     },
                     "state": {
                         "type": "string"
-                    },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -6275,7 +6261,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "projectId",
                     "refs",
                     "repositoryId",
@@ -6285,8 +6270,7 @@
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
-                    "state",
-                    "vulnAutoReopenAfterDays"
+                    "state"
                 ],
                 "type": "object"
             },
@@ -6368,9 +6352,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "projectId": {
                         "type": "string"
                     },
@@ -6405,9 +6386,6 @@
                     "state": {
                         "type": "string"
                     },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
-                    },
                     "webhookSecret": {
                         "type": "string"
                     }
@@ -6437,7 +6415,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "projectId",
                     "refs",
                     "repositoryId",
@@ -6448,7 +6425,6 @@
                     "signingPubKey",
                     "slug",
                     "state",
-                    "vulnAutoReopenAfterDays",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -6576,9 +6552,6 @@
                     "sharesInformation": {
                         "type": "boolean"
                     },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
-                    },
                     "webhookSecret": {
                         "maxLength": 1024,
                         "type": "string"
@@ -6609,7 +6582,6 @@
                     "repositoryProvider",
                     "riskAutomaticTicketThreshold",
                     "sharesInformation",
-                    "vulnAutoReopenAfterDays",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -12758,9 +12730,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "project": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project"
                     },
@@ -12805,10 +12774,6 @@
                     "updatedAt": {
                         "type": "string"
                     },
-                    "vulnAutoReopenAfterDays": {
-                        "description": "Auto-reopen configuration - number of days after which closed/accepted vulnerabilities should be reopened",
-                        "type": "integer"
-                    },
                     "webhookSecret": {
                         "type": "string"
                     }
@@ -12838,7 +12803,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "project",
                     "projectId",
                     "refs",
@@ -12852,7 +12816,6 @@
                     "state",
                     "type",
                     "updatedAt",
-                    "vulnAutoReopenAfterDays",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -14727,20 +14690,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
                     1,
                     1000,
                     1000000,
@@ -14764,20 +14713,6 @@
                 "x-enum-varnames": [
                     "minDuration",
                     "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",

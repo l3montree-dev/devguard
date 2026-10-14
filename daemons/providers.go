@@ -32,7 +32,7 @@ type DebugOptions struct {
 	// LimitToStages, when non-empty, skips all pipeline stages not in the list.
 	// Valid values match the stage method names: "SyncTickets",
 	// "ResolveDifferencesInTicketState", "SyncUpstream",
-	// "CollectStats", "RecalculateRiskForVulnerabilities", "AutoReopenTickets",
+	// "CollectStats", "RecalculateRiskForVulnerabilities",
 	// "DeleteOldAssetVersions", "ResolveFixedVersions".
 	LimitToStages []string
 	// DryRun skips all database writes. External system mutations are separately

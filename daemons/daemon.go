@@ -92,11 +92,6 @@ func daemonJob(errMsg string, fn func(ctx context.Context) error) events.NotifyH
 	}
 }
 
-func (runner *DaemonRunner) runAssetPipeline(ctx context.Context) error {
-	runner.RunAssetPipeline(ctx, false)
-	return nil
-}
-
 // the vulndb chain: vulndb -> scan -> fixed versions -> direct dependency fixed versions.
 // each step notifies the next one on success - therefore each step is retried on its own.
 func (runner *DaemonRunner) runVulnDB(ctx context.Context) error {
@@ -120,8 +115,13 @@ func (runner *DaemonRunner) runFixedVersions(ctx context.Context) error {
 	return runner.broker.Notify(ctx, nil, events.TopicDirectDependencyFixedVersion, nil, nil)
 }
 
+// enqueues the step for every asset which did not resolve its fixed versions within the pipeline interval
 func (runner *DaemonRunner) runDirectDependencyFixedVersions(ctx context.Context) error {
-	return runner.RunResolveFixedVersionsPipeline(ctx, false)
+	assetIDs, err := runner.fetchAllAssetIDs(ctx)
+	if err != nil {
+		return err
+	}
+	return runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineResolveFixedVersions, pipelinePayload{})
 }
 
 func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
@@ -137,7 +137,8 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage},
 		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation},
 		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage},
-		{events.TopicAssetPipeline, "*/5 * * * *", "could not run asset pipeline", runner.runAssetPipeline},
+		// the sweep only enqueues the due steps of every asset, see assetPipelineSteps
+		{events.TopicAssetPipeline, "*/5 * * * *", "could not sweep asset pipeline", runner.sweepAssetPipeline},
 
 		{events.TopicVulnDB, "30 * * * *", "could not update vulndb", runner.runVulnDB},
 		{events.TopicScan, "", "could not scan sboms", runner.runScan},
@@ -154,6 +155,13 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		}
 		if err := runner.broker.Schedule(job.topic, job.cron); err != nil {
 			return fmt.Errorf("could not schedule %s: %w", job.topic, err)
+		}
+	}
+
+	// the asset pipeline steps are never scheduled - the sweep or an event enqueues them per asset
+	for i, step := range runner.assetPipelineSteps() {
+		if err := runner.broker.Listen(step.topic, runner.assetPipelineJob(i)); err != nil {
+			return fmt.Errorf("could not listen on %s: %w", step.topic, err)
 		}
 	}
 	return nil

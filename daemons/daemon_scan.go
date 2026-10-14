@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -548,10 +549,10 @@ func (runner *DaemonRunner) saveDependencyVulns(ctx context.Context, conn *pgxpo
 	}
 	slog.Info("finished handling all scan results", "time", time.Since(startHandling), "failed", failed)
 
-	// the asset pipeline runs right after the scan, making these assets due there applies vex rules, tickets and stats to the new vulns
+	// applies vex rules, risk, tickets and stats to the new vulns right away - the sweep skips these steps afterwards
 	if !runner.debugOptions.DryRun && len(assetIDs) > 0 {
-		if _, err := conn.Exec(ctx, `UPDATE assets SET pipeline_last_run = to_timestamp(0) WHERE id = ANY($1);`, assetIDs); err != nil {
-			return fmt.Errorf("could not mark scanned assets for the asset pipeline: %w", err)
+		if err := runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineApplyVEXRules, pipelinePayload{Force: true, Chain: true}); err != nil {
+			return fmt.Errorf("could not enqueue the asset pipeline for scanned assets: %w", err)
 		}
 	}
 

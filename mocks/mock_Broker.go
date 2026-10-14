@@ -6,6 +6,8 @@ package mocks
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/events"
@@ -46,6 +48,86 @@ type Broker_Expecter struct {
 
 func (_m *Broker) EXPECT() *Broker_Expecter {
 	return &Broker_Expecter{mock: &_m.Mock}
+}
+
+// FinishedSince provides a mock function for the type Broker
+func (_mock *Broker) FinishedSince(ctx context.Context, topic events.NotifyTopic, since time.Time, match any) ([]json.RawMessage, error) {
+	ret := _mock.Called(ctx, topic, since, match)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FinishedSince")
+	}
+
+	var r0 []json.RawMessage
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, events.NotifyTopic, time.Time, any) ([]json.RawMessage, error)); ok {
+		return returnFunc(ctx, topic, since, match)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, events.NotifyTopic, time.Time, any) []json.RawMessage); ok {
+		r0 = returnFunc(ctx, topic, since, match)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]json.RawMessage)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, events.NotifyTopic, time.Time, any) error); ok {
+		r1 = returnFunc(ctx, topic, since, match)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Broker_FinishedSince_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FinishedSince'
+type Broker_FinishedSince_Call struct {
+	*mock.Call
+}
+
+// FinishedSince is a helper method to define mock.On call
+//   - ctx context.Context
+//   - topic events.NotifyTopic
+//   - since time.Time
+//   - match any
+func (_e *Broker_Expecter) FinishedSince(ctx any, topic any, since any, match any) *Broker_FinishedSince_Call {
+	return &Broker_FinishedSince_Call{Call: _e.mock.On("FinishedSince", ctx, topic, since, match)}
+}
+
+func (_c *Broker_FinishedSince_Call) Run(run func(ctx context.Context, topic events.NotifyTopic, since time.Time, match any)) *Broker_FinishedSince_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 events.NotifyTopic
+		if args[1] != nil {
+			arg1 = args[1].(events.NotifyTopic)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		var arg3 any
+		if args[3] != nil {
+			arg3 = args[3].(any)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *Broker_FinishedSince_Call) Return(rawMessages []json.RawMessage, err error) *Broker_FinishedSince_Call {
+	_c.Call.Return(rawMessages, err)
+	return _c
+}
+
+func (_c *Broker_FinishedSince_Call) RunAndReturn(run func(ctx context.Context, topic events.NotifyTopic, since time.Time, match any) ([]json.RawMessage, error)) *Broker_FinishedSince_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // IsHealthy provides a mock function for the type Broker

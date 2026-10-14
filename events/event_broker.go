@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,6 +24,10 @@ type Broker interface {
 	Listen(topic NotifyTopic, handler NotifyHandler) error
 	// Schedule notifies the topic according to the cron expression - exactly once across all instances.
 	Schedule(topic NotifyTopic, cronExpr string) error
+	// FinishedSince returns the distinct payloads of the jobs of the topic which completed or were discarded after since.
+	// match filters by payload containment (jsonb @>) - nil matches every job.
+	// finished jobs are only kept for completedJobRetention, since must not lie further back.
+	FinishedSince(ctx context.Context, topic NotifyTopic, since time.Time, match any) ([]json.RawMessage, error)
 
 	IsHealthy() bool
 }
@@ -48,6 +53,16 @@ const (
 	TopicScan                         NotifyTopic = "daemon.scan"
 	TopicFixedVersions                NotifyTopic = "daemon.fixedVersions"
 	TopicDirectDependencyFixedVersion NotifyTopic = "daemon.directDependencyFixedVersion"
+
+	// asset pipeline steps - one job per asset and step, the payload carries the asset id
+	TopicPipelineDeleteOldAssetVersions   NotifyTopic = "pipeline.deleteOldAssetVersions"
+	TopicPipelineSyncUpstream             NotifyTopic = "pipeline.syncUpstream"
+	TopicPipelineApplyVEXRules            NotifyTopic = "pipeline.applyVEXRules"
+	TopicPipelineRecalculateRisk          NotifyTopic = "pipeline.recalculateRisk"
+	TopicPipelineResolveFixedVersions     NotifyTopic = "pipeline.resolveFixedVersions"
+	TopicPipelineSyncTickets              NotifyTopic = "pipeline.syncTickets"
+	TopicPipelineResolveTicketDifferences NotifyTopic = "pipeline.resolveTicketDifferences"
+	TopicPipelineCollectStats             NotifyTopic = "pipeline.collectStats"
 )
 
 type EventBrokerImpl struct {
@@ -76,6 +91,10 @@ func (EventBrokerStub) Listen(topic NotifyTopic, handler NotifyHandler) error {
 
 func (EventBrokerStub) Schedule(topic NotifyTopic, cronExpr string) error {
 	return nil
+}
+
+func (EventBrokerStub) FinishedSince(ctx context.Context, topic NotifyTopic, since time.Time, match any) ([]json.RawMessage, error) {
+	return nil, nil
 }
 
 func (EventBrokerStub) IsHealthy() bool {

@@ -26,7 +26,14 @@ type NotifyHandler = func(ctx context.Context, payload json.RawMessage) error
 const maxAttempts = 3
 const rescueStuckJobsAfter = 3 * time.Hour
 
+// completedJobRetention bounds how far FinishedSince can look back - callers rely on it, do not lower it carelessly
+const completedJobRetention = 24 * time.Hour
+
+// QueueAssetPipeline runs the per asset pipeline steps, separated so they cannot starve the other daemons
+const QueueAssetPipeline = "asset_pipeline"
+
 type Queue struct {
+	db          *pgxpool.Pool
 	riverClient *river.Client[pgx.Tx]
 	workers     *river.Workers
 
@@ -39,7 +46,9 @@ func NewQueue(lc fx.Lifecycle, dbPool *pgxpool.Pool) (*Queue, error) {
 	client, err := river.NewClient(riverpgxv5.New(dbPool), &river.Config{
 		Queues: map[string]river.QueueConfig{
 			river.QueueDefault: {MaxWorkers: 25},
+			QueueAssetPipeline: {MaxWorkers: 10},
 		},
+		CompletedJobRetentionPeriod: completedJobRetention,
 		// the client keeps this pointer - workers added via Listen before Start are picked up
 		Workers:     workers,
 		MaxAttempts: maxAttempts,
@@ -52,6 +61,7 @@ func NewQueue(lc fx.Lifecycle, dbPool *pgxpool.Pool) (*Queue, error) {
 	}
 
 	q := &Queue{
+		db:          dbPool,
 		riverClient: client,
 		workers:     workers,
 		handlers:    make(map[NotifyTopic][]NotifyHandler),
@@ -162,6 +172,31 @@ func (r *Queue) Schedule(topic NotifyTopic, cronExpr string) error {
 		},
 	))
 	return err
+}
+
+func (r *Queue) FinishedSince(ctx context.Context, topic NotifyTopic, since time.Time, match any) ([]json.RawMessage, error) {
+	if since.Before(time.Now().Add(-completedJobRetention)) {
+		return nil, fmt.Errorf("since %s lies before the job retention of %s", since, completedJobRetention)
+	}
+	filter, err := json.Marshal(map[string]any{"payload": match})
+	if err != nil {
+		return nil, fmt.Errorf("could not marshal match: %w", err)
+	}
+	if match == nil {
+		filter = []byte("{}")
+	}
+	// kind is covered by river_job_kind, the payload containment by river_job_args_index
+	rows, err := r.db.Query(ctx, `
+		SELECT DISTINCT args->'payload'
+		FROM river_job
+		WHERE kind = $1
+			AND state IN ('completed', 'discarded')
+			AND finalized_at > $2
+			AND args @> $3::jsonb`, string(topic), since, filter)
+	if err != nil {
+		return nil, fmt.Errorf("could not query finished jobs: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[json.RawMessage])
 }
 
 // It must be called before the fx app is started - river does not support adding workers to a running client.

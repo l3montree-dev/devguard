@@ -120,7 +120,7 @@ update) are replaced by log lines showing what would have happened.`,
 	}
 	cmd.Flags().StringP("assetVersionSlug", "v", "", "Scope to a specific asset version name")
 	cmd.Flags().Bool("dryRun", true, "Read-only mode: log ticket operations instead of executing them, never write to the database (default: true, use --dryRun=false to apply changes)")
-	cmd.Flags().StringArray("stage", []string{}, "Run only the specified pipeline stage(s), can be repeated (e.g. --stage SyncTickets --stage CollectStats). Valid values: SyncTickets, ResolveDifferencesInTicketState, ScanAsset, SyncUpstream, CollectStats, RecalculateRiskForVulnerabilities, AutoReopenTickets, DeleteOldAssetVersions, ResolveFixedVersions")
+	cmd.Flags().StringArray("stage", []string{}, "Run only the specified pipeline stage(s), can be repeated (e.g. --stage SyncTickets --stage CollectStats). Valid values: SyncTickets, ResolveDifferencesInTicketState, ScanAsset, SyncUpstream, CollectStats, RecalculateRiskForVulnerabilities, DeleteOldAssetVersions, ResolveFixedVersions")
 
 	return cmd
 }
