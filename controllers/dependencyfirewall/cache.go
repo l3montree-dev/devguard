@@ -22,9 +22,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // cacheValue is the payload stored under a cache key. releaseTime,
@@ -48,9 +51,21 @@ type cacheEntry struct {
 	storedAt    time.Time
 }
 
+type CacheStats struct {
+	SizeBytes int64 `json:"sizeBytes"`
+	MaxBytes  int64 `json:"maxBytes"`
+	Entries   int   `json:"entries"`
+	Hits      int   `json:"hits"`
+	Misses    int   `json:"misses"`
+	Evictions int   `json:"evictions"`
+}
+
 type cache struct {
 	mu          sync.Mutex
 	currentSize int
+	hits        int
+	misses      int
+	evictions   int
 	// maxSize is the maximum size of the cache in bytes.
 	maxSize  int
 	basePath string
@@ -68,9 +83,77 @@ func newCache(basePath string, sizeInMB int) *cache {
 	}
 }
 
+type orgCaches struct {
+	mu       sync.Mutex
+	basePath string
+	sizeMB   int
+	caches   map[uuid.UUID]*cache
+}
+
+func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
+	entries, _ := os.ReadDir(baseDir)
+	ecosystemList := []string{"npm_", "pypi_", "go_", "maven_", "composer_", "deb_", "oci_"}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			if slices.ContainsFunc(ecosystemList, func(p string) bool { return strings.HasPrefix(entry.Name(), p) }) {
+				if err := os.Remove(filepath.Join(baseDir, entry.Name())); err != nil {
+					slog.Warn("failed to remove entry in cache", "error", err)
+				}
+			}
+		}
+	}
+
+	return &orgCaches{
+		basePath: baseDir,
+		sizeMB:   sizeInMB,
+		caches:   make(map[uuid.UUID]*cache),
+	}
+}
+
+func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
+	if orgID == uuid.Nil {
+		return nil, fmt.Errorf("no orgID found")
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	e, exists := o.caches[orgID]
+	if exists {
+		return e, nil
+	}
+	path := filepath.Join(o.basePath, orgID.String())
+	if err := os.RemoveAll(path); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return nil, err
+	}
+	c := newCache(path, o.sizeMB)
+	o.caches[orgID] = c
+	return c, nil
+}
+
+func (o *orgCaches) Stats() CacheStats {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	totalStats := CacheStats{}
+	for _, c := range o.caches {
+		s := c.Stats()
+		totalStats.SizeBytes += s.SizeBytes
+		totalStats.MaxBytes += s.MaxBytes
+		totalStats.Entries += s.Entries
+		totalStats.Hits += s.Hits
+		totalStats.Misses += s.Misses
+		totalStats.Evictions += s.Evictions
+	}
+	return totalStats
+}
+
 func (c *cache) Get(key string) (cacheValue, bool) {
 	c.mu.Lock()
 	e, exists := c.cache[key]
+	if !exists {
+		c.misses++
+	}
 	c.mu.Unlock()
 	if !exists {
 		return cacheValue{}, false
@@ -92,6 +175,7 @@ func (c *cache) Get(key string) (cacheValue, bool) {
 	c.mu.Lock()
 	// Update the LRU map to mark this entry as recently used
 	c.lru[key] = time.Now()
+	c.hits++
 	c.mu.Unlock()
 	return cacheValue{
 		data:        content,
@@ -180,6 +264,7 @@ func (c *cache) Set(key string, v cacheValue) error {
 		if oldestKey == "" {
 			break // No more entries to evict
 		}
+		c.evictions++
 		c.removeLocked(oldestKey)
 	}
 
@@ -238,4 +323,17 @@ func bypassCache(r *http.Request) bool {
 		}
 	}
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("Pragma")), "no-cache")
+}
+
+func (c *cache) Stats() CacheStats {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return CacheStats{
+		SizeBytes: int64(c.currentSize),
+		MaxBytes:  int64(c.maxSize),
+		Entries:   len(c.cache),
+		Hits:      c.hits,
+		Misses:    c.misses,
+		Evictions: c.evictions,
+	}
 }

@@ -91,41 +91,42 @@ func TestOCIEcosystemParsePackage(t *testing.T) {
 
 func TestOCIManifestFresh(t *testing.T) {
 	dir := t.TempDir()
-	d := &DependencyProxyController{cache: newCache(dir, 10)}
+	c := newCache(dir, 10)
+	d := &DependencyProxyController{}
 
 	t.Run("missing entry is not fresh", func(t *testing.T) {
-		if d.ociManifestFresh("nginx-manifest", "/v2/docker.io/library/nginx/manifests/latest") {
+		if d.ociManifestFresh("nginx-manifest", "/v2/docker.io/library/nginx/manifests/latest", c) {
 			t.Fatal("expected false for missing entry")
 		}
 	})
 
 	t.Run("digest-pinned manifest is always fresh", func(t *testing.T) {
-		if !d.ociManifestFresh("nginx-manifest-digest", "/v2/docker.io/library/nginx/manifests/sha256_deadbeef") {
+		if !d.ociManifestFresh("nginx-manifest-digest", "/v2/docker.io/library/nginx/manifests/sha256_deadbeef", c) {
 			t.Fatal("expected digest manifest to be fresh regardless of cache state")
 		}
 	})
 
 	t.Run("tag manifest within TTL is fresh", func(t *testing.T) {
 		key := "nginx-manifest-latest"
-		if err := d.cache.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
+		if err := c.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
 			t.Fatal(err)
 		}
-		if !d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/latest") {
+		if !d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/latest", c) {
 			t.Fatal("expected fresh tag manifest to be fresh")
 		}
 	})
 
 	t.Run("tag manifest past TTL is not fresh", func(t *testing.T) {
 		key := "nginx-manifest-old-tag"
-		if err := d.cache.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
+		if err := c.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
 			t.Fatal(err)
 		}
-		d.cache.mu.Lock()
-		e := d.cache.cache[key]
+		c.mu.Lock()
+		e := c.cache[key]
 		e.storedAt = time.Now().Add(-2 * time.Hour)
-		d.cache.cache[key] = e
-		d.cache.mu.Unlock()
-		if d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/old-tag") {
+		c.cache[key] = e
+		c.mu.Unlock()
+		if d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/old-tag", c) {
 			t.Fatal("expected stale tag manifest to not be fresh")
 		}
 	})

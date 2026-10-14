@@ -175,6 +175,11 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	orgCache, err := d.caches.forOrg(configs.OrgID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.pypi",
@@ -195,7 +200,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	slog.Info("Proxy request", "proxy", "pypi", "type", "package", "method", c.Request().Method, "path", requestPath)
 
 	cacheKey := "pypi/" + requestPath
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := orgCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "pypi", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -215,11 +220,11 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "pypi", "path", requestPath, "reason", reason)
-		d.cache.Remove(cacheKey)
+		orgCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 	}
 
-	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
+	if entry, ok := orgCache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
 		if configs.MinReleaseAge > 0 {
 			if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
@@ -266,7 +271,7 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 	}
 
 	if releaseTimeErr == nil {
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+		if err := orgCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "pypi", "error", err)
 		}
 	}
@@ -327,7 +332,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
-	
 	pkgName := normalizePyPIName(c.Param("package"))
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
 
