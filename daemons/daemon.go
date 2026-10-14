@@ -109,55 +109,55 @@ func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) er
 }
 
 func (runner *DaemonRunner) runDaemons(ctx context.Context) {
-	if err := runner.maybeRunAndMark(ctx, "vexrules.recommendations", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonVEXRuleRecommendations, func() error {
 		return runner.RunVEXRuleRecommendationDaemon(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not run VEX rule recommendation daemon", err)
 	}
-	if err := runner.maybeRunAndMark(ctx, "maintain.cleanup", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonCleanupOrphanedRecords, func() error {
 		return runner.CleanupOrphanedRecords(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not clean up orphaned records", err)
 	}
 
-	if err := runner.maybeRunAndMark(ctx, "maintain.sbomGarbageCollection", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonSBOMGarbageCollection, func() error {
 		return runner.CollectSBOMGarbage(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not collect sbom garbage", err)
 	}
 
-	if err := runner.maybeRunAndMark(ctx, "vulndb.opensourceinsights", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonOpenSourceInsights, func() error {
 		return runner.UpdateOpenSourceInsightInformation(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update open source insight information", err)
 	}
 
-	if err := runner.maybeRunAndMark(ctx, "vulndb.vulndb", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonVulnDB, func() error {
 		return runner.UpdateVulnDB(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update vulndb", err)
 	}
 
 	// right after the vulndb import, the fixed version jobs and the asset pipeline work on the vulns it creates
-	if err := runner.maybeRunAndMark(ctx, "vulndb.scan", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonScan, func() error {
 		return runner.ScanAllAssets(ctx)
 	}); err != nil {
 		monitoring.Alert("could not scan sboms", err)
 	}
 
-	if err := runner.maybeRunAndMark(ctx, "vulndb.fixedVersions", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonFixedVersions, func() error {
 		return runner.UpdateFixedVersions(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update fixed versions", err)
 	}
 
-	if err := runner.maybeRunAndMark(ctx, "vulndb.directDependencyFixedVersion", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonDirectDependencyFixedVersion, func() error {
 		return runner.RunResolveFixedVersionsPipeline(ctx, false)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not resolve direct dependency fixed versions", err)
 	}
 
-	if err := runner.maybeRunAndMark(ctx, "externalEntityGarbageCollection", func() error {
+	if err := runner.maybeRunAndMark(ctx, DaemonExternalEntityGarbage, func() error {
 		return runner.CollectExternalEntityGarbage(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not collect external entity garbage", err)

@@ -153,7 +153,7 @@ type cveProjectOrgCache struct {
 // ScanAllAssets matches every stored SBOM against the vulndb and opens, associates or fixes dependency vulns for all assets
 // it must finish before the asset pipeline, so the per asset stages see the new vulns
 func (runner *DaemonRunner) ScanAllAssets(ctx context.Context) error {
-	if !runner.stageEnabled("ScanAsset") {
+	if !runner.stageEnabled(StageScanAsset) {
 		return nil
 	}
 
