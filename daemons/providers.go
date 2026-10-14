@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.opentelemetry.io/otel"
@@ -46,7 +47,7 @@ type DebugOptions struct {
 // DaemonRunner encapsulates daemon dependencies and lifecycle
 type DaemonRunner struct {
 	db                              shared.DB
-	broker                          shared.PubSubBroker
+	broker                          events.Broker
 	configService                   shared.ConfigService
 	rbacProvider                    shared.RBACProvider
 	integrationAggregate            shared.IntegrationAggregate
@@ -105,7 +106,7 @@ func (runner *DaemonRunner) DebugMode() bool {
 // NewDaemonRunner creates a new daemon runner with injected dependencies
 func NewDaemonRunner(
 	db shared.DB,
-	broker shared.PubSubBroker,
+	broker events.Broker,
 	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,

@@ -291,7 +291,7 @@ func (runner *DaemonRunner) computeAffectedPurls(ctx context.Context, conn *pgxp
 	}
 	slog.Info("finished reading all dependencies", "amount", len(allDependencies))
 
-	purlMatcher := scan.NewPurlComparer(runner.db, new(int(0)), scan.WithPreloads())
+	purlMatcher := scan.NewPurlComparer(runner.db, runner.broker, new(int(0)), scan.WithPreloads())
 
 	slog.Info("start matching purls to affected components")
 	start := time.Now()

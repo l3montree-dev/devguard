@@ -21,38 +21,6 @@ services:
     tmpfs: /run/postgresql:rw,uid=999,gid=999
     # command: ["postgres", "-c", "log_statement=all"] # enable to log all queries into the log
 
-  river-migrate:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:16.15
-    shm_size: 1g
-    env_file: .env
-    environment:
-      PGHOST: postgresql
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB}
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    command:
-      - bash
-      - -c
-      - |
-        psql -v ON_ERROR_STOP=1 \
-          -v river_user="${RIVER_POSTGRES_USER}" \
-          -v river_db="${RIVER_POSTGRES_DB}" \
-          -v river_password="${RIVER_POSTGRES_PASSWORD}" <<'SQL'
-        SELECT format('CREATE USER %I PASSWORD %L', :'river_user', :'river_password')
-        WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'river_user')
-        \gexec
-
-        SELECT format('CREATE DATABASE %I OWNER %I', :'river_db', :'river_user')
-        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'river_db')
-        \gexec
-
-        \c :"river_db"
-        GRANT USAGE, CREATE ON SCHEMA public TO :"river_user";
-        SQL
-
   kratos-migrate:
     image: ghcr.io/l3montree-dev/devguard/kratos:v26.2.0
     depends_on:

@@ -76,7 +76,7 @@ func runMigrations() error {
 		fx.NopLogger,
 		database.Module,
 		events.Module,
-		fx.Provide(database.NewPostgreSQLBroker),
+		fx.Provide(events.NewBroker),
 		repositories.Module,
 		services.ServiceModule,
 		accesscontrol.AccessControlModule,

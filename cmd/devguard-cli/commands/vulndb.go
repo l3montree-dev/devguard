@@ -70,8 +70,6 @@ func migrateDB() {
 				),
 			),
 			events.Module,
-			fx.Provide(fx.Annotate(database.NewPostgreSQLBroker, fx.As(new(shared.PubSubBroker)))),
-			fx.Provide(database.NewPostgreSQLBroker),
 			fx.Provide(api.NewServer),
 			repositories.Module,
 			controllers.ControllerModule,

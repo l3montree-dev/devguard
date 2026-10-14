@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -601,7 +602,7 @@ func runCVEHashMigration(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner) e
 		panic(err)
 	}
 
-	pc := scan.NewPurlComparer(db, new(0)) // no cache should be fine
+	pc := scan.NewPurlComparer(db, events.BrokerStub, new(0)) // no cache should be fine
 	totalVulns := len(allVulns)
 	slog.Info("Starting CVE hash migration", "total", totalVulns)
 
@@ -1182,8 +1183,7 @@ func runVulnerabilityPathHashMigration(pool *pgxpool.Pool) error {
 // river's job/queue client needs) against the river database. This is the
 // programmatic equivalent of running `river migrate-up` via the river CLI.
 func RunRiverMigrations() error {
-	cfg := database.GetRiverPoolConfigFromEnv()
-
+	cfg := database.GetPoolConfigFromEnv()
 	pool := database.NewPgxConnPool(cfg)
 	defer pool.Close()
 

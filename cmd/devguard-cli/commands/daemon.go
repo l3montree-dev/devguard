@@ -155,7 +155,7 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 		fx.Supply(poolCfg),
 		fx.NopLogger,
 		database.Module,
-		fx.Provide(database.NewPostgreSQLBroker),
+		fx.Provide(events.NewBroker),
 		events.Module,
 		repositories.Module,
 		services.ServiceModule,
@@ -210,7 +210,7 @@ func triggerDaemon(selectedDaemons []string) error {
 		fx.NopLogger,
 		database.Module,
 		events.Module,
-		fx.Provide(database.NewPostgreSQLBroker),
+		fx.Provide(events.NewBroker),
 		// Include all the standard modules
 		repositories.Module,
 		services.ServiceModule,

@@ -15,10 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
-	"github.com/l3montree-dev/devguard/workers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -52,8 +51,7 @@ type VulnDBService struct {
 	configService     shared.ConfigService
 	pool              *pgxpool.Pool
 	ghVexFetcher      shared.GitHubVexFetcher
-	purlComparer      *scan.PurlComparer // used to flush the cache after import
-	riverInstance     shared.RiverInstance
+	riverInstance     events.Broker
 }
 
 func NewVulnDBService(
@@ -65,8 +63,7 @@ func NewVulnDBService(
 	configService shared.ConfigService,
 	ghVexFetcher shared.GitHubVexFetcher,
 	pool *pgxpool.Pool,
-	purlComparer *scan.PurlComparer,
-	riverInstance shared.RiverInstance,
+	riverInstance events.Broker,
 ) *VulnDBService {
 	return &VulnDBService{
 		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
@@ -80,7 +77,6 @@ func NewVulnDBService(
 		configService:     configService,
 		pool:              pool,
 		ghVexFetcher:      ghVexFetcher,
-		purlComparer:      purlComparer,
 		riverInstance:     riverInstance,
 	}
 }
@@ -566,16 +562,13 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
-	// flush the purl comparer cache since its values are now outdated
-	service.purlComparer.FlushCache()
-	service.riverInstance.Publish(ctx, workers.VulnDBUpdateArgs{}, nil, nil)
-
 	refreshStart := time.Now()
 	if _, err := conn.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY cve_ecosystem"); err != nil {
 		return fmt.Errorf("could not refresh cve_ecosystem: %w", err)
 	}
 	slog.Info("refreshed cve_ecosystem", "took", time.Since(refreshStart))
 
+	service.riverInstance.Publish(ctx, events.VulnDBUpdated, nil)
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
 }
