@@ -70,14 +70,6 @@ func initCLITracing() func() {
 	}
 }
 
-func markMirrored(configService shared.ConfigService, key string) error {
-	return configService.SetJSONConfig(context.Background(), key, struct {
-		Time time.Time `json:"time"`
-	}{
-		Time: time.Now(),
-	})
-}
-
 func NewDaemonCommand() *cobra.Command {
 	daemon := cobra.Command{
 		Use:   "daemon",
@@ -265,9 +257,6 @@ func triggerDaemon(selectedDaemons []string) error {
 					slog.Error("could not update vulndb", "err", err)
 					return
 				}
-				if err := markMirrored(configService, daemons.DaemonVulnDB); err != nil {
-					slog.Error("could not mark vulnDB as mirrored", "err", err)
-				}
 				slog.Info("vulndb updated", "duration", time.Since(start))
 			}
 
@@ -276,9 +265,6 @@ func triggerDaemon(selectedDaemons []string) error {
 				if err := runner.UpdateFixedVersions(context.Background()); err != nil {
 					slog.Error("could not update component properties", "err", err)
 					return
-				}
-				if err := markMirrored(configService, daemons.DaemonFixedVersions); err != nil {
-					slog.Error("could not mark fixedVersions as mirrored", "err", err)
 				}
 				slog.Info("component properties updated", "duration", time.Since(start))
 			}
@@ -302,9 +288,6 @@ func triggerDaemon(selectedDaemons []string) error {
 				if err := runner.RunVEXRuleRecommendationDaemon(context.Background()); err != nil {
 					slog.Error("could not build and save recommendations for all", "err", err)
 					return
-				}
-				if err := markMirrored(configService, daemons.DaemonVEXRuleRecommendations); err != nil {
-					slog.Error("could not mark recommendations as mirrored", "err", err)
 				}
 				slog.Info("recommendations built and saved for all", "duration", time.Since(start))
 			}

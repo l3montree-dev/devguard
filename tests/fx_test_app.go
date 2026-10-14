@@ -45,9 +45,8 @@ type TestApp struct {
 	fx.In
 
 	// Core infrastructure
-	DB            shared.DB
-	Broker        shared.PubSubBroker
-	RiverInstance shared.RiverInstance
+	DB     shared.DB
+	Broker events.Broker
 
 	// Services
 	ConfigService            shared.ConfigService
@@ -134,8 +133,8 @@ type TestAppOptions struct {
 	ExtraOptions []fx.Option
 	// Whether to suppress FX logging
 	SuppressLogs bool
-	// Custom broker (if nil, a default in-memory broker will be provided)
-	Broker shared.PubSubBroker
+	// Custom broker (if nil, a no-op broker will be provided)
+	Broker events.Broker
 	// Wrap the integration aggregate so no ticket or webhook ever reaches a real
 	// external system. Tests running against the development database need this:
 	// that data is a production dump, webhook urls included.
@@ -163,13 +162,12 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 			),
 		),
 
-		// Provide broker
-		fx.Provide(func() shared.PubSubBroker {
+		// Replace the broker - tests neither publish nor run queued jobs
+		fx.Decorate(func() events.Broker {
 			if opts.Broker != nil {
 				return opts.Broker
 			}
-			// Return a no-op broker for tests
-			return &noopBroker{}
+			return events.BrokerStub
 		}),
 		// Use the same modules as production
 		events.Module,
@@ -183,10 +181,6 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		vulndb.Module,
 		fx.Decorate(func() utils.FireAndForgetSynchronizer {
 			return utils.NewSyncFireAndForgetSynchronizer()
-		}),
-		// Provide a test leader elector that always returns true
-		fx.Decorate(func() shared.LeaderElector {
-			return &testLeaderElector{}
 		}),
 		// Wire up the monitoring package-level logger, mirroring production (cmd/devguard/main.go)
 		fx.Invoke(monitoring.SetLogger),
@@ -239,30 +233,6 @@ func NewTestAppWithT(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestA
 	}
 
 	return app, fxApp
-}
-
-// noopBroker is a no-op implementation of the Broker interface for testing
-type noopBroker struct{}
-
-func (n *noopBroker) IsHealthy() bool {
-	return true
-}
-
-func (n *noopBroker) Publish(ctx context.Context, message shared.PubSubMessage) error {
-	return nil
-}
-
-func (n *noopBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[string]any, error) {
-	ch := make(chan map[string]any)
-	close(ch) // Return a closed channel so subscribers don't block
-	return ch, nil
-}
-
-// testLeaderElector is a simple implementation for tests that always returns true
-type testLeaderElector struct{}
-
-func (t *testLeaderElector) IsLeader() bool {
-	return true
 }
 
 // createMockedComponentService wraps the real ComponentService with mocking for external calls

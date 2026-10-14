@@ -51,7 +51,7 @@ type DaemonRunner interface {
 	CollectExternalEntityGarbage(ctx context.Context) error
 	RunScanDaemon(ctx context.Context) error
 
-	Start(ctx context.Context)
+	RegisterJobs(schedule bool) error
 	StartBenchmarkJobs(ctx context.Context, stages []string)
 }
 
@@ -59,9 +59,6 @@ type FixedVersionResolver interface {
 	ResolveFixedVersions(path []packageurl.PackageURL, fixedVersion string) (string, error)
 }
 
-type LeaderElector interface {
-	IsLeader() bool
-}
 type ReleaseService interface {
 	ListByProject(ctx context.Context, projectID uuid.UUID) ([]models.Release, error)
 	ListByProjectPaged(ctx context.Context, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)

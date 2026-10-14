@@ -2,9 +2,12 @@ package daemons
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/pkg/errors"
@@ -27,41 +30,6 @@ func getLastMirrorTime(ctx context.Context, configService shared.ConfigService, 
 	}
 
 	return lastMirror.Time, nil
-}
-
-func shouldMirror(ctx context.Context, configService shared.ConfigService, key string) bool {
-	lastTime, err := getLastMirrorTime(ctx, configService, key)
-	if err != nil {
-		return false
-	}
-
-	return time.Since(lastTime) > 1*time.Hour
-}
-
-func markMirrored(ctx context.Context, configService shared.ConfigService, key string) error {
-	return configService.SetJSONConfig(ctx, key, struct {
-		Time time.Time `json:"time"`
-	}{
-		Time: time.Now(),
-	})
-}
-
-func (runner *DaemonRunner) maybeRunAndMark(ctx context.Context, key string, fn func() error) error {
-	if shouldMirror(ctx, runner.configService, key) {
-		t := time.Now()
-		slog.Info("starting daemon", "key", key)
-		// always mark as mirrored - even in case of error to avoid endless loops
-		err1 := markMirrored(ctx, runner.configService, key)
-		err := fn()
-		slog.Info("finished daemon", "key", key, "duration", time.Since(t))
-		if err != nil {
-			return err
-		}
-		if err1 != nil {
-			return err1
-		}
-	}
-	return nil
 }
 
 // CollectSBOMGarbage removes subtrees no SBOM can reach any more.
@@ -108,58 +76,85 @@ func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) er
 	return nil
 }
 
-func (runner *DaemonRunner) runDaemons(ctx context.Context) {
-	if err := runner.maybeRunAndMark(ctx, DaemonVEXRuleRecommendations, func() error {
-		return runner.RunVEXRuleRecommendationDaemon(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not run VEX rule recommendation daemon", err)
+// jobTimeout bounds every daemon job - river does not cancel the handlers itself (see events.Queue)
+const jobTimeout = 2 * time.Hour
+
+// daemonJob wraps a daemon into a queue handler with a timeout and alerting
+func daemonJob(errMsg string, fn func(ctx context.Context) error) events.NotifyHandler {
+	return func(ctx context.Context, _ json.RawMessage) error {
+		ctx, cancel := context.WithTimeout(ctx, jobTimeout)
+		defer cancel()
+		if err := fn(ctx); err != nil {
+			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, errMsg, err)
+			return err
+		}
+		return nil
 	}
-	if err := runner.maybeRunAndMark(ctx, DaemonCleanupOrphanedRecords, func() error {
-		return runner.CleanupOrphanedRecords(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not clean up orphaned records", err)
+}
+
+func (runner *DaemonRunner) runAssetPipeline(ctx context.Context) error {
+	runner.RunAssetPipeline(ctx, false)
+	return nil
+}
+
+// the vulndb chain: vulndb -> scan -> fixed versions -> direct dependency fixed versions.
+// each step notifies the next one on success - therefore each step is retried on its own.
+func (runner *DaemonRunner) runVulnDB(ctx context.Context) error {
+	if err := runner.UpdateVulnDB(ctx); err != nil {
+		return err
+	}
+	return runner.broker.Notify(ctx, nil, events.TopicScan, nil, nil)
+}
+
+func (runner *DaemonRunner) runScan(ctx context.Context) error {
+	if err := runner.ScanAllAssets(ctx); err != nil {
+		return err
+	}
+	return runner.broker.Notify(ctx, nil, events.TopicFixedVersions, nil, nil)
+}
+
+func (runner *DaemonRunner) runFixedVersions(ctx context.Context) error {
+	if err := runner.UpdateFixedVersions(ctx); err != nil {
+		return err
+	}
+	return runner.broker.Notify(ctx, nil, events.TopicDirectDependencyFixedVersion, nil, nil)
+}
+
+func (runner *DaemonRunner) runDirectDependencyFixedVersions(ctx context.Context) error {
+	return runner.RunResolveFixedVersionsPipeline(ctx, false)
+}
+
+func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
+	jobs := []struct {
+		topic   events.NotifyTopic
+		cron    string // empty: not scheduled, triggered by the previous step of a chain
+		errMsg  string
+		handler func(ctx context.Context) error
+	}{
+		// the hourly daemons are staggered to avoid running all of them at once
+		{events.TopicVEXRuleRecommendations, "0 * * * *", "could not run VEX rule recommendation daemon", runner.RunVEXRuleRecommendationDaemon},
+		{events.TopicCleanupOrphanedRecords, "5 * * * *", "could not clean up orphaned records", runner.CleanupOrphanedRecords},
+		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage},
+		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation},
+		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage},
+		{events.TopicAssetPipeline, "*/5 * * * *", "could not run asset pipeline", runner.runAssetPipeline},
+
+		{events.TopicVulnDB, "30 * * * *", "could not update vulndb", runner.runVulnDB},
+		{events.TopicScan, "", "could not scan sboms", runner.runScan},
+		{events.TopicFixedVersions, "", "could not update fixed versions", runner.runFixedVersions},
+		{events.TopicDirectDependencyFixedVersion, "", "could not resolve direct dependency fixed versions", runner.runDirectDependencyFixedVersions},
 	}
 
-	if err := runner.maybeRunAndMark(ctx, DaemonSBOMGarbageCollection, func() error {
-		return runner.CollectSBOMGarbage(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not collect sbom garbage", err)
+	for _, job := range jobs {
+		if err := runner.broker.Listen(job.topic, daemonJob(job.errMsg, job.handler)); err != nil {
+			return fmt.Errorf("could not listen on %s: %w", job.topic, err)
+		}
+		if !schedule || job.cron == "" {
+			continue
+		}
+		if err := runner.broker.Schedule(job.topic, job.cron); err != nil {
+			return fmt.Errorf("could not schedule %s: %w", job.topic, err)
+		}
 	}
-
-	if err := runner.maybeRunAndMark(ctx, DaemonOpenSourceInsights, func() error {
-		return runner.UpdateOpenSourceInsightInformation(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update open source insight information", err)
-	}
-
-	if err := runner.maybeRunAndMark(ctx, DaemonVulnDB, func() error {
-		return runner.UpdateVulnDB(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update vulndb", err)
-	}
-
-	// right after the vulndb import, the fixed version jobs and the asset pipeline work on the vulns it creates
-	if err := runner.maybeRunAndMark(ctx, DaemonScan, func() error {
-		return runner.ScanAllAssets(ctx)
-	}); err != nil {
-		monitoring.Alert("could not scan sboms", err)
-	}
-
-	if err := runner.maybeRunAndMark(ctx, DaemonFixedVersions, func() error {
-		return runner.UpdateFixedVersions(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update fixed versions", err)
-	}
-
-	if err := runner.maybeRunAndMark(ctx, DaemonDirectDependencyFixedVersion, func() error {
-		return runner.RunResolveFixedVersionsPipeline(ctx, false)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not resolve direct dependency fixed versions", err)
-	}
-
-	if err := runner.maybeRunAndMark(ctx, DaemonExternalEntityGarbage, func() error {
-		return runner.CollectExternalEntityGarbage(ctx)
-	}); err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not collect external entity garbage", err)
-	}
+	return nil
 }

@@ -21,6 +21,8 @@ type Broker interface {
 	// deliver exactly once - only a single instance of devguard will receive the message and execute the handler.
 	Notify(ctx context.Context, tx pgx.Tx, topic NotifyTopic, payload any, opts *NotifyOptions) error
 	Listen(topic NotifyTopic, handler NotifyHandler) error
+	// Schedule notifies the topic according to the cron expression - exactly once across all instances.
+	Schedule(topic NotifyTopic, cronExpr string) error
 
 	IsHealthy() bool
 }
@@ -33,6 +35,20 @@ const (
 )
 
 type NotifyTopic string
+
+// Job topics. They are persisted as river job kinds - do not rename while jobs of the old name may still be queued.
+const (
+	TopicVEXRuleRecommendations       NotifyTopic = "daemon.vexRuleRecommendations"
+	TopicCleanupOrphanedRecords       NotifyTopic = "daemon.cleanupOrphanedRecords"
+	TopicSBOMGarbageCollection        NotifyTopic = "daemon.sbomGarbageCollection"
+	TopicOpenSourceInsights           NotifyTopic = "daemon.openSourceInsights"
+	TopicExternalEntityGarbage        NotifyTopic = "daemon.externalEntityGarbage"
+	TopicAssetPipeline                NotifyTopic = "daemon.assetPipeline"
+	TopicVulnDB                       NotifyTopic = "daemon.vulnDB"
+	TopicScan                         NotifyTopic = "daemon.scan"
+	TopicFixedVersions                NotifyTopic = "daemon.fixedVersions"
+	TopicDirectDependencyFixedVersion NotifyTopic = "daemon.directDependencyFixedVersion"
+)
 
 type EventBrokerImpl struct {
 	*PostgreSQLBroker
@@ -55,6 +71,10 @@ func (EventBrokerStub) Notify(ctx context.Context, tx pgx.Tx, topic NotifyTopic,
 }
 
 func (EventBrokerStub) Listen(topic NotifyTopic, handler NotifyHandler) error {
+	return nil
+}
+
+func (EventBrokerStub) Schedule(topic NotifyTopic, cronExpr string) error {
 	return nil
 }
 

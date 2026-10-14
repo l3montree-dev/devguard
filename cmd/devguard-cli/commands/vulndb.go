@@ -101,13 +101,8 @@ func migrateDB() {
 					},
 				})
 			}),
-			fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
-				lc.Append(fx.Hook{
-					OnStart: func(ctx context.Context) error {
-						go daemonRunner.Start(context.Background()) // start in background
-						return nil
-					},
-				})
+			fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
+				return daemonRunner.RegisterJobs(true)
 			}),
 			fx.Populate(&daemonRunner),
 		)

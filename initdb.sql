@@ -22,12 +22,3 @@ GRANT ALL PRIVILEGES ON DATABASE kratos to kratos;
 \c kratos
 
 GRANT USAGE, CREATE ON SCHEMA public TO kratos;
-
-
-CREATE DATABASE river;
-CREATE USER river PASSWORD 'change-me-definitely-when-not-testing-river';
-GRANT ALL PRIVILEGES ON DATABASE river to river;
-
-\c river
-
-GRANT USAGE, CREATE ON SCHEMA public TO river;

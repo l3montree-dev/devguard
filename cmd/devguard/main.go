@@ -158,17 +158,14 @@ func main() {
 				},
 			})
 		}),
-		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-					if os.Getenv("DISABLE_DAEMONS") == "true" {
-						slog.Info("background daemons are disabled via DISABLE_DAEMONS environment variable")
-						return nil
-					}
-					go daemonRunner.Start(ctx) // start in background
-					return nil
-				},
-			})
+		// must run as invoke - the handlers have to be registered before the queue starts
+		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
+			// river elects its own leader which schedules the jobs - this needs to be set equally on all instances
+			schedule := os.Getenv("DISABLE_DAEMONS") != "true"
+			if !schedule {
+				slog.Info("background daemons are disabled via DISABLE_DAEMONS environment variable")
+			}
+			return daemonRunner.RegisterJobs(schedule)
 		}),
 		fx.Invoke(func(lc fx.Lifecycle, db shared.DB) {
 			lc.Append(fx.Hook{

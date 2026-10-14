@@ -419,9 +419,6 @@ func (controller *AdminController) checkCooldown(ctx context.Context, configKey 
 
 // markTriggered writes the current timestamp to the config DB so that other
 // instances (and subsequent requests) respect the cooldown.
-// It reuses the same key that the automatic daemon scheduler checks via
-// shouldMirror / markMirrored, so a manual trigger also resets the automatic
-// 12-hour timer.
 func (controller *AdminController) markTriggered(ctx context.Context, configKey string) {
 	if err := controller.configService.SetJSONConfig(ctx, configKey, daemonTriggerTimestamp{Time: time.Now()}); err != nil {
 		slog.Error("admin: failed to mark daemon triggered in config DB",
@@ -592,10 +589,7 @@ func (controller *AdminController) TriggerAssetPipelineSingle(ctx shared.Context
 //  3. Opens an SSE stream and executes fn synchronously, streaming logs.
 //  4. Sends a done or error event when finished.
 //
-// configKey is the config DB key used for both cooldown tracking and updating
-// the last-run timestamp. For daemons that share a key with the automatic
-// scheduler (e.g. "vulndb.vulndb"), the manual trigger also resets the
-// automatic 12-hour timer.
+// configKey is the config DB key used for cooldown tracking.
 func (controller *AdminController) runDaemonSSE(
 	ctx shared.Context,
 	configKey string,

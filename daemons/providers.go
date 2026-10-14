@@ -16,14 +16,10 @@
 package daemons
 
 import (
-	"context"
-	"log/slog"
 	"slices"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/events"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
@@ -70,7 +66,6 @@ type DaemonRunner struct {
 	exploitsRepository              shared.ExploitRepository
 	affectedComponentsRepository    shared.AffectedComponentRepository
 	scanService                     shared.ScanService
-	leaderElector                   shared.LeaderElector
 	maliciousPackageChecker         shared.MaliciousPackageChecker
 	vulnDBImportService             shared.VulnDBService
 	vexRuleRepository               shared.VEXRuleRepository
@@ -129,7 +124,6 @@ func NewDaemonRunner(
 	exploitsRepository shared.ExploitRepository,
 	affectedComponentsRepository shared.AffectedComponentRepository,
 	scanService shared.ScanService,
-	leaderElector shared.LeaderElector,
 	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBService,
 	vexRuleRepository shared.VEXRuleRepository,
@@ -167,7 +161,6 @@ func NewDaemonRunner(
 		exploitsRepository:              exploitsRepository,
 		affectedComponentsRepository:    affectedComponentsRepository,
 		scanService:                     scanService,
-		leaderElector:                   leaderElector,
 		maliciousPackageChecker:         maliciousPackageChecker,
 		vulnDBImportService:             vulnDBImportService,
 		vexRuleRepository:               vexRuleRepository,
@@ -179,33 +172,6 @@ func NewDaemonRunner(
 		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
 		externalEntityProviderService:   externalEntityProviderService,
 		pgxpool:                         pool,
-	}
-}
-
-// Start initiates all background daemons
-func (runner *DaemonRunner) Start(ctx context.Context) {
-	go func() {
-		runner.tick()
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			runner.tick()
-		}
-	}()
-}
-
-func (runner *DaemonRunner) tick() {
-	if runner.leaderElector.IsLeader() {
-		slog.Info("this instance is the leader - running background jobs with a timeout of 2 hours")
-		tickCtx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
-		runner.runDaemons(tickCtx)
-		runner.RunAssetPipeline(tickCtx, false)
-		if err := tickCtx.Err(); err != nil {
-			monitoring.AlertAndSaveInErrorLog(tickCtx, nil, monitoring.AlertContext{}, "error during daemon tick", err)
-		}
-		cancel()
-	} else {
-		slog.Info("not the leader - skipping background jobs")
 	}
 }
 

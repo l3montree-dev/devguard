@@ -287,6 +287,63 @@ func (_c *Broker_Publish_Call) RunAndReturn(run func(ctx context.Context, topic 
 	return _c
 }
 
+// Schedule provides a mock function for the type Broker
+func (_mock *Broker) Schedule(topic events.NotifyTopic, cronExpr string) error {
+	ret := _mock.Called(topic, cronExpr)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Schedule")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(events.NotifyTopic, string) error); ok {
+		r0 = returnFunc(topic, cronExpr)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Broker_Schedule_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Schedule'
+type Broker_Schedule_Call struct {
+	*mock.Call
+}
+
+// Schedule is a helper method to define mock.On call
+//   - topic events.NotifyTopic
+//   - cronExpr string
+func (_e *Broker_Expecter) Schedule(topic any, cronExpr any) *Broker_Schedule_Call {
+	return &Broker_Schedule_Call{Call: _e.mock.On("Schedule", topic, cronExpr)}
+}
+
+func (_c *Broker_Schedule_Call) Run(run func(topic events.NotifyTopic, cronExpr string)) *Broker_Schedule_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 events.NotifyTopic
+		if args[0] != nil {
+			arg0 = args[0].(events.NotifyTopic)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Broker_Schedule_Call) Return(err error) *Broker_Schedule_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Broker_Schedule_Call) RunAndReturn(run func(topic events.NotifyTopic, cronExpr string) error) *Broker_Schedule_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Subscribe provides a mock function for the type Broker
 func (_mock *Broker) Subscribe(topic events.PubSubTopic, handler events.SubscribeHandler) error {
 	ret := _mock.Called(topic, handler)
