@@ -366,7 +366,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	// each newly configured source is stored as its own SBOM
 	for _, upstream := range boms {
-		if _, err := c.assetVersionService.UpdateSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
+		if err := c.assetVersionService.StoreSBOM(reqCtx, tx, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
 			slog.Error("could not update sbom", "err", err, "origin", upstream.Source)
 			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}

@@ -168,7 +168,6 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx
 // bounds every preload issued for them.
 const otherAssetVersionsBatchSize = 1000
 
-
 func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, assetSignatures []int64) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
