@@ -1,11 +1,11 @@
 package dtos
 
-type VulnInPackageDTO struct {
+type VulnInPackage struct {
 	CVEID        string  `json:"cveId"`
 	FixedVersion *string `json:"fixedVersion"`
 }
 
-type AffectedComponentDTO struct {
+type AffectedComponent struct {
 	ID int64 `json:"id"`
 
 	PurlWithoutVersion string `json:"purl"`
@@ -17,5 +17,5 @@ type AffectedComponentDTO struct {
 	VersionIntroduced *string `json:"versionIntroduced"`
 	VersionFixed      *string `json:"versionFixed"`
 
-	CVEs []CVEDTO `json:"cves"`
+	CVEs []CVE `json:"cves"`
 }

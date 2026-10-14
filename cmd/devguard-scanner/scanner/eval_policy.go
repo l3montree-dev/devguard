@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
@@ -181,6 +182,12 @@ func buildSarifFromPolicy(image string, policy compliance.PolicyFS, evaluations 
 					Driver: driver,
 				},
 				Results: results,
+				Invocations: []sarif.Invocation{
+					{
+						ExecutionSuccessful: true,
+						StartTimeUtc:        new(time.Now().UTC()),
+					},
+				},
 			},
 		},
 	}

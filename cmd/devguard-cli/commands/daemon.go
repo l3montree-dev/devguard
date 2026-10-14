@@ -101,7 +101,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "recommendations", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{daemons.DaemonVulnDB, daemons.DaemonVEXRuleRecommendations, daemons.DaemonFixedVersions}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -229,7 +229,7 @@ func triggerDaemon(selectedDaemons []string) error {
 			slog.Info("starting background jobs", "time", time.Now())
 			var start time.Time
 
-			if emptyOrContains(selectedDaemons, "openSourceInsights") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonOpenSourceInsights) {
 				start = time.Now()
 				err := runner.UpdateOpenSourceInsightInformation(context.Background())
 				if err != nil {
@@ -239,7 +239,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("deps dev information updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "sbomGarbageCollection") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonSBOMGarbageCollection) {
 				start = time.Now()
 				err := runner.CollectSBOMGarbage(context.Background())
 				if err != nil {
@@ -249,7 +249,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("SBOM garbage collection completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "externalEntityGarbageCollection") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonExternalEntityGarbage) {
 				start = time.Now()
 				err := runner.CollectExternalEntityGarbage(context.Background())
 				if err != nil {
@@ -259,44 +259,52 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("external entity garbage collection completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "vulndb") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonVulnDB) {
 				start = time.Now()
 				if err := runner.UpdateVulnDB(context.Background()); err != nil {
 					slog.Error("could not update vulndb", "err", err)
 					return
 				}
-				if err := markMirrored(configService, "vulndb.vulndb"); err != nil {
-					slog.Error("could not mark vulndb.vulndb as mirrored", "err", err)
+				if err := markMirrored(configService, daemons.DaemonVulnDB); err != nil {
+					slog.Error("could not mark vulnDB as mirrored", "err", err)
 				}
 				slog.Info("vulndb updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "fixedVersions") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonFixedVersions) {
 				start = time.Now()
 				if err := runner.UpdateFixedVersions(context.Background()); err != nil {
 					slog.Error("could not update component properties", "err", err)
 					return
 				}
-				if err := markMirrored(configService, "vulndb.componentProperties"); err != nil {
-					slog.Error("could not mark vulndb.componentProperties as mirrored", "err", err)
+				if err := markMirrored(configService, daemons.DaemonFixedVersions); err != nil {
+					slog.Error("could not mark fixedVersions as mirrored", "err", err)
 				}
 				slog.Info("component properties updated", "duration", time.Since(start))
 			}
+			if emptyOrContains(selectedDaemons, "scan") {
+				start = time.Now()
+				if err := runner.RunScanDaemon(context.Background()); err != nil {
+					slog.Error("could not run scan daemon", "err", err)
+					return
+				}
+				slog.Info("scan daemon completed", "duration", time.Since(start))
+			}
 
-			if emptyOrContains(selectedDaemons, "assetPipeline") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonAssetPipeline) {
 				start = time.Now()
 				runner.RunAssetPipeline(context.Background(), true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "recommendations") {
+			if emptyOrContains(selectedDaemons, daemons.DaemonVEXRuleRecommendations) {
 				start = time.Now()
 				if err := runner.RunVEXRuleRecommendationDaemon(context.Background()); err != nil {
 					slog.Error("could not build and save recommendations for all", "err", err)
 					return
 				}
-				if err := markMirrored(configService, "vexrules.recommendations"); err != nil {
-					slog.Error("could not mark vexrules.recommendations as mirrored", "err", err)
+				if err := markMirrored(configService, daemons.DaemonVEXRuleRecommendations); err != nil {
+					slog.Error("could not mark recommendations as mirrored", "err", err)
 				}
 				slog.Info("recommendations built and saved for all", "duration", time.Since(start))
 			}

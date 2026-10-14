@@ -79,7 +79,7 @@ type ArtifactRequest struct {
 }
 
 type ArtifactUpdateResponse struct {
-	Artifact    dtos.ArtifactDTO              `json:"artifact"`
+	Artifact    dtos.Artifact                 `json:"artifact"`
 	InvalidURLs []dtos.ExternalReferenceError `json:"invalidURLs"`
 }
 
@@ -104,7 +104,7 @@ func informationSourceToString(source informationSource) string {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param body body controllers.ArtifactRequest true "Artifact data"
-// @Success 201 {object} dtos.ArtifactDTO
+// @Success 201 {object} dtos.Artifact
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [post]
 func (c *ArtifactController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -366,7 +366,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	// each newly configured source is stored as its own SBOM
 	for _, upstream := range boms {
-		if _, err := c.assetVersionService.UpdateSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
+		if err := c.assetVersionService.StoreSBOM(reqCtx, tx, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
 			slog.Error("could not update sbom", "err", err, "origin", upstream.Source)
 			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}

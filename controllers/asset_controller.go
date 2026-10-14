@@ -119,7 +119,7 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {array} dtos.AssetDTO
+// @Success 200 {array} dtos.Asset
 // @Router /organizations/{organization}/projects/{projectSlug}/assets [get]
 func (a *AssetController) List(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
@@ -228,7 +228,7 @@ func (a *AssetController) GetSecrets(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.AssetCreateRequest true "Request body"
-// @Success 200 {object} dtos.AssetDTO
+// @Success 200 {object} dtos.Asset
 // @Router /organizations/{organization}/projects/{projectSlug}/assets [post]
 func (a *AssetController) Create(ctx shared.Context) error {
 	var req dtos.AssetCreateRequest
@@ -261,7 +261,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {object} dtos.AssetDetailsDTO
+// @Success 200 {object} dtos.AssetDetails
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [get]
 func (a *AssetController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
@@ -291,7 +291,7 @@ func applyChange[T ~string](changes *[]string, label string, field *T, patch *T)
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param body body dtos.AssetPatchRequest true "Request body"
-// @Success 200 {object} dtos.AssetDetailsWithSecretsDTO
+// @Success 200 {object} dtos.AssetDetailsWithSecrets
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [patch]
 func (a *AssetController) Update(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()

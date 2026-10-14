@@ -96,7 +96,7 @@ type AssetChangeRoleRequest struct {
 }
 
 type AssetInviteToAssetRequest struct {
-	Ids []string `json:"ids" validate:"required"`
+	Ids []string `json:"ids" validate:"required,max=100,dive,max=256"`
 }
 
 type Environmental struct {
@@ -113,7 +113,7 @@ type Environmental struct {
 	ModifiedAvailability       ModifiedRequirementLevel   `json:"modifiedAvailability" gorm:"default:'X';type:text;"`
 }
 
-type AssetDTO struct {
+type Asset struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	Avatar      *string   `json:"avatar,omitempty"`
@@ -132,11 +132,13 @@ type AssetDTO struct {
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 	VulnAutoReopenAfterDays      *int     `json:"vulnAutoReopenAfterDays"`
 
-	AssetVersions []AssetVersionDTO `json:"refs"`
+	AssetVersions []AssetVersion `json:"refs"`
 
-	ExternalEntityProviderID *string   `json:"externalEntityProviderId,omitempty"`
-	ExternalEntityID         *string   `json:"externalEntityId,omitempty"`
-	PipelineLastRun          time.Time `json:"pipelineLastRun"`
+	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
+	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
+	ExternalBotUserLink      *string `json:"externalBotUserLink,omitempty"`
+
+	PipelineLastRun time.Time `json:"pipelineLastRun"`
 
 	RepositoryProvider              *string `json:"repositoryProvider,omitempty"`
 	IsPublic                        bool    `json:"isPublic"`
@@ -146,24 +148,24 @@ type AssetDTO struct {
 	State                           string  `json:"state"`
 }
 
-type AssetWithSecretsDTO struct {
-	AssetDTO
+type AssetWithSecrets struct {
+	Asset
 	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 }
 
-type AssetDetailsDTO struct {
-	AssetDTO
-	Members []UserDTO `json:"members"`
+type AssetDetails struct {
+	Asset
+	Members []User `json:"members"`
 }
 
-type AssetDetailsWithSecretsDTO struct {
-	AssetWithSecretsDTO
-	Members []UserDTO `json:"members"`
+type AssetDetailsWithSecrets struct {
+	AssetWithSecrets
+	Members []User `json:"members"`
 }
 
 type AssetCreateRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name        string `json:"name" validate:"required,max=256"`
+	Description string `json:"description" validate:"max=4000"`
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
@@ -189,8 +191,8 @@ type AssetCreateRequest struct {
 }
 
 type AssetPatchRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
+	Name        *string `json:"name" validate:"omitempty,max=256"`
+	Description *string `json:"description" validate:"omitempty,max=4000"`
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
@@ -210,14 +212,14 @@ type AssetPatchRequest struct {
 	ModifiedIntegrity          *ModifiedRequirementLevel   `json:"modifiedIntegrity" validate:"omitempty,oneof=X none low high"`
 	ModifiedAvailability       *ModifiedRequirementLevel   `json:"modifiedAvailability" validate:"omitempty,oneof=X none low high"`
 
-	RepositoryID   *string `json:"repositoryId"`
-	RepositoryName *string `json:"repositoryName"`
+	RepositoryID   *string `json:"repositoryId" validate:"omitempty,max=256"`
+	RepositoryName *string `json:"repositoryName" validate:"omitempty,max=256"`
 
 	ConfigFiles *map[string]any `json:"configFiles"`
 
 	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
 
-	WebhookSecret *string `json:"webhookSecret"`
+	WebhookSecret *string `json:"webhookSecret" validate:"omitempty,max=1024"`
 
 	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 	IsPublic           *bool   `json:"isPublic"`

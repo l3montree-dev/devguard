@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -98,6 +99,7 @@ func mergeSBOMs(ctx context.Context, purl string, sboms []string) error {
 	result := cyclonedx.NewBOM()
 	// we can already set the metadata
 	result.Metadata = &cyclonedx.Metadata{
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Component: &cyclonedx.Component{
 			Type:       cyclonedx.ComponentTypeApplication,
 			BOMRef:     purl,

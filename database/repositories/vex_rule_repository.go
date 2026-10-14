@@ -26,6 +26,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/lib/pq"
@@ -238,6 +239,15 @@ func (r *vexRuleRepository) FindByAssetIDs(ctx context.Context, tx *gorm.DB, ass
 	}
 	var rules []models.VEXRule
 	err := r.GetDB(ctx, tx).Where("asset_id = ANY (?)", pq.Array(assetIDs)).Order("created_at DESC").Find(&rules).Error
+	return rules, err
+}
+
+func (r *vexRuleRepository) FindOpenVexRulesByAssetIDs(ctx context.Context, tx *gorm.DB, assetIDs []uuid.UUID) ([]models.VEXRule, error) {
+	if len(assetIDs) == 0 {
+		return nil, nil
+	}
+	var rules []models.VEXRule
+	err := r.GetDB(ctx, tx).Where("asset_id = ANY (?) AND event_type != ?", pq.Array(assetIDs), dtos.EventTypeReopened).Order("created_at DESC").Find(&rules).Error
 	return rules, err
 }
 

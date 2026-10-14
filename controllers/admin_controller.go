@@ -28,6 +28,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
@@ -382,17 +383,17 @@ func (controller *AdminController) GetInstanceSettings(ctx shared.Context) error
 // A missing setting is a valid, unconfigured state for a fresh instance, not an error.
 // @Summary Get public instance settings
 // @Tags Admin
-// @Success 200 {object} dtos.InstanceSettingsDTO
+// @Success 200 {object} dtos.InstanceSettings
 // @Router /instance-settings [get]
 func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) error {
 	settings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
 	if err != nil {
-		return ctx.JSON(200, dtos.InstanceSettingsDTO{})
+		return ctx.JSON(200, dtos.InstanceSettings{})
 	}
 
-	gitlabOAuthConfigs := make([]dtos.GitlabOauth2ConfigDTO, 0, len(controller.gitlabOAuth2))
+	gitlabOAuthConfigs := make([]dtos.GitlabOauth2Config, 0, len(controller.gitlabOAuth2))
 	for _, config := range controller.gitlabOAuth2 {
-		gitlabOAuthConfigs = append(gitlabOAuthConfigs, dtos.GitlabOauth2ConfigDTO{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
+		gitlabOAuthConfigs = append(gitlabOAuthConfigs, dtos.GitlabOauth2Config{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
 	}
 
 	return ctx.JSON(200, transformer.InstanceSettingsToDTO(settings, gitlabOAuthConfigs))
@@ -488,7 +489,7 @@ func (s *sseWriter) sendError(msg string) {
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/open-source-insights/trigger [post]
 func (controller *AdminController) TriggerOpenSourceInsights(ctx shared.Context) error {
-	return controller.runDaemonSSE(ctx, "vulndb.opensourceinsights", "Open Source Insights", func(sse *sseWriter) error {
+	return controller.runDaemonSSE(ctx, daemons.DaemonOpenSourceInsights, "Open Source Insights", func(sse *sseWriter) error {
 		return controller.daemonRunner.UpdateOpenSourceInsightInformation(ctx.Request().Context())
 	})
 }
@@ -506,7 +507,7 @@ func (controller *AdminController) TriggerOpenSourceInsights(ctx shared.Context)
 func (controller *AdminController) TriggerVulnDB(ctx shared.Context) error {
 	// The vulndb.vulndb timestamp is already set by markTriggered in
 	// runDaemonSSE (before the handler runs), so no extra write needed here.
-	return controller.runDaemonSSE(ctx, "vulndb.vulndb", "VulnDB Import", func(sse *sseWriter) error {
+	return controller.runDaemonSSE(ctx, daemons.DaemonVulnDB, "VulnDB Import", func(sse *sseWriter) error {
 		sse.sendLog("Running VulnDB import…")
 		return controller.daemonRunner.UpdateVulnDB(ctx.Request().Context())
 	})
@@ -523,7 +524,7 @@ func (controller *AdminController) TriggerVulnDB(ctx shared.Context) error {
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/fixed-versions/trigger [post]
 func (controller *AdminController) TriggerFixedVersions(ctx shared.Context) error {
-	return controller.runDaemonSSE(ctx, "vulndb.fixedVersions", "Fixed Versions", func(sse *sseWriter) error {
+	return controller.runDaemonSSE(ctx, daemons.DaemonFixedVersions, "Fixed Versions", func(sse *sseWriter) error {
 		return controller.daemonRunner.UpdateFixedVersions(ctx.Request().Context())
 	})
 }
@@ -539,7 +540,7 @@ func (controller *AdminController) TriggerFixedVersions(ctx shared.Context) erro
 // @Failure 429 {object} echo.HTTPError "Cooldown not elapsed – try again later"
 // @Router /admin/daemons/asset-pipeline-all/trigger [post]
 func (controller *AdminController) TriggerAssetPipelineAll(ctx shared.Context) error {
-	return controller.runDaemonSSE(ctx, "daemon.assetPipelineAll", "Asset Pipeline (all)", func(sse *sseWriter) error {
+	return controller.runDaemonSSE(ctx, daemons.DaemonAssetPipelineAll, "Asset Pipeline (all)", func(sse *sseWriter) error {
 		controller.daemonRunner.RunAssetPipeline(ctx.Request().Context(), true)
 		return nil
 	})
@@ -575,7 +576,7 @@ func (controller *AdminController) TriggerAssetPipelineSingle(ctx shared.Context
 
 	// Use "." as separator to stay consistent with the dotted-path configKey
 	// convention (a ":" would be an anomalous character in the DB key).
-	configKey := "daemon.assetPipelineSingle." + assetID.String()
+	configKey := daemons.DaemonAssetPipelineSinglePrefix + assetID.String()
 	return controller.runDaemonSSE(ctx, configKey, "Asset Pipeline ("+assetID.String()+")", func(sse *sseWriter) error {
 		return controller.daemonRunner.RunDaemonPipelineForAsset(ctx.Request().Context(), assetID)
 	})
@@ -660,7 +661,7 @@ func extractMailFromRequest(ctx shared.Context) (string, error) {
 // @Param search query string false "Search term"
 // @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
 // @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
-// @Success 200 {object} shared.Paged[dtos.LogDTO]
+// @Success 200 {object} shared.Paged[dtos.Log]
 // @Router /admin/logs/ [get]
 func (controller *AdminController) GetLogs(ctx shared.Context) error {
 

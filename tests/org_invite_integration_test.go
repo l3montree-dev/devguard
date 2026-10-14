@@ -36,7 +36,7 @@ import (
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 // rolesFromMembers converts a member list into a userID→role map.
-func rolesFromMembers(members []dtos.UserDTO) map[string]string {
+func rolesFromMembers(members []dtos.User) map[string]string {
 	m := make(map[string]string, len(members))
 	for _, u := range members {
 		m[u.ID] = u.Role
@@ -90,7 +90,7 @@ func (f *TestFixture) InviteMember(t testing.TB, e *echo.Echo, org models.Org, i
 	adminClient.On("ListUser", mock.Anything).Return([]client.Identity{}, nil)
 	shared.SetAuthAdminClient(ctx, adminClient)
 	integration := &mocks.IntegrationAggregate{}
-	integration.On("GetUsers", mock.Anything).Return([]dtos.UserDTO{})
+	integration.On("GetUsers", mock.Anything).Return([]dtos.User{})
 	shared.SetThirdPartyIntegration(ctx, integration)
 
 	require.NoError(t, f.App.OrgController.InviteMember(ctx))
@@ -135,7 +135,7 @@ func (f *TestFixture) AcceptInvitation(t testing.TB, e *echo.Echo, code string, 
 }
 
 // GetOrgMembers calls the Members endpoint and returns the list of members with their roles.
-func (f *TestFixture) GetOrgMembers(t testing.TB, e *echo.Echo, org models.Org, identities []client.Identity) []dtos.UserDTO {
+func (f *TestFixture) GetOrgMembers(t testing.TB, e *echo.Echo, org models.Org, identities []client.Identity) []dtos.User {
 	t.Helper()
 
 	byID := make(map[string]client.Identity, len(identities))
@@ -164,13 +164,13 @@ func (f *TestFixture) GetOrgMembers(t testing.TB, e *echo.Echo, org models.Org, 
 	shared.SetAuthAdminClient(ctx, adminClient)
 
 	integration := mocks.NewIntegrationAggregate(t)
-	integration.On("GetUsers", mock.Anything).Return([]dtos.UserDTO{})
+	integration.On("GetUsers", mock.Anything).Return([]dtos.User{})
 	shared.SetThirdPartyIntegration(ctx, integration)
 
 	require.NoError(t, f.App.OrgController.Members(ctx))
 	require.Equal(t, 200, rec.Code)
 
-	var members []dtos.UserDTO
+	var members []dtos.User
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &members))
 	return members
 }

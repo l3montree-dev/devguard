@@ -17,24 +17,24 @@ package dtos
 
 import "github.com/google/uuid"
 
-type AdvisoryCreate struct {
-	Title            string            `json:"title" validate:"required"`
-	Description      string            `json:"description" validate:"required"`
+type AdvisoryCreateRequest struct {
+	Title            string            `json:"title" validate:"required,max=256"`
+	Description      string            `json:"description" validate:"required,max=4000"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
-	Severity         string            `json:"severity"`
-	VectorString     string            `json:"vectorString"`
+	Severity         string            `json:"severity" validate:"max=256"`
+	VectorString     string            `json:"vectorString" validate:"max=256"`
 	AssetID          uuid.UUID         `json:"assetID"`
 }
-type AdvisoryUpdate struct {
-	Title            *string           `json:"title"`
-	Description      *string           `json:"description"`
+type AdvisoryUpdateRequest struct {
+	Title            *string           `json:"title" validate:"omitempty,max=256"`
+	Description      *string           `json:"description" validate:"omitempty,max=4000"`
 	AffectedPackages []AffectedPackage `json:"affectedPackages"`
-	Severity         *string           `json:"severity"`
-	VectorString     *string           `json:"vectorString"`
+	Severity         *string           `json:"severity" validate:"omitempty,max=256"`
+	VectorString     *string           `json:"vectorString" validate:"omitempty,max=256"`
 	AssetID          *uuid.UUID        `json:"assetID"`
 }
 
-type AdvisoryDTO struct {
+type Advisory struct {
 	ID               uuid.UUID         `json:"id"`
 	Title            string            `json:"title" validate:"required"`
 	Description      string            `json:"description" validate:"required"`

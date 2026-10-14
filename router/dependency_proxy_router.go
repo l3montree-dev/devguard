@@ -13,6 +13,10 @@ type DependencyProxyRouter struct {
 }
 
 func registerNPMRoutes(group *echo.Group, npmController *dependencyfirewall.NPMDependencyProxyController) {
+	// NPM registry API: audits, signing keys and attestations (`npm audit`, `npm audit signatures`).
+	// The static "-" segment takes precedence over the :package param routes below.
+	group.GET("/npm/-/*", npmController.ProxyNPMRegistryAPI)
+	group.POST("/npm/-/*", npmController.ProxyNPMRegistryAPI)
 	// NPM tarballs: unscoped (lodash/-/lodash-4.17.21.tgz) and scoped (@babel/core/-/@babel/core-7.0.0.tgz)
 	group.GET("/npm/:package/-/*", npmController.ProxyNPMTarball)
 	group.GET("/npm/:scope/:name/-/*", npmController.ProxyNPMTarball)
@@ -21,8 +25,6 @@ func registerNPMRoutes(group *echo.Group, npmController *dependencyfirewall.NPMD
 	group.GET("/npm/:package/", npmController.ProxyNPMMetadata)
 	group.GET("/npm/:scope/:name", npmController.ProxyNPMMetadata)
 	group.GET("/npm/:scope/:name/", npmController.ProxyNPMMetadata)
-	// NPM audit
-	group.POST("/npm/*", npmController.ProxyNPMAudit)
 }
 
 func registerGoRoutes(group *echo.Group, goController *dependencyfirewall.GoDependencyProxyController) {
@@ -39,17 +41,36 @@ func registerPyPIRoutes(group *echo.Group, pythonController *dependencyfirewall.
 	group.GET("/pypi/packages/*", pythonController.ProxyPyPIPackage)
 }
 
+func registerMavenRoutes(group *echo.Group, mavenController *dependencyfirewall.MavenDependencyProxyController) {
+	// Maven packages and metadata share one path tree
+	group.GET("/maven/*", mavenController.ProxyMaven)
+}
+
+func registerComposerRoutes(group *echo.Group, composerController *dependencyfirewall.ComposerDependencyProxyController) {
+	group.GET("/composer/*", composerController.ProxyComposer)
+}
+
+func registerDebRoutes(group *echo.Group, debController *dependencyfirewall.DebDependencyProxyController) {
+	group.GET("/deb/*", debController.ProxyDeb)
+}
+
 func NewDependencyProxyRouter(
 	apiV1Group APIV1Router,
 	npmController *dependencyfirewall.NPMDependencyProxyController,
 	goController *dependencyfirewall.GoDependencyProxyController,
 	pythonController *dependencyfirewall.PythonDependencyProxyController,
+	mavenController *dependencyfirewall.MavenDependencyProxyController,
+	composerController *dependencyfirewall.ComposerDependencyProxyController,
+	debController *dependencyfirewall.DebDependencyProxyController,
 ) DependencyProxyRouter {
 	group := apiV1Group.Group.Group("/dependency-proxy")
 
 	registerNPMRoutes(group, npmController)
 	registerGoRoutes(group, goController)
 	registerPyPIRoutes(group, pythonController)
+	registerMavenRoutes(group, mavenController)
+	registerComposerRoutes(group, composerController)
+	registerDebRoutes(group, debController)
 
 	// Secret-scoped routes (used without DevGuard authentication)
 	secretGroup := group.Group("/:secret")
@@ -57,6 +78,9 @@ func NewDependencyProxyRouter(
 	registerNPMRoutes(secretGroup, npmController)
 	registerGoRoutes(secretGroup, goController)
 	registerPyPIRoutes(secretGroup, pythonController)
+	registerMavenRoutes(secretGroup, mavenController)
+	registerComposerRoutes(secretGroup, composerController)
+	registerDebRoutes(secretGroup, debController)
 
 	return DependencyProxyRouter{Group: group}
 }

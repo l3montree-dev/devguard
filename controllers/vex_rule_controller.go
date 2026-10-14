@@ -96,7 +96,7 @@ func (c *VEXRuleController) countMatchingVulnsForRules(ctx context.Context, rule
 // @Param page query int false "Page number (default: 1)"
 // @Param pageSize query int false "Page size (default: 10, max: 100)"
 // @Param search query string false "Search term for CVE ID or justification"
-// @Success 200 {object} object{pageSize=int,page=int,total=int64,data=[]dtos.VEXRuleDTO}
+// @Success 200 {object} object{pageSize=int,page=int,total=int64,data=[]dtos.VEXRule}
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [get]
 func (c *VEXRuleController) List(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "VEXRuleController.List")
@@ -140,7 +140,7 @@ func (c *VEXRuleController) List(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param ruleId path string true "Rule ID"
-// @Success 200 {object} dtos.VEXRuleDTO
+// @Success 200 {object} dtos.VEXRule
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/{ruleId} [get]
 func (c *VEXRuleController) Get(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -262,7 +262,7 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param body body dtos.CreateVEXRuleRequest true "Rule data"
-// @Success 201 {object} dtos.VEXRuleDTO
+// @Success 201 {object} dtos.VEXRule
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules [post]
 func (c *VEXRuleController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)

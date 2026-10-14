@@ -23,7 +23,7 @@ const (
 	ComponentTypePlatform             ComponentType = "platform"
 )
 
-type ComponentProjectDTO struct {
+type ComponentProject struct {
 	// project name like "github.com/facebook/react"
 	ProjectKey      string `json:"projectKey" gorm:"primaryKey;column:project_key"`
 	StarsCount      int    `json:"starsCount" gorm:"column:stars_count"`
@@ -38,32 +38,32 @@ type ComponentProjectDTO struct {
 	UpdatedAt      time.Time      `json:"updatedAt" gorm:"column:updated_at"`
 }
 
-type ComponentDTO struct {
-	Purl          string                   `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
-	Dependencies  []ComponentDependencyDTO `json:"dependsOn" gorm:"hasMany;"`
-	ComponentType ComponentType            `json:"componentType"`
-	Version       string                   `json:"version"`
-	License       *string                  `json:"license"`
-	Published     *time.Time               `json:"published"`
+type Component struct {
+	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
+	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
+	ComponentType ComponentType         `json:"componentType"`
+	Version       string                `json:"version"`
+	License       *string               `json:"license"`
+	Published     *time.Time            `json:"published"`
 
-	ComponentProject     *ComponentProjectDTO `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
-	ComponentProjectKey  *string              `json:"projectId" gorm:"column:project_key"`
-	IsLicenseOverwritten bool                 `json:"isLicenseOverwritten" gorm:"-"`
+	ComponentProject     *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
+	ComponentProjectKey  *string           `json:"projectId" gorm:"column:project_key"`
+	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"-"`
 }
 
-type ComponentDependencyDTO struct {
+type ComponentDependency struct {
 	ID            uuid.UUID `json:"id"`
 	ComponentPurl string    `json:"componentPurl"`
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	DependencyPurl string        `json:"dependencyPurl"` // will be nil, for direct dependencies
-	Artifacts      []ArtifactDTO `json:"artifacts"`
-	Component      ComponentDTO  `json:"component"`
-	Dependency     ComponentDTO  `json:"dependency"`
+	DependencyPurl string     `json:"dependencyPurl"` // will be nil, for direct dependencies
+	Artifacts      []Artifact `json:"artifacts"`
+	Component      Component  `json:"component"`
+	Dependency     Component  `json:"dependency"`
 }
 
-type ComponentOccurrenceDTO struct {
+type ComponentOccurrence struct {
 	ComponentDependencyID string  `json:"componentDependencyId"`
 	DependencyPurl        *string `json:"dependencyPurl"`
 	OrganizationID        string  `json:"organizationId"`

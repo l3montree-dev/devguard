@@ -40,12 +40,21 @@ func TestPyPIParsePackage(t *testing.T) {
 		expectedVersion string
 	}{
 		{"/simple/requests/", "requests", ""},
+		// PEP 503: name normalization must apply to /simple/ lookups too, otherwise a
+		// firewall rule written against the normalized name can be bypassed by using
+		// an equivalent, unnormalized spelling in the request path.
+		{"/simple/Typing_Extensions/", "typing-extensions", ""},
+		{"/simple/TYPING--EXTENSIONS/", "typing-extensions", ""},
+		{"/simple/chartkit.core/", "chartkit-core", ""},
 		{"/packages/ab/cd/requests-2.31.0-py3-none-any.whl", "requests", "2.31.0"},
 		{"/packages/ab/cd/requests-2.31.0-py3-none-any.whl/", "requests", "2.31.0"},
 		{"/packages/ab/cd/requests-2.32.3.tar.gz", "requests", "2.32.3"},
 		{"/packages/ab/cd/Zope.Interface-6.0.tar.gz", "zope-interface", "6.0"},
 		{"/packages/ab/cd/python-dateutil-2.9.0.post0.tar.gz", "python-dateutil", "2.9.0.post0"},
 		{"/packages/ab/cd/six-1.0.tar.bz2", "six", "1.0"},
+		// PEP 658 core metadata files belong to the distribution they describe
+		{"/packages/ea/03/92d3/requests-2.11.1-py2.py3-none-any.whl.metadata", "requests", "2.11.1"},
+		{"/packages/ab/cd/charset_normalizer-3.5.1-cp313-cp313-macosx_10_13_universal2.whl.metadata", "charset-normalizer", "3.5.1"},
 	}
 
 	for _, tc := range cases {
@@ -170,6 +179,34 @@ func TestProxyPyPISimpleBlocksMaliciousBeforeUpstreamFetch(t *testing.T) {
 
 	checker := mocks.NewMaliciousPackageChecker(t)
 	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "fake-malicious-pypi-package").Return([]models.MaliciousAffectedComponent{{MaliciousPackageID: "MAL-1"}}, nil)
+	checker.EXPECT().GetMaliciousPackage(mock.Anything, "MAL-1").Return(models.MaliciousPackage{}, nil)
+
+	ctrl := &PythonDependencyProxyController{
+		DependencyProxyController: &DependencyProxyController{
+			maliciousChecker: checker,
+			client:           &http.Client{Transport: simpleIndexTransport{}},
+		},
+	}
+
+	if err := ctrl.ProxyPyPISimple(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, rec.Code)
+	}
+}
+
+func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
+	
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/pypi/simple/Typing_Extensions/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("package")
+	c.SetParamValues("Typing_Extensions")
+
+	checker := mocks.NewMaliciousPackageChecker(t)
+	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "typing-extensions").Return([]models.MaliciousAffectedComponent{{MaliciousPackageID: "MAL-1"}}, nil)
 	checker.EXPECT().GetMaliciousPackage(mock.Anything, "MAL-1").Return(models.MaliciousPackage{}, nil)
 
 	ctrl := &PythonDependencyProxyController{

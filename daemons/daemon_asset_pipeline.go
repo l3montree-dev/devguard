@@ -37,6 +37,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// -----------------------------------------------------------------------------------
+//
+//	Types
+//
+// -----------------------------------------------------------------------------------
+
 type assetWithProjectAndOrg struct {
 	ctx           context.Context // carries the root pipeline.asset span
 	asset         models.Asset
@@ -50,11 +56,16 @@ type pipelineError struct {
 	err   error
 }
 
+// -----------------------------------------------------------------------------------
+//
+//	Asset Pipeline - Controller Functions
+//
+// -----------------------------------------------------------------------------------
+
+// runPipeline only runs the concurrent per asset stages, the global scan runs before it (see ScanAllAssets)
 func (runner *DaemonRunner) runPipeline(ctx context.Context, idsChan <-chan uuid.UUID, errChan chan<- pipelineError) {
 	ch := runner.FetchAssetDetails(ctx, idsChan, errChan)
 	ch = runner.DeleteOldAssetVersions(ch, errChan)
-	// scan asset will apply all vex rules
-	ch = runner.ScanAsset(ch, errChan)
 	ch = runner.SyncUpstream(ch, errChan)
 	ch = runner.ApplyVEXRules(ch, errChan)
 	ch = runner.AutoReopenTickets(ch, errChan)
@@ -106,6 +117,36 @@ func (runner *DaemonRunner) RunDaemonPipelineForAsset(ctx context.Context, asset
 	<-wg
 
 	return pErr.err
+}
+
+// RunDaemonPipelineForAssets runs the per asset stages for the given assets and returns the last error of every failed asset
+func (runner *DaemonRunner) RunDaemonPipelineForAssets(ctx context.Context, assetIDs []uuid.UUID) map[uuid.UUID]error {
+	idsChan := make(chan uuid.UUID)
+	go func() {
+		defer close(idsChan)
+		for _, assetID := range assetIDs {
+			idsChan <- assetID
+		}
+	}()
+
+	// utils.TeeChannel drops values while a receiver is busy, so errors are forwarded to the collector instead
+	failed := make(map[uuid.UUID]error)
+	errChan := make(chan pipelineError)
+	collectChan := make(chan pipelineError, 100)
+	runner.collectErrors(collectChan)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer close(collectChan)
+		for pErr := range errChan {
+			failed[pErr.asset.ID] = pErr.err
+			collectChan <- pErr
+		}
+	}()
+	runner.runPipeline(ctx, idsChan, errChan)
+	<-done
+
+	return failed
 }
 
 // failStage records err on both the stage span and the root pipeline.asset span, then ends both.
@@ -185,6 +226,12 @@ func (runner *DaemonRunner) FetchAssetIDs(ctx context.Context) <-chan uuid.UUID 
 	return out
 }
 
+// -----------------------------------------------------------------------------------
+//
+//	Data Structures - Stages
+//
+// -----------------------------------------------------------------------------------
+
 func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 	go func() {
@@ -193,15 +240,17 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "resolve fixed versions panic")
 		}()
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ResolveFixedVersions") {
+			if !runner.stageEnabled(StageResolveFixedVersions) {
 				out <- assetWithDetails
 				continue
 			}
+			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.resolve-fixed-versions")
 			toSaveVulns := make([]models.DependencyVuln, 0)
 			// get all closed/accepted vulnerabilities for the asset version
-			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(assetWithDetails.ctx, nil, assetWithDetails.asset.ID)
+			vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(stageCtx, nil, assetWithDetails.asset.ID)
 			if err != nil {
 				slog.Error("could not get vulns for asset", "assetID", assetWithDetails.asset.ID, "err", err)
+				failStage(assetWithDetails.ctx, span, err)
 				errChan <- pipelineError{
 					asset: assetWithDetails.asset,
 					err:   fmt.Errorf("could not get vulns for asset: %w", err),
@@ -237,10 +286,11 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 
 			if len(toSaveVulns) > 0 {
 				tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-				err = runner.dependencyVulnRepository.SaveBatch(assetWithDetails.ctx, tx, toSaveVulns)
+				err = runner.dependencyVulnRepository.SaveBatch(stageCtx, tx, toSaveVulns)
 				if err != nil {
 					tx.Rollback()
 					slog.Error("could not save vulns with resolved fixed versions", "assetID", assetWithDetails.asset.ID, "err", err)
+					failStage(assetWithDetails.ctx, span, err)
 					errChan <- pipelineError{
 						asset: assetWithDetails.asset,
 						err:   fmt.Errorf("could not save vulns with resolved fixed versions: %w", err),
@@ -254,6 +304,8 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 				}
 			}
 
+			span.SetAttributes(attribute.Int("vulns.resolved", len(toSaveVulns)))
+			span.End()
 			out <- assetWithDetails
 		}
 	}()
@@ -277,12 +329,12 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			)
 			slog.Info("running asset pipeline", "assetID", assetID, "traceID", span.SpanContext().TraceID().String())
 
-			asset, err := runner.assetRepository.Read(assetCtx, nil, assetID)
+			fetchCtx, fetchSpan := daemonTracer.Start(assetCtx, "pipeline.fetch-details")
+
+			asset, err := runner.assetRepository.Read(fetchCtx, nil, assetID)
 			if err != nil {
 				slog.Error("could not fetch asset in runner", "assetID", assetID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch asset failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: models.Asset{Model: models.Model{ID: assetID}},
 					err:   fmt.Errorf("could not fetch asset: %w", err),
@@ -295,12 +347,10 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 				attribute.String("asset.name", asset.Name),
 			)
 
-			assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(assetCtx, nil, asset.ID)
+			assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(fetchCtx, nil, asset.ID)
 			if err != nil {
 				slog.Error("could not fetch asset versions in runner", "assetID", asset.ID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch asset versions failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch asset versions: %w", err),
@@ -317,24 +367,20 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 				}
 			}
 
-			project, err := runner.projectRepository.Read(assetCtx, nil, asset.ProjectID)
+			project, err := runner.projectRepository.Read(fetchCtx, nil, asset.ProjectID)
 			if err != nil {
 				slog.Error("could not fetch project in runner", "assetID", asset.ID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch project failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch project: %w", err),
 				}
 				continue
 			}
-			org, err := runner.orgRepository.Read(assetCtx, nil, project.OrganizationID)
+			org, err := runner.orgRepository.Read(fetchCtx, nil, project.OrganizationID)
 			if err != nil {
 				slog.Error("could not fetch org in runner", "assetID", asset.ID, "err", err)
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "fetch org failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch project: %w", err),
@@ -345,13 +391,11 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			// mark the asset as processed - so that we do not process it again, even if the pipeline takes longer than an hour
 			asset.PipelineLastRun = time.Now()
 			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-			err = runner.assetRepository.Save(assetCtx, tx, &asset)
+			err = runner.assetRepository.Save(fetchCtx, tx, &asset)
 			if err != nil {
 				tx.Rollback()
 				monitoring.RecoverPanicAndSaveInErrorLog(pipelineCtx, nil, monitoring.AlertContext{}, "could not save last pipeline run. The asset will be processed whenever the pipeline runs again (usually 5 minutes)")
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "save pipeline run failed")
-				span.End()
+				failStage(assetCtx, fetchSpan, err)
 				errChan <- pipelineError{
 					asset: asset,
 					err:   fmt.Errorf("could not fetch project: %w", err),
@@ -363,6 +407,9 @@ func (runner *DaemonRunner) FetchAssetDetails(pipelineCtx context.Context, input
 			} else {
 				tx.Commit()
 			}
+
+			fetchSpan.SetAttributes(attribute.Int("asset.versions", len(assetVersions)))
+			fetchSpan.End()
 
 			// NOTE: the pipeline.asset span is intentionally NOT ended here.
 			// It stays open until CollectStats (success) or failStage (failure).
@@ -389,7 +436,7 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("SyncTickets") {
+			if !runner.stageEnabled(StageSyncTickets) {
 				out <- assetWithDetails
 				continue
 			}
@@ -469,7 +516,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ResolveDifferencesInTicketState") {
+			if !runner.stageEnabled(StageResolveDifferencesInTicketState) {
 				out <- assetWithDetails
 				continue
 			}
@@ -525,90 +572,6 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 	return out
 }
 
-func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
-	out := make(chan assetWithProjectAndOrg)
-
-	go func() {
-		defer func() {
-			close(out)
-			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "scan panic")
-		}()
-		frontendURL := os.Getenv("FRONTEND_URL")
-		if frontendURL == "" {
-			monitoring.AlertAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "FRONTEND_URL environment variable is not set. ScanAsset stage will fail.", nil)
-		}
-
-		for assetWithDetails := range input {
-			if !runner.stageEnabled("ScanAsset") {
-				out <- assetWithDetails
-				continue
-			}
-			assetVersions := assetWithDetails.assetVersions
-			asset := assetWithDetails.asset
-			project := assetWithDetails.project
-			org := assetWithDetails.org
-
-			stageCtx, span := daemonTracer.Start(assetWithDetails.ctx, "pipeline.scan")
-			errs := make([]error, 0)
-			for i := range assetVersions {
-				artifacts := assetVersions[i].Artifacts
-				for _, artifact := range artifacts {
-					// each artifact's SBOMs are loaded on their own - there is no
-					// shared asset-version graph to scope out of any more
-					bom, err := runner.assetVersionService.LoadArtifactSBOMs(stageCtx, nil, assetVersions[i], artifact.ArtifactName)
-					if err != nil {
-						slog.Error("failed to load sboms", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-						errs = append(errs, err)
-						continue
-					}
-
-					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-
-					opened, closed, newState, err := runner.scanService.ScanNormalizedSBOM(stageCtx, tx, org, project, asset, assetVersions[i], artifact, bom, "system", nil)
-
-					// an artifact with no SBOMs is not an error - it just has
-					// nothing to scan, and ScanNormalizedSBOM returns early
-					if err != nil {
-						tx.Rollback()
-						slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-						errs = append(errs, err)
-						continue
-					}
-
-					if runner.debugOptions.DryRun {
-						tx.Rollback()
-						for _, v := range opened {
-							slog.Info("[DRY-RUN] would open vuln", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "component", v.ComponentPurl)
-						}
-						for _, v := range closed {
-							slog.Info("[DRY-RUN] would close vuln", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "component", v.ComponentPurl)
-						}
-						for _, v := range newState {
-							slog.Info("[DRY-RUN] vuln unchanged", "vulnID", v.CVEID, "assetVersion", v.AssetVersionName, "state", v.State, "component", v.ComponentPurl)
-						}
-					} else {
-						tx.Commit()
-					}
-
-					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
-				}
-			}
-			if len(errs) > 0 {
-				joined := errors.Join(errs...)
-				failStage(assetWithDetails.ctx, span, joined)
-				errChan <- pipelineError{
-					asset: asset,
-					err:   fmt.Errorf("could not scan asset: %v", joined),
-				}
-				continue
-			}
-			span.End()
-			out <- assetWithDetails
-		}
-	}()
-	return out
-}
-
 func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, errChan chan<- pipelineError) <-chan assetWithProjectAndOrg {
 	out := make(chan assetWithProjectAndOrg)
 
@@ -619,7 +582,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("SyncUpstream") {
+			if !runner.stageEnabled(StageSyncUpstream) {
 				out <- assetWithDetails
 				continue
 			}
@@ -661,18 +624,24 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 				tx.Commit()
 			}
 
+			rescannedArtifacts := 0
 			for i := range assetVersions {
 				artifacts := assetVersions[i].Artifacts
 				for _, artifact := range artifacts {
 					tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-					if _, _, err := runner.scanService.SyncArtifactUpstreamSBOMSources(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil); err != nil {
+					// unchanged sboms are skipped, the global scan already covers new cves for them
+					rescanned, err := runner.scanService.SyncArtifactUpstreamSBOMSourcesIfChanged(stageCtx, tx, org, project, asset, assetVersions[i], artifact, "system", nil)
+					if err != nil {
 						slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 						errs = append(errs, err)
 						tx.Rollback()
 						continue
 					}
 
-					slog.Info("synced upstream for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+					if rescanned {
+						rescannedArtifacts++
+						slog.Info("synced changed upstream sboms for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+					}
 
 					if runner.debugOptions.DryRun {
 						tx.Rollback()
@@ -681,6 +650,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 					}
 				}
 			}
+			span.SetAttributes(attribute.Int("artifacts.rescanned", rescannedArtifacts))
 			if len(errs) > 0 {
 				joined := errors.Join(errs...)
 				failStage(assetWithDetails.ctx, span, joined)
@@ -716,7 +686,7 @@ func (runner *DaemonRunner) ApplyVEXRules(input <-chan assetWithProjectAndOrg, e
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ApplyVEXRules") {
+			if !runner.stageEnabled(StageApplyVEXRules) {
 				out <- assetWithDetails
 				continue
 			}
@@ -794,7 +764,7 @@ func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("CollectStats") {
+			if !runner.stageEnabled(StageCollectStats) {
 				out <- assetWithDetails
 				continue
 			}
@@ -846,7 +816,7 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("RecalculateRiskForVulnerabilities") {
+			if !runner.stageEnabled(StageRecalculateRiskForVulnerabilities) {
 				out <- assetWithDetails
 				continue
 			}
@@ -908,7 +878,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("AutoReopenTickets") {
+			if !runner.stageEnabled(StageAutoReopenTickets) {
 				out <- assetWithDetails
 				continue
 			}
@@ -978,7 +948,7 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("DeleteOldAssetVersions") {
+			if !runner.stageEnabled(StageDeleteOldAssetVersions) {
 				out <- assetWithDetails
 				continue
 			}
@@ -1035,3 +1005,27 @@ func (runner *DaemonRunner) RunResolveFixedVersionsPipeline(ctx context.Context,
 	close(errChan)
 	return nil
 }
+
+// StartBenchmarkJobs runs the asset pipeline over all assets with every database
+// write rolled back. stages limits the run to the given pipeline stages, see
+// DebugOptions.LimitToStages for the valid names - pass nil to run all of them.
+func (runner *DaemonRunner) StartBenchmarkJobs(ctx context.Context, stages []string) {
+	runner.SetDebugOptions(DebugOptions{
+		DryRun:        true,
+		LimitToStages: stages,
+	})
+
+	errChan := make(chan pipelineError, 100)
+	runner.collectErrors(errChan)
+
+	if err := runner.ScanAllAssets(ctx); err != nil {
+		monitoring.Alert("could not scan sboms", err)
+	}
+	runner.runPipeline(ctx, runner.FetchAllAssetIDs(ctx), errChan)
+}
+
+// -----------------------------------------------------------------------------------
+//
+//	Helper Functions
+//
+// -----------------------------------------------------------------------------------

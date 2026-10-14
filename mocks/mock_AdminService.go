@@ -171,23 +171,23 @@ func (_c *AdminService_CheckIfOrgExists_Call) RunAndReturn(run func(ctx context.
 }
 
 // GetAdminsForOrg provides a mock function for the type AdminService
-func (_mock *AdminService) GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
+func (_mock *AdminService) GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.User, error) {
 	ret := _mock.Called(ctx, orgID, adminClient)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAdminsForOrg")
 	}
 
-	var r0 []dtos.UserDTO
+	var r0 []dtos.User
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, shared.AdminClient) ([]dtos.UserDTO, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, shared.AdminClient) ([]dtos.User, error)); ok {
 		return returnFunc(ctx, orgID, adminClient)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, shared.AdminClient) []dtos.UserDTO); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, shared.AdminClient) []dtos.User); ok {
 		r0 = returnFunc(ctx, orgID, adminClient)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.UserDTO)
+			r0 = ret.Get(0).([]dtos.User)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, shared.AdminClient) error); ok {
@@ -234,12 +234,12 @@ func (_c *AdminService_GetAdminsForOrg_Call) Run(run func(ctx context.Context, o
 	return _c
 }
 
-func (_c *AdminService_GetAdminsForOrg_Call) Return(userDTOs []dtos.UserDTO, err error) *AdminService_GetAdminsForOrg_Call {
-	_c.Call.Return(userDTOs, err)
+func (_c *AdminService_GetAdminsForOrg_Call) Return(users []dtos.User, err error) *AdminService_GetAdminsForOrg_Call {
+	_c.Call.Return(users, err)
 	return _c
 }
 
-func (_c *AdminService_GetAdminsForOrg_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error)) *AdminService_GetAdminsForOrg_Call {
+func (_c *AdminService_GetAdminsForOrg_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.User, error)) *AdminService_GetAdminsForOrg_Call {
 	_c.Call.Return(run)
 	return _c
 }

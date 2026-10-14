@@ -38,12 +38,19 @@ func TestOSVPostInsertCleanup(t *testing.T) {
 
 			cleanedConstraints, cleanedIndexes, err := getCurrentIndexAndConstraintState(ctx, tx)
 			assert.NoError(t, err)
-			assert.Len(t, cleanedIndexes, 2, "only the primary key indexes of cves and cve_relationships should remain for the import to detect ON CONFLICT triggers")
+			assert.Len(t, cleanedIndexes, 3, "only the primary key indexes of cves and cve_relationships plus the cve_ecosystem index should remain for the import to detect ON CONFLICT triggers")
 			for table, indexes := range cleanedIndexes {
-				if table == "cves" || table == "cve_relationships" {
+				switch table {
+				case "cves", "cve_relationships":
 					assert.Len(t, indexes, 1)
 					assert.Equal(t, table+"_pkey", indexes[0])
-				} else {
+				case "cve_ecosystem":
+					// cve_ecosystem is a materialized view, not a bulk-insert target - the
+					// import never writes to it directly, it is refreshed after the commit.
+					// So its index is intentionally left in place by PrepareBulkInsert.
+					assert.Len(t, indexes, 1)
+					assert.Equal(t, "idx_cve_ecosystem_ecosystem_cve_id", indexes[0])
+				default:
 					t.Fail()
 				}
 			}
@@ -108,7 +115,7 @@ func getCurrentIndexAndConstraintState(ctx context.Context, tx pgx.Tx) (map[stri
 			FROM
 				information_schema.table_constraints
 			WHERE
-				table_name IN ('cves','cve_relationships','affected_components','cve_affected_component');`)
+				table_name IN ('cves','cve_relationships','affected_components','cve_affected_component','cve_ecosystem');`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get current constraint state: %w", err)
 	}
@@ -128,7 +135,7 @@ func getCurrentIndexAndConstraintState(ctx context.Context, tx pgx.Tx) (map[stri
 			FROM
 				pg_catalog.pg_indexes
 			WHERE
-				tablename IN ('cves','cve_relationships','affected_components','cve_affected_component');`)
+				tablename IN ('cves','cve_relationships','affected_components','cve_affected_component','cve_ecosystem');`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get current index state: %w", err)
 	}
@@ -141,8 +148,8 @@ func getCurrentIndexAndConstraintState(ctx context.Context, tx pgx.Tx) (map[stri
 		return nil, nil, err
 	}
 
-	constraintsPerTable := make(map[string][]string, 4)
-	indexesPerTable := make(map[string][]string, 4)
+	constraintsPerTable := make(map[string][]string, 5)
+	indexesPerTable := make(map[string][]string, 5)
 
 	for _, constraint := range constraints {
 		constraintsPerTable[constraint.TableName] = append(constraintsPerTable[constraint.TableName], constraint.ConstraintName)

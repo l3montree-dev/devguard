@@ -51,11 +51,11 @@ func evidenceLinks(texts ...string) []oscalTypes.Link {
 	return links
 }
 
-func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetailsDTO {
+func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetails {
 
-	mappedControls := make([]dtos.MappedControlDTO, len(c.FrameworkControl.MappedControls))
+	mappedControls := make([]dtos.MappedControl, len(c.FrameworkControl.MappedControls))
 	for i, m := range c.FrameworkControl.MappedControls {
-		mappedControls[i] = dtos.MappedControlDTO{
+		mappedControls[i] = dtos.MappedControl{
 			FrameworkControlID: m.FrameworkControlID,
 			RelatedFramework:   m.RelatedFramework,
 			RelatedControlID:   m.RelatedControlID,
@@ -63,7 +63,7 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 		}
 	}
 
-	p := dtos.CompliancePostureWithControlDTO{
+	p := dtos.CompliancePostureWithControl{
 		FrameworkControlID:       c.FrameworkControlID,
 		CompliancePostureID:      c.ID.String(),
 		ControlID:                c.FrameworkControl.ControlID,
@@ -82,22 +82,22 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 		TicketURL:                c.TicketURL,
 		MappedControls:           mappedControls,
 	}
-	events := make([]dtos.VulnEventDTO, len(c.Events))
+	events := make([]dtos.VulnEvent, len(c.Events))
 	for i, e := range c.Events {
 		events[i] = ConvertVulnEventToDto(e)
 	}
-	byComponents := make([]dtos.ComplianceComponentImplementsControlStatementDTO, len(c.ByComponents))
+	byComponents := make([]dtos.ComplianceComponentImplementsControlStatement, len(c.ByComponents))
 	for i, bc := range c.ByComponents {
 		byComponents[i] = ComplianceComponentImplementsControlStatementToDTO(bc)
 	}
-	return dtos.CompliancePostureWithDetailsDTO{
-		CompliancePostureWithControlDTO: p,
-		Events:                          events,
-		ByComponents:                    byComponents,
+	return dtos.CompliancePostureWithDetails{
+		CompliancePostureWithControl: p,
+		Events:                       events,
+		ByComponents:                 byComponents,
 	}
 }
 
-func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dtos.CompliancePostureWithDetailsDTO, frameworkControls []models.FrameworkControl) (oscalTypes.OscalCompleteSchema, error) {
+func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dtos.CompliancePostureWithDetails, frameworkControls []models.FrameworkControl) (oscalTypes.OscalCompleteSchema, error) {
 
 	//OscalCompleteSchema
 	var schema oscalTypes.OscalCompleteSchema

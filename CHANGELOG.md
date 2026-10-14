@@ -2,6 +2,70 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.16.1] - 2026-10-08
+
+### Added
+
+- **`externalBotUserLink` on assets** — assets linked to an external GitLab provider now expose a link to that provider's bot user profile (`{baseURL}/-/u/{userID}`) in `AssetDTO`. The link is built from the `GITLAB_{PROVIDER}_BASEURL` and `GITLAB_{PROVIDER}_BOTUSERID` environment variables and is omitted when either is unset
+
+### Fixed
+
+- **Vulnerability database sync no longer gets the database OOM-killed** — `computeDiffFromStage` built its delete/insert diffs with `EXCEPT`, which PostgreSQL plans as a `HashSetOp` that ignores `work_mem` and cannot spill to disk. On the ~17M row `cve_affected_component` table a single diff allocated ~2.4 GB in one backend. The diffs are now `NOT EXISTS` anti joins, which stream over the key indexes or spill in batches, and the staging table is `ANALYZE`d first so the planner picks a good join
+  - `maintenance_work_mem` during index rebuilds lowered from 4 GB to 1 GB, well below the 8 Gi memory limit of the PostgreSQL pod in the Helm chart
+  - A failed import is now reported as `vulndb import failed` instead of `integrity validation failed`, since the error is not always an integrity check
+
+## [v1.16.0] - 2026-10-06
+
+### Added
+
+- **Maven, Composer and Debian dependency proxies** — the dependency firewall now proxies three more ecosystems, available at `/dependency-proxy/maven/*`, `/dependency-proxy/composer/*` and `/dependency-proxy/deb/*` (and under the secret-scoped `/dependency-proxy/{secret}/…` variants). Requests are checked against the malicious-package database and the configured `minReleaseAge`, including on the initial request, and responses are cached
+  - Maven packages and metadata share a single path tree and are served through one route
+  - Debian packages are compared using Debian version semantics and use the `debian` ecosystem name in the frontend
+  - The fake malicious packages used to verify the firewall setup now cover `composer` and `deb`
+- Empty state for repositories when no repository provider is connected
+
+### Changed
+
+- **Faster CVE listing filtered by ecosystem** — the ecosystem filter now goes through a new `cve_ecosystem` materialized view (distinct CVE/ecosystem pairs, about 389k rows instead of 13.7M in `cve_affected_component`) with an index-only prefix scan, instead of joining the full join table on every request.
+- **Malicious-package lookup keeps the case of Maven and Go names** — package names are lowercased for all other ecosystems, but Maven and Go names are case-sensitive and are now matched as given.
+- PostgreSQL container image now ships the tools required to run under the CloudNativePG operator
+- Updated all Go, Nix and Python dependencies;
+
+### Fixed
+
+- **npm tarballs without a known release time are no longer cached** — a response was cached even when its release time could not be determined, so a later `minReleaseAge` check could be evaluated against a zero timestamp
+- Patched a gRPC vulnerability in the bundled Kratos build
+
+## [v1.15.0] - 2026-09-30
+
+### Added
+
+- **Error log storage** — asset and project errors are now persisted as logs instead of only being emitted to stdout, with the actual error details stored alongside each entry. Log listing supports search, filter and sort, is available at the org level with project/asset names joined in, and can list a project's logs without requiring an asset scope.
+- **Permalink resolve endpoint** — `GET /resolve/` turns an org, project or asset UUID into its slug path (`OrganizationSlug`/`ProjectSlug`/`AssetSlug`), so the frontend can resolve a link without already knowing the slug.
+- **Org-wide dependency search** — `GET /organizations/{organization}/components` searches component occurrences across every project in an organization, reusing the existing per-project search against the full list of child project IDs
+- **`minReleaseAge` enforcement extended to Go and PyPI proxies** — the Go module proxy and the PyPI simple index/tarball proxy now block packages younger than the configured minimum release age, matching the existing npm behavior
+- `POSTGRES_SSL_MODE` environment variable — defaults to `disable` (unchanged behavior), can be set to `require`
+- `DISABLE_DAEMONS` environment variable — skips starting background daemon jobs, for running API-only instances
+- Timestamps added to SARIF, VEX and CycloneDX SBOM export output
+
+### Changed
+
+- **PyPI downloads routed through the firewall** — tarball fetches now go through `files.pythonhosted.org`, malicious-package and `minReleaseAge` checks are performed from the filename before falling back to the PyPI JSON API for release time, and requests fail closed once `MinReleaseAge` is configured and a release time cannot be determined. The `/simple/` index route now runs the malicious-package check itself instead of deferring it to version resolution, and rewrites absolute URLs in the returned index HTML to keep subsequent requests routed through the proxy
+- **PyPI package name normalization** — package names are normalized (lowercased, `-`/`_`/`.` collapsed to `-`) before being matched against the database, so requests like `Typing_Extensions` correctly match `typing-extensions`
+- **Python version comparison is now PEP440-aware** — rule and allowlist evaluation for the Python ecosystem no longer uses naive semver-style comparison; the same comparison interface is shared across the npm, Go and OCI ecosystems
+- **OCI purl matching keeps the registry qualifier** — building a purl match key for OCI images previously stripped all qualifiers, which meant an image name like `nginx` matched the same database entry regardless of registry. A normalized `repository_url` qualifier is now retained, since an OCI purl's name is only the last path segment. `MinReleaseAge` does not apply to OCI images, since registries have no reliable publish timestamp
+- **npm tarball proxy checks release time before downloading** — `ProxyNPMTarball` now resolves and checks the package's release time before fetching the tarball body from upstream, instead of downloading first and discarding blocked packages afterwards. A TTL cache was added for metadata lookups, and npm audit signature support was added
+- **Batched deletion of resolved dependency vulnerabilities** — `UserDidNotDetectDependencyVulnInArtifactAnymore` now deletes resolved `artifact_dependency_vulns` in a single batched statement instead of one `DELETE` per vulnerability
+- **PAT `last_used_at` updates throttled** — the timestamp is now only written if at least a minute has passed since the last update, reducing write amplification on PAT-authenticated requests
+- Added database indexes to speed up dashboard loading (asset/asset-version lookups on compliance postures, advisories, vuln events, artifact risk history and dependency vulns)
+- Upgraded to Go 1.27.1
+
+### Fixed
+
+- **PyPI `minReleaseAge` comparison was inverted for cached responses** — packages younger than the configured minimum release age were being let through while older ones were incorrectly blocked
+- **VEX rule recommendations no longer consider closed rules** — `VexRuleRecommendationController` was recommending against VEX rules that had already been closed or expired ([#3042](https://github.com/l3montree-dev/devguard/issues/3042))
+- Fixed artifact distribution across assets in the bundled GitHub Action and GitLab CI templates
+
 ## [v1.14.2] - 2026-09-18
 
 ### Changed

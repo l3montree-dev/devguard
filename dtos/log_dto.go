@@ -14,7 +14,7 @@ const (
 	LogLevelError = "error"
 )
 
-type LogDTO struct {
+type Log struct {
 	ID          uuid.UUID  `json:"id"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	OrgID       *uuid.UUID `json:"orgID"`

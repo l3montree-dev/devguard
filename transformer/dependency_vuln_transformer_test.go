@@ -1,6 +1,7 @@
 package transformer_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -195,6 +196,41 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 		}
 		assert.Contains(t, paths, "pkg:npm/a@1.0.0,"+pkgBPurl)
 		assert.Contains(t, paths, "pkg:npm/x@1.0.0,"+pkgBPurl)
+	})
+
+	t.Run("an sbom with more paths than the limit gets one empty path while another sbom keeps its path", func(t *testing.T) {
+		// same rule as the daemon scan: the limit applies per sbom, not across all sboms of the artifact
+		vulnPurl := "pkg:npm/vulnerable@1.0.0"
+		exploding := map[string][]string{"root": {}}
+		for i := range normalize.MaxPathsPerSBOM + 1 {
+			middle := fmt.Sprintf("pkg:npm/middle-%d@1.0.0", i)
+			exploding["root"] = append(exploding["root"], middle)
+			exploding[middle] = []string{vulnPurl}
+		}
+		forest := normalize.MerkleForest{
+			sbomOf(artifactName, exploding),
+			sbomOf(artifactName, map[string][]string{
+				"root":            {"pkg:npm/a@1.0.0"},
+				"pkg:npm/a@1.0.0": {vulnPurl},
+			}),
+		}
+
+		purl, err := packageurl.FromString(vulnPurl)
+		require.NoError(t, err)
+
+		vulns := transformer.VulnInPackageToDependencyVulns(models.VulnInPackage{
+			Purl:  purl,
+			CVEID: "CVE-2024-EXPLODE",
+			CVE:   models.CVE{CVE: "CVE-2024-EXPLODE"},
+		}, forest, assetID, assetVersionName, artifactName)
+
+		require.Len(t, vulns, 2)
+		paths := []string{
+			strings.Join(vulns[0].VulnerabilityPath, ","),
+			strings.Join(vulns[1].VulnerabilityPath, ","),
+		}
+		assert.Contains(t, paths, "")
+		assert.Contains(t, paths, "pkg:npm/a@1.0.0,"+vulnPurl)
 	})
 
 	t.Run("transitive dependency has correct depth", func(t *testing.T) {

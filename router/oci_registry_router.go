@@ -38,7 +38,8 @@ func ociPublicProxyEnabled() bool {
 //
 //	docker pull <host>/docker.io/library/nginx:latest
 //
-// Secret-scoped (custom rules and MinReleaseAge enforced):
+// Secret-scoped (custom rules enforced; MinReleaseAge does not apply to OCI images,
+// registries expose no reliable publish time):
 //
 //	docker pull <host>/<secret>/docker.io/library/nginx:latest
 //

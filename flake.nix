@@ -52,6 +52,20 @@
         go-mockery = nixpkgs-unstable.legacyPackages.${system}.go-mockery.override {
           buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
+        go-swag =
+          (nixpkgs-unstable.legacyPackages.${system}.go-swag.override {
+            buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
+          }).overrideAttrs
+            (_old: {
+              version = "2.0.0-rc6";
+              src = nixpkgs-unstable.legacyPackages.${system}.fetchFromGitHub {
+                owner = "swaggo";
+                repo = "swag";
+                rev = "v2.0.0-rc6";
+                sha256 = "sha256-ieHbfpcmBJgt1Q1mNvHUsjqv0oJ0Ihv1Jl0/zyRjEVc=";
+              };
+              vendorHash = "sha256-s4DdnXGPhML80gWVRVqLhKdPZxoguWOI2tjYOTOJzlk=";
+            });
         hostPkgs = nixpkgs.legacyPackages.${system} // {
           buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
         };
@@ -195,14 +209,19 @@
         # (`nix build .#devguard-scanner-sbom && cat result/sboms/*.json`)
         # without rebuilding and untarring a whole OCI image just to check
         # one file.
+        # Built from the image set matching the evaluating system: the sources
+        # are read at eval time (builtins.path), which forces their fetch
+        # derivations to build, and that fails on a mismatched platform.
+        sbomImages = if system == "x86_64-linux" then ociImagesAmd64 else ociImagesArm64;
+
         sbomOutputs = {
-          devguard-scanner-sbom = ociImagesArm64.devguardBinaries.devguardScannerSBOM;
-          devguard-sbom = ociImagesArm64.devguardBinaries.devguardSBOM;
-          devguard-cli-sbom = ociImagesArm64.devguardBinaries.devguardCLISBOM;
-          crane-sbom = ociImagesArm64.craneFromSource.sbom;
-          gitleaks-sbom = ociImagesArm64.gitleaksFromSource.sbom;
-          trivy-sbom = ociImagesArm64.trivyFromSource.sbom;
-          kratos-sbom = ociImagesArm64.kratosFromSource.kratosSBOM;
+          devguard-scanner-sbom = sbomImages.devguardBinaries.devguardScannerSBOM;
+          devguard-sbom = sbomImages.devguardBinaries.devguardSBOM;
+          devguard-cli-sbom = sbomImages.devguardBinaries.devguardCLISBOM;
+          crane-sbom = sbomImages.craneFromSource.sbom;
+          gitleaks-sbom = sbomImages.gitleaksFromSource.sbom;
+          trivy-sbom = sbomImages.trivyFromSource.sbom;
+          kratos-sbom = sbomImages.kratosFromSource.kratosSBOM;
         };
 
         arm64Packages = {
@@ -253,6 +272,7 @@
             unstablePkgs.gopls
             unstablePkgs.golangci-lint
             go-mockery
+            go-swag
             self.formatter.${system}
           ];
         };

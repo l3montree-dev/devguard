@@ -20,8 +20,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func ArtifactModelToDTO(artifact models.Artifact) dtos.ArtifactDTO {
-	return dtos.ArtifactDTO{
+func ArtifactModelToDTO(artifact models.Artifact) dtos.Artifact {
+	return dtos.Artifact{
 		ArtifactName:     artifact.ArtifactName,
 		AssetVersionName: artifact.AssetVersionName,
 		AssetID:          artifact.AssetID,

@@ -495,6 +495,132 @@ func (_c *ScanService_HandleScanResult_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// HandleScanResultForVulns provides a mock function for the type ScanService
+func (_mock *ScanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleScanResultForVulns")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 []models.DependencyVuln
+	var r2 []models.DependencyVuln
+	var r3 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, string, *models.AssetVersion, normalize.MerkleForest, []models.DependencyVuln, models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, string, *models.AssetVersion, normalize.MerkleForest, []models.DependencyVuln, models.Asset) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *string, string, *models.AssetVersion, normalize.MerkleForest, []models.DependencyVuln, models.Asset) []models.DependencyVuln); ok {
+		r1 = returnFunc(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, string, *string, string, *models.AssetVersion, normalize.MerkleForest, []models.DependencyVuln, models.Asset) []models.DependencyVuln); ok {
+		r2 = returnFunc(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, string, *string, string, *models.AssetVersion, normalize.MerkleForest, []models.DependencyVuln, models.Asset) error); ok {
+		r3 = returnFunc(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	} else {
+		r3 = ret.Error(3)
+	}
+	return r0, r1, r2, r3
+}
+
+// ScanService_HandleScanResultForVulns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleScanResultForVulns'
+type ScanService_HandleScanResultForVulns_Call struct {
+	*mock.Call
+}
+
+// HandleScanResultForVulns is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - userID string
+//   - userAgent *string
+//   - artifactName string
+//   - assetVersion *models.AssetVersion
+//   - forest normalize.MerkleForest
+//   - dependencyVulns []models.DependencyVuln
+//   - asset models.Asset
+func (_e *ScanService_Expecter) HandleScanResultForVulns(ctx any, tx any, userID any, userAgent any, artifactName any, assetVersion any, forest any, dependencyVulns any, asset any) *ScanService_HandleScanResultForVulns_Call {
+	return &ScanService_HandleScanResultForVulns_Call{Call: _e.mock.On("HandleScanResultForVulns", ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)}
+}
+
+func (_c *ScanService_HandleScanResultForVulns_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset)) *ScanService_HandleScanResultForVulns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 *string
+		if args[3] != nil {
+			arg3 = args[3].(*string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 *models.AssetVersion
+		if args[5] != nil {
+			arg5 = args[5].(*models.AssetVersion)
+		}
+		var arg6 normalize.MerkleForest
+		if args[6] != nil {
+			arg6 = args[6].(normalize.MerkleForest)
+		}
+		var arg7 []models.DependencyVuln
+		if args[7] != nil {
+			arg7 = args[7].([]models.DependencyVuln)
+		}
+		var arg8 models.Asset
+		if args[8] != nil {
+			arg8 = args[8].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+			arg8,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_HandleScanResultForVulns_Call) Return(dependencyVulns1 []models.DependencyVuln, dependencyVulns2 []models.DependencyVuln, dependencyVulns3 []models.DependencyVuln, err error) *ScanService_HandleScanResultForVulns_Call {
+	_c.Call.Return(dependencyVulns1, dependencyVulns2, dependencyVulns3, err)
+	return _c
+}
+
+func (_c *ScanService_HandleScanResultForVulns_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *ScanService_HandleScanResultForVulns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IngestVEXRules provides a mock function for the type ScanService
 func (_mock *ScanService) IngestVEXRules(ctx context.Context, tx shared.DB, asset models.Asset, rules []models.VEXRule) error {
 	ret := _mock.Called(ctx, tx, asset, rules)
@@ -1017,6 +1143,114 @@ func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) Return(merkleForest 
 }
 
 func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)) *ScanService_SyncArtifactUpstreamSBOMSources_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SyncArtifactUpstreamSBOMSourcesIfChanged provides a mock function for the type ScanService
+func (_mock *ScanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncArtifactUpstreamSBOMSourcesIfChanged")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (bool, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) bool); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) error); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncArtifactUpstreamSBOMSourcesIfChanged'
+type ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call struct {
+	*mock.Call
+}
+
+// SyncArtifactUpstreamSBOMSourcesIfChanged is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - artifact models.Artifact
+//   - userID string
+//   - userAgent *string
+func (_e *ScanService_Expecter) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx any, tx any, org any, project any, asset any, assetVersion any, artifact any, userID any, userAgent any) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	return &ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call{Call: _e.mock.On("SyncArtifactUpstreamSBOMSourcesIfChanged", ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)}
+}
+
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string)) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 models.Org
+		if args[2] != nil {
+			arg2 = args[2].(models.Org)
+		}
+		var arg3 models.Project
+		if args[3] != nil {
+			arg3 = args[3].(models.Project)
+		}
+		var arg4 models.Asset
+		if args[4] != nil {
+			arg4 = args[4].(models.Asset)
+		}
+		var arg5 models.AssetVersion
+		if args[5] != nil {
+			arg5 = args[5].(models.AssetVersion)
+		}
+		var arg6 models.Artifact
+		if args[6] != nil {
+			arg6 = args[6].(models.Artifact)
+		}
+		var arg7 string
+		if args[7] != nil {
+			arg7 = args[7].(string)
+		}
+		var arg8 *string
+		if args[8] != nil {
+			arg8 = args[8].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+			arg8,
+		)
+	})
+	return _c
+}
+
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Return(b bool, err error) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error)) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
 	_c.Call.Return(run)
 	return _c
 }

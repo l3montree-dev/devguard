@@ -65,15 +65,15 @@ func LicenseDistribution(components map[string]cyclonedx.Component, componentIDs
 	return counts
 }
 
-func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
-	var componentProject *dtos.ComponentProjectDTO
+func ComponentModelToDTO(m models.Component) dtos.Component {
+	var componentProject *dtos.ComponentProject
 	if m.ComponentProject != nil {
 		var scoreCard map[string]any
 		if m.ComponentProject.ScoreCard != nil {
 			scoreCard = *m.ComponentProject.ScoreCard
 		}
 
-		componentProject = &dtos.ComponentProjectDTO{
+		componentProject = &dtos.ComponentProject{
 			ProjectKey:      m.ComponentProject.ProjectKey,
 			StarsCount:      m.ComponentProject.StarsCount,
 			ForksCount:      m.ComponentProject.ForksCount,
@@ -89,9 +89,9 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 
 	parsed, err := packageurl.FromString(m.ID)
 	if err != nil {
-		return dtos.ComponentDTO{
+		return dtos.Component{
 			Purl:                m.ID,
-			Dependencies:        []dtos.ComponentDependencyDTO{}, // never populated: a component row carries no edges
+			Dependencies:        []dtos.ComponentDependency{}, // never populated: a component row carries no edges
 			ComponentType:       m.ComponentType,
 			Version:             "",
 			License:             m.License,
@@ -101,9 +101,9 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 		}
 	}
 
-	return dtos.ComponentDTO{
+	return dtos.Component{
 		Purl:                m.ID,
-		Dependencies:        []dtos.ComponentDependencyDTO{}, // never populated: a component row carries no edges
+		Dependencies:        []dtos.ComponentDependency{}, // never populated: a component row carries no edges
 		ComponentType:       m.ComponentType,
 		Version:             parsed.Version,
 		License:             m.License,
@@ -113,18 +113,18 @@ func ComponentModelToDTO(m models.Component) dtos.ComponentDTO {
 	}
 }
 
-func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDependencyDTO {
-	return dtos.ComponentDependencyDTO{
+func ComponentDependencyToDTO(m models.ComponentDependency) dtos.ComponentDependency {
+	return dtos.ComponentDependency{
 		ComponentPurl:  m.ComponentID,
 		DependencyPurl: m.DependencyID,
-		Artifacts:      []dtos.ArtifactDTO{}, // Artifacts are now determined via component_id prefix pattern
+		Artifacts:      []dtos.Artifact{}, // Artifacts are now determined via component_id prefix pattern
 		Component:      ComponentModelToDTO(m.Component),
 		Dependency:     ComponentModelToDTO(m.Dependency),
 	}
 }
 
-func ComponentOccurrenceToDTO(m models.ComponentOccurrence) dtos.ComponentOccurrenceDTO {
-	return dtos.ComponentOccurrenceDTO{
+func ComponentOccurrenceToDTO(m models.ComponentOccurrence) dtos.ComponentOccurrence {
+	return dtos.ComponentOccurrence{
 		ComponentDependencyID: m.ComponentDependencyID.String(),
 		DependencyPurl:        m.DependencyPurl,
 		ProjectID:             m.ProjectID.String(),

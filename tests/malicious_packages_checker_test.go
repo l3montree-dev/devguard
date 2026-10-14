@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -125,6 +126,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			eco := dependencyfirewall.EcosystemFromString(tt.ecosystem)
 			components, err := checker.GetMaliciousComponents(context.Background(), tt.ecosystem, tt.pkgName)
 			if tt.error {
 				assert.NotNil(t, err)
@@ -134,7 +136,7 @@ func TestMaliciousPackageChecker(t *testing.T) {
 
 			isMalicious := false
 			for _, comp := range components {
-				if comp.AffectsAllVersions() || vulndb.MatchesVersion(comp, tt.version) {
+				if comp.AffectsAllVersions() || eco.MatchesVersion(comp, tt.version) {
 					isMalicious = true
 					break
 				}

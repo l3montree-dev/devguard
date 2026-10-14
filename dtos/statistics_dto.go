@@ -118,15 +118,15 @@ type History struct {
 	FixedDependencyVulns int `json:"fixedDependencyVulns"`
 }
 
-type RiskHistoryDTO struct {
+type RiskHistory struct {
 	History
 	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
-type RiskHistoryWithVersionDTO struct {
-	RiskHistoryDTO
+type RiskHistoryWithVersion struct {
+	RiskHistory
 	Slug             string `json:"slug"`
 	DefaultBranch    bool   `json:"defaultBranch"`
 	AssetVersionType string `json:"type"`
@@ -272,7 +272,7 @@ type OrgOverview struct {
 	TopEcosystems                  []EcosystemUsage `json:"topEcosystems"`
 
 	MaliciousPackages        []MaliciousPackageInOrg `json:"maliciousPackages"`
-	AverageAgeOfDependencies time.Duration           `json:"averageAgeOfDependencies" swaggertype:"integer"`
+	AverageAgeOfDependencies float64                 `json:"averageAgeOfDependencies"`
 	AverageRemediationTimes  AverageRemediationTimes `json:"averageRemediationTimes"`
 
 	RemediationTypeDistribution RemediationTypeDistribution `json:"remediationTypeDistribution"`
@@ -294,4 +294,5 @@ type InstanceUsageStatistics struct {
 	NumberOfAssetVersions                 int `gorm:"column:number_of_asset_versions"`
 	NumberOfTicketSyncedProjects          int `gorm:"column:number_of_ticket_synced_projects"`
 	NumberOfProjectsWithGitlabIntegration int `gorm:"column:number_of_projects_with_gitlab_integration"`
+	NumberOfAssetsWithSBOM                int `gorm:"column:number_of_assets_with_sbom"`
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/spf13/cobra"
@@ -191,6 +192,12 @@ func convertKyvernoToSARIF(kyvernoResults []kyvernoTestResult) sarif.SarifSchema
 					},
 				},
 				Results: results,
+				Invocations: []sarif.Invocation{
+					{
+						ExecutionSuccessful: true,
+						StartTimeUtc:        new(time.Now().UTC()),
+					},
+				},
 			},
 		},
 	}

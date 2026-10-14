@@ -5,7 +5,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func AdvisoryCreateRequestToModel(c dtos.AdvisoryCreate) models.Advisory {
+func AdvisoryCreateRequestToModel(c dtos.AdvisoryCreateRequest) models.Advisory {
 
 	components := make([]models.AffectedPackage, len(c.AffectedPackages))
 	for i, asset := range c.AffectedPackages {
@@ -25,7 +25,7 @@ func AdvisoryCreateRequestToModel(c dtos.AdvisoryCreate) models.Advisory {
 	}
 }
 
-func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdate, advisory models.Advisory) models.Advisory {
+func AdvisoryUpdateRequestToModel(c dtos.AdvisoryUpdateRequest, advisory models.Advisory) models.Advisory {
 	if c.Title != nil {
 		advisory.Title = *c.Title
 	}
