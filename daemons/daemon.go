@@ -92,6 +92,14 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	return nil
 }
 
+func (runner *DaemonRunner) RunScanDaemon(ctx context.Context) error {
+	if err := runner.ScanAllAssets(ctx); err != nil {
+		slog.Error("failed to run scan daemon", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) error {
 	if err := runner.externalEntityProviderService.CollectGarbage(ctx); err != nil {
 		slog.Error("failed to collect external entity garbage", "error", err)

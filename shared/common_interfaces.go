@@ -49,6 +49,7 @@ type DaemonRunner interface {
 	RunVEXRuleRecommendationDaemon(ctx context.Context) error
 	CollectSBOMGarbage(ctx context.Context) error
 	CollectExternalEntityGarbage(ctx context.Context) error
+	RunScanDaemon(ctx context.Context) error
 
 	Start(ctx context.Context)
 	StartBenchmarkJobs(ctx context.Context, stages []string)

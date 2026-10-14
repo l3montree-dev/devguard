@@ -279,6 +279,14 @@ func triggerDaemon(selectedDaemons []string) error {
 				}
 				slog.Info("component properties updated", "duration", time.Since(start))
 			}
+			if emptyOrContains(selectedDaemons, "scan") {
+				start = time.Now()
+				if err := runner.RunScanDaemon(context.Background()); err != nil {
+					slog.Error("could not run scan daemon", "err", err)
+					return
+				}
+				slog.Info("scan daemon completed", "duration", time.Since(start))
+			}
 
 			if emptyOrContains(selectedDaemons, "assetPipeline") {
 				start = time.Now()
