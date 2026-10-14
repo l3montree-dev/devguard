@@ -43,6 +43,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var openSourceInsightService = services.NewOpenSourceInsightService()
+
 func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM, svc shared.OpenSourceInsightService) error {
 	if config.RuntimeBaseConfig.UpstreamPURL != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -643,7 +645,7 @@ func scanExternalImage(ctx context.Context) error {
 		return err
 	}
 
-	err = addSupplementaryUpstreamPURLManually(bom, services.NewOpenSourceInsightService())
+	err = addSupplementaryUpstreamPURLManually(bom, openSourceInsightService)
 	if err != nil {
 		return err
 	}
@@ -825,7 +827,7 @@ func scanLocalFilePath(ctx context.Context) error {
 			return err
 		}
 
-		err = addSupplementaryUpstreamPURLManually(bom, services.NewOpenSourceInsightService())
+		err = addSupplementaryUpstreamPURLManually(bom, openSourceInsightService)
 		if err != nil {
 			return err
 		}
