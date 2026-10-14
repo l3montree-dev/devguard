@@ -792,7 +792,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 	return nil
 }
 
-func (i *JiraIntegration) GetUsers(org models.Org) []dtos.UserDTO {
+func (i *JiraIntegration) GetUsers(org models.Org) []dtos.User {
 	// Jira integration does not have users in the same way as GitLab or GitHub
 	return nil
 }
@@ -840,7 +840,7 @@ func (i *JiraIntegration) TestAndSave(ctx shared.Context) error {
 	if err := i.jiraIntegrationRepository.Save(context.Background(), nil, jiraIntegration); err != nil {
 		return err
 	}
-	return ctx.JSON(200, dtos.JiraIntegrationDTO{
+	return ctx.JSON(200, dtos.JiraIntegration{
 		ID:              jiraIntegration.ID.String(),
 		Name:            jiraIntegration.Name,
 		URL:             jiraIntegration.URL,

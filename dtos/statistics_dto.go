@@ -118,15 +118,15 @@ type History struct {
 	FixedDependencyVulns int `json:"fixedDependencyVulns"`
 }
 
-type RiskHistoryDTO struct {
+type RiskHistory struct {
 	History
 	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 }
 
-type RiskHistoryWithVersionDTO struct {
-	RiskHistoryDTO
+type RiskHistoryWithVersion struct {
+	RiskHistory
 	Slug             string `json:"slug"`
 	DefaultBranch    bool   `json:"defaultBranch"`
 	AssetVersionType string `json:"type"`

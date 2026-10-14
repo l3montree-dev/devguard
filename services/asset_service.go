@@ -190,7 +190,7 @@ func (s *assetService) GetCVSSBadgeSVG(ctx context.Context, latest *models.Artif
 
 }
 
-func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
+func FetchMembersOfAsset(ctx shared.Context) ([]dtos.User, error) {
 	asset := shared.GetAsset(ctx)
 	// get rbac
 	rbac := shared.GetRBAC(ctx)
@@ -200,7 +200,7 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 	if len(members) == 0 {
-		return []dtos.UserDTO{}, nil
+		return []dtos.User{}, nil
 	}
 
 	// get the auth admin client from the context
@@ -212,16 +212,16 @@ func FetchMembersOfAsset(ctx shared.Context) ([]dtos.UserDTO, error) {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
-	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
+	users := utils.Map(m, func(i client.Identity) dtos.User {
 		name := shared.IdentityName(i.Traits)
 		role, err := rbac.GetAssetRole(i.Id, asset.ID.String())
 		if err != nil {
-			return dtos.UserDTO{
+			return dtos.User{
 				ID:   i.Id,
 				Name: name,
 			}
 		}
-		return dtos.UserDTO{
+		return dtos.User{
 			ID:   i.Id,
 			Name: name,
 			Role: string(role),

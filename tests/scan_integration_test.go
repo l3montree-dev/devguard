@@ -24,7 +24,7 @@ import (
 )
 
 // Helper to extract artifact names from []models.Artifact
-func getArtifactNames(artifacts []dtos.ArtifactDTO) []string {
+func getArtifactNames(artifacts []dtos.Artifact) []string {
 	names := make([]string, 0, len(artifacts))
 	for _, a := range artifacts {
 		names = append(names, a.ArtifactName)

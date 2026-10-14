@@ -788,12 +788,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 		// find the member which created the event
 		member, ok := utils.Find(
 			members,
-			func(member dtos.UserDTO) bool {
+			func(member dtos.User) bool {
 				return member.ID == ev.UserID
 			},
 		)
 		if !ok {
-			member = dtos.UserDTO{
+			member = dtos.User{
 				Name: "unknown",
 			}
 		}

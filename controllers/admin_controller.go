@@ -382,17 +382,17 @@ func (controller *AdminController) GetInstanceSettings(ctx shared.Context) error
 // A missing setting is a valid, unconfigured state for a fresh instance, not an error.
 // @Summary Get public instance settings
 // @Tags Admin
-// @Success 200 {object} dtos.InstanceSettingsDTO
+// @Success 200 {object} dtos.InstanceSettings
 // @Router /instance-settings [get]
 func (controller *AdminController) InstanceSettingsPublic(ctx shared.Context) error {
 	settings, err := controller.configService.GetInstanceSettings(ctx.Request().Context())
 	if err != nil {
-		return ctx.JSON(200, dtos.InstanceSettingsDTO{})
+		return ctx.JSON(200, dtos.InstanceSettings{})
 	}
 
-	gitlabOAuthConfigs := make([]dtos.GitlabOauth2ConfigDTO, 0, len(controller.gitlabOAuth2))
+	gitlabOAuthConfigs := make([]dtos.GitlabOauth2Config, 0, len(controller.gitlabOAuth2))
 	for _, config := range controller.gitlabOAuth2 {
-		gitlabOAuthConfigs = append(gitlabOAuthConfigs, dtos.GitlabOauth2ConfigDTO{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
+		gitlabOAuthConfigs = append(gitlabOAuthConfigs, dtos.GitlabOauth2Config{ProviderID: config.ProviderID, GitlabBaseURL: config.GitlabBaseURL})
 	}
 
 	return ctx.JSON(200, transformer.InstanceSettingsToDTO(settings, gitlabOAuthConfigs))
@@ -660,7 +660,7 @@ func extractMailFromRequest(ctx shared.Context) (string, error) {
 // @Param search query string false "Search term"
 // @Param sort query string false "Sort query, e.g. sort[createdAt]=desc"
 // @Param filterQuery query string false "Filter query, e.g. filterQuery[logs.log_level][is]=error"
-// @Success 200 {object} shared.Paged[dtos.LogDTO]
+// @Success 200 {object} shared.Paged[dtos.Log]
 // @Router /admin/logs/ [get]
 func (controller *AdminController) GetLogs(ctx shared.Context) error {
 

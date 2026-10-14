@@ -1,13 +1,13 @@
 package dtos
 
-type GitlabIntegrationDTO struct {
+type GitlabIntegration struct {
 	Name            string `json:"name"`
 	ID              string `json:"id"`
 	URL             string `json:"url"`
 	ObfuscatedToken string `json:"obfuscatedToken"`
 }
 
-type JiraIntegrationDTO struct {
+type JiraIntegration struct {
 	Name            string `json:"name"`
 	ID              string `json:"id"`
 	URL             string `json:"url"`
@@ -15,7 +15,7 @@ type JiraIntegrationDTO struct {
 	UserEmail       string `json:"userEmail"`
 }
 
-type WebhookIntegrationDTO struct {
+type WebhookIntegration struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

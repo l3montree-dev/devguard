@@ -116,8 +116,8 @@ func ApplyOrgPatchRequestToModel(p dtos.OrgPatchRequest, org *models.Org) bool {
 
 }
 
-func obfuscateGitLabIntegrations(integration models.GitLabIntegration) dtos.GitlabIntegrationDTO {
-	return dtos.GitlabIntegrationDTO{
+func obfuscateGitLabIntegrations(integration models.GitLabIntegration) dtos.GitlabIntegration {
+	return dtos.GitlabIntegration{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
@@ -125,8 +125,8 @@ func obfuscateGitLabIntegrations(integration models.GitLabIntegration) dtos.Gitl
 	}
 }
 
-func obfuscateJiraIntegrations(integration models.JiraIntegration) dtos.JiraIntegrationDTO {
-	return dtos.JiraIntegrationDTO{
+func obfuscateJiraIntegrations(integration models.JiraIntegration) dtos.JiraIntegration {
+	return dtos.JiraIntegration{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
@@ -135,8 +135,8 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) dtos.JiraInte
 	}
 }
 
-func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.WebhookIntegrationDTO {
-	return dtos.WebhookIntegrationDTO{
+func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.WebhookIntegration {
+	return dtos.WebhookIntegration{
 		ID:          integration.ID.String(),
 		Name:        *integration.Name,
 		Description: *integration.Description,
@@ -146,8 +146,8 @@ func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.We
 	}
 }
 
-func GithubAppInstallationToDTO(g models.GithubAppInstallation) dtos.GithubAppInstallationDTO {
-	return dtos.GithubAppInstallationDTO{
+func GithubAppInstallationToDTO(g models.GithubAppInstallation) dtos.GithubAppInstallation {
+	return dtos.GithubAppInstallation{
 		InstallationID:                         g.InstallationID,
 		OrgID:                                  *g.OrgID,
 		InstallationCreatedWebhookReceivedTime: g.InstallationCreatedWebhookReceivedTime,
@@ -158,8 +158,8 @@ func GithubAppInstallationToDTO(g models.GithubAppInstallation) dtos.GithubAppIn
 	}
 }
 
-func OrgDTOFromModel(org models.Org) dtos.OrgDTO {
-	return dtos.OrgDTO{
+func OrgDTOFromModel(org models.Org) dtos.Org {
+	return dtos.Org{
 		ID:                       org.ID,
 		CreatedAt:                org.CreatedAt,
 		UpdatedAt:                org.UpdatedAt,
@@ -186,10 +186,10 @@ func OrgDTOFromModel(org models.Org) dtos.OrgDTO {
 	}
 }
 
-func OrgSettingsDTOFromModel(org models.Org, members []dtos.UserDTO) dtos.OrgSettingsDTO {
-	return dtos.OrgSettingsDTO{
-		OrgDetailsDTO: dtos.OrgDetailsDTO{
-			OrgDTO:  OrgDTOFromModel(org),
+func OrgSettingsDTOFromModel(org models.Org, members []dtos.User) dtos.OrgSettings {
+	return dtos.OrgSettings{
+		OrgDetails: dtos.OrgDetails{
+			Org:     OrgDTOFromModel(org),
 			Members: members,
 		},
 		Webhooks: utils.Map(org.Webhooks, obfuscateWebhookIntegrations),

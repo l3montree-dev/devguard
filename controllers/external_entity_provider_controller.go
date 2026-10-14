@@ -31,7 +31,7 @@ func NewExternalEntityProviderController(service shared.ExternalEntityProviderSe
 // @Tags Organizations
 // @Security CookieAuth
 // @Security PATAuth
-// @Success 200 {array} dtos.OrgDTO
+// @Success 200 {array} dtos.Org
 // @Router /trigger-sync [get]
 func (e *ExternalEntityProviderController) TriggerOrgSync(c shared.Context) error {
 	return e.service.TriggerOrgSync(c)

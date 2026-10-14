@@ -33,34 +33,34 @@ const (
 	SeverityInfo     Severity = "info"
 )
 
-type RelationshipDTO struct {
+type Relationship struct {
 	RelationshipType string `json:"relationshipType"`
 	TargetCVE        string `json:"targetCve"`
 }
 
-type CVEDTO struct {
-	CVE                   string                 `json:"cve"`
-	CreatedAt             time.Time              `json:"createdAt"`
-	UpdatedAt             time.Time              `json:"updatedAt"`
-	DatePublished         time.Time              `json:"datePublished"`
-	DateLastModified      time.Time              `json:"dateLastModified"`
-	Description           string                 `json:"description"`
-	CVSS                  float32                `json:"cvss"`
-	References            string                 `json:"references"`
-	CISAExploitAdd        *datatypes.Date        `json:"cisaExploitAdd" swaggertype:"string" format:"date"`
-	CISAActionDue         *datatypes.Date        `json:"cisaActionDue" swaggertype:"string" format:"date"`
-	CISARequiredAction    *string                `json:"cisaRequiredAction"`
-	CISAVulnerabilityName *string                `json:"cisaVulnerabilityName"`
-	EPSS                  *float64               `json:"epss"`
-	Percentile            *float32               `json:"percentile"`
-	Vector                string                 `json:"vector"`
-	Risk                  RiskMetrics            `json:"risk"`
-	Exploits              []ExploitDTO           `json:"exploits"`
-	Relationships         []RelationshipDTO      `json:"relationships"`
-	EUVDExploitAdd        *datatypes.Date        `json:"euvdExploitAdd" format:"date"`
-	AffectedComponents    []AffectedComponentDTO `json:"affectedComponents"`
-	Withdrawn             *datatypes.Date        `json:"withdrawn"`
-	CWEs                  []string               `json:"cwes"`
+type CVE struct {
+	CVE                   string              `json:"cve"`
+	CreatedAt             time.Time           `json:"createdAt"`
+	UpdatedAt             time.Time           `json:"updatedAt"`
+	DatePublished         time.Time           `json:"datePublished"`
+	DateLastModified      time.Time           `json:"dateLastModified"`
+	Description           string              `json:"description"`
+	CVSS                  float32             `json:"cvss"`
+	References            string              `json:"references"`
+	CISAExploitAdd        *datatypes.Date     `json:"cisaExploitAdd" swaggertype:"string" format:"date"`
+	CISAActionDue         *datatypes.Date     `json:"cisaActionDue" swaggertype:"string" format:"date"`
+	CISARequiredAction    *string             `json:"cisaRequiredAction"`
+	CISAVulnerabilityName *string             `json:"cisaVulnerabilityName"`
+	EPSS                  *float64            `json:"epss"`
+	Percentile            *float32            `json:"percentile"`
+	Vector                string              `json:"vector"`
+	Risk                  RiskMetrics         `json:"risk"`
+	Exploits              []Exploit           `json:"exploits"`
+	Relationships         []Relationship      `json:"relationships"`
+	EUVDExploitAdd        *datatypes.Date     `json:"euvdExploitAdd" format:"date"`
+	AffectedComponents    []AffectedComponent `json:"affectedComponents"`
+	Withdrawn             *datatypes.Date     `json:"withdrawn"`
+	CWEs                  []string            `json:"cwes"`
 }
 
 type VulnState string
@@ -78,7 +78,7 @@ const (
 	VulnStateWithdrawn         VulnState = "withdrawn"     // for advisory
 )
 
-type ExploitDTO struct {
+type Exploit struct {
 	ID          string     `json:"id"`
 	Published   *time.Time `json:"pushed_at"`
 	Updated     *time.Time `json:"updated_at"`
@@ -95,25 +95,25 @@ type ExploitDTO struct {
 	Stars       int        `json:"stargazers_count"`
 }
 
-type DependencyVulnDTO struct {
-	ID                           uuid.UUID     `json:"id"`
-	AssetVersionName             string        `json:"assetVersionId"`
-	AssetID                      string        `json:"assetId"`
-	State                        VulnState     `json:"state"`
-	CVE                          *CVEDTO       `json:"cve"`
-	CVEID                        string        `json:"cveID"`
-	ComponentPurl                string        `json:"componentPurl"`
-	ComponentFixedVersion        *string       `json:"componentFixedVersion"`
-	VulnerabilityPath            []string      `json:"vulnerabilityPath"`
-	DirectDependencyFixedVersion *string       `json:"directDependencyFixedVersion"`
-	RiskAssessment               *float64      `json:"riskAssessment"`
-	LastStateChange              time.Time     `json:"lastStateChange"`
-	CreatedAt                    time.Time     `json:"createdAt"`
-	TicketID                     *string       `json:"ticketId"`
-	TicketURL                    *string       `json:"ticketUrl"`
-	ManualTicketCreation         bool          `json:"manualTicketCreation"`
-	Artifacts                    []ArtifactDTO `json:"artifacts"`
-	Exploits                     []ExploitDTO  `json:"exploits"`
+type DependencyVuln struct {
+	ID                           uuid.UUID  `json:"id"`
+	AssetVersionName             string     `json:"assetVersionId"`
+	AssetID                      string     `json:"assetId"`
+	State                        VulnState  `json:"state"`
+	CVE                          *CVE       `json:"cve"`
+	CVEID                        string     `json:"cveID"`
+	ComponentPurl                string     `json:"componentPurl"`
+	ComponentFixedVersion        *string    `json:"componentFixedVersion"`
+	VulnerabilityPath            []string   `json:"vulnerabilityPath"`
+	DirectDependencyFixedVersion *string    `json:"directDependencyFixedVersion"`
+	RiskAssessment               *float64   `json:"riskAssessment"`
+	LastStateChange              time.Time  `json:"lastStateChange"`
+	CreatedAt                    time.Time  `json:"createdAt"`
+	TicketID                     *string    `json:"ticketId"`
+	TicketURL                    *string    `json:"ticketUrl"`
+	ManualTicketCreation         bool       `json:"manualTicketCreation"`
+	Artifacts                    []Artifact `json:"artifacts"`
+	Exploits                     []Exploit  `json:"exploits"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 
@@ -121,37 +121,37 @@ type DependencyVulnDTO struct {
 	AssetSignature int64 `json:"assetSignature,string"`
 }
 
-func (d DependencyVulnDTO) GetCVE() CVEDTO {
+func (d DependencyVuln) GetCVE() CVE {
 	if d.CVE == nil {
-		return CVEDTO{}
+		return CVE{}
 	}
 	return *d.CVE
 }
 
-type DetailedDependencyVulnDTO struct {
-	DependencyVulnDTO
-	Events []VulnEventDTO `json:"events"`
+type DetailedDependencyVuln struct {
+	DependencyVuln
+	Events []VulnEvent `json:"events"`
 }
 
 type CreateEventRequest struct {
-	StatusType              string                      `json:"status"`
+	StatusType              string                      `json:"status" validate:"max=256"`
 	Justification           string                      `json:"justification" validate:"max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-type BatchDependencyVulnStatus struct {
+type BatchDependencyVulnStatusRequest struct {
 	VulnIDs                 []uuid.UUID                 `json:"vulnIds"`
-	StatusType              string                      `json:"status"`
+	StatusType              string                      `json:"status" validate:"max=256"`
 	Justification           string                      `json:"justification" validate:"max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-type DetailedDependencyVulnWithRelationsDTO struct {
-	DetailedDependencyVulnDTO
-	Related map[RelationshipType][]CVEDTO `json:"related"`
+type DetailedDependencyVulnWithRelations struct {
+	DetailedDependencyVuln
+	Related map[RelationshipType][]CVE `json:"related"`
 }
 
-type CVEWithRelationsDTO struct {
-	CVEDTO
-	Related map[RelationshipType][]CVEDTO `json:"related"`
+type CVEWithRelations struct {
+	CVE
+	Related map[RelationshipType][]CVE `json:"related"`
 }

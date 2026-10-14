@@ -939,7 +939,7 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 		}
 	}
 
-	var vulns []dtos.FirstPartyVulnDTO
+	var vulns []dtos.FirstPartyVuln
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
 			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, string(result.Kind)) {
@@ -951,7 +951,7 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 				ruleProperties = rule.Properties.AdditionalProperties
 			}
 			msg := utils.OrDefault(&result.Message.Text, "")
-			vuln := dtos.FirstPartyVulnDTO{
+			vuln := dtos.FirstPartyVuln{
 				ScannerIDs:      scannerID,
 				RuleID:          utils.OrDefault(result.RuleID, ""),
 				RuleName:        utils.OrDefault(rule.Name, ""),
@@ -981,7 +981,7 @@ func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sari
 	}
 
 	if vulns == nil {
-		vulns = []dtos.FirstPartyVulnDTO{}
+		vulns = []dtos.FirstPartyVuln{}
 	}
 
 	return dtos.FirstPartyScanResponse{
@@ -1003,11 +1003,11 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 		return dtos.ScanResponse{}, err
 	}
 
-	vulnDTOs := make([]dtos.DependencyVulnDTO, 0, len(vulns))
+	vulnDTOs := make([]dtos.DependencyVuln, 0, len(vulns))
 	for _, v := range vulns {
 		dependencyVulns := transformer.VulnInPackageToDependencyVulnsWithoutArtifact(v, normalized, uuid.Nil, "")
 		for _, dv := range dependencyVulns {
-			vulnDTOs = append(vulnDTOs, dtos.DependencyVulnDTO{
+			vulnDTOs = append(vulnDTOs, dtos.DependencyVuln{
 				CVEID:                 dv.CVEID,
 				CVE:                   utils.PtrMap(dv.CVE, transformer.CVEToDTO),
 				ComponentPurl:         dv.ComponentPurl,

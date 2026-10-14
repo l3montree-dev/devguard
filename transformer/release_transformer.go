@@ -21,8 +21,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func ReleaseItemToDTO(i models.ReleaseItem) dtos.ReleaseItemDTO {
-	return dtos.ReleaseItemDTO{
+func ReleaseItemToDTO(i models.ReleaseItem) dtos.ReleaseItem {
+	return dtos.ReleaseItem{
 		ID:               i.ID,
 		ReleaseID:        i.ReleaseID,
 		ChildReleaseID:   i.ChildReleaseID,
@@ -38,8 +38,8 @@ func ReleaseItemToDTO(i models.ReleaseItem) dtos.ReleaseItemDTO {
 	}
 }
 
-func ReleaseToDTO(r models.Release) dtos.ReleaseDTO {
-	dto := dtos.ReleaseDTO{
+func ReleaseToDTO(r models.Release) dtos.Release {
+	dto := dtos.Release{
 		ID:        r.ID,
 		CreatedAt: r.CreatedAt,
 		UpdatedAt: r.UpdatedAt,

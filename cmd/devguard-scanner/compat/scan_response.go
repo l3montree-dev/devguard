@@ -64,27 +64,27 @@ type FirstPartyVulnDTO struct {
 }
 
 type DependencyVulnDTO struct {
-	Message                      *string            `json:"message"`
-	AssetVersionName             string             `json:"assetVersionId"`
-	AssetID                      string             `json:"assetId"`
-	State                        dtos.VulnState     `json:"state"`
-	CVE                          dtos.CVEDTO        `json:"cve"`
-	CVEID                        string             `json:"cveID"`
-	ComponentPurl                string             `json:"componentPurl"`
-	ComponentFixedVersion        *string            `json:"componentFixedVersion"`
-	VulnerabilityPath            []string           `json:"vulnerabilityPath"`
-	DirectDependencyFixedVersion *string            `json:"directDependencyFixedVersion"`
-	Effort                       *int               `json:"effort"`
-	RiskAssessment               *int               `json:"riskAssessment"`
-	RawRiskAssessment            *float64           `json:"rawRiskAssessment"`
-	Priority                     *int               `json:"priority"`
-	LastDetected                 time.Time          `json:"lastDetected"`
-	CreatedAt                    time.Time          `json:"createdAt"`
-	TicketID                     *string            `json:"ticketId"`
-	TicketURL                    *string            `json:"ticketUrl"`
-	ManualTicketCreation         bool               `json:"manualTicketCreation"`
-	Artifacts                    []dtos.ArtifactDTO `json:"artifacts"`
-	Exploits                     []dtos.ExploitDTO  `json:"exploits"`
+	Message                      *string         `json:"message"`
+	AssetVersionName             string          `json:"assetVersionId"`
+	AssetID                      string          `json:"assetId"`
+	State                        dtos.VulnState  `json:"state"`
+	CVE                          dtos.CVE        `json:"cve"`
+	CVEID                        string          `json:"cveID"`
+	ComponentPurl                string          `json:"componentPurl"`
+	ComponentFixedVersion        *string         `json:"componentFixedVersion"`
+	VulnerabilityPath            []string        `json:"vulnerabilityPath"`
+	DirectDependencyFixedVersion *string         `json:"directDependencyFixedVersion"`
+	Effort                       *int            `json:"effort"`
+	RiskAssessment               *int            `json:"riskAssessment"`
+	RawRiskAssessment            *float64        `json:"rawRiskAssessment"`
+	Priority                     *int            `json:"priority"`
+	LastDetected                 time.Time       `json:"lastDetected"`
+	CreatedAt                    time.Time       `json:"createdAt"`
+	TicketID                     *string         `json:"ticketId"`
+	TicketURL                    *string         `json:"ticketUrl"`
+	ManualTicketCreation         bool            `json:"manualTicketCreation"`
+	Artifacts                    []dtos.Artifact `json:"artifacts"`
+	Exploits                     []dtos.Exploit  `json:"exploits"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }

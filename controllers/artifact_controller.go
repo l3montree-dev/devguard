@@ -79,7 +79,7 @@ type ArtifactRequest struct {
 }
 
 type ArtifactUpdateResponse struct {
-	Artifact    dtos.ArtifactDTO              `json:"artifact"`
+	Artifact    dtos.Artifact                 `json:"artifact"`
 	InvalidURLs []dtos.ExternalReferenceError `json:"invalidURLs"`
 }
 
@@ -104,7 +104,7 @@ func informationSourceToString(source informationSource) string {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param body body controllers.ArtifactRequest true "Artifact data"
-// @Success 201 {object} dtos.ArtifactDTO
+// @Success 201 {object} dtos.Artifact
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [post]
 func (c *ArtifactController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)

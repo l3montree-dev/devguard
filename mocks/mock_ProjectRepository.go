@@ -1330,22 +1330,22 @@ func (_c *ProjectRepository_ListPaged_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // ListSubProjectsAndAssets provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) ListSubProjectsAndAssets(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectAssetDTO], error) {
+func (_mock *ProjectRepository) ListSubProjectsAndAssets(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectAsset], error) {
 	ret := _mock.Called(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListSubProjectsAndAssets")
 	}
 
-	var r0 shared.Paged[dtos.ProjectAssetDTO]
+	var r0 shared.Paged[dtos.ProjectAsset]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.ProjectAssetDTO], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.ProjectAsset], error)); ok {
 		return returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.ProjectAssetDTO]); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.ProjectAsset]); ok {
 		r0 = returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(shared.Paged[dtos.ProjectAssetDTO])
+		r0 = ret.Get(0).(shared.Paged[dtos.ProjectAsset])
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string, []uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
 		r1 = returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
@@ -1433,12 +1433,12 @@ func (_c *ProjectRepository_ListSubProjectsAndAssets_Call) Run(run func(ctx cont
 	return _c
 }
 
-func (_c *ProjectRepository_ListSubProjectsAndAssets_Call) Return(paged shared.Paged[dtos.ProjectAssetDTO], err error) *ProjectRepository_ListSubProjectsAndAssets_Call {
+func (_c *ProjectRepository_ListSubProjectsAndAssets_Call) Return(paged shared.Paged[dtos.ProjectAsset], err error) *ProjectRepository_ListSubProjectsAndAssets_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *ProjectRepository_ListSubProjectsAndAssets_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectAssetDTO], error)) *ProjectRepository_ListSubProjectsAndAssets_Call {
+func (_c *ProjectRepository_ListSubProjectsAndAssets_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectAsset], error)) *ProjectRepository_ListSubProjectsAndAssets_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1818,22 +1818,22 @@ func (_c *ProjectRepository_RecursivelyGetChildProjects_Call) RunAndReturn(run f
 }
 
 // SearchProjectsWithSubProjectsAndAssetsPaged provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
+func (_mock *ProjectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Project], error) {
 	ret := _mock.Called(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SearchProjectsWithSubProjectsAndAssetsPaged")
 	}
 
-	var r0 shared.Paged[dtos.ProjectDTO]
+	var r0 shared.Paged[dtos.Project]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.Project], error)); ok {
 		return returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.ProjectDTO]); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.Project]); ok {
 		r0 = returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(shared.Paged[dtos.ProjectDTO])
+		r0 = ret.Get(0).(shared.Paged[dtos.Project])
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string, []string, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
 		r1 = returnFunc(ctx, tx, allowedAssetIDs, allowedProjectIDs, parentID, orgID, pageInfo, search, filter, sort)
@@ -1921,12 +1921,12 @@ func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Ru
 	return _c
 }
 
-func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Return(paged shared.Paged[dtos.ProjectDTO], err error) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) Return(paged shared.Paged[dtos.Project], err error) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error)) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
+func (_c *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Project], error)) *ProjectRepository_SearchProjectsWithSubProjectsAndAssetsPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -26,25 +26,25 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func AssetModelsToDTOs(assets []models.Asset) []dtos.AssetDTO {
-	assetDTOs := make([]dtos.AssetDTO, len(assets))
+func AssetModelsToDTOs(assets []models.Asset) []dtos.Asset {
+	assetDTOs := make([]dtos.Asset, len(assets))
 	for i, asset := range assets {
 		assetDTOs[i] = AssetModelToDTO(asset)
 	}
 	return assetDTOs
 }
 
-func AssetModelToDetailsDTO(asset models.Asset, members []dtos.UserDTO) dtos.AssetDetailsDTO {
-	return dtos.AssetDetailsDTO{
-		AssetDTO: AssetModelToDTO(asset),
-		Members:  members,
+func AssetModelToDetailsDTO(asset models.Asset, members []dtos.User) dtos.AssetDetails {
+	return dtos.AssetDetails{
+		Asset:   AssetModelToDTO(asset),
+		Members: members,
 	}
 }
 
-func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDTO) dtos.AssetDetailsWithSecretsDTO {
-	return dtos.AssetDetailsWithSecretsDTO{
-		AssetWithSecretsDTO: toDTOWithSecrets(asset),
-		Members:             members,
+func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.User) dtos.AssetDetailsWithSecrets {
+	return dtos.AssetDetailsWithSecrets{
+		AssetWithSecrets: toDTOWithSecrets(asset),
+		Members:          members,
 	}
 }
 
@@ -58,14 +58,14 @@ func getBotUserLinkForExternalProvider(providerID string) *string {
 	return nil
 }
 
-func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
+func AssetModelToDTO(asset models.Asset) dtos.Asset {
 	// if its an external provider
 	var botUserLink *string
 	if asset.ExternalEntityProviderID != nil {
 		// we can inspect the env variables to get the bot user link for the external provider
 		botUserLink = getBotUserLinkForExternalProvider(*asset.ExternalEntityProviderID)
 	}
-	return dtos.AssetDTO{
+	return dtos.Asset{
 		ID:                           asset.ID,
 		Name:                         asset.Name,
 		Avatar:                       asset.Avatar,
@@ -92,9 +92,9 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 	}
 }
 
-func toDTOWithSecrets(asset models.Asset) dtos.AssetWithSecretsDTO {
-	return dtos.AssetWithSecretsDTO{
-		AssetDTO:      AssetModelToDTO(asset),
+func toDTOWithSecrets(asset models.Asset) dtos.AssetWithSecrets {
+	return dtos.AssetWithSecrets{
+		Asset:         AssetModelToDTO(asset),
 		WebhookSecret: asset.WebhookSecret,
 	}
 }
