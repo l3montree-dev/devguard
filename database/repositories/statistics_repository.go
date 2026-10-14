@@ -643,7 +643,10 @@ func (r *statisticsRepository) GetInstanceUsageStatistics(ctx context.Context, t
         (SELECT COUNT(*) FROM public.asset_versions) AS number_of_asset_versions,
         (SELECT COUNT(*) FROM public.projects
             WHERE external_entity_id IS NOT NULL
-            AND external_entity_provider_id IN ('gitlab','opencode')) AS number_of_projects_with_gitlab_integration
+            AND external_entity_provider_id IN ('gitlab','opencode')) AS number_of_projects_with_gitlab_integration,
+		(SELECT COUNT(*) FROM public.assets
+        	WHERE EXISTS (SELECT FROM sboms WHERE sboms.asset_id = assets.id) 
+			AND assets.state = 'active') AS number_of_assets_with_sbom
 	`).First(&instanceStatistics).Error
 	if err != nil {
 		return instanceStatistics, fmt.Errorf("could not fetch instance usage statistics: %w", err)
