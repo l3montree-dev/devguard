@@ -95,8 +95,7 @@ func (service *VulnDBService) ExportRC(ctx context.Context) error {
 func (service *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
 	slog.Info("quick-diff: importing previous artifact to establish baseline")
 	if err := service.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
-		slog.Info("quick-diff: failed to import previous artifact, proceeding with export without diff", "error", err)
-		return service.exportRC(ctx, false)
+		return fmt.Errorf("could not import previous artifact for quick-diff: %w", err)
 	}
 	return service.exportRC(ctx, true)
 }
