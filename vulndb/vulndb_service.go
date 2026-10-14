@@ -51,7 +51,7 @@ type VulnDBService struct {
 	configService     shared.ConfigService
 	pool              *pgxpool.Pool
 	ghVexFetcher      shared.GitHubVexFetcher
-	riverInstance     events.Broker
+	broker            events.Broker
 }
 
 func NewVulnDBService(
@@ -77,7 +77,7 @@ func NewVulnDBService(
 		configService:     configService,
 		pool:              pool,
 		ghVexFetcher:      ghVexFetcher,
-		riverInstance:     riverInstance,
+		broker:            riverInstance,
 	}
 }
 
@@ -568,7 +568,9 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 	}
 	slog.Info("refreshed cve_ecosystem", "took", time.Since(refreshStart))
 
-	service.riverInstance.Publish(ctx, events.VulnDBUpdated, nil)
+	if err := service.broker.Publish(ctx, events.VulnDBUpdated, nil); err != nil {
+		slog.Warn("could not publish sucessful vulndb import")
+	}
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
 }

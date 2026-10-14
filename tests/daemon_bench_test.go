@@ -403,7 +403,7 @@ func (offline *offlineIntegrationAggregate) GetIntegration(id shared.Integration
 	return offline
 }
 
-func (offline *offlineIntegrationAggregate) GetUsers(org models.Org) []dtos.UserDTO {
+func (offline *offlineIntegrationAggregate) GetUsers(org models.Org) []dtos.User {
 	return nil
 }
 

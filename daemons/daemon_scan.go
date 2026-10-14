@@ -163,7 +163,7 @@ func (runner *DaemonRunner) ScanAllAssets(ctx context.Context) error {
 	}
 	// the scan session is closed instead of reused, ending it releases the advisory lock, drops the temp tables and rolls back whatever an aborted run left open
 	defer func() {
-		conn.Conn().Close(context.Background())
+		conn.Conn().Close(ctx)
 		conn.Release()
 	}()
 

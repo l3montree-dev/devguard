@@ -110,7 +110,6 @@ func (b *PostgreSQLBroker) Subscribe(topic PubSubTopic, handler SubscribeHandler
 
 	// Add channel to subscribers list
 	if _, exists := b.subscribers[topic]; !exists {
-
 		ctx := context.Background()
 		ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
@@ -132,11 +131,11 @@ func (b *PostgreSQLBroker) Subscribe(topic PubSubTopic, handler SubscribeHandler
 				handler,
 			},
 		}
-	}
-
-	b.subscribers[topic] = ListeningConnection{
-		Conn:        b.subscribers[topic].Conn,
-		Subscribers: append(b.subscribers[topic].Subscribers, handler),
+	} else {
+		b.subscribers[topic] = ListeningConnection{
+			Conn:        b.subscribers[topic].Conn,
+			Subscribers: append(b.subscribers[topic].Subscribers, handler),
+		}
 	}
 
 	return nil
