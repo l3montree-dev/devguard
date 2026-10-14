@@ -28,11 +28,14 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 
@@ -40,8 +43,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
+func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM, svc shared.OpenSourceInsightService) error {
 	if config.RuntimeBaseConfig.UpstreamPURL != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		for i, upstreamPurl := range config.RuntimeBaseConfig.UpstreamPURL {
 			upstreamPURL, err := packageurl.FromString(upstreamPurl)
 			if err != nil {
@@ -50,6 +56,13 @@ func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
 			if upstreamPURL.Version == "" {
 				return fmt.Errorf("invalid --upstreamPURL %q: it should contain a version", upstreamPurl)
 			}
+			if _, err := svc.GetVersion(ctx, upstreamPURL); err != nil {
+				slog.Warn("could not resolve and verify upstreamPURL, there might be a typo or it may not exist", "upstreamPURL", upstreamPurl, "err", err)
+				if _, ok := packageurl.KnownTypes[upstreamPURL.Type]; !ok {
+					slog.Warn("the provided upstreamPURL does not seem to be in known types", "upstreamPURL", upstreamPurl)
+				}
+			}
+
 			upstreamPURLString := upstreamPURL.String()
 
 			cmp := cyclonedx.Component{
@@ -630,7 +643,7 @@ func scanExternalImage(ctx context.Context) error {
 		return err
 	}
 
-	err = addSupplementaryUpstreamPURLManually(bom)
+	err = addSupplementaryUpstreamPURLManually(bom, services.NewOpenSourceInsightService())
 	if err != nil {
 		return err
 	}
@@ -812,7 +825,7 @@ func scanLocalFilePath(ctx context.Context) error {
 			return err
 		}
 
-		err = addSupplementaryUpstreamPURLManually(bom)
+		err = addSupplementaryUpstreamPURLManually(bom, services.NewOpenSourceInsightService())
 		if err != nil {
 			return err
 		}
