@@ -106,9 +106,9 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	var result struct {
 		PURL               string                      `json:"purl"`
 		MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
-		Component          *dtos.ComponentDTO          `json:"component"`
-		AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
-		Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
+		Component          *dtos.Component             `json:"component"`
+		AffectedComponents []dtos.AffectedComponent    `json:"affectedComponents"`
+		Vulns              []dtos.VulnInPackage        `json:"vulns"`
 		MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
 	}
 
@@ -132,9 +132,9 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	return r
 }
 
-func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.PurlMatchContext, component *dtos.ComponentDTO, affectedComponents []dtos.AffectedComponentDTO, vulns []dtos.VulnInPackageDTO, maliciousPackage *dtos.OSV) error {
+func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.PurlMatchContext, component *dtos.Component, affectedComponents []dtos.AffectedComponent, vulns []dtos.VulnInPackage, maliciousPackage *dtos.OSV) error {
 	// Collect unique CVEs from raw affected components
-	rawCVEMap := make(map[string]dtos.CVEDTO)
+	rawCVEMap := make(map[string]dtos.CVE)
 	for _, ac := range affectedComponents {
 		for _, cve := range ac.CVEs {
 			rawCVEMap[cve.CVE] = cve
@@ -142,7 +142,7 @@ func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.Purl
 	}
 
 	// Collect deduplicated CVEs
-	dedupCVEMap := make(map[string]dtos.VulnInPackageDTO)
+	dedupCVEMap := make(map[string]dtos.VulnInPackage)
 	for _, v := range vulns {
 		dedupCVEMap[v.CVEID] = v
 	}
@@ -398,7 +398,7 @@ func outputInspectResult(inputPurl string, purl string, matchCtx *normalize.Purl
 }
 
 // findAliasOf finds which kept CVE the removed CVE is an alias of
-func findAliasOf(cve dtos.CVEDTO, rawCVEMap map[string]dtos.CVEDTO, dedupCVEMap map[string]dtos.VulnInPackageDTO, removedCVE string) string {
+func findAliasOf(cve dtos.CVE, rawCVEMap map[string]dtos.CVE, dedupCVEMap map[string]dtos.VulnInPackage, removedCVE string) string {
 	// Check if removed CVE points to a kept CVE
 	for _, rel := range cve.Relationships {
 		if rel.RelationshipType == "alias" {

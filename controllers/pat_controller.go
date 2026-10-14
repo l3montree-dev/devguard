@@ -74,8 +74,8 @@ func (p *PatController) Create(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not create personal access token").WithInternal(err)
 	}
 
-	resp := dtos.PATCreateResponseDTO{
-		PATDTO:      transformer.PATModelToDTO(patStruct),
+	resp := dtos.PATCreateResponse{
+		PAT:         transformer.PATModelToDTO(patStruct),
 		BearerToken: bearerToken,
 	}
 	return c.JSON(200, resp)
@@ -88,7 +88,7 @@ func (p *PatController) Create(c shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.PatCreateRequest true "Request body"
-// @Success 200 {object} dtos.PATCreateResponseDTO
+// @Success 200 {object} dtos.PATCreateResponse
 // @Router /organizations/{organization}/pats [post]
 func (p *PatController) CreateForOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
@@ -114,8 +114,8 @@ func (p *PatController) CreateForOrg(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
 	}
 
-	resp := dtos.PATCreateResponseDTO{
-		PATDTO:      transformer.PATModelToDTO(patStruct),
+	resp := dtos.PATCreateResponse{
+		PAT:         transformer.PATModelToDTO(patStruct),
 		BearerToken: bearerToken,
 	}
 	return c.JSON(200, resp)
@@ -129,7 +129,7 @@ func (p *PatController) CreateForOrg(c shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.PatCreateRequest true "Request body"
-// @Success 200 {object} dtos.PATCreateResponseDTO
+// @Success 200 {object} dtos.PATCreateResponse
 // @Router /organizations/{organization}/projects/{projectSlug}/pats [post]
 func (p *PatController) CreateForProject(c shared.Context) error {
 	project := shared.GetProject(c)
@@ -155,8 +155,8 @@ func (p *PatController) CreateForProject(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
 	}
 
-	resp := dtos.PATCreateResponseDTO{
-		PATDTO:      transformer.PATModelToDTO(patStruct),
+	resp := dtos.PATCreateResponse{
+		PAT:         transformer.PATModelToDTO(patStruct),
 		BearerToken: bearerToken,
 	}
 	return c.JSON(200, resp)
@@ -171,7 +171,7 @@ func (p *PatController) CreateForProject(c shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param body body dtos.PatCreateRequest true "Request body"
-// @Success 200 {object} dtos.PATCreateResponseDTO
+// @Success 200 {object} dtos.PATCreateResponse
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/pats [post]
 func (p *PatController) CreateForAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)
@@ -197,8 +197,8 @@ func (p *PatController) CreateForAsset(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not create project access token").WithInternal(err)
 	}
 
-	resp := dtos.PATCreateResponseDTO{
-		PATDTO:      transformer.PATModelToDTO(patStruct),
+	resp := dtos.PATCreateResponse{
+		PAT:         transformer.PATModelToDTO(patStruct),
 		BearerToken: bearerToken,
 	}
 	return c.JSON(200, resp)
@@ -373,7 +373,7 @@ func (p *PatController) DeleteByAsset(c shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Success 200 {array} dtos.PATDTO
+// @Success 200 {array} dtos.PAT
 // @Router /pats [get]
 func (p *PatController) List(c shared.Context) error {
 	// get the user id from the session
@@ -397,7 +397,7 @@ func (p *PatController) List(c shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {array} dtos.PATDTO
+// @Success 200 {array} dtos.PAT
 // @Router /organizations/{organization}/pats [get]
 func (p *PatController) ListByOrg(c shared.Context) error {
 	org := shared.GetOrg(c)
@@ -417,7 +417,7 @@ func (p *PatController) ListByOrg(c shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {array} dtos.PATDTO
+// @Success 200 {array} dtos.PAT
 // @Router /organizations/{organization}/projects/{projectSlug}/pats [get]
 func (p *PatController) ListByProject(c shared.Context) error {
 	project := shared.GetProject(c)
@@ -438,7 +438,7 @@ func (p *PatController) ListByProject(c shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {array} dtos.PATDTO
+// @Success 200 {array} dtos.PAT
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/pats [get]
 func (p *PatController) ListByAsset(c shared.Context) error {
 	asset := shared.GetAsset(c)

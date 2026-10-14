@@ -59,8 +59,8 @@ func (r *externalReferenceRepository) FindByAssetID(ctx context.Context, tx *gor
 	return refs, err
 }
 
-func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[dtos.ExternalReferenceDTO], error) {
-	var refs []dtos.ExternalReferenceDTO
+func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[dtos.ExternalReference], error) {
+	var refs []dtos.ExternalReference
 	var total int64
 
 	query := r.GetDB(ctx, tx).Table("external_references").
@@ -83,7 +83,7 @@ func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx con
 
 	// Count total before pagination
 	if err := query.Session(&gorm.Session{}).Distinct("external_references.url").Count(&total).Error; err != nil {
-		return shared.Paged[dtos.ExternalReferenceDTO]{}, err
+		return shared.Paged[dtos.ExternalReference]{}, err
 	}
 
 	query = query.Select("external_references.*, COUNT(vex_rules.id) AS vex_rule_count")
@@ -101,7 +101,7 @@ func (r *externalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx con
 	query = pageInfo.ApplyOnDB(query)
 
 	if err := query.Find(&refs).Error; err != nil {
-		return shared.Paged[dtos.ExternalReferenceDTO]{}, err
+		return shared.Paged[dtos.ExternalReference]{}, err
 	}
 
 	return shared.NewPaged(pageInfo, total, refs), nil

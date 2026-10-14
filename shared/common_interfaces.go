@@ -128,8 +128,8 @@ type ProjectRepository interface {
 	Upsert(ctx context.Context, tx DB, projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 	EnableCommunityManagedPolicies(ctx context.Context, tx DB, projectID uuid.UUID) error
 	UpsertSplit(ctx context.Context, tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
-	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAssetDTO], error)
-	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectDTO], error)
+	ListSubProjectsAndAssets(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.ProjectAsset], error)
+	SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.Project], error)
 	All(ctx context.Context, tx DB) ([]models.Project, error)
 	CleanupExternalProjectAssetVersion(ctx context.Context, tx DB, organizationID uuid.UUID, providerID string, projectExternalEntityID string, assetExternalEntityID string, assetVersionName string, artifactName string) error
 }
@@ -439,7 +439,7 @@ type ExternalReferenceRepository interface {
 	SaveBatch(ctx context.Context, tx DB, ts []models.ExternalReference) error
 	FindByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.ExternalReference, error)
 	DeleteByURL(ctx context.Context, tx DB, assetID uuid.UUID, url string) error
-	FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[dtos.ExternalReferenceDTO], error)
+	FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx DB, assetID uuid.UUID, pageInfo PageInfo, search string, filterQuery []FilterQuery, sortQuery []SortQuery) (Paged[dtos.ExternalReference], error)
 }
 
 type ExternalEntityProviderService interface {
@@ -454,13 +454,13 @@ type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
-	ListAllowedSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectAssetDTO], error)
+	ListAllowedSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectAsset], error)
 	ListProjectsByOrganizationID(ctx context.Context, organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
 	BootstrapProject(ctx context.Context, rbac AccessControl, project *models.Project) error
-	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.ProjectDTO], error)
+	SearchProjectsWithSubProjectsAndAssetsPaged(c Context) (Paged[dtos.Project], error)
 	FindOrCreateProject(ctx Context, providerID string, orgID uuid.UUID, name string, externalEntityID string, parentID uuid.UUID, description string) (*models.Project, error)
 }
 
@@ -765,7 +765,7 @@ type VulnDBService interface {
 }
 
 type AdminService interface {
-	GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient AdminClient) ([]dtos.UserDTO, error)
+	GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient AdminClient) ([]dtos.User, error)
 	AddAdminToOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
 	RevokeAdminFromOrg(ctx context.Context, orgID uuid.UUID, userID uuid.UUID) error
 	GetUserIDFromMail(ctx context.Context, adminClient AdminClient, email string) (uuid.UUID, error)
@@ -851,9 +851,9 @@ type CompliancePostureRepository interface {
 	ApplyAndSave(ctx context.Context, tx DB, posture *models.CompliancePosture, ev *models.VulnEvent) error
 	FindOrCreate(ctx context.Context, tx DB, posture models.CompliancePosture) (*models.CompliancePosture, error)
 
-	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
-	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error)
-	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStatsDTO, error)
+	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
+	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
+	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
 
 	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
@@ -876,9 +876,9 @@ type FrameworkControlRepository interface {
 type CompliancePostureService interface {
 	UpdateCompliancePostureState(ctx context.Context, tx DB, userID string, posture *models.CompliancePosture, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 
-	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControlDTO], error)
-	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error)
-	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStatsDTO, error)
+	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
+	GetAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
+	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
 	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
@@ -949,12 +949,12 @@ type TrustedEntityRepository interface {
 
 type LogService interface {
 	SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID, message string) error
-	ListPaged(ctx Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.LogDTO], error)
+	ListPaged(ctx Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.Log], error)
 }
 
 type LogRepository interface {
 	Save(ctx context.Context, tx *gorm.DB, log *models.Log) error
-	ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.LogDTO], error)
+	ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.Log], error)
 }
 
 type Object string

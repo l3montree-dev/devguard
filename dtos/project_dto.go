@@ -23,11 +23,11 @@ import (
 )
 
 type ProjectCreateRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name        string `json:"name" validate:"required,max=256"`
+	Description string `json:"description" validate:"max=4000"`
 
 	ParentID *uuid.UUID `json:"parentId"` // if created as a child project
-	Type     string     `json:"type"`
+	Type     string     `json:"type" validate:"max=256"`
 }
 
 type ProjectChangeRoleRequest struct {
@@ -35,22 +35,22 @@ type ProjectChangeRoleRequest struct {
 }
 
 type ProjectInviteRequest struct {
-	Ids []string `json:"ids" validate:"required"`
+	Ids []string `json:"ids" validate:"required,max=100,dive,max=256"`
 }
 
 type ProjectPatchRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
+	Name        *string `json:"name" validate:"omitempty,max=256"`
+	Description *string `json:"description" validate:"omitempty,max=4000"`
 	IsPublic    *bool   `json:"isPublic"`
 
-	Type *string `json:"type"`
+	Type *string `json:"type" validate:"omitempty,max=256"`
 
-	RepositoryID   *string         `json:"repositoryId"`
-	RepositoryName *string         `json:"repositoryName"`
+	RepositoryID   *string         `json:"repositoryId" validate:"omitempty,max=256"`
+	RepositoryName *string         `json:"repositoryName" validate:"omitempty,max=256"`
 	ConfigFiles    *map[string]any `json:"configFiles"`
 }
 
-type ProjectDTO struct {
+type Project struct {
 	Avatar      *string   `json:"avatar,omitempty"` // URL to the project's avatar
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
@@ -59,28 +59,28 @@ type ProjectDTO struct {
 	IsPublic    bool      `json:"isPublic"`
 	Type        string    `json:"type"`
 
-	ParentID *uuid.UUID  `json:"parentId"`
-	Parent   *ProjectDTO `json:"parent,omitempty"` // recursive structure
+	ParentID *uuid.UUID `json:"parentId"`
+	Parent   *Project   `json:"parent,omitempty"` // recursive structure
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	Assets      []AssetDTO     `json:"assets"`
+	Assets      []Asset        `json:"assets"`
 	ConfigFiles map[string]any `json:"configFiles"`
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"` // only set if this is an external entity
 
-	SubGroupsAndAssets []ProjectAssetDTO `json:"subGroupsAndAsset"`
+	SubGroupsAndAssets []ProjectAsset `json:"subGroupsAndAsset"`
 }
 
-type ProjectDetailsDTO struct {
-	ProjectDTO
-	Members  []UserDTO               `json:"members"`
-	Webhooks []WebhookIntegrationDTO `json:"webhooks"`
+type ProjectDetails struct {
+	Project
+	Members  []User               `json:"members"`
+	Webhooks []WebhookIntegration `json:"webhooks"`
 }
 
-type ProjectAssetDTO struct {
+type ProjectAsset struct {
 	ResourceType string     `json:"resourceType"` // "project" or "asset"
 	ID           uuid.UUID  `json:"id"`
 	Avatar       *string    `json:"avatar,omitempty"` // URL to the asset's avatar
@@ -94,45 +94,45 @@ type ProjectAssetDTO struct {
 	CreatedAt    time.Time  `json:"createdAt"`
 	UpdatedAt    time.Time  `json:"updatedAt"`
 
-	SubGroupsAndAssets []ProjectAssetDTO `json:"subGroupsAndAsset" gorm:"-"`
+	SubGroupsAndAssets []ProjectAsset `json:"subGroupsAndAsset" gorm:"-"`
 }
 
-type AssetVersionEntryDTO struct {
+type AssetVersionEntry struct {
 	AssetVersionName string   `json:"assetVersionName"`
 	Artifacts        []string `json:"artifacts"`
 }
 
-type AssetEntryDTO struct {
-	AssetExternalEntityID string                `json:"assetExternalEntityId"`
-	AssetName             string                `json:"assetName"`
-	AssetVersions         []AssetVersionEntryDTO `json:"assetVersions"`
+type AssetEntry struct {
+	AssetExternalEntityID string              `json:"assetExternalEntityId"`
+	AssetName             string              `json:"assetName"`
+	AssetVersions         []AssetVersionEntry `json:"assetVersions"`
 }
 
-type SubProjectEntryDTO struct {
-	SubProjectExternalEntityID string         `json:"subProjectExternalEntityId,omitempty"`
-	SubProjectName             string         `json:"subProjectName,omitempty"`
-	SubProjectDescription      string         `json:"subProjectDescription,omitempty"`
-	Assets                     []AssetEntryDTO `json:"assets"`
+type SubProjectEntry struct {
+	SubProjectExternalEntityID string       `json:"subProjectExternalEntityId,omitempty"`
+	SubProjectName             string       `json:"subProjectName,omitempty"`
+	SubProjectDescription      string       `json:"subProjectDescription,omitempty"`
+	Assets                     []AssetEntry `json:"assets"`
 }
 
 type ProjectExternalEntityTree struct {
-	ProjectExternalEntityID string               `json:"projectExternalEntityId"`
-	ProjectName             string               `json:"projectName"`
-	SubProjects             []SubProjectEntryDTO `json:"subProjects,omitempty"`
-	Assets                  []AssetEntryDTO      `json:"assets"`
+	ProjectExternalEntityID string            `json:"projectExternalEntityId"`
+	ProjectName             string            `json:"projectName"`
+	SubProjects             []SubProjectEntry `json:"subProjects,omitempty"`
+	Assets                  []AssetEntry      `json:"assets"`
 }
-type ExternalSubprojectRequestDTO struct {
+type ExternalSubprojectRequest struct {
 	Verb                       string          `json:"verb" validate:"required,oneof=update delete"`
-	ProjectExternalEntityID    string          `json:"projectExternalEntityId" validate:"required"`
-	ProjectName                string          `json:"projectName"`
-	ProjectDescription         string          `json:"projectDescription"`
-	SubProjectExternalEntityID string          `json:"subProjectExternalEntityId,omitempty"`
-	SubProjectName             string          `json:"subProjectName,omitempty"`
-	SubProjectDescription      string          `json:"subProjectDescription,omitempty"`
-	AssetExternalEntityID      string          `json:"assetExternalEntityId" validate:"required"`
-	AssetName                  string          `json:"assetName"`
-	AssetDescription           string          `json:"assetDescription"`
-	AssetVersionName           string          `json:"assetVersionName"`
-	Artifact                   string          `json:"artifact"`
+	ProjectExternalEntityID    string          `json:"projectExternalEntityId" validate:"required,max=256"`
+	ProjectName                string          `json:"projectName" validate:"max=256"`
+	ProjectDescription         string          `json:"projectDescription" validate:"max=4000"`
+	SubProjectExternalEntityID string          `json:"subProjectExternalEntityId,omitempty" validate:"max=256"`
+	SubProjectName             string          `json:"subProjectName,omitempty" validate:"max=256"`
+	SubProjectDescription      string          `json:"subProjectDescription,omitempty" validate:"max=4000"`
+	AssetExternalEntityID      string          `json:"assetExternalEntityId" validate:"required,max=256"`
+	AssetName                  string          `json:"assetName" validate:"max=256"`
+	AssetDescription           string          `json:"assetDescription" validate:"max=4000"`
+	AssetVersionName           string          `json:"assetVersionName" validate:"max=256"`
+	Artifact                   string          `json:"artifact" validate:"max=256"`
 	Sbom                       json.RawMessage `json:"sbom,omitempty"`
 }

@@ -83,11 +83,11 @@ func (s logService) SaveLog(ctx context.Context, tx *gorm.DB, orgID, projectID, 
 	return nil
 }
 
-func (s logService) ListPaged(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
+func (s logService) ListPaged(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Log], error) {
 
 	logs, err := s.logRepository.ListPaged(ctx.Request().Context(), tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	if err != nil {
-		return shared.Paged[dtos.LogDTO]{}, err
+		return shared.Paged[dtos.Log]{}, err
 	}
 
 	return logs, nil

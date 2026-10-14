@@ -15,27 +15,27 @@
 
 package dtos
 
-type ComplianceComponentDTO struct {
+type ComplianceComponent struct {
 	UUID        string `json:"uuid"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
-// ComplianceComponentImplementsControlDTO is a component's catalog-level claim
+// ComplianceComponentImplementsControl is a component's catalog-level claim
 // that it implements a given control (models.ComplianceComponentImplementsControl).
-type ComplianceComponentImplementsControlDTO struct {
+type ComplianceComponentImplementsControl struct {
 	FrameworkControlID       string `json:"frameworkControlId"`
 	ComplianceComponentID    string `json:"complianceComponentId"`
 	ComplianceComponentTitle string `json:"complianceComponentTitle"`
 	Description              string `json:"description"`
 }
 
-type ComplianceComponentDetailsDTO struct {
-	ComplianceComponentDTO
-	ImplementedControls []ComplianceComponentImplementsControlDTO `json:"implementedControls"`
+type ComplianceComponentDetails struct {
+	ComplianceComponent
+	ImplementedControls []ComplianceComponentImplementsControl `json:"implementedControls"`
 }
 
-type ComplianceComponentImplementsControlStatementDTO struct {
+type ComplianceComponentImplementsControlStatement struct {
 	ID                             string `json:"id"`
 	CompliancePostureID            string `json:"compliancePostureId"`
 	ComplianceComponentID          string `json:"complianceComponentId"`

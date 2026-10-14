@@ -57,10 +57,10 @@ func (row frameworkControlPostureRow) compliancePostureIDString() string {
 }
 
 // nosemgrep: repo-method-missing-ctx, repo-method-missing-ctx-empty-params
-func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlDTO {
-	mappedControls := make([]dtos.MappedControlDTO, len(row.MappedControls))
+func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControl {
+	mappedControls := make([]dtos.MappedControl, len(row.MappedControls))
 	for i, mc := range row.MappedControls {
-		mappedControls[i] = dtos.MappedControlDTO{
+		mappedControls[i] = dtos.MappedControl{
 			FrameworkControlID: mc.FrameworkControlID,
 			RelatedFramework:   mc.RelatedFramework,
 			RelatedControlID:   mc.RelatedControlID,
@@ -68,7 +68,7 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 		}
 	}
 
-	return dtos.CompliancePostureWithControlDTO{
+	return dtos.CompliancePostureWithControl{
 		FrameworkControlID:       row.FrameworkControlID,
 		Framework:                row.Framework,
 		ControlID:                row.ControlID,
@@ -90,9 +90,9 @@ func (row frameworkControlPostureRow) toDTO() dtos.CompliancePostureWithControlD
 }
 
 // nosemgrep: repo-method-missing-ctx, repo-method-missing-ctx-empty-params
-func (row frameworkControlPostureRow) toDetailsDTO() dtos.CompliancePostureWithDetailsDTO {
-	dto := dtos.CompliancePostureWithDetailsDTO{
-		CompliancePostureWithControlDTO: row.toDTO(),
+func (row frameworkControlPostureRow) toDetailsDTO() dtos.CompliancePostureWithDetails {
+	dto := dtos.CompliancePostureWithDetails{
+		CompliancePostureWithControl: row.toDTO(),
 	}
 	for _, ev := range row.Events {
 		dto.Events = append(dto.Events, transformer.ConvertVulnEventToDto(ev))
@@ -159,8 +159,8 @@ func (r *CompliancePostureRepository) applyAndSave(ctx context.Context, tx *gorm
 	return nil
 }
 
-func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControlDTO], error) {
-	var postures []dtos.CompliancePostureWithControlDTO
+func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
+	var postures []dtos.CompliancePostureWithControl
 	var count int64
 
 	query := r.GetDB(ctx, tx).Model(&models.FrameworkControl{}).
@@ -234,7 +234,7 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 	}
 
 	if err := subquery.Count(&count).Error; err != nil {
-		return shared.Paged[dtos.CompliancePostureWithControlDTO]{}, err
+		return shared.Paged[dtos.CompliancePostureWithControl]{}, err
 	}
 
 	var rows []frameworkControlPostureRow
@@ -243,10 +243,10 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 		Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Limit(pageInfo.PageSize).
 		Find(&rows).Error; err != nil {
-		return shared.Paged[dtos.CompliancePostureWithControlDTO]{}, err
+		return shared.Paged[dtos.CompliancePostureWithControl]{}, err
 	}
 
-	postures = make([]dtos.CompliancePostureWithControlDTO, len(rows))
+	postures = make([]dtos.CompliancePostureWithControl, len(rows))
 
 	for i, row := range rows {
 		postures[i] = row.toDTO()
@@ -255,8 +255,8 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 	return shared.NewPaged(pageInfo, count, postures), nil
 }
 
-func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error) {
-	var postures []dtos.CompliancePostureWithDetailsDTO
+func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
+	var postures []dtos.CompliancePostureWithDetails
 
 	query := r.GetDB(ctx, tx).Model(&models.FrameworkControl{}).
 		Select(`frameworks_controls.framework_control_id,
@@ -337,7 +337,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 		return nil, err
 	}
 
-	postures = make([]dtos.CompliancePostureWithDetailsDTO, len(rows))
+	postures = make([]dtos.CompliancePostureWithDetails, len(rows))
 	for i, row := range rows {
 		postures[i] = row.toDetailsDTO()
 	}
@@ -345,7 +345,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 	return postures, nil
 }
 
-func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStatsDTO, error) {
+func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
 	type row struct {
 		State *string `gorm:"column:state"`
 		Count int64   `gorm:"column:count"`
@@ -390,10 +390,10 @@ func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context
 	}
 
 	if err := subquery.Select("state, COUNT(*) AS count").Group("state").Scan(&rows).Error; err != nil {
-		return dtos.CompliancePostureStatsDTO{}, err
+		return dtos.CompliancePostureStats{}, err
 	}
 
-	var stats dtos.CompliancePostureStatsDTO
+	var stats dtos.CompliancePostureStats
 	for _, row := range rows {
 		switch {
 		case row.State == nil:

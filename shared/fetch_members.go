@@ -37,7 +37,7 @@ const (
 )
 
 type membersCacheEntry struct {
-	users     []dtos.UserDTO
+	users     []dtos.User
 	fetchedAt time.Time
 }
 
@@ -92,7 +92,7 @@ func InvalidateMembersCache(orgID uuid.UUID) {
 
 // FetchMembersOfOrganization retrieves all members of an organization including their roles
 // from both the RBAC system and third-party integrations.
-func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
+func FetchMembersOfOrganization(ctx Context) ([]dtos.User, error) {
 	organization := GetOrg(ctx)
 	accessControl := GetRBAC(ctx)
 	authAdminClient := GetAuthAdminClient(ctx)
@@ -136,17 +136,17 @@ func FetchMembersOfOrganization(ctx Context) ([]dtos.UserDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	return v.([]dtos.UserDTO), nil
+	return v.([]dtos.User), nil
 }
 
-func fetchMembersOfOrganization(ctx context.Context, organization models.Org, accessControl AccessControl, authAdminClient AdminClient, thirdPartyIntegrations IntegrationAggregate) ([]dtos.UserDTO, error) {
+func fetchMembersOfOrganization(ctx context.Context, organization models.Org, accessControl AccessControl, authAdminClient AdminClient, thirdPartyIntegrations IntegrationAggregate) ([]dtos.User, error) {
 	members, err := accessControl.GetAllMembersOfOrganization()
 
 	if err != nil {
 		return nil, err
 	}
 
-	users := make([]dtos.UserDTO, 0, len(members))
+	users := make([]dtos.User, 0, len(members))
 	if len(members) > 0 {
 		// fetch the users from the auth service
 		m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
@@ -177,7 +177,7 @@ func fetchMembersOfOrganization(ctx context.Context, organization models.Org, ac
 		}, make(map[string]Role))
 
 		for _, member := range m {
-			users = append(users, dtos.UserDTO{
+			users = append(users, dtos.User{
 				ID:    member.Id,
 				Name:  IdentityName(member.Traits),
 				Role:  string(roleMap[member.Id]),

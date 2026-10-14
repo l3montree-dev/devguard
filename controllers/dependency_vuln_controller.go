@@ -32,7 +32,7 @@ type dependencyVulnsByPackage struct {
 	DependencyVulnCount int     `json:"vulnCount"`
 	TotalRisk           float64 `json:"totalRisk"`
 	//TODO: change the name to DependencyVulns
-	DependencyVulns []dtos.DependencyVulnDTO `json:"vulns"`
+	DependencyVulns []dtos.DependencyVuln `json:"vulns"`
 }
 
 type DependencyVulnController struct {
@@ -236,7 +236,7 @@ func (controller *DependencyVulnController) ListPaged(ctx shared.Context) error 
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
 // @Param body body object{comment=string} true "Request body"
-// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Success 200 {object} dtos.DetailedDependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/mitigate [post]
 func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 	type justification struct {
@@ -289,7 +289,7 @@ func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
-// @Success 200 {object} dtos.DetailedDependencyVulnWithRelationsDTO
+// @Success 200 {object} dtos.DetailedDependencyVulnWithRelations
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
 func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
@@ -308,9 +308,9 @@ func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get advisories for dependency vuln").WithInternal(err)
 	}
 	// convert the related CVEs to DTOs
-	relatedDTOs := map[dtos.RelationshipType][]dtos.CVEDTO{}
+	relatedDTOs := map[dtos.RelationshipType][]dtos.CVE{}
 	for relationshipType, cves := range related {
-		relatedDTOs[relationshipType] = utils.Map(cves, func(cve models.CVE) dtos.CVEDTO {
+		relatedDTOs[relationshipType] = utils.Map(cves, func(cve models.CVE) dtos.CVE {
 			return transformer.CVEToDTO(cve)
 		})
 	}
@@ -321,9 +321,9 @@ func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 		dependencyVuln.CVE.Vector = vector
 	}
 
-	return ctx.JSON(200, dtos.DetailedDependencyVulnWithRelationsDTO{
-		DetailedDependencyVulnDTO: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
-		Related:                   relatedDTOs,
+	return ctx.JSON(200, dtos.DetailedDependencyVulnWithRelations{
+		DetailedDependencyVuln: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
+		Related:                relatedDTOs,
 	})
 }
 
@@ -380,8 +380,8 @@ func (controller *DependencyVulnController) SyncDependencyVulns(ctx shared.Conte
 	userAgent := ctx.Request().UserAgent()
 
 	type vulnReq struct {
-		VulnID uuid.UUID         `json:"vulnId"`
-		Event  dtos.VulnEventDTO `json:"event"`
+		VulnID uuid.UUID      `json:"vulnId"`
+		Event  dtos.VulnEvent `json:"event"`
 	}
 
 	type requestBody struct {
@@ -444,7 +444,7 @@ func (controller *DependencyVulnController) SyncDependencyVulns(ctx shared.Conte
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
 // @Param body body dtos.CreateEventRequest true "Request body"
-// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Success 200 {object} dtos.DetailedDependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [post]
 func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -534,8 +534,8 @@ func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) erro
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param body body dtos.BatchDependencyVulnStatus true "Request body"
-// @Success 200 {array} dtos.DetailedDependencyVulnDTO
+// @Param body body dtos.BatchDependencyVulnStatusRequest true "Request body"
+// @Success 200 {array} dtos.DetailedDependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/batch [post]
 func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -543,7 +543,7 @@ func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status dtos.BatchDependencyVulnStatus
+	var status dtos.BatchDependencyVulnStatusRequest
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
@@ -563,7 +563,7 @@ func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context)
 	}
 
 	eventType := dtos.VulnEventType(status.StatusType)
-	updatedVulns := make([]dtos.DetailedDependencyVulnDTO, 0, len(status.VulnIDs))
+	updatedVulns := make([]dtos.DetailedDependencyVuln, 0, len(status.VulnIDs))
 
 	for _, vulnID := range status.VulnIDs {
 		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)

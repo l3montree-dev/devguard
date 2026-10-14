@@ -26,8 +26,8 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func CVEToDTO(cve models.CVE) dtos.CVEDTO {
-	return dtos.CVEDTO{
+func CVEToDTO(cve models.CVE) dtos.CVE {
+	return dtos.CVE{
 		CVE:                   cve.CVE,
 		DatePublished:         cve.DatePublished,
 		DateLastModified:      cve.DateLastModified,
@@ -49,14 +49,14 @@ func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 	}
 }
 
-func RelationshipToDTO(relation models.CVERelationship) dtos.RelationshipDTO {
-	return dtos.RelationshipDTO{
+func RelationshipToDTO(relation models.CVERelationship) dtos.Relationship {
+	return dtos.Relationship{
 		RelationshipType: relation.RelationshipType,
 		TargetCVE:        relation.TargetCVE,
 	}
 }
-func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
-	return dtos.DependencyVulnDTO{
+func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVuln {
+	return dtos.DependencyVuln{
 		ID:                           f.ID,
 		AssetVersionName:             f.AssetVersionName,
 		AssetID:                      f.AssetID.String(),
@@ -80,9 +80,9 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 	}
 }
 
-func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.DetailedDependencyVulnDTO {
-	return dtos.DetailedDependencyVulnDTO{
-		DependencyVulnDTO: dtos.DependencyVulnDTO{
+func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.DetailedDependencyVuln {
+	return dtos.DetailedDependencyVuln{
+		DependencyVuln: dtos.DependencyVuln{
 			ID:                           dependencyVuln.ID,
 			AssetVersionName:             dependencyVuln.AssetVersionName,
 			AssetID:                      dependencyVuln.AssetID.String(),
@@ -108,21 +108,21 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 	}
 }
 
-func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackageDTO {
-	return dtos.VulnInPackageDTO{
+func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackage {
+	return dtos.VulnInPackage{
 		CVEID:        vuln.CVEID,
 		FixedVersion: vuln.FixedVersion,
 	}
 }
 
-func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentDTO {
+func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponent {
 	dto := affectedComponentToDTOWithoutCVEs(ac)
 	dto.CVEs = utils.Map(ac.CVE, CVEToDTO)
 	return dto
 }
 
-func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.AffectedComponentDTO {
-	return dtos.AffectedComponentDTO{
+func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.AffectedComponent {
+	return dtos.AffectedComponent{
 		ID:                 ac.ID,
 		PurlWithoutVersion: ac.PurlWithoutVersion,
 		Ecosystem:          ac.Ecosystem,

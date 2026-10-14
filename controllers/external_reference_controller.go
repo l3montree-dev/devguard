@@ -69,7 +69,7 @@ func NewExternalReferenceController(
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {array} dtos.ExternalReferenceDTO
+// @Success 200 {array} dtos.ExternalReference
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references [get]
 func (c *ExternalReferenceController) List(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -96,7 +96,7 @@ func (c *ExternalReferenceController) List(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param request body dtos.CreateExternalReferenceRequest true "Create request"
-// @Success 201 {object} dtos.ExternalReferenceDTO
+// @Success 201 {object} dtos.ExternalReference
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references [post]
 func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -122,7 +122,7 @@ func (c *ExternalReferenceController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to create external reference").WithInternal(err)
 	}
 
-	return ctx.JSON(201, dtos.ExternalReferenceDTO{
+	return ctx.JSON(201, dtos.ExternalReference{
 		AssetID: ref.AssetID.String(),
 		URL:     ref.URL,
 		Type:    ref.Type,

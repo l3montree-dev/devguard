@@ -89,7 +89,7 @@
             "controllers.ArtifactUpdateResponse": {
                 "properties": {
                     "artifact": {
-                        "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                        "$ref": "#/components/schemas/dtos.Artifact"
                     },
                     "invalidURLs": {
                         "items": {
@@ -129,13 +129,13 @@
                 "properties": {
                     "affectedComponents": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AffectedComponentDTO"
+                            "$ref": "#/components/schemas/dtos.AffectedComponent"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "component": {
-                        "$ref": "#/components/schemas/dtos.ComponentDTO"
+                        "$ref": "#/components/schemas/dtos.Component"
                     },
                     "maliciousPackage": {
                         "$ref": "#/components/schemas/dtos.OSV"
@@ -148,7 +148,7 @@
                     },
                     "vulns": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnInPackageDTO"
+                            "$ref": "#/components/schemas/dtos.VulnInPackage"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -5582,6 +5582,7 @@
             "dtos.AcceptInvitationRequest": {
                 "properties": {
                     "code": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -5594,7 +5595,7 @@
                 "properties": {
                     "admins": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.UserDTO"
+                            "$ref": "#/components/schemas/dtos.User"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -5617,7 +5618,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AdvisoryCreate": {
+            "dtos.AdvisoryCreateRequest": {
                 "properties": {
                     "affectedPackages": {
                         "items": {
@@ -5630,15 +5631,19 @@
                         "type": "string"
                     },
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "severity": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "title": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "vectorString": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -5652,7 +5657,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AdvisoryUpdate": {
+            "dtos.AdvisoryUpdateRequest": {
                 "properties": {
                     "affectedPackages": {
                         "items": {
@@ -5665,15 +5670,19 @@
                         "type": "string"
                     },
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "severity": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "title": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "vectorString": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -5718,11 +5727,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.AffectedComponentDTO": {
+            "dtos.AffectedComponent": {
                 "properties": {
                     "cves": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.CVEDTO"
+                            "$ref": "#/components/schemas/dtos.CVE"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -5792,7 +5801,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.ArtifactDTO": {
+            "dtos.Artifact": {
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -5866,6 +5875,157 @@
                 ],
                 "type": "object"
             },
+            "dtos.Asset": {
+                "properties": {
+                    "availabilityRequirement": {
+                        "$ref": "#/components/schemas/dtos.RequirementLevel"
+                    },
+                    "avatar": {
+                        "type": "string"
+                    },
+                    "centralDependencyVulnManagement": {
+                        "type": "boolean"
+                    },
+                    "confidentialityRequirement": {
+                        "$ref": "#/components/schemas/dtos.RequirementLevel"
+                    },
+                    "cvssAutomaticTicketThreshold": {
+                        "type": "number"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "enableTicketRange": {
+                        "type": "boolean"
+                    },
+                    "externalBotUserLink": {
+                        "type": "string"
+                    },
+                    "externalEntityId": {
+                        "type": "string"
+                    },
+                    "externalEntityProviderId": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "integrityRequirement": {
+                        "$ref": "#/components/schemas/dtos.RequirementLevel"
+                    },
+                    "isPublic": {
+                        "type": "boolean"
+                    },
+                    "modifiedAttackComplexity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
+                    },
+                    "modifiedAttackVector": {
+                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
+                    },
+                    "modifiedAvailability": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedConfidentiality": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedIntegrity": {
+                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
+                    },
+                    "modifiedPrivilegesRequired": {
+                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
+                    },
+                    "modifiedScope": {
+                        "$ref": "#/components/schemas/dtos.ModifiedScope"
+                    },
+                    "modifiedUserInteraction": {
+                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "paranoidMode": {
+                        "type": "boolean"
+                    },
+                    "pipelineLastRun": {
+                        "type": "string"
+                    },
+                    "projectId": {
+                        "type": "string"
+                    },
+                    "refs": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "repositoryId": {
+                        "type": "string"
+                    },
+                    "repositoryName": {
+                        "type": "string"
+                    },
+                    "repositoryProvider": {
+                        "type": "string"
+                    },
+                    "riskAutomaticTicketThreshold": {
+                        "type": "number"
+                    },
+                    "sharesInformation": {
+                        "type": "boolean"
+                    },
+                    "signingPubKey": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "state": {
+                        "type": "string"
+                    },
+                    "vulnAutoReopenAfterDays": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "availabilityRequirement",
+                    "avatar",
+                    "centralDependencyVulnManagement",
+                    "confidentialityRequirement",
+                    "cvssAutomaticTicketThreshold",
+                    "description",
+                    "enableTicketRange",
+                    "externalBotUserLink",
+                    "externalEntityId",
+                    "externalEntityProviderId",
+                    "id",
+                    "integrityRequirement",
+                    "isPublic",
+                    "modifiedAttackComplexity",
+                    "modifiedAttackVector",
+                    "modifiedAvailability",
+                    "modifiedConfidentiality",
+                    "modifiedIntegrity",
+                    "modifiedPrivilegesRequired",
+                    "modifiedScope",
+                    "modifiedUserInteraction",
+                    "name",
+                    "paranoidMode",
+                    "pipelineLastRun",
+                    "projectId",
+                    "refs",
+                    "repositoryId",
+                    "repositoryName",
+                    "repositoryProvider",
+                    "riskAutomaticTicketThreshold",
+                    "sharesInformation",
+                    "signingPubKey",
+                    "slug",
+                    "state",
+                    "vulnAutoReopenAfterDays"
+                ],
+                "type": "object"
+            },
             "dtos.AssetChangeRoleRequest": {
                 "properties": {
                     "role": {
@@ -5896,6 +6056,7 @@
                         "type": "number"
                     },
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "enableTicketRange": {
@@ -5932,6 +6093,7 @@
                         "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "repositoryProvider": {
@@ -5969,158 +6131,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AssetDTO": {
-                "properties": {
-                    "availabilityRequirement": {
-                        "$ref": "#/components/schemas/dtos.RequirementLevel"
-                    },
-                    "avatar": {
-                        "type": "string"
-                    },
-                    "centralDependencyVulnManagement": {
-                        "type": "boolean"
-                    },
-                    "confidentialityRequirement": {
-                        "$ref": "#/components/schemas/dtos.RequirementLevel"
-                    },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "enableTicketRange": {
-                        "type": "boolean"
-                    },
-                    "externalBotUserLink": {
-                        "type": "string"
-                    },
-                    "externalEntityId": {
-                        "type": "string"
-                    },
-                    "externalEntityProviderId": {
-                        "type": "string"
-                    },
-                    "id": {
-                        "type": "string"
-                    },
-                    "integrityRequirement": {
-                        "$ref": "#/components/schemas/dtos.RequirementLevel"
-                    },
-                    "isPublic": {
-                        "type": "boolean"
-                    },
-                    "modifiedAttackComplexity": {
-                        "$ref": "#/components/schemas/dtos.ModifiedAttackComplexity"
-                    },
-                    "modifiedAttackVector": {
-                        "$ref": "#/components/schemas/dtos.ModifiedAttackVector"
-                    },
-                    "modifiedAvailability": {
-                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
-                    },
-                    "modifiedConfidentiality": {
-                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
-                    },
-                    "modifiedIntegrity": {
-                        "$ref": "#/components/schemas/dtos.ModifiedRequirementLevel"
-                    },
-                    "modifiedPrivilegesRequired": {
-                        "$ref": "#/components/schemas/dtos.ModifiedPrivilegesRequired"
-                    },
-                    "modifiedScope": {
-                        "$ref": "#/components/schemas/dtos.ModifiedScope"
-                    },
-                    "modifiedUserInteraction": {
-                        "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "paranoidMode": {
-                        "type": "boolean"
-                    },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
-                    "projectId": {
-                        "type": "string"
-                    },
-                    "refs": {
-                        "items": {
-                            "$ref": "#/components/schemas/dtos.AssetVersionDTO"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
-                    "repositoryId": {
-                        "type": "string"
-                    },
-                    "repositoryName": {
-                        "type": "string"
-                    },
-                    "repositoryProvider": {
-                        "type": "string"
-                    },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
-                    "sharesInformation": {
-                        "type": "boolean"
-                    },
-                    "signingPubKey": {
-                        "type": "string"
-                    },
-                    "slug": {
-                        "type": "string"
-                    },
-                    "state": {
-                        "type": "string"
-                    },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
-                    }
-                },
-                "required": [
-                    "availabilityRequirement",
-                    "avatar",
-                    "centralDependencyVulnManagement",
-                    "confidentialityRequirement",
-                    "cvssAutomaticTicketThreshold",
-                    "description",
-                    "enableTicketRange",
-                    "externalBotUserLink",
-                    "externalEntityId",
-                    "externalEntityProviderId",
-                    "id",
-                    "integrityRequirement",
-                    "isPublic",
-                    "modifiedAttackComplexity",
-                    "modifiedAttackVector",
-                    "modifiedAvailability",
-                    "modifiedConfidentiality",
-                    "modifiedIntegrity",
-                    "modifiedPrivilegesRequired",
-                    "modifiedScope",
-                    "modifiedUserInteraction",
-                    "name",
-                    "paranoidMode",
-                    "pipelineLastRun",
-                    "projectId",
-                    "refs",
-                    "repositoryId",
-                    "repositoryName",
-                    "repositoryProvider",
-                    "riskAutomaticTicketThreshold",
-                    "sharesInformation",
-                    "signingPubKey",
-                    "slug",
-                    "state",
-                    "vulnAutoReopenAfterDays"
-                ],
-                "type": "object"
-            },
-            "dtos.AssetDetailsDTO": {
+            "dtos.AssetDetails": {
                 "properties": {
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
@@ -6163,7 +6174,7 @@
                     },
                     "members": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.UserDTO"
+                            "$ref": "#/components/schemas/dtos.User"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6206,7 +6217,7 @@
                     },
                     "refs": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AssetVersionDTO"
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6279,7 +6290,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AssetDetailsWithSecretsDTO": {
+            "dtos.AssetDetailsWithSecrets": {
                 "properties": {
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
@@ -6322,7 +6333,7 @@
                     },
                     "members": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.UserDTO"
+                            "$ref": "#/components/schemas/dtos.User"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6365,7 +6376,7 @@
                     },
                     "refs": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AssetVersionDTO"
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6442,7 +6453,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AssetEntryDTO": {
+            "dtos.AssetEntry": {
                 "properties": {
                     "assetExternalEntityId": {
                         "type": "string"
@@ -6452,7 +6463,7 @@
                     },
                     "assetVersions": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AssetVersionEntryDTO"
+                            "$ref": "#/components/schemas/dtos.AssetVersionEntry"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6471,6 +6482,7 @@
                         "items": {
                             "type": "string"
                         },
+                        "maxItems": 100,
                         "type": "array",
                         "uniqueItems": false
                     }
@@ -6499,6 +6511,7 @@
                         "type": "number"
                     },
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "enableTicketRange": {
@@ -6535,15 +6548,18 @@
                         "$ref": "#/components/schemas/dtos.ModifiedUserInteraction"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "paranoidMode": {
                         "type": "boolean"
                     },
                     "repositoryId": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "repositoryName": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "repositoryProvider": {
@@ -6564,6 +6580,7 @@
                         "type": "integer"
                     },
                     "webhookSecret": {
+                        "maxLength": 1024,
                         "type": "string"
                     }
                 },
@@ -6597,7 +6614,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AssetVersionDTO": {
+            "dtos.AssetVersion": {
                 "properties": {
                     "assetId": {
                         "type": "string"
@@ -6645,7 +6662,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.AssetVersionEntryDTO": {
+            "dtos.AssetVersionEntry": {
                 "properties": {
                     "artifacts": {
                         "items": {
@@ -6815,7 +6832,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.BatchDependencyVulnStatus": {
+            "dtos.BatchDependencyVulnStatusRequest": {
                 "properties": {
                     "justification": {
                         "maxLength": 4000,
@@ -6825,6 +6842,7 @@
                         "$ref": "#/components/schemas/dtos.MechanicalJustificationType"
                     },
                     "status": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "vulnIds": {
@@ -6843,7 +6861,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.BatchFirstPartyVulnStatus": {
+            "dtos.BatchFirstPartyVulnStatusRequest": {
                 "properties": {
                     "justification": {
                         "maxLength": 4000,
@@ -6853,6 +6871,7 @@
                         "$ref": "#/components/schemas/dtos.MechanicalJustificationType"
                     },
                     "status": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "vulnIds": {
@@ -6894,11 +6913,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.CVEDTO": {
+            "dtos.CVE": {
                 "properties": {
                     "affectedComponents": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AffectedComponentDTO"
+                            "$ref": "#/components/schemas/dtos.AffectedComponent"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6951,7 +6970,7 @@
                     },
                     "exploits": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ExploitDTO"
+                            "$ref": "#/components/schemas/dtos.Exploit"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -6964,7 +6983,7 @@
                     },
                     "relationships": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.RelationshipDTO"
+                            "$ref": "#/components/schemas/dtos.Relationship"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7027,18 +7046,18 @@
                 ],
                 "type": "object"
             },
-            "dtos.CandidatesResponseDTO": {
+            "dtos.CandidatesResponse": {
                 "properties": {
                     "artifacts": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                            "$ref": "#/components/schemas/dtos.Artifact"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "releases": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ReleaseDTO"
+                            "$ref": "#/components/schemas/dtos.Release"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7050,14 +7069,14 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComplianceComponentDetailsDTO": {
+            "dtos.ComplianceComponentDetails": {
                 "properties": {
                     "description": {
                         "type": "string"
                     },
                     "implementedControls": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlDTO"
+                            "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControl"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7077,7 +7096,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComplianceComponentImplementsControlDTO": {
+            "dtos.ComplianceComponentImplementsControl": {
                 "properties": {
                     "complianceComponentId": {
                         "type": "string"
@@ -7100,7 +7119,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComplianceComponentImplementsControlStatementDTO": {
+            "dtos.ComplianceComponentImplementsControlStatement": {
                 "properties": {
                     "complianceComponentDescription": {
                         "type": "string"
@@ -7139,7 +7158,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.CompliancePostureStatsDTO": {
+            "dtos.CompliancePostureStats": {
                 "properties": {
                     "implemented": {
                         "type": "integer"
@@ -7158,7 +7177,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.CompliancePostureWithControlDTO": {
+            "dtos.CompliancePostureWithControl": {
                 "properties": {
                     "additional": {
                         "type": "object"
@@ -7192,7 +7211,7 @@
                     },
                     "mappedControls": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.MappedControlDTO"
+                            "$ref": "#/components/schemas/dtos.MappedControl"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7245,7 +7264,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.CompliancePostureWithDetailsDTO": {
+            "dtos.CompliancePostureWithDetails": {
                 "properties": {
                     "additional": {
                         "type": "object"
@@ -7258,7 +7277,7 @@
                     },
                     "byComponents": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                            "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7277,7 +7296,7 @@
                     },
                     "events": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                            "$ref": "#/components/schemas/dtos.VulnEvent"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7293,7 +7312,7 @@
                     },
                     "mappedControls": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.MappedControlDTO"
+                            "$ref": "#/components/schemas/dtos.MappedControl"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7348,14 +7367,14 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComponentDTO": {
+            "dtos.Component": {
                 "properties": {
                     "componentType": {
                         "$ref": "#/components/schemas/dtos.ComponentType"
                     },
                     "dependsOn": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ComponentDependencyDTO"
+                            "$ref": "#/components/schemas/dtos.ComponentDependency"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7367,7 +7386,7 @@
                         "type": "string"
                     },
                     "project": {
-                        "$ref": "#/components/schemas/dtos.ComponentProjectDTO"
+                        "$ref": "#/components/schemas/dtos.ComponentProject"
                     },
                     "projectId": {
                         "type": "string"
@@ -7396,23 +7415,23 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComponentDependencyDTO": {
+            "dtos.ComponentDependency": {
                 "properties": {
                     "artifacts": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                            "$ref": "#/components/schemas/dtos.Artifact"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "component": {
-                        "$ref": "#/components/schemas/dtos.ComponentDTO"
+                        "$ref": "#/components/schemas/dtos.Component"
                     },
                     "componentPurl": {
                         "type": "string"
                     },
                     "dependency": {
-                        "$ref": "#/components/schemas/dtos.ComponentDTO"
+                        "$ref": "#/components/schemas/dtos.Component"
                     },
                     "dependencyPurl": {
                         "description": "the provided sbom from cyclondx only contains the transitive dependencies, which do really get used\nthis means, that the dependency graph between people using the same library might differ, since they use it differently\nwe use edges, which provide the information, that a component is used by another component in one asset",
@@ -7432,41 +7451,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComponentOccurrenceAcrossInstance": {
-                "properties": {
-                    "purl": {
-                        "type": "string"
-                    },
-                    "relativeAmount": {
-                        "type": "number"
-                    },
-                    "totalAmount": {
-                        "type": "integer"
-                    }
-                },
-                "required": [
-                    "purl",
-                    "relativeAmount",
-                    "totalAmount"
-                ],
-                "type": "object"
-            },
-            "dtos.ComponentOccurrenceAcrossOrg": {
-                "properties": {
-                    "purl": {
-                        "type": "string"
-                    },
-                    "totalAmount": {
-                        "type": "integer"
-                    }
-                },
-                "required": [
-                    "purl",
-                    "totalAmount"
-                ],
-                "type": "object"
-            },
-            "dtos.ComponentOccurrenceDTO": {
+            "dtos.ComponentOccurrence": {
                 "properties": {
                     "artifactAssetVersion": {
                         "type": "string"
@@ -7537,7 +7522,41 @@
                 ],
                 "type": "object"
             },
-            "dtos.ComponentProjectDTO": {
+            "dtos.ComponentOccurrenceAcrossInstance": {
+                "properties": {
+                    "purl": {
+                        "type": "string"
+                    },
+                    "relativeAmount": {
+                        "type": "number"
+                    },
+                    "totalAmount": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "purl",
+                    "relativeAmount",
+                    "totalAmount"
+                ],
+                "type": "object"
+            },
+            "dtos.ComponentOccurrenceAcrossOrg": {
+                "properties": {
+                    "purl": {
+                        "type": "string"
+                    },
+                    "totalAmount": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "purl",
+                    "totalAmount"
+                ],
+                "type": "object"
+            },
+            "dtos.ComponentProject": {
                 "properties": {
                     "description": {
                         "type": "string"
@@ -7627,6 +7646,7 @@
                         "$ref": "#/components/schemas/dtos.MechanicalJustificationType"
                     },
                     "status": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -7641,6 +7661,7 @@
                 "properties": {
                     "csafPackageScope": {
                         "description": "only relevant for csaf references - NEEDS TO BE A VALID PURL",
+                        "maxLength": 2048,
                         "type": "string"
                     },
                     "type": {
@@ -7652,6 +7673,7 @@
                         ]
                     },
                     "url": {
+                        "maxLength": 2048,
                         "type": "string"
                     }
                 },
@@ -7665,18 +7687,23 @@
             "dtos.CreateInTotoLinkRequest": {
                 "properties": {
                     "filename": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "payload": {
+                        "maxLength": 1048576,
                         "type": "string"
                     },
                     "step": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "supplyChainId": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "supplyChainOutputDigest": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -7692,6 +7719,7 @@
             "dtos.CreateVEXRuleRequest": {
                 "properties": {
                     "celExpression": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "eventType": {
@@ -7703,12 +7731,14 @@
                         ]
                     },
                     "justification": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "mechanicalJustification": {
                         "$ref": "#/components/schemas/dtos.MechanicalJustificationType"
                     },
                     "title": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "wasRecommended": {
@@ -7812,11 +7842,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.DependencyVulnDTO": {
+            "dtos.DependencyVuln": {
                 "properties": {
                     "artifacts": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                            "$ref": "#/components/schemas/dtos.Artifact"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7841,7 +7871,7 @@
                         "type": "string"
                     },
                     "cve": {
-                        "$ref": "#/components/schemas/dtos.CVEDTO"
+                        "$ref": "#/components/schemas/dtos.CVE"
                     },
                     "cveID": {
                         "type": "string"
@@ -7851,7 +7881,7 @@
                     },
                     "exploits": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ExploitDTO"
+                            "$ref": "#/components/schemas/dtos.Exploit"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7917,11 +7947,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.DetailedDependencyVulnDTO": {
+            "dtos.DetailedDependencyVuln": {
                 "properties": {
                     "artifacts": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                            "$ref": "#/components/schemas/dtos.Artifact"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -7946,7 +7976,7 @@
                         "type": "string"
                     },
                     "cve": {
-                        "$ref": "#/components/schemas/dtos.CVEDTO"
+                        "$ref": "#/components/schemas/dtos.CVE"
                     },
                     "cveID": {
                         "type": "string"
@@ -7956,14 +7986,14 @@
                     },
                     "events": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                            "$ref": "#/components/schemas/dtos.VulnEvent"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "exploits": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ExploitDTO"
+                            "$ref": "#/components/schemas/dtos.Exploit"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8030,11 +8060,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.DetailedDependencyVulnWithRelationsDTO": {
+            "dtos.DetailedDependencyVulnWithRelations": {
                 "properties": {
                     "artifacts": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                            "$ref": "#/components/schemas/dtos.Artifact"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8059,7 +8089,7 @@
                         "type": "string"
                     },
                     "cve": {
-                        "$ref": "#/components/schemas/dtos.CVEDTO"
+                        "$ref": "#/components/schemas/dtos.CVE"
                     },
                     "cveID": {
                         "type": "string"
@@ -8069,14 +8099,14 @@
                     },
                     "events": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                            "$ref": "#/components/schemas/dtos.VulnEvent"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "exploits": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ExploitDTO"
+                            "$ref": "#/components/schemas/dtos.Exploit"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8093,7 +8123,7 @@
                     "related": {
                         "additionalProperties": {
                             "items": {
-                                "$ref": "#/components/schemas/dtos.CVEDTO"
+                                "$ref": "#/components/schemas/dtos.CVE"
                             },
                             "type": "array"
                         },
@@ -8153,7 +8183,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.DetailedFirstPartyVulnDTO": {
+            "dtos.DetailedFirstPartyVuln": {
                 "properties": {
                     "assetId": {
                         "type": "string"
@@ -8178,7 +8208,7 @@
                     },
                     "events": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                            "$ref": "#/components/schemas/dtos.VulnEvent"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8261,11 +8291,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.DetailedLicenseRiskDTO": {
+            "dtos.DetailedLicenseRisk": {
                 "properties": {
                     "artifacts": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.LicenseRiskArtifactDTO"
+                            "$ref": "#/components/schemas/dtos.LicenseRiskArtifact"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8277,7 +8307,7 @@
                         "type": "string"
                     },
                     "component": {
-                        "$ref": "#/components/schemas/dtos.ComponentDTO"
+                        "$ref": "#/components/schemas/dtos.Component"
                     },
                     "componentPurl": {
                         "type": "string"
@@ -8287,7 +8317,7 @@
                     },
                     "events": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                            "$ref": "#/components/schemas/dtos.VulnEvent"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8358,7 +8388,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.ExploitDTO": {
+            "dtos.Exploit": {
                 "properties": {
                     "author": {
                         "type": "string"
@@ -8421,7 +8451,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.ExternalReferenceDTO": {
+            "dtos.ExternalReference": {
                 "properties": {
                     "assetId": {
                         "type": "string"
@@ -8479,30 +8509,38 @@
                     "ExternalReferenceTypeUnknown"
                 ]
             },
-            "dtos.ExternalSubprojectRequestDTO": {
+            "dtos.ExternalSubprojectRequest": {
                 "properties": {
                     "artifact": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "assetDescription": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "assetExternalEntityId": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "assetName": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "assetVersionName": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "projectDescription": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "projectExternalEntityId": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "projectName": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "sbom": {
@@ -8513,12 +8551,15 @@
                         "uniqueItems": false
                     },
                     "subProjectDescription": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "subProjectExternalEntityId": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "subProjectName": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "verb": {
@@ -8556,7 +8597,7 @@
                     },
                     "firstPartyVulns": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.FirstPartyVulnDTO"
+                            "$ref": "#/components/schemas/dtos.FirstPartyVuln"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8569,7 +8610,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.FirstPartyVulnDTO": {
+            "dtos.FirstPartyVuln": {
                 "properties": {
                     "assetId": {
                         "type": "string"
@@ -8669,7 +8710,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.FirstPartyVulnStatus": {
+            "dtos.FirstPartyVulnStatusRequest": {
                 "properties": {
                     "justification": {
                         "maxLength": 4000,
@@ -8679,6 +8720,7 @@
                         "$ref": "#/components/schemas/dtos.MechanicalJustificationType"
                     },
                     "status": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -8728,7 +8770,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.GithubAppInstallationDTO": {
+            "dtos.GithubAppInstallation": {
                 "properties": {
                     "installationCreatedWebhookReceivedTime": {
                         "type": "string"
@@ -8762,7 +8804,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.GitlabIntegrationDTO": {
+            "dtos.GitlabIntegration": {
                 "properties": {
                     "id": {
                         "type": "string"
@@ -8785,7 +8827,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.GitlabOauth2ConfigDTO": {
+            "dtos.GitlabOauth2Config": {
                 "properties": {
                     "gitlabBaseURL": {
                         "type": "string"
@@ -8870,14 +8912,14 @@
                 ],
                 "type": "object"
             },
-            "dtos.InstanceSettingsDTO": {
+            "dtos.InstanceSettings": {
                 "properties": {
                     "bearerTokenAuthDisabled": {
                         "type": "boolean"
                     },
                     "gitlabOAuth2Config": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GitlabOauth2ConfigDTO"
+                            "$ref": "#/components/schemas/dtos.GitlabOauth2Config"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -8910,6 +8952,7 @@
             "dtos.InviteRequest": {
                 "properties": {
                     "email": {
+                        "maxLength": 320,
                         "type": "string"
                     }
                 },
@@ -8918,7 +8961,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.InvitedUserDTO": {
+            "dtos.InvitedUser": {
                 "properties": {
                     "email": {
                         "type": "string"
@@ -8941,7 +8984,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.JiraIntegrationDTO": {
+            "dtos.JiraIntegration": {
                 "properties": {
                     "id": {
                         "type": "string"
@@ -8968,7 +9011,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.LicenseRiskArtifactDTO": {
+            "dtos.LicenseRiskArtifact": {
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -8987,7 +9030,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.LogDTO": {
+            "dtos.Log": {
                 "properties": {
                     "assetID": {
                         "type": "string"
@@ -9064,6 +9107,7 @@
                         "type": "string"
                     },
                     "license": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -9135,7 +9179,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.MappedControlDTO": {
+            "dtos.MappedControl": {
                 "properties": {
                     "frameworkControlId": {
                         "type": "string"
@@ -9372,73 +9416,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.OrgChangeRoleRequest": {
-                "properties": {
-                    "role": {
-                        "enum": [
-                            "member",
-                            "admin"
-                        ],
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "role"
-                ],
-                "type": "object"
-            },
-            "dtos.OrgCreateRequest": {
-                "properties": {
-                    "contactPhoneNumber": {
-                        "type": "string"
-                    },
-                    "country": {
-                        "type": "string"
-                    },
-                    "criticalInfrastructure": {
-                        "type": "boolean"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "grundschutz": {
-                        "type": "boolean"
-                    },
-                    "industry": {
-                        "type": "string"
-                    },
-                    "iso27001": {
-                        "type": "boolean"
-                    },
-                    "language": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "nist": {
-                        "type": "boolean"
-                    },
-                    "numberOfEmployees": {
-                        "type": "integer"
-                    }
-                },
-                "required": [
-                    "contactPhoneNumber",
-                    "country",
-                    "criticalInfrastructure",
-                    "description",
-                    "grundschutz",
-                    "industry",
-                    "iso27001",
-                    "language",
-                    "name",
-                    "nist",
-                    "numberOfEmployees"
-                ],
-                "type": "object"
-            },
-            "dtos.OrgDTO": {
+            "dtos.Org": {
                 "properties": {
                     "configFiles": {
                         "additionalProperties": {},
@@ -9464,14 +9442,14 @@
                     },
                     "gitLabIntegrations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GitlabIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.GitlabIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "githubAppInstallations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GithubAppInstallationDTO"
+                            "$ref": "#/components/schemas/dtos.GithubAppInstallation"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9493,7 +9471,7 @@
                     },
                     "jiraIntegrations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.JiraIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.JiraIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9512,7 +9490,7 @@
                     },
                     "projects": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectDTO"
+                            "$ref": "#/components/schemas/dtos.Project"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9554,7 +9532,79 @@
                 ],
                 "type": "object"
             },
-            "dtos.OrgDetailsDTO": {
+            "dtos.OrgChangeRoleRequest": {
+                "properties": {
+                    "role": {
+                        "enum": [
+                            "member",
+                            "admin"
+                        ],
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "role"
+                ],
+                "type": "object"
+            },
+            "dtos.OrgCreateRequest": {
+                "properties": {
+                    "contactPhoneNumber": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "country": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "criticalInfrastructure": {
+                        "type": "boolean"
+                    },
+                    "description": {
+                        "maxLength": 4000,
+                        "type": "string"
+                    },
+                    "grundschutz": {
+                        "type": "boolean"
+                    },
+                    "industry": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "iso27001": {
+                        "type": "boolean"
+                    },
+                    "language": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "name": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "nist": {
+                        "type": "boolean"
+                    },
+                    "numberOfEmployees": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "contactPhoneNumber",
+                    "country",
+                    "criticalInfrastructure",
+                    "description",
+                    "grundschutz",
+                    "industry",
+                    "iso27001",
+                    "language",
+                    "name",
+                    "nist",
+                    "numberOfEmployees"
+                ],
+                "type": "object"
+            },
+            "dtos.OrgDetails": {
                 "properties": {
                     "configFiles": {
                         "additionalProperties": {},
@@ -9580,14 +9630,14 @@
                     },
                     "gitLabIntegrations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GitlabIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.GitlabIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "githubAppInstallations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GithubAppInstallationDTO"
+                            "$ref": "#/components/schemas/dtos.GithubAppInstallation"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9603,7 +9653,7 @@
                     },
                     "invitedMembers": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.InvitedUserDTO"
+                            "$ref": "#/components/schemas/dtos.InvitedUser"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9616,7 +9666,7 @@
                     },
                     "jiraIntegrations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.JiraIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.JiraIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9626,7 +9676,7 @@
                     },
                     "members": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.UserDTO"
+                            "$ref": "#/components/schemas/dtos.User"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9642,7 +9692,7 @@
                     },
                     "projects": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectDTO"
+                            "$ref": "#/components/schemas/dtos.Project"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -9803,21 +9853,25 @@
                         "type": "object"
                     },
                     "contactPhoneNumber": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "country": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "criticalInfrastructure": {
                         "type": "boolean"
                     },
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "grundschutz": {
                         "type": "boolean"
                     },
                     "industry": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "isPublic": {
@@ -9827,9 +9881,11 @@
                         "type": "boolean"
                     },
                     "language": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "nist": {
@@ -9999,7 +10055,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.OrgSettingsDTO": {
+            "dtos.OrgSettings": {
                 "properties": {
                     "configFiles": {
                         "additionalProperties": {},
@@ -10025,14 +10081,14 @@
                     },
                     "gitLabIntegrations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GitlabIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.GitlabIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
                     },
                     "githubAppInstallations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.GithubAppInstallationDTO"
+                            "$ref": "#/components/schemas/dtos.GithubAppInstallation"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10048,7 +10104,7 @@
                     },
                     "invitedMembers": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.InvitedUserDTO"
+                            "$ref": "#/components/schemas/dtos.InvitedUser"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10061,7 +10117,7 @@
                     },
                     "jiraIntegrations": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.JiraIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.JiraIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10071,7 +10127,7 @@
                     },
                     "members": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.UserDTO"
+                            "$ref": "#/components/schemas/dtos.User"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10087,7 +10143,7 @@
                     },
                     "projects": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectDTO"
+                            "$ref": "#/components/schemas/dtos.Project"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10103,7 +10159,7 @@
                     },
                     "webhooks": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.WebhookIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10197,7 +10253,42 @@
                 ],
                 "type": "object"
             },
-            "dtos.PATCreateResponseDTO": {
+            "dtos.PAT": {
+                "properties": {
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "expiryDateUnix": {
+                        "type": "integer"
+                    },
+                    "fingerprint": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lastUsedAt": {
+                        "type": "string"
+                    },
+                    "scopes": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "createdAt",
+                    "description",
+                    "expiryDateUnix",
+                    "fingerprint",
+                    "id",
+                    "lastUsedAt",
+                    "scopes"
+                ],
+                "type": "object"
+            },
+            "dtos.PATCreateResponse": {
                 "properties": {
                     "bearerToken": {
                         "type": "string"
@@ -10236,41 +10327,6 @@
                 ],
                 "type": "object"
             },
-            "dtos.PATDTO": {
-                "properties": {
-                    "createdAt": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "expiryDateUnix": {
-                        "type": "integer"
-                    },
-                    "fingerprint": {
-                        "type": "string"
-                    },
-                    "id": {
-                        "type": "string"
-                    },
-                    "lastUsedAt": {
-                        "type": "string"
-                    },
-                    "scopes": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "createdAt",
-                    "description",
-                    "expiryDateUnix",
-                    "fingerprint",
-                    "id",
-                    "lastUsedAt",
-                    "scopes"
-                ],
-                "type": "object"
-            },
             "dtos.Package": {
                 "properties": {
                     "ecosystem": {
@@ -10293,15 +10349,18 @@
             "dtos.PatCreateRequest": {
                 "properties": {
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "expiryDateUnix": {
                         "type": "integer"
                     },
                     "pubKey": {
+                        "maxLength": 8192,
                         "type": "string"
                     },
                     "scopes": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -10332,7 +10391,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.PolicyDTO": {
+            "dtos.Policy": {
                 "properties": {
                     "description": {
                         "type": "string"
@@ -10417,7 +10476,90 @@
                 ],
                 "type": "object"
             },
-            "dtos.ProjectAssetDTO": {
+            "dtos.Project": {
+                "properties": {
+                    "assets": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.Asset"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "avatar": {
+                        "description": "URL to the project's avatar",
+                        "type": "string"
+                    },
+                    "configFiles": {
+                        "additionalProperties": {},
+                        "type": "object"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "externalEntityId": {
+                        "description": "only set if this is an external entity",
+                        "type": "string"
+                    },
+                    "externalEntityProviderId": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "isPublic": {
+                        "type": "boolean"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "parent": {
+                        "$ref": "#/components/schemas/dtos.Project",
+                        "description": "recursive structure"
+                    },
+                    "parentId": {
+                        "type": "string"
+                    },
+                    "repositoryId": {
+                        "type": "string"
+                    },
+                    "repositoryName": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "subGroupsAndAsset": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.ProjectAsset"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assets",
+                    "avatar",
+                    "configFiles",
+                    "description",
+                    "externalEntityId",
+                    "externalEntityProviderId",
+                    "id",
+                    "isPublic",
+                    "name",
+                    "parent",
+                    "parentId",
+                    "repositoryId",
+                    "repositoryName",
+                    "slug",
+                    "subGroupsAndAsset",
+                    "type"
+                ],
+                "type": "object"
+            },
+            "dtos.ProjectAsset": {
                 "properties": {
                     "avatar": {
                         "description": "URL to the asset's avatar",
@@ -10457,7 +10599,7 @@
                     },
                     "subGroupsAndAsset": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
+                            "$ref": "#/components/schemas/dtos.ProjectAsset"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10501,9 +10643,11 @@
             "dtos.ProjectCreateRequest": {
                 "properties": {
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "parentId": {
@@ -10511,6 +10655,7 @@
                         "type": "string"
                     },
                     "type": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -10522,94 +10667,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.ProjectDTO": {
+            "dtos.ProjectDetails": {
                 "properties": {
                     "assets": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AssetDTO"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
-                    "avatar": {
-                        "description": "URL to the project's avatar",
-                        "type": "string"
-                    },
-                    "configFiles": {
-                        "additionalProperties": {},
-                        "type": "object"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "externalEntityId": {
-                        "description": "only set if this is an external entity",
-                        "type": "string"
-                    },
-                    "externalEntityProviderId": {
-                        "type": "string"
-                    },
-                    "id": {
-                        "type": "string"
-                    },
-                    "isPublic": {
-                        "type": "boolean"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "parent": {
-                        "$ref": "#/components/schemas/dtos.ProjectDTO",
-                        "description": "recursive structure"
-                    },
-                    "parentId": {
-                        "type": "string"
-                    },
-                    "repositoryId": {
-                        "type": "string"
-                    },
-                    "repositoryName": {
-                        "type": "string"
-                    },
-                    "slug": {
-                        "type": "string"
-                    },
-                    "subGroupsAndAsset": {
-                        "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
-                    "type": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "assets",
-                    "avatar",
-                    "configFiles",
-                    "description",
-                    "externalEntityId",
-                    "externalEntityProviderId",
-                    "id",
-                    "isPublic",
-                    "name",
-                    "parent",
-                    "parentId",
-                    "repositoryId",
-                    "repositoryName",
-                    "slug",
-                    "subGroupsAndAsset",
-                    "type"
-                ],
-                "type": "object"
-            },
-            "dtos.ProjectDetailsDTO": {
-                "properties": {
-                    "assets": {
-                        "items": {
-                            "$ref": "#/components/schemas/dtos.AssetDTO"
+                            "$ref": "#/components/schemas/dtos.Asset"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10640,7 +10702,7 @@
                     },
                     "members": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.UserDTO"
+                            "$ref": "#/components/schemas/dtos.User"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10649,7 +10711,7 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.ProjectDTO",
+                        "$ref": "#/components/schemas/dtos.Project",
                         "description": "recursive structure"
                     },
                     "parentId": {
@@ -10666,7 +10728,7 @@
                     },
                     "subGroupsAndAsset": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
+                            "$ref": "#/components/schemas/dtos.ProjectAsset"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10676,7 +10738,7 @@
                     },
                     "webhooks": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                            "$ref": "#/components/schemas/dtos.WebhookIntegration"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10708,7 +10770,7 @@
                 "properties": {
                     "assets": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AssetEntryDTO"
+                            "$ref": "#/components/schemas/dtos.AssetEntry"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10721,7 +10783,7 @@
                     },
                     "subProjects": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.SubProjectEntryDTO"
+                            "$ref": "#/components/schemas/dtos.SubProjectEntry"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10741,6 +10803,7 @@
                         "items": {
                             "type": "string"
                         },
+                        "maxItems": 100,
                         "type": "array",
                         "uniqueItems": false
                     }
@@ -10757,21 +10820,26 @@
                         "type": "object"
                     },
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "isPublic": {
                         "type": "boolean"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "repositoryId": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "repositoryName": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "type": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -10867,7 +10935,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.RelationshipDTO": {
+            "dtos.Relationship": {
                 "properties": {
                     "relationshipType": {
                         "type": "string"
@@ -10903,26 +10971,7 @@
                     "RelationshipTypeAdvisory"
                 ]
             },
-            "dtos.ReleaseCreateRequest": {
-                "properties": {
-                    "items": {
-                        "items": {
-                            "$ref": "#/components/schemas/dtos.ReleaseItemDTO"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "items",
-                    "name"
-                ],
-                "type": "object"
-            },
-            "dtos.ReleaseDTO": {
+            "dtos.Release": {
                 "properties": {
                     "createdAt": {
                         "type": "string"
@@ -10932,7 +10981,7 @@
                     },
                     "items": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ReleaseItemDTO"
+                            "$ref": "#/components/schemas/dtos.ReleaseItem"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -10957,7 +11006,27 @@
                 ],
                 "type": "object"
             },
-            "dtos.ReleaseItemDTO": {
+            "dtos.ReleaseCreateRequest": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.ReleaseItem"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "name": {
+                        "maxLength": 256,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "items",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.ReleaseItem": {
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -10996,7 +11065,7 @@
                 "properties": {
                     "items": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ReleaseItemDTO"
+                            "$ref": "#/components/schemas/dtos.ReleaseItem"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -11081,6 +11150,7 @@
             "dtos.RevokeByPrivateKeyRequest": {
                 "properties": {
                     "privkey": {
+                        "maxLength": 8192,
                         "type": "string"
                     }
                 },
@@ -11089,7 +11159,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.RiskHistoryDTO": {
+            "dtos.RiskHistory": {
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -11281,7 +11351,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.RiskHistoryWithVersionDTO": {
+            "dtos.RiskHistoryWithVersion": {
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -11537,7 +11607,7 @@
                     },
                     "dependencyVulns": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.DependencyVulnDTO"
+                            "$ref": "#/components/schemas/dtos.DependencyVuln"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -11596,11 +11666,11 @@
                 ],
                 "type": "object"
             },
-            "dtos.SubProjectEntryDTO": {
+            "dtos.SubProjectEntry": {
                 "properties": {
                     "assets": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.AssetEntryDTO"
+                            "$ref": "#/components/schemas/dtos.AssetEntry"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -11629,6 +11699,7 @@
                         "items": {
                             "type": "string"
                         },
+                        "maxItems": 100,
                         "type": "array",
                         "uniqueItems": false
                     },
@@ -11650,6 +11721,7 @@
             "dtos.UpdateAssetRequest": {
                 "properties": {
                     "new_slug": {
+                        "maxLength": 256,
                         "type": "string"
                     }
                 },
@@ -11670,7 +11742,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.UserDTO": {
+            "dtos.User": {
                 "properties": {
                     "avatarUrl": {
                         "type": "string"
@@ -11693,7 +11765,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.VEXRuleDTO": {
+            "dtos.VEXRule": {
                 "properties": {
                     "appliesToAmountOfDependencyVulns": {
                         "description": "Metrics",
@@ -11839,7 +11911,7 @@
                     "VexRuleRecommendationTypeUpstream"
                 ]
             },
-            "dtos.VulnEventDTO": {
+            "dtos.VulnEvent": {
                 "properties": {
                     "createdAt": {
                         "type": "string"
@@ -11875,7 +11947,7 @@
                         "type": "string"
                     },
                     "vexRule": {
-                        "$ref": "#/components/schemas/dtos.VEXRuleDTO"
+                        "$ref": "#/components/schemas/dtos.VEXRule"
                     },
                     "vexRuleId": {
                         "type": "string"
@@ -11951,7 +12023,7 @@
                     "EventTypeRawRiskAssessmentUpdated"
                 ]
             },
-            "dtos.VulnInPackageDTO": {
+            "dtos.VulnInPackage": {
                 "properties": {
                     "cveId": {
                         "type": "string"
@@ -12059,21 +12131,25 @@
                     "VulnTypeSecurityAdvisory"
                 ]
             },
-            "dtos.WebhookCreateRequestDTO": {
+            "dtos.WebhookCreateRequest": {
                 "properties": {
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "sbomEnabled": {
                         "type": "boolean"
                     },
                     "secret": {
+                        "maxLength": 1024,
                         "type": "string"
                     },
                     "url": {
+                        "maxLength": 2048,
                         "type": "string"
                     },
                     "vulnEnabled": {
@@ -12090,7 +12166,7 @@
                 ],
                 "type": "object"
             },
-            "dtos.WebhookIntegrationDTO": {
+            "dtos.WebhookIntegration": {
                 "properties": {
                     "description": {
                         "type": "string"
@@ -12121,15 +12197,18 @@
                 ],
                 "type": "object"
             },
-            "dtos.WebhookTestRequestDTO": {
+            "dtos.WebhookTestRequest": {
                 "properties": {
                     "payloadType": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "secret": {
+                        "maxLength": 1024,
                         "type": "string"
                     },
                     "url": {
+                        "maxLength": 2048,
                         "type": "string"
                     }
                 },
@@ -12140,24 +12219,29 @@
                 ],
                 "type": "object"
             },
-            "dtos.WebhookUpdateRequestDTO": {
+            "dtos.WebhookUpdateRequest": {
                 "properties": {
                     "description": {
+                        "maxLength": 4000,
                         "type": "string"
                     },
                     "id": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
                     "sbomEnabled": {
                         "type": "boolean"
                     },
                     "secret": {
+                        "maxLength": 1024,
                         "type": "string"
                     },
                     "url": {
+                        "maxLength": 2048,
                         "type": "string"
                     },
                     "vulnEnabled": {
@@ -14243,11 +14327,11 @@
                 "additionalProperties": {},
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControl": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.CompliancePostureWithControlDTO"
+                            "$ref": "#/components/schemas/dtos.CompliancePostureWithControl"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14270,11 +14354,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependencyDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependency": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ComponentDependencyDTO"
+                            "$ref": "#/components/schemas/dtos.ComponentDependency"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14297,11 +14381,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrence": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ComponentOccurrenceDTO"
+                            "$ref": "#/components/schemas/dtos.ComponentOccurrence"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14324,11 +14408,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_Log": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.LogDTO"
+                            "$ref": "#/components/schemas/dtos.Log"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14351,11 +14435,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_Project": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectAssetDTO"
+                            "$ref": "#/components/schemas/dtos.Project"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14378,11 +14462,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAsset": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ProjectDTO"
+                            "$ref": "#/components/schemas/dtos.ProjectAsset"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14405,11 +14489,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_ReleaseDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_Release": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.ReleaseDTO"
+                            "$ref": "#/components/schemas/dtos.Release"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14432,11 +14516,11 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_shared.Paged-dtos_VulnEventDTO": {
+            "github_com_l3montree-dev_devguard_shared.Paged-dtos_VulnEvent": {
                 "properties": {
                     "data": {
                         "items": {
-                            "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                            "$ref": "#/components/schemas/dtos.VulnEvent"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -14651,16 +14735,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14704,16 +14778,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -14851,7 +14915,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.OrgDTO"
+                                    "$ref": "#/components/schemas/dtos.Org"
                                 }
                             }
                         },
@@ -15307,7 +15371,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_Log"
                                 }
                             }
                         },
@@ -15793,7 +15857,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.ComplianceComponentDetailsDTO"
+                                        "$ref": "#/components/schemas/dtos.ComplianceComponentDetails"
                                     },
                                     "type": "array"
                                 }
@@ -15837,7 +15901,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentDetails"
                                 }
                             }
                         },
@@ -17133,7 +17197,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.InstanceSettingsDTO"
+                                    "$ref": "#/components/schemas/dtos.InstanceSettings"
                                 }
                             }
                         },
@@ -17405,7 +17469,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.OrgDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.OrgDetails"
                                 }
                             }
                         },
@@ -17458,7 +17522,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.OrgDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.OrgDetails"
                                 }
                             }
                         },
@@ -17500,7 +17564,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControl"
                                 }
                             }
                         },
@@ -17613,7 +17677,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                                 }
                             }
                         },
@@ -17697,7 +17761,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureStatsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureStats"
                                 }
                             }
                         },
@@ -17748,7 +17812,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetails"
                                 }
                             }
                         },
@@ -17817,7 +17881,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetails"
                                 }
                             }
                         },
@@ -17890,7 +17954,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                                 }
                             }
                         },
@@ -17956,7 +18020,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrence"
                                 }
                             }
                         },
@@ -18111,7 +18175,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.ProjectDTO"
+                                        "$ref": "#/components/schemas/dtos.Project"
                                     },
                                     "type": "array"
                                 }
@@ -18508,7 +18572,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.GitlabIntegrationDTO"
+                                    "$ref": "#/components/schemas/dtos.GitlabIntegration"
                                 }
                             }
                         },
@@ -18620,7 +18684,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.JiraIntegrationDTO"
+                                    "$ref": "#/components/schemas/dtos.JiraIntegration"
                                 }
                             }
                         },
@@ -18750,7 +18814,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.WebhookTestRequestDTO",
+                                "$ref": "#/components/schemas/dtos.WebhookTestRequest",
                                 "summary": "body",
                                 "description": "Test webhook data"
                             }
@@ -18813,7 +18877,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.WebhookCreateRequestDTO",
+                                "$ref": "#/components/schemas/dtos.WebhookCreateRequest",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -18827,7 +18891,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegration"
                                 }
                             }
                         },
@@ -18919,7 +18983,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.WebhookUpdateRequestDTO",
+                                "$ref": "#/components/schemas/dtos.WebhookUpdateRequest",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -18933,7 +18997,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegration"
                                 }
                             }
                         },
@@ -19059,7 +19123,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_Log"
                                 }
                             }
                         },
@@ -19346,7 +19410,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.PATDTO"
+                                        "$ref": "#/components/schemas/dtos.PAT"
                                     },
                                     "type": "array"
                                 }
@@ -19401,7 +19465,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.PATCreateResponseDTO"
+                                    "$ref": "#/components/schemas/dtos.PATCreateResponse"
                                 }
                             }
                         },
@@ -19529,7 +19593,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.PolicyDTO",
+                                "$ref": "#/components/schemas/dtos.Policy",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -19543,7 +19607,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.PolicyDTO"
+                                    "$ref": "#/components/schemas/dtos.Policy"
                                 }
                             }
                         },
@@ -19684,7 +19748,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.PolicyDTO",
+                                "$ref": "#/components/schemas/dtos.Policy",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -19883,7 +19947,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_Project"
                                 }
                             }
                         },
@@ -19976,7 +20040,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ProjectDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.ProjectDetails"
                                 }
                             }
                         },
@@ -20038,7 +20102,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ProjectDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.ProjectDetails"
                                 }
                             }
                         },
@@ -20090,7 +20154,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.AssetDTO"
+                                        "$ref": "#/components/schemas/dtos.Asset"
                                     },
                                     "type": "array"
                                 }
@@ -20154,7 +20218,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.AssetDTO"
+                                    "$ref": "#/components/schemas/dtos.Asset"
                                 }
                             }
                         },
@@ -20265,7 +20329,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.AssetDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.AssetDetails"
                                 }
                             }
                         },
@@ -20336,7 +20400,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.AssetDetailsWithSecretsDTO"
+                                    "$ref": "#/components/schemas/dtos.AssetDetailsWithSecrets"
                                 }
                             }
                         },
@@ -21249,7 +21313,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.ExternalReferenceDTO"
+                                        "$ref": "#/components/schemas/dtos.ExternalReference"
                                     },
                                     "type": "array"
                                 }
@@ -21322,7 +21386,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ExternalReferenceDTO"
+                                    "$ref": "#/components/schemas/dtos.ExternalReference"
                                 }
                             }
                         },
@@ -21723,7 +21787,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_Log"
                                 }
                             }
                         },
@@ -22099,7 +22163,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.PATDTO"
+                                        "$ref": "#/components/schemas/dtos.PAT"
                                     },
                                     "type": "array"
                                 }
@@ -22172,7 +22236,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.PATCreateResponseDTO"
+                                    "$ref": "#/components/schemas/dtos.PATCreateResponse"
                                 }
                             }
                         },
@@ -22348,7 +22412,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.AssetVersionDTO"
+                                        "$ref": "#/components/schemas/dtos.AssetVersion"
                                     },
                                     "type": "array"
                                 }
@@ -22431,7 +22495,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.AssetVersionDTO"
+                                    "$ref": "#/components/schemas/dtos.AssetVersion"
                                 }
                             }
                         },
@@ -22560,7 +22624,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.AssetVersionDTO"
+                                    "$ref": "#/components/schemas/dtos.AssetVersion"
                                 }
                             }
                         },
@@ -22695,7 +22759,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.AdvisoryCreate",
+                                "$ref": "#/components/schemas/dtos.AdvisoryCreateRequest",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -22924,7 +22988,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.AdvisoryUpdate",
+                                "$ref": "#/components/schemas/dtos.AdvisoryUpdateRequest",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -23093,7 +23157,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.DependencyVulnDTO"
+                                        "$ref": "#/components/schemas/dtos.DependencyVuln"
                                     },
                                     "type": "array"
                                 }
@@ -23234,7 +23298,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                                        "$ref": "#/components/schemas/dtos.Artifact"
                                     },
                                     "type": "array"
                                 }
@@ -23316,7 +23380,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ArtifactDTO"
+                                    "$ref": "#/components/schemas/dtos.Artifact"
                                 }
                             }
                         },
@@ -24384,7 +24448,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControl"
                                 }
                             }
                         },
@@ -24551,7 +24615,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                                 }
                             }
                         },
@@ -24689,7 +24753,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureStatsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureStats"
                                 }
                             }
                         },
@@ -24767,7 +24831,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetails"
                                 }
                             }
                         },
@@ -24863,7 +24927,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetails"
                                 }
                             }
                         },
@@ -24963,7 +25027,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                                 }
                             }
                         },
@@ -25110,7 +25174,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependencyDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentDependency"
                                 }
                             }
                         },
@@ -25505,7 +25569,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.BatchDependencyVulnStatus",
+                                "$ref": "#/components/schemas/dtos.BatchDependencyVulnStatusRequest",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -25520,7 +25584,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.DetailedDependencyVulnDTO"
+                                        "$ref": "#/components/schemas/dtos.DetailedDependencyVuln"
                                     },
                                     "type": "array"
                                 }
@@ -25681,7 +25745,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedDependencyVulnWithRelationsDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedDependencyVulnWithRelations"
                                 }
                             }
                         },
@@ -25770,7 +25834,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedDependencyVulnDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedDependencyVuln"
                                 }
                             }
                         },
@@ -25849,7 +25913,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                                        "$ref": "#/components/schemas/dtos.VulnEvent"
                                     },
                                     "type": "array"
                                 }
@@ -26024,7 +26088,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedDependencyVulnDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedDependencyVuln"
                                 }
                             }
                         },
@@ -26109,7 +26173,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_VulnEventDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_VulnEvent"
                                 }
                             }
                         },
@@ -26325,7 +26389,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.BatchFirstPartyVulnStatus",
+                                "$ref": "#/components/schemas/dtos.BatchFirstPartyVulnStatusRequest",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -26340,7 +26404,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                        "$ref": "#/components/schemas/dtos.DetailedFirstPartyVuln"
                                     },
                                     "type": "array"
                                 }
@@ -26420,7 +26484,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVuln"
                                 }
                             }
                         },
@@ -26495,7 +26559,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.FirstPartyVulnStatus",
+                                "$ref": "#/components/schemas/dtos.FirstPartyVulnStatusRequest",
                                 "summary": "body",
                                 "description": "Event data"
                             }
@@ -26509,7 +26573,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVuln"
                                 }
                             }
                         },
@@ -26588,7 +26652,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.VulnEventDTO"
+                                        "$ref": "#/components/schemas/dtos.VulnEvent"
                                     },
                                     "type": "array"
                                 }
@@ -26685,7 +26749,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVulnDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedFirstPartyVuln"
                                 }
                             }
                         },
@@ -26997,7 +27061,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRiskDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRisk"
                                 }
                             }
                         },
@@ -27086,7 +27150,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRiskDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRisk"
                                 }
                             }
                         },
@@ -27177,7 +27241,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRiskDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRisk"
                                 }
                             }
                         },
@@ -27272,7 +27336,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRiskDTO"
+                                    "$ref": "#/components/schemas/dtos.DetailedLicenseRisk"
                                 }
                             }
                         },
@@ -27897,7 +27961,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.RiskHistoryDTO"
+                                        "$ref": "#/components/schemas/dtos.RiskHistory"
                                     },
                                     "type": "array"
                                 }
@@ -28272,7 +28336,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.RiskHistoryWithVersionDTO"
+                                        "$ref": "#/components/schemas/dtos.RiskHistoryWithVersion"
                                     },
                                     "type": "array"
                                 }
@@ -28361,7 +28425,7 @@
                                     "properties": {
                                         "data": {
                                             "items": {
-                                                "$ref": "#/components/schemas/dtos.VEXRuleDTO"
+                                                "$ref": "#/components/schemas/dtos.VEXRule"
                                             },
                                             "type": "array"
                                         },
@@ -28446,7 +28510,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.VEXRuleDTO"
+                                    "$ref": "#/components/schemas/dtos.VEXRule"
                                 }
                             }
                         },
@@ -28789,7 +28853,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.VEXRuleDTO"
+                                    "$ref": "#/components/schemas/dtos.VEXRule"
                                 }
                             }
                         },
@@ -28894,7 +28958,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControlDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_CompliancePostureWithControl"
                                 }
                             }
                         },
@@ -29025,7 +29089,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                                 }
                             }
                         },
@@ -29127,7 +29191,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureStatsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureStats"
                                 }
                             }
                         },
@@ -29187,7 +29251,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetails"
                                 }
                             }
                         },
@@ -29265,7 +29329,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetailsDTO"
+                                    "$ref": "#/components/schemas/dtos.CompliancePostureWithDetails"
                                 }
                             }
                         },
@@ -29347,7 +29411,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatementDTO"
+                                    "$ref": "#/components/schemas/dtos.ComplianceComponentImplementsControlStatement"
                                 }
                             }
                         },
@@ -29398,7 +29462,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrenceDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ComponentOccurrence"
                                 }
                             }
                         },
@@ -29763,7 +29827,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.ExternalSubprojectRequestDTO",
+                                "$ref": "#/components/schemas/dtos.ExternalSubprojectRequest",
                                 "summary": "body",
                                 "description": "Request body"
                             }
@@ -29820,7 +29884,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.WebhookTestRequestDTO",
+                                "$ref": "#/components/schemas/dtos.WebhookTestRequest",
                                 "summary": "body",
                                 "description": "Test webhook data"
                             }
@@ -29892,7 +29956,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.WebhookCreateRequestDTO",
+                                "$ref": "#/components/schemas/dtos.WebhookCreateRequest",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -29906,7 +29970,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegration"
                                 }
                             }
                         },
@@ -30016,7 +30080,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.WebhookUpdateRequestDTO",
+                                "$ref": "#/components/schemas/dtos.WebhookUpdateRequest",
                                 "summary": "body",
                                 "description": "Webhook data"
                             }
@@ -30030,7 +30094,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.WebhookIntegrationDTO"
+                                    "$ref": "#/components/schemas/dtos.WebhookIntegration"
                                 }
                             }
                         },
@@ -30121,7 +30185,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_LogDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_Log"
                                 }
                             }
                         },
@@ -30173,7 +30237,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.UserDTO"
+                                        "$ref": "#/components/schemas/dtos.User"
                                     },
                                     "type": "array"
                                 }
@@ -30399,7 +30463,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.PATDTO"
+                                        "$ref": "#/components/schemas/dtos.PAT"
                                     },
                                     "type": "array"
                                 }
@@ -30463,7 +30527,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.PATCreateResponseDTO"
+                                    "$ref": "#/components/schemas/dtos.PATCreateResponse"
                                 }
                             }
                         },
@@ -30733,7 +30797,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ReleaseDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_Release"
                                 }
                             }
                         },
@@ -30795,7 +30859,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ReleaseDTO"
+                                    "$ref": "#/components/schemas/dtos.Release"
                                 }
                             }
                         },
@@ -30854,7 +30918,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CandidatesResponseDTO"
+                                    "$ref": "#/components/schemas/dtos.CandidatesResponse"
                                 }
                             }
                         },
@@ -30965,7 +31029,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ReleaseDTO"
+                                    "$ref": "#/components/schemas/dtos.Release"
                                 }
                             }
                         },
@@ -31036,7 +31100,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ReleaseDTO"
+                                    "$ref": "#/components/schemas/dtos.Release"
                                 }
                             }
                         },
@@ -31095,7 +31159,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.CandidatesResponseDTO"
+                                    "$ref": "#/components/schemas/dtos.CandidatesResponse"
                                 }
                             }
                         },
@@ -31192,7 +31256,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/dtos.ReleaseItemDTO",
+                                "$ref": "#/components/schemas/dtos.ReleaseItem",
                                 "summary": "body",
                                 "description": "Release item data"
                             }
@@ -31206,7 +31270,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.ReleaseItemDTO"
+                                    "$ref": "#/components/schemas/dtos.ReleaseItem"
                                 }
                             }
                         },
@@ -31565,7 +31629,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.RiskHistoryDTO"
+                                        "$ref": "#/components/schemas/dtos.RiskHistory"
                                     },
                                     "type": "array"
                                 }
@@ -31754,7 +31818,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAssetDTO"
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_shared.Paged-dtos_ProjectAsset"
                                 }
                             }
                         },
@@ -31796,7 +31860,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/dtos.OrgSettingsDTO"
+                                    "$ref": "#/components/schemas/dtos.OrgSettings"
                                 }
                             }
                         },
@@ -31942,7 +32006,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.PATDTO"
+                                        "$ref": "#/components/schemas/dtos.PAT"
                                     },
                                     "type": "array"
                                 }
@@ -32774,7 +32838,7 @@
                             "application/json": {
                                 "schema": {
                                     "items": {
-                                        "$ref": "#/components/schemas/dtos.OrgDTO"
+                                        "$ref": "#/components/schemas/dtos.Org"
                                     },
                                     "type": "array"
                                 }

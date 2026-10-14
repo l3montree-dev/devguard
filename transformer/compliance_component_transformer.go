@@ -20,16 +20,16 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func ComplianceComponentToDTO(m models.ComplianceComponent) dtos.ComplianceComponentDTO {
-	return dtos.ComplianceComponentDTO{
+func ComplianceComponentToDTO(m models.ComplianceComponent) dtos.ComplianceComponent {
+	return dtos.ComplianceComponent{
 		UUID:        m.UUID.String(),
 		Title:       m.Title,
 		Description: m.Description,
 	}
 }
 
-func ComplianceComponentImplementsControlToDTO(m models.ComplianceComponentImplementsControl) dtos.ComplianceComponentImplementsControlDTO {
-	return dtos.ComplianceComponentImplementsControlDTO{
+func ComplianceComponentImplementsControlToDTO(m models.ComplianceComponentImplementsControl) dtos.ComplianceComponentImplementsControl {
+	return dtos.ComplianceComponentImplementsControl{
 		FrameworkControlID:       m.FrameworkControlID,
 		ComplianceComponentID:    m.ComplianceComponentID.String(),
 		ComplianceComponentTitle: m.ComplianceComponent.Title,
@@ -37,9 +37,9 @@ func ComplianceComponentImplementsControlToDTO(m models.ComplianceComponentImple
 	}
 }
 
-func ComplianceComponentToDetailsDTO(m models.ComplianceComponent) dtos.ComplianceComponentDetailsDTO {
-	dto := dtos.ComplianceComponentDetailsDTO{
-		ComplianceComponentDTO: ComplianceComponentToDTO(m),
+func ComplianceComponentToDetailsDTO(m models.ComplianceComponent) dtos.ComplianceComponentDetails {
+	dto := dtos.ComplianceComponentDetails{
+		ComplianceComponent: ComplianceComponentToDTO(m),
 	}
 	for _, ic := range m.ImplementedControls {
 		dto.ImplementedControls = append(dto.ImplementedControls, ComplianceComponentImplementsControlToDTO(ic))
@@ -47,9 +47,9 @@ func ComplianceComponentToDetailsDTO(m models.ComplianceComponent) dtos.Complian
 	return dto
 }
 
-func ComplianceComponentImplementsControlStatementToDTO(m models.ComplianceComponentImplementsControlStatement) dtos.ComplianceComponentImplementsControlStatementDTO {
+func ComplianceComponentImplementsControlStatementToDTO(m models.ComplianceComponentImplementsControlStatement) dtos.ComplianceComponentImplementsControlStatement {
 	component := m.ComplianceComponentImplementsControl.ComplianceComponent
-	return dtos.ComplianceComponentImplementsControlStatementDTO{
+	return dtos.ComplianceComponentImplementsControlStatement{
 		ID:                             m.ID.String(),
 		CompliancePostureID:            m.CompliancePostureID.String(),
 		ComplianceComponentID:          m.ComplianceComponentID.String(),

@@ -141,7 +141,7 @@ func (f *TestFixture) InviteToProject(t testing.TB, e *echo.Echo, org models.Org
 
 // GetProjectMembers calls the project Members endpoint and returns the member list.
 // identities is a lookup map used to resolve user IDs that RBAC reports as members.
-func (f *TestFixture) GetProjectMembers(t testing.TB, e *echo.Echo, org models.Org, project models.Project, identities []client.Identity) []dtos.UserDTO {
+func (f *TestFixture) GetProjectMembers(t testing.TB, e *echo.Echo, org models.Org, project models.Project, identities []client.Identity) []dtos.User {
 	t.Helper()
 
 	byID := make(map[string]client.Identity, len(identities))
@@ -175,7 +175,7 @@ func (f *TestFixture) GetProjectMembers(t testing.TB, e *echo.Echo, org models.O
 	require.NoError(t, f.App.ProjectController.Members(ctx))
 	require.Equal(t, 200, rec.Code)
 
-	var members []dtos.UserDTO
+	var members []dtos.User
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &members))
 	return members
 }
@@ -206,7 +206,7 @@ func (f *TestFixture) CreateAssetViaController(t testing.TB, e *echo.Echo, org m
 	require.NoError(t, f.App.AssetController.Create(ctx))
 	require.Equal(t, 200, rec.Code)
 
-	var assetDTO dtos.AssetDTO
+	var assetDTO dtos.Asset
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &assetDTO))
 
 	// resolve to full model for later use
@@ -241,7 +241,7 @@ func (f *TestFixture) InviteToAsset(t testing.TB, e *echo.Echo, org models.Org, 
 
 // GetAssetMembers calls the asset Members endpoint and returns the member list.
 // identities is a lookup map used to resolve user IDs that RBAC reports as members.
-func (f *TestFixture) GetAssetMembers(t testing.TB, e *echo.Echo, org models.Org, project models.Project, asset models.Asset, identities []client.Identity) []dtos.UserDTO {
+func (f *TestFixture) GetAssetMembers(t testing.TB, e *echo.Echo, org models.Org, project models.Project, asset models.Asset, identities []client.Identity) []dtos.User {
 	t.Helper()
 
 	byID := make(map[string]client.Identity, len(identities))
@@ -274,7 +274,7 @@ func (f *TestFixture) GetAssetMembers(t testing.TB, e *echo.Echo, org models.Org
 	require.NoError(t, f.App.AssetController.Members(ctx))
 	require.Equal(t, 200, rec.Code)
 
-	var members []dtos.UserDTO
+	var members []dtos.User
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &members))
 	return members
 }
@@ -313,7 +313,7 @@ func TestMemberRolesAcrossProjectHierarchy(t *testing.T) {
 			{Id: userBID, Traits: map[string]any{"email": userBEmail, "name": "User B"}},
 		}
 
-		memberIDs := func(members []dtos.UserDTO) map[string]struct{} {
+		memberIDs := func(members []dtos.User) map[string]struct{} {
 			m := make(map[string]struct{}, len(members))
 			for _, u := range members {
 				m[u.ID] = struct{}{}

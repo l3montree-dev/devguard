@@ -38,7 +38,7 @@ func NewCompliancePostureService(compliancePostureRepository shared.CompliancePo
 	}
 }
 
-func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControlDTO], error) {
+func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
 	postures, err := s.compliancePostureRepository.GetForAllControlsPaged(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	//mapping the state to string for the DTO
 	for i, posture := range postures.Data {
@@ -50,7 +50,7 @@ func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, t
 	return postures, err
 }
 
-func (s *compliancePostureService) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetailsDTO, error) {
+func (s *compliancePostureService) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
 	postures, err := s.compliancePostureRepository.GetAllControls(ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)
 	//mapping the state to string for the DTO
 	for i, posture := range postures {
@@ -91,7 +91,7 @@ func (s *compliancePostureService) updateCompliancePostureState(ctx context.Cont
 	return ev, err
 }
 
-func (s *compliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStatsDTO, error) {
+func (s *compliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
 	return s.compliancePostureRepository.GetStatsForAllControls(ctx, tx, assetVersionName, assetID, projectID, orgID, filter)
 }
 

@@ -113,6 +113,6 @@ func (d *dryRunIntegration) GetIntegration(id shared.IntegrationID) shared.Third
 	return d.real.GetIntegration(id)
 }
 
-func (d *dryRunIntegration) GetUsers(org models.Org) []dtos.UserDTO {
+func (d *dryRunIntegration) GetUsers(org models.Org) []dtos.User {
 	return d.real.GetUsers(org)
 }

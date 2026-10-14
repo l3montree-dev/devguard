@@ -42,7 +42,7 @@ type ThirdPartyIntegration interface {
 type IntegrationAggregate interface {
 	ThirdPartyIntegration
 	GetIntegration(id IntegrationID) ThirdPartyIntegration
-	GetUsers(org models.Org) []dtos.UserDTO
+	GetUsers(org models.Org) []dtos.User
 }
 
 type ExternalEntitySlug string

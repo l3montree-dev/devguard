@@ -1143,8 +1143,8 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client shar
 	return err
 }
 
-func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.UserDTO {
-	return []dtos.UserDTO{}
+func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.User {
+	return []dtos.User{}
 }
 
 func (g *GitlabIntegration) GetID() shared.IntegrationID {
@@ -1230,7 +1230,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 	}
 
 	// return all projects
-	return ctx.JSON(200, dtos.GitlabIntegrationDTO{
+	return ctx.JSON(200, dtos.GitlabIntegration{
 		ID:              integration.ID.String(),
 		URL:             integration.GitLabURL,
 		Name:            integration.Name,

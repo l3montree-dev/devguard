@@ -132,7 +132,7 @@ func (c *IntegrationController) HandleWebhook(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body object{url=string,token=string,name=string} true "GitLab credentials"
-// @Success 200 {object} dtos.GitlabIntegrationDTO
+// @Success 200 {object} dtos.GitlabIntegration
 // @Router /organizations/{organization}/integrations/gitlab/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -156,7 +156,7 @@ func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context)
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body object{url=string,token=string,name=string,userEmail=string} true "Jira credentials"
-// @Success 200 {object} dtos.JiraIntegrationDTO
+// @Success 200 {object} dtos.JiraIntegration
 // @Router /organizations/{organization}/integrations/jira/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)

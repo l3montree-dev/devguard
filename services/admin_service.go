@@ -24,7 +24,7 @@ func NewAdminService(casbinRBACProvider shared.RBACProvider, orgRepository share
 	return &AdminService{casbinRBACProvider: casbinRBACProvider, orgRepository: orgRepository, statisticsRepository: statisticsRepository}
 }
 
-func (service AdminService) GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.UserDTO, error) {
+func (service AdminService) GetAdminsForOrg(ctx context.Context, orgID uuid.UUID, adminClient shared.AdminClient) ([]dtos.User, error) {
 	orgRBAC := service.casbinRBACProvider.GetDomainRBAC(orgID.String())
 	adminIDs, err := orgRBAC.GetAdminsOfOrganization()
 	if err != nil {
@@ -32,16 +32,16 @@ func (service AdminService) GetAdminsForOrg(ctx context.Context, orgID uuid.UUID
 	}
 
 	if len(adminIDs) == 0 {
-		return []dtos.UserDTO{}, nil
+		return []dtos.User{}, nil
 	}
 
 	memberIdentities, err := adminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(adminIDs))
 	if err != nil {
 		return nil, err
 	}
-	users := make([]dtos.UserDTO, 0, len(adminIDs))
+	users := make([]dtos.User, 0, len(adminIDs))
 	for _, member := range memberIdentities {
-		users = append(users, dtos.UserDTO{
+		users = append(users, dtos.User{
 			ID:   member.Id,
 			Name: shared.IdentityName(member.Traits),
 			Role: string(shared.RoleAdmin),
