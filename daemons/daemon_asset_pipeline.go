@@ -193,7 +193,7 @@ func (runner *DaemonRunner) ResolveFixedVersions(input <-chan assetWithProjectAn
 			monitoring.RecoverPanicAndSaveInErrorLog(context.Background(), nil, monitoring.AlertContext{}, "resolve fixed versions panic")
 		}()
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ResolveFixedVersions") {
+			if !runner.stageEnabled(StageResolveFixedVersions) {
 				out <- assetWithDetails
 				continue
 			}
@@ -389,7 +389,7 @@ func (runner *DaemonRunner) SyncTickets(input <-chan assetWithProjectAndOrg, err
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("SyncTickets") {
+			if !runner.stageEnabled(StageSyncTickets) {
 				out <- assetWithDetails
 				continue
 			}
@@ -469,7 +469,7 @@ func (runner *DaemonRunner) ResolveDifferencesInTicketState(input <-chan assetWi
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ResolveDifferencesInTicketState") {
+			if !runner.stageEnabled(StageResolveDifferencesInTicketState) {
 				out <- assetWithDetails
 				continue
 			}
@@ -539,7 +539,7 @@ func (runner *DaemonRunner) ScanAsset(input <-chan assetWithProjectAndOrg, errCh
 		}
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ScanAsset") {
+			if !runner.stageEnabled(StageScanAsset) {
 				out <- assetWithDetails
 				continue
 			}
@@ -619,7 +619,7 @@ func (runner *DaemonRunner) SyncUpstream(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("SyncUpstream") {
+			if !runner.stageEnabled(StageSyncUpstream) {
 				out <- assetWithDetails
 				continue
 			}
@@ -716,7 +716,7 @@ func (runner *DaemonRunner) ApplyVEXRules(input <-chan assetWithProjectAndOrg, e
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("ApplyVEXRules") {
+			if !runner.stageEnabled(StageApplyVEXRules) {
 				out <- assetWithDetails
 				continue
 			}
@@ -794,7 +794,7 @@ func (runner *DaemonRunner) CollectStats(input <-chan assetWithProjectAndOrg, er
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("CollectStats") {
+			if !runner.stageEnabled(StageCollectStats) {
 				out <- assetWithDetails
 				continue
 			}
@@ -846,7 +846,7 @@ func (runner *DaemonRunner) RecalculateRiskForVulnerabilities(input <-chan asset
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("RecalculateRiskForVulnerabilities") {
+			if !runner.stageEnabled(StageRecalculateRiskForVulnerabilities) {
 				out <- assetWithDetails
 				continue
 			}
@@ -908,7 +908,7 @@ func (runner *DaemonRunner) AutoReopenTickets(input <-chan assetWithProjectAndOr
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("AutoReopenTickets") {
+			if !runner.stageEnabled(StageAutoReopenTickets) {
 				out <- assetWithDetails
 				continue
 			}
@@ -978,7 +978,7 @@ func (runner *DaemonRunner) DeleteOldAssetVersions(input <-chan assetWithProject
 		}()
 
 		for assetWithDetails := range input {
-			if !runner.stageEnabled("DeleteOldAssetVersions") {
+			if !runner.stageEnabled(StageDeleteOldAssetVersions) {
 				out <- assetWithDetails
 				continue
 			}
