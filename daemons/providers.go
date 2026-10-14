@@ -34,7 +34,7 @@ type DebugOptions struct {
 	LimitToAssetVersionSlug string
 	// LimitToStages, when non-empty, skips all pipeline stages not in the list.
 	// Valid values match the stage method names: "SyncTickets",
-	// "ResolveDifferencesInTicketState", "ScanAsset", "SyncUpstream",
+	// "ResolveDifferencesInTicketState", "SyncUpstream",
 	// "CollectStats", "RecalculateRiskForVulnerabilities", "AutoReopenTickets",
 	// "DeleteOldAssetVersions", "ResolveFixedVersions".
 	LimitToStages []string

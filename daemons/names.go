@@ -7,9 +7,12 @@ const (
 	DaemonSBOMGarbageCollection        = "maintain.sbomGarbageCollection"
 	DaemonOpenSourceInsights           = "vulndb.opensourceinsights"
 	DaemonVulnDB                       = "vulndb.vulndb"
+	DaemonScan                         = "vulndb.scan"
 	DaemonFixedVersions                = "vulndb.fixedVersions"
 	DaemonDirectDependencyFixedVersion = "vulndb.directDependencyFixedVersion"
 	DaemonAssetPipeline                = "assetPipeline"
+	DaemonAssetPipelineAll             = "daemon.assetPipelineAll"
+	DaemonAssetPipelineSinglePrefix    = "daemon.assetPipelineSingle."
 	DaemonExternalEntityGarbage        = "externalEntityGarbageCollection"
 )
 

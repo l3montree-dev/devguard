@@ -92,6 +92,14 @@ func (runner *DaemonRunner) CleanupOrphanedRecords(ctx context.Context) error {
 	return nil
 }
 
+func (runner *DaemonRunner) RunScanDaemon(ctx context.Context) error {
+	if err := runner.ScanAllAssets(ctx); err != nil {
+		slog.Error("failed to run scan daemon", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) error {
 	if err := runner.externalEntityProviderService.CollectGarbage(ctx); err != nil {
 		slog.Error("failed to collect external entity garbage", "error", err)
@@ -128,6 +136,13 @@ func (runner *DaemonRunner) runDaemons(ctx context.Context) {
 		return runner.UpdateVulnDB(ctx)
 	}); err != nil {
 		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not update vulndb", err)
+	}
+
+	// right after the vulndb import, the fixed version jobs and the asset pipeline work on the vulns it creates
+	if err := runner.maybeRunAndMark(ctx, DaemonScan, func() error {
+		return runner.ScanAllAssets(ctx)
+	}); err != nil {
+		monitoring.Alert("could not scan sboms", err)
 	}
 
 	if err := runner.maybeRunAndMark(ctx, DaemonFixedVersions, func() error {
