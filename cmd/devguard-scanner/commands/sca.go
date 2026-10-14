@@ -78,7 +78,11 @@ func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM, svc shared.OpenSou
 						Identities: &[]cyclonedx.EvidenceIdentity{
 							{
 								Methods: &[]cyclonedx.EvidenceIdentityMethod{
-									{Technique: cyclonedx.EvidenceIdentityTechniqueOther, Confidence: new(float32(1.0)), Value: "user-declared"},
+									{
+										Technique:  cyclonedx.EvidenceIdentityTechniqueAttestation,
+										Confidence: new(float32(1.0)),
+										Value:      "user-declared",
+									},
 								},
 							},
 						},
