@@ -122,9 +122,13 @@ func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs [
 		steps = steps[:1]
 	}
 
-	finished, err := runner.finishedPipelineSteps(ctx, steps, assetIDs, payload.Force)
-	if err != nil {
-		return err
+	var finished map[events.NotifyTopic]map[uuid.UUID]struct{}
+	var err error
+	if !payload.Force {
+		finished, err = runner.finishedPipelineSteps(ctx, steps, assetIDs)
+		if err != nil {
+			return err
+		}
 	}
 
 	errs := make([]error, 0)
@@ -145,11 +149,8 @@ func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs [
 }
 
 // finishedPipelineSteps returns per step the assets whose job finished within the pipeline interval - none if forced
-func (runner *DaemonRunner) finishedPipelineSteps(ctx context.Context, steps []assetPipelineStep, assetIDs []uuid.UUID, force bool) (map[events.NotifyTopic]map[uuid.UUID]struct{}, error) {
+func (runner *DaemonRunner) finishedPipelineSteps(ctx context.Context, steps []assetPipelineStep, assetIDs []uuid.UUID) (map[events.NotifyTopic]map[uuid.UUID]struct{}, error) {
 	finished := make(map[events.NotifyTopic]map[uuid.UUID]struct{}, len(steps))
-	if force {
-		return finished, nil
-	}
 
 	// a single asset narrows the lookup down, otherwise all finished jobs of the step are fetched at once
 	var match any
@@ -201,10 +202,14 @@ func (runner *DaemonRunner) RunDaemonPipelineForAssets(ctx context.Context, asse
 // inline runs are not recorded as finished jobs - the queue runs those steps again once they are due.
 func (runner *DaemonRunner) runAssetPipelineInline(ctx context.Context, assetIDs []uuid.UUID, force bool) map[uuid.UUID]error {
 	steps := runner.assetPipelineSteps()
-	finished, err := runner.finishedPipelineSteps(ctx, steps, assetIDs, force)
-	if err != nil {
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not fetch finished pipeline steps - running all of them", err)
-		finished = nil
+	var finished map[events.NotifyTopic]map[uuid.UUID]struct{}
+	var err error
+	if !force {
+		finished, err = runner.finishedPipelineSteps(ctx, steps, assetIDs)
+		if err != nil {
+			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "could not fetch finished pipeline steps - running all of them", err)
+			finished = nil
+		}
 	}
 
 	var mu sync.Mutex
@@ -612,7 +617,10 @@ outer:
 
 		directDependencyFixedVersion, err := runner.fixedVersionResolver.ResolveFixedVersions(purls, *vuln.ComponentFixedVersion)
 		if err != nil {
-			// slog.Debug("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err) // this log spams the output and is not useful for the user. We can ignore it.
+			if errors.Is(err, shared.ErrNoFixedVersionAvailable) || errors.Is(err, shared.ErrFixedVersionResolutionUnsupported) {
+				continue
+			}
+			slog.Warn("could not resolve fixed version", "vulnerabilityID", vuln.ID, "err", err)
 			continue
 		}
 

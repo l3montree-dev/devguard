@@ -17,18 +17,38 @@ package fixedversion
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/singleflight"
 )
 
-type NPMResolver struct{}
+const (
+	npmPackumentCacheSize = 10_000
+	npmPackumentCacheTTL  = 3 * time.Hour
+)
+
+type NPMResolver struct {
+	// the same packages show up in the paths of many vulns - caching them keeps us below the egress rate limit
+	packuments *expirable.LRU[string, *NPMResponse]
+	inflight   singleflight.Group
+}
+
+func NewNPMResolver() *NPMResolver {
+	return &NPMResolver{
+		packuments: expirable.NewLRU[string, *NPMResponse](npmPackumentCacheSize, nil, npmPackumentCacheTTL),
+	}
+}
 
 var _ Resolver[*NPMResponse] = &NPMResolver{}
 
@@ -97,19 +117,61 @@ func matchesVersionConstraint(rangeType string, version string, baseVersion stri
 	}
 }
 
+// FetchPackageMetadata returns the packument of the package if no version is set.
+// Otherwise the metadata of that version - taken from the packument, therefore no extra request is needed.
+// The returned response is shared through the cache and must not be modified.
 func (resolver *NPMResolver) FetchPackageMetadata(purl packageurl.PackageURL) (*NPMResponse, error) {
-	resp, err := getNPMRegistry(purl)
+	packument, err := resolver.fetchPackument(buildFullPackageName(purl))
 	if err != nil {
 		return nil, fmt.Errorf("error fetching %s: %w", purl.ToString(), err)
 	}
-	defer resp.Body.Close()
 
-	var npmResp NPMResponse
-	if err := json.NewDecoder(resp.Body).Decode(&npmResp); err != nil {
-		return nil, fmt.Errorf("error decoding JSON for %s: %w", purl.ToString(), err)
+	if purl.Version == "" {
+		return packument, nil
 	}
 
-	return &npmResp, nil
+	version := strings.Trim(purl.Version, "/")
+	versionData, ok := packument.Versions[version]
+	if !ok {
+		return nil, fmt.Errorf("%w: version %s not found for %s", shared.ErrFixedVersionResolutionUnsupported, version, packument.Name)
+	}
+
+	return &NPMResponse{
+		Name:                 packument.Name,
+		Versions:             map[string]VersionData{version: versionData},
+		Dependencies:         versionData.Dependencies,
+		DevDependencies:      versionData.DevDependencies,
+		PeerDependencies:     versionData.PeerDependencies,
+		OptionalDependencies: versionData.OptionalDependencies,
+	}, nil
+}
+
+// fetchPackument returns the cached packument or fetches it - concurrent fetches of the same package share one request
+func (resolver *NPMResolver) fetchPackument(fullName string) (*NPMResponse, error) {
+	if packument, ok := resolver.packuments.Get(fullName); ok {
+		if packument == nil {
+			return nil, npmPackageNotFound(fullName)
+		}
+		return packument, nil
+	}
+
+	res, err, _ := resolver.inflight.Do(fullName, func() (any, error) {
+		packument, err := getNPMPackument(fullName)
+		if errors.Is(err, errNPMPackageNotFound) {
+			// unpublished packages (e.g. the project itself or private packages) are cached as nil
+			resolver.packuments.Add(fullName, nil)
+			return nil, npmPackageNotFound(fullName)
+		}
+		if err != nil {
+			return nil, err
+		}
+		resolver.packuments.Add(fullName, packument)
+		return packument, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res.(*NPMResponse), nil
 }
 
 // this currently implements the versioning algorithm for "always take latest"
@@ -128,7 +190,7 @@ func (resolver *NPMResolver) GetUpgradeCandidates(npmResponse *NPMResponse, curr
 
 	var currentMajor, currentMinor, currentPatch int
 	if _, err := fmt.Sscanf(currentVersion, "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch); err != nil {
-		return nil, fmt.Errorf("invalid current version format: %s", currentVersion)
+		return nil, fmt.Errorf("%w: invalid current version format: %s", shared.ErrFixedVersionResolutionUnsupported, currentVersion)
 	}
 
 	var recommended []string
@@ -192,13 +254,13 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 	}
 
 	if rangeType != "||" && !semver.IsValid("v"+baseVersion) {
-		return "", fmt.Errorf("invalid semver in spec: %s", versionConstraint)
+		return "", fmt.Errorf("%w: invalid semver in spec: %s", shared.ErrFixedVersionResolutionUnsupported, versionConstraint)
 	}
 
 	// For exact version, simply return the requested version; equality with currentVersion is allowed
 	if rangeType == "exact" {
 		if baseVersion == currentVersion {
-			return "", fmt.Errorf("exact version %s is same as current version, no upgrade possible", baseVersion)
+			return "", fmt.Errorf("%w: exact version %s is same as current version, no upgrade possible", shared.ErrNoFixedVersionAvailable, baseVersion)
 		}
 		return baseVersion, nil
 	}
@@ -247,7 +309,7 @@ func (resolver *NPMResolver) ResolveBestVersion(allVersionsMeta *NPMResponse, ve
 	}
 
 	if len(candidates) == 0 {
-		return "", fmt.Errorf("no versions match spec %s", versionConstraint)
+		return "", fmt.Errorf("%w: no versions match spec %s", shared.ErrNoFixedVersionAvailable, versionConstraint)
 	}
 
 	// Sort candidates and return the highest version
@@ -262,36 +324,38 @@ func (resolver *NPMResolver) CheckIfVulnerabilityIsFixed(vulnVersion string, fix
 	return semver.Compare("v"+vulnVersion, "v"+fixedVersion) >= 0
 }
 
-// get all versions if no version is specified
-func getNPMRegistry(pkg packageurl.PackageURL) (*http.Response, error) {
-	var req *http.Response
-	var err error
+var errNPMPackageNotFound = errors.New("npm package not found")
 
-	normalizedVersion := strings.Trim(pkg.Version, "/") // remove quotes if present
+func npmPackageNotFound(fullName string) error {
+	return fmt.Errorf("%w: package %s is not published on the npm registry", shared.ErrFixedVersionResolutionUnsupported, fullName)
+}
 
-	// Build full package name (handles scoped packages like @babel/core)
-	fullName := pkg.Name
-	if pkg.Namespace != "" {
-		fullName = pkg.Namespace + "/" + pkg.Name
-	}
-	encodedName := url.PathEscape(fullName)
-
-	if pkg.Version != "" {
-		req, err = utils.EgressClient.Get("https://registry.npmjs.org/" + encodedName + "/" + normalizedVersion)
-	} else {
-		req, err = utils.EgressClient.Get("https://registry.npmjs.org/" + encodedName)
-	}
-
+// getNPMPackument fetches the abbreviated packument (all versions with their dependencies) of a package.
+// fullName includes the scope for scoped packages, e.g. @babel/core
+func getNPMPackument(fullName string) (*NPMResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://registry.npmjs.org/"+url.PathEscape(fullName), nil)
 	if err != nil {
-		if req != nil {
-			req.Body.Close()
-		}
 		return nil, err
 	}
+	// the abbreviated metadata is a fraction of the full packument but still contains the dependencies of every version
+	req.Header.Set("Accept", "application/vnd.npm.install-v1+json")
 
-	if req.StatusCode != 200 {
-		req.Body.Close()
-		return nil, fmt.Errorf("failed to fetch data for %s: %s", fullName, req.Status)
+	resp, err := utils.EgressClient.Do(req)
+	if err != nil {
+		return nil, err
 	}
-	return req, nil
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, errNPMPackageNotFound
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch data for %s: %s", fullName, resp.Status)
+	}
+
+	var packument NPMResponse
+	if err := json.NewDecoder(resp.Body).Decode(&packument); err != nil {
+		return nil, fmt.Errorf("error decoding JSON for %s: %w", fullName, err)
+	}
+	return &packument, nil
 }

@@ -17,6 +17,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"iter"
 	"net/http"
 	"time"
@@ -54,6 +55,14 @@ type DaemonRunner interface {
 	RegisterJobs(schedule bool) error
 	StartBenchmarkJobs(ctx context.Context, stages []string)
 }
+
+// Known outcomes of ResolveFixedVersions - every other error is an actual failure (network, decoding, ...)
+var (
+	// ErrNoFixedVersionAvailable - the path was analyzed, but no upgrade of the direct dependency fixes the vulnerability
+	ErrNoFixedVersionAvailable = errors.New("no fixed version available")
+	// ErrFixedVersionResolutionUnsupported - the path cannot be analyzed, e.g. unsupported ecosystem or unparsable versions
+	ErrFixedVersionResolutionUnsupported = errors.New("fixed version resolution unsupported")
+)
 
 type FixedVersionResolver interface {
 	ResolveFixedVersions(path []packageurl.PackageURL, fixedVersion string) (string, error)

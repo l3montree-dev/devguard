@@ -102,17 +102,20 @@ func newTriggerCommand() *cobra.Command {
 func newRunPipelineForAssetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "runPipeline [asset-id]",
-		Short: "Run the asset pipeline for a single asset",
+		Short: "Run the asset pipeline for a single asset - or every asset if no asset id is provided",
 		Long: `Runs the full asset pipeline (scan, risk recalculation, ticket sync, etc.) for a single asset.
 Useful for debugging. You can further scope with --assetVersionSlug flag.
 
 Use --dryRun to run in safe read-only mode: the database connection is opened
 with default_transaction_read_only=on and all ticket mutations (open, close,
 update) are replaced by log lines showing what would have happened.`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			assetID := args[0]
+			assetID := ""
+			if len(args) > 0 {
+				assetID = args[0]
+			}
 			assetVersion, _ := cmd.Flags().GetString("assetVersionSlug")
 			dryRun, _ := cmd.Flags().GetBool("dryRun")
 			stages, _ := cmd.Flags().GetStringArray("stage")
@@ -127,10 +130,16 @@ update) are replaced by log lines showing what would have happened.`,
 }
 
 func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stages []string) error {
-	assetID, err := uuid.Parse(assetIDStr)
-	if err != nil {
-		slog.Error("invalid asset ID", "assetID", assetIDStr, "err", err)
-		return err
+	// without an asset id the pipeline runs for every asset
+	allAssets := assetIDStr == ""
+	var assetID uuid.UUID
+	if !allAssets {
+		var err error
+		assetID, err = uuid.Parse(assetIDStr)
+		if err != nil {
+			slog.Error("invalid asset ID", "assetID", assetIDStr, "err", err)
+			return err
+		}
 	}
 
 	var daemonRunner shared.DaemonRunner
@@ -183,6 +192,12 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 		LimitToStages:           stages,
 		DryRun:                  dryRun,
 	})
+
+	if allAssets {
+		runner.RunAssetPipeline(context.Background(), true)
+		slog.Info("successfully ran asset pipeline for all assets")
+		return nil
+	}
 
 	if err := runner.RunDaemonPipelineForAsset(context.Background(), assetID); err != nil {
 		slog.Error("pipeline failed", "assetID", assetID, "err", err)
