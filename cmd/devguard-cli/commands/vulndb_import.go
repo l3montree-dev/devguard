@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/vulndb"
@@ -27,7 +28,6 @@ func newImportCommand() *cobra.Command {
 		Long:  "Pulls the pre-built vulndb artifact from the OCI registry and applies all changes to the local database",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			migrateDB()
 			opts := shared.ImportOptions{
 				BatchSize:       batchSize,
 				Bulk:            bulk,
@@ -40,6 +40,7 @@ func newImportCommand() *cobra.Command {
 				database.Module,
 				fx.Supply(database.GetPoolConfigFromEnv()),
 				events.Module,
+				listeners.Module,
 				repositories.Module,
 				services.ServiceModule,
 				vulndb.Module,
@@ -80,7 +81,6 @@ func newExportCommand() *cobra.Command {
 		Long:  "Fetches all vulnerability data sources, writes gob files, and produces an integrity manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			migrateDB()
 			app := fx.New(
 				fx.NopLogger,
 				database.Module,

@@ -71,6 +71,10 @@ func NewQueue(lc fx.Lifecycle, dbPool *pgxpool.Pool) (*Queue, error) {
 	// fx runs OnStart hooks after all constructors and invokes - therefore after every Listen call
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			// only start, if workers are registered, otherwise it will fail
+			if len(q.handlers) == 0 {
+				return nil
+			}
 			return client.Start(context.Background())
 		},
 		OnStop: func(ctx context.Context) error {

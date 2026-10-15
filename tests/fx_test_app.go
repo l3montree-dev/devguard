@@ -169,10 +169,6 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 			}
 			return events.NewInlineBroker()
 		}),
-		// the listeners of the inline broker - nothing is scheduled
-		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
-			return daemonRunner.RegisterJobs(false)
-		}),
 		// Use the same modules as production
 		events.Module,
 		repositories.Module,

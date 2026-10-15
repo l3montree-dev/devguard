@@ -159,7 +159,6 @@ func main() {
 				},
 			})
 		}),
-		// must run as invoke - the handlers have to be registered before the queue starts
 		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
 			// river elects its own leader which schedules the jobs - this needs to be set equally on all instances
 			schedule := os.Getenv("DISABLE_DAEMONS") != "true"
