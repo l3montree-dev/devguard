@@ -81,35 +81,21 @@ func (runner *DaemonRunner) assetPipelineSteps() []assetPipelineStep {
 
 // assetPipelineJob runs a single step for the asset of the payload - river retries it on its own if it fails
 func (runner *DaemonRunner) assetPipelineJob(step int) events.NotifyHandler {
-	return func(ctx context.Context, raw json.RawMessage) error {
-		ctx, cancel := context.WithTimeout(ctx, jobTimeout)
-		defer cancel()
-
-		var payload events.AssetPipelinePayload
-		if err := json.Unmarshal(raw, &payload); err != nil {
-			return fmt.Errorf("could not unmarshal pipeline payload: %w", err)
-		}
-
-		steps := runner.assetPipelineSteps()
+	steps := runner.assetPipelineSteps()
+	return job("pipeline error in "+steps[step].stage, func(ctx context.Context, payload events.AssetPipelinePayload) error {
 		asset, err := runner.fetchAssetDetails(ctx, payload.AssetID)
-		if shared.IsNotFound(err) {
-			// the asset was deleted in the meantime
-			return nil
-		}
-		if err == nil {
-			err = runner.runStep(ctx, steps[step], &asset)
-		}
 		if err != nil {
-			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{AssetID: payload.AssetID}, fmt.Sprintf("pipeline error for asset %s", payload.AssetID), err)
 			return err
 		}
-
+		if err := runner.runStep(ctx, steps[step], &asset); err != nil {
+			return err
+		}
 		if !payload.Chain || step+1 == len(steps) {
 			return nil
 		}
 		// call the next step
 		return runner.enqueueAssetPipeline(ctx, []uuid.UUID{payload.AssetID}, steps[step+1].topic, payload)
-	}
+	})
 }
 
 // sweepAssetPipeline enqueues the first due step of every asset - the chain takes care of the rest

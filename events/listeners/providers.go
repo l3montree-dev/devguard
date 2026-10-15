@@ -52,21 +52,14 @@ type DaemonRunner struct {
 	assetRepository                 shared.AssetRepository
 	projectRepository               shared.ProjectRepository
 	orgRepository                   shared.OrganizationRepository
-	artifactService                 shared.ArtifactService
-	componentRepository             shared.ComponentRepository
 	componentService                shared.ComponentService
 	dependencyVulnService           shared.DependencyVulnService
 	dependencyVulnRepository        shared.DependencyVulnRepository
 	componentProjectRepository      shared.ComponentProjectRepository
-	vulnEventRepository             shared.VulnEventRepository
 	statisticsService               shared.StatisticsService
 	artifactRepository              shared.ArtifactRepository
 	cveRepository                   shared.CveRepository
-	cweRepository                   shared.CweRepository
-	exploitsRepository              shared.ExploitRepository
-	affectedComponentsRepository    shared.AffectedComponentRepository
 	scanService                     shared.ScanService
-	maliciousPackageChecker         shared.MaliciousPackageChecker
 	vulnDBImportService             shared.VulnDBService
 	vexRuleRepository               shared.VEXRuleRepository
 	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository
@@ -111,21 +104,14 @@ func NewDaemonRunner(
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	orgRepository shared.OrganizationRepository,
-	artifactService shared.ArtifactService,
-	componentRepository shared.ComponentRepository,
 	componentService shared.ComponentService,
 	dependencyVulnService shared.DependencyVulnService,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	componentProjectRepository shared.ComponentProjectRepository,
-	vulnEventRepository shared.VulnEventRepository,
 	statisticsService shared.StatisticsService,
 	artifactRepository shared.ArtifactRepository,
 	cveRepository shared.CveRepository,
-	cweRepository shared.CweRepository,
-	exploitsRepository shared.ExploitRepository,
-	affectedComponentsRepository shared.AffectedComponentRepository,
 	scanService shared.ScanService,
-	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBService,
 	vexRuleRepository shared.VEXRuleRepository,
 	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository,
@@ -149,21 +135,14 @@ func NewDaemonRunner(
 		assetRepository:                 assetRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
-		artifactService:                 artifactService,
-		componentRepository:             componentRepository,
 		componentService:                componentService,
 		dependencyVulnService:           dependencyVulnService,
 		dependencyVulnRepository:        dependencyVulnRepository,
 		componentProjectRepository:      componentProjectRepository,
-		vulnEventRepository:             vulnEventRepository,
 		statisticsService:               statisticsService,
 		artifactRepository:              artifactRepository,
 		cveRepository:                   cveRepository,
-		cweRepository:                   cweRepository,
-		exploitsRepository:              exploitsRepository,
-		affectedComponentsRepository:    affectedComponentsRepository,
 		scanService:                     scanService,
-		maliciousPackageChecker:         maliciousPackageChecker,
 		vulnDBImportService:             vulnDBImportService,
 		vexRuleRepository:               vexRuleRepository,
 		vexRuleRecommendationRepository: vexRuleRecommendationRepository,

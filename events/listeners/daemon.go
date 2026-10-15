@@ -45,7 +45,6 @@ func getLastMirrorTime(ctx context.Context, configService shared.ConfigService, 
 func (runner *DaemonRunner) CollectSBOMGarbage(ctx context.Context) error {
 	deleted, err := runner.sbomRepository.CollectGarbage(ctx, nil)
 	if err != nil {
-		slog.Error("failed to collect sbom garbage", "error", err)
 		return err
 	}
 	slog.Info("collected sbom garbage", "deletedRows", deleted)
@@ -69,50 +68,32 @@ func (runner *DaemonRunner) RunScanDaemon(ctx context.Context) error {
 }
 
 func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) error {
-	if err := runner.externalEntityProviderService.CollectGarbage(ctx); err != nil {
-		slog.Error("failed to collect external entity garbage", "error", err)
-		return err
-	}
-	return nil
+	return runner.externalEntityProviderService.CollectGarbage(ctx)
 }
 
 // jobTimeout bounds every daemon job - river does not cancel the handlers itself (see events.Queue)
 const jobTimeout = 2 * time.Hour
 
-// daemonJob wraps a daemon into a queue handler with a timeout and alerting
-func daemonJob(errMsg string, fn func(ctx context.Context) error) events.NotifyHandler {
-	return func(ctx context.Context, _ json.RawMessage) error {
+// job wraps fn into a queue handler: it bounds the run time, unmarshals the payload and alerts if fn fails.
+// A record deleted in the meantime is no failure - there is nothing left to do, so the job is not retried.
+func job[P events.Payload](errMsg string, fn func(ctx context.Context, payload P) error) events.NotifyHandler {
+	return func(ctx context.Context, raw json.RawMessage) error {
 		ctx, cancel := context.WithTimeout(ctx, jobTimeout)
 		defer cancel()
-		if err := fn(ctx); err != nil {
-			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, errMsg, err)
-			return err
+
+		var payload P
+		if len(raw) > 0 {
+			if err := json.Unmarshal(raw, &payload); err != nil {
+				return fmt.Errorf("could not unmarshal payload: %w", err)
+			}
 		}
-		return nil
-	}
-}
-
-// the vulndb chain: vulndb -> scan -> fixed versions -> direct dependency fixed versions.
-// each step notifies the next one on success - therefore each step is retried on its own.
-func (runner *DaemonRunner) runVulnDB(ctx context.Context) error {
-	if err := runner.UpdateVulnDB(ctx); err != nil {
+		err := fn(ctx, payload)
+		if err == nil || shared.IsNotFound(err) {
+			return nil
+		}
+		monitoring.AlertAndSaveInErrorLog(ctx, nil, payload.AlertContext(), errMsg, err)
 		return err
 	}
-	return runner.broker.Notify(ctx, nil, events.TopicScan, nil, nil)
-}
-
-func (runner *DaemonRunner) runScan(ctx context.Context) error {
-	if err := runner.ScanAllAssets(ctx); err != nil {
-		return err
-	}
-	return runner.broker.Notify(ctx, nil, events.TopicFixedVersions, nil, nil)
-}
-
-func (runner *DaemonRunner) runFixedVersions(ctx context.Context) error {
-	if err := runner.UpdateFixedVersions(ctx); err != nil {
-		return err
-	}
-	return runner.broker.Notify(ctx, nil, events.TopicDirectDependencyFixedVersion, nil, nil)
 }
 
 // enqueues the step for every asset which did not resolve its fixed versions within the pipeline interval
@@ -130,31 +111,41 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		cron    string // empty: not scheduled, triggered by the previous step of a chain
 		errMsg  string
 		handler func(ctx context.Context) error
+		next    *events.NotifyTopic // notified once the handler succeeded - each step of a chain is retried on its own
 	}{
 		// the hourly daemons are staggered to avoid running all of them at once
-		{events.TopicVEXRuleRecommendations, "0 * * * *", "could not run VEX rule recommendation daemon", runner.RunVEXRuleRecommendationDaemon},
-		{events.TopicCleanupOrphanedRecords, "5 * * * *", "could not clean up orphaned records", runner.CleanupOrphanedRecords},
-		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage},
-		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation},
-		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage},
+		{events.TopicVEXRuleRecommendations, "0 * * * *", "could not run VEX rule recommendation daemon", runner.RunVEXRuleRecommendationDaemon, nil},
+		{events.TopicCleanupOrphanedRecords, "5 * * * *", "could not clean up orphaned records", runner.CleanupOrphanedRecords, nil},
+		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage, nil},
+		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation, nil},
+		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage, nil},
 		// the sweep only enqueues the due steps of every asset, see assetPipelineSteps
-		{events.TopicAssetPipeline, "*/5 * * * *", "could not sweep asset pipeline", runner.sweepAssetPipeline},
+		{events.TopicAssetPipeline, "*/5 * * * *", "could not sweep asset pipeline", runner.sweepAssetPipeline, nil},
 
-		{events.TopicVulnDB, "30 * * * *", "could not update vulndb", runner.runVulnDB},
-		{events.TopicScan, "", "could not scan sboms", runner.runScan},
-		{events.TopicFixedVersions, "", "could not update fixed versions", runner.runFixedVersions},
-		{events.TopicDirectDependencyFixedVersion, "", "could not resolve direct dependency fixed versions", runner.runDirectDependencyFixedVersions},
+		{events.TopicVulnDB, "30 * * * *", "could not update vulndb", runner.UpdateVulnDB, new(events.TopicScan)},
+		{events.TopicScan, "", "could not scan sboms", runner.ScanAllAssets, new(events.TopicFixedVersions)},
+		{events.TopicFixedVersions, "", "could not update fixed versions", runner.UpdateFixedVersions, new(events.TopicDirectDependencyFixedVersion)},
+		{events.TopicDirectDependencyFixedVersion, "", "could not resolve direct dependency fixed versions", runner.runDirectDependencyFixedVersions, nil},
 	}
 
-	for _, job := range jobs {
-		if err := runner.broker.Listen(job.topic, daemonJob(job.errMsg, job.handler)); err != nil {
-			return fmt.Errorf("could not listen on %s: %w", job.topic, err)
+	for _, daemon := range jobs {
+		handler := job(daemon.errMsg, func(ctx context.Context, _ events.EmptyPayload) error {
+			if err := daemon.handler(ctx); err != nil {
+				return err
+			}
+			if daemon.next == nil {
+				return nil
+			}
+			return runner.broker.Notify(ctx, nil, *daemon.next, nil, nil)
+		})
+		if err := runner.broker.Listen(daemon.topic, handler); err != nil {
+			return fmt.Errorf("could not listen on %s: %w", daemon.topic, err)
 		}
-		if !schedule || job.cron == "" {
+		if !schedule || daemon.cron == "" {
 			continue
 		}
-		if err := runner.broker.Schedule(job.topic, job.cron); err != nil {
-			return fmt.Errorf("could not schedule %s: %w", job.topic, err)
+		if err := runner.broker.Schedule(daemon.topic, daemon.cron); err != nil {
+			return fmt.Errorf("could not schedule %s: %w", daemon.topic, err)
 		}
 	}
 
@@ -180,8 +171,8 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
 		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineCollectStats, false)},
 		{events.TopicAssetTicketSettingsChanged, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
-		{events.TopicArtifactDeleted, runner.cleanupOrphanedRecords},
-		{events.TopicAssetVersionDeleted, runner.cleanupOrphanedRecords},
+		{events.TopicArtifactDeleted, runner.enqueueCleanup()},
+		{events.TopicAssetVersionDeleted, runner.enqueueCleanup()},
 	}
 	for _, listener := range listeners {
 		if err := runner.broker.Listen(listener.topic, listener.handler); err != nil {

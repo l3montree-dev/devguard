@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/monitoring"
 )
 
 // Domain events state what happened - the listeners decide what follows, see daemons.RegisterJobs.
@@ -22,9 +23,25 @@ const (
 	TopicAssetTicketSettingsChanged NotifyTopic = "asset.ticketSettingsChanged"
 )
 
+// Payload is implemented by every job payload - a failing job names the context of its payload in the alert
+type Payload interface {
+	AlertContext() monitoring.AlertContext
+}
+
+// EmptyPayload is the payload of the jobs which need none, e.g. the scheduled daemons
+type EmptyPayload struct{}
+
+func (EmptyPayload) AlertContext() monitoring.AlertContext {
+	return monitoring.AlertContext{}
+}
+
 // AssetPayload names the asset an event happened on
 type AssetPayload struct {
 	AssetID uuid.UUID `json:"assetId"`
+}
+
+func (p AssetPayload) AlertContext() monitoring.AlertContext {
+	return monitoring.AlertContext{AssetID: p.AssetID}
 }
 
 // ArtifactPayload names the artifact an event happened on - the listeners load everything else themselves, so a retry never works on stale data.
@@ -36,6 +53,25 @@ type ArtifactPayload struct {
 	UserAgent        string    `json:"userAgent,omitempty"`
 	// the vulns a scan opened
 	VulnIDs []uuid.UUID `json:"vulnIds,omitempty"`
+}
+
+func (p ArtifactPayload) AlertContext() monitoring.AlertContext {
+	return monitoring.AlertContext{AssetID: p.AssetID}
+}
+
+const assetPipelineTopicPrefix = "pipeline."
+
+// AssetPipelinePayload is the payload of every asset pipeline step job
+type AssetPipelinePayload struct {
+	AssetID uuid.UUID `json:"assetId"`
+	// Force runs the step even if it already finished within the pipeline interval - set by event triggered runs
+	Force bool `json:"force"`
+	// Chain enqueues the next due step of the pipeline once this step succeeded
+	Chain bool `json:"chain"`
+}
+
+func (p AssetPipelinePayload) AlertContext() monitoring.AlertContext {
+	return monitoring.AlertContext{AssetID: p.AssetID}
 }
 
 func notify(ctx context.Context, broker Broker, topic NotifyTopic, payload any) {

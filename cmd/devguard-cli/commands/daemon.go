@@ -271,7 +271,7 @@ func triggerDaemon(selectedDaemons []string) error {
 			}
 			if emptyOrContains(selectedDaemons, "scan") {
 				start = time.Now()
-				if err := runner.RunScanDaemon(context.Background()); err != nil {
+				if err := runner.ScanAllAssets(context.Background()); err != nil {
 					slog.Error("could not run scan daemon", "err", err)
 					return
 				}

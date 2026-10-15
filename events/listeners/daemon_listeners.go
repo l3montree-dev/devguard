@@ -17,13 +17,11 @@ package listeners
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/events"
-	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -36,18 +34,16 @@ import (
 
 // enqueueStep forces the pipeline step for the asset of the event - chain runs the following steps as well
 func (runner *DaemonRunner) enqueueStep(step events.NotifyTopic, chain bool) events.NotifyHandler {
-	return func(ctx context.Context, raw json.RawMessage) error {
-		var payload events.AssetPayload
-		if err := json.Unmarshal(raw, &payload); err != nil {
-			return fmt.Errorf("could not unmarshal asset payload: %w", err)
-		}
+	return job("could not enqueue "+string(step), func(ctx context.Context, payload events.AssetPayload) error {
 		return runner.broker.Notify(ctx, nil, step, events.AssetPipelinePayload{AssetID: payload.AssetID, Force: true, Chain: chain}, nil)
-	}
+	})
 }
 
-// cleanupOrphanedRecords enqueues the cleanup - bursts of deletions collapse into a single job
-func (runner *DaemonRunner) cleanupOrphanedRecords(ctx context.Context, _ json.RawMessage) error {
-	return runner.broker.Notify(ctx, nil, events.TopicCleanupOrphanedRecords, nil, nil)
+// enqueueCleanup enqueues the orphan cleanup - bursts of deletions collapse into a single job
+func (runner *DaemonRunner) enqueueCleanup() events.NotifyHandler {
+	return job("could not enqueue the orphan cleanup", func(ctx context.Context, _ events.EmptyPayload) error {
+		return runner.broker.Notify(ctx, nil, events.TopicCleanupOrphanedRecords, nil, nil)
+	})
 }
 
 type artifactWithDetails struct {
@@ -60,31 +56,15 @@ type artifactWithDetails struct {
 	vulnIDs      []uuid.UUID
 }
 
-// artifactJob loads the artifact of the payload and runs fn on it - river retries it on its own if it fails
+// artifactJob loads the artifact of the payload and runs fn on it
 func (runner *DaemonRunner) artifactJob(errMsg string, fn func(ctx context.Context, artifact artifactWithDetails) error) events.NotifyHandler {
-	return func(ctx context.Context, raw json.RawMessage) error {
-		ctx, cancel := context.WithTimeout(ctx, jobTimeout)
-		defer cancel()
-
-		var payload events.ArtifactPayload
-		if err := json.Unmarshal(raw, &payload); err != nil {
-			return fmt.Errorf("could not unmarshal artifact payload: %w", err)
-		}
-
+	return job(errMsg, func(ctx context.Context, payload events.ArtifactPayload) error {
 		artifact, err := runner.fetchArtifactDetails(ctx, payload)
-		if shared.IsNotFound(err) {
-			// deleted in the meantime
-			return nil
-		}
-		if err == nil {
-			err = fn(ctx, artifact)
-		}
 		if err != nil {
-			monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{AssetID: payload.AssetID}, errMsg, err)
 			return err
 		}
-		return nil
-	}
+		return fn(ctx, artifact)
+	})
 }
 
 func (runner *DaemonRunner) fetchArtifactDetails(ctx context.Context, payload events.ArtifactPayload) (artifactWithDetails, error) {

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -69,17 +68,6 @@ const (
 	TopicPipelineResolveTicketDifferences NotifyTopic = "pipeline.resolveTicketDifferences"
 	TopicPipelineCollectStats             NotifyTopic = "pipeline.collectStats"
 )
-
-const assetPipelineTopicPrefix = "pipeline."
-
-// AssetPipelinePayload is the payload of every asset pipeline step job
-type AssetPipelinePayload struct {
-	AssetID uuid.UUID `json:"assetId"`
-	// Force runs the step even if it already finished within the pipeline interval - set by event triggered runs
-	Force bool `json:"force"`
-	// Chain enqueues the next due step of the pipeline once this step succeeded
-	Chain bool `json:"chain"`
-}
 
 type EventBrokerImpl struct {
 	*PostgreSQLBroker
