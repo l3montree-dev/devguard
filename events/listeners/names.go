@@ -22,6 +22,7 @@ const (
 	StageScanAsset                         = "ScanAsset"
 	StageSyncUpstream                      = "SyncUpstream"
 	StageResolveLicenses                   = "ResolveLicenses"
+	StageFindLicenseRisks                  = "FindLicenseRisks"
 	StageApplyVEXRules                     = "ApplyVEXRules"
 	StageCollectStats                      = "CollectStats"
 	StageRecalculateRiskForVulnerabilities = "RecalculateRiskForVulnerabilities"

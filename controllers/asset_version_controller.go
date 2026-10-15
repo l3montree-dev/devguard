@@ -407,33 +407,6 @@ func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 	})
 }
 
-// RefetchLicenses forces re-fetching license information for all components of the current asset version
-// @Summary Refetch license information for all components
-// @Tags Asset Versions
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param artifactName query string false "Artifact name"
-// @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses/refresh/ [post]
-func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)
-	artifactName := ctx.Param("artifactName")
-
-	_, err := a.componentService.GetAndSaveLicenseInformation(ctx.Request().Context(), nil, assetVersion, utils.EmptyThenNil(artifactName), true)
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, map[string]any{
-		"message": "refetched licenses for all components",
-	})
-}
-
 var latexReplacer = strings.NewReplacer(
 	"\\", "\\textbackslash{}",
 	"&", "\\&",

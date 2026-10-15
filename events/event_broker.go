@@ -61,6 +61,7 @@ const (
 	TopicPipelineDeleteOldAssetVersions   NotifyTopic = "pipeline.deleteOldAssetVersions"
 	TopicPipelineSyncUpstream             NotifyTopic = "pipeline.syncUpstream"
 	TopicPipelineResolveLicenses          NotifyTopic = "pipeline.resolveLicenses"
+	TopicPipelineFindLicenseRisks         NotifyTopic = "pipeline.findLicenseRisks"
 	TopicPipelineApplyVEXRules            NotifyTopic = "pipeline.applyVEXRules"
 	TopicPipelineRecalculateRisk          NotifyTopic = "pipeline.recalculateRisk"
 	TopicPipelineResolveFixedVersions     NotifyTopic = "pipeline.resolveFixedVersions"

@@ -52,7 +52,9 @@ type DaemonRunner struct {
 	assetRepository                 shared.AssetRepository
 	projectRepository               shared.ProjectRepository
 	orgRepository                   shared.OrganizationRepository
+	componentRepository             shared.ComponentRepository
 	componentService                shared.ComponentService
+	licenseRiskService              shared.LicenseRiskService
 	dependencyVulnService           shared.DependencyVulnService
 	dependencyVulnRepository        shared.DependencyVulnRepository
 	componentProjectRepository      shared.ComponentProjectRepository
@@ -104,7 +106,9 @@ func NewDaemonRunner(
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	orgRepository shared.OrganizationRepository,
+	componentRepository shared.ComponentRepository,
 	componentService shared.ComponentService,
+	licenseRiskService shared.LicenseRiskService,
 	dependencyVulnService shared.DependencyVulnService,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	componentProjectRepository shared.ComponentProjectRepository,
@@ -135,7 +139,9 @@ func NewDaemonRunner(
 		assetRepository:                 assetRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
+		componentRepository:             componentRepository,
 		componentService:                componentService,
+		licenseRiskService:              licenseRiskService,
 		dependencyVulnService:           dependencyVulnService,
 		dependencyVulnRepository:        dependencyVulnRepository,
 		componentProjectRepository:      componentProjectRepository,

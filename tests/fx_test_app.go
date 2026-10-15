@@ -169,6 +169,9 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 			}
 			return events.NewInlineBroker()
 		}),
+		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
+			return daemonRunner.RegisterJobs(false)
+		}),
 		// Use the same modules as production
 		events.Module,
 		repositories.Module,
@@ -241,7 +244,7 @@ func createMockedComponentService(t testing.TB, realCS shared.ComponentService) 
 	mockCS := &mocks.ComponentService{}
 
 	// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
-	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]models.Component{}, nil)
 
 	// Mock other methods to delegate to real implementation

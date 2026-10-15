@@ -70,6 +70,7 @@ func (runner *DaemonRunner) assetPipelineSteps() []assetPipelineStep {
 		{events.TopicPipelineDeleteOldAssetVersions, StageDeleteOldAssetVersions, "pipeline.delete-old-versions", runner.deleteOldAssetVersions},
 		{events.TopicPipelineSyncUpstream, StageSyncUpstream, "pipeline.sync-upstream", runner.syncUpstream},
 		{events.TopicPipelineResolveLicenses, StageResolveLicenses, "pipeline.resolve-licenses", runner.resolveLicenses},
+		{events.TopicPipelineFindLicenseRisks, StageFindLicenseRisks, "pipeline.find-license-risks", runner.findLicenseRisks},
 		{events.TopicPipelineApplyVEXRules, StageApplyVEXRules, "pipeline.apply-vex-rules", runner.applyAssetVEXRules},
 		{events.TopicPipelineRecalculateRisk, StageRecalculateRiskForVulnerabilities, "pipeline.recalculate-risk", runner.recalculateRiskForVulnerabilities},
 		{events.TopicPipelineResolveFixedVersions, StageResolveFixedVersions, "pipeline.resolve-fixed-versions", runner.resolveFixedVersions},
@@ -447,7 +448,7 @@ func (runner *DaemonRunner) resolveLicenses(ctx context.Context, a *assetWithPro
 	}
 	errs := make([]error, 0)
 	for _, assetVersion := range a.assetVersions {
-		if _, err := runner.componentService.GetAndSaveLicenseInformation(ctx, nil, assetVersion, nil, false); err != nil {
+		if _, err := runner.componentService.GetAndSaveLicenseInformation(ctx, nil, assetVersion, nil); err != nil {
 			slog.Error("could not resolve licenses for asset version", "assetVersionName", assetVersion.Name, "assetID", a.asset.ID, "err", err)
 			errs = append(errs, err)
 		}
@@ -455,6 +456,47 @@ func (runner *DaemonRunner) resolveLicenses(ctx context.Context, a *assetWithPro
 	if len(errs) > 0 {
 		return fmt.Errorf("could not resolve licenses: %w", errors.Join(errs...))
 	}
+	return nil
+}
+
+// findLicenseRisks opens a license risk for every component whose license is not valid - and closes the ones whose license became valid
+func (runner *DaemonRunner) findLicenseRisks(ctx context.Context, a *assetWithProjectAndOrg) error {
+	errs := make([]error, 0)
+	for _, assetVersion := range a.assetVersions {
+		for _, artifact := range assetVersion.Artifacts {
+			if err := runner.findLicenseRisksOfArtifact(ctx, assetVersion, artifact.ArtifactName); err != nil {
+				slog.Error("could not find license risks", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", a.asset.ID, "err", err)
+				errs = append(errs, err)
+			}
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("could not find license risks: %w", errors.Join(errs...))
+	}
+	return nil
+}
+
+func (runner *DaemonRunner) findLicenseRisksOfArtifact(ctx context.Context, assetVersion models.AssetVersion, artifactName string) error {
+	forest, err := runner.assetVersionService.LoadArtifactSBOMs(ctx, nil, assetVersion, artifactName)
+	if err != nil {
+		return err
+	}
+	components, err := runner.componentRepository.FindByIDs(ctx, nil, forest.ComponentIDs())
+	if err != nil {
+		return fmt.Errorf("could not load components: %w", err)
+	}
+	// only components with a valid purl carry a version a license applies to
+	components = utils.Filter(components, func(component models.Component) bool {
+		_, err := packageurl.FromString(component.ID)
+		return err == nil
+	})
+
+	tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+	if err := runner.licenseRiskService.FindLicenseRisksInComponents(ctx, tx, "system", nil, assetVersion, components, artifactName); err != nil {
+		tx.Rollback()
+		return err
+	}
+	runner.finishTx(tx)
 	return nil
 }
 

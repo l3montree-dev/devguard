@@ -78,7 +78,12 @@ func NewQueue(lc fx.Lifecycle, dbPool *pgxpool.Pool) (*Queue, error) {
 			return client.Start(context.Background())
 		},
 		OnStop: func(ctx context.Context) error {
-			return client.Stop(ctx)
+			if err := client.Stop(ctx); err != nil {
+				cancelCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				return client.StopAndCancel(cancelCtx)
+			}
+			return nil
 		},
 	})
 
