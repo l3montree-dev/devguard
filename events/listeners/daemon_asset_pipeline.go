@@ -36,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"github.com/package-url/packageurl-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -595,13 +596,17 @@ func (runner *DaemonRunner) recalculateRiskForVulnerabilities(ctx context.Contex
 }
 
 func (runner *DaemonRunner) resolveFixedVersions(ctx context.Context, a *assetWithProjectAndOrg) error {
-	// get all closed/accepted vulnerabilities for the asset version
-	vulnerabilities, err := runner.dependencyVulnRepository.GetAllVulnsByAssetID(ctx, nil, a.asset.ID)
-	if err != nil {
+	// only the columns needed - an asset can have more vulns than postgres allows parameters for preloading their relations
+	var vulnerabilities []models.DependencyVuln
+	if err := runner.db.WithContext(ctx).
+		Select("id", "vulnerability_path", "component_fixed_version", "direct_dependency_fixed_version").
+		Where("asset_id = ? AND component_fixed_version IS NOT NULL", a.asset.ID).
+		Find(&vulnerabilities).Error; err != nil {
 		return fmt.Errorf("could not get vulns for asset: %w", err)
 	}
 
-	toSaveVulns := make([]models.DependencyVuln, 0)
+	ids := make([]string, 0)
+	fixedVersions := make([]string, 0)
 outer:
 	for _, vuln := range vulnerabilities {
 		if vuln.ComponentFixedVersion == nil {
@@ -627,20 +632,27 @@ outer:
 			continue
 		}
 
-		vuln.DirectDependencyFixedVersion = &directDependencyFixedVersion
-		toSaveVulns = append(toSaveVulns, vuln)
+		if vuln.DirectDependencyFixedVersion != nil && *vuln.DirectDependencyFixedVersion == directDependencyFixedVersion {
+			continue
+		}
+		ids = append(ids, vuln.ID.String())
+		fixedVersions = append(fixedVersions, directDependencyFixedVersion)
 	}
 
-	if len(toSaveVulns) > 0 {
+	if len(ids) > 0 {
+		// only the resolved column is written - two array parameters, whatever the number of vulns
 		tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-		if err := runner.dependencyVulnRepository.SaveBatch(ctx, tx, toSaveVulns); err != nil {
+		if err := tx.WithContext(ctx).Exec(`
+			UPDATE dependency_vulns SET direct_dependency_fixed_version = resolved.fixed_version
+			FROM unnest(?::uuid[], ?::text[]) AS resolved(id, fixed_version)
+			WHERE dependency_vulns.id = resolved.id`, pq.Array(ids), pq.Array(fixedVersions)).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("could not save vulns with resolved fixed versions: %w", err)
 		}
 		runner.finishTx(tx)
 	}
 
-	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("vulns.resolved", len(toSaveVulns)))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("vulns.resolved", len(ids)))
 	return nil
 }
 
