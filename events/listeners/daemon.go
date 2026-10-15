@@ -102,7 +102,7 @@ func (runner *DaemonRunner) runDirectDependencyFixedVersions(ctx context.Context
 	if err != nil {
 		return err
 	}
-	return runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineResolveFixedVersions, events.AssetPipelinePayload{})
+	return runner.enqueueDueAssetPipeline(ctx, assetIDs, events.TopicPipelineResolveFixedVersions)
 }
 
 func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
@@ -161,16 +161,15 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		topic   events.NotifyTopic
 		handler events.NotifyHandler
 	}{
-		{events.TopicSBOMCreated, runner.enqueueStep(events.TopicPipelineResolveLicenses, true)},
+		{events.TopicSBOMCreated, runner.enqueueStep(events.TopicPipelineResolveLicenses)},
 		{events.TopicSBOMCreated, runner.artifactJob("could not handle sbom created event", runner.sendSBOMCreatedEvent)},
 		{events.TopicDependencyVulnsDetected, runner.artifactJob("could not handle dependency vulns detected event", runner.sendDependencyVulnsDetectedEvent)},
-		{events.TopicFirstPartyScanned, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
+		// the ticket sync is followed by the ticket differences and the stats
+		{events.TopicFirstPartyScanned, runner.enqueueStep(events.TopicPipelineSyncTickets)},
 		{events.TopicFirstPartyScanned, runner.artifactJob("could not handle first party vulns detected event", runner.sendFirstPartyVulnsDetectedEvent)},
-		{events.TopicVEXRuleCreated, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
-		{events.TopicVEXRuleCreated, runner.enqueueStep(events.TopicPipelineCollectStats, false)},
-		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
-		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineCollectStats, false)},
-		{events.TopicAssetTicketSettingsChanged, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
+		{events.TopicVEXRuleCreated, runner.enqueueStep(events.TopicPipelineSyncTickets)},
+		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineSyncTickets)},
+		{events.TopicAssetTicketSettingsChanged, runner.enqueueStep(events.TopicPipelineSyncTickets)},
 		{events.TopicArtifactDeleted, runner.enqueueCleanup()},
 		{events.TopicAssetVersionDeleted, runner.enqueueCleanup()},
 	}

@@ -61,13 +61,11 @@ func (p ArtifactPayload) AlertContext() monitoring.AlertContext {
 
 const assetPipelineTopicPrefix = "pipeline."
 
-// AssetPipelinePayload is the payload of every asset pipeline step job
+// AssetPipelinePayload is the payload of every asset pipeline step job.
+// The asset is the only argument - jobs are unique by their arguments, therefore an asset has at most one queued or running job per step.
+// Every step enqueues the following step once it succeeded.
 type AssetPipelinePayload struct {
 	AssetID uuid.UUID `json:"assetId"`
-	// Force runs the step even if it already finished within the pipeline interval - set by event triggered runs
-	Force bool `json:"force"`
-	// Chain enqueues the next due step of the pipeline once this step succeeded
-	Chain bool `json:"chain"`
 }
 
 func (p AssetPipelinePayload) AlertContext() monitoring.AlertContext {
@@ -134,7 +132,7 @@ func NotifyAssetTicketSettingsChanged(ctx context.Context, broker Broker, assetI
 func NotifyVulnEventCreated(ctx context.Context, broker Broker, assetID uuid.UUID, eventType dtos.VulnEventType) {
 	switch eventType {
 	case dtos.EventTypeAccepted, dtos.EventTypeFalsePositive, dtos.EventTypeReopened:
-		if err := broker.Notify(ctx, nil, TopicPipelineCollectStats, AssetPipelinePayload{AssetID: assetID, Force: true}, nil); err != nil {
+		if err := broker.Notify(ctx, nil, TopicPipelineCollectStats, AssetPipelinePayload{AssetID: assetID}, nil); err != nil {
 			slog.Error("could not enqueue stats collection", "assetID", assetID, "err", err)
 		}
 	}

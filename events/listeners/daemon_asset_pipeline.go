@@ -80,7 +80,9 @@ func (runner *DaemonRunner) assetPipelineSteps() []assetPipelineStep {
 	}
 }
 
-// assetPipelineJob runs a single step for the asset of the payload - river retries it on its own if it fails
+// assetPipelineJob runs a single step for the asset of the payload and enqueues the following step once it succeeded.
+// river retries a failing step on its own - the following steps wait for it.
+// the following step always runs: it works on the data the step just changed.
 func (runner *DaemonRunner) assetPipelineJob(step int) events.NotifyHandler {
 	steps := runner.assetPipelineSteps()
 	return job("pipeline error in "+steps[step].stage, func(ctx context.Context, payload events.AssetPipelinePayload) error {
@@ -91,44 +93,47 @@ func (runner *DaemonRunner) assetPipelineJob(step int) events.NotifyHandler {
 		if err := runner.runStep(ctx, steps[step], &asset); err != nil {
 			return err
 		}
-		if !payload.Chain || step+1 == len(steps) {
+		if step+1 == len(steps) {
 			return nil
 		}
-		// call the next step
-		return runner.enqueueAssetPipeline(ctx, []uuid.UUID{payload.AssetID}, steps[step+1].topic, payload)
+		return runner.broker.Notify(ctx, nil, steps[step+1].topic, payload, nil)
 	})
 }
 
-// sweepAssetPipeline enqueues the first due step of every asset - the chain takes care of the rest
+// sweepAssetPipeline enqueues the first due step of every asset - the following steps are enqueued by the step before
 func (runner *DaemonRunner) sweepAssetPipeline(ctx context.Context) error {
 	assetIDs, err := runner.fetchAllAssetIDs(ctx)
 	if err != nil {
 		return err
 	}
-	return runner.enqueueAssetPipeline(ctx, assetIDs, runner.assetPipelineSteps()[0].topic, events.AssetPipelinePayload{Chain: true})
+	return runner.enqueueDueAssetPipeline(ctx, assetIDs, runner.assetPipelineSteps()[0].topic)
 }
 
-// enqueueAssetPipeline enqueues for every asset the first due step, starting at the step of from.
-// a step is due if the payload is forced or the step did not finish within the pipeline interval.
-// without Chain only the step of from is considered.
-func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs []uuid.UUID, from events.NotifyTopic, payload events.AssetPipelinePayload) error {
+// enqueueAssetPipeline enqueues the step from for every asset - e.g. because an event changed the data of the assets.
+// a job of the step which is already queued or running for an asset is not duplicated.
+func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs []uuid.UUID, from events.NotifyTopic) error {
+	errs := make([]error, 0)
+	for _, assetID := range assetIDs {
+		if err := runner.broker.Notify(ctx, nil, from, events.AssetPipelinePayload{AssetID: assetID}, nil); err != nil {
+			errs = append(errs, fmt.Errorf("could not enqueue %s for asset %s: %w", from, assetID, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// enqueueDueAssetPipeline enqueues for every asset the first due step, starting at the step of from.
+// a step is due if it did not finish within the pipeline interval.
+func (runner *DaemonRunner) enqueueDueAssetPipeline(ctx context.Context, assetIDs []uuid.UUID, from events.NotifyTopic) error {
 	steps := runner.assetPipelineSteps()
 	start := slices.IndexFunc(steps, func(step assetPipelineStep) bool { return step.topic == from })
 	if start < 0 {
 		return fmt.Errorf("%s is not an asset pipeline step", from)
 	}
 	steps = steps[start:]
-	if !payload.Chain {
-		steps = steps[:1]
-	}
 
-	var finished map[events.NotifyTopic]map[uuid.UUID]struct{}
-	var err error
-	if !payload.Force {
-		finished, err = runner.finishedPipelineSteps(ctx, steps, assetIDs)
-		if err != nil {
-			return err
-		}
+	finished, err := runner.finishedPipelineSteps(ctx, steps, assetIDs)
+	if err != nil {
+		return err
 	}
 
 	errs := make([]error, 0)
@@ -137,9 +142,7 @@ func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs [
 			if _, ok := finished[step.topic][assetID]; ok {
 				continue
 			}
-			p := payload
-			p.AssetID = assetID
-			if err := runner.broker.Notify(ctx, nil, step.topic, p, nil); err != nil {
+			if err := runner.broker.Notify(ctx, nil, step.topic, events.AssetPipelinePayload{AssetID: assetID}, nil); err != nil {
 				errs = append(errs, fmt.Errorf("could not enqueue %s for asset %s: %w", step.topic, assetID, err))
 			}
 			break
@@ -148,7 +151,7 @@ func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs [
 	return errors.Join(errs...)
 }
 
-// finishedPipelineSteps returns per step the assets whose job finished within the pipeline interval - none if forced
+// finishedPipelineSteps returns per step the assets whose job finished within the pipeline interval
 func (runner *DaemonRunner) finishedPipelineSteps(ctx context.Context, steps []assetPipelineStep, assetIDs []uuid.UUID) (map[events.NotifyTopic]map[uuid.UUID]struct{}, error) {
 	finished := make(map[events.NotifyTopic]map[uuid.UUID]struct{}, len(steps))
 

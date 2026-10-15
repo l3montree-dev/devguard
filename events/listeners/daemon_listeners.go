@@ -32,10 +32,10 @@ import (
 // most of them only enqueue pipeline steps - the integration webhooks are the only work done right in the listener.
 // all listeners of a topic run in the same job and are retried together.
 
-// enqueueStep forces the pipeline step for the asset of the event - chain runs the following steps as well
-func (runner *DaemonRunner) enqueueStep(step events.NotifyTopic, chain bool) events.NotifyHandler {
+// enqueueStep enqueues the pipeline step for the asset of the event - the following steps run afterwards
+func (runner *DaemonRunner) enqueueStep(step events.NotifyTopic) events.NotifyHandler {
 	return job("could not enqueue "+string(step), func(ctx context.Context, payload events.AssetPayload) error {
-		return runner.broker.Notify(ctx, nil, step, events.AssetPipelinePayload{AssetID: payload.AssetID, Force: true, Chain: chain}, nil)
+		return runner.broker.Notify(ctx, nil, step, events.AssetPipelinePayload{AssetID: payload.AssetID}, nil)
 	})
 }
 

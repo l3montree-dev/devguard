@@ -534,8 +534,13 @@ func (runner *DaemonRunner) saveDependencyVulns(ctx context.Context, conn *pgxpo
 		cves: make(map[string]*models.CVE, 15_000),
 	}
 	failed := 0
+	// only assets whose vulns changed need the following pipeline steps right away - the sweep covers the others
+	changedAssetIDs := make([]uuid.UUID, 0, len(assetIDs))
 	for i, assetID := range assetIDs {
-		err = runner.handleScanResultForAsset(ctx, jobFilter, conn, assetID, cache)
+		changed, err := runner.handleScanResultForAsset(ctx, jobFilter, conn, assetID, cache)
+		if changed {
+			changedAssetIDs = append(changedAssetIDs, assetID)
+		}
 		if err != nil {
 			failed++
 			slog.Error("could not handle scan result for asset", "err", err, "asset", assetID)
@@ -544,11 +549,11 @@ func (runner *DaemonRunner) saveDependencyVulns(ctx context.Context, conn *pgxpo
 			start = time.Now()
 		}
 	}
-	slog.Info("finished handling all scan results", "time", time.Since(startHandling), "failed", failed)
+	slog.Info("finished handling all scan results", "time", time.Since(startHandling), "failed", failed, "changedAssets", len(changedAssetIDs))
 
 	// applies vex rules, risk, tickets and stats to the new vulns right away - the sweep skips these steps afterwards
-	if !runner.debugOptions.DryRun && len(assetIDs) > 0 {
-		if err := runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineApplyVEXRules, events.AssetPipelinePayload{Force: true, Chain: true}); err != nil {
+	if !runner.debugOptions.DryRun && len(changedAssetIDs) > 0 {
+		if err := runner.enqueueAssetPipeline(ctx, changedAssetIDs, events.TopicPipelineApplyVEXRules); err != nil {
 			return fmt.Errorf("could not enqueue the asset pipeline for scanned assets: %w", err)
 		}
 	}
@@ -604,16 +609,17 @@ const scanResultsQuery = `
 	JOIN purl_mapping pm ON pm.purl = p.component_purl
 	JOIN cves ON cves.id = pm.cve_id`
 
-func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter *jobFilter, conn *pgxpool.Conn, assetID uuid.UUID, cache *cveCache) error {
+// changed reports whether the scan committed new vulns or new artifact associations for any asset version of the asset
+func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter *jobFilter, conn *pgxpool.Conn, assetID uuid.UUID, cache *cveCache) (changed bool, err error) {
 	assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx, nil, assetID)
 	if err != nil {
-		return fmt.Errorf("could not fetch asset versions for asset: %w", err)
+		return false, fmt.Errorf("could not fetch asset versions for asset: %w", err)
 	}
 
 	var asset models.Asset
 	err = runner.db.WithContext(ctx).First(&asset, "id = ?", assetID).Error
 	if err != nil {
-		return fmt.Errorf("could not fetch asset details: %w", err)
+		return false, fmt.Errorf("could not fetch asset details: %w", err)
 	}
 
 	// a failing asset version is rolled back on its own and must not block the others
@@ -622,38 +628,42 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter
 		if !filter.shouldProcess(assetVersion) {
 			continue
 		}
-		if err := runner.handleScanResultForAssetVersion(ctx, conn, filter, asset, assetVersion, cache); err != nil {
+		versionChanged, err := runner.handleScanResultForAssetVersion(ctx, conn, filter, asset, assetVersion, cache)
+		if err != nil {
 			errs = append(errs, fmt.Errorf("asset version %s: %w", assetVersion.Name, err))
+			continue
 		}
+		changed = changed || versionChanged
 	}
-	return errors.Join(errs...)
+	return changed, errors.Join(errs...)
 }
 
-func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, filter *jobFilter, asset models.Asset, assetVersion models.AssetVersion, cache *cveCache) error {
+// changed reports whether new vulns or new artifact associations were committed
+func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, filter *jobFilter, asset models.Asset, assetVersion models.AssetVersion, cache *cveCache) (changed bool, err error) {
 	if len(assetVersion.Artifacts) == 0 {
-		return nil
+		return false, nil
 	}
 
 	tx, err := conn.Begin(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer tx.Rollback(ctx) // nolint:errcheck
 
 	// uploads write their sbom and scan results in one transaction, so blocking sbom writes serializes them with this asset version
 	_, err = tx.Exec(ctx, `SET LOCAL lock_timeout = '10s'; LOCK TABLE sboms IN SHARE MODE;`)
 	if err != nil {
-		return fmt.Errorf("could not lock sboms: %w", err)
+		return false, fmt.Errorf("could not lock sboms: %w", err)
 	}
 
 	unchanged, err := filter.isAssetVersionUnchanged(ctx, tx, assetVersion)
 	if err != nil {
-		return fmt.Errorf("could not check sbom fingerprint: %w", err)
+		return false, fmt.Errorf("could not check sbom fingerprint: %w", err)
 	}
 	if !unchanged {
 		// the upload that changed it already scanned it, the next run picks up anything left
 		slog.Info("sboms changed during scan, skipping asset version", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-		return nil
+		return false, nil
 	}
 
 	// new_dependency_vulns was diffed before this run wrote anything, so a vuln shared by several artifacts is new for each of them
@@ -666,19 +676,20 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 		// a savepoint per artifact: a failing artifact is undone without aborting the asset version transaction
 		savepoint, err := tx.Begin(ctx)
 		if err != nil {
-			return fmt.Errorf("could not create savepoint for artifact %s: %w", artifact.ArtifactName, err)
+			return false, fmt.Errorf("could not create savepoint for artifact %s: %w", artifact.ArtifactName, err)
 		}
-		artifactOpened, err := runner.handleArtifact(ctx, savepoint, artifact, createdInAssetVersion, asset, cache)
+		artifactOpened, associated, err := runner.handleArtifact(ctx, savepoint, artifact, createdInAssetVersion, asset, cache)
 		if err != nil {
 			slog.Error("could not handle scan results", "err", err, "artifact", artifact.ArtifactName, "assetVersion", assetVersion.Name)
 			if err := savepoint.Rollback(ctx); err != nil {
-				return fmt.Errorf("could not roll back savepoint for artifact %s: %w", artifact.ArtifactName, err)
+				return false, fmt.Errorf("could not roll back savepoint for artifact %s: %w", artifact.ArtifactName, err)
 			}
 			continue // createdInAssetVersion is only extended once the savepoint is released
 		}
 		if err := savepoint.Commit(ctx); err != nil {
-			return fmt.Errorf("could not release savepoint for artifact %s: %w", artifact.ArtifactName, err)
+			return false, fmt.Errorf("could not release savepoint for artifact %s: %w", artifact.ArtifactName, err)
 		}
+		changed = changed || len(artifactOpened) > 0 || associated > 0
 		for i := range artifactOpened {
 			createdInAssetVersion[artifactOpened[i].CalculateHash()] = struct{}{}
 		}
@@ -688,7 +699,7 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 	// dry runs are rolled back by the deferred rollback
 	if !runner.debugOptions.DryRun {
 		if err := tx.Commit(ctx); err != nil {
-			return fmt.Errorf("could not commit scan results: %w", err)
+			return false, fmt.Errorf("could not commit scan results: %w", err)
 		}
 	}
 
@@ -702,7 +713,7 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 			}, utils.Map(vulns, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
 		}
 	}
-	return nil
+	return changed, nil
 }
 
 // sbomFingerprintQuery hashes the sboms of each asset version
@@ -712,11 +723,12 @@ const sbomFingerprintQuery = `
 		md5(string_agg(concat_ws('/', artifact_name, source, root_subtree_hash, updated_at), ',' ORDER BY artifact_name, source))
 	FROM sboms`
 
-// handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
-func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *cveCache) (opened []models.DependencyVuln, err error) {
+// handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back.
+// associated is the number of existing vulns which were associated with the artifact.
+func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *cveCache) (opened []models.DependencyVuln, associated int64, err error) {
 	newVulns, existingVulns, err := runner.fetchNewVulnsForArtifact(ctx, tx, artifact)
 	if err != nil {
-		return nil, fmt.Errorf("could not query found vulns for artifact: %w", err)
+		return nil, 0, fmt.Errorf("could not query found vulns for artifact: %w", err)
 	}
 
 	// a previous artifact of this asset version already created these, they only need the association
@@ -730,7 +742,7 @@ func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artif
 	})
 
 	if err := runner.hydrateCVEs(ctx, newVulns, cache.cves); err != nil {
-		return nil, fmt.Errorf("could not load cve details for artifact: %w", err)
+		return nil, 0, fmt.Errorf("could not load cve details for artifact: %w", err)
 	}
 
 	// only new vulns are matched against other branches, so restrict the query to their signatures
@@ -741,7 +753,7 @@ func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artif
 
 	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, artifact.AssetVersionName, asset.ID, newSignatures)
 	if err != nil {
-		return nil, fmt.Errorf("could not get existing dependency vulns on other branches: %w", err)
+		return nil, 0, fmt.Errorf("could not get existing dependency vulns on other branches: %w", err)
 	}
 
 	branchDiff := statemachine.DiffVulnsBetweenBranches(utils.Map(newVulns, utils.Ptr), utils.Map(existingVulnsOnOtherBranch, utils.Ptr))
@@ -750,20 +762,21 @@ func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artif
 	// this way we preserve the event history
 	copied, err := copyVulnsFromOtherBranches(ctx, tx, branchDiff.ExistingOnOtherBranches)
 	if err != nil {
-		return nil, fmt.Errorf("could not copy vulns existing on other branches: %w", err)
+		return nil, 0, fmt.Errorf("could not copy vulns existing on other branches: %w", err)
 	}
 	// We can create the newly found one without checking anything
 	// the inserted slice is returned, the insert sets id, state and risk on it
 	newToAllBranches := utils.DereferenceSlice(branchDiff.NewToAllBranches)
 	if err := insertDetectedVulns(ctx, tx, newToAllBranches, asset); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	if err := associateVulnsWithArtifact(ctx, tx, existingVulns, artifact.ArtifactName); err != nil {
-		return nil, fmt.Errorf("could not associate vulns with artifact: %w", err)
+	associated, err = associateVulnsWithArtifact(ctx, tx, existingVulns, artifact.ArtifactName)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not associate vulns with artifact: %w", err)
 	}
 
-	return append(newToAllBranches, copied...), nil
+	return append(newToAllBranches, copied...), associated, nil
 }
 
 // returns the inserted vulns, copyDependencyVulns sets their id, state and timestamps
@@ -871,9 +884,9 @@ func copyVulnEvents(ctx context.Context, tx pgx.Tx, events []models.VulnEvent) e
 	return nil
 }
 
-func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifactName string) error {
+func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifactName string) (int64, error) {
 	if len(vulnerabilities) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	assetVersionNames := make([]string, 0, len(vulnerabilities))
@@ -894,7 +907,10 @@ func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities 
 			dependencyVulnIDs = append(dependencyVulnIDs, vulnerabilities[i].CalculateHash())
 		}
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO artifact_dependency_vulns 
+	if len(dependencyVulnIDs) == 0 {
+		return 0, nil
+	}
+	tag, err := tx.Exec(ctx, `INSERT INTO artifact_dependency_vulns 
 				(artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id)
 				SELECT 
 					$1,
@@ -902,8 +918,10 @@ func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities 
 					UNNEST($3::uuid[]),
 					UNNEST($4::uuid[])
 				ON CONFLICT DO NOTHING;`, artifactName, assetVersionNames, assetIDs, dependencyVulnIDs)
-
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 // newVulns do not exist on the asset version yet, existingVulns only lack the association with the artifact
