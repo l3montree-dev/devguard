@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -87,6 +88,29 @@ type dynamicArgs struct {
 
 func (a dynamicArgs) Kind() string {
 	return string(a.topic)
+}
+
+// InsertOpts are the defaults of every notification - options passed to Notify take precedence.
+// An identical job is dropped while another one is still queued or running.
+// completed is left out on purpose - a finished job must not block a rerun.
+func (a dynamicArgs) InsertOpts() river.InsertOpts {
+	queue := river.QueueDefault
+	if strings.HasPrefix(string(a.topic), assetPipelineTopicPrefix) {
+		queue = QueueAssetPipeline
+	}
+	return river.InsertOpts{
+		Queue: queue,
+		UniqueOpts: river.UniqueOpts{
+			ByArgs: true,
+			ByState: []rivertype.JobState{
+				rivertype.JobStateAvailable,
+				rivertype.JobStatePending,
+				rivertype.JobStateRunning,
+				rivertype.JobStateRetryable,
+				rivertype.JobStateScheduled,
+			},
+		},
+	}
 }
 
 // dynamicWorker is registered once per topic and fans out to every handler registered for that topic.

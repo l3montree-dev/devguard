@@ -37,34 +37,17 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
-	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 )
 
-// -----------------------------------------------------------------------------------
-//
-//	Types
-//
-// -----------------------------------------------------------------------------------
-
 type assetWithProjectAndOrg struct {
 	asset         models.Asset
 	assetVersions []models.AssetVersion // artifacts are prefetched!
 	project       models.Project
 	org           models.Org
-}
-
-// pipelinePayload is the payload of every asset pipeline step job
-type pipelinePayload struct {
-	AssetID uuid.UUID `json:"assetId"`
-	// Force runs the step even if it already finished within the pipeline interval - set by event triggered runs
-	Force bool `json:"force"`
-	// Chain enqueues the next due step of the pipeline once this step succeeded
-	Chain bool `json:"chain"`
 }
 
 type assetPipelineStep struct {
@@ -86,6 +69,7 @@ func (runner *DaemonRunner) assetPipelineSteps() []assetPipelineStep {
 	return []assetPipelineStep{
 		{events.TopicPipelineDeleteOldAssetVersions, StageDeleteOldAssetVersions, "pipeline.delete-old-versions", runner.deleteOldAssetVersions},
 		{events.TopicPipelineSyncUpstream, StageSyncUpstream, "pipeline.sync-upstream", runner.syncUpstream},
+		{events.TopicPipelineResolveLicenses, StageResolveLicenses, "pipeline.resolve-licenses", runner.resolveLicenses},
 		{events.TopicPipelineApplyVEXRules, StageApplyVEXRules, "pipeline.apply-vex-rules", runner.applyAssetVEXRules},
 		{events.TopicPipelineRecalculateRisk, StageRecalculateRiskForVulnerabilities, "pipeline.recalculate-risk", runner.recalculateRiskForVulnerabilities},
 		{events.TopicPipelineResolveFixedVersions, StageResolveFixedVersions, "pipeline.resolve-fixed-versions", runner.resolveFixedVersions},
@@ -101,7 +85,7 @@ func (runner *DaemonRunner) assetPipelineJob(step int) events.NotifyHandler {
 		ctx, cancel := context.WithTimeout(ctx, jobTimeout)
 		defer cancel()
 
-		var payload pipelinePayload
+		var payload events.AssetPipelinePayload
 		if err := json.Unmarshal(raw, &payload); err != nil {
 			return fmt.Errorf("could not unmarshal pipeline payload: %w", err)
 		}
@@ -134,13 +118,13 @@ func (runner *DaemonRunner) sweepAssetPipeline(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return runner.enqueueAssetPipeline(ctx, assetIDs, runner.assetPipelineSteps()[0].topic, pipelinePayload{Chain: true})
+	return runner.enqueueAssetPipeline(ctx, assetIDs, runner.assetPipelineSteps()[0].topic, events.AssetPipelinePayload{Chain: true})
 }
 
 // enqueueAssetPipeline enqueues for every asset the first due step, starting at the step of from.
 // a step is due if the payload is forced or the step did not finish within the pipeline interval.
 // without Chain only the step of from is considered.
-func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs []uuid.UUID, from events.NotifyTopic, payload pipelinePayload) error {
+func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs []uuid.UUID, from events.NotifyTopic, payload events.AssetPipelinePayload) error {
 	steps := runner.assetPipelineSteps()
 	start := slices.IndexFunc(steps, func(step assetPipelineStep) bool { return step.topic == from })
 	if start < 0 {
@@ -164,7 +148,7 @@ func (runner *DaemonRunner) enqueueAssetPipeline(ctx context.Context, assetIDs [
 			}
 			p := payload
 			p.AssetID = assetID
-			if err := runner.broker.Notify(ctx, nil, step.topic, p, pipelineNotifyOptions()); err != nil {
+			if err := runner.broker.Notify(ctx, nil, step.topic, p, nil); err != nil {
 				errs = append(errs, fmt.Errorf("could not enqueue %s for asset %s: %w", step.topic, assetID, err))
 			}
 			break
@@ -196,7 +180,7 @@ func (runner *DaemonRunner) finishedPipelineSteps(ctx context.Context, steps []a
 		}
 		finished[step.topic] = make(map[uuid.UUID]struct{}, len(payloads))
 		for _, raw := range payloads {
-			var p pipelinePayload
+			var p events.AssetPipelinePayload
 			if err := json.Unmarshal(raw, &p); err != nil {
 				continue
 			}
@@ -204,23 +188,6 @@ func (runner *DaemonRunner) finishedPipelineSteps(ctx context.Context, steps []a
 		}
 	}
 	return finished, nil
-}
-
-func pipelineNotifyOptions() *events.NotifyOptions {
-	return &events.NotifyOptions{
-		Queue: events.QueueAssetPipeline,
-		// completed is left out on purpose - a finished step must not block an event triggered rerun
-		UniqueOpts: river.UniqueOpts{
-			ByArgs: true,
-			ByState: []rivertype.JobState{
-				rivertype.JobStateAvailable,
-				rivertype.JobStatePending,
-				rivertype.JobStateRunning,
-				rivertype.JobStateRetryable,
-				rivertype.JobStateScheduled,
-			},
-		},
-	}
 }
 
 // RunAssetPipeline runs the pipeline for all assets in this process, bypassing the queue.
@@ -413,11 +380,15 @@ func (runner *DaemonRunner) finishTx(tx shared.DB) {
 
 func (runner *DaemonRunner) deleteOldAssetVersions(ctx context.Context, a *assetWithProjectAndOrg) error {
 	tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-	if _, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(ctx, tx, a.asset.ID, 7); err != nil {
+	deleted, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(ctx, tx, a.asset.ID, 7)
+	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("could not delete old asset versions: %w", err)
 	}
 	runner.finishTx(tx)
+	if deleted > 0 && !runner.debugOptions.DryRun {
+		events.NotifyAssetVersionDeleted(ctx, runner.broker, a.asset.ID)
+	}
 
 	// Remove just-deleted versions from the in-memory slice.
 	// DeleteOldAssetVersionsOfAsset deletes branch versions with
@@ -457,23 +428,46 @@ func (runner *DaemonRunner) syncUpstream(ctx context.Context, a *assetWithProjec
 		for _, artifact := range assetVersion.Artifacts {
 			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
 			// unchanged sboms are skipped, the global scan already covers new cves for them
-			rescanned, err := runner.scanService.SyncArtifactUpstreamSBOMSourcesIfChanged(ctx, tx, a.org, a.project, asset, assetVersion, artifact, "system", nil)
+			rescanned, opened, err := runner.scanService.SyncArtifactUpstreamSBOMSourcesIfChanged(ctx, tx, a.org, a.project, asset, assetVersion, artifact, "system", nil)
 			if err != nil {
 				slog.Error("failed to sync upstream for artifact", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", asset.ID)
 				errs = append(errs, err)
 				tx.Rollback()
 				continue
 			}
+			runner.finishTx(tx)
 			if rescanned {
 				rescannedArtifacts++
 				slog.Info("synced changed upstream sboms for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", asset.ID)
+				if !runner.debugOptions.DryRun {
+					artifactEvent := events.ArtifactPayload{AssetID: asset.ID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName}
+					events.NotifySBOMCreatedWithVulns(ctx, runner.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+				}
 			}
-			runner.finishTx(tx)
 		}
 	}
 	trace.SpanFromContext(ctx).SetAttributes(attribute.Int("artifacts.rescanned", rescannedArtifacts))
 	if len(errs) > 0 {
 		return fmt.Errorf("could not sync upstream: %w", errors.Join(errs...))
+	}
+	return nil
+}
+
+// resolveLicenses fetches the licenses of all components which have none yet - after an upload most of them are known already
+func (runner *DaemonRunner) resolveLicenses(ctx context.Context, a *assetWithProjectAndOrg) error {
+	if runner.debugOptions.DryRun {
+		// the components are saved outside of any transaction
+		return nil
+	}
+	errs := make([]error, 0)
+	for _, assetVersion := range a.assetVersions {
+		if _, err := runner.componentService.GetAndSaveLicenseInformation(ctx, nil, assetVersion, nil, false); err != nil {
+			slog.Error("could not resolve licenses for asset version", "assetVersionName", assetVersion.Name, "assetID", a.asset.ID, "err", err)
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("could not resolve licenses: %w", errors.Join(errs...))
 	}
 	return nil
 }
@@ -619,11 +613,13 @@ func (runner *DaemonRunner) syncTickets(ctx context.Context, a *assetWithProject
 	for _, assetVersion := range a.assetVersions {
 		// No transaction needed: SyncAllIssues delegates to thirdPartyIntegration.CreateIssue/UpdateIssue,
 		// which in dry-run mode are intercepted by dryRunIntegration and never reach the DB write inside the real integration.
-		err := runner.dependencyVulnService.SyncAllIssues(ctx, a.org, a.project, a.asset, assetVersion, nil)
-		if errors.Is(err, commonint.ErrNotConnected) {
-			continue
-		}
-		if err != nil {
+		for _, err := range []error{
+			runner.dependencyVulnService.SyncAllIssues(ctx, a.org, a.project, a.asset, assetVersion, nil),
+			runner.firstPartyVulnService.SyncAllIssues(ctx, a.org, a.project, a.asset, assetVersion, nil),
+		} {
+			if err == nil || errors.Is(err, commonint.ErrNotConnected) {
+				continue
+			}
 			slog.Error("failed to sync issues for asset version", "assetVersionName", assetVersion.Name, "assetID", a.asset.ID, "error", err)
 			errs = append(errs, err)
 		}

@@ -20,12 +20,11 @@ import (
 	"fmt"
 	"log/slog"
 	neturl "net/url"
-	"time"
 
-	"go.opentelemetry.io/otel/trace"
-
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -35,29 +34,23 @@ type ExternalReferenceController struct {
 	assetVersionRepository      shared.AssetVersionRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	artifactRepository          shared.ArtifactRepository
-	dependencyVulnService       shared.DependencyVulnService
-	statisticsService           shared.StatisticsService
-	utils.FireAndForgetSynchronizer
 	shared.ScanService
+	broker events.Broker
 }
 
 func NewExternalReferenceController(
 	assetVersionRepository shared.AssetVersionRepository,
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	artifactRepository shared.ArtifactRepository,
-	dependencyVulnService shared.DependencyVulnService,
-	statisticsService shared.StatisticsService,
-	synchronizer utils.FireAndForgetSynchronizer,
 	scanService shared.ScanService,
+	broker events.Broker,
 ) *ExternalReferenceController {
 	return &ExternalReferenceController{
 		assetVersionRepository:      assetVersionRepository,
 		externalReferenceRepository: externalReferenceRepository,
 		artifactRepository:          artifactRepository,
-		dependencyVulnService:       dependencyVulnService,
-		statisticsService:           statisticsService,
-		FireAndForgetSynchronizer:   synchronizer,
 		ScanService:                 scanService,
+		broker:                      broker,
 	}
 }
 
@@ -133,7 +126,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 	tx := c.artifactRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	_, vulns, err := c.SyncArtifactUpstreamSBOMSources(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, &userAgent)
+	_, opened, err := c.SyncArtifactUpstreamSBOMSources(reqCtx, tx, org, project, asset, assetVersion, artifact, ownerID, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after syncing external sources", "err", err, "artifact", artifact.ArtifactName)
@@ -145,19 +138,8 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 		return echo.NewHTTPError(500, "could not persist scan results after syncing external sources").WithInternal(commitResult.Error)
 	}
 
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
-	c.FireAndForget(func() {
-		if err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent); err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-	c.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
-
+	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
+	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
 	return nil
 }
 

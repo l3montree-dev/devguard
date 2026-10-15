@@ -33,9 +33,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
-	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
@@ -145,10 +143,8 @@ func (filter *jobFilter) isAssetVersionUnchanged(ctx context.Context, tx pgx.Tx,
 	return fingerprint == snapshotFingerprint, nil
 }
 
-type cveProjectOrgCache struct {
-	cves     map[string]*models.CVE
-	projects map[uuid.UUID]models.Project
-	orgs     map[uuid.UUID]models.Org
+type cveCache struct {
+	cves map[string]*models.CVE
 }
 
 // ScanAllAssets matches every stored SBOM against the vulndb and opens, associates or fixes dependency vulns for all assets
@@ -531,10 +527,8 @@ func (runner *DaemonRunner) saveDependencyVulns(ctx context.Context, conn *pgxpo
 	slog.Info("start handling scan results for assets", "number of assets", len(assetIDs))
 	startHandling := time.Now()
 	start := time.Now()
-	cache := &cveProjectOrgCache{
-		cves:     make(map[string]*models.CVE, 15_000),
-		projects: make(map[uuid.UUID]models.Project),
-		orgs:     make(map[uuid.UUID]models.Org),
+	cache := &cveCache{
+		cves: make(map[string]*models.CVE, 15_000),
 	}
 	failed := 0
 	for i, assetID := range assetIDs {
@@ -551,7 +545,7 @@ func (runner *DaemonRunner) saveDependencyVulns(ctx context.Context, conn *pgxpo
 
 	// applies vex rules, risk, tickets and stats to the new vulns right away - the sweep skips these steps afterwards
 	if !runner.debugOptions.DryRun && len(assetIDs) > 0 {
-		if err := runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineApplyVEXRules, pipelinePayload{Force: true, Chain: true}); err != nil {
+		if err := runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineApplyVEXRules, events.AssetPipelinePayload{Force: true, Chain: true}); err != nil {
 			return fmt.Errorf("could not enqueue the asset pipeline for scanned assets: %w", err)
 		}
 	}
@@ -607,7 +601,7 @@ const scanResultsQuery = `
 	JOIN purl_mapping pm ON pm.purl = p.component_purl
 	JOIN cves ON cves.id = pm.cve_id`
 
-func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter *jobFilter, conn *pgxpool.Conn, assetID uuid.UUID, cache *cveProjectOrgCache) error {
+func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter *jobFilter, conn *pgxpool.Conn, assetID uuid.UUID, cache *cveCache) error {
 	assetVersions, err := runner.assetVersionRepository.GetAssetVersionsByAssetIDWithArtifacts(ctx, nil, assetID)
 	if err != nil {
 		return fmt.Errorf("could not fetch asset versions for asset: %w", err)
@@ -632,7 +626,7 @@ func (runner *DaemonRunner) handleScanResultForAsset(ctx context.Context, filter
 	return errors.Join(errs...)
 }
 
-func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, filter *jobFilter, asset models.Asset, assetVersion models.AssetVersion, cache *cveProjectOrgCache) error {
+func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context, conn *pgxpool.Conn, filter *jobFilter, asset models.Asset, assetVersion models.AssetVersion, cache *cveCache) error {
 	if len(assetVersion.Artifacts) == 0 {
 		return nil
 	}
@@ -695,9 +689,15 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 		}
 	}
 
-	// only notify after the commit, otherwise subscribers could be told about vulns that were rolled back
-	for artifactName, vulns := range opened {
-		runner.notifyDependencyVulnsDetected(ctx, cache, asset, assetVersion, artifactName, vulns)
+	// only publish after the commit, otherwise subscribers could be told about vulns that were rolled back
+	if !runner.debugOptions.DryRun {
+		for artifactName, vulns := range opened {
+			events.NotifyDependencyVulnsDetected(ctx, runner.broker, events.ArtifactPayload{
+				AssetID:          assetVersion.AssetID,
+				AssetVersionName: assetVersion.Name,
+				ArtifactName:     artifactName,
+			}, utils.Map(vulns, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+		}
 	}
 	return nil
 }
@@ -710,7 +710,7 @@ const sbomFingerprintQuery = `
 	FROM sboms`
 
 // handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back
-func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *cveProjectOrgCache) (opened []models.DependencyVuln, err error) {
+func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *cveCache) (opened []models.DependencyVuln, err error) {
 	newVulns, existingVulns, err := runner.fetchNewVulnsForArtifact(ctx, tx, artifact)
 	if err != nil {
 		return nil, fmt.Errorf("could not query found vulns for artifact: %w", err)
@@ -761,62 +761,6 @@ func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artif
 	}
 
 	return append(newToAllBranches, copied...), nil
-}
-
-func (runner *DaemonRunner) notifyDependencyVulnsDetected(ctx context.Context, cache *cveProjectOrgCache, asset models.Asset, assetVersion models.AssetVersion, artifactName string, opened []models.DependencyVuln) {
-	if len(opened) == 0 || (!assetVersion.DefaultBranch && assetVersion.Type != models.AssetVersionTag) {
-		return
-	}
-
-	// make sure to swallow if wrapper doesn't work
-	if runner.debugOptions.DryRun {
-		return
-	}
-
-	project, org, err := runner.projectAndOrgFor(ctx, cache, asset)
-	if err != nil {
-		slog.Error("could not load project and org for detected event", "err", err, "assetID", asset.ID)
-		return
-	}
-
-	// dispatched synchronously: a detached goroutine can outlive the daemon run
-	if err := runner.integrationAggregate.HandleEvent(ctx, shared.DependencyVulnsDetectedEvent{
-		AssetVersion: shared.ToAssetVersionObject(assetVersion),
-		Asset:        shared.ToAssetObject(asset),
-		Project:      shared.ToProjectObject(project),
-		Org:          shared.ToOrgObject(org),
-		Vulns:        utils.Map(opened, transformer.DependencyVulnToDTO),
-		Artifact: shared.ArtifactObject{
-			ArtifactName: artifactName,
-		},
-	}, nil); err != nil {
-		slog.Error("could not handle dependency vulnerabilities detected event", "err", err, "artifact", artifactName)
-	}
-}
-
-// try to get project and org from cache, otherwise read from db
-func (runner *DaemonRunner) projectAndOrgFor(ctx context.Context, cache *cveProjectOrgCache, asset models.Asset) (models.Project, models.Org, error) {
-	project, ok := cache.projects[asset.ProjectID]
-	if !ok {
-		var err error
-		project, err = runner.projectRepository.Read(ctx, nil, asset.ProjectID)
-		if err != nil {
-			return models.Project{}, models.Org{}, err
-		}
-		cache.projects[asset.ProjectID] = project
-	}
-
-	org, ok := cache.orgs[project.OrganizationID]
-	if !ok {
-		var err error
-		org, err = runner.orgRepository.GetOrgByID(ctx, nil, project.OrganizationID)
-		if err != nil {
-			return models.Project{}, models.Org{}, err
-		}
-		cache.orgs[project.OrganizationID] = org
-	}
-
-	return project, org, nil
 }
 
 // returns the inserted vulns, copyDependencyVulns sets their id, state and timestamps

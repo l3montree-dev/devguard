@@ -23,6 +23,7 @@ const (
 	StageResolveDifferencesInTicketState   = "ResolveDifferencesInTicketState"
 	StageScanAsset                         = "ScanAsset"
 	StageSyncUpstream                      = "SyncUpstream"
+	StageResolveLicenses                   = "ResolveLicenses"
 	StageApplyVEXRules                     = "ApplyVEXRules"
 	StageCollectStats                      = "CollectStats"
 	StageRecalculateRiskForVulnerabilities = "RecalculateRiskForVulnerabilities"

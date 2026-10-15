@@ -29,22 +29,6 @@ func createTestAffectedComponent(purlStr string, cves []models.CVE) (models.Affe
 	}, nil
 }
 
-// createSBOMStructure stores one SBOM for the artifact, the way an ingest would.
-func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, origin string) error {
-	return SeedSBOM(f.DB, assetVersion, artifact.ArtifactName, origin, map[string][]string{
-		sbomSeedRoot: componentPurls,
-	})
-}
-
-// createVEXStructure stores a second SBOM for the artifact, standing in for a
-// VEX document that reports these components. It is a separate source, so it
-// coexists with the scanner's own SBOM rather than overwriting it.
-func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, cves []string, origin string) error {
-	return SeedSBOM(f.DB, assetVersion, artifact.ArtifactName, "vex:"+origin, map[string][]string{
-		sbomSeedRoot: componentPurls,
-	})
-}
-
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
 func TestDaemonPipelineEndToEnd(t *testing.T) {
 	t.Parallel()

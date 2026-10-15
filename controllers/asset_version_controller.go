@@ -10,6 +10,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -28,6 +29,7 @@ type AssetVersionController struct {
 	statisticsService        shared.StatisticsService
 	artifactService          shared.ArtifactService
 	dependencyVulnService    shared.DependencyVulnService
+	broker                   events.Broker
 }
 
 func NewAssetVersionController(
@@ -40,7 +42,7 @@ func NewAssetVersionController(
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
 	dependencyVulnService shared.DependencyVulnService,
-
+	broker events.Broker,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -52,6 +54,7 @@ func NewAssetVersionController(
 		statisticsService:        statisticsService,
 		artifactService:          artifactService,
 		dependencyVulnService:    dependencyVulnService,
+		broker:                   broker,
 	}
 }
 
@@ -134,6 +137,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err
 	}
+	events.NotifyAssetVersionDeleted(ctx.Request().Context(), a.broker, assetVersion.AssetID)
 	return ctx.JSON(200, "deleted asset version successfully")
 }
 

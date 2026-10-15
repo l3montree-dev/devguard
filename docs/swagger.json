@@ -14694,8 +14694,6 @@
                     1000,
                     1000000,
                     1000000000,
-                    60000000000,
-                    3600000000000,
                     1,
                     1000,
                     1000000,
@@ -14723,8 +14721,6 @@
                     "Microsecond",
                     "Millisecond",
                     "Second",
-                    "Minute",
-                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -25540,87 +25536,6 @@
                     }
                 ],
                 "summary": "Batch create vulnerability events",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/sync": {
-            "post": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset version slug",
-                        "in": "path",
-                        "name": "assetVersionSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "title": "body",
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "Request body",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Sync dependency vulnerabilities with third party integrations",
                 "tags": [
                     "Vulnerabilities"
                 ]

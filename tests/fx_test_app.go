@@ -133,7 +133,7 @@ type TestAppOptions struct {
 	ExtraOptions []fx.Option
 	// Whether to suppress FX logging
 	SuppressLogs bool
-	// Custom broker (if nil, a no-op broker will be provided)
+	// Custom broker (if nil, a broker running every job inline will be provided)
 	Broker events.Broker
 	// Wrap the integration aggregate so no ticket or webhook ever reaches a real
 	// external system. Tests running against the development database need this:
@@ -162,12 +162,16 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 			),
 		),
 
-		// Replace the broker - tests neither publish nor run queued jobs
+		// Replace the broker - queued jobs run right away in the caller, so tests stay synchronous
 		fx.Decorate(func() events.Broker {
 			if opts.Broker != nil {
 				return opts.Broker
 			}
-			return events.BrokerStub
+			return events.NewInlineBroker()
+		}),
+		// the listeners of the inline broker - nothing is scheduled
+		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
+			return daemonRunner.RegisterJobs(false)
 		}),
 		// Use the same modules as production
 		events.Module,

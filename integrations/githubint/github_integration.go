@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -77,7 +78,7 @@ type GithubIntegration struct {
 	orgRepository       shared.OrganizationRepository
 	projectRepository   shared.ProjectRepository
 	githubClientFactory func(repoID string) (shared.GithubClientFacade, error)
-	statisticsService   shared.StatisticsService
+	broker              events.Broker
 	utils.FireAndForgetSynchronizer
 }
 
@@ -98,7 +99,7 @@ func NewGithubIntegration(
 	licenseRiskRepository shared.LicenseRiskRepository,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
-	statisticsService shared.StatisticsService,
+	broker events.Broker,
 	synchronizer utils.FireAndForgetSynchronizer) *GithubIntegration {
 
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -120,7 +121,7 @@ func NewGithubIntegration(
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 		licenseRiskRepository:           licenseRiskRepository,
-		statisticsService:               statisticsService,
+		broker:                          broker,
 		FireAndForgetSynchronizer:       synchronizer,
 
 		githubClientFactory: func(repoID string) (shared.GithubClientFacade, error) {
@@ -324,7 +325,6 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		return nil
 	}
 	var vuln models.Vuln
-	doUpdateArtifactRiskHistory := false
 
 	userAgent := req.UserAgent()
 
@@ -379,7 +379,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(reqCtx, githubIntegration.broker, vuln.GetAssetID(), vulnEvent.Type)
 
 		case "reopened":
 			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is reopened by %s", event.Sender.GetLogin()), false, &userAgent)
@@ -388,7 +388,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(reqCtx, githubIntegration.broker, vuln.GetAssetID(), vulnEvent.Type)
 
 		case "deleted":
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), dtos.VulnerableCodeNotInExecutePath, false, &userAgent)
@@ -399,7 +399,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(reqCtx, githubIntegration.broker, vuln.GetAssetID(), vulnEvent.Type)
 		}
 	case *github.IssueCommentEvent:
 		// check if the issue is a devguard issues
@@ -497,9 +497,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			return err
 		}
 
-		if vulnEvent.Type == dtos.EventTypeAccepted || vulnEvent.Type == dtos.EventTypeFalsePositive || vulnEvent.Type == dtos.EventTypeReopened {
-			doUpdateArtifactRiskHistory = true
-		}
+		events.NotifyVulnEventCreated(reqCtx, githubIntegration.broker, vuln.GetAssetID(), vulnEvent.Type)
 
 		err = githubIntegration.UpdateIssue(reqCtx, asset, assetVersion.Slug, vuln, &userAgent)
 
@@ -538,15 +536,6 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 			}
 		}
 
-	}
-
-	if doUpdateArtifactRiskHistory && vuln != nil {
-		artifacts := vuln.GetArtifacts()
-		for _, artifact := range artifacts {
-			if err := githubIntegration.statisticsService.UpdateArtifactRiskAggregation(reqCtx, nil, &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
-				slog.Error("could not recalculate risk history", "err", err)
-			}
-		}
 	}
 
 	return ctx.JSON(200, "ok")

@@ -121,7 +121,7 @@ func (runner *DaemonRunner) runDirectDependencyFixedVersions(ctx context.Context
 	if err != nil {
 		return err
 	}
-	return runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineResolveFixedVersions, pipelinePayload{})
+	return runner.enqueueAssetPipeline(ctx, assetIDs, events.TopicPipelineResolveFixedVersions, events.AssetPipelinePayload{})
 }
 
 func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
@@ -162,6 +162,30 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 	for i, step := range runner.assetPipelineSteps() {
 		if err := runner.broker.Listen(step.topic, runner.assetPipelineJob(i)); err != nil {
 			return fmt.Errorf("could not listen on %s: %w", step.topic, err)
+		}
+	}
+
+	// what follows the domain events - see events/domain_events.go
+	listeners := []struct {
+		topic   events.NotifyTopic
+		handler events.NotifyHandler
+	}{
+		{events.TopicSBOMCreated, runner.enqueueStep(events.TopicPipelineResolveLicenses, true)},
+		{events.TopicSBOMCreated, runner.artifactJob("could not handle sbom created event", runner.sendSBOMCreatedEvent)},
+		{events.TopicDependencyVulnsDetected, runner.artifactJob("could not handle dependency vulns detected event", runner.sendDependencyVulnsDetectedEvent)},
+		{events.TopicFirstPartyScanned, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
+		{events.TopicFirstPartyScanned, runner.artifactJob("could not handle first party vulns detected event", runner.sendFirstPartyVulnsDetectedEvent)},
+		{events.TopicVEXRuleCreated, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
+		{events.TopicVEXRuleCreated, runner.enqueueStep(events.TopicPipelineCollectStats, false)},
+		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
+		{events.TopicVEXRuleDeleted, runner.enqueueStep(events.TopicPipelineCollectStats, false)},
+		{events.TopicAssetTicketSettingsChanged, runner.enqueueStep(events.TopicPipelineSyncTickets, false)},
+		{events.TopicArtifactDeleted, runner.cleanupOrphanedRecords},
+		{events.TopicAssetVersionDeleted, runner.cleanupOrphanedRecords},
+	}
+	for _, listener := range listeners {
+		if err := runner.broker.Listen(listener.topic, listener.handler); err != nil {
+			return fmt.Errorf("could not listen on %s: %w", listener.topic, err)
 		}
 	}
 	return nil

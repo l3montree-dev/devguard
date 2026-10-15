@@ -3,8 +3,11 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -54,9 +57,11 @@ const (
 	TopicFixedVersions                NotifyTopic = "daemon.fixedVersions"
 	TopicDirectDependencyFixedVersion NotifyTopic = "daemon.directDependencyFixedVersion"
 
-	// asset pipeline steps - one job per asset and step, the payload carries the asset id
+	// asset pipeline steps - one job per asset and step, the payload is an AssetPipelinePayload.
+	// they run on QueueAssetPipeline, see assetPipelineTopicPrefix
 	TopicPipelineDeleteOldAssetVersions   NotifyTopic = "pipeline.deleteOldAssetVersions"
 	TopicPipelineSyncUpstream             NotifyTopic = "pipeline.syncUpstream"
+	TopicPipelineResolveLicenses          NotifyTopic = "pipeline.resolveLicenses"
 	TopicPipelineApplyVEXRules            NotifyTopic = "pipeline.applyVEXRules"
 	TopicPipelineRecalculateRisk          NotifyTopic = "pipeline.recalculateRisk"
 	TopicPipelineResolveFixedVersions     NotifyTopic = "pipeline.resolveFixedVersions"
@@ -64,6 +69,17 @@ const (
 	TopicPipelineResolveTicketDifferences NotifyTopic = "pipeline.resolveTicketDifferences"
 	TopicPipelineCollectStats             NotifyTopic = "pipeline.collectStats"
 )
+
+const assetPipelineTopicPrefix = "pipeline."
+
+// AssetPipelinePayload is the payload of every asset pipeline step job
+type AssetPipelinePayload struct {
+	AssetID uuid.UUID `json:"assetId"`
+	// Force runs the step even if it already finished within the pipeline interval - set by event triggered runs
+	Force bool `json:"force"`
+	// Chain enqueues the next due step of the pipeline once this step succeeded
+	Chain bool `json:"chain"`
+}
 
 type EventBrokerImpl struct {
 	*PostgreSQLBroker
@@ -103,6 +119,42 @@ func (EventBrokerStub) IsHealthy() bool {
 
 var BrokerStub = EventBrokerStub{}
 
+// InlineBroker runs the handlers of a notification right away in the caller - tests use it to keep queued work synchronous.
+// Like a job, a failing handler does not fail the notification.
+type InlineBroker struct {
+	EventBrokerStub
+
+	mu       sync.RWMutex
+	handlers map[NotifyTopic][]NotifyHandler
+}
+
+func NewInlineBroker() *InlineBroker {
+	return &InlineBroker{handlers: make(map[NotifyTopic][]NotifyHandler)}
+}
+
+func (b *InlineBroker) Listen(topic NotifyTopic, handler NotifyHandler) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.handlers[topic] = append(b.handlers[topic], handler)
+	return nil
+}
+
+func (b *InlineBroker) Notify(ctx context.Context, tx pgx.Tx, topic NotifyTopic, payload any, opts *NotifyOptions) error {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	b.mu.RLock()
+	handlers := b.handlers[topic]
+	b.mu.RUnlock()
+	for _, handler := range handlers {
+		if err := handler(ctx, raw); err != nil {
+			slog.Error("inline job failed", "topic", topic, "err", err)
+		}
+	}
+	return nil
+}
+
 func NewBroker(lc fx.Lifecycle, db *pgxpool.Pool) (*EventBrokerImpl, error) {
 	broker, err := NewPostgreSQLBroker(db)
 	if err != nil {
@@ -117,3 +169,4 @@ func NewBroker(lc fx.Lifecycle, db *pgxpool.Pool) (*EventBrokerImpl, error) {
 
 var _ Broker = (*EventBrokerImpl)(nil)
 var _ Broker = EventBrokerStub{}
+var _ Broker = (*InlineBroker)(nil)

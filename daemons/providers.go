@@ -75,6 +75,7 @@ type DaemonRunner struct {
 	externalReferenceRepository     shared.ExternalReferenceRepository
 	sbomRepository                  shared.SBOMRepository
 	externalEntityProviderService   shared.ExternalEntityProviderService
+	firstPartyVulnService           shared.FirstPartyVulnService
 	pgxpool                         *pgxpool.Pool
 
 	debugOptions         DebugOptions
@@ -134,6 +135,7 @@ func NewDaemonRunner(
 	fixedVersionResolver shared.FixedVersionResolver,
 	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 	externalEntityProviderService shared.ExternalEntityProviderService,
+	firstPartyVulnService shared.FirstPartyVulnService,
 	pool *pgxpool.Pool,
 ) *DaemonRunner {
 	return &DaemonRunner{
@@ -171,6 +173,7 @@ func NewDaemonRunner(
 		fixedVersionResolver:            fixedVersionResolver,
 		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
 		externalEntityProviderService:   externalEntityProviderService,
+		firstPartyVulnService:           firstPartyVulnService,
 		pgxpool:                         pool,
 	}
 }
