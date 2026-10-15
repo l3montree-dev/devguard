@@ -1,4 +1,4 @@
-package daemons
+package listeners
 
 // Daemon keys. They are persisted as config keys to track the last run time - do not rename.
 const (

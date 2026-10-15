@@ -30,7 +30,8 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/events/listeners"
+
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
@@ -138,7 +139,7 @@ func main() {
 		accesscontrol.AccessControlModule,
 		integrations.Module,
 		vulndb.Module,
-		daemons.Module,
+		listeners.Module,
 		fixedversion.Module,
 		fx.Invoke(func(routers router.Routers) {}),
 		fx.Invoke(monitoring.SetLogger),

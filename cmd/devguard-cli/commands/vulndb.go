@@ -10,10 +10,10 @@ import (
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/router"
 	"github.com/l3montree-dev/devguard/services"
@@ -78,7 +78,7 @@ func migrateDB() {
 			router.RouterModule,
 			accesscontrol.AccessControlModule,
 			integrations.Module,
-			daemons.Module,
+			listeners.Module,
 			vulndb.Module,
 			// we need to invoke all routers to register their routes
 			fx.Invoke(func(OrgRouter router.OrgRouter) {}),

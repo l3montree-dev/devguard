@@ -10,7 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/events/listeners"
+
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/events"
@@ -93,7 +94,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{daemons.DaemonVulnDB, daemons.DaemonVEXRuleRecommendations, daemons.DaemonFixedVersions}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{listeners.DaemonVulnDB, listeners.DaemonVEXRuleRecommendations, listeners.DaemonFixedVersions}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -155,7 +156,7 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 		controllers.ControllerModule,
 		integrations.Module,
 		vulndb.Module,
-		daemons.Module,
+		listeners.Module,
 		fixedversion.Module,
 		fx.Populate(&daemonRunner, &dependencyVulnRepository, &dependencyVulnService, &assetRepository, &assetVersionRepository),
 	}
@@ -171,13 +172,13 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 	if err := app.Err(); err != nil {
 		return err
 	}
-	runner := daemonRunner.(*daemons.DaemonRunner)
+	runner := daemonRunner.(*listeners.DaemonRunner)
 
 	shutdownTracing := initCLITracing()
 	defer shutdownTracing()
 
 	slog.Info("running asset pipeline", "assetID", assetID, "dryRun", dryRun, "stages", stages, "assetVersionSlug", assetVersionSlug)
-	runner.SetDebugOptions(daemons.DebugOptions{
+	runner.SetDebugOptions(listeners.DebugOptions{
 		LimitToAssetVersionSlug: assetVersionSlug,
 		LimitToStages:           stages,
 		DryRun:                  dryRun,
@@ -210,7 +211,7 @@ func triggerDaemon(selectedDaemons []string) error {
 		controllers.ControllerModule,
 		integrations.Module,
 		vulndb.Module,
-		daemons.Module,
+		listeners.Module,
 		fixedversion.Module,
 
 		// Invoke the daemon trigger function with all dependencies
@@ -221,7 +222,7 @@ func triggerDaemon(selectedDaemons []string) error {
 			slog.Info("starting background jobs", "time", time.Now())
 			var start time.Time
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonOpenSourceInsights) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonOpenSourceInsights) {
 				start = time.Now()
 				err := runner.UpdateOpenSourceInsightInformation(context.Background())
 				if err != nil {
@@ -231,7 +232,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("deps dev information updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonSBOMGarbageCollection) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonSBOMGarbageCollection) {
 				start = time.Now()
 				err := runner.CollectSBOMGarbage(context.Background())
 				if err != nil {
@@ -241,7 +242,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("SBOM garbage collection completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonExternalEntityGarbage) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonExternalEntityGarbage) {
 				start = time.Now()
 				err := runner.CollectExternalEntityGarbage(context.Background())
 				if err != nil {
@@ -251,7 +252,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("external entity garbage collection completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonVulnDB) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonVulnDB) {
 				start = time.Now()
 				if err := runner.UpdateVulnDB(context.Background()); err != nil {
 					slog.Error("could not update vulndb", "err", err)
@@ -260,7 +261,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("vulndb updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonFixedVersions) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonFixedVersions) {
 				start = time.Now()
 				if err := runner.UpdateFixedVersions(context.Background()); err != nil {
 					slog.Error("could not update component properties", "err", err)
@@ -277,13 +278,13 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("scan daemon completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonAssetPipeline) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonAssetPipeline) {
 				start = time.Now()
 				runner.RunAssetPipeline(context.Background(), true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, daemons.DaemonVEXRuleRecommendations) {
+			if emptyOrContains(selectedDaemons, listeners.DaemonVEXRuleRecommendations) {
 				start = time.Now()
 				if err := runner.RunVEXRuleRecommendationDaemon(context.Background()); err != nil {
 					slog.Error("could not build and save recommendations for all", "err", err)

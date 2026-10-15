@@ -35,9 +35,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"go.opentelemetry.io/otel"
@@ -88,7 +88,7 @@ func BenchmarkScanAllAssets(b *testing.B) {
 	fixture := &TestFixture{T: b, App: app, DB: db, Pool: pool}
 	runner := fixture.CreateDaemonRunner()
 	// without it the first iteration commits the found vulns and every later one finds nothing new
-	runner.SetDebugOptions(daemons.DebugOptions{DryRun: true})
+	runner.SetDebugOptions(listeners.DebugOptions{DryRun: true})
 
 	sampler := startHeapSampler(20 * time.Millisecond)
 	runtime.GC()
@@ -101,7 +101,7 @@ func BenchmarkScanAllAssets(b *testing.B) {
 
 	iterations := 0
 	for b.Loop() {
-		runner.SetDebugOptions(daemons.DebugOptions{DryRun: false})
+		runner.SetDebugOptions(listeners.DebugOptions{DryRun: false})
 
 		if err := runner.ScanAllAssets(context.Background()); err != nil {
 			b.Fatalf("ScanAllAssets failed: %v", err)
@@ -195,7 +195,7 @@ func BenchmarkAssetPipeline(b *testing.B) {
 	fixture := &TestFixture{T: b, App: app, DB: db, Pool: pool}
 	runner := fixture.CreateDaemonRunner()
 	// without it every iteration would see the writes of the previous one
-	runner.SetDebugOptions(daemons.DebugOptions{DryRun: true, LimitToStages: stages})
+	runner.SetDebugOptions(listeners.DebugOptions{DryRun: true, LimitToStages: stages})
 
 	sampler := startHeapSampler(20 * time.Millisecond)
 	runtime.GC()
