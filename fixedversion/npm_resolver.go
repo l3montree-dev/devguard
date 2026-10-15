@@ -16,6 +16,7 @@
 package fixedversion
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,6 +37,7 @@ import (
 const (
 	npmPackumentCacheSize = 10_000
 	npmPackumentCacheTTL  = 3 * time.Hour
+	npmRequestTimeout     = 60 * time.Second
 )
 
 type NPMResolver struct {
@@ -333,7 +335,12 @@ func npmPackageNotFound(fullName string) error {
 // getNPMPackument fetches the abbreviated packument (all versions with their dependencies) of a package.
 // fullName includes the scope for scoped packages, e.g. @babel/core
 func getNPMPackument(fullName string) (*NPMResponse, error) {
-	req, err := http.NewRequest(http.MethodGet, "https://registry.npmjs.org/"+url.PathEscape(fullName), nil)
+	// the request is shared between all callers waiting on the same package (singleflight),
+	// so it must not be tied to a single caller's context - bound it with a timeout instead
+	ctx, cancel := context.WithTimeout(context.Background(), npmRequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://registry.npmjs.org/"+url.PathEscape(fullName), nil)
 	if err != nil {
 		return nil, err
 	}

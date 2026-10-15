@@ -35,7 +35,7 @@ import (
 // enqueueStep enqueues the pipeline step for the asset of the event - the following steps run afterwards
 func (runner *DaemonRunner) enqueueStep(step events.NotifyTopic) events.NotifyHandler {
 	return job("could not enqueue "+string(step), func(ctx context.Context, payload events.AssetPayload) error {
-		return runner.broker.Notify(ctx, nil, step, events.AssetPipelinePayload{AssetID: payload.AssetID}, nil)
+		return runner.broker.Notify(ctx, nil, step, events.AssetPipelinePayload(payload), nil)
 	})
 }
 
