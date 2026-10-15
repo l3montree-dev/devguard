@@ -303,57 +303,6 @@ func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
-// RunScanDaemon provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) RunScanDaemon(ctx context.Context) error {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RunScanDaemon")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// DaemonRunner_RunScanDaemon_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunScanDaemon'
-type DaemonRunner_RunScanDaemon_Call struct {
-	*mock.Call
-}
-
-// RunScanDaemon is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *DaemonRunner_Expecter) RunScanDaemon(ctx any) *DaemonRunner_RunScanDaemon_Call {
-	return &DaemonRunner_RunScanDaemon_Call{Call: _e.mock.On("RunScanDaemon", ctx)}
-}
-
-func (_c *DaemonRunner_RunScanDaemon_Call) Run(run func(ctx context.Context)) *DaemonRunner_RunScanDaemon_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *DaemonRunner_RunScanDaemon_Call) Return(err error) *DaemonRunner_RunScanDaemon_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *DaemonRunner_RunScanDaemon_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_RunScanDaemon_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RunVEXRuleRecommendationDaemon provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) error {
 	ret := _mock.Called(ctx)
@@ -401,6 +350,57 @@ func (_c *DaemonRunner_RunVEXRuleRecommendationDaemon_Call) Return(err error) *D
 }
 
 func (_c *DaemonRunner_RunVEXRuleRecommendationDaemon_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_RunVEXRuleRecommendationDaemon_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ScanAllAssets provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) ScanAllAssets(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ScanAllAssets")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_ScanAllAssets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ScanAllAssets'
+type DaemonRunner_ScanAllAssets_Call struct {
+	*mock.Call
+}
+
+// ScanAllAssets is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) ScanAllAssets(ctx any) *DaemonRunner_ScanAllAssets_Call {
+	return &DaemonRunner_ScanAllAssets_Call{Call: _e.mock.On("ScanAllAssets", ctx)}
+}
+
+func (_c *DaemonRunner_ScanAllAssets_Call) Run(run func(ctx context.Context)) *DaemonRunner_ScanAllAssets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_ScanAllAssets_Call) Return(err error) *DaemonRunner_ScanAllAssets_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_ScanAllAssets_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_ScanAllAssets_Call {
 	_c.Call.Return(run)
 	return _c
 }
