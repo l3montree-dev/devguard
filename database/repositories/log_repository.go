@@ -62,7 +62,7 @@ func pruneScope(tx *gorm.DB, log *models.Log) error {
 		Limit(maxLogsPerScope)
 
 	return tx.Where(scopeWhere, scopeID).
-		Where("id != ANY(?)", keep).
+		Where("id NOT IN (?)", keep).
 		Delete(&models.Log{}).Error
 }
 
