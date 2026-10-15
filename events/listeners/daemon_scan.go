@@ -158,8 +158,10 @@ func (runner *DaemonRunner) ScanAllAssets(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// the scan session is closed instead of reused, ending it releases the advisory lock, drops the temp tables and rolls back whatever an aborted run left open
+	// the scan session is closed instead of reused, it drops the temp tables and rolls back whatever an aborted run left open
 	defer func() {
+		// the server only frees a closed session's locks asynchronously, so an immediately following scan could still see the lock as taken
+		conn.Exec(context.WithoutCancel(ctx), `SELECT pg_advisory_unlock($1);`, scanLockKey) // nolint:errcheck
 		conn.Conn().Close(ctx)
 		conn.Release()
 	}()
@@ -218,14 +220,15 @@ func (runner *DaemonRunner) ScanAllAssets(ctx context.Context) error {
 	return nil
 }
 
+var scanLockKey = utils.HashToInt64("daemon.ScanAllAssets")
+
 var errScanAlreadyRunning = errors.New("another scan is already running")
 
 // executes all prerequisites for isolation of the scan
 // takes the single run lock, it lives as long as the session, and snapshots the sboms to detect concurrent changes
 func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnapshot, err error) {
-	lockKey := utils.HashToInt64("daemon.ScanAllAssets")
 	var locked bool
-	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1);`, lockKey).Scan(&locked); err != nil {
+	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1);`, scanLockKey).Scan(&locked); err != nil {
 		return nil, fmt.Errorf("could not acquire scan lock: %w", err)
 	}
 	if !locked {
