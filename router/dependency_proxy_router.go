@@ -4,6 +4,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/labstack/echo/v4"
 )
@@ -43,7 +45,7 @@ func registerPyPIRoutes(group *echo.Group, pythonController *dependencyfirewall.
 
 func registerMavenRoutes(group *echo.Group, mavenController *dependencyfirewall.MavenDependencyProxyController) {
 	// Maven packages and metadata share one path tree
-	group.GET("/maven/*", mavenController.ProxyMaven)
+	group.Match([]string{http.MethodGet, http.MethodHead}, "/maven/*", mavenController.ProxyMaven)
 }
 
 func registerComposerRoutes(group *echo.Group, composerController *dependencyfirewall.ComposerDependencyProxyController) {

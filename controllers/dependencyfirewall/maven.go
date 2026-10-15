@@ -220,6 +220,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 			if entry.contentType != "" {
 				c.Response().Header().Set("Content-Type", entry.contentType)
 			}
+			setLastModified(c, entry.releaseTime)
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			return maven.writeResponse(c, entry.data, requestPath, true)
 		}
@@ -258,8 +259,15 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	if contentType := headers.Get("Content-Type"); contentType != "" {
 		c.Response().Header().Set("Content-Type", contentType)
 	}
+	setLastModified(c, releaseTime)
 
 	return maven.writeResponse(c, data, requestPath, false)
+}
+
+func setLastModified(c shared.Context, t time.Time) {
+	if !t.IsZero() {
+		c.Response().Header().Set("Last-Modified", t.UTC().Format(http.TimeFormat))
+	}
 }
 
 // mavenReleaseTime reads the upload time of an artifact. Maven Central has no metadata
