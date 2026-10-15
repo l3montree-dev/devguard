@@ -1,4 +1,4 @@
--- Copyright (C) 2025 l3montree GmbH
+-- Copyright (C) 2026 l3montree GmbH
 -- 
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU Affero General Public License as
@@ -13,18 +13,7 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-WITH duplicates AS (
-  SELECT
-    id,
-    created_at,
-    type,
-    vuln_id,
-    vuln_type,
-    LAG(id) OVER (ORDER BY created_at) AS prev_id,
-    ROW_NUMBER() OVER (
-      PARTITION BY type, vuln_id, vuln_type, justification
-      ORDER BY created_at
-    ) AS row_num
-  FROM public.vuln_events
-)
-DELETE FROM vuln_events WHERE id IN(SELECT id FROM duplicates WHERE row_num > 1)
+-- the asset pipeline steps are river jobs now, their finished jobs track when a step ran last
+ALTER TABLE public.assets
+    DROP COLUMN IF EXISTS pipeline_last_run,
+    DROP COLUMN IF EXISTS pipeline_error;

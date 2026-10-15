@@ -22,12 +22,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -49,23 +49,16 @@ var vulnMapCache = expirable.NewLRU[vulnMapCacheKey, []map[string]any](vulnCache
 type VEXRuleController struct {
 	vexRuleRepository        shared.VEXRuleRepository
 	vulnEventRepository      shared.VulnEventRepository
-	statisticsService        shared.StatisticsService
 	dependencyVulnRepository shared.DependencyVulnRepository
-	dependencyVulnService    shared.DependencyVulnService
-	assetVersionRepository   shared.AssetVersionRepository
-	utils.FireAndForgetSynchronizer
+	broker                   events.Broker
 }
 
-func NewVEXRuleController(vexRuleRepository shared.VEXRuleRepository, vulnEventRepository shared.VulnEventRepository, statisticsService shared.StatisticsService, dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, assetVersionRepository shared.AssetVersionRepository, synchronizer utils.FireAndForgetSynchronizer) *VEXRuleController {
+func NewVEXRuleController(vexRuleRepository shared.VEXRuleRepository, vulnEventRepository shared.VulnEventRepository, dependencyVulnRepository shared.DependencyVulnRepository, broker events.Broker) *VEXRuleController {
 	return &VEXRuleController{
 		vexRuleRepository:        vexRuleRepository,
 		vulnEventRepository:      vulnEventRepository,
-		statisticsService:        statisticsService,
 		dependencyVulnRepository: dependencyVulnRepository,
-		dependencyVulnService:    dependencyVulnService,
-		assetVersionRepository:   assetVersionRepository,
-
-		FireAndForgetSynchronizer: synchronizer,
+		broker:                   broker,
 	}
 }
 
@@ -304,7 +297,6 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 
 	representativeVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, tx, asset.ID, lookingForVulnState)
 
-	var vulns []models.DependencyVuln
 	if err != nil {
 		slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID)
 		tx.Rollback()
@@ -314,16 +306,9 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 			slog.Error("failed to apply VEX rules to vulns", "error", computeErr)
 			tx.Rollback()
 		} else {
-			assetSignatures, saveErr := c.dependencyVulnRepository.ApplyGroupEventsAndSave(reqCtx, tx, groupEvents)
-			if saveErr != nil {
+			if _, saveErr := c.dependencyVulnRepository.ApplyGroupEventsAndSave(reqCtx, tx, groupEvents); saveErr != nil {
 				slog.Error("failed to save group VEX rule events", "error", saveErr)
 				tx.Rollback()
-			} else if len(assetSignatures) > 0 {
-				vulns, err = c.dependencyVulnRepository.GetVulnsByAssetSignatures(reqCtx, tx, assetSignatures)
-				if err != nil {
-					slog.Error("failed to fetch updated vulns", "error", err)
-					tx.Rollback()
-				}
 			}
 		}
 	}
@@ -332,58 +317,14 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to commit VEX rule creation").WithInternal(err)
 	}
 
-	c.syncTicketsForVulns(ctx, asset, vulns)
+	events.NotifyVEXRuleCreated(reqCtx, c.broker, asset.ID)
 
 	count, err := c.countMatchingVulns(reqCtx, *rule)
 	if err != nil {
 		ctx.Logger().Error("failed to count matching vulns for rule", "ruleId", rule.ID, "error", err)
 		count = 0
 	}
-	c.updateArtifactRiskAggregation(ctx.Request().Context(), asset, vulns)
-
 	return ctx.JSON(201, transformer.VEXRuleToDTOWithCount(*rule, count))
-}
-
-// syncTicketsForVulns syncs the third-party ticket (e.g. GitLab issue) for
-// every vuln on the default branch that a just-applied VEX rule touched, so
-// an existing open ticket reflects the new state instead of staying stale.
-func (c *VEXRuleController) syncTicketsForVulns(ctx shared.Context, asset models.Asset, vulns []models.DependencyVuln) {
-	defaultAssetVersion, err := c.assetVersionRepository.GetDefaultAssetVersion(ctx.Request().Context(), nil, asset.ID)
-	if err != nil {
-		slog.Error("failed to get default asset version for ticket sync", "assetID", asset.ID, "error", err)
-		return
-	}
-
-	defaultBranchVulns := utils.Filter(vulns, func(v models.DependencyVuln) bool {
-		return v.AssetVersionName == defaultAssetVersion.Name
-	})
-	if len(defaultBranchVulns) == 0 {
-		return
-	}
-
-	userAgent := ctx.Request().UserAgent()
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
-	if err := c.dependencyVulnService.SyncIssues(ctx.Request().Context(), org, project, asset, defaultAssetVersion, defaultBranchVulns, &userAgent); err != nil {
-		slog.Error("failed to sync tickets after applying VEX rule", "assetID", asset.ID, "error", err)
-	}
-}
-
-func (c *VEXRuleController) updateArtifactRiskAggregation(ctx context.Context, asset models.Asset, vulns []models.DependencyVuln) {
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
-	c.FireAndForget(func() {
-		artifacts := map[string]models.Artifact{}
-		for _, vuln := range vulns {
-			for _, artifact := range vuln.Artifacts {
-				artifacts[artifact.ArtifactName] = artifact
-			}
-		}
-		for _, artifact := range artifacts {
-			if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
-				slog.Error("failed to update artifact risk aggregation", "artifact", artifact.ArtifactName, "error", err)
-			}
-		}
-	})
 }
 
 // @Summary Delete a VEX rule
@@ -477,7 +418,7 @@ func (c *VEXRuleController) Delete(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to commit VEX rule deletion").WithInternal(err)
 	}
 
-	c.updateArtifactRiskAggregation(reqCtx, asset, vulns)
+	events.NotifyVEXRuleDeleted(reqCtx, c.broker, asset.ID)
 
 	return ctx.NoContent(204)
 }

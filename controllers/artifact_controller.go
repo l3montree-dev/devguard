@@ -19,9 +19,11 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
@@ -40,16 +42,15 @@ type ArtifactController struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	statisticsRepository     shared.StatisticsRepository
 	statisticsService        shared.StatisticsService
-	componentService         shared.ComponentService
 	assetVersionService      shared.AssetVersionService
 	csafService              shared.CSAFService
-	thirdPartyIntegration    shared.IntegrationAggregate
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
+	broker events.Broker
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, componentService shared.ComponentService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, csafService shared.CSAFService, thirdPartyIntegration shared.IntegrationAggregate) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, csafService shared.CSAFService, broker events.Broker) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -57,12 +58,11 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		statisticsRepository:      statisticsRepository,
 		statisticsService:         statisticsService,
 		FireAndForgetSynchronizer: synchronizer,
-		componentService:          componentService,
 		assetVersionService:       assetVersionService,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 		csafService:               csafService,
-		thirdPartyIntegration:     thirdPartyIntegration,
+		broker:                    broker,
 	}
 }
 
@@ -164,7 +164,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 	currentOwnerID := shared.GetSession(ctx).GetActorName()
 
-	_, _, newState, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentOwnerID, &userAgent)
+	opened, _, _, err := c.ScanNormalizedSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, bom, currentOwnerID, &userAgent)
 	if err != nil {
 		tx.Rollback()
 		slog.Error("could not scan sbom after creating artifact", "err", err)
@@ -173,62 +173,8 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 
 	tx.Commit()
 
-	linkedCtx := trace.ContextWithSpan(
-		context.Background(),
-		trace.SpanFromContext(ctx.Request().Context()),
-	)
-	// update the license information in the background
-	c.FireAndForget(func() {
-		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifact.ArtifactName), false)
-		if err != nil {
-			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
-		} else {
-			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		}
-	})
-
-	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
-		c.FireAndForget(func() {
-			// Export the updated graph back to CycloneDX format for the event
-			metadata, metaErr := c.assetVersionService.LoadComponentMetadata(linkedCtx, nil, assetVersion, bom)
-			if metaErr != nil {
-				slog.Error("could not load component metadata for sbom event", "err", metaErr)
-				return
-			}
-			exportedBOM := transformer.ForestToCycloneDX(bom, normalize.BOMMetadata{
-				RootName: artifact.ArtifactName,
-			}, metadata)
-			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
-				AssetVersion: shared.ToAssetVersionObject(assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Artifact: shared.ArtifactObject{
-					ArtifactName: artifact.ArtifactName,
-				},
-				SBOM: exportedBOM,
-			}, &userAgent); err != nil {
-				slog.Error("could not handle SBOM updated event", "err", err)
-			} else {
-				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-			}
-		})
-	}
-
-	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, newState, &userAgent)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-
-	c.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
+	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
+	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
 
 	return ctx.JSON(201, transformer.ArtifactModelToDTO(artifact))
 }
@@ -362,8 +308,6 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	//check if the upstream urls are valid urls
 	boms, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, tx, asset, artifactName, artifact.AssetVersionName, toAddUrls)
-	var vulns []models.DependencyVuln
-
 	// each newly configured source is stored as its own SBOM
 	for _, upstream := range boms {
 		if err := c.assetVersionService.StoreSBOM(reqCtx, tx, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
@@ -379,7 +323,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not load sboms").WithInternal(err)
 	}
 
-	_, _, vulns, err = c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetActorName(), &userAgent)
+	opened, _, _, err := c.ScanNormalizedSBOM(reqCtx, tx, org, project, asset, assetVersion, artifact, sbom, shared.GetSession(ctx).GetActorName(), &userAgent)
 	if err != nil {
 		slog.Error("could not scan sbom after updating it", "err", err)
 		return echo.NewHTTPError(500, "could not scan sbom after updating it").WithInternal(err)
@@ -387,59 +331,8 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 
 	tx.Commit()
 
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
-	// update the license information in the background
-	c.FireAndForget(func() {
-		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := c.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifactName), false)
-		if err != nil {
-			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
-		} else {
-			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		}
-	})
-
-	if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
-		c.FireAndForget(func() {
-			// Export the updated graph back to CycloneDX format for the event
-			metadata, metaErr := c.assetVersionService.LoadComponentMetadata(linkedCtx, nil, assetVersion, sbom)
-			if metaErr != nil {
-				slog.Error("could not load component metadata for sbom event", "err", metaErr)
-				return
-			}
-			exportedBOM := transformer.ForestToCycloneDX(sbom, normalize.BOMMetadata{
-				RootName: artifactName,
-			}, metadata)
-			if err = c.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
-				AssetVersion: shared.ToAssetVersionObject(assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Artifact: shared.ArtifactObject{
-					ArtifactName: artifactName,
-				},
-				SBOM: exportedBOM,
-			}, &userAgent); err != nil {
-				slog.Error("could not handle SBOM updated event", "err", err)
-			} else {
-				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-			}
-		})
-	}
-
-	c.FireAndForget(func() {
-		err := c.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-
-	c.FireAndForget(func() {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := c.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-		}
-	})
+	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifactName, UserAgent: userAgent}
+	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
 
 	response := ArtifactUpdateResponse{
 		Artifact:    transformer.ArtifactModelToDTO(artifact),

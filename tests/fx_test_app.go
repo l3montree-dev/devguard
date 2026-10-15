@@ -22,9 +22,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
@@ -45,7 +46,7 @@ type TestApp struct {
 
 	// Core infrastructure
 	DB     shared.DB
-	Broker shared.PubSubBroker
+	Broker events.Broker
 
 	// Services
 	ConfigService            shared.ConfigService
@@ -132,8 +133,8 @@ type TestAppOptions struct {
 	ExtraOptions []fx.Option
 	// Whether to suppress FX logging
 	SuppressLogs bool
-	// Custom broker (if nil, a default in-memory broker will be provided)
-	Broker shared.PubSubBroker
+	// Custom broker (if nil, a broker running every job inline will be provided)
+	Broker events.Broker
 	// Wrap the integration aggregate so no ticket or webhook ever reaches a real
 	// external system. Tests running against the development database need this:
 	// that data is a production dump, webhook urls included.
@@ -154,30 +155,35 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 		fx.Provide(func() shared.DB { return db }),
 		// Provide the connection pool
 		fx.Provide(func() *pgxpool.Pool { return pool }),
+		fx.Provide(
+			fx.Annotate(
+				func() *pgxpool.Pool { return pool },
+				fx.ResultTags(`name:"river"`),
+			),
+		),
 
-		// Provide broker
-		fx.Provide(func() shared.PubSubBroker {
+		// Replace the broker - queued jobs run right away in the caller, so tests stay synchronous
+		fx.Decorate(func() events.Broker {
 			if opts.Broker != nil {
 				return opts.Broker
 			}
-			// Return a no-op broker for tests
-			return &noopBroker{}
+			return events.NewInlineBroker()
+		}),
+		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
+			return daemonRunner.RegisterJobs(false)
 		}),
 		// Use the same modules as production
+		events.Module,
 		repositories.Module,
 		services.ServiceModule,
 		fixedversion.Module,
-		daemons.Module,
+		listeners.Module,
 		controllers.ControllerModule,
 		accesscontrol.AccessControlModule,
 		integrations.Module,
 		vulndb.Module,
 		fx.Decorate(func() utils.FireAndForgetSynchronizer {
 			return utils.NewSyncFireAndForgetSynchronizer()
-		}),
-		// Provide a test leader elector that always returns true
-		fx.Decorate(func() shared.LeaderElector {
-			return &testLeaderElector{}
 		}),
 		// Wire up the monitoring package-level logger, mirroring production (cmd/devguard/main.go)
 		fx.Invoke(monitoring.SetLogger),
@@ -232,37 +238,13 @@ func NewTestAppWithT(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestA
 	return app, fxApp
 }
 
-// noopBroker is a no-op implementation of the Broker interface for testing
-type noopBroker struct{}
-
-func (n *noopBroker) IsHealthy() bool {
-	return true
-}
-
-func (n *noopBroker) Publish(ctx context.Context, message shared.PubSubMessage) error {
-	return nil
-}
-
-func (n *noopBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[string]any, error) {
-	ch := make(chan map[string]any)
-	close(ch) // Return a closed channel so subscribers don't block
-	return ch, nil
-}
-
-// testLeaderElector is a simple implementation for tests that always returns true
-type testLeaderElector struct{}
-
-func (t *testLeaderElector) IsLeader() bool {
-	return true
-}
-
 // createMockedComponentService wraps the real ComponentService with mocking for external calls
 // This ensures tests don't make actual HTTP requests
 func createMockedComponentService(t testing.TB, realCS shared.ComponentService) shared.ComponentService {
 	mockCS := &mocks.ComponentService{}
 
 	// Mock GetAndSaveLicenseInformation to return empty slice (prevent HTTP calls)
-	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCS.On("GetAndSaveLicenseInformation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]models.Component{}, nil)
 
 	// Mock other methods to delegate to real implementation

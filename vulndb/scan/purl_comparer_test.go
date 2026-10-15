@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
@@ -397,7 +398,7 @@ func TestAffectedComponentsCache(t *testing.T) {
 func TestResolveCandidatesUsesCache(t *testing.T) {
 	// the comparer has no database - every lookup that is not served by the
 	// cache panics, which is exactly what these tests assert against
-	comparer := NewPurlComparer(nil, new(50))
+	comparer := NewPurlComparer(nil, events.BrokerStub, new(50))
 
 	t.Run("cached purls are resolved without touching the database", func(t *testing.T) {
 

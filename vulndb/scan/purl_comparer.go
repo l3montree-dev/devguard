@@ -17,6 +17,7 @@ package scan
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/l3montree-dev/devguard/normalize"
@@ -58,7 +60,7 @@ func WithPreloads(preloads ...func(*gorm.DB) *gorm.DB) func(*PurlComparer) {
 // cache Size is the maximum number of elements held at one time
 // if 0 is provided the cache gets disabled
 // if nil is provided the default is used
-func NewPurlComparer(db shared.DB, cacheSize *int, opts ...func(*PurlComparer)) *PurlComparer {
+func NewPurlComparer(db shared.DB, eventBroker events.Broker, cacheSize *int, opts ...func(*PurlComparer)) *PurlComparer {
 	comparer := &PurlComparer{
 		db:       db,
 		cache:    NewAffectedComponentsCache(cacheSize),
@@ -68,6 +70,14 @@ func NewPurlComparer(db shared.DB, cacheSize *int, opts ...func(*PurlComparer)) 
 	for _, opt := range opts {
 		opt(comparer)
 	}
+
+	if err := eventBroker.Subscribe(events.VulnDBUpdated, func(ctx context.Context, _payload json.RawMessage) {
+		comparer.cache.Flush()
+		slog.Info("flushed purl comparer cache due to VulnDBUpdated event")
+	}); err != nil {
+		panic("could not subscribe to vulndb updated events (pub/sub)y")
+	}
+
 	return comparer
 }
 

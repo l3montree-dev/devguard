@@ -30,19 +30,20 @@ import (
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
 type SystemController struct {
 	db     shared.DB
 	pool   *pgxpool.Pool
-	broker shared.PubSubBroker
+	broker events.Broker
 
 	healthConn   *pgxpool.Conn
 	healthConnMu sync.Mutex
 }
 
-func NewSystemController(db shared.DB, pool *pgxpool.Pool, broker shared.PubSubBroker) *SystemController {
+func NewSystemController(db shared.DB, pool *pgxpool.Pool, broker events.Broker) *SystemController {
 	if pool == nil {
 		panic("NewSystemController: pool must not be nil")
 	}

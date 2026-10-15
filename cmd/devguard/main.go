@@ -30,8 +30,10 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/events/listeners"
+
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
@@ -128,6 +130,7 @@ func main() {
 		fx.WithLogger(func() fxevent.Logger { return &fxErrorLogger{} }),
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.Provide(api.NewServer),
+		events.Module,
 		database.Module,
 		repositories.Module,
 		controllers.ControllerModule,
@@ -136,7 +139,7 @@ func main() {
 		accesscontrol.AccessControlModule,
 		integrations.Module,
 		vulndb.Module,
-		daemons.Module,
+		listeners.Module,
 		fixedversion.Module,
 		fx.Invoke(func(routers router.Routers) {}),
 		fx.Invoke(monitoring.SetLogger),
@@ -156,17 +159,13 @@ func main() {
 				},
 			})
 		}),
-		fx.Invoke(func(lc fx.Lifecycle, daemonRunner shared.DaemonRunner) {
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-					if os.Getenv("DISABLE_DAEMONS") == "true" {
-						slog.Info("background daemons are disabled via DISABLE_DAEMONS environment variable")
-						return nil
-					}
-					go daemonRunner.Start(ctx) // start in background
-					return nil
-				},
-			})
+		fx.Invoke(func(daemonRunner shared.DaemonRunner) error {
+			// river elects its own leader which schedules the jobs - this needs to be set equally on all instances
+			schedule := os.Getenv("DISABLE_DAEMONS") != "true"
+			if !schedule {
+				slog.Info("background daemons are disabled via DISABLE_DAEMONS environment variable")
+			}
+			return daemonRunner.RegisterJobs(schedule)
 		}),
 		fx.Invoke(func(lc fx.Lifecycle, db shared.DB) {
 			lc.Append(fx.Hook{

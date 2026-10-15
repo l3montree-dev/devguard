@@ -1683,6 +1683,8 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 func TestTicketHandling(t *testing.T) {
 	t.Parallel()
 	testClientFactory, gitlabClientFacade := NewTestClientFactory(t)
+	// every upload runs the asset pipeline, which compares the ticket states with gitlab
+	gitlabClientFacade.On("GetProjectIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*gitlab.Issue{}, &gitlab.Response{}, nil).Maybe()
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
 		SuppressLogs: true,
 		ExtraOptions: []fx.Option{
@@ -1904,6 +1906,7 @@ func TestTicketHandling(t *testing.T) {
 
 			gitlabClientFacade.Calls = nil         // reset recorded calls
 			gitlabClientFacade.ExpectedCalls = nil // clear all prior expectations so they don't shadow new .Once() expectations
+			gitlabClientFacade.On("GetProjectIssues", mock.Anything, mock.Anything, mock.Anything).Return([]*gitlab.Issue{}, &gitlab.Response{}, nil).Maybe()
 			gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&gitlab.Issue{
 				IID: 789,
 			}, nil, nil).Once()

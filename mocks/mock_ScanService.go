@@ -1148,7 +1148,7 @@ func (_c *ScanService_SyncArtifactUpstreamSBOMSources_Call) RunAndReturn(run fun
 }
 
 // SyncArtifactUpstreamSBOMSourcesIfChanged provides a mock function for the type ScanService
-func (_mock *ScanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error) {
+func (_mock *ScanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, []models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 
 	if len(ret) == 0 {
@@ -1156,8 +1156,9 @@ func (_mock *ScanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.C
 	}
 
 	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (bool, error)); ok {
+	var r1 []models.DependencyVuln
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) (bool, []models.DependencyVuln, error)); ok {
 		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) bool); ok {
@@ -1165,12 +1166,19 @@ func (_mock *ScanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.C
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) []models.DependencyVuln); ok {
 		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]models.DependencyVuln)
+		}
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *string) error); ok {
+		r2 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncArtifactUpstreamSBOMSourcesIfChanged'
@@ -1245,12 +1253,12 @@ func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Run(run fun
 	return _c
 }
 
-func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Return(b bool, err error) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
-	_c.Call.Return(b, err)
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) Return(rescanned bool, opened []models.DependencyVuln, err error) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+	_c.Call.Return(rescanned, opened, err)
 	return _c
 }
 
-func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error)) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
+func (_c *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, []models.DependencyVuln, error)) *ScanService_SyncArtifactUpstreamSBOMSourcesIfChanged_Call {
 	_c.Call.Return(run)
 	return _c
 }

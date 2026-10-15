@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"github.com/lib/pq"
+	"gorm.io/gorm/clause"
 
 	"github.com/l3montree-dev/devguard/database/models"
 
@@ -261,6 +262,10 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 	return nil
 }
 
+func withoutAssociations(tx shared.DB) shared.DB {
+	return tx.Omit(clause.Associations)
+}
+
 func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context, tx shared.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error) {
 	if len(dependencyVulns) == 0 {
 		return nil, nil
@@ -294,7 +299,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 	// it is crucial to maintain a consistent audit log of events
 	if tx == nil {
 		err := s.dependencyVulnRepository.Transaction(ctx, func(tx shared.DB) error {
-			if err := s.dependencyVulnRepository.SaveBatch(ctx, tx, dependencyVulns); err != nil {
+			if err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns); err != nil {
 				return fmt.Errorf("could not save dependencyVulns: %v", err)
 			}
 			if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
@@ -308,7 +313,7 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 		return dependencyVulns, nil
 	}
 
-	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns)
 	if err != nil {
 		return nil, fmt.Errorf("could not save dependencyVulns: %v", err)
 	}

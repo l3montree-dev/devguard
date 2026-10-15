@@ -16,7 +16,7 @@
 CREATE EXTENSION IF NOT EXISTS semver;
 
 CREATE DATABASE kratos;
-CREATE USER kratos PASSWORD 'change-me-definitely-when-not-testing';
+CREATE USER kratos PASSWORD 'change-me-definitely-when-not-testing-kratos';
 GRANT ALL PRIVILEGES ON DATABASE kratos to kratos;
 
 \c kratos
