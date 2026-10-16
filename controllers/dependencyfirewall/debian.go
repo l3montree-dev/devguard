@@ -174,7 +174,16 @@ func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "deb", "type", "metadata", "method", c.Request().Method, "path", requestPath)
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, debRegistry, requestPath, c.Request().Header, nil)
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
+			return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, configs.getRegistry(deb, debRegistry), requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -263,7 +272,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, debRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, configs.getRegistry(deb, debRegistry), requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

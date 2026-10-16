@@ -123,21 +123,21 @@ func TestProxyPyPISimpleRewritesFileURLs(t *testing.T) {
 			path:        "/api/v1/dependency-proxy/pypi/simple/requests/",
 			contentType: "text/html",
 			upstream:    `<a href="https://files.pythonhosted.org/packages/ab/cd/requests-2.31.0-py3-none-any.whl#sha256=abc">requests-2.31.0-py3-none-any.whl</a>`,
-			expected:    `<a href="/api/v1/dependency-proxy/pypi/packages/ab/cd/requests-2.31.0-py3-none-any.whl#sha256=abc">requests-2.31.0-py3-none-any.whl</a>`,
+			expected:    `<a href="/api/v1/dependency-proxy/pypi/packages/requests-2.31.0-py3-none-any.whl#sha256=abc">requests-2.31.0-py3-none-any.whl</a>`,
 		},
 		{
 			name:        "json with secret",
 			path:        "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/pypi/simple/requests/",
 			contentType: "application/vnd.pypi.simple.v1+json",
 			upstream:    `{"files":[{"url":"https://files.pythonhosted.org/packages/ab/cd/requests-2.31.0-py3-none-any.whl"}]}`,
-			expected:    `{"files":[{"url":"/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/pypi/packages/ab/cd/requests-2.31.0-py3-none-any.whl"}]}`,
+			expected:    `{"files":[{"url":"/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/pypi/packages/requests-2.31.0-py3-none-any.whl"}]}`,
 		},
 		{
 			name:        "scheme-relative and foreign host",
 			path:        "/api/v1/dependency-proxy/pypi/simple/requests/",
 			contentType: "text/html",
 			upstream:    `<a href="//files.pythonhosted.org/packages/ab/cd/a.whl">a</a><a href="https://evil.example/b.whl">b</a>`,
-			expected:    `<a href="/api/v1/dependency-proxy/pypi/packages/ab/cd/a.whl">a</a><a href="/api/v1/dependency-proxy/pypi/b.whl">b</a>`,
+			expected:    `<a href="/api/v1/dependency-proxy/pypi/packages/a.whl">a</a><a href="/api/v1/dependency-proxy/pypi/packages/b.whl">b</a>`,
 		},
 	}
 
@@ -253,11 +253,12 @@ type pypiFileTransport struct {
 
 func (p pypiFileTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	body := "sdist"
-	if req.URL.Path == "/pypi/requests/json" {
-		if p.uploadTime.IsZero() {
-			return &http.Response{StatusCode: http.StatusNotFound, Body: http.NoBody}, nil
+	if req.URL.Path == "/simple/requests" {
+		uploadTime := ""
+		if !p.uploadTime.IsZero() {
+			uploadTime = fmt.Sprintf(`,"upload-time":%q`, p.uploadTime.Format(time.RFC3339Nano))
 		}
-		body = fmt.Sprintf(`{"releases":{"2.32.3":[{"upload_time_iso_8601":%q}]}}`, p.uploadTime.Format(time.RFC3339Nano))
+		body = fmt.Sprintf(`{"files":[{"filename":"requests-2.32.3.tar.gz","url":"https://files.pythonhosted.org/packages/ab/cd/requests-2.32.3.tar.gz"%s}]}`, uploadTime)
 	}
 	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}, nil
 }

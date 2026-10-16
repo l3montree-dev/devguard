@@ -21,8 +21,9 @@ import (
 
 // DependencyProxyConfig is the config-file payload persisted for the dependency proxy.
 type DependencyProxyConfig struct {
-	Rules         string `json:"rules"`
-	MinReleaseAge int    `json:"minReleaseAge" validate:"gte=0,lte=87600"` // in hours, capped at 10 years
+	Rules         string            `json:"rules"`
+	MinReleaseAge int               `json:"minReleaseAge" validate:"gte=0,lte=87600"` // in hours, capped at 10 years
+	Registries    map[string]string `json:"registries" validate:"omitempty,dive,keys,oneof=npm go pypi maven composer deb,endkeys,required,url"`
 }
 
 // dependencyProxyConfigFileID is the key under which dependency-proxy settings

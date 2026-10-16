@@ -250,14 +250,19 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		}
 	}
 
-	distURL, releaseTime, err := d.resolveComposerDist(ctx, packageName, version)
+	registry := configs.getRegistry(composer, composerMetadataRegistry)
+	distURL, releaseTime, err := d.resolveComposerDist(ctx, packageName, version, registry)
 	if err != nil {
 		span.RecordError(err)
 		slog.Warn("Could not resolve dist url", "proxy", "composer", "package", packageName, "version", version, "error", err)
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("could not resolve %s@%s", packageName, version))
 	}
 
-	if err := checkComposerDistHost(distURL); err != nil {
+	registryURL, err := url.Parse(registry)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "invalid composer registry")
+	}
+	if err := checkDistHost(distURL, append([]string{registryURL.Hostname()}, composerDistHosts...)...); err != nil {
 		span.RecordError(err)
 		slog.Warn("Blocked dist url", "proxy", "composer", "package", packageName, "version", version, "url", distURL, "error", err)
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("blocked dist url: %v", err))
@@ -344,7 +349,7 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 	}
 
 	data, headers, statusCode, err := d.fetchFromUpstream(
-		ctx, composer, composerMetadataRegistry, requestPath, c.Request().Header, nil,
+		ctx, composer, configs.getRegistry(composer, composerMetadataRegistry), requestPath, c.Request().Header, nil,
 	)
 
 	if err != nil {
@@ -494,10 +499,10 @@ func filterComposerMetadata(data []byte, proxyBaseURL string, minAge time.Durati
 	return out, removed, nil
 }
 
-func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Context, packageName, version string) (string, time.Time, error) {
+func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Context, packageName, version, registry string) (string, time.Time, error) {
 	metadataPath := fmt.Sprintf("p2/%s.json", packageName)
 
-	data, _, statusCode, err := d.fetchFromUpstream(ctx, composer, composerMetadataRegistry, metadataPath, http.Header{}, nil)
+	data, _, statusCode, err := d.fetchFromUpstream(ctx, composer, registry, metadataPath, http.Header{}, nil)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -541,24 +546,6 @@ func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Cont
 	}
 
 	return "", time.Time{}, fmt.Errorf("%s@%s not found upstream", packageName, version)
-}
-
-// checkComposerDistHost keeps a tampered or compromised upstream entry from turning this
-// proxy into a fetcher for arbitrary hosts.
-func checkComposerDistHost(distURL string) error {
-	parsed, err := url.Parse(distURL)
-	if err != nil {
-		return fmt.Errorf("invalid dist url")
-	}
-	if parsed.Scheme != "https" {
-		return fmt.Errorf("dist url is not https")
-	}
-	for _, host := range composerDistHosts {
-		if parsed.Hostname() == host {
-			return nil
-		}
-	}
-	return fmt.Errorf("dist host %s is not allowed", parsed.Hostname())
 }
 
 func composerCacheTTL(requestPath string) time.Duration {

@@ -187,7 +187,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	// The tarball itself carries no publish date - it lives in the package metadata.
 	// Always resolve it, even without MinReleaseAge: the cache is shared across proxy
 	// secrets, so an entry stored for one config must be checkable under another.
-	releaseTime, err := d.fetchNPMReleaseTime(ctx, packageName, version)
+	releaseTime, err := d.fetchNPMReleaseTime(ctx, packageName, version, configs.getRegistry(npm, npmRegistry))
 	if err != nil {
 		slog.Warn("Could not determine release time", "proxy", "npm", "package", packageName, "version", version, "error", err)
 		if configs.MinReleaseAge > 0 {
@@ -200,7 +200,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		}
 	}
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, npmRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, configs.getRegistry(npm, npmRegistry), requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -240,7 +240,7 @@ var npmMetadata = utils.NewTTLCache[string](5*time.Minute, 256*1024*1024, func(e
 
 // fetchPackageMetadata returns the full (non-abbreviated) npm package document.
 // Only successful responses are cached.
-func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context, packageName string) ([]byte, http.Header, int, error) {
+func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context, packageName, registry string) ([]byte, http.Header, int, error) {
 	cacheKey := "npm/metadata/" + packageName
 	if entry, ok := npmMetadata.Get(cacheKey); ok {
 		slog.Debug("Cache hit for metadata", "proxy", "npm", "package", packageName)
@@ -249,7 +249,7 @@ func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context,
 		return entry.data, headers, http.StatusOK, nil
 	}
 
-	data, headers, status, err := d.fetchFromUpstream(ctx, npm, npmRegistry, "/"+packageName, nil, nil)
+	data, headers, status, err := d.fetchFromUpstream(ctx, npm, registry, "/"+packageName, nil, nil)
 	if err != nil {
 		return nil, nil, status, fmt.Errorf("failed to fetch metadata from upstream: %w", err)
 	}
@@ -260,8 +260,8 @@ func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context,
 }
 
 // fetchNPMReleaseTime returns the publish time of packageName@version from the package metadata.
-func (d *NPMDependencyProxyController) fetchNPMReleaseTime(ctx context.Context, packageName, version string) (time.Time, error) {
-	metadata, _, status, err := d.fetchPackageMetadata(ctx, packageName)
+func (d *NPMDependencyProxyController) fetchNPMReleaseTime(ctx context.Context, packageName, version, registry string) (time.Time, error) {
+	metadata, _, status, err := d.fetchPackageMetadata(ctx, packageName, registry)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -336,7 +336,7 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
-	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName)
+	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName, configs.getRegistry(npm, npmRegistry))
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -396,6 +396,15 @@ func (d *NPMDependencyProxyController) ProxyNPMRegistryAPI(c shared.Context) err
 	requestPath := npm.trimPrefix(c.Request().URL.Path)
 	method := c.Request().Method
 
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
+			return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
+	}
+
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.npm-registry-api",
 		trace.WithAttributes(
 			attribute.String("proxy.ecosystem", "npm"),
@@ -423,7 +432,7 @@ func (d *NPMDependencyProxyController) ProxyNPMRegistryAPI(c shared.Context) err
 
 	slog.Info("Proxy request", "proxy", "npm", "type", "registry-api", "method", method, "path", requestPath, "bodySize", len(body))
 
-	data, headers, statusCode, err := d.fetchNPMRegistryAPIFromUpstream(ctx, method, requestPath, c.Request().URL.RawQuery, c.Request().Header, body)
+	data, headers, statusCode, err := d.fetchNPMRegistryAPIFromUpstream(ctx, method, requestPath, c.Request().URL.RawQuery, c.Request().Header, body, configs.getRegistry(npm, npmRegistry))
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -436,9 +445,9 @@ func (d *NPMDependencyProxyController) ProxyNPMRegistryAPI(c shared.Context) err
 
 // fetchNPMRegistryAPIFromUpstream forwards a registry API request including the
 // headers npm relies on (body encoding for audits, Accept for content negotiation).
-func (d *NPMDependencyProxyController) fetchNPMRegistryAPIFromUpstream(ctx context.Context, method, requestPath, rawQuery string, headers http.Header, body []byte) ([]byte, http.Header, int, error) {
+func (d *NPMDependencyProxyController) fetchNPMRegistryAPIFromUpstream(ctx context.Context, method, requestPath, rawQuery string, headers http.Header, body []byte, registry string) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
-	upstreamURL, err := url.JoinPath(npmRegistry, requestPath)
+	upstreamURL, err := url.JoinPath(registry, requestPath)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to join URL: %w", err)
 	}

@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -59,8 +60,17 @@ type DependencyProxyCache struct {
 }
 
 type DependencyProxyConfigs struct {
-	Rules         []string `json:"rules"`
-	MinReleaseAge int      `json:"minReleaseAge"` // in hours
+	Rules         []string          `json:"rules"`
+	MinReleaseAge int               `json:"minReleaseAge"` // in hours
+	Registries    map[string]string `json:"registries"`
+}
+
+func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
+	individualRegistry := c.Registries[eco.name()]
+	if individualRegistry == "" {
+		return defaultRegistry
+	}
+	return individualRegistry
 }
 
 type DependencyProxyController struct {
@@ -293,8 +303,9 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
 		var raw struct {
-			Rules         string `json:"rules"`
-			MinReleaseAge int    `json:"minReleaseAge"`
+			Rules         string            `json:"rules"`
+			MinReleaseAge int               `json:"minReleaseAge"`
+			Registries    map[string]string `json:"registries"`
 		}
 		if err := json.Unmarshal([]byte(s), &raw); err != nil {
 			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
@@ -306,6 +317,7 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 				configs.Rules = append(configs.Rules, line)
 			}
 		}
+		configs.Registries = raw.Registries
 	}
 
 	return configs, nil
@@ -315,6 +327,20 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 // parameter and delegates to LoadConfigsBySecret.
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
+}
+
+func checkDistHost(distURL string, allowedHosts ...string) error {
+	parsed, err := url.Parse(distURL)
+	if err != nil {
+		return fmt.Errorf("invalid dist url")
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("dist url is not https")
+	}
+	if !slices.Contains(allowedHosts, parsed.Hostname()) {
+		return fmt.Errorf("dist host %s is not allowed", parsed.Hostname())
+	}
+	return nil
 }
 
 // matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.
