@@ -44,12 +44,18 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if pubKeyX != hex.EncodeToString(pubKeyCheck.X.Bytes()) {
-			t.Fatalf("expected %s, got %s", pubKeyX, hex.EncodeToString(pubKeyCheck.X.Bytes()))
+		pubkeyBytes, err := pubKeyCheck.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		pubkeyBytes = pubkeyBytes[1:] // skip the 0x04 prefix for uncompressed keys
+
+		if pubKeyX != hex.EncodeToString(pubkeyBytes[:32]) {
+			t.Fatalf("expected %s, got %s", pubKeyX, hex.EncodeToString(pubkeyBytes[:32]))
 		}
 
-		if pubKeyY != hex.EncodeToString(pubKeyCheck.Y.Bytes()) {
-			t.Fatalf("expected %s, got %s", pubKeyY, hex.EncodeToString(pubKeyCheck.Y.Bytes()))
+		if pubKeyY != hex.EncodeToString(pubkeyBytes[32:]) {
+			t.Fatalf("expected %s, got %s", pubKeyY, hex.EncodeToString(pubkeyBytes[32:]))
 		}
 	})
 }
@@ -58,11 +64,15 @@ func TestHexPrivKeyToPubKey(t *testing.T) {
 	t.Run("test hexPrivKey to PubKey", func(t *testing.T) {
 		priv := "1b210d1412d412bc6d0ce767bd2795353377f568ac3cbad1850797cd36180449"
 		pub := "c600494b2ba7254dbfc160ea9f36dbe8b111e7170592f95dba2c2f6ca64caf4aa4e5e6f9b6d82e7b1376fad7c418831689182832f7e25f15fa2a2b6dcb5159eb"
-		pubCheck, err := hexPrivKeyToPubKey(priv)
+		_, pubCheck, err := HexTokenToECDSA(priv)
 		if err != nil {
 			t.Fatal(err)
 		}
-		p := hex.EncodeToString(pubCheck.X.Bytes()) + hex.EncodeToString(pubCheck.Y.Bytes())
+		pubkeyBytes, err := pubCheck.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := hex.EncodeToString(pubkeyBytes[1:]) // skip the 0x04 prefix for uncompressed keys
 		if pub != p {
 			t.Fatalf("expected %s, got %s", pub, pubCheck)
 		}
