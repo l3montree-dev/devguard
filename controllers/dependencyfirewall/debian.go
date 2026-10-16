@@ -229,12 +229,6 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, deb, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, pkgVersion := deb.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, deb, packageName, pkgVersion)
@@ -250,8 +244,10 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, debCacheTTL) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "deb", "path", requestPath)
-			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, deb, requestPath, entry.releaseTime, configs.MinReleaseAge)
+			notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, debRegistry, packageName, pkgVersion, entry.releaseTime), configs)
+			if notAllowed {
+				slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
+				return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
 			}
 			if entry.contentType != "" {
 				c.Response().Header().Set("Content-Type", entry.contentType)
@@ -277,15 +273,15 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	}
 
 	releaseTime := debReleaseTime(headers)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, debRegistry, packageName, pkgVersion, releaseTime), configs)
+	if notAllowed {
+		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
+		return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
+	}
+
 	if releaseTime.IsZero() {
 		slog.Warn("Could not determine release time", "proxy", "deb", "package", packageName, "version", pkgVersion)
-		if configs.MinReleaseAge > 0 {
-			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not determine release time of %s@%s", packageName, pkgVersion))
-		}
 	} else {
-		if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, deb, requestPath, releaseTime, configs.MinReleaseAge)
-		}
 		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "deb", "error", err)
 		}

@@ -447,7 +447,7 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "manifest", "method", method, "image", fqImageName, "reference", reference)
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, ociEco, requestPath, configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, reference, time.Time{}), configs)
 	if notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
@@ -578,7 +578,7 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 	slog.Info("Proxy request", "proxy", "oci", "type", "blob", "method", method, "image", fqImageName, "digest", digest)
 
 	// Blobs are image-scoped; check the fully-qualified image name against rules.
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, "", time.Time{}), configs)
 	if notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, requestPath, notAllowedReason)
 	}
@@ -706,7 +706,7 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "referrers", "image", fqImageName, "digest", digest)
 
-	if notAllowed, reason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs); notAllowed {
+	if notAllowed, reason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, "", time.Time{}), configs); notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
 	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)
@@ -775,7 +775,7 @@ func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "oci", "type", "tags/list", "image", fqImageName)
 
-	if notAllowed, reason := d.CheckNotAllowedPackage(ctx, ociEco, fqImageName, configs); notAllowed {
+	if notAllowed, reason := d.CheckNotAllowedPackage(newPackage(ociEco, registry, fqImageName, "", time.Time{}), configs); notAllowed {
 		return d.blockNotAllowedPackage(c, ociEco, fqImageName, reason)
 	}
 	blocked, reason, err := d.checkMaliciousPackage(ctx, ociEco, fqImageName)

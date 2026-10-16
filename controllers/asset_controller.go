@@ -478,7 +478,7 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 
 	if configID == dtos.DependencyProxyConfigFileID {
 		if err := dtos.ValidateConfigFile(body); err != nil {
-			return err
+			return echo.NewHTTPError(400, err.Error())
 		}
 	}
 

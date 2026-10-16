@@ -17,7 +17,6 @@ package dependencyfirewall
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -25,11 +24,13 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -59,8 +60,7 @@ type DependencyProxyCache struct {
 }
 
 type DependencyProxyConfigs struct {
-	Rules         []string `json:"rules"`
-	MinReleaseAge int      `json:"minReleaseAge"` // in hours
+	Rules []packagerules.CompiledRule
 }
 
 type DependencyProxyController struct {
@@ -292,23 +292,27 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 		if !ok {
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
-		var raw struct {
-			Rules         string `json:"rules"`
-			MinReleaseAge int    `json:"minReleaseAge"`
-		}
-		if err := json.Unmarshal([]byte(s), &raw); err != nil {
-			return configs, fmt.Errorf("failed to unmarshal config file json into configs: %w", err)
-		}
-		configs.MinReleaseAge = raw.MinReleaseAge
-		for line := range strings.SplitSeq(raw.Rules, "\n") {
-			line = strings.TrimSpace(line)
-			if line != "" && !strings.HasPrefix(line, "#") {
-				configs.Rules = append(configs.Rules, line)
-			}
-		}
+		return parseDependencyProxyConfigs(s)
 	}
 
 	return configs, nil
+}
+
+var compiledRulesCache = utils.NewTTLCache[string, []packagerules.CompiledRule](10*time.Minute, 1000, nil)
+
+func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
+	if rules, ok := compiledRulesCache.Get(s); ok {
+		return DependencyProxyConfigs{Rules: rules}, nil
+	}
+
+	rules, err := packagerules.ParseConfig(s)
+	if err != nil {
+		return DependencyProxyConfigs{}, err
+	}
+
+	compiledRulesCache.Set(s, rules)
+
+	return DependencyProxyConfigs{Rules: rules}, nil
 }
 
 // GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
@@ -317,59 +321,28 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
 }
 
-// matchPattern matches a packagePurl against a pattern that may contain '*' wildcards.
-func matchPattern(pattern, str string) bool {
-	parts := strings.Split(pattern, "*")
-	if len(parts) == 1 {
-		return str == pattern
+func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) packagerules.Package {
+	return packagerules.Package{
+		Name:       name,
+		Version:    version,
+		Ecosystem:  eco.name(),
+		Purl:       eco.packageIdentifier(name, version),
+		Registry:   registry,
+		ReleasedAt: releasedAt,
 	}
-	if parts[0] != "" && !strings.HasPrefix(str, parts[0]) {
-		return false
-	}
-	if parts[len(parts)-1] != "" && !strings.HasSuffix(str, parts[len(parts)-1]) {
-		return false
-	}
-	rest := str
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
-		idx := strings.Index(rest, part)
-		if idx == -1 {
-			return false
-		}
-		rest = rest[idx+len(part):]
-	}
-	return true
 }
 
-func (d *DependencyProxyController) CheckNotAllowedPackage(ctx context.Context, eco ecosystem, path string, configs DependencyProxyConfigs) (bool, string) {
-	packageName, version := eco.parsePackage(path)
-	if packageName == "" {
-		return false, ""
+func (d *DependencyProxyController) CheckNotAllowedPackage(pkg packagerules.Package, configs DependencyProxyConfigs) (bool, string) {
+	blocked, ruleName, err := packagerules.Evaluate(configs.Rules, pkg)
+	if err != nil {
+		return true, fmt.Sprintf("failed to evaluate rule %s: %v", ruleName, err)
 	}
-	blocked, matchedRule := matchRules(eco.packageIdentifier(packageName, version), configs.Rules)
+
 	if blocked {
-		return true, fmt.Sprintf("Package %s is not allowed by rule: %s", packageName, matchedRule)
+		return blocked, fmt.Sprintf("%s is not allowed by rule %s", pkg.Name, ruleName)
 	}
+
 	return false, ""
-}
-
-// matchRules applies the rules in order like gitignore: last matching rule wins.
-// A rule prefixed with "!" negates the match (allowlist).
-func matchRules(packageIdentifier string, rules []string) (bool, string) {
-	blocked := false
-	matchedRule := ""
-	for _, rule := range rules {
-		negate := strings.HasPrefix(rule, "!")
-		pattern := strings.TrimPrefix(rule, "!")
-
-		if matchPattern(pattern, packageIdentifier) {
-			blocked = !negate
-			matchedRule = rule
-		}
-	}
-	return blocked, matchedRule
 }
 
 func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecosystem, packageName, version string) (int, string, error) {
@@ -400,6 +373,12 @@ func (d *DependencyProxyController) checkMalicious(ctx context.Context, eco ecos
 	}
 
 	return 0, "", nil
+}
+
+func isMaliciousVersion(eco ecosystem, components []models.MaliciousAffectedComponent, version string) bool {
+	return slices.ContainsFunc(components, func(comp models.MaliciousAffectedComponent) bool {
+		return eco.MatchesVersion(comp, version)
+	})
 }
 
 func (d *DependencyProxyController) maliciousReason(ctx context.Context, packageName, version string, comp models.MaliciousAffectedComponent) string {
@@ -491,35 +470,6 @@ func (d *DependencyProxyController) blockMaliciousPackage(c shared.Context, eco 
 	return c.JSON(status, map[string]any{
 		"error":   "Forbidden",
 		"message": "This package has been blocked by the malicious package firewall",
-		"reason":  reason,
-		"path":    path,
-		"blocked": true,
-	})
-}
-
-func (d *DependencyProxyController) blockTooNewPackage(c shared.Context, eco ecosystem, path string, releaseTime time.Time, minReleaseAge int) error {
-	span := trace.SpanFromContext(c.Request().Context())
-	span.SetAttributes(attribute.Bool("proxy.too_new_blocked", true))
-	span.SetStatus(codes.Error, "package too new")
-
-	c.Response().Header().Set("X-Too-New-Package", "blocked")
-
-	packageName, _ := eco.parsePackage(path)
-	if packageName == "" {
-		packageName = "unknown"
-	}
-	span.SetAttributes(attribute.String("proxy.package", packageName))
-
-	reason := fmt.Sprintf("Package %s was released %s ago, which is less than the required minimum of %d hours",
-		packageName,
-		time.Since(releaseTime).Round(time.Minute),
-		minReleaseAge,
-	)
-	slog.Warn("BLOCKED TOO NEW PACKAGE", "path", path, "reason", reason)
-
-	return c.JSON(http.StatusForbidden, map[string]any{
-		"error":   "Forbidden",
-		"message": "This package has been blocked because it was released too recently",
 		"reason":  reason,
 		"path":    path,
 		"blocked": true,
