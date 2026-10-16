@@ -71,14 +71,11 @@ func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) er
 	return runner.externalEntityProviderService.CollectGarbage(ctx)
 }
 
-// jobTimeout bounds every daemon job - river does not cancel the handlers itself (see events.Queue)
-const jobTimeout = 2 * time.Hour
-
 // job wraps fn into a queue handler: it bounds the run time, unmarshals the payload and alerts if fn fails.
 // A record deleted in the meantime is no failure - there is nothing left to do, so the job is not retried.
 func job[P events.Payload](errMsg string, fn func(ctx context.Context, payload P) error) events.NotifyHandler {
 	return func(ctx context.Context, raw json.RawMessage) error {
-		ctx, cancel := context.WithTimeout(ctx, jobTimeout)
+		ctx, cancel := context.WithTimeout(ctx, events.HandlerTimeout)
 		defer cancel()
 
 		var payload P

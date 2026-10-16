@@ -25,7 +25,12 @@ var Module = fx.Options(
 type NotifyHandler = func(ctx context.Context, payload json.RawMessage) error
 
 const maxAttempts = 3
-const rescueStuckJobsAfter = 3 * time.Hour
+
+const HandlerTimeout = 2 * time.Hour
+
+const jobTimeout = HandlerTimeout + 30*time.Minute
+
+const rescueStuckJobsAfter = jobTimeout + 30*time.Hour
 
 // completedJobRetention bounds how far FinishedSince can look back - callers rely on it, do not lower it carelessly
 const completedJobRetention = 24 * time.Hour
@@ -130,9 +135,9 @@ type dynamicWorker struct {
 	topic NotifyTopic
 }
 
-// the handlers define their own deadlines - river's default of one minute is way too short for most background jobs
+// river's default of one minute is way too short for most background jobs. Never return a negative value - see jobTimeout.
 func (w *dynamicWorker) Timeout(*river.Job[dynamicArgs]) time.Duration {
-	return -1
+	return jobTimeout
 }
 
 func (w *dynamicWorker) Work(ctx context.Context, job *river.Job[dynamicArgs]) error {
