@@ -139,7 +139,7 @@ func (c *ExternalReferenceController) syncArtifact(reqCtx context.Context, org m
 	}
 
 	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
-	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 	return nil
 }
 

@@ -281,7 +281,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 
 	if !noWrite {
 		artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifactName, UserAgent: userAgent}
-		events.NotifySBOMCreatedWithVulns(scanCtx, s.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+		events.NotifySBOMCreatedWithVulns(scanCtx, s.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 	}
 
 	return opened, closed, newState, assetVersion, nil

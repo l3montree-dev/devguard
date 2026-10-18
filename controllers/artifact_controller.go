@@ -174,7 +174,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	tx.Commit()
 
 	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
-	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 
 	return ctx.JSON(201, transformer.ArtifactModelToDTO(artifact))
 }
@@ -332,7 +332,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	tx.Commit()
 
 	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifactName, UserAgent: userAgent}
-	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 
 	response := ArtifactUpdateResponse{
 		Artifact:    transformer.ArtifactModelToDTO(artifact),

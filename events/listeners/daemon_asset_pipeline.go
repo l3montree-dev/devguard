@@ -437,7 +437,7 @@ func (runner *DaemonRunner) syncUpstream(ctx context.Context, a *assetWithProjec
 				slog.Info("synced changed upstream sboms for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", asset.ID)
 				if !runner.debugOptions.DryRun {
 					artifactEvent := events.ArtifactPayload{AssetID: asset.ID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName}
-					events.NotifySBOMCreatedWithVulns(ctx, runner.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+					events.NotifySBOMCreatedWithVulns(ctx, runner.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 				}
 			}
 		}

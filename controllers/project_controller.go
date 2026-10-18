@@ -740,7 +740,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 
 	tx.Commit()
 	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
-	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), projectController.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.ID }))
+	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), projectController.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 
