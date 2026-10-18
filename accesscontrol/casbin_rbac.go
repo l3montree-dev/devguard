@@ -588,6 +588,9 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 		}
 		return false, nil
 	case shared.SessionActorOrg:
+		if ownerID != c.domain {
+			return false, nil
+		}
 		// an org token can do anything except delete or update the organization itself
 		if object == shared.ObjectOrganization {
 			return action != shared.ActionDelete && action != shared.ActionUpdate, nil
