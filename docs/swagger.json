@@ -5840,22 +5840,14 @@
                     "assetId": {
                         "type": "string"
                     },
-                    "assetVersionId": {
-                        "type": "string"
-                    },
                     "assetVersionName": {
-                        "type": "string"
-                    },
-                    "id": {
                         "type": "string"
                     }
                 },
                 "required": [
                     "artifactName",
                     "assetId",
-                    "assetVersionId",
-                    "assetVersionName",
-                    "id"
+                    "assetVersionName"
                 ],
                 "type": "object"
             },
@@ -8199,9 +8191,6 @@
                     "assetId": {
                         "type": "string"
                     },
-                    "assetVersionId": {
-                        "type": "string"
-                    },
                     "assetVersionName": {
                         "type": "string"
                     },
@@ -8280,7 +8269,6 @@
                 },
                 "required": [
                     "assetId",
-                    "assetVersionId",
                     "assetVersionName",
                     "author",
                     "commit",
@@ -8316,9 +8304,6 @@
                         "uniqueItems": false
                     },
                     "assetId": {
-                        "type": "string"
-                    },
-                    "assetVersionId": {
                         "type": "string"
                     },
                     "assetVersionName": {
@@ -8362,7 +8347,6 @@
                 "required": [
                     "artifacts",
                     "assetId",
-                    "assetVersionId",
                     "assetVersionName",
                     "component",
                     "componentPurl",
@@ -8634,9 +8618,6 @@
                     "assetId": {
                         "type": "string"
                     },
-                    "assetVersionId": {
-                        "type": "string"
-                    },
                     "assetVersionName": {
                         "type": "string"
                     },
@@ -8708,7 +8689,6 @@
                 },
                 "required": [
                     "assetId",
-                    "assetVersionId",
                     "assetVersionName",
                     "author",
                     "commit",
@@ -9044,16 +9024,12 @@
                     },
                     "assetVersionName": {
                         "type": "string"
-                    },
-                    "id": {
-                        "type": "string"
                     }
                 },
                 "required": [
                     "artifactName",
                     "assetId",
-                    "assetVersionName",
-                    "id"
+                    "assetVersionName"
                 ],
                 "type": "object"
             },
@@ -9522,6 +9498,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9553,6 +9536,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -9724,6 +9708,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9757,6 +9748,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -10175,6 +10167,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -10215,6 +10214,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -10962,6 +10962,137 @@
                 ],
                 "type": "object"
             },
+            "dtos.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "obfuscatedToken": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "obfuscatedToken",
+                    "trackerId",
+                    "url"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineIntegrationProperties": {
+                "properties": {
+                    "priorities": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedminePriority"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "statuses": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineStatus"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "trackers": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineTracker"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "priorities",
+                    "statuses",
+                    "trackers"
+                ],
+                "type": "object"
+            },
+            "dtos.RedminePriority": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineStatus": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineTracker": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
             "dtos.Relationship": {
                 "properties": {
                     "relationshipType": {
@@ -11055,9 +11186,6 @@
             },
             "dtos.ReleaseItem": {
                 "properties": {
-                    "artifactId": {
-                        "type": "string"
-                    },
                     "artifactName": {
                         "type": "string"
                     },
@@ -11081,7 +11209,6 @@
                     }
                 },
                 "required": [
-                    "artifactId",
                     "artifactName",
                     "assetId",
                     "assetVersionName",
@@ -11944,9 +12071,6 @@
             },
             "dtos.VulnEvent": {
                 "properties": {
-                    "artifactId": {
-                        "type": "string"
-                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -11997,7 +12121,6 @@
                     }
                 },
                 "required": [
-                    "artifactId",
                     "createdAt",
                     "createdByVexRule",
                     "id",
@@ -12035,8 +12158,6 @@
                     "attachedComplianceComponent",
                     "removedComplianceComponent",
                     "detected",
-                    "detectedInArtifact",
-                    "fixedInArtifact",
                     "rawRiskAssessmentUpdated"
                 ],
                 "type": "string",
@@ -12057,8 +12178,6 @@
                     "EventTypeAttachedComplianceComponent",
                     "EventTypeRemovedComplianceComponent",
                     "EventTypeDetected",
-                    "EventTypeDetectedInArtifact",
-                    "EventTypeFixedInArtifact",
                     "EventTypeRawRiskAssessmentUpdated"
                 ]
             },
@@ -12319,11 +12438,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionId": {
-                        "type": "string"
-                    },
                     "assetVersionName": {
-                        "description": "not stored on advisories, filled by selecting withAssetVersionName",
                         "type": "string"
                     },
                     "createdAt": {
@@ -12377,7 +12492,6 @@
                 "required": [
                     "affectedPackages",
                     "assetVersion",
-                    "assetVersionId",
                     "assetVersionName",
                     "createdAt",
                     "description",
@@ -12489,7 +12603,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionId": {
+                    "assetVersionName": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -12502,12 +12616,19 @@
                         "type": "array",
                         "uniqueItems": false
                     },
-                    "id": {
+                    "lastHistoryUpdate": {
                         "type": "string"
                     },
                     "licenseRisks": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "riskHistories": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -12519,12 +12640,205 @@
                 "required": [
                     "artifactName",
                     "assetVersion",
-                    "assetVersionId",
+                    "assetVersionName",
                     "createdAt",
                     "dependencyVulns",
-                    "id",
+                    "lastHistoryUpdate",
                     "licenseRisks",
+                    "riskHistories",
                     "vulnAssetId"
+                ],
+                "type": "object"
+            },
+            "github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory": {
+                "properties": {
+                    "artifactName": {
+                        "type": "string"
+                    },
+                    "assetId": {
+                        "type": "string"
+                    },
+                    "assetVersionName": {
+                        "type": "string"
+                    },
+                    "averageClosedRisk": {
+                        "type": "number"
+                    },
+                    "averageOpenRisk": {
+                        "type": "number"
+                    },
+                    "critical": {
+                        "type": "integer"
+                    },
+                    "criticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableCritical": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlFixableMediumCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlHigh": {
+                        "type": "integer"
+                    },
+                    "cvePurlHighCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlLow": {
+                        "type": "integer"
+                    },
+                    "cvePurlLowCvss": {
+                        "type": "integer"
+                    },
+                    "cvePurlMedium": {
+                        "type": "integer"
+                    },
+                    "cvePurlMediumCvss": {
+                        "type": "integer"
+                    },
+                    "day": {
+                        "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
+                        "type": "string"
+                    },
+                    "fixableCritical": {
+                        "type": "integer"
+                    },
+                    "fixableCriticalCvss": {
+                        "type": "integer"
+                    },
+                    "fixableHigh": {
+                        "type": "integer"
+                    },
+                    "fixableHighCvss": {
+                        "type": "integer"
+                    },
+                    "fixableLow": {
+                        "type": "integer"
+                    },
+                    "fixableLowCvss": {
+                        "type": "integer"
+                    },
+                    "fixableMedium": {
+                        "type": "integer"
+                    },
+                    "fixableMediumCvss": {
+                        "type": "integer"
+                    },
+                    "fixedDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "high": {
+                        "type": "integer"
+                    },
+                    "highCvss": {
+                        "type": "integer"
+                    },
+                    "low": {
+                        "type": "integer"
+                    },
+                    "lowCvss": {
+                        "type": "integer"
+                    },
+                    "maxClosedRisk": {
+                        "type": "number"
+                    },
+                    "maxOpenRisk": {
+                        "type": "number"
+                    },
+                    "medium": {
+                        "type": "integer"
+                    },
+                    "mediumCvss": {
+                        "type": "integer"
+                    },
+                    "minClosedRisk": {
+                        "type": "number"
+                    },
+                    "minOpenRisk": {
+                        "type": "number"
+                    },
+                    "openDependencyVulns": {
+                        "type": "integer"
+                    },
+                    "sumClosedRisk": {
+                        "type": "number"
+                    },
+                    "sumOpenRisk": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "artifactName",
+                    "assetId",
+                    "assetVersionName",
+                    "averageClosedRisk",
+                    "averageOpenRisk",
+                    "critical",
+                    "criticalCvss",
+                    "cvePurlCritical",
+                    "cvePurlCriticalCvss",
+                    "cvePurlFixableCritical",
+                    "cvePurlFixableCriticalCvss",
+                    "cvePurlFixableHigh",
+                    "cvePurlFixableHighCvss",
+                    "cvePurlFixableLow",
+                    "cvePurlFixableLowCvss",
+                    "cvePurlFixableMedium",
+                    "cvePurlFixableMediumCvss",
+                    "cvePurlHigh",
+                    "cvePurlHighCvss",
+                    "cvePurlLow",
+                    "cvePurlLowCvss",
+                    "cvePurlMedium",
+                    "cvePurlMediumCvss",
+                    "day",
+                    "fixableCritical",
+                    "fixableCriticalCvss",
+                    "fixableHigh",
+                    "fixableHighCvss",
+                    "fixableLow",
+                    "fixableLowCvss",
+                    "fixableMedium",
+                    "fixableMediumCvss",
+                    "fixedDependencyVulns",
+                    "high",
+                    "highCvss",
+                    "low",
+                    "lowCvss",
+                    "maxClosedRisk",
+                    "maxOpenRisk",
+                    "medium",
+                    "mediumCvss",
+                    "minClosedRisk",
+                    "minOpenRisk",
+                    "openDependencyVulns",
+                    "sumClosedRisk",
+                    "sumOpenRisk"
                 ],
                 "type": "object"
             },
@@ -12744,9 +13058,6 @@
                         "type": "array",
                         "uniqueItems": false
                     },
-                    "id": {
-                        "type": "string"
-                    },
                     "lastAccessedAt": {
                         "type": "string"
                     },
@@ -12783,7 +13094,6 @@
                     "createdAt",
                     "defaultBranch",
                     "dependencyVulns",
-                    "id",
                     "lastAccessedAt",
                     "metadata",
                     "name",
@@ -12809,13 +13119,10 @@
             "github_com_l3montree-dev_devguard_database_models.Attestation": {
                 "properties": {
                     "artifact": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
-                    },
-                    "artifactId": {
-                        "type": "string"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact",
+                        "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID"
                     },
                     "artifactName": {
-                        "description": "not stored in this table, filled by joining artifacts and asset_versions",
                         "type": "string"
                     },
                     "assetId": {
@@ -12839,7 +13146,6 @@
                 },
                 "required": [
                     "artifact",
-                    "artifactId",
                     "artifactName",
                     "assetId",
                     "assetVersionName",
@@ -13094,11 +13400,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionId": {
-                        "type": "string"
-                    },
                     "assetVersionName": {
-                        "description": "part of the content hash, the asset version relation itself is kept by AssetVersionID",
                         "type": "string"
                     },
                     "componentFixedVersion": {
@@ -13173,7 +13475,6 @@
                     "artifacts",
                     "assetSignature",
                     "assetVersion",
-                    "assetVersionId",
                     "assetVersionName",
                     "componentFixedVersion",
                     "componentPurl",
@@ -13343,7 +13644,7 @@
                     "assetId": {
                         "type": "string"
                     },
-                    "assetVersionId": {
+                    "assetVersionName": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -13372,7 +13673,7 @@
                 },
                 "required": [
                     "assetId",
-                    "assetVersionId",
+                    "assetVersionName",
                     "createdAt",
                     "filename",
                     "pat",
@@ -13474,11 +13775,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionId": {
-                        "type": "string"
-                    },
                     "assetVersionName": {
-                        "description": "part of the content hash, the asset version relation itself is kept by AssetVersionID",
                         "type": "string"
                     },
                     "component": {
@@ -13530,7 +13827,6 @@
                 "required": [
                     "artifacts",
                     "assetVersion",
-                    "assetVersionId",
                     "assetVersionName",
                     "component",
                     "componentPurl",
@@ -13547,6 +13843,19 @@
                     "vulnAssetId"
                 ],
                 "type": "object"
+            },
+            "github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType": {
+                "enum": [
+                    "none",
+                    "macro",
+                    "commonmark"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "None",
+                    "Macro",
+                    "CommonMark"
+                ]
             },
             "github_com_l3montree-dev_devguard_database_models.Org": {
                 "properties": {
@@ -13626,6 +13935,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -13664,6 +13980,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -13909,6 +14226,73 @@
                     "ProjectTypeDynamic"
                 ]
             },
+            "github_com_l3montree-dev_devguard_database_models.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "org": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org"
+                    },
+                    "orgId": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "createdAt",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "org",
+                    "orgId",
+                    "trackerId",
+                    "updatedAt",
+                    "url"
+                ],
+                "type": "object"
+            },
             "github_com_l3montree-dev_devguard_database_models.SupplyChain": {
                 "properties": {
                     "assetId": {
@@ -13917,7 +14301,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionId": {
+                    "assetVersionName": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -13939,7 +14323,7 @@
                 "required": [
                     "assetId",
                     "assetVersion",
-                    "assetVersionId",
+                    "assetVersionName",
                     "createdAt",
                     "supplyChainId",
                     "supplyChainOutputDigest",
@@ -14020,9 +14404,6 @@
             },
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
-                    "artifactId": {
-                        "type": "string"
-                    },
                     "assetSignature": {
                         "description": "set instead of DependencyVulnID for a group event applying to every\nDependencyVuln sharing this AssetSignature.",
                         "type": "integer"
@@ -14077,7 +14458,6 @@
                     }
                 },
                 "required": [
-                    "artifactId",
                     "assetSignature",
                     "compliancePostureId",
                     "createdAt",
@@ -14599,26 +14979,10 @@
                     1000000,
                     1000000000,
                     60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
                     "minDuration",
                     "maxDuration",
                     "Nanosecond",
@@ -15791,45 +16155,6 @@
                 ]
             }
         },
-        "/dependency-proxy/{secret}/apk/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Alpine repository request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
         "/dependency-proxy/{secret}/composer/{path}": {
             "get": {
                 "parameters": [
@@ -15988,43 +16313,6 @@
         },
         "/dependency-proxy/{secret}/maven/{path}": {
             "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Maven repository request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            },
-            "head": {
                 "parameters": [
                     {
                         "description": "dependency proxy secret",
@@ -18143,6 +18431,258 @@
                     }
                 ],
                 "summary": "Delete a Jira integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/test-and-save/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "string"
+                                    },
+                                    "url": {
+                                        "type": "string"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine credentials",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test and save Rdemine integration credentials",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete a Redmine integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegrationProperties"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Retrieve Redmine integration properties (trackers, statuses, priorities)",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "closeStatus": {
+                                        "type": "integer"
+                                    },
+                                    "criticalPriority": {
+                                        "type": "integer"
+                                    },
+                                    "defaultStatus": {
+                                        "type": "integer"
+                                    },
+                                    "highPriority": {
+                                        "type": "integer"
+                                    },
+                                    "lowPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mediumPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mermaidIntegration": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine integration settings",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update Redmine integration settings",
                 "tags": [
                     "Integrations"
                 ]
@@ -30833,6 +31373,147 @@
                 "summary": "Get release SBOM as XML",
                 "tags": [
                     "Releases"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Release ID",
+                        "in": "path",
+                        "name": "releaseID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RemediationTimeAverages"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get average remediation times for a release",
+                "tags": [
+                    "Statistics"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Release ID",
+                        "in": "path",
+                        "name": "releaseID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Start date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "start",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "End date (YYYY-MM-DD)",
+                        "in": "query",
+                        "name": "end",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.RiskHistory"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get risk history for a release",
+                "tags": [
+                    "Statistics"
                 ]
             }
         },
