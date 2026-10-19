@@ -21,6 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
+	"github.com/l3montree-dev/devguard/integrations/redmineint"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
@@ -160,13 +161,92 @@ func (c *IntegrationController) TestAndSaveGitlabIntegration(ctx shared.Context)
 // @Router /organizations/{organization}/integrations/jira/test-and-save/ [post]
 func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
-	gl := thirdPartyIntegration.GetIntegration(shared.JiraIntegrationID)
-	if gl == nil {
+	jira := thirdPartyIntegration.GetIntegration(shared.JiraIntegrationID)
+	if jira == nil {
 		return ctx.JSON(404, "Jira integration not enabled")
 	}
 
-	if err := gl.(*jiraint.JiraIntegration).TestAndSave(ctx); err != nil {
-		slog.Error("could not test GitLab integration", "err", err)
+	if err := jira.(*jiraint.JiraIntegration).TestAndSave(ctx); err != nil {
+		slog.Error("could not test Jira integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+// @Summary Test and save Rdemine integration credentials
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param body body object{url=string,token=string,name=string,tracker=string} true "Redmine credentials"
+// @Success 200 {object} dtos.RedmineIntegration
+// @Router /organizations/{organization}/integrations/redmine/test-and-save/ [post]
+func (c *IntegrationController) TestAndSaveRedmineIntegration(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
+	slog.Info("Testing and saving Redmine integration", "redmine", redmine)
+	if redmine == nil {
+		slog.Error("Redmine integration not enabled")
+		return ctx.JSON(404, "Redmine integration not enabled")
+	}
+
+	if err := redmine.(*redmineint.RedmineIntegration).TestAndSave(ctx); err != nil {
+		slog.Error("could not test Redmine integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+// @Summary Retrieve Redmine integration properties (trackers, statuses, priorities)
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param redmine_integration_id path string true "Redmine integration ID"
+// @Success 200 {object} dtos.RedmineIntegrationProperties
+// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties [get]
+func (c *IntegrationController) GetRedmineIntegrationProperties(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
+
+	if redmine == nil {
+		slog.Error("Redmine integration not enabled")
+		return ctx.JSON(404, "Redmine integration not enabled")
+	}
+
+	if err := redmine.(*redmineint.RedmineIntegration).GetIntegrationProperties(ctx); err != nil {
+		slog.Error("could not test Redmine integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+// @Summary Update Redmine integration settings
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param redmine_integration_id path string true "Redmine integration ID"
+// @Param body body object{tracker=int,defaultStatus=int,closeStatus=int,lowPriority=int,mediumPriority=int,highPriority=int,criticalPriority=int,mermaidIntegration=string} true "Redmine integration settings"
+// @Success 200 {object} dtos.RedmineIntegration
+// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings [post]
+func (c *IntegrationController) UpdateRedmineIntegrationSettings(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
+
+	if redmine == nil {
+		slog.Error("Redmine integration not enabled")
+		return ctx.JSON(404, "Redmine integration not enabled")
+	}
+
+	if err := redmine.(*redmineint.RedmineIntegration).UpdateIntegrationSettings(ctx); err != nil {
+		slog.Error("could not test Redmine integration", "err", err)
 		return err
 	}
 
@@ -263,6 +343,30 @@ func (c *IntegrationController) DeleteJiraAccessToken(ctx shared.Context) error 
 
 	if err := jira.(*jiraint.JiraIntegration).Delete(ctx); err != nil {
 		slog.Error("could not delete Jira integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+// @Summary Delete a Redmine integration access token
+// @Tags Integrations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param redmine_integration_id path string true "Redmine integration ID"
+// @Success 200
+// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/ [delete]
+func (c *IntegrationController) DeleteRedmineAccessToken(ctx shared.Context) error {
+	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
+	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
+	if redmine == nil {
+		return ctx.JSON(404, "Redmine integration not enabled")
+	}
+
+	if err := redmine.(*redmineint.RedmineIntegration).Delete(ctx); err != nil {
+		slog.Error("could not delete Redmine integration", "err", err)
 		return err
 	}
 
