@@ -632,6 +632,14 @@ type JiraIntegrationRepository interface {
 	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.JiraIntegration, error)
 }
 
+type RedmineIntegrationRepository interface {
+	Save(ctx context.Context, tx DB, model *models.RedmineIntegration) error
+	Read(ctx context.Context, tx DB, id uuid.UUID) (models.RedmineIntegration, error)
+	FindByOrganizationID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.RedmineIntegration, error)
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.RedmineIntegration, error)
+}
+
 type WebhookIntegrationRepository interface {
 	Save(ctx context.Context, tx DB, model *models.WebhookIntegration) error
 	Read(ctx context.Context, tx DB, id uuid.UUID) (models.WebhookIntegration, error)

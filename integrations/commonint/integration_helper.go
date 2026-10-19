@@ -491,7 +491,27 @@ func beautifyNodeLabel(nodeID string) string {
 }
 
 func PathsToMermaid(paths [][]string) string {
-	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
+	return "```" + MermaidFlowChart(paths) + "\nclassDef default stroke-width:2px\n```\n"
+}
+
+func stateToLabel(state dtos.VulnState) string {
+	switch state {
+	case dtos.VulnStateFalsePositive:
+		return "false-positive"
+	case dtos.VulnStateAccepted:
+		return "accepted"
+	case dtos.VulnStateFixed:
+		return "fixed"
+	case dtos.VulnStateOpen:
+		return "open"
+	case dtos.VulnStateMarkedForTransfer:
+		return "marked-for-transfer"
+	}
+	return "unknown"
+}
+
+func MermaidFlowChart(paths [][]string) string {
+	mermaidFlowChart := "mermaid\n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\nflowchart TD\n"
 
 	var builder strings.Builder
 	builder.WriteString(mermaidFlowChart)
@@ -528,24 +548,7 @@ func PathsToMermaid(paths [][]string) string {
 			builder.WriteString(mermaidPath)
 		}
 	}
-
-	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
-}
-
-func stateToLabel(state dtos.VulnState) string {
-	switch state {
-	case dtos.VulnStateFalsePositive:
-		return "false-positive"
-	case dtos.VulnStateAccepted:
-		return "accepted"
-	case dtos.VulnStateFixed:
-		return "fixed"
-	case dtos.VulnStateOpen:
-		return "open"
-	case dtos.VulnStateMarkedForTransfer:
-		return "marked-for-transfer"
-	}
-	return "unknown"
+	return builder.String()
 }
 
 // githubLabelMaxLength is GitHub's hard limit on label name length. Labels

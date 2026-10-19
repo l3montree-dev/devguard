@@ -20,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/integrations/jiraint"
+	"github.com/l3montree-dev/devguard/integrations/redmineint"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.uber.org/fx"
 )
@@ -37,10 +38,13 @@ var Module = fx.Options(
 	// Jira Integration
 	fx.Provide(jiraint.NewJiraIntegration),
 
+	// Redmine Integration
+	fx.Provide(redmineint.NewRedmineIntegration),
+
 	// Aggregated Third Party Integration
 	fx.Provide(fx.Annotate(
-		func(externalUserRepository shared.ExternalUserRepository, gitlabIntegration *gitlabint.GitlabIntegration, githubIntegration *githubint.GithubIntegration, jiraIntegration *jiraint.JiraIntegration, webhookIntegration *controllers.WebhookController) shared.IntegrationAggregate {
-			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration, webhookIntegration)
+		func(externalUserRepository shared.ExternalUserRepository, gitlabIntegration *gitlabint.GitlabIntegration, githubIntegration *githubint.GithubIntegration, jiraIntegration *jiraint.JiraIntegration, redmineIntegration *redmineint.RedmineIntegration, webhookIntegration *controllers.WebhookController) shared.IntegrationAggregate {
+			return NewThirdPartyIntegrations(externalUserRepository, githubIntegration, jiraIntegration, gitlabIntegration, redmineIntegration, webhookIntegration)
 		},
 		fx.As(new(shared.IntegrationAggregate)),
 	)),
