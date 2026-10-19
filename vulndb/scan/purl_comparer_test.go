@@ -19,12 +19,15 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 )
 
 func mustParsePurl(t *testing.T, purl string) packageurl.PackageURL {
@@ -212,6 +215,30 @@ func TestDeduplicateByAlias(t *testing.T) {
 	})
 }
 
+func TestVulnsFromAffectedComponents(t *testing.T) {
+	t.Run("a withdrawn cve is skipped and does not hide its alias", func(t *testing.T) {
+		// CVE-2024-1111 --alias--> CVE-2024-2222, but CVE-2024-1111 was withdrawn
+		withdrawn := datatypes.Date(time.Now())
+		component := models.AffectedComponent{
+			CVE: []models.CVE{
+				{
+					CVE:       "CVE-2024-1111",
+					Withdrawn: &withdrawn,
+					Relationships: []models.CVERelationship{
+						{SourceCVE: "CVE-2024-1111", TargetCVE: "CVE-2024-2222", RelationshipType: "alias"},
+					},
+				},
+				{CVE: "CVE-2024-2222"},
+			},
+		}
+
+		result := vulnsFromAffectedComponents(mustParsePurl(t, "pkg:npm/lodash@1.0.0"), []models.AffectedComponent{component})
+
+		require.Len(t, result, 1)
+		assert.Equal(t, "CVE-2024-2222", result[0].CVEID)
+	})
+}
+
 func TestCandidateCacheKey(t *testing.T) {
 	t.Run("purls resolving to the same package and version share a key", func(t *testing.T) {
 		// the qualifiers are stripped from the search purl, so both end up in the same bucket
@@ -371,7 +398,7 @@ func TestAffectedComponentsCache(t *testing.T) {
 func TestResolveCandidatesUsesCache(t *testing.T) {
 	// the comparer has no database - every lookup that is not served by the
 	// cache panics, which is exactly what these tests assert against
-	comparer := NewPurlComparer(nil, new(50))
+	comparer := NewPurlComparer(nil, events.BrokerStub, new(50))
 
 	t.Run("cached purls are resolved without touching the database", func(t *testing.T) {
 

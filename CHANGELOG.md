@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.16.1] - 2026-10-08
+
+### Added
+
+- **`externalBotUserLink` on assets** — assets linked to an external GitLab provider now expose a link to that provider's bot user profile (`{baseURL}/-/u/{userID}`) in `AssetDTO`. The link is built from the `GITLAB_{PROVIDER}_BASEURL` and `GITLAB_{PROVIDER}_BOTUSERID` environment variables and is omitted when either is unset
+
+### Fixed
+
+- **Vulnerability database sync no longer gets the database OOM-killed** — `computeDiffFromStage` built its delete/insert diffs with `EXCEPT`, which PostgreSQL plans as a `HashSetOp` that ignores `work_mem` and cannot spill to disk. On the ~17M row `cve_affected_component` table a single diff allocated ~2.4 GB in one backend. The diffs are now `NOT EXISTS` anti joins, which stream over the key indexes or spill in batches, and the staging table is `ANALYZE`d first so the planner picks a good join
+  - `maintenance_work_mem` during index rebuilds lowered from 4 GB to 1 GB, well below the 8 Gi memory limit of the PostgreSQL pod in the Helm chart
+  - A failed import is now reported as `vulndb import failed` instead of `integrity validation failed`, since the error is not always an integrity check
+
 ## [v1.16.0] - 2026-10-06
 
 ### Added

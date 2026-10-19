@@ -66,9 +66,9 @@ func pruneScope(tx *gorm.DB, log *models.Log) error {
 		Delete(&models.Log{}).Error
 }
 
-func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
+func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Log], error) {
 	var count int64
-	logs := []dtos.LogDTO{}
+	logs := []dtos.Log{}
 
 	q := r.Repository.GetDB(ctx, tx).Model(&models.Log{})
 	if orgID != nil {
@@ -105,7 +105,7 @@ func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.U
 
 	err := q.Session(&gorm.Session{}).Count(&count).Error
 	if err != nil {
-		return shared.Paged[dtos.LogDTO]{}, err
+		return shared.Paged[dtos.Log]{}, err
 	}
 
 	findQuery := q.Session(&gorm.Session{}).
@@ -123,7 +123,7 @@ func (r logRepository) ListPaged(ctx context.Context, tx *gorm.DB, orgID *uuid.U
 		Limit(pageInfo.PageSize).
 		Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Find(&logs).Error; err != nil {
-		return shared.Paged[dtos.LogDTO]{}, err
+		return shared.Paged[dtos.Log]{}, err
 	}
 
 	return shared.NewPaged(pageInfo, count, logs), nil

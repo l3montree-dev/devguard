@@ -26,8 +26,8 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func CVEToDTO(cve models.CVE) dtos.CVEDTO {
-	return dtos.CVEDTO{
+func CVEToDTO(cve models.CVE) dtos.CVE {
+	return dtos.CVE{
 		CVE:                   cve.CVE,
 		DatePublished:         cve.DatePublished,
 		DateLastModified:      cve.DateLastModified,
@@ -49,14 +49,14 @@ func CVEToDTO(cve models.CVE) dtos.CVEDTO {
 	}
 }
 
-func RelationshipToDTO(relation models.CVERelationship) dtos.RelationshipDTO {
-	return dtos.RelationshipDTO{
+func RelationshipToDTO(relation models.CVERelationship) dtos.Relationship {
+	return dtos.Relationship{
 		RelationshipType: relation.RelationshipType,
 		TargetCVE:        relation.TargetCVE,
 	}
 }
-func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
-	return dtos.DependencyVulnDTO{
+func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVuln {
+	return dtos.DependencyVuln{
 		ID:                           f.ID,
 		AssetVersionName:             f.AssetVersionName,
 		AssetID:                      f.AssetID.String(),
@@ -80,9 +80,9 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVulnDTO {
 	}
 }
 
-func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.DetailedDependencyVulnDTO {
-	return dtos.DetailedDependencyVulnDTO{
-		DependencyVulnDTO: dtos.DependencyVulnDTO{
+func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.DetailedDependencyVuln {
+	return dtos.DetailedDependencyVuln{
+		DependencyVuln: dtos.DependencyVuln{
 			ID:                           dependencyVuln.ID,
 			AssetVersionName:             dependencyVuln.AssetVersionName,
 			AssetID:                      dependencyVuln.AssetID.String(),
@@ -108,21 +108,21 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 	}
 }
 
-func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackageDTO {
-	return dtos.VulnInPackageDTO{
+func VulnInPackageToDTO(vuln models.VulnInPackage) dtos.VulnInPackage {
+	return dtos.VulnInPackage{
 		CVEID:        vuln.CVEID,
 		FixedVersion: vuln.FixedVersion,
 	}
 }
 
-func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponentDTO {
+func AffectedComponentToDTO(ac models.AffectedComponent) dtos.AffectedComponent {
 	dto := affectedComponentToDTOWithoutCVEs(ac)
 	dto.CVEs = utils.Map(ac.CVE, CVEToDTO)
 	return dto
 }
 
-func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.AffectedComponentDTO {
-	return dtos.AffectedComponentDTO{
+func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.AffectedComponent {
+	return dtos.AffectedComponent{
 		ID:                 ac.ID,
 		PurlWithoutVersion: ac.PurlWithoutVersion,
 		Ecosystem:          ac.Ecosystem,
@@ -167,12 +167,18 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, fo
 	}
 	fixedVersion := normalize.FixFixedVersion(stringPurl, v.FixedVersion)
 
-	// Find all paths to this vulnerable component
-	paths := forest.PathsToPURL(stringPurl, 12) // at max we use 12 paths, to avoid path explosion
+	// the limit applies per sbom like in the daemon scan, an sbom with more paths contributes a single empty path
+	paths := make([]normalize.Path, 0)
+	for _, tree := range forest {
+		treePaths := tree.PathsToPURL(stringPurl, normalize.MaxPathsPerSBOM+1)
+		if len(treePaths) > normalize.MaxPathsPerSBOM {
+			treePaths = []normalize.Path{{}}
+		}
+		paths = append(paths, treePaths...)
+	}
 
 	// If no paths found, create a single vuln with empty path (fallback)
-	if len(paths) == 0 || len(paths) == 12 {
-		// either 0 paths OR we hit the max path limit
+	if len(paths) == 0 {
 		return []models.DependencyVuln{
 			{
 				Vulnerability: models.Vulnerability{

@@ -107,7 +107,7 @@ func (c *FirstPartyVulnController) ListByProjectPaged(ctx shared.Context) error 
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param firstPartyVulnID path string true "Vulnerability ID"
 // @Param body body object{justification=string} true "Request body"
-// @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
+// @Success 200 {object} dtos.DetailedFirstPartyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/mitigate [post]
 func (c *FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
@@ -154,7 +154,7 @@ func (c *FirstPartyVulnController) Mitigate(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param firstPartyVulnID path string true "Vulnerability ID"
-// @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
+// @Success 200 {object} dtos.DetailedFirstPartyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID} [get]
 func (c *FirstPartyVulnController) Read(ctx shared.Context) error {
 	firstPartyVulnID, _, err := shared.GetVulnID(ctx)
@@ -180,8 +180,8 @@ func (c *FirstPartyVulnController) Read(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param firstPartyVulnID path string true "Vulnerability ID"
-// @Param body body dtos.FirstPartyVulnStatus true "Event data"
-// @Success 200 {object} dtos.DetailedFirstPartyVulnDTO
+// @Param body body dtos.FirstPartyVulnStatusRequest true "Event data"
+// @Success 200 {object} dtos.DetailedFirstPartyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID} [post]
 func (c *FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -196,7 +196,7 @@ func (c *FirstPartyVulnController) CreateEvent(ctx shared.Context) error {
 	}
 	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status dtos.FirstPartyVulnStatus
+	var status dtos.FirstPartyVulnStatusRequest
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
@@ -390,11 +390,11 @@ func (c *FirstPartyVulnController) Sarif(ctx shared.Context) error {
 	return ctx.JSON(200, report)
 }
 
-func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dtos.DetailedFirstPartyVulnDTO {
-	return dtos.DetailedFirstPartyVulnDTO{
-		FirstPartyVulnDTO: transformer.FirstPartyVulnToDto(firstPartyVuln),
-		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
-			return dtos.VulnEventDTO{
+func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dtos.DetailedFirstPartyVuln {
+	return dtos.DetailedFirstPartyVuln{
+		FirstPartyVuln: transformer.FirstPartyVulnToDto(firstPartyVuln),
+		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) dtos.VulnEvent {
+			return dtos.VulnEvent{
 				ID:                       ev.ID,
 				Type:                     ev.Type,
 				VulnID:                   ev.GetVulnID(),
@@ -414,18 +414,18 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param body body dtos.BatchFirstPartyVulnStatus true "Request body"
+// @Param body body dtos.BatchFirstPartyVulnStatusRequest true "Request body"
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {array} dtos.DetailedFirstPartyVulnDTO
+// @Success 200 {array} dtos.DetailedFirstPartyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/batch [post]
 func (c *FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status dtos.BatchFirstPartyVulnStatus
+	var status dtos.BatchFirstPartyVulnStatusRequest
 	if err := json.NewDecoder(ctx.Request().Body).Decode(&status); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
@@ -440,7 +440,7 @@ func (c *FirstPartyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	}
 
 	userAgent := ctx.Request().UserAgent()
-	updated := make([]dtos.DetailedFirstPartyVulnDTO, 0, len(status.VulnIDs))
+	updated := make([]dtos.DetailedFirstPartyVuln, 0, len(status.VulnIDs))
 	for _, vulnID := range status.VulnIDs {
 		fpv, err := c.firstPartyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
 		if err != nil {

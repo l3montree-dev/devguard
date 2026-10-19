@@ -44,7 +44,7 @@ func NewAdvisoryController(advisoryService shared.AdvisoryService) *AdvisoryCont
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Param body body dtos.AdvisoryCreate true "Request body"
+// @Param body body dtos.AdvisoryCreateRequest true "Request body"
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
@@ -52,7 +52,7 @@ func NewAdvisoryController(advisoryService shared.AdvisoryService) *AdvisoryCont
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/ [post]
 func (controller *AdvisoryController) Create(ctx shared.Context) error {
-	var req dtos.AdvisoryCreate
+	var req dtos.AdvisoryCreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request")
 	}
@@ -147,12 +147,12 @@ func (controller *AdvisoryController) ReadAdvisory(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param id path string true "Advisory ID"
-// @Param body body dtos.AdvisoryUpdate true "Request body"
+// @Param body body dtos.AdvisoryUpdateRequest true "Request body"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/advisory/{id}/ [patch]
 func (controller *AdvisoryController) Update(ctx shared.Context) error {
-	var req dtos.AdvisoryUpdate
-	if err := ctx.Bind(&req); err != nil { // nosemgrep: bind-without-validate -- AdvisoryUpdate fields are all optional patch pointers with no constraints
+	var req dtos.AdvisoryUpdateRequest
+	if err := ctx.Bind(&req); err != nil { // nosemgrep: bind-without-validate -- AdvisoryUpdateRequest fields are all optional patch pointers with no constraints
 		return echo.NewHTTPError(400, "unable to process request")
 	}
 

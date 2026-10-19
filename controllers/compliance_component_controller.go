@@ -46,7 +46,7 @@ func NewComplianceComponentController(complianceComponentRepository shared.Compl
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
-// @Success 200 {array} dtos.ComplianceComponentDetailsDTO
+// @Success 200 {array} dtos.ComplianceComponentDetails
 // @Router /compliance-components/ [get]
 func (c *ComplianceComponentController) List(ctx shared.Context) error {
 	filter := shared.GetFilterQuery(ctx)
@@ -70,7 +70,7 @@ func (c *ComplianceComponentController) List(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param complianceComponentID path string true "Compliance component ID"
-// @Success 200 {object} dtos.ComplianceComponentDetailsDTO
+// @Success 200 {object} dtos.ComplianceComponentDetails
 // @Router /compliance-components/{complianceComponentID}/ [get]
 func (c *ComplianceComponentController) Details(ctx shared.Context) error {
 	id, err := uuid.Parse(ctx.Param("complianceComponentID"))
@@ -103,7 +103,7 @@ type statementPayload struct {
 // @Param frameworkControlID path string true "Framework control ID"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
-// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatement
 // @Router /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/ [post]
 func (c *ComplianceComponentController) OrgCreateStatement(ctx shared.Context) error {
 	return c.CreateStatement(ctx)
@@ -119,7 +119,7 @@ func (c *ComplianceComponentController) OrgCreateStatement(ctx shared.Context) e
 // @Param frameworkControlID path string true "Framework control ID"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
-// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatement
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
 func (c *ComplianceComponentController) ProjectCreateStatement(ctx shared.Context) error {
 	return c.CreateStatement(ctx)
@@ -137,7 +137,7 @@ func (c *ComplianceComponentController) ProjectCreateStatement(ctx shared.Contex
 // @Param frameworkControlID path string true "Framework control ID"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
-// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Success 201 {object} dtos.ComplianceComponentImplementsControlStatement
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
 func (c *ComplianceComponentController) AssetVersionCreateStatement(ctx shared.Context) error {
 	return c.CreateStatement(ctx)
@@ -209,7 +209,7 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 // @Param organization path string true "Organization slug"
 // @Param statementID path string true "Statement ID"
 // @Param body body statementPayload true "Request body"
-// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatement
 // @Router /organizations/{organization}/compliance-postures/components/{statementID}/ [put]
 func (c *ComplianceComponentController) OrgUpdateStatement(ctx shared.Context) error {
 	return c.UpdateStatement(ctx)
@@ -224,7 +224,7 @@ func (c *ComplianceComponentController) OrgUpdateStatement(ctx shared.Context) e
 // @Param projectSlug path string true "Project slug"
 // @Param statementID path string true "Statement ID"
 // @Param body body statementPayload true "Request body"
-// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatement
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID} [put]
 func (c *ComplianceComponentController) ProjectUpdateStatement(ctx shared.Context) error {
 	return c.UpdateStatement(ctx)
@@ -241,7 +241,7 @@ func (c *ComplianceComponentController) ProjectUpdateStatement(ctx shared.Contex
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param statementID path string true "Statement ID"
 // @Param body body statementPayload true "Request body"
-// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatementDTO
+// @Success 200 {object} dtos.ComplianceComponentImplementsControlStatement
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/components/{statementID} [put]
 func (c *ComplianceComponentController) AssetVersionUpdateStatement(ctx shared.Context) error {
 	return c.UpdateStatement(ctx)

@@ -119,7 +119,8 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, t
 
 	newLicenseRisks := comparison.OnlyInA
 	fixedLicenseRisks := comparison.OnlyInB
-	inBoth := comparison.InBoth
+	// the existing rows - they carry the stored id and the artifacts, the found risks only the calculated fields
+	inBoth := comparison.InBothB
 
 	// get all license risks from other branches
 	existingRisksOnOtherBranch, err := s.licenseRiskRepository.GetLicenseRisksByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID)
@@ -261,7 +262,8 @@ func (s *LicenseRiskService) UserDetectedLicenseRiskInAnotherArtifact(ctx contex
 	}
 	for i := range licenseRisks {
 		// add artifact association via raw SQL for efficiency
-		if err := tx.Exec("INSERT INTO artifact_license_risks (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, license_risk_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING", artifactName, licenseRisks[i].AssetVersionName, licenseRisks[i].AssetID, licenseRisks[i].CalculateHash()).Error; err != nil {
+		// the stored id is used - rows created with an older hash scheme do not match CalculateHash
+		if err := tx.Exec("INSERT INTO artifact_license_risks (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, license_risk_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING", artifactName, licenseRisks[i].AssetVersionName, licenseRisks[i].AssetID, licenseRisks[i].ID).Error; err != nil {
 			return err
 		}
 	}

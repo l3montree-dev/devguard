@@ -103,7 +103,7 @@ func (controller *OrgController) Create(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.OrgPatchRequest true "Request body"
-// @Success 200 {object} dtos.OrgDetailsDTO
+// @Success 200 {object} dtos.OrgDetails
 // @Router /organizations/{organization} [patch]
 func (controller *OrgController) Update(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
@@ -135,8 +135,8 @@ func (controller *OrgController) Update(ctx shared.Context) error {
 		}
 	}
 
-	resp := dtos.OrgDetailsDTO{
-		OrgDTO:  transformer.OrgDTOFromModel(organization),
+	resp := dtos.OrgDetails{
+		Org:     transformer.OrgDTOFromModel(organization),
 		Members: members,
 	}
 
@@ -175,7 +175,7 @@ func (controller *OrgController) Delete(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {array} dtos.ProjectDTO
+// @Success 200 {array} dtos.Project
 // @Router /organizations/{organization}/content-tree [get]
 func (controller *OrgController) ContentTree(ctx shared.Context) error {
 	// get the whole content tree of the organization
@@ -203,7 +203,7 @@ func (controller *OrgController) ContentTree(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param body body dtos.AcceptInvitationRequest true "Request body"
-// @Success 200 {object} dtos.OrgDTO
+// @Success 200 {object} dtos.Org
 // @Router /accept-invitation [post]
 func (controller *OrgController) AcceptInvitation(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
@@ -521,7 +521,7 @@ func (controller *OrgController) Members(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {object} dtos.OrgSettingsDTO
+// @Success 200 {object} dtos.OrgSettings
 // @Router /organizations/{organization}/settings [get]
 func (controller *OrgController) AdminSettings(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)
@@ -539,7 +539,7 @@ func (controller *OrgController) AdminSettings(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {object} dtos.OrgDetailsDTO
+// @Success 200 {object} dtos.OrgDetails
 // @Router /organizations/{organization} [get]
 func (controller *OrgController) Read(ctx shared.Context) error {
 	return controller.readDetails(ctx)
@@ -551,7 +551,7 @@ func (controller *OrgController) Read(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {object} dtos.OrgDetailsDTO
+// @Success 200 {object} dtos.OrgDetails
 func (controller *OrgController) readDetails(ctx shared.Context) error {
 	// get the organization from the context
 	organization := shared.GetOrg(ctx)
@@ -566,7 +566,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get invitations of organization").WithInternal(err)
 	}
 
-	var invitedUsers []dtos.InvitedUserDTO
+	var invitedUsers []dtos.InvitedUser
 	for _, inv := range invitations {
 		var invitationStatus dtos.InvitationStatus
 		if isInvitationExpired(inv) {
@@ -574,7 +574,7 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 		} else {
 			invitationStatus = dtos.InvitationStatusPending
 		}
-		invitedUsers = append(invitedUsers, dtos.InvitedUserDTO{
+		invitedUsers = append(invitedUsers, dtos.InvitedUser{
 			ID:               inv.ID.String(),
 			Email:            inv.Email,
 			ExpiryDate:       inv.CreatedAt.Add(expiryDuration),
@@ -582,8 +582,8 @@ func (controller *OrgController) readDetails(ctx shared.Context) error {
 		})
 	}
 
-	resp := dtos.OrgDetailsDTO{
-		OrgDTO:         transformer.OrgDTOFromModel(organization),
+	resp := dtos.OrgDetails{
+		Org:            transformer.OrgDTOFromModel(organization),
 		Members:        members,
 		InvitedMembers: invitedUsers,
 	}

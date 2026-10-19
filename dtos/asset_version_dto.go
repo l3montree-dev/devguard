@@ -7,14 +7,14 @@ type AssetMetrics struct {
 	EnabledSCA                     bool    `json:"enabledSCA"`
 }
 
-type InformationSourceDTO struct {
+type InformationSource struct {
 	URL  string `json:"url,omitempty"`
 	Purl string `json:"purl,omitempty"`
 	// type can be "csaf", "vex", "sbom"
 	Type string `json:"type,omitempty"`
 }
 
-type AssetVersionDTO struct {
+type AssetVersion struct {
 	CreatedAt      string         `json:"createdAt"`
 	UpdatedAt      string         `json:"updatedAt"`
 	Name           string         `json:"name"`

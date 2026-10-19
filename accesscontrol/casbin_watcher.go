@@ -16,58 +16,35 @@ package accesscontrol
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
-	"log/slog"
 
 	"github.com/casbin/casbin/v2/persist"
-	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/events"
 )
 
 type casbinPubSubWatcher struct {
-	broker   shared.PubSubBroker
+	broker   events.Broker
 	callback func(string)
 	cancel   context.CancelFunc
 }
 
-type policyChangePubSubMessage struct {
-}
-
-func (policyChangePubSubMessage) GetChannel() shared.PubSubChannel {
-	return shared.PolicyChange
-}
-
-func (policyChangePubSubMessage) GetPayload() map[string]any {
-	return map[string]any{
-		"action": "update",
-	}
-}
-
 var _ persist.Watcher = &casbinPubSubWatcher{}
 
-func newCasbinPubSubWatcher(broker shared.PubSubBroker) *casbinPubSubWatcher {
+func newCasbinPubSubWatcher(broker events.Broker) *casbinPubSubWatcher {
 	// start listening to the policy change topic
-	ch, err := broker.Subscribe(shared.PolicyChange)
-	if err != nil {
-		log.Fatalf("could not subscribe to policy change topic: %v", err)
-	}
-
 	watcher := &casbinPubSubWatcher{
 		broker: broker,
 	}
+	if err := broker.Subscribe(events.PolicyChange, func(ctx context.Context, msg json.RawMessage) {
+		watcher.callback("policy updated")
+	}); err != nil {
+		log.Fatalf("could not subscribe to policy change topic: %v", err)
+	}
 
-	go watcher.listenForUpdates(ch)
 	return watcher
 }
-
-func (w *casbinPubSubWatcher) listenForUpdates(ch <-chan map[string]any) {
-	slog.Debug("listening for policy change notifications")
-	for range ch {
-		slog.Debug("received policy change notification")
-		w.callback("policy updated")
-	}
-}
-
 func (w *casbinPubSubWatcher) SetUpdateCallback(callback func(string)) error {
 	w.callback = callback
 	return nil
@@ -80,7 +57,7 @@ func (w *casbinPubSubWatcher) Update() error {
 
 	ctx := context.Background()
 
-	if err := w.broker.Publish(ctx, policyChangePubSubMessage{}); err != nil {
+	if err := w.broker.Publish(ctx, events.PolicyChange, nil); err != nil {
 		log.Printf("could not publish policy change: %v", err)
 	}
 	return nil

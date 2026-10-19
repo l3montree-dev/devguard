@@ -1,17 +1,14 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"strings"
 
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -28,11 +25,10 @@ type AssetController struct {
 	statisticsService             shared.StatisticsService
 	thirdPartyIntegration         shared.IntegrationAggregate
 	daemonRunner                  shared.DaemonRunner
-
-	utils.FireAndForgetSynchronizer
+	broker                        events.Broker
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, synchronizer utils.FireAndForgetSynchronizer, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner) *AssetController {
 	return &AssetController{
 		assetRepository:               repository,
 		assetVersionRepository:        assetVersionRepository,
@@ -41,7 +37,7 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 		dependencyVulnService:         dependencyVulnService,
 		statisticsService:             statisticsService,
 		thirdPartyIntegration:         thirdPartyIntegration,
-		FireAndForgetSynchronizer:     synchronizer,
+		broker:                        broker,
 		daemonRunner:                  daemonRunner,
 	}
 }
@@ -119,7 +115,7 @@ func (a *AssetController) HandleLookup(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {array} dtos.AssetDTO
+// @Success 200 {array} dtos.Asset
 // @Router /organizations/{organization}/projects/{projectSlug}/assets [get]
 func (a *AssetController) List(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
@@ -228,7 +224,7 @@ func (a *AssetController) GetSecrets(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.AssetCreateRequest true "Request body"
-// @Success 200 {object} dtos.AssetDTO
+// @Success 200 {object} dtos.Asset
 // @Router /organizations/{organization}/projects/{projectSlug}/assets [post]
 func (a *AssetController) Create(ctx shared.Context) error {
 	var req dtos.AssetCreateRequest
@@ -261,7 +257,7 @@ func (a *AssetController) Create(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {object} dtos.AssetDetailsDTO
+// @Success 200 {object} dtos.AssetDetails
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [get]
 func (a *AssetController) Read(ctx shared.Context) error {
 	app := shared.GetAsset(ctx)
@@ -291,7 +287,7 @@ func applyChange[T ~string](changes *[]string, label string, field *T, patch *T)
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param body body dtos.AssetPatchRequest true "Request body"
-// @Success 200 {object} dtos.AssetDetailsWithSecretsDTO
+// @Success 200 {object} dtos.AssetDetailsWithSecrets
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug} [patch]
 func (a *AssetController) Update(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
@@ -376,10 +372,8 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		enableTicketRangeUpdated = true
 	}
 
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
-	userAgent := ctx.Request().UserAgent()
-	if enableTicketRangeUpdated || len(changes) > 0 {
+	syncTickets := enableTicketRangeUpdated || len(changes) > 0
+	if syncTickets {
 		//check if we have already created the labels in gitlab, if not create them
 		// do NOT update the asset in the database yet, we do this after the ticket sync
 		//we can't do this in the background task, because we need this before we save the asset
@@ -394,23 +388,6 @@ func (a *AssetController) Update(ctx shared.Context) error {
 				asset.Metadata["gitlabLabels"] = true
 			}
 		}
-
-		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(reqCtx))
-		a.FireAndForget(func() {
-			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(linkedCtx, nil, asset.ID)
-			if err != nil {
-				slog.Error("could not get default asset version", "err", err)
-				return
-			}
-
-			if err := a.dependencyVulnService.SyncAllIssues(linkedCtx, org, project, asset, defaultAssetVersion, &userAgent); err != nil {
-				monitoring.AlertAndSaveInErrorLog(linkedCtx, nil, monitoring.AlertContext{
-					OrgID:     org.ID,
-					ProjectID: project.ID,
-					AssetID:   asset.ID,
-				}, "could not sync tickets", err)
-			}
-		})
 	}
 
 	updated := transformer.ApplyAssetPatchRequestToModel(patchRequest, &asset)
@@ -423,6 +400,11 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		if err != nil {
 			return fmt.Errorf("error updating asset: %v", err)
 		}
+	}
+
+	// after the update - the job reads the new thresholds from the database
+	if syncTickets {
+		events.NotifyAssetTicketSettingsChanged(reqCtx, a.broker, asset.ID)
 	}
 
 	members, err := services.FetchMembersOfAsset(ctx)

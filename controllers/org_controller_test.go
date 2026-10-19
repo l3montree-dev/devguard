@@ -194,7 +194,7 @@ func TestOrgControllerAdminSettings(t *testing.T) {
 	shared.SetRBAC(ctx, mockRBAC)
 
 	mockIntegrations := mocks.NewIntegrationAggregate(t)
-	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
+	mockIntegrations.On("GetUsers", org).Return([]dtos.User{})
 	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
 
 	shared.SetAuthAdminClient(ctx, mocks.NewAdminClient(t))
@@ -205,7 +205,7 @@ func TestOrgControllerAdminSettings(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var response dtos.OrgSettingsDTO
+	var response dtos.OrgSettings
 	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 	assert.Equal(t, org.Name, response.Name)
 	assert.Equal(t, org.Slug, response.Slug)
@@ -239,7 +239,7 @@ func TestOrgControllerReadDoesNotExposeWebhooks(t *testing.T) {
 	shared.SetRBAC(ctx, mockRBAC)
 
 	mockIntegrations := mocks.NewIntegrationAggregate(t)
-	mockIntegrations.On("GetUsers", org).Return([]dtos.UserDTO{})
+	mockIntegrations.On("GetUsers", org).Return([]dtos.User{})
 	shared.SetThirdPartyIntegration(ctx, mockIntegrations)
 
 	shared.SetAuthAdminClient(ctx, mocks.NewAdminClient(t))
