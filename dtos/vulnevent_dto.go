@@ -69,7 +69,7 @@ type VulnEvent struct {
 
 	CreatedAt                time.Time `json:"createdAt"`
 	OriginalAssetVersionName *string   `json:"originalAssetVersionName"`
-	VulnerabilityName        string    `json:"vulnerabilityName"`
+	ResourceIdentifier       string    `json:"resourceIdentifier"`
 	PackageName              string    `json:"packageName"`
 	URI                      string    `json:"uri"`
 	CreatedByVexRule         bool      `json:"createdByVexRule"`

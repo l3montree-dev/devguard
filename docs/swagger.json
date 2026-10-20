@@ -11906,6 +11906,9 @@
                     "packageName": {
                         "type": "string"
                     },
+                    "resourceIdentifier": {
+                        "type": "string"
+                    },
                     "type": {
                         "$ref": "#/components/schemas/dtos.VulnEventType"
                     },
@@ -11929,9 +11932,6 @@
                     },
                     "vulnType": {
                         "$ref": "#/components/schemas/dtos.VulnType"
-                    },
-                    "vulnerabilityName": {
-                        "type": "string"
                     }
                 },
                 "required": [
@@ -11942,6 +11942,7 @@
                     "mechanicalJustification",
                     "originalAssetVersionName",
                     "packageName",
+                    "resourceIdentifier",
                     "type",
                     "uri",
                     "userAgent",
@@ -11949,8 +11950,7 @@
                     "vexRule",
                     "vexRuleId",
                     "vulnId",
-                    "vulnType",
-                    "vulnerabilityName"
+                    "vulnType"
                 ],
                 "type": "object"
             },
@@ -14706,8 +14706,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14741,8 +14739,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",

@@ -402,7 +402,7 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) dt
 				Justification:            ev.Justification,
 				MechanicalJustification:  ev.MechanicalJustification,
 				OriginalAssetVersionName: ev.OriginalAssetVersionName,
-				VulnerabilityName:        firstPartyVuln.RuleName,
+				ResourceIdentifier:       firstPartyVuln.RuleName,
 				CreatedAt:                ev.CreatedAt,
 			}
 		}),

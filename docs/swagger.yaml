@@ -8801,6 +8801,8 @@ components:
           type: string
         packageName:
           type: string
+        resourceIdentifier:
+          type: string
         type:
           $ref: '#/components/schemas/dtos.VulnEventType'
         uri:
@@ -8817,8 +8819,6 @@ components:
           type: string
         vulnType:
           $ref: '#/components/schemas/dtos.VulnType'
-        vulnerabilityName:
-          type: string
       required:
       - createdAt
       - createdByVexRule
@@ -8827,6 +8827,7 @@ components:
       - mechanicalJustification
       - originalAssetVersionName
       - packageName
+      - resourceIdentifier
       - type
       - uri
       - userAgent
@@ -8835,7 +8836,6 @@ components:
       - vexRuleId
       - vulnId
       - vulnType
-      - vulnerabilityName
       type: object
     dtos.VulnEventType:
       enum:
@@ -10895,8 +10895,6 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10929,8 +10927,6 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
