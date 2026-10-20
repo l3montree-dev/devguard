@@ -34,6 +34,7 @@ import (
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -44,7 +45,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 )
 
@@ -62,8 +62,7 @@ type scanService struct {
 	vulnEventRepository         shared.VulnEventRepository
 	externalReferenceRepository shared.ExternalReferenceRepository
 	componentService            shared.ComponentService
-	// mark public to let it be overridden in tests
-	utils.FireAndForgetSynchronizer
+	broker                      events.Broker
 }
 
 var _ shared.ScanService = (*scanService)(nil)
@@ -71,7 +70,6 @@ var _ shared.ScanService = (*scanService)(nil)
 func NewScanService(
 	cveRepository shared.CveRepository,
 	dependencyVulnService shared.DependencyVulnService,
-	synchronizer utils.FireAndForgetSynchronizer,
 	firstPartyVulnService shared.FirstPartyVulnService,
 	firstPartyVulnRepository shared.FirstPartyVulnRepository,
 	dependencyVulnRepository shared.DependencyVulnRepository,
@@ -83,6 +81,7 @@ func NewScanService(
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	componentService shared.ComponentService,
 	purlComparer *scan.PurlComparer,
+	broker events.Broker,
 ) *scanService {
 	scanner := scan.NewSBOMScanner(purlComparer, cveRepository)
 	return &scanService{
@@ -90,7 +89,7 @@ func NewScanService(
 		dependencyVulnService:       dependencyVulnService,
 		firstPartyVulnRepository:    firstPartyVulnRepository,
 		firstPartyVulnService:       firstPartyVulnService,
-		FireAndForgetSynchronizer:   synchronizer,
+		broker:                      broker,
 		dependencyVulnRepository:    dependencyVulnRepository,
 		thirdPartyIntegration:       thirdPartyIntegration,
 		cveRepository:               cveRepository,
@@ -419,21 +418,12 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
-	if len(branchDiff.NewToAllBranches) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
-		// detach from request context but keep the trace for background integration work
-		linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx))
-		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.FirstPartyVulnsDetectedEvent{
-				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Vulns:        utils.Map(utils.DereferenceSlice(branchDiff.NewToAllBranches), transformer.FirstPartyVulnToDto),
-			}, userAgent); err != nil {
-				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
-			}
-		})
-	}
+	// the vulns are committed - the listeners can load them
+	events.NotifyFirstPartyScanned(ctx, s.broker, events.ArtifactPayload{
+		AssetID:          asset.ID,
+		AssetVersionName: assetVersion.Name,
+		UserAgent:        utils.OrDefault(userAgent, ""),
+	}, utils.Map(branchDiff.NewToAllBranches, func(v *models.FirstPartyVuln) uuid.UUID { return v.ID }))
 
 	v, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(ctx, nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -499,25 +489,6 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		attribute.Int("scan.total", len(newState)),
 	)
 
-	// detach from request context (avoids cancellation on response) but keep the trace
-	linkedCtx := trace.ContextWithSpan(context.Background(), span)
-
-	if len(opened) > 0 && (assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag) {
-		s.FireAndForget(func() {
-			if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.DependencyVulnsDetectedEvent{
-				AssetVersion: shared.ToAssetVersionObject(*assetVersion),
-				Asset:        shared.ToAssetObject(asset),
-				Project:      shared.ToProjectObject(project),
-				Org:          shared.ToOrgObject(org),
-				Vulns:        utils.Map(opened, transformer.DependencyVulnToDTO),
-				Artifact: shared.ArtifactObject{
-					ArtifactName: artifactName,
-				},
-			}, userAgent); err != nil {
-				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
-			}
-		})
-	}
 	return opened, closed, newState, nil
 }
 
@@ -880,17 +851,17 @@ func (s *scanService) SyncArtifactUpstreamSBOMSources(ctx context.Context,
 	return s.scanArtifactSBOMs(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent)
 }
 
-// SyncArtifactUpstreamSBOMSourcesIfChanged only rescans the artifact when an upstream SBOM changed.
+// SyncArtifactUpstreamSBOMSourcesIfChanged only rescans the artifact when an upstream SBOM changed - it returns the vulns the rescan opened.
 // New CVEs in unchanged SBOMs are picked up by the global daemon scan.
-func (s *scanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error) {
+func (s *scanService) SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (rescanned bool, opened []models.DependencyVuln, err error) {
 	changed, err := s.storeChangedUpstreamSBOMs(ctx, tx, org, project, asset, assetVersion, artifact)
 	if err != nil || !changed {
-		return false, err
+		return false, nil, err
 	}
-	if _, _, err := s.scanArtifactSBOMs(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent); err != nil {
-		return false, err
+	if _, opened, err = s.scanArtifactSBOMs(ctx, tx, org, project, asset, assetVersion, artifact, userID, userAgent); err != nil {
+		return false, nil, err
 	}
-	return true, nil
+	return true, opened, nil
 }
 
 // storeChangedUpstreamSBOMs refetches the upstream SBOMs of the artifact and stores the ones whose content changed
@@ -938,6 +909,7 @@ func (s *scanService) storeChangedUpstreamSBOMs(ctx context.Context, tx shared.D
 	return changed, nil
 }
 
+// scanArtifactSBOMs returns the vulns the scan opened
 func (s *scanService) scanArtifactSBOMs(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error) {
 	// An origin that failed to fetch keeps its previous SBOM rather than being
 	// dropped, so a transient network error cannot silently empty an artifact.
@@ -948,13 +920,13 @@ func (s *scanService) scanArtifactSBOMs(ctx context.Context, tx shared.DB, org m
 	}
 
 	// Scan the normalized SBOM for vulnerabilities
-	_, _, dependencyVulns, err := s.ScanNormalizedSBOM(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
+	opened, _, _, err := s.ScanNormalizedSBOM(ctx, tx, org, project, asset, assetVersion, artifact, normalizedBom, userID, userAgent)
 	if err != nil {
 		slog.Error("failed to scan normalized sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name)
 		return nil, nil, fmt.Errorf("failed to scan normalized sbom: %w", err)
 	}
 
-	return normalizedBom, dependencyVulns, nil
+	return normalizedBom, opened, nil
 }
 
 func (s *scanService) ScanSarifWithoutSaving(ctx context.Context, sarifScan sarif.SarifSchema210Json, scannerID string) (dtos.FirstPartyScanResponse, error) {

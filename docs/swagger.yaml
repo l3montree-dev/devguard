@@ -4430,8 +4430,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineLastRun:
-          type: string
         projectId:
           type: string
         refs:
@@ -4455,8 +4453,6 @@ components:
           type: string
         state:
           type: string
-        vulnAutoReopenAfterDays:
-          type: integer
       required:
       - availabilityRequirement
       - avatar
@@ -4481,7 +4477,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineLastRun
       - projectId
       - refs
       - repositoryId
@@ -4492,7 +4487,6 @@ components:
       - signingPubKey
       - slug
       - state
-      - vulnAutoReopenAfterDays
       type: object
     dtos.AssetChangeRoleRequest:
       properties:
@@ -4624,8 +4618,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineLastRun:
-          type: string
         projectId:
           type: string
         refs:
@@ -4649,8 +4641,6 @@ components:
           type: string
         state:
           type: string
-        vulnAutoReopenAfterDays:
-          type: integer
       required:
       - availabilityRequirement
       - avatar
@@ -4676,7 +4666,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineLastRun
       - projectId
       - refs
       - repositoryId
@@ -4687,7 +4676,6 @@ components:
       - signingPubKey
       - slug
       - state
-      - vulnAutoReopenAfterDays
       type: object
     dtos.AssetDetailsWithSecrets:
       properties:
@@ -4742,8 +4730,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineLastRun:
-          type: string
         projectId:
           type: string
         refs:
@@ -4767,8 +4753,6 @@ components:
           type: string
         state:
           type: string
-        vulnAutoReopenAfterDays:
-          type: integer
         webhookSecret:
           type: string
       required:
@@ -4796,7 +4780,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineLastRun
       - projectId
       - refs
       - repositoryId
@@ -4807,7 +4790,6 @@ components:
       - signingPubKey
       - slug
       - state
-      - vulnAutoReopenAfterDays
       - webhookSecret
       type: object
     dtos.AssetEntry:
@@ -4896,8 +4878,6 @@ components:
           type: number
         sharesInformation:
           type: boolean
-        vulnAutoReopenAfterDays:
-          type: integer
         webhookSecret:
           maxLength: 1024
           type: string
@@ -4926,7 +4906,6 @@ components:
       - repositoryProvider
       - riskAutomaticTicketThreshold
       - sharesInformation
-      - vulnAutoReopenAfterDays
       - webhookSecret
       type: object
     dtos.AssetVersion:
@@ -9444,8 +9423,6 @@ components:
           type: string
         paranoidMode:
           type: boolean
-        pipelineLastRun:
-          type: string
         project:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
         projectId:
@@ -9477,10 +9454,6 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetType'
         updatedAt:
           type: string
-        vulnAutoReopenAfterDays:
-          description: Auto-reopen configuration - number of days after which closed/accepted
-            vulnerabilities should be reopened
-          type: integer
         webhookSecret:
           type: string
       required:
@@ -9508,7 +9481,6 @@ components:
       - modifiedUserInteraction
       - name
       - paranoidMode
-      - pipelineLastRun
       - project
       - projectId
       - refs
@@ -9522,7 +9494,6 @@ components:
       - state
       - type
       - updatedAt
-      - vulnAutoReopenAfterDays
       - webhookSecret
       type: object
     github_com_l3montree-dev_devguard_database_models.AssetState:
@@ -10916,24 +10887,16 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10958,24 +10921,16 @@ components:
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -17129,52 +17084,6 @@ paths:
       summary: Get license distribution for an asset version
       tags:
       - Components
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses/refresh/:
-    post:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      - description: Artifact name
-        in: query
-        name: artifactName
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: object
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Refetch license information for all components
-      tags:
-      - Asset Versions
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-graph/:
     get:
       parameters:
@@ -17583,55 +17492,6 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Batch create vulnerability events
-      tags:
-      - Vulnerabilities
-  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/sync:
-    post:
-      parameters:
-      - description: Organization slug
-        in: path
-        name: organization
-        required: true
-        schema:
-          type: string
-      - description: Project slug
-        in: path
-        name: projectSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset slug
-        in: path
-        name: assetSlug
-        required: true
-        schema:
-          type: string
-      - description: Asset version slug
-        in: path
-        name: assetVersionSlug
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          text/plain:
-            schema:
-              title: body
-              type: object
-        description: Request body
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                type: object
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Sync dependency vulnerabilities with third party integrations
       tags:
       - Vulnerabilities
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events:

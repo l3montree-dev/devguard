@@ -137,7 +137,7 @@ func TestSyncExternalReferences(t *testing.T) {
 		assert.NoError(t, err)
 
 		syncIfChanged := func(t *testing.T, artifact models.Artifact) bool {
-			rescanned, err := f.App.ScanService.SyncArtifactUpstreamSBOMSourcesIfChanged(context.Background(), f.DB, org, project, asset, upstreamVersion, artifact, "system", nil)
+			rescanned, _, err := f.App.ScanService.SyncArtifactUpstreamSBOMSourcesIfChanged(context.Background(), f.DB, org, project, asset, upstreamVersion, artifact, "system", nil)
 			assert.NoError(t, err)
 			return rescanned
 		}

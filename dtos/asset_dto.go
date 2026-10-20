@@ -1,8 +1,6 @@
 package dtos
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -126,19 +124,15 @@ type Asset struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	SigningPubKey                *string  `json:"signingPubKey"`
-	EnableTicketRange            bool     `json:"enableTicketRange"`
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	VulnAutoReopenAfterDays      *int     `json:"vulnAutoReopenAfterDays"`
-
-	AssetVersions []AssetVersion `json:"refs"`
+	SigningPubKey                *string        `json:"signingPubKey"`
+	EnableTicketRange            bool           `json:"enableTicketRange"`
+	CVSSAutomaticTicketThreshold *float64       `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64       `json:"riskAutomaticTicketThreshold"`
+	AssetVersions                []AssetVersion `json:"refs"`
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
 	ExternalBotUserLink      *string `json:"externalBotUserLink,omitempty"`
-
-	PipelineLastRun time.Time `json:"pipelineLastRun"`
 
 	RepositoryProvider              *string `json:"repositoryProvider,omitempty"`
 	IsPublic                        bool    `json:"isPublic"`
@@ -216,8 +210,6 @@ type AssetPatchRequest struct {
 	RepositoryName *string `json:"repositoryName" validate:"omitempty,max=256"`
 
 	ConfigFiles *map[string]any `json:"configFiles"`
-
-	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
 
 	WebhookSecret *string `json:"webhookSecret" validate:"omitempty,max=1024"`
 

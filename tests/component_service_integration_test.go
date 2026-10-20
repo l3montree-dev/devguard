@@ -8,6 +8,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	packageurl "github.com/package-url/packageurl-go"
@@ -95,9 +96,14 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Call the function under test using FX-injected component service
-			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, new(artifact.ArtifactName), false)
+			resultComponents, err := f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, new(artifact.ArtifactName))
 			assert.NoError(t, err)
 			assert.NotEmpty(t, resultComponents)
+
+			// the license risks follow in their own pipeline step
+			runner := f.CreateDaemonRunner()
+			runner.SetDebugOptions(listeners.DebugOptions{LimitToStages: []string{listeners.StageFindLicenseRisks}})
+			assert.NoError(t, runner.RunDaemonPipelineForAsset(context.Background(), assetVersion.AssetID))
 
 			// Verify that license risks were created for components with invalid licenses
 			var licenseRisks []models.LicenseRisk
@@ -189,9 +195,9 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			err = f.DB.Create(&existingLicenseRisk).Error
 			assert.NoError(t, err)
 
-			// Call the function under test using FX-injected component service
-			_, err = f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, new(artifact.ArtifactName), false)
-			assert.NoError(t, err)
+			runner := f.CreateDaemonRunner()
+			runner.SetDebugOptions(listeners.DebugOptions{LimitToStages: []string{listeners.StageFindLicenseRisks}})
+			assert.NoError(t, runner.RunDaemonPipelineForAsset(context.Background(), assetVersion.AssetID))
 
 			// Verify that no duplicate license risk was created
 			var licenseRisks []models.LicenseRisk

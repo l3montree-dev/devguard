@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package database
+package events
 
 import (
 	"context"
@@ -27,35 +27,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/lib/pq"
 )
 
+type SubscribeHandler = func(ctx context.Context, payload json.RawMessage)
+
 type PostgreSQLMessage struct {
-	ID        string               `json:"id"`
-	Channel   shared.PubSubChannel `json:"topic"`
-	Payload   map[string]any       `json:"payload"`
-	Timestamp time.Time            `json:"timestamp"`
-	SenderID  string               `json:"sender_id,omitempty"` // Optional field for sender ID
-}
-
-func (m PostgreSQLMessage) GetChannel() shared.PubSubChannel {
-	return m.Channel
-}
-
-func (m PostgreSQLMessage) GetPayload() map[string]any {
-	return m.Payload
+	ID        string          `json:"id"`
+	Topic     PubSubTopic     `json:"topic"`
+	Payload   json.RawMessage `json:"payload"`
+	Timestamp time.Time       `json:"timestamp"`
+	SenderID  string          `json:"sender_id,omitempty"` // Optional field for sender ID
 }
 
 type ListeningConnection struct {
 	Conn        *pgxpool.Conn
-	Subscribers []chan map[string]any
+	Subscribers []SubscribeHandler
 }
 
 // PostgreSQLBroker implements the Broker interface using PostgreSQL LISTEN/NOTIFY
 type PostgreSQLBroker struct {
 	db                       *pgxpool.Pool
-	subscribers              map[shared.PubSubChannel]ListeningConnection
+	subscribers              map[PubSubTopic]ListeningConnection
 	subscribeMux             sync.RWMutex
 	wg                       sync.WaitGroup
 	ID                       string      // Unique identifier for the broker instance
@@ -71,7 +64,7 @@ func (b *PostgreSQLBroker) SetShouldReceiveOwnMessages(should bool) {
 func NewPostgreSQLBroker(db *pgxpool.Pool) (*PostgreSQLBroker, error) {
 	broker := &PostgreSQLBroker{
 		db:                       db,
-		subscribers:              make(map[shared.PubSubChannel]ListeningConnection),
+		subscribers:              make(map[PubSubTopic]ListeningConnection),
 		ID:                       uuid.New().String(), // Unique ID for this broker instance
 		shouldReceiveOwnMessages: false,
 	}
@@ -80,32 +73,20 @@ func NewPostgreSQLBroker(db *pgxpool.Pool) (*PostgreSQLBroker, error) {
 }
 
 // Publish implements the Broker interface
-func (b *PostgreSQLBroker) Publish(ctx context.Context, message shared.PubSubMessage) error {
-	topic := message.GetChannel()
+func (b *PostgreSQLBroker) Publish(ctx context.Context, topic PubSubTopic, payload any) error {
+	// If no payload method, serialize the entire message
+	messageBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %w", err)
+	}
 
 	// Create a PostgreSQL message with metadata
 	pgMessage := PostgreSQLMessage{
 		ID:        uuid.New().String(),
-		Channel:   topic,
+		Topic:     topic,
 		Timestamp: time.Now(),
 		SenderID:  b.ID, // Use broker ID as sender ID
-	}
-
-	// Extract payload from the message if it has one
-	if payloadMsg, ok := message.(interface{ GetPayload() map[string]any }); ok {
-		pgMessage.Payload = payloadMsg.GetPayload()
-	} else {
-		// If no payload method, serialize the entire message
-		messageBytes, err := json.Marshal(message)
-		if err != nil {
-			return fmt.Errorf("failed to marshal message: %w", err)
-		}
-
-		var messageMap map[string]any
-		if err := json.Unmarshal(messageBytes, &messageMap); err != nil {
-			return fmt.Errorf("failed to unmarshal message to map: %w", err)
-		}
-		pgMessage.Payload = messageMap
+		Payload:   messageBytes,
 	}
 
 	messageJSON, err := json.Marshal(pgMessage)
@@ -123,29 +104,22 @@ func (b *PostgreSQLBroker) Publish(ctx context.Context, message shared.PubSubMes
 	return nil
 }
 
-// Subscribe implements the Broker interface
-func (b *PostgreSQLBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[string]any, error) {
+func (b *PostgreSQLBroker) Subscribe(topic PubSubTopic, handler SubscribeHandler) error {
 	b.subscribeMux.Lock()
 	defer b.subscribeMux.Unlock()
 
-	// Create a buffered channel for this subscriber
-	ch := make(chan map[string]any, 100)
-
 	// Add channel to subscribers list
 	if _, exists := b.subscribers[topic]; !exists {
-
 		ctx := context.Background()
 		ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 		conn, err := b.db.Acquire(ctxWithTimeout)
 		if err != nil {
-			close(ch)
-			return nil, fmt.Errorf("failed to acquire connection for listening: %w", err)
+			return fmt.Errorf("failed to acquire connection for listening: %w", err)
 		}
 		// Start listening to this topic
 		if _, err = conn.Exec(context.Background(), "LISTEN "+pq.QuoteIdentifier(string(topic))); err != nil {
-			close(ch)
-			return nil, fmt.Errorf("failed to listen on topic %s: %w", topic, err)
+			return fmt.Errorf("failed to listen on topic %s: %w", topic, err)
 		}
 		b.wg.Go(func() {
 			b.processMessages(topic, conn)
@@ -153,22 +127,22 @@ func (b *PostgreSQLBroker) Subscribe(topic shared.PubSubChannel) (<-chan map[str
 
 		b.subscribers[topic] = ListeningConnection{
 			Conn: conn,
-			Subscribers: []chan map[string]any{
-				ch,
+			Subscribers: []SubscribeHandler{
+				handler,
 			},
+		}
+	} else {
+		b.subscribers[topic] = ListeningConnection{
+			Conn:        b.subscribers[topic].Conn,
+			Subscribers: append(b.subscribers[topic].Subscribers, handler),
 		}
 	}
 
-	b.subscribers[topic] = ListeningConnection{
-		Conn:        b.subscribers[topic].Conn,
-		Subscribers: append(b.subscribers[topic].Subscribers, ch),
-	}
-
-	return ch, nil
+	return nil
 }
 
 // processMessages handles incoming notifications in a separate goroutine
-func (b *PostgreSQLBroker) processMessages(topic shared.PubSubChannel, conn *pgxpool.Conn) {
+func (b *PostgreSQLBroker) processMessages(topic PubSubTopic, conn *pgxpool.Conn) {
 	for {
 		notification, err := conn.Conn().WaitForNotification(context.TODO())
 		if err != nil {
@@ -186,7 +160,7 @@ func (b *PostgreSQLBroker) processMessages(topic shared.PubSubChannel, conn *pgx
 
 			// check if send by us
 			if message.SenderID == b.ID && !b.shouldReceiveOwnMessages {
-				slog.Debug("ignoring message sent by self", "messageID", message.ID, "topic", message.Channel)
+				slog.Debug("ignoring message sent by self", "messageID", message.ID, "topic", message.Topic)
 				continue
 			}
 
@@ -199,15 +173,12 @@ func (b *PostgreSQLBroker) processMessages(topic shared.PubSubChannel, conn *pgx
 				continue
 			}
 
+			wg := sync.WaitGroup{}
 			// Send message to all subscribers
 			for _, subscriber := range subscribers.Subscribers {
-				select {
-				case subscriber <- message.Payload:
-					// Message sent successfully
-				default:
-					// shared.PubSubChannel is full, skip this subscriber
-					slog.Warn("subscriber channel full, dropping message", "topic", topic, "messageID", message.ID)
-				}
+				wg.Go(func() {
+					subscriber(context.TODO(), message.Payload)
+				})
 			}
 
 			slog.Debug("message distributed", "topic", topic, "messageID", message.ID, "subscribers", len(subscribers.Subscribers))
@@ -221,11 +192,11 @@ func (b *PostgreSQLBroker) IsHealthy() bool {
 }
 
 // GetActiveTopics returns a list of topics currently being listened to
-func (b *PostgreSQLBroker) GetActiveTopics() []shared.PubSubChannel {
+func (b *PostgreSQLBroker) GetActiveTopics() []PubSubTopic {
 	b.subscribeMux.RLock()
 	defer b.subscribeMux.RUnlock()
 
-	topics := make([]shared.PubSubChannel, 0, len(b.subscribers))
+	topics := make([]PubSubTopic, 0, len(b.subscribers))
 	for topic := range b.subscribers {
 		topics = append(topics, topic)
 	}

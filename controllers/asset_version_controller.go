@@ -10,6 +10,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -28,6 +29,7 @@ type AssetVersionController struct {
 	statisticsService        shared.StatisticsService
 	artifactService          shared.ArtifactService
 	dependencyVulnService    shared.DependencyVulnService
+	broker                   events.Broker
 }
 
 func NewAssetVersionController(
@@ -40,7 +42,7 @@ func NewAssetVersionController(
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
 	dependencyVulnService shared.DependencyVulnService,
-
+	broker events.Broker,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -52,6 +54,7 @@ func NewAssetVersionController(
 		statisticsService:        statisticsService,
 		artifactService:          artifactService,
 		dependencyVulnService:    dependencyVulnService,
+		broker:                   broker,
 	}
 }
 
@@ -134,6 +137,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err
 	}
+	events.NotifyAssetVersionDeleted(ctx.Request().Context(), a.broker, assetVersion.AssetID)
 	return ctx.JSON(200, "deleted asset version successfully")
 }
 
@@ -400,33 +404,6 @@ func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 		EnabledSCA:                     enabledSca,
 		EnabledImageSigning:            enabledImageSigning,
 		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
-	})
-}
-
-// RefetchLicenses forces re-fetching license information for all components of the current asset version
-// @Summary Refetch license information for all components
-// @Tags Asset Versions
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param artifactName query string false "Artifact name"
-// @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses/refresh/ [post]
-func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)
-	artifactName := ctx.Param("artifactName")
-
-	_, err := a.componentService.GetAndSaveLicenseInformation(ctx.Request().Context(), nil, assetVersion, utils.EmptyThenNil(artifactName), true)
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, map[string]any{
-		"message": "refetched licenses for all components",
 	})
 }
 

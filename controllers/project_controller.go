@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -44,9 +45,10 @@ type ProjectController struct {
 	projectService         shared.ProjectService
 	webhookRepository      shared.WebhookIntegrationRepository
 	scanService            shared.ScanService
+	broker                 events.Broker
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker) *ProjectController {
 	return &ProjectController{
 		projectRepository:      repository,
 		assetRepository:        assetRepository,
@@ -58,6 +60,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 		projectService:         projectService,
 		webhookRepository:      webhookRepository,
 		scanService:            scanService,
+		broker:                 broker,
 	}
 }
 
@@ -729,13 +732,15 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	}
 
 	userAgent := ctx.Request().UserAgent()
-	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
+	opened, _, _, err := projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("trivy operator: scan failed", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "scan failed"})
 	}
 
 	tx.Commit()
+	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
+	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), projectController.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 
