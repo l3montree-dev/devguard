@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"net/http"
 	"os"
 	"strings"
@@ -139,28 +138,6 @@ func generateBearerToken() (cleartext, hash string, err error) {
 	return cleartext, utils.HashString(cleartext), nil
 }
 
-func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
-	privKeyD := new(big.Int)
-
-	_, err := privKeyD.SetString(hexPrivKey, 16)
-	if !err {
-		return ecdsa.PublicKey{}, fmt.Errorf("could not parse hexPrivKey")
-	}
-
-	privKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     new(big.Int),
-			Y:     new(big.Int),
-		},
-		D: privKeyD,
-	}
-	privKey.X, privKey.Y = privKey.ScalarBaseMult(privKey.D.Bytes())
-
-	pubKey := &privKey.PublicKey
-	return *pubKey, nil
-}
-
 // validatePubKey checks that pubKey is a valid hex-encoded P256 public key (128 hex chars).
 func validatePubKey(pubKey string) error {
 	decoded, err := hex.DecodeString(pubKey)
@@ -170,10 +147,10 @@ func validatePubKey(pubKey string) error {
 	if len(decoded) != 64 {
 		return fmt.Errorf("public key must be 64 bytes (got %d)", len(decoded))
 	}
-	x := new(big.Int).SetBytes(decoded[:32])
-	y := new(big.Int).SetBytes(decoded[32:])
-	if !elliptic.P256().IsOnCurve(x, y) {
-		return fmt.Errorf("public key point is not on P256 curve")
+	uncompressed := append([]byte{0x04}, decoded...)
+	_, err = ecdsa.ParseUncompressedPublicKey(elliptic.P256(), uncompressed)
+	if err != nil {
+		return fmt.Errorf("invalid public key: %w", err)
 	}
 	return nil
 }
@@ -188,52 +165,42 @@ func pubKeyToFingerprint(pubKey string) (string, error) {
 	return hex.EncodeToString(fingerprint.Sum(nil)), nil
 }
 
-func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
-	privKeyD := new(big.Int)
-	privKeyD.SetString(hexPrivKey, 16)
+func HexPubKeyToECDSA(hexPubKey string) (ecdsa.PublicKey, error) {
 
-	privKeyECDSA := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     new(big.Int),
-			Y:     new(big.Int),
-		},
-		D: privKeyD,
+	decodedPubKey, err := hex.DecodeString(hexPubKey)
+	if err != nil {
+		return ecdsa.PublicKey{}, fmt.Errorf("could not decode hexPubKey: %v", err)
 	}
-	privKeyECDSA.X, privKeyECDSA.Y = privKeyECDSA.ScalarBaseMult(privKeyECDSA.D.Bytes())
-
-	return *privKeyECDSA
+	if len(decodedPubKey) != 64 {
+		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key length: expected 64 bytes, got %d", len(decodedPubKey))
+	}
+	uncompressed := append([]byte{0x04}, decodedPubKey...)
+	pubKeyECDSA, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), uncompressed)
+	if err != nil {
+		return ecdsa.PublicKey{}, fmt.Errorf("could not parse hexPubKey: %v", err)
+	}
+	return *pubKeyECDSA, nil
 }
 
-func HexPubKeyToECDSA(hexPubKey string) (ecdsa.PublicKey, error) {
-	// A P-256 public key is two 32-byte coordinates = 64 hex bytes each = 128 chars total.
-	if len(hexPubKey) != 128 {
-		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key length: expected 128 hex chars, got %d", len(hexPubKey))
+func GetPubKeyBytes(pubKey ecdsa.PublicKey) ([]byte, error) {
+	uncompressed, err := pubKey.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("could not get public key bytes: %v", err)
 	}
-
-	x, okX := new(big.Int).SetString(hexPubKey[:64], 16)
-	y, okY := new(big.Int).SetString(hexPubKey[64:], 16)
-	if !okX || !okY {
-		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key: could not parse hex coordinates")
-	}
-
-	curve := elliptic.P256()
-	if !curve.IsOnCurve(x, y) {
-		return ecdsa.PublicKey{}, fmt.Errorf("invalid public key: point is not on P-256 curve")
-	}
-
-	return ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
+	return uncompressed[1:], nil // skip the 0x04 prefix for uncompressed keys
 }
 
 func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error) {
-	pubKey, err := hexPrivKeyToPubKey(hexToken)
+	privKeyDecoded, err := hex.DecodeString(hexToken)
 	if err != nil {
-		return ecdsa.PrivateKey{}, ecdsa.PublicKey{}, fmt.Errorf("could not convert hex token to public key: %v", err)
+		return ecdsa.PrivateKey{}, ecdsa.PublicKey{}, fmt.Errorf("could not decode hexPrivKey: %v", err)
 	}
 
-	privKeyECDSA := hexPrivKeyToPrivKeyECDSA(hexToken)
-
-	return privKeyECDSA, pubKey, nil
+	privKey, err := ecdsa.ParseRawPrivateKey(elliptic.P256(), privKeyDecoded)
+	if err != nil {
+		return ecdsa.PrivateKey{}, ecdsa.PublicKey{}, fmt.Errorf("could not parse hexPrivKey: %v", err)
+	}
+	return *privKey, privKey.PublicKey, nil
 }
 
 // use a helper function for consistency across the code
@@ -260,7 +227,12 @@ func signRequest(hexPrivKey string, req *http.Request) error {
 		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
 	}
 
-	pubKeyString := hex.EncodeToString(pubKey.X.Bytes()) + hex.EncodeToString(pubKey.Y.Bytes())
+	pubKeyBytes, err := GetPubKeyBytes(pubKey)
+	if err != nil {
+		return fmt.Errorf("could not get public key bytes: %v", err)
+	}
+
+	pubKeyString := hex.EncodeToString(pubKeyBytes)
 
 	fingerprint, err := pubKeyToFingerprint(pubKeyString)
 	if err != nil {
@@ -338,14 +310,10 @@ func (p *PatService) getPubKeyAndUserIDUsingFingerprint(ctx context.Context, fin
 	}
 	pubKey := *pat.PubKey
 
-	pubKeyECDSA := ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     new(big.Int),
-		Y:     new(big.Int),
+	pubKeyECDSA, err := HexPubKeyToECDSA(pubKey)
+	if err != nil {
+		return ecdsa.PublicKey{}, models.PAT{}, fmt.Errorf("could not convert hex pub key to ECDSA: %v", err)
 	}
-
-	pubKeyECDSA.X, _ = new(big.Int).SetString(pubKey[:len(pubKey)/2], 16)
-	pubKeyECDSA.Y, _ = new(big.Int).SetString(pubKey[len(pubKey)/2:], 16)
 
 	return pubKeyECDSA, pat, nil
 }
@@ -430,7 +398,12 @@ func (p *PatService) RevokeByPrivateKey(ctx context.Context, privKey string) err
 		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
 	}
 
-	pubKeyString := hex.EncodeToString(pubKey.X.Bytes()) + hex.EncodeToString(pubKey.Y.Bytes())
+	pubKeyBytes, err := pubKey.Bytes()
+	if err != nil {
+		return fmt.Errorf("could not get public key bytes: %v", err)
+	}
+
+	pubKeyString := hex.EncodeToString(pubKeyBytes[1:]) // skip the 0x04 prefix for uncompressed keys
 
 	fingerprint, err := pubKeyToFingerprint(pubKeyString)
 	if err != nil {
