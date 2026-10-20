@@ -74,7 +74,7 @@ func TestReadEventsByAssetIDAndAssetVersionName(t *testing.T) {
 			UserID: "system",
 		}
 		detail.ComponentPurl = "pkg:npm/express@4.18.2"
-		detail.CVEID = "CVE-2024-1234"
+		detail.ResourceIdentifier = "CVE-2024-1234"
 
 		paged := shared.NewPaged(shared.PageInfo{Page: 1, PageSize: 10}, 1, []models.VulnEventDetail{detail})
 		mockRepo.On("ReadEventsByAssetIDAndAssetVersionName", mock.Anything, mock.Anything, assetID, "main", mock.Anything, mock.Anything).
