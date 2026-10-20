@@ -182,6 +182,14 @@ func HexPubKeyToECDSA(hexPubKey string) (ecdsa.PublicKey, error) {
 	return *pubKeyECDSA, nil
 }
 
+func GetPubKeyBytes(pubKey ecdsa.PublicKey) ([]byte, error) {
+	uncompressed, err := pubKey.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("could not get public key bytes: %v", err)
+	}
+	return uncompressed[1:], nil // skip the 0x04 prefix for uncompressed keys
+}
+
 func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error) {
 	privKeyDecoded, err := hex.DecodeString(hexToken)
 	if err != nil {
@@ -219,12 +227,12 @@ func signRequest(hexPrivKey string, req *http.Request) error {
 		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
 	}
 
-	pubKeyBytes, err := pubKey.Bytes()
+	pubKeyBytes, err := GetPubKeyBytes(pubKey)
 	if err != nil {
 		return fmt.Errorf("could not get public key bytes: %v", err)
 	}
 
-	pubKeyString := hex.EncodeToString(pubKeyBytes[1:]) // skip the 0x04 prefix for uncompressed keys
+	pubKeyString := hex.EncodeToString(pubKeyBytes)
 
 	fingerprint, err := pubKeyToFingerprint(pubKeyString)
 	if err != nil {

@@ -35,7 +35,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse key")
 	}
 
-	pubKeyBy, err := pubKey.Bytes()
+	pubKeyBy, err := services.GetPubKeyBytes(pubKey)
 	if err != nil {
 		return errors.Wrap(err, "could not get public key bytes")
 	}
@@ -58,7 +58,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 	fmt.Print("\n\n")
 
 	fmt.Println("PUBLIC KEY HEX")
-	fmt.Printf("%s\n\n", hex.EncodeToString(pubKeyBy[1:])) // skip the 0x04 prefix for uncompressed keys
+	fmt.Printf("%s\n\n", hex.EncodeToString(pubKeyBy))
 	fmt.Println("PUBLIC KEY PEM")
 	// encode the public key to PEM
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&pubKey)

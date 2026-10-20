@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/mocks"
+
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/mock"
@@ -44,11 +45,10 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		pubkeyBytes, err := pubKeyCheck.Bytes()
+		pubkeyBytes, err := GetPubKeyBytes(pubKeyCheck)
 		if err != nil {
 			t.Fatal(err)
 		}
-		pubkeyBytes = pubkeyBytes[1:] // skip the 0x04 prefix for uncompressed keys
 
 		if pubKeyX != hex.EncodeToString(pubkeyBytes[:32]) {
 			t.Fatalf("expected %s, got %s", pubKeyX, hex.EncodeToString(pubkeyBytes[:32]))
@@ -68,11 +68,11 @@ func TestHexPrivKeyToPubKey(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		pubkeyBytes, err := pubCheck.Bytes()
+		pubkeyBytes, err := GetPubKeyBytes(pubCheck)
 		if err != nil {
 			t.Fatal(err)
 		}
-		p := hex.EncodeToString(pubkeyBytes[1:]) // skip the 0x04 prefix for uncompressed keys
+		p := hex.EncodeToString(pubkeyBytes)
 		if pub != p {
 			t.Fatalf("expected %s, got %s", pub, pubCheck)
 		}
