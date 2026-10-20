@@ -200,7 +200,7 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx shared.Context) error {
 	return nil
 }
 
-func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.UserDTO {
+func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.User {
 
 	users, err := t.externalUserRepository.FindByOrgID(context.Background(), nil, org.ID)
 	if err != nil {
@@ -208,8 +208,8 @@ func (t *thirdPartyIntegrations) GetUsers(org models.Org) []dtos.UserDTO {
 		return nil
 	}
 
-	return utils.Map(users, func(user models.ExternalUser) dtos.UserDTO {
-		return dtos.UserDTO{
+	return utils.Map(users, func(user models.ExternalUser) dtos.User {
+		return dtos.User{
 			ID:        user.ID,
 			Name:      user.Username,
 			AvatarURL: &user.AvatarURL,

@@ -134,6 +134,18 @@ func TestSecurityOrgTokenCannotDeleteOrUpdateItsOwnOrganization(t *testing.T) {
 	}
 }
 
+func TestSecurityOrgTokenCannotReadForeignOrgLevelData(t *testing.T) {
+	f := newSecurityFixture(t)
+	ctx := context.Background()
+	foreignSession := orgSession(f.orgB)
+
+	for _, action := range []shared.Action{shared.ActionRead, shared.ActionCreate, shared.ActionUpdate, shared.ActionDelete} {
+		allowed, err := f.rbacOrgA.IsAllowed(ctx, foreignSession, &models.Org{}, shared.ObjectOrganization, action, shared.ActorScope{})
+		require.NoError(t, err)
+		assert.Falsef(t, allowed, "action %q on foreign org's org-level object", action)
+	}
+}
+
 func TestSecurityOrgTokenProjectAndAssetListsDoNotLeakForeignOrg(t *testing.T) {
 	f := newSecurityFixture(t)
 	ctx := context.Background()

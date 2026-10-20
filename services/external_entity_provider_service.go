@@ -68,7 +68,7 @@ func (s externalEntityProviderService) TriggerOrgSync(ctx shared.Context) error 
 		return echo.NewHTTPError(500, "could not sync organizations").WithInternal(err)
 	}
 
-	return ctx.JSON(200, utils.Map(orgs, func(o *models.Org) dtos.OrgDTO {
+	return ctx.JSON(200, utils.Map(orgs, func(o *models.Org) dtos.Org {
 		return transformer.OrgDTOFromModel(*o)
 	}))
 }

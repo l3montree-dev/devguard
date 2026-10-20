@@ -17,7 +17,6 @@ package controllers
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,9 +25,11 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -36,35 +37,23 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type ScanController struct {
-	assetVersionRepository      shared.AssetVersionRepository
-	assetVersionService         shared.AssetVersionService
-	statisticsService           shared.StatisticsService
-	artifactService             shared.ArtifactService
-	dependencyVulnService       shared.DependencyVulnService
-	firstPartyVulnService       shared.FirstPartyVulnService
-	componentService            shared.ComponentService
-	thirdPartyIntegration       shared.IntegrationAggregate
+	assetVersionRepository shared.AssetVersionRepository
+	assetVersionService    shared.AssetVersionService
+	artifactService        shared.ArtifactService
 	shared.ScanService
-	// mark public to let it be overridden in tests
-	utils.FireAndForgetSynchronizer
+	broker events.Broker
 }
 
-func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, statisticsService shared.StatisticsService, dependencyVulnService shared.DependencyVulnService, firstPartyVulnService shared.FirstPartyVulnService, artifactService shared.ArtifactService, synchronizer utils.FireAndForgetSynchronizer, componentService shared.ComponentService, thirdPartyIntegration shared.IntegrationAggregate) *ScanController {
+func NewScanController(scanService shared.ScanService, assetVersionRepository shared.AssetVersionRepository, assetVersionService shared.AssetVersionService, artifactService shared.ArtifactService, broker events.Broker) *ScanController {
 	return &ScanController{
-		assetVersionService:       assetVersionService,
-		assetVersionRepository:    assetVersionRepository,
-		statisticsService:         statisticsService,
-		dependencyVulnService:     dependencyVulnService,
-		firstPartyVulnService:     firstPartyVulnService,
-		FireAndForgetSynchronizer: synchronizer,
-		artifactService:           artifactService,
-		ScanService:               scanService,
-		componentService:          componentService,
-		thirdPartyIntegration:     thirdPartyIntegration,
+		assetVersionService:    assetVersionService,
+		assetVersionRepository: assetVersionRepository,
+		artifactService:        artifactService,
+		ScanService:            scanService,
+		broker:                 broker,
 	}
 }
 
@@ -291,62 +280,8 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	)
 
 	if !noWrite {
-		// detach from the HTTP request context (avoids cancellation on response) but keep the trace
-		linkedCtx := trace.ContextWithSpan(context.Background(), span)
-
-		// update the license information in the background
-		s.FireAndForget(func() {
-			slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-			_, err := s.componentService.GetAndSaveLicenseInformation(linkedCtx, nil, assetVersion, new(artifactName), false)
-			if err != nil {
-				slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
-			} else {
-				slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-			}
-		})
-
-		if assetVersion.DefaultBranch || assetVersion.Type == models.AssetVersionTag {
-			s.FireAndForget(func() {
-				// Export the updated SBOMs back to CycloneDX format for the event
-				metadata, metaErr := s.assetVersionService.LoadComponentMetadata(linkedCtx, nil, assetVersion, wholeSBOM)
-				if metaErr != nil {
-					slog.Error("could not load component metadata for sbom event", "err", metaErr)
-					return
-				}
-				exportedBOM := transformer.ForestToCycloneDX(wholeSBOM, normalize.BOMMetadata{
-					RootName: artifactName,
-				}, metadata)
-				if err = s.thirdPartyIntegration.HandleEvent(linkedCtx, shared.SBOMCreatedEvent{
-					AssetVersion: shared.ToAssetVersionObject(assetVersion),
-					Asset:        shared.ToAssetObject(asset),
-					Project:      shared.ToProjectObject(project),
-					Org:          shared.ToOrgObject(org),
-					Artifact: shared.ArtifactObject{
-						ArtifactName: artifactName,
-					},
-					SBOM: exportedBOM,
-				}, &userAgent); err != nil {
-					slog.Error("could not handle SBOM updated event", "err", err)
-				} else {
-					slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-				}
-			})
-		}
-
-		//Check if we want to create an issue for this assetVersion
-		s.FireAndForget(func() {
-			err := s.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, append(newState, closed...), &userAgent)
-			if err != nil {
-				slog.Error("could not create issues for vulnerabilities", "err", err)
-			}
-		})
-
-		s.FireAndForget(func() {
-			slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-			if err := s.statisticsService.UpdateArtifactRiskAggregation(linkedCtx, nil, &artifact, asset.ID, utils.OrDefault(artifact.LastHistoryUpdate, assetVersion.CreatedAt), time.Now()); err != nil {
-				slog.Error("could not recalculate risk history", "err", err)
-			}
-		})
+		artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifactName, UserAgent: userAgent}
+		events.NotifySBOMCreatedWithVulns(scanCtx, s.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 	}
 
 	return opened, closed, newState, assetVersion, nil
@@ -434,15 +369,6 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 		span.SetStatus(codes.Error, err.Error())
 		return ctx.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
-
-	linkedCtx := trace.ContextWithSpan(context.Background(), span)
-
-	s.FireAndForget(func() {
-		err := s.firstPartyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, append(newState, closed...), &userAgent)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
 
 	err = s.assetVersionRepository.Save(reqCtx, nil, &assetVersion)
 	if err != nil {
@@ -858,12 +784,6 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 			span.SetStatus(codes.Error, err.Error())
 			return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 		}
-		linkedCtx := trace.ContextWithSpan(context.Background(), span)
-		s.FireAndForget(func() {
-			if err := s.firstPartyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, newState, &userAgent); err != nil {
-				slog.Error("could not create issues for vulnerabilities", "err", err)
-			}
-		})
 		if err := s.assetVersionRepository.Save(c.Request().Context(), nil, &assetVersion); err != nil {
 			slog.Error("could not save asset", "err", err)
 		}

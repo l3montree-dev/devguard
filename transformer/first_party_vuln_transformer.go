@@ -50,13 +50,13 @@ func FromJSONSnippetContents(firstPartyVuln models.FirstPartyVuln) (dtos.Snippet
 	return res, nil
 }
 
-func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVulnDTO {
+func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVuln {
 	snippets, err := FromJSONSnippetContents(f)
 	if err != nil {
 		snippets = dtos.SnippetContents{}
 	}
 
-	return dtos.FirstPartyVulnDTO{
+	return dtos.FirstPartyVuln{
 		ID:                   f.ID,
 		ScannerIDs:           f.ScannerIDs,
 		Message:              f.Message,
@@ -83,7 +83,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVulnDTO {
 	}
 }
 
-func FirstPartyVulnDTOToModel(v dtos.FirstPartyVulnDTO) models.FirstPartyVuln {
+func FirstPartyVulnDTOToModel(v dtos.FirstPartyVuln) models.FirstPartyVuln {
 	m := models.FirstPartyVuln{
 		RuleID:          v.RuleID,
 		RuleName:        v.RuleName,

@@ -19,7 +19,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type VEXRuleDTO struct {
+type VEXRule struct {
 	// Primary key
 	ID string `json:"id"`
 
@@ -81,14 +81,14 @@ type VexRuleRecommendation struct {
 }
 
 type TestVEXRulesRequest struct {
-	CelExpression []string      `json:"celExpression" validate:"required"`
+	CelExpression []string      `json:"celExpression" validate:"required,max=100,dive,max=4000"`
 	EventType     VulnEventType `json:"eventType" validate:"required,oneof=accepted falsePositive reopened"`
 }
 type CreateVEXRuleRequest struct {
-	Title                   string                      `json:"title"`
-	Justification           string                      `json:"justification" validate:"required"`
+	Title                   string                      `json:"title" validate:"max=256"`
+	Justification           string                      `json:"justification" validate:"required,max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
-	CELExpression           string                      `json:"celExpression" validate:"required"`
+	CELExpression           string                      `json:"celExpression" validate:"required,max=4000"`
 	EventType               VulnEventType               `json:"eventType" validate:"required,oneof=accepted falsePositive reopened"`
 	WasRecommended          bool                        `json:"wasRecommended"`
 }

@@ -20,7 +20,7 @@ import (
 	"gorm.io/datatypes"
 )
 
-type CompliancePostureDTO struct {
+type CompliancePosture struct {
 	ControlID          string `json:"controlId"`
 	ControlTitle       string `json:"controlTitle"`
 	ControlDescription string `json:"controlDescription"`
@@ -36,12 +36,12 @@ type CompliancePostureDTO struct {
 	State string `json:"state"`
 }
 
-type DetailsCompliancePostureDTO struct {
-	CompliancePostureDTO
-	Events []VulnEventDTO `json:"events"`
+type DetailsCompliancePosture struct {
+	CompliancePosture
+	Events []VulnEvent `json:"events"`
 }
 
-type CompliancePostureWithControlDTO struct {
+type CompliancePostureWithControl struct {
 	FrameworkControlID       string         `json:"frameworkControlId"`
 	Framework                string         `json:"framework"`
 	ControlID                string         `json:"controlId"`
@@ -61,23 +61,23 @@ type CompliancePostureWithControlDTO struct {
 	TicketID                 *string        `json:"ticketId"`
 	TicketURL                *string        `json:"ticketUrl"`
 
-	MappedControls []MappedControlDTO `json:"mappedControls"`
+	MappedControls []MappedControl `json:"mappedControls"`
 }
 
-type MappedControlDTO struct {
+type MappedControl struct {
 	FrameworkControlID string `json:"frameworkControlId"`
 	RelatedFramework   string `json:"relatedFramework"`
 	RelatedControlID   string `json:"relatedControlId"`
 	Relationship       string `json:"relationship"`
 }
 
-type CompliancePostureWithDetailsDTO struct {
-	CompliancePostureWithControlDTO
-	Events       []VulnEventDTO                                     `json:"events"`
-	ByComponents []ComplianceComponentImplementsControlStatementDTO `json:"byComponents"`
+type CompliancePostureWithDetails struct {
+	CompliancePostureWithControl
+	Events       []VulnEvent                                     `json:"events"`
+	ByComponents []ComplianceComponentImplementsControlStatement `json:"byComponents"`
 }
 
-type CompliancePostureStatsDTO struct {
+type CompliancePostureStats struct {
 	Open          int64 `json:"open"`
 	Implemented   int64 `json:"implemented"`
 	NotApplicable int64 `json:"notApplicable"`

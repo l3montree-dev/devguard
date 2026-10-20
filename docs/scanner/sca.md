@@ -48,6 +48,12 @@ devguard-scanner sca [image|path] [flags]
   # Scan and fail on high risk vulnerabilities
   devguard-scanner sca ./project --failOnRisk high
 
+  # Declare vendored components that the scanner cannot detect (repeatable).
+  # --upstreamVCS values are matched to --upstreamPURL values by position.
+  devguard-scanner sca ./project \\
+    --upstreamPURL pkg:generic/zlib@1.3.1 --upstreamVCS git:github.com/madler/zlib.git@v1.3.1 \\
+    --upstreamPURL pkg:generic/openssl@3.0.13
+
   # Forward extra flags to trivy
   devguard-scanner sca ./project -- --skip-dirs vendor --timeout 10m
 ```
@@ -74,6 +80,8 @@ devguard-scanner sca [image|path] [flags]
       --sbomPath string                 Path to scan for supplementary SBOM json files to merge into the scan results. A directory when scanning a path, an absolute path inside the image filesystem when scanning a container image. Each supplementary SBOM's root component name must match the exact in-image/in-project path of the application it describes, so that DevGuard can attach it under the right node and silence the 'unresolved application' warning for it. (default "/sboms")
       --timeout int                     Set the timeout for scanner operations in seconds (default 300)
       --token string                    The personal access token to authenticate the request
+      --upstreamPURL stringArray        Add a user declared component to the SBOM. This makes sense when scanning a container image that contains a vendored dependency, or when scanning a project that has a vendored dependency. Regular SCA scanners have a lot of trouble identifying components which are not listed in any package managing manifest.
+      --upstreamVCS stringArray         Provide VCS information for the supplementary component. Must be used together with the --upstreamPURL flag. Arguments are mapped by index, so the first --upstreamVCS value corresponds to the first --upstreamPURL value, and so on. The VCS information should be in the format 'vcsType:vcsURL@vcsRevision', e.g. 'git:github.com/l3montree-dev/devguard.git@main'.
       --webUI string                    The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'. (default "https://app.devguard.org")
 ```
 

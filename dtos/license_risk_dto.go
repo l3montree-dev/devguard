@@ -7,13 +7,13 @@ import (
 	"github.com/l3montree-dev/devguard/licenses"
 )
 
-type LicenseRiskArtifactDTO struct {
+type LicenseRiskArtifact struct {
 	ArtifactName     string `json:"artifactName"`
 	AssetVersionName string `json:"assetVersionName"`
 	AssetID          string `json:"assetId"`
 }
 
-type LicenseRiskDTO struct {
+type LicenseRisk struct {
 	ID                   uuid.UUID `json:"id"`
 	AssetVersionName     string    `json:"assetVersionName"`
 	AssetID              string    `json:"assetId"`
@@ -26,17 +26,17 @@ type LicenseRiskDTO struct {
 	FinalLicenseDecision *string `json:"finalLicenseDecision"`
 	ComponentPurl        string  `json:"componentPurl"`
 
-	Component ComponentDTO             `json:"component"`
-	Artifacts []LicenseRiskArtifactDTO `json:"artifacts"`
+	Component Component             `json:"component"`
+	Artifacts []LicenseRiskArtifact `json:"artifacts"`
 }
 
-type DetailedLicenseRiskDTO struct {
-	LicenseRiskDTO
-	Events []VulnEventDTO `json:"events"`
+type DetailedLicenseRisk struct {
+	LicenseRisk
+	Events []VulnEvent `json:"events"`
 }
 
 type MakeFinalLicenseDecisionRequest struct {
-	License       string `json:"license"`
+	License       string `json:"license" validate:"max=256"`
 	Justification string `json:"justification" validate:"max=4000"`
 }
 

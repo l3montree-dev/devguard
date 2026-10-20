@@ -40,6 +40,71 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
+	if config.RuntimeBaseConfig.UpstreamPURL != nil {
+		for i, upstreamPurl := range config.RuntimeBaseConfig.UpstreamPURL {
+			upstreamPURL, err := packageurl.FromString(upstreamPurl)
+			if err != nil {
+				return fmt.Errorf("invalid --upstreamPURL %q: %w", upstreamPurl, err)
+			}
+			if upstreamPURL.Version == "" {
+				return fmt.Errorf("invalid --upstreamPURL %q: it should contain a version", upstreamPurl)
+			}
+			upstreamPURLString := upstreamPURL.String()
+
+			cmp := cyclonedx.Component{
+				Type:       cyclonedx.ComponentTypeApplication,
+				Name:       upstreamPURLString,
+				BOMRef:     upstreamPURLString,
+				PackageURL: upstreamPURLString,
+				Version:    upstreamPURL.Version,
+				Evidence: &cyclonedx.Evidence{
+					Identity: &cyclonedx.EvidenceIdentityChoice{
+						Identities: &[]cyclonedx.EvidenceIdentity{
+							{
+								Methods: &[]cyclonedx.EvidenceIdentityMethod{
+									{Technique: cyclonedx.EvidenceIdentityTechniqueOther, Confidence: new(float32(1.0)), Value: "user-declared"},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			if i < len(config.RuntimeBaseConfig.UpstreamVCS) {
+				vcs := config.RuntimeBaseConfig.UpstreamVCS[i]
+				cmp.Pedigree = &cyclonedx.Pedigree{
+					Ancestors: &[]cyclonedx.Component{
+						cyclonedx.Component{
+							ExternalReferences: &[]cyclonedx.ExternalReference{
+								{Type: cyclonedx.ERTypeVCS, URL: vcs},
+							},
+						},
+					},
+				}
+			}
+
+			bom.Components = new(append(*bom.Components, cmp))
+			if bom.Dependencies == nil {
+				return fmt.Errorf("invalid sbom provided. No dependencies declared, cannot add user declared dependency.")
+			}
+			// make sure, that root has a dependency edge to the new component
+			for i, dep := range *bom.Dependencies {
+				if dep.Ref == bom.Metadata.Component.BOMRef {
+					if (*bom.Dependencies)[i].Dependencies == nil {
+						(*bom.Dependencies)[i].Dependencies = new([]string)
+					}
+
+					(*bom.Dependencies)[i].Dependencies = new(append(*(*bom.Dependencies)[i].Dependencies, upstreamPURL.String()))
+					break
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // extract filename from path or return directory if path points to a directory
 // second return argument is true if it's a directory and false is it's a file
 func maybeGetFileName(path string) (string, bool) {
@@ -565,6 +630,11 @@ func scanExternalImage(ctx context.Context) error {
 		return err
 	}
 
+	err = addSupplementaryUpstreamPURLManually(bom)
+	if err != nil {
+		return err
+	}
+
 	if err := discoverAndMergeSupplementarySBOMs(bom, func() ([]*cyclonedx.BOM, error) {
 		img, err := scanner.LoadRemoteImage(ctx, config.RuntimeBaseConfig.Image)
 		if err != nil {
@@ -742,6 +812,11 @@ func scanLocalFilePath(ctx context.Context) error {
 			return err
 		}
 
+		err = addSupplementaryUpstreamPURLManually(bom)
+		if err != nil {
+			return err
+		}
+
 		if err := discoverAndMergeSupplementarySBOMs(bom, func() ([]*cyclonedx.BOM, error) {
 			return discoverSupplementarySBOMsForPath(config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.SBOMPath)
 		}); err != nil {
@@ -855,6 +930,12 @@ See the trivy CLI reference for available flags: https://trivy.dev/docs/latest/g
 
   # Scan and fail on high risk vulnerabilities
   devguard-scanner sca ./project --failOnRisk high
+
+  # Declare vendored components that the scanner cannot detect (repeatable).
+  # --upstreamVCS values are matched to --upstreamPURL values by position.
+  devguard-scanner sca ./project \\
+    --upstreamPURL pkg:generic/zlib@1.3.1 --upstreamVCS git:github.com/madler/zlib.git@v1.3.1 \\
+    --upstreamPURL pkg:generic/openssl@3.0.13
 
   # Forward extra flags to trivy
   devguard-scanner sca ./project -- --skip-dirs vendor --timeout 10m`,

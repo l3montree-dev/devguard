@@ -45,6 +45,9 @@ func (t *MerkleTree) Parents() map[uuid.UUID][]uuid.UUID {
 	return reverse
 }
 
+// MaxPathsPerSBOM is shared by the daemon and the scan service, an sbom with more paths falls back to NULL
+const MaxPathsPerSBOM = 11
+
 // PathsToPURL returns every dependency path from a direct dependency of this
 // SBOM down to purl, as component ids. A limit of 0 means unlimited.
 //

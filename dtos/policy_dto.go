@@ -15,7 +15,7 @@
 
 package dtos
 
-type PolicyDTO struct {
+type Policy struct {
 	Title         string `json:"title" validate:"required"`
 	Description   string `json:"description"`
 	Priority      int    `json:"priority"`

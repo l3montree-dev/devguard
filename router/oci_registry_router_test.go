@@ -19,9 +19,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
+	"github.com/labstack/echo/v4"
 )
 
 const (

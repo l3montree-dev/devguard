@@ -57,7 +57,7 @@ const (
 	InlineMitigationsAlreadyExist               MechanicalJustificationType = "inline_mitigations_already_exist"
 )
 
-type VulnEventDTO struct {
+type VulnEvent struct {
 	ID       uuid.UUID     `json:"id"`
 	Type     VulnEventType `json:"type"`
 	VulnID   uuid.UUID     `json:"vulnId"`
@@ -67,13 +67,13 @@ type VulnEventDTO struct {
 	Justification           *string                     `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 
-	CreatedAt                time.Time   `json:"createdAt"`
-	OriginalAssetVersionName *string     `json:"originalAssetVersionName"`
-	VulnerabilityName        string      `json:"vulnerabilityName"`
-	PackageName              string      `json:"packageName"`
-	URI                      string      `json:"uri"`
-	CreatedByVexRule         bool        `json:"createdByVexRule"`
-	UserAgent                string      `json:"userAgent"`
-	VexRuleID                *string     `json:"vexRuleId"`
-	VexRule                  *VEXRuleDTO `json:"vexRule,omitempty"`
+	CreatedAt                time.Time `json:"createdAt"`
+	OriginalAssetVersionName *string   `json:"originalAssetVersionName"`
+	VulnerabilityName        string    `json:"vulnerabilityName"`
+	PackageName              string    `json:"packageName"`
+	URI                      string    `json:"uri"`
+	CreatedByVexRule         bool      `json:"createdByVexRule"`
+	UserAgent                string    `json:"userAgent"`
+	VexRuleID                *string   `json:"vexRuleId"`
+	VexRule                  *VEXRule  `json:"vexRule,omitempty"`
 }

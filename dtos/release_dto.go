@@ -21,7 +21,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type ReleaseItemDTO struct {
+type ReleaseItem struct {
 	ID               uuid.UUID  `json:"id,omitempty"`
 	ReleaseID        uuid.UUID  `json:"releaseId,omitempty"`
 	ChildReleaseName *string    `json:"childReleaseName,omitempty"`
@@ -31,33 +31,33 @@ type ReleaseItemDTO struct {
 	AssetID          *uuid.UUID `json:"assetId,omitempty" validate:"required_without=ChildReleaseID"`
 }
 
-type ReleaseDTO struct {
-	ID        uuid.UUID        `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
-	CreatedAt time.Time        `json:"createdAt"`
-	UpdatedAt time.Time        `json:"updatedAt"`
-	Name      string           `json:"name"`
-	ProjectID uuid.UUID        `json:"projectId"`
-	Items     []ReleaseItemDTO `json:"items,omitempty"`
+type Release struct {
+	ID        uuid.UUID     `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
+	CreatedAt time.Time     `json:"createdAt"`
+	UpdatedAt time.Time     `json:"updatedAt"`
+	Name      string        `json:"name"`
+	ProjectID uuid.UUID     `json:"projectId"`
+	Items     []ReleaseItem `json:"items,omitempty"`
 }
 
-// ArtifactDTO is a trimmed artifact view returned to clients. It includes the asset's name.
-type ArtifactDTO struct {
+// Artifact is a trimmed artifact view returned to clients. It includes the asset's name.
+type Artifact struct {
 	ArtifactName     string    `json:"artifactName"`
 	AssetVersionName string    `json:"assetVersionName"`
 	AssetID          uuid.UUID `json:"assetId"`
 }
 
-type CandidatesResponseDTO struct {
-	Artifacts []ArtifactDTO `json:"artifacts"`
-	Releases  []ReleaseDTO  `json:"releases"`
+type CandidatesResponse struct {
+	Artifacts []Artifact `json:"artifacts"`
+	Releases  []Release  `json:"releases"`
 }
 
 // requests
 type ReleaseCreateRequest struct {
-	Name  string           `json:"name" validate:"required"`
-	Items []ReleaseItemDTO `json:"items,omitempty" validate:"omitempty,dive"`
+	Name  string        `json:"name" validate:"required,max=256"`
+	Items []ReleaseItem `json:"items,omitempty" validate:"omitempty,dive"`
 }
 
 type ReleasePatchRequest struct {
-	Items []ReleaseItemDTO `json:"items,omitempty" validate:"omitempty,dive"`
+	Items []ReleaseItem `json:"items,omitempty" validate:"omitempty,dive"`
 }

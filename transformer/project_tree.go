@@ -17,8 +17,8 @@ func BuildArtifactIndex(artifacts []models.Artifact) map[uuid.UUID]map[string][]
 	return index
 }
 
-func BuildAssetEntries(assets []models.Asset, versionsByAssetID map[uuid.UUID][]models.AssetVersion, artifactIndex map[uuid.UUID]map[string][]string) []dtos.AssetEntryDTO {
-	var entries []dtos.AssetEntryDTO
+func BuildAssetEntries(assets []models.Asset, versionsByAssetID map[uuid.UUID][]models.AssetVersion, artifactIndex map[uuid.UUID]map[string][]string) []dtos.AssetEntry {
+	var entries []dtos.AssetEntry
 	for _, asset := range assets {
 		if asset.ExternalEntityID == nil {
 			continue
@@ -27,9 +27,9 @@ func BuildAssetEntries(assets []models.Asset, versionsByAssetID map[uuid.UUID][]
 		if len(versions) == 0 {
 			continue
 		}
-		entry := dtos.AssetEntryDTO{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
+		entry := dtos.AssetEntry{AssetExternalEntityID: *asset.ExternalEntityID, AssetName: asset.Name}
 		for _, av := range versions {
-			entry.AssetVersions = append(entry.AssetVersions, dtos.AssetVersionEntryDTO{
+			entry.AssetVersions = append(entry.AssetVersions, dtos.AssetVersionEntry{
 				AssetVersionName: av.Name,
 				Artifacts:        artifactIndex[asset.ID][av.Name],
 			})
@@ -79,7 +79,7 @@ func BuildExternalProjectTree(
 			if sp.ExternalEntityID == nil {
 				continue
 			}
-			entry.SubProjects = append(entry.SubProjects, dtos.SubProjectEntryDTO{
+			entry.SubProjects = append(entry.SubProjects, dtos.SubProjectEntry{
 				SubProjectExternalEntityID: *sp.ExternalEntityID,
 				SubProjectName:             sp.Name,
 				Assets:                     BuildAssetEntries(assetsByProjectID[sp.ID], versionsByAssetID, artifactIndex),

@@ -21,8 +21,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRuleDTO {
-	return dtos.VEXRuleDTO{
+func VEXRuleToDTOWithCount(rule models.VEXRule, appliesToCount int) dtos.VEXRule {
+	return dtos.VEXRule{
 		// Primary key
 		ID: rule.ID,
 

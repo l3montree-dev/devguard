@@ -17,13 +17,16 @@ package tests
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -99,18 +102,9 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 	})
 }
 
-func TestLicenseRiskClosedByRefresh(t *testing.T) {
+func TestLicenseRiskClosedOnceTheLicenseIsValid(t *testing.T) {
 	t.Parallel()
-	mockOpenSourceInsightService := mocks.NewOpenSourceInsightService(t)
-
-	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{
-		SuppressLogs: true,
-		ExtraOptions: []fx.Option{
-			fx.Decorate(func() shared.OpenSourceInsightService {
-				return mockOpenSourceInsightService
-			}),
-		},
-	}, func(f *TestFixture) {
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		_, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 		// Component starts with an invalid license
@@ -127,29 +121,29 @@ func TestLicenseRiskClosedByRefresh(t *testing.T) {
 		}
 		assert.NoError(t, f.DB.Create(&artifact).Error)
 
-		// Store the component in an SBOM so GetAndSaveLicenseInformation can find it
+		// Store the component in an SBOM so the pipeline step can find it
 		assert.NoError(t, SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, comp.ID))
 
+		runner := f.CreateDaemonRunner()
+		runner.SetDebugOptions(listeners.DebugOptions{LimitToStages: []string{listeners.StageFindLicenseRisks}})
+
 		// Open the license risk
-		err := f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{comp}, artifact.ArtifactName)
-		assert.NoError(t, err)
+		assert.NoError(t, runner.RunDaemonPipelineForAsset(context.Background(), asset.ID))
 
 		risks, err := f.App.LicenseRiskRepository.GetByAssetID(context.Background(), nil, asset.ID)
 		assert.NoError(t, err)
 		assert.Len(t, risks, 1)
 		assert.Equal(t, dtos.VulnStateOpen, risks[0].State)
 
-		// Refresh returns a valid license now
-		mockOpenSourceInsightService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(dtos.OpenSourceInsightsVersionResponse{Licenses: []string{"MIT"}}, nil)
+		// The license of the component is valid now
+		assert.NoError(t, f.DB.Model(&comp).Update("license", "MIT").Error)
 
-		_, err = f.App.ComponentService.GetAndSaveLicenseInformation(context.Background(), nil, assetVersion, nil, true)
-		assert.NoError(t, err)
+		assert.NoError(t, runner.RunDaemonPipelineForAsset(context.Background(), asset.ID))
 
 		risks, err = f.App.LicenseRiskRepository.GetByAssetID(context.Background(), nil, asset.ID)
 		assert.NoError(t, err)
 		assert.Len(t, risks, 1)
-		assert.Equal(t, dtos.VulnStateFixed, risks[0].State, "license risk should be closed after refresh returns a valid license")
+		assert.Equal(t, dtos.VulnStateFixed, risks[0].State, "license risk should be closed once the license is valid")
 		assert.Equal(t, "MIT", *risks[0].FinalLicenseDecision)
 	})
 }
@@ -264,5 +258,45 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 			newRisk := risks[0]
 			assert.Equal(t, dtos.VulnStateAccepted, newRisk.State)
 		})
+	})
+}
+
+func TestLicenseRiskConcurrentArtifacts(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		_, _, _, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		component := models.Component{ID: "pkg:npm/test-package@1.0.0", License: new("PROPRIETARY")}
+		assert.NoError(t, f.DB.Create(&component).Error)
+
+		const artifacts = 4
+		names := make([]string, 0, artifacts)
+		for i := range artifacts {
+			a := models.Artifact{ArtifactName: fmt.Sprintf("artifact-%d", i), AssetVersionName: assetVersion.Name, AssetID: assetVersion.AssetID}
+			assert.NoError(t, f.DB.Create(&a).Error)
+			names = append(names, a.ArtifactName)
+		}
+
+		var wg sync.WaitGroup
+		errs := make([]error, artifacts)
+		for i, name := range names {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				errs[i] = f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{component}, name)
+			}()
+		}
+		wg.Wait()
+
+		for i, err := range errs {
+			assert.NoError(t, err, "artifact %d", i)
+		}
+
+		var risks []models.LicenseRisk
+		assert.NoError(t, f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risks).Error)
+		assert.Len(t, risks, 1)
+		if len(risks) == 1 {
+			assert.Len(t, risks[0].Artifacts, artifacts)
+		}
 	})
 }

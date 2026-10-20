@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"go.opentelemetry.io/otel/trace"
@@ -53,8 +53,6 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 	var vuln models.Vuln
 	var issueID int
 	var projectID int
-
-	doUpdateArtifactRiskHistory := false
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
@@ -122,7 +120,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 			if err != nil {
 				slog.Error("could not save vuln and event", "err", err)
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(context.Background(), g.broker, vuln.GetAssetID(), vulnEvent.Type)
 
 		case "reopen":
 			if vuln.GetState() == dtos.VulnStateOpen || vuln.GetState() == dtos.VulnStateFixed {
@@ -136,7 +134,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 				slog.Error("could not save vuln and event", "err", err)
 
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(context.Background(), g.broker, vuln.GetAssetID(), vulnEvent.Type)
 		}
 		asset, err := g.assetRepository.Read(reqCtx, nil, vuln.GetAssetID())
 		if err != nil {
@@ -250,18 +248,8 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 
 		}
 
-		if vulnEvent.Type == dtos.EventTypeAccepted || vulnEvent.Type == dtos.EventTypeFalsePositive || vulnEvent.Type == dtos.EventTypeReopened {
-			doUpdateArtifactRiskHistory = true
-		}
+		events.NotifyVulnEventCreated(context.Background(), g.broker, vuln.GetAssetID(), vulnEvent.Type)
 
-	}
-
-	if doUpdateArtifactRiskHistory {
-		for _, artifact := range vuln.GetArtifacts() {
-			if err := g.statisticsService.UpdateArtifactRiskAggregation(context.Background(), nil, &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
-				slog.Error("could not recalculate risk history", "err", err)
-			}
-		}
 	}
 
 	switch vulnEvent.Type {

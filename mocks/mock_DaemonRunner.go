@@ -149,6 +149,57 @@ func (_c *DaemonRunner_CollectSBOMGarbage_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// RegisterJobs provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) RegisterJobs(schedule bool) error {
+	ret := _mock.Called(schedule)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RegisterJobs")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(bool) error); ok {
+		r0 = returnFunc(schedule)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_RegisterJobs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterJobs'
+type DaemonRunner_RegisterJobs_Call struct {
+	*mock.Call
+}
+
+// RegisterJobs is a helper method to define mock.On call
+//   - schedule bool
+func (_e *DaemonRunner_Expecter) RegisterJobs(schedule any) *DaemonRunner_RegisterJobs_Call {
+	return &DaemonRunner_RegisterJobs_Call{Call: _e.mock.On("RegisterJobs", schedule)}
+}
+
+func (_c *DaemonRunner_RegisterJobs_Call) Run(run func(schedule bool)) *DaemonRunner_RegisterJobs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 bool
+		if args[0] != nil {
+			arg0 = args[0].(bool)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_RegisterJobs_Call) Return(err error) *DaemonRunner_RegisterJobs_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_RegisterJobs_Call) RunAndReturn(run func(schedule bool) error) *DaemonRunner_RegisterJobs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RunAssetPipeline provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) RunAssetPipeline(ctx context.Context, forceAll bool) {
 	_mock.Called(ctx, forceAll)
@@ -303,24 +354,35 @@ func (_c *DaemonRunner_RunVEXRuleRecommendationDaemon_Call) RunAndReturn(run fun
 	return _c
 }
 
-// Start provides a mock function for the type DaemonRunner
-func (_mock *DaemonRunner) Start(ctx context.Context) {
-	_mock.Called(ctx)
-	return
+// ScanAllAssets provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) ScanAllAssets(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ScanAllAssets")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
-// DaemonRunner_Start_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Start'
-type DaemonRunner_Start_Call struct {
+// DaemonRunner_ScanAllAssets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ScanAllAssets'
+type DaemonRunner_ScanAllAssets_Call struct {
 	*mock.Call
 }
 
-// Start is a helper method to define mock.On call
+// ScanAllAssets is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *DaemonRunner_Expecter) Start(ctx any) *DaemonRunner_Start_Call {
-	return &DaemonRunner_Start_Call{Call: _e.mock.On("Start", ctx)}
+func (_e *DaemonRunner_Expecter) ScanAllAssets(ctx any) *DaemonRunner_ScanAllAssets_Call {
+	return &DaemonRunner_ScanAllAssets_Call{Call: _e.mock.On("ScanAllAssets", ctx)}
 }
 
-func (_c *DaemonRunner_Start_Call) Run(run func(ctx context.Context)) *DaemonRunner_Start_Call {
+func (_c *DaemonRunner_ScanAllAssets_Call) Run(run func(ctx context.Context)) *DaemonRunner_ScanAllAssets_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -333,12 +395,58 @@ func (_c *DaemonRunner_Start_Call) Run(run func(ctx context.Context)) *DaemonRun
 	return _c
 }
 
-func (_c *DaemonRunner_Start_Call) Return() *DaemonRunner_Start_Call {
+func (_c *DaemonRunner_ScanAllAssets_Call) Return(err error) *DaemonRunner_ScanAllAssets_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_ScanAllAssets_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_ScanAllAssets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// StartBenchmarkJobs provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) StartBenchmarkJobs(ctx context.Context, stages []string) {
+	_mock.Called(ctx, stages)
+	return
+}
+
+// DaemonRunner_StartBenchmarkJobs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StartBenchmarkJobs'
+type DaemonRunner_StartBenchmarkJobs_Call struct {
+	*mock.Call
+}
+
+// StartBenchmarkJobs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - stages []string
+func (_e *DaemonRunner_Expecter) StartBenchmarkJobs(ctx any, stages any) *DaemonRunner_StartBenchmarkJobs_Call {
+	return &DaemonRunner_StartBenchmarkJobs_Call{Call: _e.mock.On("StartBenchmarkJobs", ctx, stages)}
+}
+
+func (_c *DaemonRunner_StartBenchmarkJobs_Call) Run(run func(ctx context.Context, stages []string)) *DaemonRunner_StartBenchmarkJobs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_StartBenchmarkJobs_Call) Return() *DaemonRunner_StartBenchmarkJobs_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *DaemonRunner_Start_Call) RunAndReturn(run func(ctx context.Context)) *DaemonRunner_Start_Call {
+func (_c *DaemonRunner_StartBenchmarkJobs_Call) RunAndReturn(run func(ctx context.Context, stages []string)) *DaemonRunner_StartBenchmarkJobs_Call {
 	_c.Run(run)
 	return _c
 }

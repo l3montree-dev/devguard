@@ -36,8 +36,6 @@ func NewDependencyVulnRouter(
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
-
-	dependencyVulnRouter.POST("/sync/", dependencyVulnController.SyncDependencyVulns, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	dependencyVulnRouter.POST("/batch/", dependencyVulnController.BatchCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
