@@ -165,14 +165,14 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 	searchResultsCTE := `
 WITH RECURSIVE
 searchResults AS (
-    SELECT 'asset'::text AS resource_type, a.id, a.name, a.slug, a.description,
+    SELECT 'asset'::text AS resource_type, a.avatar, a.id, a.name, a.slug, a.description,
            a.project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id,
            a.is_public, a.state, a.created_at, a.updated_at
     FROM assets a
     INNER JOIN projects p ON p.id = a.project_id
     WHERE a.name ILIKE ? AND (a.id = ANY(?) OR (a.is_public = true AND p.organization_id = ?))
     UNION
-    SELECT 'project'::text AS resource_type, p.id, p.name, p.slug, p.description,
+    SELECT 'project'::text AS resource_type, p.avatar, p.id, p.name, p.slug, p.description,
            NULL::uuid AS project_id, p.parent_id, p.organization_id,
            p.is_public, p.state, p.created_at, p.updated_at
     FROM projects p
@@ -221,11 +221,11 @@ project_chain AS (
     FROM projects pr
     INNER JOIN project_chain pc ON pr.id = pc.parent_id` + projectChainStopCond + `
 )
-SELECT resource_type, id, name, slug, description, project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM paginatedResults
+SELECT resource_type, avatar, id, name, slug, description, project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM paginatedResults
 UNION
-SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM asset_project_chain
+SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM asset_project_chain
 UNION
-SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
+SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
 
 	dataParams := make([]any, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
 	dataParams = append(dataParams, assetParams...)
@@ -273,6 +273,7 @@ func transformToProjectDTOs(results []dtos.ProjectAsset) []dtos.Project {
 	rootDTOs := make([]dtos.Project, 0, len(rootProjects))
 	for _, r := range rootProjects {
 		rootDTOs = append(rootDTOs, dtos.Project{
+			Avatar:             r.Avatar,
 			ID:                 r.ID,
 			Name:               r.Name,
 			Slug:               r.Slug,
