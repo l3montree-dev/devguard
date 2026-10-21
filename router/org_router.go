@@ -98,6 +98,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	organizationRouter.GET("/projects/", projectController.List)
+	organizationRouter.POST("/projects/", projectController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectProject, shared.ActionCreate))
 	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.OrgListRepositories)
 
@@ -110,7 +111,6 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.OrgTest)
 	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
 	organizationUpdateAccessControlRequired.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration)
-	organizationUpdateAccessControlRequired.POST("/projects/", projectController.Create)
 	organizationUpdateAccessControlRequired.POST("/pats/", patController.CreateForOrg)
 
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
