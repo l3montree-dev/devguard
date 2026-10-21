@@ -38,12 +38,11 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
+	"go.uber.org/fx"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-var openSourceInsightService = services.NewOpenSourceInsightService()
 
 func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM, svc shared.OpenSourceInsightService) error {
 	if config.RuntimeBaseConfig.UpstreamPURL != nil {
@@ -626,7 +625,7 @@ func writeSBOMIfRequested(bom []byte) error {
 	return nil
 }
 
-func scanExternalImage(ctx context.Context) error {
+func scanExternalImage(ctx context.Context, openSourceInsightService shared.OpenSourceInsightService) error {
 	var err error
 	var attestations = []map[string]any{}
 	if !config.RuntimeBaseConfig.IgnoreUpstreamAttestations {
@@ -806,7 +805,7 @@ func discoverSupplementarySBOMsForPath(pathOrTar, sbomPath string) ([]*cyclonedx
 	return scanner.DiscoverSupplementarySBOMsInImage(img, sbomPath)
 }
 
-func scanLocalFilePath(ctx context.Context) error {
+func scanLocalFilePath(ctx context.Context, openSourceInsightService shared.OpenSourceInsightService) error {
 	// check if sbom file or need to generate sbom
 	var file []byte
 	var err error
@@ -894,6 +893,16 @@ func handleScanResponse(body io.Reader) error {
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {
+	var openSourceInsightService shared.OpenSourceInsightService
+	app := fx.New(
+		fx.NopLogger,
+		services.ServiceModule,
+		fx.Populate(&openSourceInsightService),
+	)
+	if err := app.Err(); err != nil {
+		return err
+	}
+
 	ctx := cmd.Context()
 	args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
@@ -915,13 +924,13 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 	// in case it's a docker image we need to scan the image and try to download attestations
 	if config.RuntimeBaseConfig.Image != "" {
-		return scanExternalImage(ctx)
+		return scanExternalImage(ctx, openSourceInsightService)
 	} else if config.RuntimeBaseConfig.Path != "" {
-		return scanLocalFilePath(ctx)
+		return scanLocalFilePath(ctx, openSourceInsightService)
 	}
 	// default to scan current directory
 	config.RuntimeBaseConfig.Path = "."
-	return scanLocalFilePath(ctx)
+	return scanLocalFilePath(ctx, openSourceInsightService)
 }
 
 func NewSCACommand() *cobra.Command {
