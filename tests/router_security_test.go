@@ -50,6 +50,8 @@ func roleRank(r shared.Role) int {
 		return 2
 	case shared.RoleOwner:
 		return 3
+	case shared.RoleInstanceAdmin:
+		return 4
 	default:
 		panic("roleRank: unhandled shared.Role " + string(r))
 	}
@@ -87,14 +89,16 @@ var routeMinLevel = map[string]shared.Role{
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/releases/:releaseID/items/:itemID/":                                                    shared.RoleAdmin,
 	"DELETE /api/v1/pats/:tokenID/":                                                                                                                            shared.RoleMember,
 	"GET /api/v1/.well-known/csaf-aggregator/aggregator.json/":                                                                                                 shared.RoleGuest,
-	"GET /api/v1/admin/":                                                                                                                                       shared.RoleOwner,
-	"GET /api/v1/admin/external-orgs/":                                                                                                                         shared.RoleOwner,
-	"GET /api/v1/admin/logs/":                                                                                                                                  shared.RoleOwner,
-	"GET /api/v1/admin/organizations/:orgID/":                                                                                                                  shared.RoleOwner,
-	"GET /api/v1/admin/settings/":                                                                                                                              shared.RoleOwner,
-	"GET /api/v1/admin/statistics/usage/":                                                                                                                      shared.RoleOwner,
-	"GET /api/v1/admin/statistics/vulnerabilities/":                                                                                                            shared.RoleOwner,
-	"GET /api/v1/admin/users/:userID/":                                                                                                                         shared.RoleOwner,
+	"GET /api/v1/admin/":                                                                                                                                       shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/external-orgs/":                                                                                                                         shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/logs/":                                                                                                                                  shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/organizations/:orgID/":                                                                                                                  shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/settings/":                                                                                                                              shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/statistics/usage/":                                                                                                                      shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/statistics/dependency-proxy-cache/":                                                                                                     shared.RoleInstanceAdmin,
+	"GET /api/v1/organizations/:organization/dependency-proxy/cache-stats/":                                                                                    shared.RoleAdmin,
+	"GET /api/v1/admin/statistics/vulnerabilities/":                                                                                                            shared.RoleInstanceAdmin,
+	"GET /api/v1/admin/users/:userID/":                                                                                                                         shared.RoleInstanceAdmin,
 	"GET /api/v1/compliance-components/":                                                                                                                       shared.RoleGuest,
 	"GET /api/v1/compliance-components/:complianceComponentID/":                                                                                                shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/go":                                                                                                                  shared.RoleGuest,
@@ -275,23 +279,24 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /v2/:secret/:registry/:ns1/:ns2/:image/referrers/:digest/":     shared.RoleGuest,
 	"GET /v2/:secret/:registry/:ns1/:ns2/:image/tags/list/":             shared.RoleGuest,
 	"HEAD /v2/": shared.RoleGuest,
-	"HEAD /v2/:secret/:registry/:namespace/:image/blobs/:digest/":                                                                                            shared.RoleGuest,
-	"HEAD /v2/:secret/:registry/:namespace/:image/manifests/:reference/":                                                                                     shared.RoleGuest,
-	"HEAD /v2/:secret/:registry/:ns1/:ns2/:image/blobs/:digest/":                                                                                             shared.RoleGuest,
-	"HEAD /v2/:secret/:registry/:ns1/:ns2/:image/manifests/:reference/":                                                                                      shared.RoleGuest,
-	"PATCH /api/v1/admin/assets/:assetID/":                                                                                                                   shared.RoleOwner,
-	"PATCH /api/v1/admin/settings/":                                                                                                                          shared.RoleOwner,
+	"HEAD /v2/:secret/:registry/:namespace/:image/blobs/:digest/":        shared.RoleGuest,
+	"HEAD /v2/:secret/:registry/:namespace/:image/manifests/:reference/": shared.RoleGuest,
+	"HEAD /v2/:secret/:registry/:ns1/:ns2/:image/blobs/:digest/":         shared.RoleGuest,
+	"HEAD /v2/:secret/:registry/:ns1/:ns2/:image/manifests/:reference/":  shared.RoleGuest,
+	"PATCH /api/v1/admin/assets/:assetID/":                               shared.RoleInstanceAdmin,
+
+	"PATCH /api/v1/admin/settings/":                                                                                                                          shared.RoleInstanceAdmin,
 	"PATCH /api/v1/organizations/:organization/":                                                                                                             shared.RoleAdmin,
 	"PATCH /api/v1/organizations/:organization/projects/:projectSlug/":                                                                                       shared.RoleAdmin,
 	"PATCH /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/":                                                                     shared.RoleAdmin,
 	"PATCH /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/:id/":                                 shared.RoleAdmin,
 	"PATCH /api/v1/organizations/:organization/projects/:projectSlug/releases/:releaseID/":                                                                   shared.RoleAdmin,
 	"POST /api/v1/accept-invitation/":                                                                                                                        shared.RoleMember,
-	"POST /api/v1/admin/daemons/asset-pipeline-all/trigger/":                                                                                                 shared.RoleOwner,
-	"POST /api/v1/admin/daemons/asset-pipeline-single/trigger/":                                                                                              shared.RoleOwner,
-	"POST /api/v1/admin/daemons/fixed-versions/trigger/":                                                                                                     shared.RoleOwner,
-	"POST /api/v1/admin/daemons/open-source-insights/trigger/":                                                                                               shared.RoleOwner,
-	"POST /api/v1/admin/daemons/vulndb/trigger/":                                                                                                             shared.RoleOwner,
+	"POST /api/v1/admin/daemons/asset-pipeline-all/trigger/":                                                                                                 shared.RoleInstanceAdmin,
+	"POST /api/v1/admin/daemons/asset-pipeline-single/trigger/":                                                                                              shared.RoleInstanceAdmin,
+	"POST /api/v1/admin/daemons/fixed-versions/trigger/":                                                                                                     shared.RoleInstanceAdmin,
+	"POST /api/v1/admin/daemons/open-source-insights/trigger/":                                                                                               shared.RoleInstanceAdmin,
+	"POST /api/v1/admin/daemons/vulndb/trigger/":                                                                                                             shared.RoleInstanceAdmin,
 	"POST /api/v1/attestations/":                                                                                                                             shared.RoleMember,
 	"POST /api/v1/dependency-proxy/:secret/npm/*":                                                                                                            shared.RoleGuest,
 	"POST /api/v1/organizations/":                                                                                                                            shared.RoleMember,
@@ -359,7 +364,7 @@ var routeMinLevel = map[string]shared.Role{
 	"POST /api/v2/sarif-scan/":                                 shared.RoleMember,
 	"POST /api/v2/scan-unauthenticated/":                       shared.RoleGuest,
 	"POST /api/v2/scan/":                                       shared.RoleMember,
-	"PUT /api/v1/admin/external-orgs/:orgID/admins/:userMail/": shared.RoleOwner,
+	"PUT /api/v1/admin/external-orgs/:orgID/admins/:userMail/": shared.RoleInstanceAdmin,
 	"PUT /api/v1/organizations/:organization/compliance-postures/components/:statementID/":                                                                shared.RoleAdmin,
 	"PUT /api/v1/organizations/:organization/config-files/:config-file/":                                                                                  shared.RoleAdmin,
 	"PUT /api/v1/organizations/:organization/integrations/webhook/:id/":                                                                                   shared.RoleAdmin,
@@ -489,8 +494,7 @@ func buildFullRouterServer(t *testing.T, public bool) (*echo.Echo, *TestApp) {
 			return shared.NewSession(actor, shared.SessionActorUser, []string{"manage", "scan"}, false), nil
 		})
 	// InstanceAdminMiddleware (admin_router.go): none of this file's actors are
-	// real instance admins, so /admin/* must always deny them (see routeMinLevel's
-	// shared.RoleOwner doc comment).
+	// real instance admins, so /admin/* must always deny them.
 	patService.On("VerifyAdminRequest", mock.Anything).Maybe().Return(false, nil)
 
 	adminClient := mocks.NewAdminClient(t)

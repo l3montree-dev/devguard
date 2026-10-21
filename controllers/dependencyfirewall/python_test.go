@@ -94,15 +94,20 @@ const testProxySecret = "550e8400-e29b-41d4-a716-446655440000"
 func newSecretScopedController(t *testing.T) *DependencyProxyController {
 	t.Helper()
 	assetID := uuid.New()
+	projectID := uuid.New()
 
 	proxyService := mocks.NewDependencyProxySecretService(t)
 	proxyService.EXPECT().GetModelBySecret(mock.Anything, uuid.MustParse(testProxySecret)).Return("asset", assetID, nil)
 	assetRepository := mocks.NewAssetRepository(t)
-	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{}, nil)
+	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ProjectID: projectID}, nil)
+	projectRepository := mocks.NewProjectRepository(t)
+	projectRepository.EXPECT().Read(mock.Anything, mock.Anything, projectID).Return(models.Project{OrganizationID: uuid.New()}, nil)
 
 	return &DependencyProxyController{
 		dependencyProxyService: proxyService,
 		assetRepository:        assetRepository,
+		projectRepository:      projectRepository,
+		caches:                 newOrgCaches(t.TempDir(), 10),
 	}
 }
 
@@ -205,6 +210,7 @@ func TestProxyPyPISimpleBlocksMaliciousBeforeUpstreamFetch(t *testing.T) {
 }
 
 func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
+
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/simple/Typing_Extensions/", nil)
 	rec := httptest.NewRecorder()
@@ -230,19 +236,14 @@ func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
 }
 
 func TestProxyPyPIPackageFailsClosedOnMaliciousCheckError(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/packages/ab/cd/requests-2.32.3.tar.gz/", nil)
-	c := e.NewContext(req, httptest.NewRecorder())
-	c.SetParamNames("secret")
-	c.SetParamValues(testProxySecret)
+	d, secret, _ := newMinReleaseAgeController(t, 0)
+	c, _ := newProxyRequest(secret, "/api/v1/dependency-proxy/"+secret.String()+"/pypi/packages/ab/cd/requests-2.32.3.tar.gz/")
 
 	checker := mocks.NewMaliciousPackageChecker(t)
 	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, errors.New("db down"))
-
-	d := newSecretScopedController(t)
 	d.maliciousChecker = checker
-	d.cache = newCache(t.TempDir(), 10)
 	d.client = &http.Client{Transport: simpleIndexTransport{}}
+
 	ctrl := &PythonDependencyProxyController{DependencyProxyController: d}
 
 	err := ctrl.ProxyPyPIPackage(c)
@@ -280,7 +281,7 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			secret, assetID := uuid.New(), uuid.New()
+			secret, assetID, projectID := uuid.New(), uuid.New(), uuid.New()
 			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+secret.String()+"/pypi/packages/ab/cd/requests-2.32.3.tar.gz/", nil)
 			rec := httptest.NewRecorder()
@@ -291,7 +292,9 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 			proxyService := mocks.NewDependencyProxySecretService(t)
 			proxyService.EXPECT().GetModelBySecret(mock.Anything, secret).Return("asset", assetID, nil)
 			assetRepository := mocks.NewAssetRepository(t)
-			assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ConfigFiles: databasetypes.JSONB{"dependency-proxy-configs": `{"minReleaseAge":60}`}}, nil)
+			assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ProjectID: projectID, ConfigFiles: databasetypes.JSONB{"dependency-proxy-configs": `{"minReleaseAge":60}`}}, nil)
+			projectRepository := mocks.NewProjectRepository(t)
+			projectRepository.EXPECT().Read(mock.Anything, mock.Anything, projectID).Return(models.Project{OrganizationID: uuid.New()}, nil)
 			checker := mocks.NewMaliciousPackageChecker(t)
 			checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, nil)
 
@@ -299,8 +302,9 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 				DependencyProxyController: &DependencyProxyController{
 					dependencyProxyService: proxyService,
 					assetRepository:        assetRepository,
+					projectRepository:      projectRepository,
 					maliciousChecker:       checker,
-					cache:                  newCache(t.TempDir(), 10),
+					caches:                 newOrgCaches(t.TempDir(), 10),
 					client:                 &http.Client{Transport: pypiFileTransport{uploadTime: tc.uploadTime}},
 				},
 			}

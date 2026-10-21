@@ -214,6 +214,37 @@
                 ],
                 "type": "object"
             },
+            "controllers_dependencyfirewall.CacheStats": {
+                "properties": {
+                    "entries": {
+                        "type": "integer"
+                    },
+                    "evictions": {
+                        "type": "integer"
+                    },
+                    "hits": {
+                        "type": "integer"
+                    },
+                    "maxBytes": {
+                        "type": "integer"
+                    },
+                    "misses": {
+                        "type": "integer"
+                    },
+                    "sizeBytes": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "entries",
+                    "evictions",
+                    "hits",
+                    "maxBytes",
+                    "misses",
+                    "sizeBytes"
+                ],
+                "type": "object"
+            },
             "cyclonedx.Advisory": {
                 "properties": {
                     "title": {
@@ -14713,10 +14744,26 @@
                     1000000,
                     1000000000,
                     60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
                     "minDuration",
                     "maxDuration",
                     "Nanosecond",
@@ -15421,6 +15468,31 @@
                     }
                 ],
                 "summary": "Update instance settings",
+                "tags": [
+                    "Admin"
+                ]
+            }
+        },
+        "/admin/statistics/dependency-proxy-cache/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers_dependencyfirewall.CacheStats"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "AdminSignedAuth": []
+                    }
+                ],
+                "summary": "Get instance-wide dependency proxy cache statistics",
                 "tags": [
                     "Admin"
                 ]
@@ -17735,6 +17807,48 @@
                     }
                 ],
                 "summary": "Get organization dependency proxy URLs",
+                "tags": [
+                    "Dependency Firewall"
+                ]
+            }
+        },
+        "/organizations/{organization}/dependency-proxy/cache-stats/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/controllers_dependencyfirewall.CacheStats"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get organization dependency proxy cache statistics",
                 "tags": [
                     "Dependency Firewall"
                 ]
