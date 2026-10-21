@@ -227,3 +227,38 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 	slog.Info("attestation uploaded successfully", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType)
 	return nil
 }
+
+// SignBuildProvenance lets devguard sign the in-toto statement with the SLSA provenance. Devguard verifies the
+// workload identity token of the CI job and writes the verified identity into the provenance before signing it.
+// It returns a DSSE envelope - or a sigstore bundle, if devguard uploads to a transparency log.
+func SignBuildProvenance(ctx context.Context, statement []byte, workloadIdentityToken string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/api/v1/slsa/build-provenance/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(statement))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Workload-Identity-Token", workloadIdentityToken)
+
+	if config.RuntimeBaseConfig.Token != "" {
+		if err := services.AuthenticateRequestWithToken(config.RuntimeBaseConfig.Token, req); err != nil {
+			return nil, err
+		}
+		config.SetXAssetHeaders(req)
+	}
+
+	// nosemgrep:http-client-missing-egress-transport this is just the client, no need for the egress transport
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("could not sign build provenance: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("could not read signed build provenance: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("could not sign build provenance: %s %s", resp.Status, string(body))
+	}
+	return body, nil
+}

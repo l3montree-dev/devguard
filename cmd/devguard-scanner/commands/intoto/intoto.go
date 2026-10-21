@@ -26,18 +26,20 @@ import (
 	"os"
 	"regexp"
 
+	provenancev1 "github.com/in-toto/attestation/go/predicates/provenance/v1"
+	attestationv1 "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/go-witness/attestation"
 	"github.com/in-toto/go-witness/attestation/git"
 	githubAttestor "github.com/in-toto/go-witness/attestation/github"
 	gitlabAttestor "github.com/in-toto/go-witness/attestation/gitlab"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
-	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var patterns = []*regexp.Regexp{
@@ -66,25 +68,26 @@ func removeSecretsFromMap(m map[string]any) map[string]any {
 	return m
 }
 
-func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, error) {
-	subjects := make([]toto.Subject, 0, len(link.Products))
-	for productName, product := range link.Products {
-		digestSet := map[string]string(product)
+// slsaBuildType describes how to interpret the external parameters of provenance generated from an in-toto link
+const slsaBuildType = "https://devguard.org/build-types/in-toto-link/v1"
 
-		subjects = append(subjects, toto.Subject{
+// generateSlsaProvenance returns an in-toto v1 statement with a SLSA v1 provenance predicate for the link.
+// The builder is only a placeholder - devguard replaces it with the verified workload identity when signing.
+func generateSlsaProvenance(link toto.Link) ([]byte, error) {
+	subjects := make([]*attestationv1.ResourceDescriptor, 0, len(link.Products))
+	for productName, product := range link.Products {
+		subjects = append(subjects, &attestationv1.ResourceDescriptor{
 			Name:   productName,
-			Digest: common.DigestSet(digestSet),
+			Digest: map[string]string(product),
 		})
 	}
 
 	// map the materials to resolved dependencies
-	resolvedDependencies := make([]slsa1.ResourceDescriptor, 0, len(link.Materials))
+	resolvedDependencies := make([]*attestationv1.ResourceDescriptor, 0, len(link.Materials))
 	for materialName, material := range link.Materials {
-		digestSet := map[string]string(material)
-
-		resolvedDependencies = append(resolvedDependencies, slsa1.ResourceDescriptor{
-			URI:    fmt.Sprintf("file://%s", materialName), // TODO: Replace with URI of the file in the gitlab repo. Need to get the repo URL from devguard - if set
-			Digest: common.DigestSet(digestSet),
+		resolvedDependencies = append(resolvedDependencies, &attestationv1.ResourceDescriptor{
+			Uri:    fmt.Sprintf("file://%s", materialName), // TODO: Replace with URI of the file in the gitlab repo. Need to get the repo URL from devguard - if set
+			Digest: map[string]string(material),
 		})
 	}
 
@@ -96,12 +99,12 @@ func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, erro
 
 	attestationContext, err := attestation.NewContext(link.Name, attestors)
 	if err != nil {
-		return toto.ProvenanceStatementSLSA1{}, errors.Wrap(err, "failed to create attestation context")
+		return nil, errors.Wrap(err, "failed to create attestation context")
 	}
 
 	err = attestationContext.RunAttestors()
 	if err != nil {
-		return toto.ProvenanceStatementSLSA1{}, errors.Wrap(err, "failed to run attestation context")
+		return nil, errors.Wrap(err, "failed to run attestation context")
 	}
 
 	// combine all attestors data into a single map
@@ -130,25 +133,53 @@ func generateSlsaProvenance(link toto.Link) (toto.ProvenanceStatementSLSA1, erro
 		}
 	}
 
-	return toto.ProvenanceStatementSLSA1{
-		StatementHeader: toto.StatementHeader{
-			Type:          toto.StatementInTotoV01,
-			PredicateType: slsa1.PredicateSLSAProvenance,
-			Subject:       subjects,
+	// round trip through json, so the attestor data only contains types structpb can represent
+	b, err := json.Marshal(removeSecretsFromMap(attestorData))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal attestor data")
+	}
+	externalParameters := &structpb.Struct{}
+	if err := protojson.Unmarshal(b, externalParameters); err != nil {
+		return nil, errors.Wrap(err, "failed to convert attestor data")
+	}
+
+	provenance := &provenancev1.Provenance{
+		BuildDefinition: &provenancev1.BuildDefinition{
+			BuildType:            slsaBuildType,
+			ExternalParameters:   externalParameters,
+			ResolvedDependencies: resolvedDependencies,
 		},
-		Predicate: slsa1.ProvenancePredicate{
-			RunDetails: slsa1.ProvenanceRunDetails{
-				Builder: slsa1.Builder{
-					ID: "devguard.org",
-				},
-			},
-			BuildDefinition: slsa1.ProvenanceBuildDefinition{
-				ResolvedDependencies: resolvedDependencies,
-				ExternalParameters:   removeSecretsFromMap(attestorData),
+		RunDetails: &provenancev1.RunDetails{
+			Builder: &provenancev1.Builder{
+				Id: "https://devguard.org",
 			},
 		},
-	}, nil
+	}
+	if err := provenance.Validate(); err != nil {
+		return nil, errors.Wrap(err, "generated invalid slsa provenance")
+	}
+
+	predicate, err := protojson.Marshal(provenance)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal slsa provenance")
+	}
+	statement := &attestationv1.Statement{
+		Type:          attestationv1.StatementTypeUri,
+		Subject:       subjects,
+		PredicateType: slsaProvenanceV1,
+		Predicate:     &structpb.Struct{},
+	}
+	if err := protojson.Unmarshal(predicate, statement.Predicate); err != nil {
+		return nil, errors.Wrap(err, "failed to convert slsa provenance")
+	}
+	if err := statement.Validate(); err != nil {
+		return nil, errors.Wrap(err, "generated invalid in-toto statement")
+	}
+
+	return protojson.Marshal(statement)
 }
+
+const slsaProvenanceV1 = "https://slsa.dev/provenance/v1"
 
 func downloadSupplyChainLinks(ctx context.Context, c *devguard.HTTPClient, linkDir, apiURL, assetName, supplyChainID string) error {
 	assetSlugPath, err := normalize.AssetSlugPath(assetName)

@@ -136,7 +136,7 @@ func generateDocsForCommand(cmd *cobra.Command, outDir string) {
 
 	_ = doc.GenMarkdownCustom(cmd, os.Stdout, emptyStr)
 
-	filename := filepath.Join(outDir, cmd.Name()+".md")
+	filename := filepath.Join(outDir, docsFilename(cmd))
 	f, err := os.Create(filename)
 	if err != nil {
 		slog.Error("could not create file", "err", err, "file", filename)
@@ -153,11 +153,16 @@ func generateDocsForCommand(cmd *cobra.Command, outDir string) {
 	}
 
 	for _, subCmd := range cmd.Commands() {
-		if subCmd.Hidden {
+		if subCmd.Hidden || subCmd.Name() == "help" {
 			continue
 		}
 		generateDocsForCommand(subCmd, outDir)
 	}
+}
+
+func docsFilename(cmd *cobra.Command) string {
+	path := strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()+" ")
+	return strings.ReplaceAll(path, " ", "-") + ".md"
 }
 
 func postProcessMarkdown(filename string) {
