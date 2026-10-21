@@ -31,7 +31,7 @@ func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEvent {
 		MechanicalJustification:  e.MechanicalJustification,
 		CreatedAt:                e.CreatedAt,
 		OriginalAssetVersionName: e.OriginalAssetVersionName,
-		VulnerabilityName:        e.ResourceIdentifier,
+		ResourceIdentifier:       e.ResourceIdentifier,
 		PackageName:              e.ComponentPurl,
 		URI:                      e.URI,
 		CreatedByVexRule:         e.CreatedByVexRule,

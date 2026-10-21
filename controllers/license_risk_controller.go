@@ -162,7 +162,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 				Justification:            ev.Justification,
 				MechanicalJustification:  ev.MechanicalJustification,
 				OriginalAssetVersionName: ev.OriginalAssetVersionName,
-				VulnerabilityName:        licenseRisk.ComponentPurl,
+				ResourceIdentifier:       licenseRisk.ComponentPurl,
 				CreatedAt:                ev.CreatedAt,
 				CreatedByVexRule:         ev.CreatedByVexRule,
 			}
