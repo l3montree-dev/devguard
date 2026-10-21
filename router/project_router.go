@@ -90,13 +90,13 @@ func NewProjectRouter(
 	projectRouter.GET("/external/:providerID/", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
+	projectRouter.POST("/releases/", releaseController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionCreate))
 
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.ProjectSave)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.ProjectTest)
 	projectUpdateAccessControlRequired.POST("/members/", projectController.InviteMembers)
-	projectUpdateAccessControlRequired.POST("/releases/", releaseController.Create)
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
 	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)

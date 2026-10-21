@@ -28,6 +28,7 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/labstack/echo/v4"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -558,8 +559,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	// get the installation id from the request
 	installationID := ctx.QueryParam("installationId")
 	if installationID == "" {
-		slog.Error("installationId is required")
-		return ctx.JSON(400, "installationId is required")
+		return echo.NewHTTPError(400, "installationId is required")
 	}
 	reqCtx := ctx.Request().Context()
 
@@ -568,24 +568,21 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	// convert the installation id to an integer
 	installationIDInt, err := strconv.Atoi(installationID)
 	if err != nil {
-		slog.Error("could not convert installationId to int", "err", err)
-		return ctx.JSON(400, "could not convert installationId to int")
+		return echo.NewHTTPError(400, "could not convert installationId to int").WithInternal(err)
 	}
 
 	// check if the installation id exists in the database
 	appInstallation, err := githubIntegration.githubAppInstallationRepository.Read(reqCtx, nil, installationIDInt)
 	if err != nil {
-		slog.Error("could not read github app installation", "err", err)
-		return ctx.JSON(400, "could not read github app installation")
+		return echo.NewHTTPError(400, "could not read github app installation").WithInternal(err)
 	}
 
 	// check if app installation is already associated with an organization
 	if appInstallation.OrgID != nil && *appInstallation.OrgID != organization.GetID() {
-		slog.Error("github app installation already associated with an organization")
-		return ctx.JSON(400, "github app installation already associated with an organization")
+		return echo.NewHTTPError(400, "github app installation already associated with an organization")
 	} else if appInstallation.OrgID != nil && *appInstallation.OrgID == organization.GetID() {
 		slog.Info("github app installation already associated with the organization")
-		return ctx.JSON(200, "ok")
+		return nil
 	}
 
 	// add the organization id to the installation
@@ -594,13 +591,10 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	// save the installation to the database
 	err = githubIntegration.githubAppInstallationRepository.Save(reqCtx, nil, &appInstallation)
 	if err != nil {
-		slog.Error("could not save github app installation", "err", err)
-		return ctx.JSON(400, "could not save github app installation")
+		return echo.NewHTTPError(500, "could not save github app installation").WithInternal(err)
 	}
 
-	// update the installation with the webhook received time
-	// save the installation to the database
-	return ctx.JSON(200, "ok")
+	return nil
 }
 
 func installationIDFromRepositoryID(repositoryID string) int {

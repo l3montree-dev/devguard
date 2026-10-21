@@ -22,17 +22,12 @@ import (
 )
 
 func TestComposerEcosystem(t *testing.T) {
-	t.Run("trimPrefix with and without secret", func(t *testing.T) {
+	t.Run("trimPrefix", func(t *testing.T) {
 		cases := []struct {
 			name     string
 			path     string
 			expected string
 		}{
-			{
-				name:     "without secret",
-				path:     "/api/v1/dependency-proxy/composer/p2/monolog/monolog.json",
-				expected: "p2/monolog/monolog.json",
-			},
 			{
 				name:     "with secret",
 				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/composer/p2/monolog/monolog.json",
@@ -40,12 +35,12 @@ func TestComposerEcosystem(t *testing.T) {
 			},
 			{
 				name:     "with trailing slash",
-				path:     "/api/v1/dependency-proxy/composer/p2/monolog/monolog.json/",
+				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/composer/p2/monolog/monolog.json/",
 				expected: "p2/monolog/monolog.json",
 			},
 			{
 				name:     "without trailing path",
-				path:     "/api/v1/dependency-proxy/composer",
+				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/composer",
 				expected: "",
 			},
 		}

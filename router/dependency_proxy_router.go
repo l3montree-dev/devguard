@@ -65,17 +65,7 @@ func NewDependencyProxyRouter(
 	composerController *dependencyfirewall.ComposerDependencyProxyController,
 	debController *dependencyfirewall.DebDependencyProxyController,
 ) DependencyProxyRouter {
-	group := apiV1Group.Group.Group("/dependency-proxy")
-
-	registerNPMRoutes(group, npmController)
-	registerGoRoutes(group, goController)
-	registerPyPIRoutes(group, pythonController)
-	registerMavenRoutes(group, mavenController)
-	registerComposerRoutes(group, composerController)
-	registerDebRoutes(group, debController)
-
-	// Secret-scoped routes (used without DevGuard authentication)
-	secretGroup := group.Group("/:secret")
+	secretGroup := apiV1Group.Group.Group("/dependency-proxy/:secret")
 
 	registerNPMRoutes(secretGroup, npmController)
 	registerGoRoutes(secretGroup, goController)
@@ -84,5 +74,5 @@ func NewDependencyProxyRouter(
 	registerComposerRoutes(secretGroup, composerController)
 	registerDebRoutes(secretGroup, debController)
 
-	return DependencyProxyRouter{Group: group}
+	return DependencyProxyRouter{Group: secretGroup}
 }

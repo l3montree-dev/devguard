@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var ociProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?oci(?:/|$)`)
+var ociProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/oci(?:/|$)`)
 
 // OCI Distribution Spec path-param formats. Anything outside these is
 // rejected at the edge so that path traversal, NUL injection, or other
@@ -397,16 +397,12 @@ func (d *OCIDependencyProxyController) ProxyOCIVersionCheck(c shared.Context) er
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param registry path string true "registry hostname"
 // @Param namespace path string false "image namespace"
 // @Param image path string true "image name"
 // @Param reference path string true "tag or digest"
 // @Success 200 {object} map[string]interface{}
-// @Router /v2/{registry}/{image}/manifests/{reference} [get]
-// @Router /v2/{registry}/{image}/manifests/{reference} [head]
-// @Router /v2/{registry}/{namespace}/{image}/manifests/{reference} [get]
-// @Router /v2/{registry}/{namespace}/{image}/manifests/{reference} [head]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/manifests/{reference} [get]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/manifests/{reference} [head]
 // @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/manifests/{reference} [get]
@@ -529,16 +525,12 @@ func (d *OCIDependencyProxyController) ProxyOCIManifest(c shared.Context) error 
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param registry path string true "registry hostname"
 // @Param namespace path string false "image namespace"
 // @Param image path string true "image name"
 // @Param digest path string true "blob digest"
 // @Success 200 {file} binary
-// @Router /v2/{registry}/{image}/blobs/{digest} [get]
-// @Router /v2/{registry}/{image}/blobs/{digest} [head]
-// @Router /v2/{registry}/{namespace}/{image}/blobs/{digest} [get]
-// @Router /v2/{registry}/{namespace}/{image}/blobs/{digest} [head]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/blobs/{digest} [get]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/blobs/{digest} [head]
 // @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/blobs/{digest} [get]
@@ -665,14 +657,12 @@ func (d *OCIDependencyProxyController) ProxyOCIBlob(c shared.Context) error {
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param registry path string true "registry hostname"
 // @Param namespace path string false "image namespace"
 // @Param image path string true "image name"
 // @Param digest path string true "subject digest"
 // @Success 200 {object} map[string]interface{}
-// @Router /v2/{registry}/{image}/referrers/{digest} [get]
-// @Router /v2/{registry}/{namespace}/{image}/referrers/{digest} [get]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/referrers/{digest} [get]
 // @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/referrers/{digest} [get]
 func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error {
@@ -737,13 +727,11 @@ func (d *OCIDependencyProxyController) ProxyOCIReferrers(c shared.Context) error
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param registry path string true "registry hostname"
 // @Param namespace path string false "image namespace"
 // @Param image path string true "image name"
 // @Success 200 {object} map[string]interface{}
-// @Router /v2/{registry}/{image}/tags/list [get]
-// @Router /v2/{registry}/{namespace}/{image}/tags/list [get]
 // @Router /v2/{secret}/{registry}/{namespace}/{image}/tags/list [get]
 // @Router /v2/{secret}/{registry}/{ns1}/{ns2}/{image}/tags/list [get]
 func (d *OCIDependencyProxyController) ProxyOCITagsList(c shared.Context) error {
