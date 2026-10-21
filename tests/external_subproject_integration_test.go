@@ -40,7 +40,7 @@ func TestHandleExternalSubprojectRequestUpdate(t *testing.T) {
 		app := echo.New()
 
 		t.Run("should create project, asset, asset version and artifact on verb=update", func(t *testing.T) {
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                    "update",
 				ProjectExternalEntityID: "group-1",
 				ProjectName:             "Group 1",
@@ -80,7 +80,7 @@ func TestHandleExternalSubprojectRequestUpdate(t *testing.T) {
 		})
 
 		t.Run("should create sub-project when SubProjectExternalEntityID is set", func(t *testing.T) {
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                       "update",
 				ProjectExternalEntityID:    "group-2",
 				ProjectName:                "Group 2",
@@ -115,7 +115,7 @@ func TestHandleExternalSubprojectRequestUpdate(t *testing.T) {
 		})
 
 		t.Run("should return 400 when sbom is missing on verb=update", func(t *testing.T) {
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                    "update",
 				ProjectExternalEntityID: "group-3",
 				ProjectName:             "Group 3",
@@ -151,7 +151,7 @@ func TestHandleExternalSubprojectRequestDelete(t *testing.T) {
 		app := echo.New()
 
 		createEntry := func(projectExtID, assetExtID, versionName, artifactName string) {
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                    "update",
 				ProjectExternalEntityID: projectExtID,
 				ProjectName:             projectExtID,
@@ -173,7 +173,7 @@ func TestHandleExternalSubprojectRequestDelete(t *testing.T) {
 		t.Run("should delete artifact and cascade to asset/version/project when last", func(t *testing.T) {
 			createEntry("del-group-1", "del-repo-1", "main", "del-app:latest")
 
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                    "delete",
 				ProjectExternalEntityID: "del-group-1",
 				AssetExternalEntityID:   "del-repo-1",
@@ -201,7 +201,7 @@ func TestHandleExternalSubprojectRequestDelete(t *testing.T) {
 			createEntry("del-group-2", "del-repo-2", "main", "artifact-a:latest")
 			createEntry("del-group-2", "del-repo-2", "main", "artifact-b:latest")
 
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                    "delete",
 				ProjectExternalEntityID: "del-group-2",
 				AssetExternalEntityID:   "del-repo-2",
@@ -239,7 +239,7 @@ func TestListExternalSubprojects(t *testing.T) {
 		app := echo.New()
 
 		createEntry := func(projectExtID, projectName, assetExtID, assetName, versionName, artifactName string) {
-			body := dtos.ExternalSubprojectRequestDTO{
+			body := dtos.ExternalSubprojectRequest{
 				Verb:                    "update",
 				ProjectExternalEntityID: projectExtID,
 				ProjectName:             projectName,

@@ -85,111 +85,101 @@ var routeMinLevel = map[string]shared.Role{
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/policies/:policyID/":                                                                   shared.RoleAdmin,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/releases/:releaseID/":                                                                  shared.RoleAdmin,
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/releases/:releaseID/items/:itemID/":                                                    shared.RoleAdmin,
-	"DELETE /api/v1/pats/:tokenID/":                                                                                                                 shared.RoleMember,
-	"GET /api/v1/.well-known/csaf-aggregator/aggregator.json/":                                                                                      shared.RoleGuest,
-	"GET /api/v1/admin/":                                                                                                                            shared.RoleOwner,
-	"GET /api/v1/admin/external-orgs/":                                                                                                              shared.RoleOwner,
-	"GET /api/v1/admin/logs/":                                                                                                                       shared.RoleOwner,
-	"GET /api/v1/admin/organizations/:orgID/":                                                                                                       shared.RoleOwner,
-	"GET /api/v1/admin/settings/":                                                                                                                   shared.RoleOwner,
-	"GET /api/v1/admin/statistics/usage/":                                                                                                           shared.RoleOwner,
-	"GET /api/v1/admin/statistics/vulnerabilities/":                                                                                                 shared.RoleOwner,
-	"GET /api/v1/admin/users/:userID/":                                                                                                              shared.RoleOwner,
-	"GET /api/v1/compliance-components/":                                                                                                            shared.RoleGuest,
-	"GET /api/v1/compliance-components/:complianceComponentID/":                                                                                     shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/go":                                                                                                       shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/go/*":                                                                                                     shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/:package":                                                                                             shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/:package/":                                                                                            shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/:package/-/*":                                                                                         shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/:scope/:name":                                                                                         shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/:scope/:name/":                                                                                        shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/:scope/:name/-/*":                                                                                     shared.RoleGuest,
-	"POST /api/v1/dependency-proxy/:secret/npm/-/*":                                                                                                 shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/npm/-/*":                                                                                                  shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/pypi/packages/*":                                                                                          shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/pypi/simple/:package":                                                                                     shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/:secret/pypi/simple/:package/":                                                                                    shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/go":                                                                                                               shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/go/*":                                                                                                             shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:package":                                                                                                     shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:package/":                                                                                                    shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:package/-/*":                                                                                                 shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:scope/:name":                                                                                                 shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:scope/:name/":                                                                                                shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:scope/:name/-/*":                                                                                             shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/-/*":                                                                                                          shared.RoleGuest,
-	"POST /api/v1/dependency-proxy/npm/-/*":                                                                                                         shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/pypi/packages/*":                                                                                                  shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/pypi/simple/:package":                                                                                             shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/pypi/simple/:package/":                                                                                            shared.RoleGuest,
-	"GET /api/v1/health/":                                                                                                                           shared.RoleGuest,
-	"GET /api/v1/info/":                                                                                                                             shared.RoleGuest,
-	"GET /api/v1/instance-settings/":                                                                                                                shared.RoleGuest,
-	"GET /api/v1/integrations/repositories/":                                                                                                        shared.RoleGuest,
-	"GET /api/v1/lookup/":                                                                                                                           shared.RoleGuest,
-	"GET /api/v1/oauth2/gitlab/:integrationName/":                                                                                                   shared.RoleGuest,
-	"GET /api/v1/oauth2/gitlab/callback/:integrationName/":                                                                                          shared.RoleGuest,
-	"GET /api/v1/organizations/":                                                                                                                    shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/":                                                                                                      shared.RoleMember,
-	"GET /api/v1/organizations/:organization/compliance-postures/":                                                                                  shared.RoleMember,
-	"GET /api/v1/organizations/:organization/compliance-postures/:frameworkControlID/":                                                              shared.RoleMember,
-	"GET /api/v1/organizations/:organization/compliance-postures/oscal/":                                                                            shared.RoleMember,
-	"GET /api/v1/organizations/:organization/compliance-postures/stats/":                                                                            shared.RoleMember,
-	"GET /api/v1/organizations/:organization/config-files/:config-file/":                                                                            shared.RoleMember,
-	"GET /api/v1/organizations/:organization/content-tree/":                                                                                         shared.RoleMember,
-	"GET /api/v1/organizations/:organization/components/":                                                                                           shared.RoleAdmin,
-	"GET /api/v1/organizations/:organization/csaf/openpgp/":                                                                                         shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/csaf/openpgp/:file/":                                                                                   shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/csaf/provider-metadata.json/":                                                                          shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/dependency-proxy-urls/":                                                                                shared.RoleMember,
-	"GET /api/v1/organizations/:organization/dependency-vulns/":                                                                                     shared.RoleMember,
-	"GET /api/v1/organizations/:organization/first-party-vulns/":                                                                                    shared.RoleMember,
-	"GET /api/v1/organizations/:organization/integrations/finish-installation/":                                                                     shared.RoleMember,
-	"GET /api/v1/organizations/:organization/integrations/repositories/":                                                                            shared.RoleMember,
-	"GET /api/v1/organizations/:organization/logs/":                                                                                                 shared.RoleMember,
-	"GET /api/v1/organizations/:organization/members/":                                                                                              shared.RoleMember,
-	"GET /api/v1/organizations/:organization/metrics/":                                                                                              shared.RoleMember,
-	"GET /api/v1/organizations/:organization/pats/":                                                                                                 shared.RoleAdmin,
-	"GET /api/v1/organizations/:organization/policies/":                                                                                             shared.RoleMember,
-	"GET /api/v1/organizations/:organization/policies/:policyID/":                                                                                   shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/":                                                                                             shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/":                                                                                shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/":                                                                         shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/":                                                              shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/badges/:badge/":                                                shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/compliance/":                                                   shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/compliance/:policy/":                                           shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/components/licenses/":                                          shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/config-files/:config-file/":                                    shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/":                                                         shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/":                                                   shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/":                                             shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/:version/":                                    shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/changes.csv/":                                       shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/index.txt/":                                         shared.RoleGuest,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/dependency-proxy-urls/":                                        shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/external-references/":                                          shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/in-toto/root.layout.json/":                                     shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/logs/":                                                         shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/members/":                                                      shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/number-of-exploits/":                                           shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/pats/":                                                         shared.RoleAdmin,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/":                                                         shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/":                                       shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/":                              shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/:id/":                          shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/affected-components/":                   shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifact-root-nodes/":                   shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/":                             shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/badges/:badge/": shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/csaf.json/":     shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/openvex.json/":  shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sbom.json/":     shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sbom.pdf/":      shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sbom.xml/":      shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/vex.json/":      shared.RoleMember,
-	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/vex.xml/":       shared.RoleMember,
+	"DELETE /api/v1/pats/:tokenID/":                                                                                               shared.RoleMember,
+	"GET /api/v1/.well-known/csaf-aggregator/aggregator.json/":                                                                    shared.RoleGuest,
+	"GET /api/v1/admin/":                                                                                                          shared.RoleOwner,
+	"GET /api/v1/admin/external-orgs/":                                                                                            shared.RoleOwner,
+	"GET /api/v1/admin/logs/":                                                                                                     shared.RoleOwner,
+	"GET /api/v1/admin/organizations/:orgID/":                                                                                     shared.RoleOwner,
+	"GET /api/v1/admin/settings/":                                                                                                 shared.RoleOwner,
+	"GET /api/v1/admin/statistics/usage/":                                                                                         shared.RoleOwner,
+	"GET /api/v1/admin/statistics/vulnerabilities/":                                                                               shared.RoleOwner,
+	"GET /api/v1/admin/users/:userID/":                                                                                            shared.RoleOwner,
+	"GET /api/v1/compliance-components/":                                                                                          shared.RoleGuest,
+	"GET /api/v1/compliance-components/:complianceComponentID/":                                                                   shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/go":                                                                                     shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/go/*":                                                                                   shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/deb/*":                                                                                  shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/maven/*":                                                                                shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/composer/*":                                                                             shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/:package":                                                                           shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/:package/":                                                                          shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/:package/-/*":                                                                       shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/:scope/:name":                                                                       shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/:scope/:name/":                                                                      shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/:scope/:name/-/*":                                                                   shared.RoleGuest,
+	"POST /api/v1/dependency-proxy/:secret/npm/-/*":                                                                               shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/npm/-/*":                                                                                shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/pypi/packages/*":                                                                        shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/pypi/simple/:package":                                                                   shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/pypi/simple/:package/":                                                                  shared.RoleGuest,
+	"GET /api/v1/health/":                                                                                                         shared.RoleGuest,
+	"GET /api/v1/info/":                                                                                                           shared.RoleGuest,
+	"GET /api/v1/instance-settings/":                                                                                              shared.RoleGuest,
+	"GET /api/v1/integrations/repositories/":                                                                                      shared.RoleGuest,
+	"GET /api/v1/lookup/":                                                                                                         shared.RoleGuest,
+	"GET /api/v1/oauth2/gitlab/:integrationName/":                                                                                 shared.RoleGuest,
+	"GET /api/v1/oauth2/gitlab/callback/:integrationName/":                                                                        shared.RoleGuest,
+	"GET /api/v1/organizations/":                                                                                                  shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/":                                                                                    shared.RoleMember,
+	"GET /api/v1/organizations/:organization/compliance-postures/":                                                                shared.RoleMember,
+	"GET /api/v1/organizations/:organization/compliance-postures/:frameworkControlID/":                                            shared.RoleMember,
+	"GET /api/v1/organizations/:organization/compliance-postures/oscal/":                                                          shared.RoleMember,
+	"GET /api/v1/organizations/:organization/compliance-postures/stats/":                                                          shared.RoleMember,
+	"GET /api/v1/organizations/:organization/config-files/:config-file/":                                                          shared.RoleMember,
+	"GET /api/v1/organizations/:organization/content-tree/":                                                                       shared.RoleMember,
+	"GET /api/v1/organizations/:organization/components/":                                                                         shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/csaf/openpgp/":                                                                       shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/csaf/openpgp/:file/":                                                                 shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/csaf/provider-metadata.json/":                                                        shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/dependency-proxy-urls/":                                                              shared.RoleMember,
+	"GET /api/v1/organizations/:organization/dependency-vulns/":                                                                   shared.RoleMember,
+	"GET /api/v1/organizations/:organization/first-party-vulns/":                                                                  shared.RoleMember,
+	"GET /api/v1/organizations/:organization/integrations/finish-installation/":                                                   shared.RoleMember,
+	"GET /api/v1/organizations/:organization/integrations/repositories/":                                                          shared.RoleMember,
+	"GET /api/v1/organizations/:organization/logs/":                                                                               shared.RoleMember,
+	"GET /api/v1/organizations/:organization/members/":                                                                            shared.RoleMember,
+	"GET /api/v1/organizations/:organization/metrics/":                                                                            shared.RoleMember,
+	"GET /api/v1/organizations/:organization/pats/":                                                                               shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/policies/":                                                                           shared.RoleMember,
+	"GET /api/v1/organizations/:organization/policies/:policyID/":                                                                 shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/":                                                                           shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/":                                                              shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/":                                                       shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/":                                            shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/badges/:badge/":                              shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/compliance/":                                 shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/compliance/:policy/":                         shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/components/licenses/":                        shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/config-files/:config-file/":                  shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/":                                       shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/":                                 shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/":                           shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/:year/:version/":                  shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/changes.csv/":                     shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/csaf/white/index.txt/":                       shared.RoleGuest,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/dependency-proxy-urls/":                      shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/external-references/":                        shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/in-toto/root.layout.json/":                   shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/logs/":                                       shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/members/":                                    shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/number-of-exploits/":                         shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/pats/":                                       shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/":                                       shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/":                     shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/":            shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/:id/":        shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/affected-components/": shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifact-root-nodes/": shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/":           shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/badges/:badge/":            shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/csaf.json/":                shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/openvex.json/":             shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sbom.json/":                shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sbom.pdf/":                 shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sbom.xml/":                 shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/vex.json/":                 shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/vex.xml/":                  shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/vulnerability-report.pdf/": shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/attestations/":                                     shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/compliance-postures/":                              shared.RoleMember,
@@ -274,14 +264,6 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/vulndb/purl-inspect/:purl":                                                     shared.RoleGuest,
 	"GET /api/v1/whoami/":                                                                       shared.RoleGuest,
 	"GET /v2/":                                                                                  shared.RoleGuest,
-	"GET /v2/:registry/:image/blobs/:digest/":                                                   shared.RoleGuest,
-	"GET /v2/:registry/:image/manifests/:reference/":                                            shared.RoleGuest,
-	"GET /v2/:registry/:image/referrers/:digest/":                                               shared.RoleGuest,
-	"GET /v2/:registry/:image/tags/list/":                                                       shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/blobs/:digest/":                                        shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/manifests/:reference/":                                 shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/referrers/:digest/":                                    shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/tags/list/":                                            shared.RoleGuest,
 	"GET /v2/:secret/:registry/:namespace/:image/blobs/:digest/":                                shared.RoleGuest,
 	"GET /v2/:secret/:registry/:namespace/:image/manifests/:reference/":                         shared.RoleGuest,
 	"GET /v2/:secret/:registry/:namespace/:image/referrers/:digest/":                            shared.RoleGuest,
@@ -291,10 +273,6 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /v2/:secret/:registry/:ns1/:ns2/:image/referrers/:digest/":                             shared.RoleGuest,
 	"GET /v2/:secret/:registry/:ns1/:ns2/:image/tags/list/":                                     shared.RoleGuest,
 	"HEAD /v2/": shared.RoleGuest,
-	"HEAD /v2/:registry/:image/blobs/:digest/":                                                                                                               shared.RoleGuest,
-	"HEAD /v2/:registry/:image/manifests/:reference/":                                                                                                        shared.RoleGuest,
-	"HEAD /v2/:registry/:namespace/:image/blobs/:digest/":                                                                                                    shared.RoleGuest,
-	"HEAD /v2/:registry/:namespace/:image/manifests/:reference/":                                                                                             shared.RoleGuest,
 	"HEAD /v2/:secret/:registry/:namespace/:image/blobs/:digest/":                                                                                            shared.RoleGuest,
 	"HEAD /v2/:secret/:registry/:namespace/:image/manifests/:reference/":                                                                                     shared.RoleGuest,
 	"HEAD /v2/:secret/:registry/:ns1/:ns2/:image/blobs/:digest/":                                                                                             shared.RoleGuest,
@@ -314,7 +292,6 @@ var routeMinLevel = map[string]shared.Role{
 	"POST /api/v1/admin/daemons/vulndb/trigger/":                                                                                                             shared.RoleOwner,
 	"POST /api/v1/attestations/":                                                                                                                             shared.RoleMember,
 	"POST /api/v1/dependency-proxy/:secret/npm/*":                                                                                                            shared.RoleGuest,
-	"POST /api/v1/dependency-proxy/npm/*":                                                                                                                    shared.RoleGuest,
 	"POST /api/v1/organizations/":                                                                                                                            shared.RoleMember,
 	"POST /api/v1/organizations/:organization/compliance-postures/:frameworkControlID/":                                                                      shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/compliance-postures/:frameworkControlID/components/:complianceComponentID/":                                    shared.RoleAdmin,
@@ -438,6 +415,7 @@ func setupIntotoTestKey(t *testing.T) {
 }
 
 type seededResources struct {
+	orgID                 uuid.UUID
 	orgSlug               string
 	projectSlug           string
 	assetSlug             string
@@ -496,6 +474,10 @@ func buildFullRouterServer(t *testing.T, public bool) (*echo.Echo, *TestApp) {
 	patService := mocks.NewPersonalAccessTokenService(t)
 	patService.On("VerifyRequestSignature", mock.Anything, mock.Anything).Maybe().
 		Return(func(_ context.Context, req *http.Request) (shared.AuthSession, error) {
+			// simulates an organization access token minted for the given org ID
+			if orgID := req.Header.Get("X-Test-Org-Token"); orgID != "" {
+				return shared.NewSession(orgID, shared.SessionActorOrg, []string{"manage", "scan"}, false), nil
+			}
 			actor := req.Header.Get("X-Test-Actor")
 			if actor == "" || actor == actorPublicVisitor {
 				return nil, fmt.Errorf("no session for public visitor")
@@ -621,6 +603,7 @@ func seedRBACFixture(t *testing.T, e *echo.Echo, app *TestApp, public bool, slug
 	}
 
 	return seededResources{
+		orgID:                 org.ID,
 		orgSlug:               org.Slug,
 		projectSlug:           project.Slug,
 		assetSlug:             createdAsset.Slug,
@@ -709,4 +692,38 @@ func TestRoutesEnforceAccessLevelsOnPublicResources(t *testing.T) {
 func TestRoutesEnforceAccessLevelsOnPrivateResources(t *testing.T) {
 	e, app := buildFullRouterServer(t, false)
 	runAccessLevelSweep(t, e, app, false)
+}
+
+func TestOrgTokenCannotAccessForeignOrganizationRoutes(t *testing.T) {
+	e, app := buildFullRouterServer(t, false)
+
+	attacker := seedRBACFixture(t, e, app, false, "attacker")
+	victim := seedRBACFixture(t, e, app, false, "victim")
+
+	var routes, deferred []*echo.Route
+	for _, route := range e.Routes() {
+		if route.Method == "echo_route_not_found" || !strings.Contains(route.Path, ":organization") {
+			continue
+		}
+		if selfDestructivePaths[route.Method+" "+route.Path] {
+			deferred = append(deferred, route)
+			continue
+		}
+		routes = append(routes, route)
+	}
+	routes = append(routes, deferred...)
+
+	for _, route := range routes {
+		if accessLevelFor(t, route.Method, route.Path) == shared.RoleGuest {
+			continue
+		}
+
+		req := httptest.NewRequest(route.Method, fillParams(route.Path, victim), nil)
+		req.Header.Set("X-Test-Org-Token", attacker.orgID.String())
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Contains(t, []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound}, rec.Code,
+			"route %s %s returned %d for an org token of a foreign organization (want 401/403/404)", route.Method, route.Path, rec.Code)
+	}
 }

@@ -1,6 +1,6 @@
 package dtos
 
-type GitlabOauth2ConfigDTO struct {
+type GitlabOauth2Config struct {
 	ProviderID    string `json:"providerID"`
 	GitlabBaseURL string `json:"gitlabBaseURL"`
 }

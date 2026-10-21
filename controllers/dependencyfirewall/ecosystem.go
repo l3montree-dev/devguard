@@ -116,6 +116,12 @@ func EcosystemFromString(eco string) ecosystem {
 		return goEcosystem{}
 	case "oci":
 		return ociEcosystem{}
+	case "maven":
+		return mavenEcosystem{}
+	case "composer":
+		return composerEcosystem{}
+	case "deb":
+		return debEcosystem{}
 	default:
 		return nil
 	}

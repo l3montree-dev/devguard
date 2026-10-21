@@ -51,22 +51,22 @@ func (_m *LogService) EXPECT() *LogService_Expecter {
 }
 
 // ListPaged provides a mock function for the type LogService
-func (_mock *LogService) ListPaged(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error) {
+func (_mock *LogService) ListPaged(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Log], error) {
 	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListPaged")
 	}
 
-	var r0 shared.Paged[dtos.LogDTO]
+	var r0 shared.Paged[dtos.Log]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.LogDTO], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.Log], error)); ok {
 		return returnFunc(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(shared.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.LogDTO]); ok {
+	if returnFunc, ok := ret.Get(0).(func(shared.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.Log]); ok {
 		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(shared.Paged[dtos.LogDTO])
+		r0 = ret.Get(0).(shared.Paged[dtos.Log])
 	}
 	if returnFunc, ok := ret.Get(1).(func(shared.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
 		r1 = returnFunc(ctx, tx, orgID, projectID, assetID, pageInfo, search, filter, sort)
@@ -148,12 +148,12 @@ func (_c *LogService_ListPaged_Call) Run(run func(ctx shared.Context, tx *gorm.D
 	return _c
 }
 
-func (_c *LogService_ListPaged_Call) Return(paged shared.Paged[dtos.LogDTO], err error) *LogService_ListPaged_Call {
+func (_c *LogService_ListPaged_Call) Return(paged shared.Paged[dtos.Log], err error) *LogService_ListPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *LogService_ListPaged_Call) RunAndReturn(run func(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.LogDTO], error)) *LogService_ListPaged_Call {
+func (_c *LogService_ListPaged_Call) RunAndReturn(run func(ctx shared.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Log], error)) *LogService_ListPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

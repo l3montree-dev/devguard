@@ -16,9 +16,9 @@
 package dtos
 
 type CreateInTotoLinkRequest struct {
-	SupplyChainID           string `json:"supplyChainId" validate:"required"`
-	Step                    string `json:"step" validate:"required"`
-	Payload                 string `json:"payload" validate:"required"`
-	Filename                string `json:"filename" validate:"required"`
-	SupplyChainOutputDigest string `json:"supplyChainOutputDigest"`
+	SupplyChainID           string `json:"supplyChainId" validate:"required,max=256"`
+	Step                    string `json:"step" validate:"required,max=256"`
+	Payload                 string `json:"payload" validate:"required,max=1048576"`
+	Filename                string `json:"filename" validate:"required,max=256"`
+	SupplyChainOutputDigest string `json:"supplyChainOutputDigest" validate:"max=256"`
 }

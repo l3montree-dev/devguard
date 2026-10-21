@@ -257,22 +257,22 @@ func (_c *ExternalReferenceRepository_FindByAssetID_Call) RunAndReturn(run func(
 }
 
 // FindByAssetIDWithVexRuleCountPaged provides a mock function for the type ExternalReferenceRepository
-func (_mock *ExternalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[dtos.ExternalReferenceDTO], error) {
+func (_mock *ExternalReferenceRepository) FindByAssetIDWithVexRuleCountPaged(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[dtos.ExternalReference], error) {
 	ret := _mock.Called(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByAssetIDWithVexRuleCountPaged")
 	}
 
-	var r0 shared.Paged[dtos.ExternalReferenceDTO]
+	var r0 shared.Paged[dtos.ExternalReference]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.ExternalReferenceDTO], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.ExternalReference], error)); ok {
 		return returnFunc(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.ExternalReferenceDTO]); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.ExternalReference]); ok {
 		r0 = returnFunc(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
 	} else {
-		r0 = ret.Get(0).(shared.Paged[dtos.ExternalReferenceDTO])
+		r0 = ret.Get(0).(shared.Paged[dtos.ExternalReference])
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
 		r1 = returnFunc(ctx, tx, assetID, pageInfo, search, filterQuery, sortQuery)
@@ -342,12 +342,12 @@ func (_c *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call) R
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call) Return(paged shared.Paged[dtos.ExternalReferenceDTO], err error) *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call {
+func (_c *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call) Return(paged shared.Paged[dtos.ExternalReference], err error) *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[dtos.ExternalReferenceDTO], error)) *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call {
+func (_c *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filterQuery []shared.FilterQuery, sortQuery []shared.SortQuery) (shared.Paged[dtos.ExternalReference], error)) *ExternalReferenceRepository_FindByAssetIDWithVexRuleCountPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

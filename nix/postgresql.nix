@@ -82,7 +82,7 @@ rec {
   entrypoint = pkgs.stdenv.mkDerivation {
     name = "docker-entrypoint";
     src = pkgs.fetchurl {
-      url = "https://raw.githubusercontent.com/docker-library/postgres/master/16/bookworm/docker-entrypoint.sh";
+      url = "https://raw.githubusercontent.com/docker-library/postgres/4f9ced003ba58a854656ba150d146243d27ae3ac/16/bookworm/docker-entrypoint.sh";
       hash = "sha256-nEQCma4EoKedVbi/AzBwNtiQpAl50vtpgHPJBQ1LIKU=";
     };
     dontUnpack = true;

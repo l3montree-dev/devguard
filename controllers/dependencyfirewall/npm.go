@@ -25,7 +25,7 @@ import (
 
 const npmRegistry = "https://registry.npmjs.org"
 
-var npmProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?npm(?:/|$)`)
+var npmProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/npm(?:/|$)`)
 
 // NPMDependencyProxyController handles npm dependency proxy requests.
 // It embeds DependencyProxyController to reuse shared helpers and state.
@@ -110,13 +110,11 @@ func (npmEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param package path string false "npm package name"
 // @Param scope path string false "npm scope"
 // @Param name path string false "npm package name (scoped)"
 // @Success 200 {file} binary
-// @Router /dependency-proxy/npm/{package}/-/{path} [get]
-// @Router /dependency-proxy/npm/{scope}/{name}/-/{path} [get]
 // @Router /dependency-proxy/{secret}/npm/{package}/-/{path} [get]
 // @Router /dependency-proxy/{secret}/npm/{scope}/{name}/-/{path} [get]
 func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
@@ -173,7 +171,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 	// Tarballs are immutable once published to npm, so a hash-verified hit
 	// never needs a freshness check — it's valid forever. Tarballs are only
 	// cached together with their release time, so it is always set here.
-	if entry, ok := d.cache.Get(cacheKey); ok {
+	if entry, ok := d.cache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
 		if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 			return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
@@ -284,13 +282,11 @@ func (d *NPMDependencyProxyController) fetchNPMReleaseTime(ctx context.Context, 
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param package path string false "npm package name"
 // @Param scope path string false "npm scope"
 // @Param name path string false "npm package name (scoped)"
 // @Success 200 {object} map[string]interface{}
-// @Router /dependency-proxy/npm/{package} [get]
-// @Router /dependency-proxy/npm/{scope}/{name} [get]
 // @Router /dependency-proxy/{secret}/npm/{package} [get]
 // @Router /dependency-proxy/{secret}/npm/{scope}/{name} [get]
 func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error {
@@ -386,10 +382,8 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Success 200 {object} map[string]interface{}
-// @Router /dependency-proxy/npm/-/{path} [get]
-// @Router /dependency-proxy/npm/-/{path} [post]
 // @Router /dependency-proxy/{secret}/npm/-/{path} [get]
 // @Router /dependency-proxy/{secret}/npm/-/{path} [post]
 func (d *NPMDependencyProxyController) ProxyNPMRegistryAPI(c shared.Context) error {

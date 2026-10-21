@@ -16,6 +16,9 @@
 package transformer
 
 import (
+	"os"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -23,30 +26,46 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func AssetModelsToDTOs(assets []models.Asset) []dtos.AssetDTO {
-	assetDTOs := make([]dtos.AssetDTO, len(assets))
+func AssetModelsToDTOs(assets []models.Asset) []dtos.Asset {
+	assetDTOs := make([]dtos.Asset, len(assets))
 	for i, asset := range assets {
 		assetDTOs[i] = AssetModelToDTO(asset)
 	}
 	return assetDTOs
 }
 
-func AssetModelToDetailsDTO(asset models.Asset, members []dtos.UserDTO) dtos.AssetDetailsDTO {
-	return dtos.AssetDetailsDTO{
-		AssetDTO: AssetModelToDTO(asset),
-		Members:  members,
+func AssetModelToDetailsDTO(asset models.Asset, members []dtos.User) dtos.AssetDetails {
+	return dtos.AssetDetails{
+		Asset:   AssetModelToDTO(asset),
+		Members: members,
 	}
 }
 
-func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.UserDTO) dtos.AssetDetailsWithSecretsDTO {
-	return dtos.AssetDetailsWithSecretsDTO{
-		AssetWithSecretsDTO: toDTOWithSecrets(asset),
-		Members:             members,
+func AssetModelToDetailsWithSecretsDTO(asset models.Asset, members []dtos.User) dtos.AssetDetailsWithSecrets {
+	return dtos.AssetDetailsWithSecrets{
+		AssetWithSecrets: toDTOWithSecrets(asset),
+		Members:          members,
 	}
 }
 
-func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
-	return dtos.AssetDTO{
+func getBotUserLinkForExternalProvider(providerID string) *string {
+	userID := os.Getenv("GITLAB_" + strings.ToUpper(providerID) + "_BOTUSERID")
+	baseURL := os.Getenv("GITLAB_" + strings.ToUpper(providerID) + "_BASEURL")
+	if userID != "" && baseURL != "" {
+		link := baseURL + "/-/u/" + userID
+		return &link
+	}
+	return nil
+}
+
+func AssetModelToDTO(asset models.Asset) dtos.Asset {
+	// if its an external provider
+	var botUserLink *string
+	if asset.ExternalEntityProviderID != nil {
+		// we can inspect the env variables to get the bot user link for the external provider
+		botUserLink = getBotUserLinkForExternalProvider(*asset.ExternalEntityProviderID)
+	}
+	return dtos.Asset{
 		ID:                           asset.ID,
 		Name:                         asset.Name,
 		Avatar:                       asset.Avatar,
@@ -59,11 +78,10 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 		SigningPubKey:                asset.SigningPubKey,
 		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
 		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
-		VulnAutoReopenAfterDays:      asset.VulnAutoReopenAfterDays,
 		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
 		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
 		ExternalEntityID:             asset.ExternalEntityID,
-		PipelineLastRun:              asset.PipelineLastRun,
+		ExternalBotUserLink:          botUserLink,
 		RepositoryProvider:           asset.RepositoryProvider,
 		IsPublic:                     asset.IsPublic,
 		ParanoidMode:                 asset.ParanoidMode,
@@ -72,9 +90,9 @@ func AssetModelToDTO(asset models.Asset) dtos.AssetDTO {
 	}
 }
 
-func toDTOWithSecrets(asset models.Asset) dtos.AssetWithSecretsDTO {
-	return dtos.AssetWithSecretsDTO{
-		AssetDTO:      AssetModelToDTO(asset),
+func toDTOWithSecrets(asset models.Asset) dtos.AssetWithSecrets {
+	return dtos.AssetWithSecrets{
+		Asset:         AssetModelToDTO(asset),
 		WebhookSecret: asset.WebhookSecret,
 	}
 }
@@ -227,11 +245,6 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 			asset.WebhookSecret = &webhookUUID
 
 		}
-	}
-
-	if assetPatch.VulnAutoReopenAfterDays != nil {
-		updated = true
-		asset.VulnAutoReopenAfterDays = assetPatch.VulnAutoReopenAfterDays
 	}
 
 	if assetPatch.RepositoryProvider != nil && *assetPatch.RepositoryProvider != "" {

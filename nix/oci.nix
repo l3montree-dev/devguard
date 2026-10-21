@@ -22,39 +22,18 @@ rec {
     trivy = trivyFromSource.package;
   };
 
-  args = {
-    inherit (pkgs)
-      lib
-      buildGoModule
-      fetchFromGitHub
-      runCommand
-      jq
-      ;
-  };
-
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
-  trivyFromSource = import ./trivy.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-    }
-  );
+  trivyFromSource = import ./trivy.nix { inherit pkgs buildGo127Module; };
 
-  craneFromSource = import ./crane.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-      trivy = trivyFromSource.package;
-    }
-  );
-  gitleaksFromSource = import ./gitleaks.nix (
-    args
-    // {
-      inherit (pkgs) installShellFiles;
-      trivy = trivyFromSource.package;
-    }
-  );
+  craneFromSource = import ./crane.nix {
+    inherit pkgs buildGo127Module;
+    trivy = trivyFromSource.package;
+  };
+  gitleaksFromSource = import ./gitleaks.nix {
+    inherit pkgs;
+    trivy = trivyFromSource.package;
+  };
 
   common = import ./common.nix {
     inherit self;
@@ -77,13 +56,10 @@ rec {
     # passed explicitly from flake.nix
     inherit uv2nix pyproject-nix pyproject-build-systems;
   };
-  kratosFromSource = import ./kratos.nix (
-    args
-    // {
-      trivy = trivyFromSource.package;
-      inherit (pkgs) go;
-    }
-  );
+  kratosFromSource = import ./kratos.nix {
+    inherit pkgs;
+    trivy = trivyFromSource.package;
+  };
 
   # Unlike the Go tools above (see gitleaks.nix/trivy.nix/crane.nix, which each
   # own their own supplementary SBOM via nix/sbom-lib.nix), semgrep ships a

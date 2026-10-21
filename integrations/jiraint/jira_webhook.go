@@ -9,10 +9,10 @@ import (
 	"io"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/statemachine"
@@ -46,8 +46,6 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 	var vuln models.Vuln
 	var issueID string
 	var projectID string
-
-	doUpdateArtifactRiskHistory := false
 
 	issueID = event.Issue.ID
 	projectID = event.Issue.Fields.Project.ID
@@ -157,9 +155,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			return err
 		}
 
-		if vulnEvent.Type == dtos.EventTypeAccepted || vulnEvent.Type == dtos.EventTypeFalsePositive || vulnEvent.Type == dtos.EventTypeReopened {
-			doUpdateArtifactRiskHistory = true
-		}
+		events.NotifyVulnEventCreated(context.Background(), i.broker, vuln.GetAssetID(), vulnEvent.Type)
 
 		err = i.UpdateIssue(ctx.Request().Context(), asset, assetVersion.Slug, vuln, &userAgent)
 
@@ -182,7 +178,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(context.Background(), i.broker, vuln.GetAssetID(), vulnEvent.Type)
 		case StatusCategoryToDo, StatusCategoryInProgress:
 			if vuln.GetState() == dtos.VulnStateOpen {
 				return nil
@@ -193,7 +189,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
-			doUpdateArtifactRiskHistory = true
+			events.NotifyVulnEventCreated(context.Background(), i.broker, vuln.GetAssetID(), vulnEvent.Type)
 
 		}
 	case EventIssueDeleted:
@@ -206,15 +202,8 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		if err != nil {
 			slog.Error("could not save vuln and event", "err", err)
 		}
-		doUpdateArtifactRiskHistory = true
+		events.NotifyVulnEventCreated(context.Background(), i.broker, vuln.GetAssetID(), vulnEvent.Type)
 	}
 
-	if doUpdateArtifactRiskHistory {
-		for _, artifact := range vuln.GetArtifacts() {
-			if err := i.statisticsService.UpdateArtifactRiskAggregation(context.Background(), nil, &artifact, vuln.GetAssetID(), time.Now(), time.Now()); err != nil {
-				slog.Error("could not recalculate risk history", "err", err)
-			}
-		}
-	}
 	return nil
 }

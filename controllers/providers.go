@@ -72,7 +72,6 @@ func ProvideDependencyProxyCache() dependencyfirewall.DependencyProxyCache {
 // ProvideMaliciousPackageChecker creates the malicious package checker
 func ProvideMaliciousPackageChecker(
 	db shared.DB,
-	leaderElector shared.LeaderElector,
 ) *vulndb.MaliciousPackageChecker {
 	repository := repositories.NewMaliciousPackageRepository(db)
 	checker, err := vulndb.NewMaliciousPackageChecker(repository)
@@ -138,6 +137,9 @@ var ControllerModule = fx.Options(
 	fx.Provide(dependencyfirewall.NewGoDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewPythonDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewOCIDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewMavenDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewComposerDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewDebDependencyProxyController),
 
 	//Crowdsourced Vexing
 	fx.Provide(NewVexRuleRecommendationController),

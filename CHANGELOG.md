@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.16.1] - 2026-10-08
+
+### Added
+
+- **`externalBotUserLink` on assets** — assets linked to an external GitLab provider now expose a link to that provider's bot user profile (`{baseURL}/-/u/{userID}`) in `AssetDTO`. The link is built from the `GITLAB_{PROVIDER}_BASEURL` and `GITLAB_{PROVIDER}_BOTUSERID` environment variables and is omitted when either is unset
+
+### Fixed
+
+- **Vulnerability database sync no longer gets the database OOM-killed** — `computeDiffFromStage` built its delete/insert diffs with `EXCEPT`, which PostgreSQL plans as a `HashSetOp` that ignores `work_mem` and cannot spill to disk. On the ~17M row `cve_affected_component` table a single diff allocated ~2.4 GB in one backend. The diffs are now `NOT EXISTS` anti joins, which stream over the key indexes or spill in batches, and the staging table is `ANALYZE`d first so the planner picks a good join
+  - `maintenance_work_mem` during index rebuilds lowered from 4 GB to 1 GB, well below the 8 Gi memory limit of the PostgreSQL pod in the Helm chart
+  - A failed import is now reported as `vulndb import failed` instead of `integrity validation failed`, since the error is not always an integrity check
+
+## [v1.16.0] - 2026-10-06
+
+### Added
+
+- **Maven, Composer and Debian dependency proxies** — the dependency firewall now proxies three more ecosystems, available at `/dependency-proxy/maven/*`, `/dependency-proxy/composer/*` and `/dependency-proxy/deb/*` (and under the secret-scoped `/dependency-proxy/{secret}/…` variants). Requests are checked against the malicious-package database and the configured `minReleaseAge`, including on the initial request, and responses are cached
+  - Maven packages and metadata share a single path tree and are served through one route
+  - Debian packages are compared using Debian version semantics and use the `debian` ecosystem name in the frontend
+  - The fake malicious packages used to verify the firewall setup now cover `composer` and `deb`
+- Empty state for repositories when no repository provider is connected
+
+### Changed
+
+- **Faster CVE listing filtered by ecosystem** — the ecosystem filter now goes through a new `cve_ecosystem` materialized view (distinct CVE/ecosystem pairs, about 389k rows instead of 13.7M in `cve_affected_component`) with an index-only prefix scan, instead of joining the full join table on every request.
+- **Malicious-package lookup keeps the case of Maven and Go names** — package names are lowercased for all other ecosystems, but Maven and Go names are case-sensitive and are now matched as given.
+- PostgreSQL container image now ships the tools required to run under the CloudNativePG operator
+- Updated all Go, Nix and Python dependencies;
+
+### Fixed
+
+- **npm tarballs without a known release time are no longer cached** — a response was cached even when its release time could not be determined, so a later `minReleaseAge` check could be evaluated against a zero timestamp
+- Patched a gRPC vulnerability in the bundled Kratos build
+
 ## [v1.15.0] - 2026-09-30
 
 ### Added

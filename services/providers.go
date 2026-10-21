@@ -3,6 +3,7 @@ package services
 import (
 	"net/http"
 
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -16,7 +17,6 @@ var servicesTracer = otel.Tracer("devguard/services")
 // ServiceModule provides all service-layer constructors as their interfaces
 var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(utils.NewFireAndForgetSynchronizer, fx.As(new(utils.FireAndForgetSynchronizer)))),
-	fx.Provide(fx.Annotate(NewDatabaseLeaderElector, fx.As(new(shared.LeaderElector)))),
 	fx.Provide(fx.Annotate(NewConfigService, fx.As(new(shared.ConfigService)))),
 	fx.Provide(fx.Annotate(NewFirstPartyVulnService, fx.As(new(shared.FirstPartyVulnService)))),
 	fx.Provide(fx.Annotate(NewLicenseRiskService, fx.As(new(shared.LicenseRiskService)))),
@@ -45,7 +45,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewGitHubVexFetcher, fx.As(new(shared.GitHubVexFetcher)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(shared.LogService)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(monitoring.AlertLogService)))),
-	fx.Provide(func(db shared.DB) *scan.PurlComparer {
-		return scan.NewPurlComparer(db, nil) // nil to use default cache size
+	fx.Provide(func(db shared.DB, broker events.Broker) *scan.PurlComparer {
+		return scan.NewPurlComparer(db, broker, nil) // nil to use default cache size
 	}),
 )

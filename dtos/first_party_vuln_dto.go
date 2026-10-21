@@ -18,7 +18,7 @@ type SnippetContent struct {
 	Snippet     string `json:"snippet"`
 }
 
-type FirstPartyVulnDTO struct {
+type FirstPartyVuln struct {
 	ID                   uuid.UUID        `json:"id"`
 	ScannerIDs           string           `json:"scannerIds"`
 	Message              *string          `json:"message"`
@@ -44,20 +44,20 @@ type FirstPartyVulnDTO struct {
 	RuleProperties  map[string]any `json:"ruleProperties"`
 }
 
-type DetailedFirstPartyVulnDTO struct {
-	FirstPartyVulnDTO
-	Events []VulnEventDTO `json:"events"`
+type DetailedFirstPartyVuln struct {
+	FirstPartyVuln
+	Events []VulnEvent `json:"events"`
 }
 
-type FirstPartyVulnStatus struct {
-	StatusType              string                      `json:"status"`
+type FirstPartyVulnStatusRequest struct {
+	StatusType              string                      `json:"status" validate:"max=256"`
 	Justification           string                      `json:"justification" validate:"max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-type BatchFirstPartyVulnStatus struct {
+type BatchFirstPartyVulnStatusRequest struct {
 	VulnIDs                 []uuid.UUID                 `json:"vulnIds"`
-	StatusType              string                      `json:"status"`
+	StatusType              string                      `json:"status" validate:"max=256"`
 	Justification           string                      `json:"justification" validate:"max=4000"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 }

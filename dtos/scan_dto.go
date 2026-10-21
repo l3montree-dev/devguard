@@ -15,13 +15,13 @@
 package dtos
 
 type ScanResponse struct {
-	AmountOpened    int                 `json:"amountOpened"`
-	AmountClosed    int                 `json:"amountClosed"`
-	DependencyVulns []DependencyVulnDTO `json:"dependencyVulns"`
+	AmountOpened    int              `json:"amountOpened"`
+	AmountClosed    int              `json:"amountClosed"`
+	DependencyVulns []DependencyVuln `json:"dependencyVulns"`
 }
 
 type FirstPartyScanResponse struct {
-	AmountOpened    int                 `json:"amountOpened"`
-	AmountClosed    int                 `json:"amountClosed"`
-	FirstPartyVulns []FirstPartyVulnDTO `json:"firstPartyVulns"`
+	AmountOpened    int              `json:"amountOpened"`
+	AmountClosed    int              `json:"amountClosed"`
+	FirstPartyVulns []FirstPartyVuln `json:"firstPartyVulns"`
 }

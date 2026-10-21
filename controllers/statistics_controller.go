@@ -68,7 +68,7 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 // @Param artifactName query string false "Restrict results to a specific artifact"
 // @Param start query string true "Start date (YYYY-MM-DD)"
 // @Param end query string true "End date (YYYY-MM-DD)"
-// @Success 200 {array} dtos.RiskHistoryDTO
+// @Success 200 {array} dtos.RiskHistory
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/risk-history/ [get]
 func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
@@ -86,7 +86,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	}
 
 	// convert to dto
-	dtoResults := make([]dtos.RiskHistoryDTO, 0, len(results))
+	dtoResults := make([]dtos.RiskHistory, 0, len(results))
 	for _, r := range results {
 		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryToDTO(r))
 	}
@@ -125,7 +125,7 @@ func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artif
 // @Param artifactName query string false "Restrict results to a specific artifact"
 // @Param start query string true "Start date (YYYY-MM-DD)"
 // @Param end query string true "End date (YYYY-MM-DD)"
-// @Success 200 {array} dtos.RiskHistoryWithVersionDTO
+// @Success 200 {array} dtos.RiskHistoryWithVersion
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/stats/risk-history/ [get]
 func (c *StatisticsController) GetAssetRiskHistory(ctx shared.Context) error {
 	artifact := ctx.QueryParam("artifactName")
@@ -154,7 +154,7 @@ func (c *StatisticsController) GetAssetRiskHistory(ctx shared.Context) error {
 		return ctx.JSON(500, nil)
 	}
 
-	dtoResults := make([]dtos.RiskHistoryWithVersionDTO, 0, len(results))
+	dtoResults := make([]dtos.RiskHistoryWithVersion, 0, len(results))
 	for _, r := range results {
 		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryWithVersionToDTO(r))
 	}
@@ -204,7 +204,7 @@ func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) erro
 // @Param releaseID path string true "Release ID"
 // @Param start query string true "Start date (YYYY-MM-DD)"
 // @Param end query string true "End date (YYYY-MM-DD)"
-// @Success 200 {array} dtos.RiskHistoryDTO
+// @Success 200 {array} dtos.RiskHistory
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/ [get]
 func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	// parse release id from param
@@ -236,7 +236,7 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 	}
 
 	// convert to dto
-	dtoResults := make([]dtos.RiskHistoryDTO, 0, len(res))
+	dtoResults := make([]dtos.RiskHistory, 0, len(res))
 	for _, r := range res {
 		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryToDTO(r))
 	}

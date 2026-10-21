@@ -38,7 +38,7 @@ import (
 const goProxyURL = "https://proxy.golang.org"
 
 var (
-	goProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?go(?:/|$)`)
+	goProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/go(?:/|$)`)
 	goPathRe        = regexp.MustCompile(`^([^@]+)(?:@v/([^/]+))?`)
 )
 
@@ -123,10 +123,8 @@ func (goEcosystem) writeResponse(c shared.Context, data []byte, path string, cac
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Success 200 {file} binary
-// @Router /dependency-proxy/go [get]
-// @Router /dependency-proxy/go/{path} [get]
 // @Router /dependency-proxy/{secret}/go [get]
 // @Router /dependency-proxy/{secret}/go/{path} [get]
 func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
@@ -194,7 +192,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 	}
 
-	if d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
+	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
 		if entry, ok := d.cache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
 			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {

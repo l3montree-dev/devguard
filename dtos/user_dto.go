@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package dtos
 
-type UserDTO struct {
+type User struct {
 	Name      string  `json:"name"`
 	ID        string  `json:"id"`
 	AvatarURL *string `json:"avatarUrl"`

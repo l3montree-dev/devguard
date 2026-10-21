@@ -23,7 +23,7 @@ const (
 	InvitationStatusExpired InvitationStatus = "expired"
 )
 
-type InvitedUserDTO struct {
+type InvitedUser struct {
 	ID               string           `json:"id"`
 	Email            string           `json:"email"`
 	ExpiryDate       time.Time        `json:"expiryDate"`

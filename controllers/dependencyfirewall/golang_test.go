@@ -18,17 +18,12 @@ package dependencyfirewall
 import "testing"
 
 func TestGoEcosystem(t *testing.T) {
-	t.Run("trimPrefix with and without secret", func(t *testing.T) {
+	t.Run("trimPrefix", func(t *testing.T) {
 		cases := []struct {
 			name     string
 			path     string
 			expected string
 		}{
-			{
-				name:     "without secret",
-				path:     "/api/v1/dependency-proxy/go/github.com/foo/bar",
-				expected: "github.com/foo/bar",
-			},
 			{
 				name:     "with secret",
 				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/go/github.com/foo/bar",
@@ -36,7 +31,7 @@ func TestGoEcosystem(t *testing.T) {
 			},
 			{
 				name:     "trailing slash is trimmed",
-				path:     "/api/v1/dependency-proxy/go/github.com/foo/bar/",
+				path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/go/github.com/foo/bar/",
 				expected: "github.com/foo/bar",
 			},
 		}

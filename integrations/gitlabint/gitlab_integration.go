@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 
 	"github.com/l3montree-dev/devguard/shared"
@@ -110,7 +111,7 @@ type GitlabIntegration struct {
 	componentRepository         shared.ComponentRepository
 	casbinRBACProvider          shared.RBACProvider
 	licenseRiskRepository       shared.LicenseRiskRepository
-	statisticsService           shared.StatisticsService
+	broker                      events.Broker
 	utils.FireAndForgetSynchronizer
 }
 
@@ -137,7 +138,7 @@ func NewGitlabIntegration(
 	gitlabOauth2TokenRepository shared.GitLabOauth2TokenRepository,
 	licenseRiskRepository shared.LicenseRiskRepository,
 	orgRepository shared.OrganizationRepository,
-	statisticsService shared.StatisticsService,
+	broker events.Broker,
 	synchronizer utils.FireAndForgetSynchronizer,
 ) *GitlabIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -163,7 +164,7 @@ func NewGitlabIntegration(
 		casbinRBACProvider:          casbinRBACProvider,
 		clientFactory:               clientFactory,
 		licenseRiskRepository:       licenseRiskRepository,
-		statisticsService:           statisticsService,
+		broker:                      broker,
 		FireAndForgetSynchronizer:   synchronizer,
 	}
 }
@@ -1143,8 +1144,8 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client shar
 	return err
 }
 
-func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.UserDTO {
-	return []dtos.UserDTO{}
+func (g *GitlabIntegration) GetUsers(org models.Org) []dtos.User {
+	return []dtos.User{}
 }
 
 func (g *GitlabIntegration) GetID() shared.IntegrationID {
@@ -1230,7 +1231,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 	}
 
 	// return all projects
-	return ctx.JSON(200, dtos.GitlabIntegrationDTO{
+	return ctx.JSON(200, dtos.GitlabIntegration{
 		ID:              integration.ID.String(),
 		URL:             integration.GitLabURL,
 		Name:            integration.Name,

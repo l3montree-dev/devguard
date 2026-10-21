@@ -138,8 +138,8 @@ func (g *projectRepository) Update(ctx context.Context, tx *gorm.DB, project *mo
 	return g.GetDB(ctx, tx).Save(project).Error
 }
 
-func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
-	var results []dtos.ProjectAssetDTO
+func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Project], error) {
+	var results []dtos.ProjectAsset
 
 	assetParams := []any{
 		"%" + search + "%",
@@ -165,14 +165,14 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 	searchResultsCTE := `
 WITH RECURSIVE
 searchResults AS (
-    SELECT 'asset'::text AS resource_type, a.id, a.name, a.slug, a.description,
+    SELECT 'asset'::text AS resource_type, a.avatar, a.id, a.name, a.slug, a.description,
            a.project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id,
            a.is_public, a.state, a.created_at, a.updated_at
     FROM assets a
     INNER JOIN projects p ON p.id = a.project_id
     WHERE a.name ILIKE ? AND (a.id = ANY(?) OR (a.is_public = true AND p.organization_id = ?))
     UNION
-    SELECT 'project'::text AS resource_type, p.id, p.name, p.slug, p.description,
+    SELECT 'project'::text AS resource_type, p.avatar, p.id, p.name, p.slug, p.description,
            NULL::uuid AS project_id, p.parent_id, p.organization_id,
            p.is_public, p.state, p.created_at, p.updated_at
     FROM projects p
@@ -186,7 +186,7 @@ searchResults AS (
 
 	var count int64
 	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", countParams...).Scan(&count).Error; err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, err
+		return shared.Paged[dtos.Project]{}, err
 	}
 
 	orderClause := "name ASC"
@@ -221,11 +221,11 @@ project_chain AS (
     FROM projects pr
     INNER JOIN project_chain pc ON pr.id = pc.parent_id` + projectChainStopCond + `
 )
-SELECT resource_type, id, name, slug, description, project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM paginatedResults
+SELECT resource_type, avatar, id, name, slug, description, project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM paginatedResults
 UNION
-SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM asset_project_chain
+SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM asset_project_chain
 UNION
-SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
+SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
 
 	dataParams := make([]any, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
 	dataParams = append(dataParams, assetParams...)
@@ -235,16 +235,16 @@ SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid
 	dataParams = append(dataParams, parentStopParam...)
 
 	if err := g.GetDB(ctx, tx).Raw(dataSQL, dataParams...).Scan(&results).Error; err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, err
+		return shared.Paged[dtos.Project]{}, err
 	}
 
 	return shared.NewPaged(pageInfo, count, transformToProjectDTOs(results)), nil
 }
 
-func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
-	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
-	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
-	var rootProjects []dtos.ProjectAssetDTO
+func transformToProjectDTOs(results []dtos.ProjectAsset) []dtos.Project {
+	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAsset{}
+	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAsset{}
+	var rootProjects []dtos.ProjectAsset
 
 	for _, r := range results {
 		if r.ResourceType == "asset" {
@@ -259,9 +259,9 @@ func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
 	}
 
 	// recursively build SubGroupsAndAssets for a given project ID
-	var buildChildren func(projectID uuid.UUID) []dtos.ProjectAssetDTO
-	buildChildren = func(projectID uuid.UUID) []dtos.ProjectAssetDTO {
-		var children []dtos.ProjectAssetDTO
+	var buildChildren func(projectID uuid.UUID) []dtos.ProjectAsset
+	buildChildren = func(projectID uuid.UUID) []dtos.ProjectAsset {
+		var children []dtos.ProjectAsset
 		for _, sub := range subprojectsByParentID[projectID] {
 			sub.SubGroupsAndAssets = buildChildren(sub.ID)
 			children = append(children, sub)
@@ -270,9 +270,10 @@ func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
 		return children
 	}
 
-	rootDTOs := make([]dtos.ProjectDTO, 0, len(rootProjects))
+	rootDTOs := make([]dtos.Project, 0, len(rootProjects))
 	for _, r := range rootProjects {
-		rootDTOs = append(rootDTOs, dtos.ProjectDTO{
+		rootDTOs = append(rootDTOs, dtos.Project{
+			Avatar:             r.Avatar,
 			ID:                 r.ID,
 			Name:               r.Name,
 			Slug:               r.Slug,
@@ -296,9 +297,9 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	search string,
 	filter []shared.FilterQuery,
 	sort []shared.SortQuery,
-) (shared.Paged[dtos.ProjectAssetDTO], error) {
+) (shared.Paged[dtos.ProjectAsset], error) {
 
-	var results []dtos.ProjectAssetDTO
+	var results []dtos.ProjectAsset
 	var q *gorm.DB
 
 	assetQuery := g.GetDB(ctx, tx).Model(&models.Asset{}).
@@ -345,7 +346,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 
 	// Single query: window function avoids a separate COUNT(*) round trip.
 	type resultRow struct {
-		dtos.ProjectAssetDTO
+		dtos.ProjectAsset
 		TotalCount int64
 	}
 	var rows []resultRow
@@ -355,20 +356,20 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+		return shared.Paged[dtos.ProjectAsset]{}, err
 	}
 
 	var count int64
-	results = make([]dtos.ProjectAssetDTO, len(rows))
+	results = make([]dtos.ProjectAsset, len(rows))
 	for i, r := range rows {
-		results[i] = r.ProjectAssetDTO
+		results[i] = r.ProjectAsset
 		count = r.TotalCount
 	}
 
 	// if we have no rows the window functions does not work, so we fallback to a traditional count
 	if len(rows) == 0 {
 		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
-			return shared.Paged[dtos.ProjectAssetDTO]{}, err
+			return shared.Paged[dtos.ProjectAsset]{}, err
 		}
 	}
 

@@ -68,7 +68,6 @@ func NewAssetVersionRouter(
 
 	assetVersionRouter.POST("/artifacts/", artifactController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
-	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetVersionRouter.POST("/make-default/", assetVersionController.MakeDefault, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetVersionRouter.DELETE("/events/:eventID/", vulnEventController.DeleteEventByID, middlewares.EventMiddleware(vulnEventRepository), middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))

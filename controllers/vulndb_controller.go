@@ -118,9 +118,9 @@ func (c *VulnDBController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch advisories for cve").WithInternal(err)
 	}
 
-	relatedDTOs := map[dtos.RelationshipType][]dtos.CVEDTO{}
+	relatedDTOs := map[dtos.RelationshipType][]dtos.CVE{}
 	for relation, relatedCVEs := range related {
-		relatedDTOs[relation] = utils.Map(relatedCVEs, func(cve models.CVE) dtos.CVEDTO {
+		relatedDTOs[relation] = utils.Map(relatedCVEs, func(cve models.CVE) dtos.CVE {
 			return transformer.CVEToDTO(cve)
 		})
 	}
@@ -131,15 +131,15 @@ func (c *VulnDBController) Read(ctx shared.Context) error {
 	cve.Risk = risk
 	cve.Vector = vector
 
-	return ctx.JSON(200, dtos.CVEWithRelationsDTO{CVEDTO: transformer.CVEToDTO(cve), Related: relatedDTOs})
+	return ctx.JSON(200, dtos.CVEWithRelations{CVE: transformer.CVEToDTO(cve), Related: relatedDTOs})
 }
 
 type PURLInspectResponse struct {
 	PURL               string                      `json:"purl"`
 	MatchContext       *normalize.PurlMatchContext `json:"matchContext"`
-	Component          *dtos.ComponentDTO          `json:"component"`
-	AffectedComponents []dtos.AffectedComponentDTO `json:"affectedComponents"`
-	Vulns              []dtos.VulnInPackageDTO     `json:"vulns"`
+	Component          *dtos.Component             `json:"component"`
+	AffectedComponents []dtos.AffectedComponent    `json:"affectedComponents"`
+	Vulns              []dtos.VulnInPackage        `json:"vulns"`
 	MaliciousPackage   *dtos.OSV                   `json:"maliciousPackage"`
 }
 
@@ -211,7 +211,7 @@ func (c *VulnDBController) PURLInspect(ctx shared.Context) error {
 		break
 	}
 
-	var componentDTO *dtos.ComponentDTO
+	var componentDTO *dtos.Component
 	comp := models.Component{ID: purlString}
 	if err := c.componentRepository.GetDB(ctx.Request().Context(), nil).Preload("ComponentProject").First(&comp, "id = ?", purlString).Error; err != nil { // nosemgrep: bola-gorm-first-by-id-only -- component ID is a PURL (public package identifier), not a tenant-scoped UUID; the component table has no tenant column
 		// Component not in DB yet — fetch license and project info on-demand and create it
