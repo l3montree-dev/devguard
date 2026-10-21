@@ -1,11 +1,15 @@
 package commands
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestHasVersionedDescendant(t *testing.T) {
@@ -69,7 +73,7 @@ func TestAddSupplementaryUpstreamPURLManually(t *testing.T) {
 	t.Run("no-op when no upstream purls are configured", func(t *testing.T) {
 		config.RuntimeBaseConfig.UpstreamPURL, config.RuntimeBaseConfig.UpstreamVCS = nil, nil
 		bom := newUpstreamTestBOM()
-		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom))
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom, mocks.NewOpenSourceInsightService(t)))
 		assert.Empty(t, *bom.Components)
 	})
 
@@ -77,7 +81,9 @@ func TestAddSupplementaryUpstreamPURLManually(t *testing.T) {
 		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:golang/example.org/a@v1.0.0", "pkg:npm/b@2.0.0"}
 		config.RuntimeBaseConfig.UpstreamVCS = nil
 		bom := newUpstreamTestBOM()
-		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom))
+		svc := mocks.NewOpenSourceInsightService(t)
+		svc.EXPECT().GetVersion(mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{}, nil).Times(2)
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom, svc))
 
 		assert.Len(t, *bom.Components, 2)
 		assert.Equal(t, "pkg:golang/example.org/a@v1.0.0", (*bom.Components)[0].PackageURL)
@@ -91,7 +97,9 @@ func TestAddSupplementaryUpstreamPURLManually(t *testing.T) {
 		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:npm/a@1.0.0", "pkg:npm/b@2.0.0"}
 		config.RuntimeBaseConfig.UpstreamVCS = []string{"git:github.com/org/a.git@main"}
 		bom := newUpstreamTestBOM()
-		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom))
+		svc := mocks.NewOpenSourceInsightService(t)
+		svc.EXPECT().GetVersion(mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{}, nil).Times(2)
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom, svc))
 
 		assert.Len(t, *bom.Components, 2)
 		first := (*bom.Components)[0]
@@ -104,12 +112,24 @@ func TestAddSupplementaryUpstreamPURLManually(t *testing.T) {
 	t.Run("errors on a purl without a version", func(t *testing.T) {
 		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:npm/a"}
 		config.RuntimeBaseConfig.UpstreamVCS = nil
-		assert.Error(t, addSupplementaryUpstreamPURLManually(newUpstreamTestBOM()))
+		assert.Error(t, addSupplementaryUpstreamPURLManually(newUpstreamTestBOM(), mocks.NewOpenSourceInsightService(t)))
 	})
 
 	t.Run("errors on an invalid purl", func(t *testing.T) {
 		config.RuntimeBaseConfig.UpstreamPURL = []string{"not-a-purl"}
 		config.RuntimeBaseConfig.UpstreamVCS = nil
-		assert.Error(t, addSupplementaryUpstreamPURLManually(newUpstreamTestBOM()))
+		assert.Error(t, addSupplementaryUpstreamPURLManually(newUpstreamTestBOM(), mocks.NewOpenSourceInsightService(t)))
+	})
+
+	t.Run("still adds the component when the lookup fails", func(t *testing.T) {
+		config.RuntimeBaseConfig.UpstreamPURL = []string{"pkg:npm/does-not-exist@1.0.0"}
+		config.RuntimeBaseConfig.UpstreamVCS = nil
+		bom := newUpstreamTestBOM()
+		svc := mocks.NewOpenSourceInsightService(t)
+		svc.EXPECT().GetVersion(mock.Anything, mock.Anything).Return(dtos.OpenSourceInsightsVersionResponse{}, errors.New("404 Not Found")).Once()
+		assert.NoError(t, addSupplementaryUpstreamPURLManually(bom, svc))
+
+		assert.Len(t, *bom.Components, 1)
+		assert.Equal(t, "pkg:npm/does-not-exist@1.0.0", (*bom.Components)[0].PackageURL)
 	})
 }
