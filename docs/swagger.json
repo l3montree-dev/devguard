@@ -5946,9 +5946,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "projectId": {
                         "type": "string"
                     },
@@ -5982,9 +5979,6 @@
                     },
                     "state": {
                         "type": "string"
-                    },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -6011,7 +6005,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "projectId",
                     "refs",
                     "repositoryId",
@@ -6021,8 +6014,7 @@
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
-                    "state",
-                    "vulnAutoReopenAfterDays"
+                    "state"
                 ],
                 "type": "object"
             },
@@ -6209,9 +6201,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "projectId": {
                         "type": "string"
                     },
@@ -6245,9 +6234,6 @@
                     },
                     "state": {
                         "type": "string"
-                    },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
                     }
                 },
                 "required": [
@@ -6275,7 +6261,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "projectId",
                     "refs",
                     "repositoryId",
@@ -6285,8 +6270,7 @@
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
-                    "state",
-                    "vulnAutoReopenAfterDays"
+                    "state"
                 ],
                 "type": "object"
             },
@@ -6368,9 +6352,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "projectId": {
                         "type": "string"
                     },
@@ -6405,9 +6386,6 @@
                     "state": {
                         "type": "string"
                     },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
-                    },
                     "webhookSecret": {
                         "type": "string"
                     }
@@ -6437,7 +6415,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "projectId",
                     "refs",
                     "repositoryId",
@@ -6448,7 +6425,6 @@
                     "signingPubKey",
                     "slug",
                     "state",
-                    "vulnAutoReopenAfterDays",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -6576,9 +6552,6 @@
                     "sharesInformation": {
                         "type": "boolean"
                     },
-                    "vulnAutoReopenAfterDays": {
-                        "type": "integer"
-                    },
                     "webhookSecret": {
                         "maxLength": 1024,
                         "type": "string"
@@ -6609,7 +6582,6 @@
                     "repositoryProvider",
                     "riskAutomaticTicketThreshold",
                     "sharesInformation",
-                    "vulnAutoReopenAfterDays",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -12758,9 +12730,6 @@
                     "paranoidMode": {
                         "type": "boolean"
                     },
-                    "pipelineLastRun": {
-                        "type": "string"
-                    },
                     "project": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project"
                     },
@@ -12805,10 +12774,6 @@
                     "updatedAt": {
                         "type": "string"
                     },
-                    "vulnAutoReopenAfterDays": {
-                        "description": "Auto-reopen configuration - number of days after which closed/accepted vulnerabilities should be reopened",
-                        "type": "integer"
-                    },
                     "webhookSecret": {
                         "type": "string"
                     }
@@ -12838,7 +12803,6 @@
                     "modifiedUserInteraction",
                     "name",
                     "paranoidMode",
-                    "pipelineLastRun",
                     "project",
                     "projectId",
                     "refs",
@@ -12852,7 +12816,6 @@
                     "state",
                     "type",
                     "updatedAt",
-                    "vulnAutoReopenAfterDays",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -14735,24 +14698,16 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14778,24 +14733,16 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -15925,607 +15872,6 @@
                 ]
             }
         },
-        "/dependency-proxy/composer/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Composer repository request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/deb/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Debian repository request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/go": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Go module requests",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/go/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Go module requests",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/maven/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy Maven repository request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/npm/-/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy npm registry API request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            },
-            "post": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy npm registry API request",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/npm/{package}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name",
-                        "in": "path",
-                        "name": "package",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm scope",
-                        "in": "path",
-                        "name": "scope",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name (scoped)",
-                        "in": "path",
-                        "name": "name",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy npm package metadata",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/npm/{package}/-/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name",
-                        "in": "path",
-                        "name": "package",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm scope",
-                        "in": "path",
-                        "name": "scope",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name (scoped)",
-                        "in": "path",
-                        "name": "name",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy npm tarball download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/npm/{scope}/{name}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name",
-                        "in": "path",
-                        "name": "package",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm scope",
-                        "in": "path",
-                        "name": "scope",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name (scoped)",
-                        "in": "path",
-                        "name": "name",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy npm package metadata",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/npm/{scope}/{name}/-/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name",
-                        "in": "path",
-                        "name": "package",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm scope",
-                        "in": "path",
-                        "name": "scope",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "npm package name (scoped)",
-                        "in": "path",
-                        "name": "name",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy npm tarball download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/pypi/packages/{path}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy PyPI package download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/dependency-proxy/pypi/simple/{package}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "PyPI package name",
-                        "in": "path",
-                        "name": "package",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "description": "HTML simple index"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy PyPI simple index metadata",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
         "/dependency-proxy/{secret}/composer/{path}": {
             "get": {
                 "parameters": [
@@ -16533,6 +15879,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16571,6 +15918,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16609,6 +15957,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16647,6 +15996,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16685,6 +16035,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16723,6 +16074,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16760,6 +16112,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16799,6 +16152,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16862,6 +16216,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16924,6 +16279,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -16987,6 +16343,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -17049,6 +16406,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -17087,6 +16445,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -25278,83 +24637,6 @@
                 ]
             }
         },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses/refresh/": {
-            "post": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset version slug",
-                        "in": "path",
-                        "name": "assetVersionSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Artifact name",
-                        "in": "query",
-                        "name": "artifactName",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Refetch license information for all components",
-                "tags": [
-                    "Asset Versions"
-                ]
-            }
-        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-graph/": {
             "get": {
                 "parameters": [
@@ -25605,87 +24887,6 @@
                     }
                 ],
                 "summary": "Batch create vulnerability events",
-                "tags": [
-                    "Vulnerabilities"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/sync": {
-            "post": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset slug",
-                        "in": "path",
-                        "name": "assetSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Asset version slug",
-                        "in": "path",
-                        "name": "assetVersionSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "text/plain": {
-                            "schema": {
-                                "title": "body",
-                                "type": "object"
-                            }
-                        }
-                    },
-                    "description": "Request body",
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Sync dependency vulnerabilities with third party integrations",
                 "tags": [
                     "Vulnerabilities"
                 ]
@@ -32923,864 +32124,6 @@
                 ]
             }
         },
-        "/v2/{registry}/{image}/blobs/{digest}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "blob digest",
-                        "in": "path",
-                        "name": "digest",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image blob download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            },
-            "head": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "blob digest",
-                        "in": "path",
-                        "name": "digest",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image blob download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{image}/manifests/{reference}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "tag or digest",
-                        "in": "path",
-                        "name": "reference",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image manifest fetch",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            },
-            "head": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "tag or digest",
-                        "in": "path",
-                        "name": "reference",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image manifest fetch",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{image}/referrers/{digest}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "subject digest",
-                        "in": "path",
-                        "name": "digest",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image referrers list",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{image}/tags/list": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image tags list",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{namespace}/{image}/blobs/{digest}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "blob digest",
-                        "in": "path",
-                        "name": "digest",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image blob download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            },
-            "head": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "blob digest",
-                        "in": "path",
-                        "name": "digest",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "file"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image blob download",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{namespace}/{image}/manifests/{reference}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "tag or digest",
-                        "in": "path",
-                        "name": "reference",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image manifest fetch",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            },
-            "head": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "tag or digest",
-                        "in": "path",
-                        "name": "reference",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image manifest fetch",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{namespace}/{image}/referrers/{digest}": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "subject digest",
-                        "in": "path",
-                        "name": "digest",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image referrers list",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
-        "/v2/{registry}/{namespace}/{image}/tags/list": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "dependency proxy secret",
-                        "in": "path",
-                        "name": "secret",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "registry hostname",
-                        "in": "path",
-                        "name": "registry",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image namespace",
-                        "in": "path",
-                        "name": "namespace",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "image name",
-                        "in": "path",
-                        "name": "image",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "additionalProperties": {},
-                                    "type": "object"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Proxy OCI image tags list",
-                "tags": [
-                    "Dependency Firewall"
-                ]
-            }
-        },
         "/v2/{secret}/{registry}/{namespace}/{image}/blobs/{digest}": {
             "get": {
                 "parameters": [
@@ -33788,6 +32131,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -33859,6 +32203,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -33932,6 +32277,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34004,6 +32350,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34078,6 +32425,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34152,6 +32500,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34217,6 +32566,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34288,6 +32638,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34361,6 +32712,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34433,6 +32785,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34507,6 +32860,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -34581,6 +32935,7 @@
                         "description": "dependency proxy secret",
                         "in": "path",
                         "name": "secret",
+                        "required": true,
                         "schema": {
                             "type": "string"
                         }

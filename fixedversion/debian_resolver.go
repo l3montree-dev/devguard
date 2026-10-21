@@ -22,12 +22,15 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/ulikunitz/xz"
+	"golang.org/x/sync/singleflight"
 	"pault.ag/go/debian/control"
 	"pault.ag/go/debian/dependency"
 	"pault.ag/go/debian/version"
@@ -133,9 +136,30 @@ func (idx *packageIndex) lookupDepToken(e debianEntry, pkgName string) (string, 
 	return "", false
 }
 
+const (
+	packageIndexTTL = 12 * time.Hour
+	// a failed download is not retried for every vuln - each attempt might take up to the client timeout
+	packageIndexRetryAfter = 5 * time.Minute
+	// Packages.xz of debian main is around 10MB - the limit only guards against unexpected responses
+	maxPackagesXZSize = 100 << 20
+)
+
+// Packages.xz is around 10MB and deb.debian.org is not always fast - the default egress timeout of 30s is not enough,
+// especially if several suites and archs are downloaded at the same time
+var packagesXZClient = utils.NewEgressClient(5 * time.Minute)
+
+type packageIndexFailure struct {
+	err error
+	at  time.Time
+}
+
 type DebianResolver struct {
+	mu         sync.RWMutex
 	index      map[distroArch]*packageIndex
 	timestamps map[distroArch]time.Time
+	failures   map[distroArch]packageIndexFailure
+	// concurrent pipeline runs share a single download per suite and arch
+	inflight singleflight.Group
 }
 
 var distroToSuite = map[string]string{
@@ -152,22 +176,57 @@ func NewDebianResolver() *DebianResolver {
 	d := DebianResolver{
 		index:      make(map[distroArch]*packageIndex),
 		timestamps: make(map[distroArch]time.Time),
+		failures:   make(map[distroArch]packageIndexFailure),
 	}
 	return &d
 }
 
 func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error) {
 	key := distroArch{suite, arch}
-	if idx, exists := d.index[key]; exists {
-		// check if older than 12h
-		lastTime := d.timestamps[key]
-		if time.Since(lastTime) < 12*time.Hour {
+
+	d.mu.RLock()
+	idx, exists := d.index[key]
+	lastTime := d.timestamps[key]
+	failure, failed := d.failures[key]
+	d.mu.RUnlock()
+
+	if exists && time.Since(lastTime) < packageIndexTTL {
+		return idx, nil
+	}
+	if failed && time.Since(failure.at) < packageIndexRetryAfter {
+		if exists {
+			// a stale index is better than none
 			return idx, nil
 		}
+		return nil, failure.err
 	}
 
+	res, err, _ := d.inflight.Do(suite+"/"+arch, func() (any, error) {
+		idx, err := fetchPackageIndex(suite, arch)
+
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		if err != nil {
+			d.failures[key] = packageIndexFailure{err: err, at: time.Now()}
+			return nil, err
+		}
+		d.index[key] = idx
+		d.timestamps[key] = time.Now()
+		delete(d.failures, key)
+		return idx, nil
+	})
+	if err != nil {
+		if exists {
+			return idx, nil
+		}
+		return nil, err
+	}
+	return res.(*packageIndex), nil
+}
+
+func fetchPackageIndex(suite, arch string) (*packageIndex, error) {
 	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
-	resp, err := utils.EgressClient.Get(url)
+	resp, err := packagesXZClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Packages.xz: %w", err)
 	}
@@ -177,7 +236,14 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 		return nil, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
 	}
 
-	xzReader, err := xz.NewReader(resp.Body)
+	// read the whole file before decompressing - the client timeout covers reading the body,
+	// decompressing and parsing while streaming takes longer than that
+	compressed, err := io.ReadAll(io.LimitReader(resp.Body, maxPackagesXZSize))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Packages.xz: %w", err)
+	}
+
+	xzReader, err := xz.NewReader(bytes.NewReader(compressed))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create xz reader: %w", err)
 	}
@@ -191,8 +257,6 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to build package index: %w", err)
 	}
-	d.index[key] = idx
-	d.timestamps[key] = time.Now()
 	return idx, nil
 }
 
@@ -313,7 +377,7 @@ func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite,
 	distro := purl.Qualifiers.Map()["distro"]
 
 	if arch == "" {
-		return "", "", fmt.Errorf("missing required 'arch' qualifier in PURL: %s", purl.String())
+		return "", "", fmt.Errorf("%w: missing required 'arch' qualifier in PURL: %s", shared.ErrFixedVersionResolutionUnsupported, purl.String())
 	}
 	if mappedSuite, ok := distroToSuite[distro]; ok {
 		suite = mappedSuite
@@ -328,7 +392,7 @@ func (d *DebianResolver) extractSuiteAndArch(purl packageurl.PackageURL) (suite,
 	}
 
 	if suite == "" {
-		return "", "", fmt.Errorf("unknown distro qualifier '%s' in PURL: %s", distro, purl.String())
+		return "", "", fmt.Errorf("%w: unknown distro qualifier '%s' in PURL: %s", shared.ErrFixedVersionResolutionUnsupported, distro, purl.String())
 	}
 
 	return suite, arch, nil
@@ -393,7 +457,7 @@ func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string
 
 	entries := idx.findByName(pkgName)
 	if len(entries) == 0 {
-		return DebianResponse{}, fmt.Errorf("package %s not found in suite %s for arch %s", pkgName, suite, arch)
+		return DebianResponse{}, fmt.Errorf("%w: package %s not found in suite %s for arch %s", shared.ErrFixedVersionResolutionUnsupported, pkgName, suite, arch)
 	}
 
 	for _, e := range entries {
@@ -410,7 +474,7 @@ func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string
 
 	if pkgVersion != "" {
 		if !targetFound {
-			return DebianResponse{}, fmt.Errorf("package %s@%s not found in %s", pkgName, pkgVersion, "suite")
+			return DebianResponse{}, fmt.Errorf("%w: package %s@%s not found in suite %s", shared.ErrFixedVersionResolutionUnsupported, pkgName, pkgVersion, suite)
 		}
 		return DebianResponse{
 			PackageName: pkgName,
@@ -421,7 +485,7 @@ func (d *DebianResolver) parseParagraphs(pkgName, pkgVersion, suite, arch string
 	}
 
 	if len(allVersions) == 0 {
-		return DebianResponse{}, fmt.Errorf("package %s not found in %s", pkgName, "suite")
+		return DebianResponse{}, fmt.Errorf("%w: package %s not found in suite %s", shared.ErrFixedVersionResolutionUnsupported, pkgName, suite)
 	}
 
 	return DebianResponse{
@@ -478,12 +542,12 @@ func lookupDependency(depends, pkgName string) (string, bool) {
 // GetUpgradeCandidates returns newer versions than currentVersion (upgrade candidates)
 func (d *DebianResolver) GetUpgradeCandidates(allVersionsMeta DebianResponse, currentVersion string) ([]string, error) {
 	if len(allVersionsMeta.Versions) == 0 {
-		return nil, fmt.Errorf("no versions available")
+		return nil, fmt.Errorf("%w: no versions available", shared.ErrNoFixedVersionAvailable)
 	}
 
 	currentVer, err := version.Parse(currentVersion)
 	if err != nil {
-		return nil, fmt.Errorf("invalid current version '%s': %w", currentVersion, err)
+		return nil, fmt.Errorf("%w: invalid current version '%s': %w", shared.ErrFixedVersionResolutionUnsupported, currentVersion, err)
 	}
 
 	var recommended []string
@@ -539,18 +603,18 @@ func (d *DebianResolver) ResolveBestVersion(allVersionsMeta DebianResponse, vers
 		if len(allVersionsMeta.Versions) > 0 {
 			return allVersionsMeta.Versions[0], nil
 		}
-		return "", fmt.Errorf("no versions available")
+		return "", fmt.Errorf("%w: no versions available", shared.ErrNoFixedVersionAvailable)
 	}
 
 	// Parse constraint: ">> 1.2.3", ">= 1.2.3", "<< 2.0", "= 1.2.3", etc.
 	operator, constraintVer, err := parseDebianConstraint(constraint)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse constraint '%s': %w", constraint, err)
+		return "", fmt.Errorf("%w: failed to parse constraint '%s': %w", shared.ErrFixedVersionResolutionUnsupported, constraint, err)
 	}
 
 	targetVer, err := version.Parse(constraintVer)
 	if err != nil {
-		return "", fmt.Errorf("invalid constraint version '%s': %w", constraintVer, err)
+		return "", fmt.Errorf("%w: invalid constraint version '%s': %w", shared.ErrFixedVersionResolutionUnsupported, constraintVer, err)
 	}
 
 	// filter
@@ -583,7 +647,7 @@ func (d *DebianResolver) ResolveBestVersion(allVersionsMeta DebianResponse, vers
 	}
 
 	if len(candidates) == 0 {
-		return "", fmt.Errorf("no version matches constraint '%s'", constraint)
+		return "", fmt.Errorf("%w: no version matches constraint '%s'", shared.ErrNoFixedVersionAvailable, constraint)
 	}
 
 	type parsedVer struct {

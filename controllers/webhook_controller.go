@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -359,6 +360,10 @@ func (w *WebhookController) Test(ctx shared.Context) error {
 }
 
 func (w *WebhookController) HandleEvent(ctx context.Context, event any, userAgent *string) error {
+	if os.Getenv("DISABLE_WEBHOOKS") == "true" {
+		slog.Info("webhook sending is disabled via DISABLE_WEBHOOKS environment variable")
+		return nil
+	}
 
 	switch event := event.(type) {
 	case shared.SBOMCreatedEvent:

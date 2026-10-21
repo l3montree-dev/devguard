@@ -17,6 +17,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"iter"
 	"net/http"
 	"time"
@@ -49,19 +50,24 @@ type DaemonRunner interface {
 	RunVEXRuleRecommendationDaemon(ctx context.Context) error
 	CollectSBOMGarbage(ctx context.Context) error
 	CollectExternalEntityGarbage(ctx context.Context) error
-	RunScanDaemon(ctx context.Context) error
+	ScanAllAssets(ctx context.Context) error
 
-	Start(ctx context.Context)
+	RegisterJobs(schedule bool) error
 	StartBenchmarkJobs(ctx context.Context, stages []string)
 }
+
+// Known outcomes of ResolveFixedVersions - every other error is an actual failure (network, decoding, ...)
+var (
+	// ErrNoFixedVersionAvailable - the path was analyzed, but no upgrade of the direct dependency fixes the vulnerability
+	ErrNoFixedVersionAvailable = errors.New("no fixed version available")
+	// ErrFixedVersionResolutionUnsupported - the path cannot be analyzed, e.g. unsupported ecosystem or unparsable versions
+	ErrFixedVersionResolutionUnsupported = errors.New("fixed version resolution unsupported")
+)
 
 type FixedVersionResolver interface {
 	ResolveFixedVersions(path []packageurl.PackageURL, fixedVersion string) (string, error)
 }
 
-type LeaderElector interface {
-	IsLeader() bool
-}
 type ReleaseService interface {
 	ListByProject(ctx context.Context, projectID uuid.UUID) ([]models.Release, error)
 	ListByProjectPaged(ctx context.Context, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)
@@ -558,8 +564,9 @@ type ScanService interface {
 	HandleScanResult(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	HandleScanResultForVulns(ctx context.Context, tx DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)
 	HandleFirstPartyVulnResult(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan sarif.SarifSchema210Json, scannerID string, userID string, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
+	// the upstream syncs return the vulns their scan opened
 	SyncArtifactUpstreamSBOMSources(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (normalize.MerkleForest, []models.DependencyVuln, error)
-	SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (bool, error)
+	SyncArtifactUpstreamSBOMSourcesIfChanged(ctx context.Context, tx DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, userID string, userAgent *string) (rescanned bool, opened []models.DependencyVuln, err error)
 	VexRulesFromDocument([]byte, string) ([]models.UpstreamVEXRule, dtos.ExternalReferenceType, error)
 	FetchSbomsFromUpstream(ctx context.Context, tx DB, asset models.Asset, artifactName string, ref string, upstreamURLs []string) ([]normalize.SBOMSource, []dtos.ExternalReferenceError)
 	FetchVexFromUpstream(ctx context.Context, assetID uuid.UUID, upstreamURLs []string) ([]models.VEXRule, []models.ExternalReference, []models.ExternalReference)
@@ -727,7 +734,7 @@ type ComponentProjectRepository interface {
 }
 
 type ComponentService interface {
-	GetAndSaveLicenseInformation(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error)
+	GetAndSaveLicenseInformation(ctx context.Context, tx DB, assetVersion models.AssetVersion, artifactName *string) ([]models.Component, error)
 	RefreshComponentProjectInformation(ctx context.Context, project models.ComponentProject)
 	GetLicense(ctx context.Context, component models.Component) (models.Component, error)
 	FetchComponentProject(ctx context.Context, component models.Component) (models.Component, error)
