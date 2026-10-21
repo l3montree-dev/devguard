@@ -20,7 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func PATModelToDTO(pat models.PAT) dtos.PATDTO {
+func PATModelToDTO(pat models.PAT) dtos.PAT {
 	var expiryDateUnix int64
 	if pat.ExpiryDate != nil {
 		expiryDateUnix = pat.ExpiryDate.Unix()
@@ -32,7 +32,7 @@ func PATModelToDTO(pat models.PAT) dtos.PATDTO {
 		lastUsedAt = &s
 	}
 
-	return dtos.PATDTO{
+	return dtos.PAT{
 		ID:             pat.ID.String(),
 		CreatedAt:      pat.CreatedAt.String(),
 		Description:    pat.Description,

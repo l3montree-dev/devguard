@@ -28,7 +28,7 @@ type SBOMCreatedEvent struct {
 }
 
 type DependencyVulnsDetectedEvent struct {
-	Vulns        any // []dtos.DependencyVulnDTO
+	Vulns        any // []dtos.DependencyVuln
 	Org          OrgObject
 	Project      ProjectObject
 	Asset        AssetObject
@@ -37,7 +37,7 @@ type DependencyVulnsDetectedEvent struct {
 }
 
 type FirstPartyVulnsDetectedEvent struct {
-	Vulns        any //[]dtos.FirstPartyVulnDTO
+	Vulns        any //[]dtos.FirstPartyVuln
 	Org          OrgObject
 	Project      ProjectObject
 	Asset        AssetObject

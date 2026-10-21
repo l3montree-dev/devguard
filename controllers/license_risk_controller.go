@@ -150,11 +150,11 @@ func (controller *LicenseRiskController) GetComponentOverwriteForAssetVersion(ct
 	return result, nil
 }
 
-func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.DetailedLicenseRiskDTO {
-	return dtos.DetailedLicenseRiskDTO{
-		LicenseRiskDTO: transformer.LicenseRiskToDTO(licenseRisk),
-		Events: utils.Map(licenseRisk.Events, func(ev models.VulnEvent) dtos.VulnEventDTO {
-			return dtos.VulnEventDTO{
+func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.DetailedLicenseRisk {
+	return dtos.DetailedLicenseRisk{
+		LicenseRisk: transformer.LicenseRiskToDTO(licenseRisk),
+		Events: utils.Map(licenseRisk.Events, func(ev models.VulnEvent) dtos.VulnEvent {
+			return dtos.VulnEvent{
 				ID:                       ev.ID,
 				Type:                     ev.Type,
 				VulnID:                   ev.GetVulnID(),
@@ -180,7 +180,7 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) dtos.Detail
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param licenseRiskID path string true "License risk ID"
-// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Success 200 {object} dtos.DetailedLicenseRisk
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID} [get]
 func (controller *LicenseRiskController) Read(ctx shared.Context) error {
 	licenseRiskID, _, err := shared.GetVulnID(ctx)
@@ -205,7 +205,7 @@ func (controller *LicenseRiskController) Read(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param licenseRiskID path string true "License risk ID"
 // @Param body body object{comment=string} true "Request body"
-// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Success 200 {object} dtos.DetailedLicenseRisk
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/mitigate [post]
 func (controller *LicenseRiskController) Mitigate(ctx shared.Context) error {
 	var justification struct {
@@ -257,7 +257,7 @@ func (controller *LicenseRiskController) Mitigate(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param licenseRiskID path string true "License risk ID"
 // @Param body body LicenseRiskStatus true "Request body"
-// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Success 200 {object} dtos.DetailedLicenseRisk
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID} [post]
 func (controller *LicenseRiskController) CreateEvent(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
@@ -319,7 +319,7 @@ func (controller *LicenseRiskController) CreateEvent(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param licenseRiskID path string true "License risk ID"
 // @Param body body dtos.MakeFinalLicenseDecisionRequest true "Request body"
-// @Success 200 {object} dtos.DetailedLicenseRiskDTO
+// @Success 200 {object} dtos.DetailedLicenseRisk
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/license-risks/{licenseRiskID}/final-license-decision [post]
 func (controller *LicenseRiskController) MakeFinalLicenseDecision(ctx shared.Context) error {
 	var licenseDecision dtos.MakeFinalLicenseDecisionRequest

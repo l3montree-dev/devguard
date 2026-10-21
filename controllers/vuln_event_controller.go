@@ -32,7 +32,7 @@ func NewVulnEventController(vulnEventRepository shared.VulnEventRepository, asse
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Dependency vulnerability ID"
-// @Success 200 {array} dtos.VulnEventDTO
+// @Success 200 {array} dtos.VulnEvent
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/events [get]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/first-party-vulns/{firstPartyVulnID}/events [get]
 func (c *VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error {
@@ -44,7 +44,7 @@ func (c *VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error 
 	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(ctx.Request().Context(), nil, vulnID, vulnType)
 	if err != nil {
 		if shared.IsNotFound(err) {
-			return ctx.JSON(404, []dtos.VulnEventDTO{})
+			return ctx.JSON(404, []dtos.VulnEvent{})
 		}
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
@@ -64,7 +64,7 @@ func (c *VulnEventController) ReadAssetEventsByVulnID(ctx shared.Context) error 
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
-// @Success 200 {object} shared.Paged[dtos.VulnEventDTO]
+// @Success 200 {object} shared.Paged[dtos.VulnEvent]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/events [get]
 func (c *VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.Context) error {
 

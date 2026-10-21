@@ -20,8 +20,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHistoryDTO {
-	return dtos.RiskHistoryDTO{
+func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHistory {
+	return dtos.RiskHistory{
 		History: dtos.History{
 			Distribution: dtos.Distribution{
 				Low:             history.Low,
@@ -78,9 +78,9 @@ func ArtifactRiskHistoryToDTO(history models.ArtifactRiskHistory) dtos.RiskHisto
 	}
 }
 
-func ArtifactRiskHistoryWithVersionToDTO(history models.ArtifactRiskHistoryWithVersion) dtos.RiskHistoryWithVersionDTO {
-	return dtos.RiskHistoryWithVersionDTO{
-		RiskHistoryDTO:   ArtifactRiskHistoryToDTO(history.ArtifactRiskHistory),
+func ArtifactRiskHistoryWithVersionToDTO(history models.ArtifactRiskHistoryWithVersion) dtos.RiskHistoryWithVersion {
+	return dtos.RiskHistoryWithVersion{
+		RiskHistory:      ArtifactRiskHistoryToDTO(history.ArtifactRiskHistory),
 		Slug:             history.Slug,
 		DefaultBranch:    history.DefaultBranch,
 		AssetVersionType: string(history.AssetVersionType),

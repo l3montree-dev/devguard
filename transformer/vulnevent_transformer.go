@@ -20,8 +20,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEventDTO {
-	return dtos.VulnEventDTO{
+func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEvent {
+	return dtos.VulnEvent{
 		ID:                       e.ID,
 		Type:                     e.Type,
 		VulnID:                   e.GetVulnID(),
@@ -31,7 +31,7 @@ func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEventDTO {
 		MechanicalJustification:  e.MechanicalJustification,
 		CreatedAt:                e.CreatedAt,
 		OriginalAssetVersionName: e.OriginalAssetVersionName,
-		VulnerabilityName:        e.CVEID,
+		VulnerabilityName:        e.ResourceIdentifier,
 		PackageName:              e.ComponentPurl,
 		URI:                      e.URI,
 		CreatedByVexRule:         e.CreatedByVexRule,
@@ -41,16 +41,16 @@ func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEventDTO {
 	}
 }
 
-func ConvertVulnEventsToDtos(events []models.VulnEventDetail) []dtos.VulnEventDTO {
-	var result []dtos.VulnEventDTO
+func ConvertVulnEventsToDtos(events []models.VulnEventDetail) []dtos.VulnEvent {
+	var result []dtos.VulnEvent
 	for _, e := range events {
 		result = append(result, ConvertVulnEventDetailToDto(e))
 	}
 	return result
 }
 
-func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEventDTO {
-	return dtos.VulnEventDTO{
+func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEvent {
+	return dtos.VulnEvent{
 		ID:                       event.ID,
 		Type:                     event.Type,
 		VulnID:                   event.GetVulnID(),
@@ -67,7 +67,7 @@ func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEventDTO {
 	}
 }
 
-func convertVexRuleToDto(rule *models.VEXRule) *dtos.VEXRuleDTO {
+func convertVexRuleToDto(rule *models.VEXRule) *dtos.VEXRule {
 	if rule == nil {
 		return nil
 	}

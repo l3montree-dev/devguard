@@ -22,11 +22,11 @@ import (
 )
 
 type AcceptInvitationRequest struct {
-	Code string `json:"code" validate:"required"`
+	Code string `json:"code" validate:"required,max=256"`
 }
 
 type InviteRequest struct {
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"required,email,max=320"`
 }
 
 type OrgChangeRoleRequest struct {
@@ -34,38 +34,38 @@ type OrgChangeRoleRequest struct {
 }
 
 type OrgCreateRequest struct {
-	Name                   string  `json:"name" validate:"required"`
-	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
+	Name                   string  `json:"name" validate:"required,max=256"`
+	ContactPhoneNumber     *string `json:"contactPhoneNumber" validate:"omitempty,max=256"`
 	NumberOfEmployees      *int    `json:"numberOfEmployees"`
-	Country                *string `json:"country"`
-	Industry               *string `json:"industry"`
+	Country                *string `json:"country" validate:"omitempty,max=256"`
+	Industry               *string `json:"industry" validate:"omitempty,max=256"`
 	CriticalInfrastructure bool    `json:"criticalInfrastructure"`
 	ISO27001               bool    `json:"iso27001"`
 	NIST                   bool    `json:"nist"`
 	Grundschutz            bool    `json:"grundschutz"`
-	Description            string  `json:"description"`
-	Language               string  `json:"language"`
+	Description            string  `json:"description" validate:"max=4000"`
+	Language               string  `json:"language" validate:"max=256"`
 }
 
 type OrgPatchRequest struct {
-	Name                   *string `json:"name"`
-	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
+	Name                   *string `json:"name" validate:"omitempty,max=256"`
+	ContactPhoneNumber     *string `json:"contactPhoneNumber" validate:"omitempty,max=256"`
 	NumberOfEmployees      *int    `json:"numberOfEmployees"`
-	Country                *string `json:"country"`
-	Industry               *string `json:"industry"`
+	Country                *string `json:"country" validate:"omitempty,max=256"`
+	Industry               *string `json:"industry" validate:"omitempty,max=256"`
 	CriticalInfrastructure *bool   `json:"criticalInfrastructure"`
 	ISO27001               *bool   `json:"iso27001"`
 	NIST                   *bool   `json:"nist"`
 	Grundschutz            *bool   `json:"grundschutz"`
-	Description            *string `json:"description"`
+	Description            *string `json:"description" validate:"omitempty,max=4000"`
 
 	ShareVulnInformation *bool           `json:"shareVulnInformation"`
 	IsPublic             *bool           `json:"isPublic"`
 	ConfigFiles          *map[string]any `json:"configFiles"`
-	Language             *string         `json:"language"`
+	Language             *string         `json:"language" validate:"omitempty,max=256"`
 }
 
-type GithubAppInstallationDTO struct {
+type GithubAppInstallation struct {
 	InstallationID                         int `json:"installationId"`
 	OrgID                                  uuid.UUID
 	InstallationCreatedWebhookReceivedTime time.Time `json:"installationCreatedWebhookReceivedTime"`
@@ -75,28 +75,28 @@ type GithubAppInstallationDTO struct {
 	TargetAvatarURL                        string    `json:"targetAvatarUrl"`
 }
 
-type OrgDTO struct {
-	ID                     uuid.UUID    `json:"id"`
-	CreatedAt              time.Time    `json:"createdAt"`
-	UpdatedAt              time.Time    `json:"updatedAt"`
-	Name                   string       `json:"name" gorm:"type:text"`
-	ContactPhoneNumber     *string      `json:"contactPhoneNumber" gorm:"type:text"`
-	NumberOfEmployees      *int         `json:"numberOfEmployees"`
-	Country                *string      `json:"country" gorm:"type:text"`
-	Industry               *string      `json:"industry" gorm:"type:text"`
-	CriticalInfrastructure bool         `json:"criticalInfrastructure"`
-	ISO27001               bool         `json:"iso27001"`
-	NIST                   bool         `json:"nist"`
-	Grundschutz            bool         `json:"grundschutz"`
-	Projects               []ProjectDTO `json:"projects" gorm:"foreignKey:OrganizationID;"`
-	Slug                   string       `json:"slug" gorm:"type:text;unique;not null;index"`
-	Description            string       `json:"description" gorm:"type:text"`
+type Org struct {
+	ID                     uuid.UUID `json:"id"`
+	CreatedAt              time.Time `json:"createdAt"`
+	UpdatedAt              time.Time `json:"updatedAt"`
+	Name                   string    `json:"name" gorm:"type:text"`
+	ContactPhoneNumber     *string   `json:"contactPhoneNumber" gorm:"type:text"`
+	NumberOfEmployees      *int      `json:"numberOfEmployees"`
+	Country                *string   `json:"country" gorm:"type:text"`
+	Industry               *string   `json:"industry" gorm:"type:text"`
+	CriticalInfrastructure bool      `json:"criticalInfrastructure"`
+	ISO27001               bool      `json:"iso27001"`
+	NIST                   bool      `json:"nist"`
+	Grundschutz            bool      `json:"grundschutz"`
+	Projects               []Project `json:"projects" gorm:"foreignKey:OrganizationID;"`
+	Slug                   string    `json:"slug" gorm:"type:text;unique;not null;index"`
+	Description            string    `json:"description" gorm:"type:text"`
 
-	GithubAppInstallations []GithubAppInstallationDTO `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
+	GithubAppInstallations []GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
 
-	GitLabIntegrations []GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
+	GitLabIntegrations []GitlabIntegration `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
-	JiraIntegrations []JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
+	JiraIntegrations []JiraIntegration `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
 	SharesVulnInformation    bool           `json:"sharesVulnInformation"`
 	IsPublic                 bool           `json:"isPublic" gorm:"default:false;"`
@@ -105,13 +105,13 @@ type OrgDTO struct {
 	ExternalEntityProviderID *string        `json:"externalEntityProviderId" gorm:"type:text"`
 }
 
-type OrgDetailsDTO struct {
-	OrgDTO
-	Members        []UserDTO        `json:"members"`
-	InvitedMembers []InvitedUserDTO `json:"invitedMembers"`
+type OrgDetails struct {
+	Org
+	Members        []User        `json:"members"`
+	InvitedMembers []InvitedUser `json:"invitedMembers"`
 }
 
-type OrgSettingsDTO struct {
-	OrgDetailsDTO
-	Webhooks []WebhookIntegrationDTO `json:"webhooks"`
+type OrgSettings struct {
+	OrgDetails
+	Webhooks []WebhookIntegration `json:"webhooks"`
 }

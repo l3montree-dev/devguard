@@ -205,56 +205,56 @@ func (s *projectService) projectsForUser(c shared.Context, projectsIdsStr []stri
 	return projectIDsSlice, parentID, nil
 }
 
-func (s *projectService) SearchProjectsWithSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectDTO], error) {
+func (s *projectService) SearchProjectsWithSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.Project], error) {
 	rbac := shared.GetRBAC(c)
 	parentIDStr := c.QueryParam("parentId")
 	var parentID *uuid.UUID
 	if parentIDStr != "" {
 		tmp, err := uuid.Parse(parentIDStr)
 		if err != nil {
-			return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(400, "invalid parentId").WithInternal(err)
+			return shared.Paged[dtos.Project]{}, echo.NewHTTPError(400, "invalid parentId").WithInternal(err)
 		}
 		parentID = &tmp
 	}
 
 	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+		return shared.Paged[dtos.Project]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
 	allowedProjectIDs, err := rbac.GetAllProjectsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
+		return shared.Paged[dtos.Project]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
 	}
 
 	projects, err := s.projectRepository.SearchProjectsWithSubProjectsAndAssetsPaged(c.Request().Context(), nil, allowedAssetIDs, allowedProjectIDs, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, err
+		return shared.Paged[dtos.Project]{}, err
 	}
 
 	return projects, nil
 }
 
-func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAssetDTO], error) {
+func (s *projectService) ListAllowedSubProjectsAndAssetsPaged(c shared.Context) (shared.Paged[dtos.ProjectAsset], error) {
 
 	rbac := shared.GetRBAC(c)
 	allowedAssetIDs, err := rbac.GetAllAssetsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
+		return shared.Paged[dtos.ProjectAsset]{}, echo.NewHTTPError(500, "could not get allowed assets for user").WithInternal(err)
 	}
 	allowedProjectIDs, err := rbac.GetAllProjectsForSession(c.Request().Context(), shared.GetSession(c))
 	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
+		return shared.Paged[dtos.ProjectAsset]{}, echo.NewHTTPError(500, "could not get allowed projects for user").WithInternal(err)
 	}
 
 	projectsIdsStr := allowedProjectIDs
 	projectsIdsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
 	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+		return shared.Paged[dtos.ProjectAsset]{}, err
 	}
 
 	assetsAndProjects, err := s.projectRepository.ListSubProjectsAndAssets(c.Request().Context(), nil, allowedAssetIDs, projectsIdsSlice, parentID, shared.GetOrg(c).GetID(), shared.GetPageInfo(c), c.QueryParam("search"), shared.GetFilterQuery(c), shared.GetSortQuery(c))
 	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+		return shared.Paged[dtos.ProjectAsset]{}, err
 	}
 
 	return assetsAndProjects, nil

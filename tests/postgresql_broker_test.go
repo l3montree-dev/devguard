@@ -2,29 +2,71 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/database"
-	"github.com/l3montree-dev/devguard/shared"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/l3montree-dev/devguard/events"
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// testMessage for testing
-type testMessage struct {
-	channel shared.PubSubChannel
-	payload map[string]any
+// recorder collects the payloads delivered to a subscribe handler.
+type recorder struct {
+	mu       sync.Mutex
+	payloads []map[string]any
 }
 
-func (m testMessage) GetChannel() shared.PubSubChannel {
-	return m.channel
+func (r *recorder) handle(_ context.Context, payload json.RawMessage) {
+	var m map[string]any
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.payloads = append(r.payloads, m)
 }
 
-func (m testMessage) GetPayload() map[string]any {
-	return m.payload
+func (r *recorder) first() (map[string]any, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.payloads) == 0 {
+		return nil, false
+	}
+	return r.payloads[0], true
+}
+
+// waitForMessage blocks until the recorder received a message and returns it.
+func (r *recorder) waitForMessage(t *testing.T) map[string]any {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		_, ok := r.first()
+		return ok
+	}, time.Second, 10*time.Millisecond, "message not received within timeout")
+	m, _ := r.first()
+	return m
+}
+
+// releaseListeners terminates the connections a test's brokers hold for LISTEN, so they return to the
+// (small) shared pool. The broker has no Close - it releases a listener connection once it fails.
+func releaseListeners(t *testing.T, db *pgxpool.Pool) {
+	t.Helper()
+	t.Cleanup(func() {
+		_, err := db.Exec(context.Background(), `
+			SELECT pg_terminate_backend(pid)
+			FROM pg_stat_activity
+			WHERE datname = current_database()
+				AND pid <> pg_backend_pid()
+				AND query LIKE 'LISTEN %'
+		`)
+		assert.NoError(t, err)
+		// give the broker goroutines time to notice and release their connections
+		time.Sleep(200 * time.Millisecond)
+	})
 }
 
 func TestPostgreSQLBroker(t *testing.T) {
@@ -33,153 +75,102 @@ func TestPostgreSQLBroker(t *testing.T) {
 	defer terminate()
 
 	t.Run("PublishAndSubscribe", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(db)
-		assert.NoError(t, err)
+		releaseListeners(t, db)
+		broker, err := events.NewPostgreSQLBroker(db)
+		require.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 
-		ctx := context.Background()
-		testTopic := shared.PubSubChannel("test_topic")
+		testTopic := events.PubSubTopic("test_topic")
 
-		// Subscribe to topic
-		messagesCh, err := broker.Subscribe(testTopic)
-		assert.NoError(t, err)
+		rec := &recorder{}
+		require.NoError(t, broker.Subscribe(testTopic, rec.handle))
 
-		// Give subscriber time to start listening
-		time.Sleep(100 * time.Millisecond)
+		err = broker.Publish(context.Background(), testTopic, map[string]any{
+			"test":   "data",
+			"number": 42,
+		})
+		require.NoError(t, err)
 
-		// Publish message
-		testMsg := testMessage{
-			channel: testTopic,
-			payload: map[string]any{
-				"test":   "data",
-				"number": 42,
-			},
-		}
-
-		err = broker.Publish(ctx, testMsg)
-		assert.NoError(t, err)
-
-		var received bool
-		// Wait for message to be received
-		select {
-		case receivedPayload := <-messagesCh:
-			received = true
-			assert.Equal(t, "data", receivedPayload["test"])
-			assert.Equal(t, float64(42), receivedPayload["number"])
-		case <-time.After(1 * time.Second):
-			t.Error("Message not received within timeout")
-		}
-
-		assert.True(t, received, "Expected to receive a message")
+		received := rec.waitForMessage(t)
+		assert.Equal(t, "data", received["test"])
+		assert.Equal(t, float64(42), received["number"])
 	})
 
 	t.Run("MultipleSubscribers", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(db)
-		assert.NoError(t, err)
+		releaseListeners(t, db)
+		broker, err := events.NewPostgreSQLBroker(db)
+		require.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 
-		ctx := context.Background()
-		testTopic := shared.PubSubChannel("multi_topic")
+		testTopic := events.PubSubTopic("multi_topic")
 
-		// Subscribe with multiple subscribers
-		subscriber1, err := broker.Subscribe(testTopic)
-		assert.NoError(t, err)
+		rec1, rec2 := &recorder{}, &recorder{}
+		require.NoError(t, broker.Subscribe(testTopic, rec1.handle))
+		require.NoError(t, broker.Subscribe(testTopic, rec2.handle))
 
-		subscriber2, err := broker.Subscribe(testTopic)
-		assert.NoError(t, err)
+		err = broker.Publish(context.Background(), testTopic, map[string]any{"multi": "test"})
+		require.NoError(t, err)
 
-		time.Sleep(100 * time.Millisecond)
-
-		// Publish message
-		testMsg := testMessage{
-			channel: testTopic,
-			payload: map[string]any{
-				"multi": "test",
-			},
-		}
-
-		err = broker.Publish(ctx, testMsg)
-		assert.NoError(t, err)
-
-		var received1, received2 bool
 		// Both subscribers should receive the message
-		select {
-		case payload1 := <-subscriber1:
-			received1 = true
-			assert.Equal(t, "test", payload1["multi"])
-		case <-time.After(1 * time.Second):
-			t.Error("Subscriber 1 did not receive message")
-		}
-
-		select {
-		case payload2 := <-subscriber2:
-			received2 = true
-			assert.Equal(t, "test", payload2["multi"])
-		case <-time.After(1 * time.Second):
-			t.Error("Subscriber 2 did not receive message")
-		}
-
-		assert.True(t, received1, "Subscriber 1 should have received the message")
-		assert.True(t, received2, "Subscriber 2 should have received the message")
+		assert.Equal(t, "test", rec1.waitForMessage(t)["multi"])
+		assert.Equal(t, "test", rec2.waitForMessage(t)["multi"])
 	})
 
-	t.Run("PolicyChangeChannel", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(db)
-		assert.NoError(t, err)
+	t.Run("PolicyChangeTopic", func(t *testing.T) {
+		releaseListeners(t, db)
+		broker, err := events.NewPostgreSQLBroker(db)
+		require.NoError(t, err)
 		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 
-		ctx := context.Background()
+		rec := &recorder{}
+		require.NoError(t, broker.Subscribe(events.PolicyChange, rec.handle))
 
-		// Subscribe to policy changes
-		messagesCh, err := broker.Subscribe(shared.PolicyChange)
-		assert.NoError(t, err)
+		err = broker.Publish(context.Background(), events.PolicyChange, map[string]any{
+			"policy_id": "policy-123",
+			"action":    "updated",
+			"user_id":   "user-456",
+		})
+		require.NoError(t, err)
 
-		time.Sleep(100 * time.Millisecond)
+		received := rec.waitForMessage(t)
+		assert.Equal(t, "policy-123", received["policy_id"])
+		assert.Equal(t, "updated", received["action"])
+		assert.Equal(t, "user-456", received["user_id"])
+	})
 
-		// Publish simple policy change message
-		policyMsg := testMessage{
-			channel: shared.PolicyChange,
-			payload: map[string]any{
-				"policy_id": "policy-123",
-				"action":    "updated",
-				"user_id":   "user-456",
-			},
-		}
+	t.Run("OwnMessagesAreIgnoredByDefault", func(t *testing.T) {
+		releaseListeners(t, db)
+		broker, err := events.NewPostgreSQLBroker(db)
+		require.NoError(t, err)
 
-		err = broker.Publish(ctx, policyMsg)
-		assert.NoError(t, err)
+		topic := events.PubSubTopic("own_messages_topic")
 
-		// Wait for message to be received
-		select {
-		case receivedPayload := <-messagesCh:
-			assert.Equal(t, "policy-123", receivedPayload["policy_id"])
-			assert.Equal(t, "updated", receivedPayload["action"])
-			assert.Equal(t, "user-456", receivedPayload["user_id"])
-		case <-time.After(1 * time.Second):
-			t.Error("Policy change message not received within timeout")
-		}
+		rec := &recorder{}
+		require.NoError(t, broker.Subscribe(topic, rec.handle))
+
+		require.NoError(t, broker.Publish(context.Background(), topic, map[string]any{"a": "b"}))
+
+		time.Sleep(300 * time.Millisecond)
+		_, ok := rec.first()
+		assert.False(t, ok, "broker must not receive its own messages by default")
 	})
 
 	t.Run("GetActiveTopics", func(t *testing.T) {
-		broker, err := database.NewPostgreSQLBroker(db)
-		assert.NoError(t, err)
-		broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
+		releaseListeners(t, db)
+		broker, err := events.NewPostgreSQLBroker(db)
+		require.NoError(t, err)
 
 		// Initially no topics
+		assert.Empty(t, broker.GetActiveTopics())
+
+		noop := func(context.Context, json.RawMessage) {}
+		require.NoError(t, broker.Subscribe(events.PubSubTopic("topic1"), noop))
+		require.NoError(t, broker.Subscribe(events.PubSubTopic("topic2"), noop))
+
 		topics := broker.GetActiveTopics()
-		assert.Empty(t, topics)
-
-		// Subscribe to topics
-		_, err = broker.Subscribe(shared.PubSubChannel("topic1"))
-		assert.NoError(t, err)
-
-		_, err = broker.Subscribe(shared.PubSubChannel("topic2"))
-		assert.NoError(t, err)
-
-		topics = broker.GetActiveTopics()
 		assert.Len(t, topics, 2)
-		assert.Contains(t, topics, shared.PubSubChannel("topic1"))
-		assert.Contains(t, topics, shared.PubSubChannel("topic2"))
+		assert.Contains(t, topics, events.PubSubTopic("topic1"))
+		assert.Contains(t, topics, events.PubSubTopic("topic2"))
 	})
 }
 
@@ -188,53 +179,36 @@ func TestBrokerIntegration(t *testing.T) {
 	db, terminate := InitRawDatabaseContainer("../initdb.sql")
 	defer terminate()
 
-	broker, err := database.NewPostgreSQLBroker(db)
-	assert.NoError(t, err)
+	broker, err := events.NewPostgreSQLBroker(db)
+	require.NoError(t, err)
 	broker.SetShouldReceiveOwnMessages(true) // Enable receiving own messages
 
 	t.Run("BasicIntegration", func(t *testing.T) {
-		ctx := context.Background()
+		rec := &recorder{}
+		require.NoError(t, broker.Subscribe(events.PolicyChange, rec.handle))
 
-		// Subscribe to policy changes to verify publication
-		messagesCh, err := broker.Subscribe(shared.PolicyChange)
-		assert.NoError(t, err)
+		err := broker.Publish(context.Background(), events.PolicyChange, map[string]any{
+			"policy_id": "policy-123",
+			"action":    "updated",
+			"user_id":   "user-456",
+		})
+		require.NoError(t, err)
 
-		time.Sleep(100 * time.Millisecond)
-
-		// Publish a simple policy change
-		msg := testMessage{
-			channel: shared.PolicyChange,
-			payload: map[string]any{
-				"policy_id": "policy-123",
-				"action":    "updated",
-				"user_id":   "user-456",
-			},
-		}
-
-		err = broker.Publish(ctx, msg)
-		assert.NoError(t, err)
-
-		// Verify message received
-		select {
-		case receivedPayload := <-messagesCh:
-			assert.Equal(t, "policy-123", receivedPayload["policy_id"])
-			assert.Equal(t, "updated", receivedPayload["action"])
-			assert.Equal(t, "user-456", receivedPayload["user_id"])
-		case <-time.After(1 * time.Second):
-			t.Error("Message not received")
-		}
+		received := rec.waitForMessage(t)
+		assert.Equal(t, "policy-123", received["policy_id"])
+		assert.Equal(t, "updated", received["action"])
+		assert.Equal(t, "user-456", received["user_id"])
 	})
 
 	t.Run("ListenerFailureMarksBrokerUnhealthy", func(t *testing.T) {
 		ctx := context.Background()
-		topic := shared.PubSubChannel("listener_health_check")
+		topic := events.PubSubTopic("listener_health_check")
 
-		_, err := broker.Subscribe(topic)
-		require.NoError(t, err)
+		require.NoError(t, broker.Subscribe(topic, func(context.Context, json.RawMessage) {}))
 		require.True(t, broker.IsHealthy())
 
 		var terminated bool
-		err = db.QueryRow(ctx, `
+		err := db.QueryRow(ctx, `
 			SELECT pg_terminate_backend(pid)
 			FROM pg_stat_activity
 			WHERE datname = current_database()

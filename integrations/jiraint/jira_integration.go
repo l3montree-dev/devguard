@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 
 	"github.com/l3montree-dev/devguard/shared"
@@ -49,7 +50,7 @@ type JiraIntegration struct {
 	orgRepository             shared.OrganizationRepository
 	projectRepository         shared.ProjectRepository
 	frontendURL               string
-	statisticsService         shared.StatisticsService
+	broker                    events.Broker
 	utils.FireAndForgetSynchronizer
 }
 
@@ -68,7 +69,7 @@ func NewJiraIntegration(jiraIntegrationRepository shared.JiraIntegrationReposito
 	assetRepository shared.AssetRepository,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
-	statisticsService shared.StatisticsService,
+	broker events.Broker,
 	synchronizer utils.FireAndForgetSynchronizer) *JiraIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -88,7 +89,7 @@ func NewJiraIntegration(jiraIntegrationRepository shared.JiraIntegrationReposito
 		projectRepository:         projectRepository,
 		orgRepository:             orgRepository,
 		frontendURL:               frontendURL,
-		statisticsService:         statisticsService,
+		broker:                    broker,
 		FireAndForgetSynchronizer: synchronizer,
 	}
 }
@@ -792,7 +793,7 @@ func (i *JiraIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstP
 	return nil
 }
 
-func (i *JiraIntegration) GetUsers(org models.Org) []dtos.UserDTO {
+func (i *JiraIntegration) GetUsers(org models.Org) []dtos.User {
 	// Jira integration does not have users in the same way as GitLab or GitHub
 	return nil
 }
@@ -840,7 +841,7 @@ func (i *JiraIntegration) TestAndSave(ctx shared.Context) error {
 	if err := i.jiraIntegrationRepository.Save(context.Background(), nil, jiraIntegration); err != nil {
 		return err
 	}
-	return ctx.JSON(200, dtos.JiraIntegrationDTO{
+	return ctx.JSON(200, dtos.JiraIntegration{
 		ID:              jiraIntegration.ID.String(),
 		Name:            jiraIntegration.Name,
 		URL:             jiraIntegration.URL,

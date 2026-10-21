@@ -186,11 +186,11 @@ func (c *PolicyController) GetPolicy(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param body body dtos.PolicyDTO true "Request body"
-// @Success 201 {object} dtos.PolicyDTO
+// @Param body body dtos.Policy true "Request body"
+// @Success 201 {object} dtos.Policy
 // @Router /organizations/{organization}/policies [post]
 func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
-	policy := dtos.PolicyDTO{}
+	policy := dtos.Policy{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func (c *PolicyController) CreatePolicy(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param policyID path string true "Policy ID"
-// @Param body body dtos.PolicyDTO true "Request body"
+// @Param body body dtos.Policy true "Request body"
 // @Success 200 {object} models.Policy
 // @Router /organizations/{organization}/policies/{policyID} [put]
 func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
@@ -237,7 +237,7 @@ func (c *PolicyController) UpdatePolicy(ctx shared.Context) error {
 		return err
 	}
 
-	policy := dtos.PolicyDTO{}
+	policy := dtos.Policy{}
 	if err := ctx.Bind(&policy); err != nil {
 		return err
 	}

@@ -177,11 +177,11 @@ func (c *webhookClient) SendSBOM(ctx context.Context, SBOM cdx.BOM, org shared.O
 	return c.send(ctx, WebhookTypeSBOM, SBOM, org, project, asset, assetVersion, artifact)
 }
 
-func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln []dtos.FirstPartyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
+func (c *webhookClient) SendFirstPartyVulnerabilities(ctx context.Context, vuln []dtos.FirstPartyVuln, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject) error {
 	return c.send(ctx, WebhookTypeFirstPartyVulnerabilities, vuln, org, project, asset, assetVersion, shared.ArtifactObject{})
 }
 
-func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln []dtos.DependencyVulnDTO, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
+func (c *webhookClient) SendDependencyVulnerabilities(ctx context.Context, vuln []dtos.DependencyVuln, org shared.OrgObject, project shared.ProjectObject, asset shared.AssetObject, assetVersion shared.AssetVersionObject, artifact shared.ArtifactObject) error {
 	return c.send(ctx, WebhookTypeDependencyVulnerabilities, vuln, org, project, asset, assetVersion, artifact)
 }
 
@@ -244,7 +244,7 @@ func createSampleSBOM() cdx.BOM {
 	}
 }
 
-func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
+func createSampleDependencyVulns() []dtos.DependencyVuln {
 	cve := "CVE-2021-44228"
 	purl := "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
 	fixedVersion := "2.15.0"
@@ -257,7 +257,7 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 		Vector:      "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
 	}
 
-	return []dtos.DependencyVulnDTO{
+	return []dtos.DependencyVuln{
 		{
 			ID: uuid.MustParse("1b836526-8448-4408-8344-b6279eb07abc"),
 			//	ScannerIDs:            "trivy",
@@ -276,10 +276,10 @@ func createSampleDependencyVulns() []dtos.DependencyVulnDTO {
 	}
 }
 
-func createSampleFirstPartyVulns() []dtos.FirstPartyVulnDTO {
+func createSampleFirstPartyVulns() []dtos.FirstPartyVuln {
 	message := "SQL injection vulnerability detected"
 
-	return []dtos.FirstPartyVulnDTO{
+	return []dtos.FirstPartyVuln{
 		{
 			ID:               uuid.MustParse("1b836526-8448-4408-8344-b6279eb07abd"),
 			ScannerIDs:       "semgrep",

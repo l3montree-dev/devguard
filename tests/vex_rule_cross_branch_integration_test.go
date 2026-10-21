@@ -101,7 +101,7 @@ func TestVEXRuleCreatedOnFeatureBranchClosesVulnOnDefaultBranch(t *testing.T) {
 		v := fetchVuln(featureBranch)
 		assert.Equal(t, dtos.VulnStateFalsePositive, v.State)
 
-		var rule dtos.VEXRuleDTO
+		var rule dtos.VEXRule
 		assert.NoError(t, json.Unmarshal(createRecorder.Body.Bytes(), &rule))
 		assert.NotEmpty(t, rule.ID)
 

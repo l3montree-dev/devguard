@@ -138,8 +138,8 @@ func (g *projectRepository) Update(ctx context.Context, tx *gorm.DB, project *mo
 	return g.GetDB(ctx, tx).Save(project).Error
 }
 
-func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.ProjectDTO], error) {
-	var results []dtos.ProjectAssetDTO
+func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx context.Context, tx *gorm.DB, allowedAssetIDs []string, allowedProjectIDs []string, parentID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.Project], error) {
+	var results []dtos.ProjectAsset
 
 	assetParams := []any{
 		"%" + search + "%",
@@ -186,7 +186,7 @@ searchResults AS (
 
 	var count int64
 	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", countParams...).Scan(&count).Error; err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, err
+		return shared.Paged[dtos.Project]{}, err
 	}
 
 	orderClause := "name ASC"
@@ -235,16 +235,16 @@ SELECT 'project'::text AS resource_type, id, name, slug, description, NULL::uuid
 	dataParams = append(dataParams, parentStopParam...)
 
 	if err := g.GetDB(ctx, tx).Raw(dataSQL, dataParams...).Scan(&results).Error; err != nil {
-		return shared.Paged[dtos.ProjectDTO]{}, err
+		return shared.Paged[dtos.Project]{}, err
 	}
 
 	return shared.NewPaged(pageInfo, count, transformToProjectDTOs(results)), nil
 }
 
-func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
-	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
-	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAssetDTO{}
-	var rootProjects []dtos.ProjectAssetDTO
+func transformToProjectDTOs(results []dtos.ProjectAsset) []dtos.Project {
+	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAsset{}
+	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAsset{}
+	var rootProjects []dtos.ProjectAsset
 
 	for _, r := range results {
 		if r.ResourceType == "asset" {
@@ -259,9 +259,9 @@ func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
 	}
 
 	// recursively build SubGroupsAndAssets for a given project ID
-	var buildChildren func(projectID uuid.UUID) []dtos.ProjectAssetDTO
-	buildChildren = func(projectID uuid.UUID) []dtos.ProjectAssetDTO {
-		var children []dtos.ProjectAssetDTO
+	var buildChildren func(projectID uuid.UUID) []dtos.ProjectAsset
+	buildChildren = func(projectID uuid.UUID) []dtos.ProjectAsset {
+		var children []dtos.ProjectAsset
 		for _, sub := range subprojectsByParentID[projectID] {
 			sub.SubGroupsAndAssets = buildChildren(sub.ID)
 			children = append(children, sub)
@@ -270,9 +270,9 @@ func transformToProjectDTOs(results []dtos.ProjectAssetDTO) []dtos.ProjectDTO {
 		return children
 	}
 
-	rootDTOs := make([]dtos.ProjectDTO, 0, len(rootProjects))
+	rootDTOs := make([]dtos.Project, 0, len(rootProjects))
 	for _, r := range rootProjects {
-		rootDTOs = append(rootDTOs, dtos.ProjectDTO{
+		rootDTOs = append(rootDTOs, dtos.Project{
 			ID:                 r.ID,
 			Name:               r.Name,
 			Slug:               r.Slug,
@@ -296,9 +296,9 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 	search string,
 	filter []shared.FilterQuery,
 	sort []shared.SortQuery,
-) (shared.Paged[dtos.ProjectAssetDTO], error) {
+) (shared.Paged[dtos.ProjectAsset], error) {
 
-	var results []dtos.ProjectAssetDTO
+	var results []dtos.ProjectAsset
 	var q *gorm.DB
 
 	assetQuery := g.GetDB(ctx, tx).Model(&models.Asset{}).
@@ -345,7 +345,7 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 
 	// Single query: window function avoids a separate COUNT(*) round trip.
 	type resultRow struct {
-		dtos.ProjectAssetDTO
+		dtos.ProjectAsset
 		TotalCount int64
 	}
 	var rows []resultRow
@@ -355,20 +355,20 @@ func (g *projectRepository) ListSubProjectsAndAssets(
 		Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).
 		Scan(&rows).Error
 	if err != nil {
-		return shared.Paged[dtos.ProjectAssetDTO]{}, err
+		return shared.Paged[dtos.ProjectAsset]{}, err
 	}
 
 	var count int64
-	results = make([]dtos.ProjectAssetDTO, len(rows))
+	results = make([]dtos.ProjectAsset, len(rows))
 	for i, r := range rows {
-		results[i] = r.ProjectAssetDTO
+		results[i] = r.ProjectAsset
 		count = r.TotalCount
 	}
 
 	// if we have no rows the window functions does not work, so we fallback to a traditional count
 	if len(rows) == 0 {
 		if err := q.Session(&gorm.Session{}).Count(&count).Error; err != nil {
-			return shared.Paged[dtos.ProjectAssetDTO]{}, err
+			return shared.Paged[dtos.ProjectAsset]{}, err
 		}
 	}
 

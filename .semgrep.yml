@@ -166,7 +166,10 @@ rules:
           ...
           $TX.Commit()
           ...
-
+      - pattern-not-inside: |
+          ...
+          runner.finishTx($TX)
+          ...
   - id: http-client-missing-egress-transport
     message: |
       http.Client is missing utils.EgressTransport.
@@ -623,3 +626,34 @@ rules:
       - metavariable-regex:
           metavariable: $WHERE_CLAUSE
           regex: (?i).*\bIN\s*\(?\s*\?
+
+  - id: dto-string-without-max-length
+    severity: WARNING
+    message: |
+      String field in request DTO $S has no length limit.
+      Without a max length, clients can send arbitrarily large strings that end up
+      in the database, in logs and in rendered UI. Pair this with the matching
+      maxLength on the input field in devguard-web.
+
+      Fix: add a bound to the validate tag, e.g.
+        Name string `json:"name" validate:"required,max=256"`
+      For slices, limit both the number of entries and each entry:
+        Ids []string `json:"ids" validate:"required,max=100,dive,max=256"`
+      Closed sets (oneof=...) and fixed formats (uuid, len=...) also count as bounded.
+      Fields that are never read from a request can be silenced with a nosemgrep comment.
+    languages: [go]
+    paths:
+      include:
+        - "**/dtos/**"
+      exclude:
+        - "**/*_test.go"
+        - "**/dtos/sarif/**"
+    patterns:
+      - pattern-inside: |
+          type $S struct { ... }
+      - pattern-regex: '(?m)^[ \t]*\w+[ \t]+(\*|\[\])?string\b.*$'
+      - pattern-not-regex: 'validate:"[^"]*\b(max|lte|lt|len|eq|oneof)='
+      - pattern-not-regex: 'validate:"[^"]*\b(uuid|uuid4)\b'
+      - metavariable-regex:
+          metavariable: $S
+          regex: '^(?!.*Response).*(Request|Create|Update|Patch)'

@@ -45,26 +45,31 @@ type DistTags struct {
 }
 
 type VersionData struct {
-	Name         string            `json:"name"`
-	Version      string            `json:"version"`
-	Keywords     []string          `json:"keywords"`
-	Author       any               `json:"author"`
-	License      any               `json:"license"`
-	ID           string            `json:"_id"`
-	Maintainers  []Person          `json:"maintainers"`
-	Contributors []Person          `json:"contributors"`
-	Homepage     string            `json:"homepage"`
-	Bugs         Bugs              `json:"bugs"`
-	Jam          map[string]any    `json:"jam"`
-	Dist         Dist              `json:"dist"`
-	Main         string            `json:"main"`
-	From         string            `json:"from"`
-	Engines      any               `json:"engines"`
-	NpmUser      Person            `json:"_npmUser"`
-	Repository   any               `json:"repository"`
-	NpmVersion   string            `json:"_npmVersion"`
-	Description  string            `json:"description"`
-	Directories  map[string]string `json:"directories"`
+	Name         string         `json:"name"`
+	Version      string         `json:"version"`
+	Keywords     []string       `json:"keywords"`
+	Author       any            `json:"author"`
+	License      any            `json:"license"`
+	ID           string         `json:"_id"`
+	Maintainers  []Person       `json:"maintainers"`
+	Contributors []Person       `json:"contributors"`
+	Homepage     string         `json:"homepage"`
+	Bugs         Bugs           `json:"bugs"`
+	Jam          map[string]any `json:"jam"`
+	Dist         Dist           `json:"dist"`
+	Main         string         `json:"main"`
+	From         string         `json:"from"`
+	Engines      any            `json:"engines"`
+	NpmUser      Person         `json:"_npmUser"`
+	Repository   any            `json:"repository"`
+	NpmVersion   string         `json:"_npmVersion"`
+	Description  string         `json:"description"`
+	Directories  any            `json:"directories"` // not always a map of strings, e.g. eslint-plugin-react@7.37.3
+
+	Dependencies         map[string]string `json:"dependencies"`
+	DevDependencies      map[string]string `json:"devDependencies"`
+	PeerDependencies     map[string]string `json:"peerDependencies"`
+	OptionalDependencies map[string]string `json:"optionalDependencies"`
 }
 
 type Person struct {

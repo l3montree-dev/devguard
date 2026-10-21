@@ -41,7 +41,7 @@ func NewReleaseController(service shared.ReleaseService, avService shared.AssetV
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search term"
-// @Success 200 {object} shared.Paged[dtos.ReleaseDTO]
+// @Success 200 {object} shared.Paged[dtos.Release]
 // @Router /organizations/{organization}/projects/{projectSlug}/releases [get]
 func (h *ReleaseController) List(c shared.Context) error {
 	project := shared.GetProject(c)
@@ -422,7 +422,7 @@ func (h *ReleaseController) gatherReleaseVulns(ctx context.Context, release mode
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
-// @Success 200 {object} dtos.ReleaseDTO
+// @Success 200 {object} dtos.Release
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID} [get]
 func (h *ReleaseController) Read(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
@@ -447,7 +447,7 @@ func (h *ReleaseController) Read(c shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ReleaseCreateRequest true "Release data"
-// @Success 201 {object} dtos.ReleaseDTO
+// @Success 201 {object} dtos.Release
 // @Router /organizations/{organization}/projects/{projectSlug}/releases [post]
 func (h *ReleaseController) Create(c shared.Context) error {
 	var req dtos.ReleaseCreateRequest
@@ -482,7 +482,7 @@ func (h *ReleaseController) Create(c shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
 // @Param body body dtos.ReleasePatchRequest true "Release data"
-// @Success 200 {object} dtos.ReleaseDTO
+// @Success 200 {object} dtos.Release
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID} [patch]
 func (h *ReleaseController) Update(c shared.Context) error {
 	idParam := shared.GetParam(c, "releaseID")
@@ -552,8 +552,8 @@ func (h *ReleaseController) Delete(c shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID path string true "Release ID"
-// @Param body body dtos.ReleaseItemDTO true "Release item data"
-// @Success 201 {object} dtos.ReleaseItemDTO
+// @Param body body dtos.ReleaseItem true "Release item data"
+// @Success 201 {object} dtos.ReleaseItem
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/items [post]
 func (h *ReleaseController) AddItem(c shared.Context) error {
 	relIDParam := shared.GetParam(c, "releaseID")
@@ -562,7 +562,7 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(400, "invalid release id")
 	}
 
-	var dto dtos.ReleaseItemDTO
+	var dto dtos.ReleaseItem
 	if err := c.Bind(&dto); err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
@@ -575,7 +575,7 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
-	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), []dtos.ReleaseItemDTO{dto}); err != nil {
+	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), []dtos.ReleaseItem{dto}); err != nil {
 		return err
 	}
 
@@ -604,7 +604,7 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 // itself - the very set ListCandidates offers. A plain assetRepository.Read would apply the
 // ownership scope, which pins the asset to the exact project from the path and therefore
 // rejects every candidate that lives in a child project.
-func (h *ReleaseController) validateReleaseItemRefs(ctx context.Context, projectID uuid.UUID, items []dtos.ReleaseItemDTO) error {
+func (h *ReleaseController) validateReleaseItemRefs(ctx context.Context, projectID uuid.UUID, items []dtos.ReleaseItem) error {
 	for _, it := range items {
 		if it.ChildReleaseID != nil {
 			if _, err := h.service.Read(ctx, *it.ChildReleaseID); err != nil {
@@ -656,7 +656,7 @@ func (h *ReleaseController) RemoveItem(c shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param releaseID query string false "Release ID"
-// @Success 200 {object} dtos.CandidatesResponseDTO
+// @Success 200 {object} dtos.CandidatesResponse
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/candidates [get]
 // @Router /organizations/{organization}/projects/{projectSlug}/releases/candidates [get]
 func (h *ReleaseController) ListCandidates(c shared.Context) error {
@@ -678,16 +678,16 @@ func (h *ReleaseController) ListCandidates(c shared.Context) error {
 	}
 
 	// map artifacts to DTOs and include asset name
-	artDTOs := []dtos.ArtifactDTO{}
+	artDTOs := []dtos.Artifact{}
 	for _, a := range artifacts {
-		artDTOs = append(artDTOs, dtos.ArtifactDTO{
+		artDTOs = append(artDTOs, dtos.Artifact{
 			ArtifactName:     a.ArtifactName,
 			AssetVersionName: a.AssetVersionName,
 			AssetID:          a.AssetID,
 		})
 	}
 
-	dto := dtos.CandidatesResponseDTO{
+	dto := dtos.CandidatesResponse{
 		Artifacts: artDTOs,
 		Releases:  utils.Map(releases, transformer.ReleaseToDTO),
 	}

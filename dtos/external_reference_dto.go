@@ -23,7 +23,7 @@ const (
 	ExternalReferenceTypeUnknown   ExternalReferenceType = "unknown"
 )
 
-type ExternalReferenceDTO struct {
+type ExternalReference struct {
 	AssetID      string                `json:"assetId"`
 	URL          string                `json:"url"`
 	VexRuleCount int                   `json:"vexRuleCount"`
@@ -32,7 +32,7 @@ type ExternalReferenceDTO struct {
 }
 
 type CreateExternalReferenceRequest struct {
-	URL              string                `json:"url" validate:"required,url"`
+	URL              string                `json:"url" validate:"required,url,max=2048"`
 	Type             ExternalReferenceType `json:"type" validate:"required,oneof=cyclonedx csaf openvex"`
-	CSAFPackageScope string                `json:"csafPackageScope"` // only relevant for csaf references - NEEDS TO BE A VALID PURL
+	CSAFPackageScope string                `json:"csafPackageScope" validate:"max=2048"` // only relevant for csaf references - NEEDS TO BE A VALID PURL
 }

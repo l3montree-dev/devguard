@@ -2,13 +2,11 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
@@ -31,22 +29,6 @@ func createTestAffectedComponent(purlStr string, cves []models.CVE) (models.Affe
 	}, nil
 }
 
-// createSBOMStructure stores one SBOM for the artifact, the way an ingest would.
-func createSBOMStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, origin string) error {
-	return SeedSBOM(f.DB, assetVersion, artifact.ArtifactName, origin, map[string][]string{
-		sbomSeedRoot: componentPurls,
-	})
-}
-
-// createVEXStructure stores a second SBOM for the artifact, standing in for a
-// VEX document that reports these components. It is a separate source, so it
-// coexists with the scanner's own SBOM rather than overwriting it.
-func createVEXStructure(f *TestFixture, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, componentPurls []string, cves []string, origin string) error {
-	return SeedSBOM(f.DB, assetVersion, artifact.ArtifactName, "vex:"+origin, map[string][]string{
-		sbomSeedRoot: componentPurls,
-	})
-}
-
 // TestDaemonPipelineEndToEnd tests the complete pipeline flow from asset creation to all stages
 func TestDaemonPipelineEndToEnd(t *testing.T) {
 	t.Parallel()
@@ -57,7 +39,6 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			project := f.CreateProject(org.ID, "test-project-e2e")
 			asset := f.CreateAsset(project.ID, "test-asset-e2e")
 			assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
-			asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 			err := f.App.AssetRepository.Save(context.Background(), nil, &asset)
 			assert.NoError(t, err)
 
@@ -98,14 +79,11 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 			// Run the daemon pipeline for this specific asset
 			runner := f.CreateDaemonRunner()
+			// the scan is a separate job, the pipeline only runs the per asset stages
+			err = runner.ScanAllAssets(context.Background())
+			assert.NoError(t, err)
 			err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 			assert.NoError(t, err)
-
-			// Verify asset was updated with pipeline run time
-			var updatedAsset models.Asset
-			err = f.DB.First(&updatedAsset, "id = ?", asset.ID).Error
-			assert.NoError(t, err)
-			assert.True(t, updatedAsset.PipelineLastRun.After(time.Now().Add(-1*time.Minute)), "PipelineLastRun should be recent")
 
 			// Verify vulnerabilities were detected
 			var vulnerabilities []models.DependencyVuln
@@ -122,196 +100,6 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 	})
 }
 
-// TestDaemonPipelineAutoReopenExceedThreshold tests that vulnerabilities are reopened when they exceed the threshold
-func TestDaemonPipelineAutoReopenExceedThreshold(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		org := f.CreateOrg("test-org-reopen-exceed")
-		project := f.CreateProject(org.ID, "test-project-reopen-exceed")
-		asset := f.CreateAsset(project.ID, "test-asset-reopen-exceed")
-		assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
-
-		// Configure auto-reopen after 1 day
-		autoReopenDays := 1
-		asset.VulnAutoReopenAfterDays = &autoReopenDays
-		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err := f.App.AssetRepository.Save(context.Background(), nil, &asset)
-		assert.NoError(t, err)
-
-		// Create a CVE
-		cve := models.CVE{
-			CVE:  "CVE-2025-TEST-002",
-			CVSS: 7.5,
-		}
-		err = f.DB.Create(&cve).Error
-		assert.NoError(t, err)
-
-		// Create affected component (links CVE to the component PURL)
-		affectedComponent, err := createTestAffectedComponent("pkg:npm/test-package@1.0.0", []models.CVE{cve})
-		assert.NoError(t, err)
-		err = f.DB.Create(&affectedComponent).Error
-		assert.NoError(t, err)
-
-		// Create artifact
-		artifact := models.Artifact{
-			ArtifactName:     "test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
-		}
-		err = f.DB.Create(&artifact).Error
-		assert.NoError(t, err)
-
-		// Create component
-		component := models.Component{
-			ID: "pkg:npm/test-package@1.0.0",
-		}
-		err = f.DB.Create(&component).Error
-		assert.NoError(t, err)
-
-		// Create SBOM structure
-		err = createSBOMStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, "test-origin")
-		assert.NoError(t, err)
-
-		// Create VEX structure that reports the CVE for this component
-		err = createVEXStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, []string{cve.CVE}, "test-origin")
-		assert.NoError(t, err)
-
-		// Create the vulnerability in accepted state (2 days ago)
-		vulnerability := models.DependencyVuln{
-			Vulnerability: models.Vulnerability{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				State:            dtos.VulnStateAccepted,
-				LastStateChange:  time.Now().Add(-48 * time.Hour),
-			},
-			CVEID:             cve.CVE,
-			ComponentPurl:     "pkg:npm/test-package@1.0.0",
-			VulnerabilityPath: []string{"pkg:npm/test-package@1.0.0"},
-			Artifacts:         []models.Artifact{artifact},
-		}
-		err = f.DB.Create(&vulnerability).Error
-		assert.NoError(t, err)
-
-		// Create accepted event (2 days ago)
-		acceptEvent := models.NewAcceptedEvent(
-			vulnerability.ID,
-			dtos.VulnTypeDependencyVuln,
-			"test-user",
-			"Test acceptance",
-			false,
-			nil,
-		)
-		acceptEvent.CreatedAt = time.Now().Add(-48 * time.Hour)
-		err = f.DB.Create(&acceptEvent).Error
-		assert.NoError(t, err)
-
-		// Run the full pipeline
-		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
-		assert.NoError(t, err)
-
-		// Verify vulnerability was reopened
-		var updatedVuln models.DependencyVuln
-		err = f.DB.Preload("Events").First(&updatedVuln, "id = ?", vulnerability.ID).Error
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateOpen, updatedVuln.State, "Vulnerability should be reopened")
-
-		// Verify reopen event was created
-		var reopenEvent *models.VulnEvent
-		for i := range updatedVuln.Events {
-			if updatedVuln.Events[i].Type == dtos.EventTypeReopened {
-				reopenEvent = &updatedVuln.Events[i]
-				break
-			}
-		}
-		assert.NotNil(t, reopenEvent, "Should have a reopen event")
-		assert.Equal(t, "system", reopenEvent.UserID, "Should be reopened by system")
-	})
-}
-
-// TestDaemonPipelineAutoReopenWithinThreshold tests that vulnerabilities are not reopened within the threshold
-func TestDaemonPipelineAutoReopenWithinThreshold(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		org := f.CreateOrg("test-org-reopen-within")
-		project := f.CreateProject(org.ID, "test-project-reopen-within")
-		asset := f.CreateAsset(project.ID, "test-asset-reopen-within")
-		assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
-
-		// Configure auto-reopen after 7 days
-		autoReopenDays := 7
-		asset.VulnAutoReopenAfterDays = &autoReopenDays
-		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err := f.App.AssetRepository.Save(context.Background(), nil, &asset)
-		assert.NoError(t, err)
-
-		// Create a CVE
-		cve := models.CVE{
-			CVE:  "CVE-2025-TEST-003",
-			CVSS: 7.5,
-		}
-		err = f.DB.Create(&cve).Error
-		assert.NoError(t, err)
-
-		// Create affected component (links CVE to the component PURL)
-		affectedComponent, err := createTestAffectedComponent("pkg:npm/test-package@1.0.0", []models.CVE{cve})
-		assert.NoError(t, err)
-		err = f.DB.Create(&affectedComponent).Error
-		assert.NoError(t, err)
-
-		// Create artifact
-		artifact := models.Artifact{
-			ArtifactName:     "test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
-		}
-		err = f.DB.Create(&artifact).Error
-		assert.NoError(t, err)
-
-		// Create component
-		component := models.Component{
-			ID: "pkg:npm/test-package@1.0.0",
-		}
-		err = f.DB.Create(&component).Error
-		assert.NoError(t, err)
-
-		// Create SBOM structure
-		err = createSBOMStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, "test-origin")
-		assert.NoError(t, err)
-
-		// Create VEX structure that reports the CVE for this component
-		err = createVEXStructure(f, asset, assetVersion, artifact, []string{"pkg:npm/test-package@1.0.0"}, []string{cve.CVE}, "test-origin")
-		assert.NoError(t, err)
-
-		// Create vulnerability accepted 2 days ago (within 7 day threshold)
-		vulnerability := models.DependencyVuln{
-			Vulnerability: models.Vulnerability{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				State:            dtos.VulnStateAccepted,
-				LastStateChange:  time.Now().Add(-48 * time.Hour),
-			},
-			CVEID:             cve.CVE,
-			ComponentPurl:     "pkg:npm/test-package@1.0.0",
-			VulnerabilityPath: []string{"pkg:npm/test-package@1.0.0"},
-			Artifacts:         []models.Artifact{artifact},
-		}
-		err = f.DB.Create(&vulnerability).Error
-		assert.NoError(t, err)
-
-		// Run the full pipeline
-		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
-		assert.NoError(t, err)
-
-		// Verify vulnerability is still accepted
-		var updatedVuln models.DependencyVuln
-		err = f.DB.First(&updatedVuln, "id = ?", vulnerability.ID).Error
-		assert.NoError(t, err)
-		assert.Equal(t, dtos.VulnStateAccepted, updatedVuln.State, "Vulnerability should remain accepted")
-	})
-}
-
 // TestDaemonPipelineErrorHandlingMissingAsset tests error handling for non-existent assets
 func TestDaemonPipelineErrorHandlingMissingAsset(t *testing.T) {
 	t.Parallel()
@@ -325,183 +113,29 @@ func TestDaemonPipelineErrorHandlingMissingAsset(t *testing.T) {
 	})
 }
 
-// TestDaemonPipelineErrorHandlingRecordErrors tests that pipeline errors are recorded on assets
-func TestDaemonPipelineErrorHandlingRecordErrors(t *testing.T) {
+// TestDaemonPipelineErrorHandlingAssetWithoutVersions tests that the pipeline completes for an asset without any asset versions
+func TestDaemonPipelineErrorHandlingAssetWithoutVersions(t *testing.T) {
 	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		// Create an asset without required related entities to trigger an error
+		// Create an asset without any asset versions or artifacts
 		org := f.CreateOrg("test-org-error-handling")
 		project := f.CreateProject(org.ID, "test-project-error")
 		asset := models.Asset{
-			Name:            "test-asset",
-			ProjectID:       project.ID,
-			Slug:            "test-asset",
-			PipelineLastRun: time.Now().Add(-2 * time.Hour),
+			Name:      "test-asset",
+			ProjectID: project.ID,
+			Slug:      "test-asset",
 		}
 		err := f.DB.Create(&asset).Error
 		assert.NoError(t, err)
 
 		runner := f.CreateDaemonRunner()
 		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
-		assert.NoError(t, err, "Pipeline should complete even with errors")
-		// The pipeline should complete but may record errors
-		var updatedAsset models.Asset
-		err = f.DB.First(&updatedAsset, "id = ?", asset.ID).Error
-		assert.NoError(t, err)
-
-		// Pipeline should have run (timestamp updated)
-		assert.True(t, updatedAsset.PipelineLastRun.After(asset.PipelineLastRun), "Pipeline should have updated run time")
+		assert.NoError(t, err, "Pipeline should complete without asset versions")
 	})
 }
 
-// TestDaemonPipelineFetchAssetIDsNeedProcessing tests fetching only assets that need processing
-func TestDaemonPipelineFetchAssetIDsNeedProcessing(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		// Create assets with different pipeline run times
-		org := f.CreateOrg("test-org-fetch-ids")
-		project := f.CreateProject(org.ID, "test-project-fetch")
-
-		// Asset 1: Needs processing (old)
-		asset1 := models.Asset{
-			Name:            "asset-needs-processing",
-			ProjectID:       project.ID,
-			Slug:            "asset-needs-processing",
-			PipelineLastRun: time.Now().Add(-20 * time.Hour),
-		}
-		err := f.DB.Create(&asset1).Error
-		assert.NoError(t, err)
-
-		// Asset 2: Recently processed (should be skipped)
-		asset2 := models.Asset{
-			Name:            "asset-recently-processed",
-			ProjectID:       project.ID,
-			Slug:            "asset-recently-processed",
-			PipelineLastRun: time.Now().Add(-30 * time.Minute),
-		}
-		err = f.DB.Create(&asset2).Error
-		assert.NoError(t, err)
-
-		// Fetch asset IDs
-		runner := f.CreateDaemonRunner()
-		idsChan := runner.FetchAssetIDs(context.Background())
-
-		// Collect IDs
-		var ids []uuid.UUID
-		for id := range idsChan {
-			ids = append(ids, id)
-		}
-
-		// Should only include asset1
-		assert.Contains(t, ids, asset1.ID, "Should include asset that needs processing")
-		assert.NotContains(t, ids, asset2.ID, "Should not include recently processed asset")
-	})
-}
-
-// TestDaemonPipelineFetchAssetIDsAll tests fetching all assets when none processed recently
-func TestDaemonPipelineFetchAssetIDsAll(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		org := f.CreateOrg("test-org-fetch-all")
-		project := f.CreateProject(org.ID, "test-project-fetch-all")
-
-		// Create multiple assets that all need processing
-		assetIDs := make([]uuid.UUID, 0)
-		for i := range 5 {
-			asset := models.Asset{
-				Name:            fmt.Sprintf("asset-%d", i),
-				ProjectID:       project.ID,
-				Slug:            fmt.Sprintf("asset-%d", i),
-				PipelineLastRun: time.Now().Add(-30 * time.Hour),
-			}
-			err := f.DB.Create(&asset).Error
-			assert.NoError(t, err)
-			assetIDs = append(assetIDs, asset.ID)
-		}
-
-		// Fetch asset IDs
-		runner := f.CreateDaemonRunner()
-		idsChan := runner.FetchAssetIDs(context.Background())
-
-		// Collect IDs
-		var fetchedIDs []uuid.UUID
-		for id := range idsChan {
-			fetchedIDs = append(fetchedIDs, id)
-		}
-
-		// Should include all created assets
-		for _, expectedID := range assetIDs {
-			assert.Contains(t, fetchedIDs, expectedID, fmt.Sprintf("Should include asset %s", expectedID))
-		}
-	})
-}
-
-// TestDaemonPipelineScanAssetDetectVulns tests scanning assets and detecting vulnerabilities
-func TestDaemonPipelineScanAssetDetectVulns(t *testing.T) {
-	t.Parallel()
-	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
-		org := f.CreateOrg("test-org-scan-vuln")
-		project := f.CreateProject(org.ID, "test-project-scan")
-		asset := f.CreateAsset(project.ID, "test-asset-scan")
-		assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
-		// Create CVE and affected component
-		cve := models.CVE{
-			CVE:              "CVE-2025-SCAN-001",
-			DatePublished:    time.Now().Add(-24 * time.Hour),
-			DateLastModified: time.Now().Add(-12 * time.Hour),
-			Description:      "Test vulnerability for scan testing",
-			CVSS:             9.0,
-		}
-		err := f.DB.Create(&cve).Error
-		assert.NoError(t, err)
-
-		affectedComponent, err := createTestAffectedComponent("pkg:npm/vulnerable-package@2.0.0", []models.CVE{cve})
-		assert.NoError(t, err)
-		err = f.DB.Create(&affectedComponent).Error
-		assert.NoError(t, err)
-
-		// Create component
-		component := models.Component{
-			ID: "pkg:npm/vulnerable-package@2.0.0",
-		}
-		err = f.DB.Create(&component).Error
-		assert.NoError(t, err)
-
-		// Create artifact
-		artifact := models.Artifact{
-			ArtifactName:     "scan-test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
-		}
-		err = f.DB.Create(&artifact).Error
-		assert.NoError(t, err)
-
-		err = SeedDirectDependencies(f.DB, assetVersion, artifact.ArtifactName, "pkg:npm/vulnerable-package@2.0.0")
-		assert.NoError(t, err)
-
-		// Mark asset for processing
-		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
-		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
-		assert.NoError(t, err)
-
-		// Run the pipeline
-		runner := f.CreateDaemonRunner()
-		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
-		assert.NoError(t, err)
-
-		// Verify vulnerability was detected
-		var vulnerabilities []models.DependencyVuln
-		err = f.DB.Preload("CVE").Find(&vulnerabilities, "asset_id = ? AND cve_id = ?", asset.ID, cve.CVE).Error
-		assert.NoError(t, err)
-		assert.Len(t, vulnerabilities, 1, "Should detect exactly one vulnerability")
-		assert.Equal(t, cve.CVE, vulnerabilities[0].CVE.CVE, "Should detect correct CVE")
-		assert.Equal(t, dtos.VulnStateOpen, vulnerabilities[0].State, "Vulnerability should be in open state")
-	})
-
-}
-
-// TestDaemonPipelineScanAssetEmptyComponents tests handling assets with no components
-func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
+// TestDaemonPipelineEmptyArtifact tests that the pipeline handles artifacts without components
+func TestDaemonPipelineEmptyArtifact(t *testing.T) {
 	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
 		org := f.CreateOrg("test-org-scan-empty")
@@ -517,7 +151,6 @@ func TestDaemonPipelineScanAssetEmptyComponents(t *testing.T) {
 		err := f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
 
-		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
@@ -578,7 +211,6 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 		err = f.DB.Create(&mainArtifact).Error
 		assert.NoError(t, err)
 
-		asset.PipelineLastRun = time.Now().Add(-2 * time.Hour)
 		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
@@ -655,6 +287,9 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 
 			// Run the pipeline
 			runner := f.CreateDaemonRunner()
+			// the scan is a separate job, the pipeline only runs the per asset stages
+			err = runner.ScanAllAssets(context.Background())
+			assert.NoError(t, err)
 			err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 			assert.NoError(t, err)
 

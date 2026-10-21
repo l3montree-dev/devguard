@@ -440,19 +440,19 @@ func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id sha
 }
 
 // GetUsers provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetUsers(org models.Org) []dtos.UserDTO {
+func (_mock *IntegrationAggregate) GetUsers(org models.Org) []dtos.User {
 	ret := _mock.Called(org)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUsers")
 	}
 
-	var r0 []dtos.UserDTO
-	if returnFunc, ok := ret.Get(0).(func(models.Org) []dtos.UserDTO); ok {
+	var r0 []dtos.User
+	if returnFunc, ok := ret.Get(0).(func(models.Org) []dtos.User); ok {
 		r0 = returnFunc(org)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]dtos.UserDTO)
+			r0 = ret.Get(0).([]dtos.User)
 		}
 	}
 	return r0
@@ -482,12 +482,12 @@ func (_c *IntegrationAggregate_GetUsers_Call) Run(run func(org models.Org)) *Int
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) Return(userDTOs []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
-	_c.Call.Return(userDTOs)
+func (_c *IntegrationAggregate_GetUsers_Call) Return(users []dtos.User) *IntegrationAggregate_GetUsers_Call {
+	_c.Call.Return(users)
 	return _c
 }
 
-func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []dtos.UserDTO) *IntegrationAggregate_GetUsers_Call {
+func (_c *IntegrationAggregate_GetUsers_Call) RunAndReturn(run func(org models.Org) []dtos.User) *IntegrationAggregate_GetUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }

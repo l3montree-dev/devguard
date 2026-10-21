@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
@@ -587,6 +588,9 @@ func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, 
 		}
 		return false, nil
 	case shared.SessionActorOrg:
+		if ownerID != c.domain {
+			return false, nil
+		}
 		// an org token can do anything except delete or update the organization itself
 		if object == shared.ObjectOrganization {
 			return action != shared.ActionDelete && action != shared.ActionUpdate, nil
@@ -794,7 +798,7 @@ func (c casbinRBACProvider) GetOwnerDomainsOfUser(user string) ([]string, error)
 }
 
 // the provider can be used to create domain specific RBAC instances
-func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) (casbinRBACProvider, error) {
+func NewCasbinRBACProvider(db *gorm.DB, broker events.Broker, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) (casbinRBACProvider, error) {
 	enforcer, err := buildEnforcer(db, broker)
 	if err != nil {
 		return casbinRBACProvider{
@@ -809,7 +813,7 @@ func NewCasbinRBACProvider(db *gorm.DB, broker shared.PubSubBroker, projectRepos
 	}, nil
 }
 
-func buildEnforcer(db *gorm.DB, broker shared.PubSubBroker) (*casbin.ContextEnforcer, error) {
+func buildEnforcer(db *gorm.DB, broker events.Broker) (*casbin.ContextEnforcer, error) {
 	a, err := gormadapter.NewAdapterByDB(db)
 	if err != nil {
 		return nil, err

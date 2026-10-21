@@ -20,17 +20,17 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func LicenseRiskToDTO(f models.LicenseRisk) dtos.LicenseRiskDTO {
-	artifacts := make([]dtos.LicenseRiskArtifactDTO, len(f.Artifacts))
+func LicenseRiskToDTO(f models.LicenseRisk) dtos.LicenseRisk {
+	artifacts := make([]dtos.LicenseRiskArtifact, len(f.Artifacts))
 	for i, artifact := range f.Artifacts {
-		artifacts[i] = dtos.LicenseRiskArtifactDTO{
+		artifacts[i] = dtos.LicenseRiskArtifact{
 			ArtifactName:     artifact.ArtifactName,
 			AssetVersionName: artifact.AssetVersionName,
 			AssetID:          artifact.AssetID.String(),
 		}
 	}
 
-	return dtos.LicenseRiskDTO{
+	return dtos.LicenseRisk{
 		ID:                   f.ID,
 		Artifacts:            artifacts,
 		AssetVersionName:     f.AssetVersionName,

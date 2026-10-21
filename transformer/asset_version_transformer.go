@@ -20,8 +20,8 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func AssetVersionModelToDTO(assetVersion models.AssetVersion) dtos.AssetVersionDTO {
-	return dtos.AssetVersionDTO{
+func AssetVersionModelToDTO(assetVersion models.AssetVersion) dtos.AssetVersion {
+	return dtos.AssetVersion{
 		CreatedAt:      assetVersion.CreatedAt.String(),
 		UpdatedAt:      assetVersion.UpdatedAt.String(),
 		Name:           assetVersion.Name,
