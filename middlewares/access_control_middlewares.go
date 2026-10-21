@@ -78,11 +78,13 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
 			}
 
-			// check if the user has the required role
-			if !allowed {
-				slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
-				ctx.Response().WriteHeader(404)
-				return echo.NewHTTPError(404, "could not find organization")
+			if session.GetSessionActorType() == shared.SessionActorUser {
+				// check if the user has the required role
+				if !allowed {
+					slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
+					ctx.Response().WriteHeader(404)
+					return echo.NewHTTPError(404, "could not find organization")
+				}
 			}
 
 			return next(ctx)
