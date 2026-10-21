@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -84,29 +83,22 @@ func newCache(basePath string, sizeInMB int) *cache {
 }
 
 type orgCaches struct {
-	mu       sync.Mutex
 	basePath string
 	sizeMB   int
-	caches   map[uuid.UUID]*cache
+	caches   sync.Map
 }
 
 func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
 	entries, _ := os.ReadDir(baseDir)
-	ecosystemList := []string{"npm_", "pypi_", "go_", "maven_", "composer_", "deb_", "oci_"}
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			if slices.ContainsFunc(ecosystemList, func(p string) bool { return strings.HasPrefix(entry.Name(), p) }) {
-				if err := os.Remove(filepath.Join(baseDir, entry.Name())); err != nil {
-					slog.Warn("failed to remove entry in cache", "error", err)
-				}
-			}
+		if err := os.RemoveAll(filepath.Join(baseDir, entry.Name())); err != nil {
+			slog.Warn("failed to remove entry in cache", "error", err)
 		}
 	}
 
 	return &orgCaches{
 		basePath: baseDir,
 		sizeMB:   sizeInMB,
-		caches:   make(map[uuid.UUID]*cache),
 	}
 }
 
@@ -114,37 +106,29 @@ func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
 	if orgID == uuid.Nil {
 		return nil, fmt.Errorf("no orgID found")
 	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	e, exists := o.caches[orgID]
-	if exists {
-		return e, nil
+	if c, ok := o.caches.Load(orgID); ok {
+		return c.(*cache), nil
 	}
 	path := filepath.Join(o.basePath, orgID.String())
-	if err := os.RemoveAll(path); err != nil {
-		return nil, err
-	}
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
-	c := newCache(path, o.sizeMB)
-	o.caches[orgID] = c
-	return c, nil
+	c, _ := o.caches.LoadOrStore(orgID, newCache(path, o.sizeMB))
+	return c.(*cache), nil
 }
 
 func (o *orgCaches) Stats() CacheStats {
-	o.mu.Lock()
-	defer o.mu.Unlock()
 	totalStats := CacheStats{}
-	for _, c := range o.caches {
-		s := c.Stats()
+	o.caches.Range(func(_, v any) bool {
+		s := v.(*cache).Stats()
 		totalStats.SizeBytes += s.SizeBytes
 		totalStats.MaxBytes += s.MaxBytes
 		totalStats.Entries += s.Entries
 		totalStats.Hits += s.Hits
 		totalStats.Misses += s.Misses
 		totalStats.Evictions += s.Evictions
-	}
+		return true
+	})
 	return totalStats
 }
 

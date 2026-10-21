@@ -94,15 +94,20 @@ const testProxySecret = "550e8400-e29b-41d4-a716-446655440000"
 func newSecretScopedController(t *testing.T) *DependencyProxyController {
 	t.Helper()
 	assetID := uuid.New()
+	projectID := uuid.New()
 
 	proxyService := mocks.NewDependencyProxySecretService(t)
 	proxyService.EXPECT().GetModelBySecret(mock.Anything, uuid.MustParse(testProxySecret)).Return("asset", assetID, nil)
 	assetRepository := mocks.NewAssetRepository(t)
-	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{}, nil)
+	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ProjectID: projectID}, nil)
+	projectRepository := mocks.NewProjectRepository(t)
+	projectRepository.EXPECT().Read(mock.Anything, mock.Anything, projectID).Return(models.Project{OrganizationID: uuid.New()}, nil)
 
 	return &DependencyProxyController{
 		dependencyProxyService: proxyService,
 		assetRepository:        assetRepository,
+		projectRepository:      projectRepository,
+		caches:                 newOrgCaches(t.TempDir(), 10),
 	}
 }
 
