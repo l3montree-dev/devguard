@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	pypiProxyPrefixRe   = regexp.MustCompile(`^/api/v1/dependency-proxy/(?:[^/]+/)?pypi(?:/|$)`)
+	pypiProxyPrefixRe   = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/pypi(?:/|$)`)
 	pypiFilenameRe      = regexp.MustCompile(`^(.+?)-(\d[^-]*?)(?:-.+\.whl|\.zip|\.tar(?:\.gz|\.bz2|\.xz|\.lz|\.lzma)?|\.t[bgx]z|\.tlz)$`)
 	pypiNameSeparatorRe = regexp.MustCompile(`[-_.]+`)
 	pypiAbsoluteURLRe   = regexp.MustCompile(`(?:https?:)?//[^/"'\s]+/`)
@@ -164,9 +164,8 @@ func (pypiEcosystem) writeResponse(c shared.Context, data []byte, path string, c
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Success 200 {file} binary
-// @Router /dependency-proxy/pypi/packages/{path} [get]
 // @Router /dependency-proxy/{secret}/pypi/packages/{path} [get]
 func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
@@ -312,10 +311,9 @@ type pySimple struct {
 // @Tags Dependency Firewall
 // @Security PATAuth
 // @Security BearerAuth
-// @Param secret path string false "dependency proxy secret"
+// @param secret path string true "dependency proxy secret"
 // @Param package path string true "PyPI package name"
 // @Success 200 {string} string "HTML simple index"
-// @Router /dependency-proxy/pypi/simple/{package} [get]
 // @Router /dependency-proxy/{secret}/pypi/simple/{package} [get]
 func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) error {
 	config, err := d.GetDependencyProxyConfigs(c)
@@ -327,7 +325,6 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
-	
 	pkgName := normalizePyPIName(c.Param("package"))
 	requestPath := pypi.trimPrefix(c.Request().URL.Path)
 

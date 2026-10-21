@@ -31,55 +31,23 @@ const (
 	pathVersionCheck       = "/v2/"
 )
 
-func TestOCIRegistryRouterPublicKillSwitch(t *testing.T) {
+func TestOCIRegistryRouterOnlySecretScopedRoutes(t *testing.T) {
 	// A nil-embedded controller is fine — Echo stores method values on route
 	// registration, the handlers themselves are never invoked here.
-	ctrl := &dependencyfirewall.OCIDependencyProxyController{}
+	paths := registerRoutesAndList(&dependencyfirewall.OCIDependencyProxyController{})
 
-	t.Run("default registers both unauth and secret-scoped routes", func(t *testing.T) {
-		t.Setenv("DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED", "")
-		paths := registerRoutesAndList(ctrl)
-
-		if !slices.Contains(paths, pathUnauthManifest1Seg) {
-			t.Error("expected 1-segment unauth manifest route to be registered")
-		}
-		if !slices.Contains(paths, pathUnauthManifest2Seg) {
-			t.Error("expected 2-segment unauth manifest route to be registered")
-		}
-		if !slices.Contains(paths, pathSecretManifest2Seg) {
-			t.Error("expected secret-scoped route to be registered")
-		}
-		if !slices.Contains(paths, pathVersionCheck) {
-			t.Error("expected version check route to be registered")
-		}
-	})
-
-	t.Run("explicit true behaves like default", func(t *testing.T) {
-		t.Setenv("DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED", "true")
-		paths := registerRoutesAndList(ctrl)
-
-		if !slices.Contains(paths, pathUnauthManifest1Seg) {
-			t.Error("expected unauth route to be registered when explicit true")
-		}
-	})
-
-	t.Run("kill switch removes unauth routes but keeps secret-scoped", func(t *testing.T) {
-		t.Setenv("DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED", "false")
-		paths := registerRoutesAndList(ctrl)
-
-		if slices.Contains(paths, pathUnauthManifest1Seg) {
-			t.Error("expected 1-segment unauth route to NOT be registered when killswitch active")
-		}
-		if slices.Contains(paths, pathUnauthManifest2Seg) {
-			t.Error("expected 2-segment unauth route to NOT be registered when killswitch active")
-		}
-		if !slices.Contains(paths, pathSecretManifest2Seg) {
-			t.Error("expected secret-scoped route to remain registered")
-		}
-		if !slices.Contains(paths, pathVersionCheck) {
-			t.Error("expected version check route to remain registered")
-		}
-	})
+	if slices.Contains(paths, pathUnauthManifest1Seg) {
+		t.Error("expected 1-segment unauth route to NOT be registered")
+	}
+	if slices.Contains(paths, pathUnauthManifest2Seg) {
+		t.Error("expected 2-segment unauth route to NOT be registered")
+	}
+	if !slices.Contains(paths, pathSecretManifest2Seg) {
+		t.Error("expected secret-scoped route to be registered")
+	}
+	if !slices.Contains(paths, pathVersionCheck) {
+		t.Error("expected version check route to be registered")
+	}
 }
 
 func registerRoutesAndList(ctrl *dependencyfirewall.OCIDependencyProxyController) []string {
