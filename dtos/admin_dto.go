@@ -17,7 +17,7 @@ type AdminsInOrg struct {
 	ID         uuid.UUID `json:"id"`
 	Slug       string    `json:"slug"`
 	InstanceID string    `json:"instance_id"`
-	Admins     []UserDTO `json:"admins"`
+	Admins     []User    `json:"admins"`
 }
 
 type OrgInformation struct {
@@ -25,7 +25,7 @@ type OrgInformation struct {
 }
 
 type UpdateAssetRequest struct {
-	NewSlug string `json:"new_slug" validate:"required"`
+	NewSlug string `json:"new_slug" validate:"required,max=256"`
 }
 
 type UpdateInstanceSettingsRequest struct {

@@ -74,18 +74,18 @@ func ApplyProjectPatchRequestToModel(projectPatch dtos.ProjectPatchRequest, proj
 	return updated
 }
 
-func ProjectModelToDTO(project models.Project) dtos.ProjectDTO {
-	var parentDTO *dtos.ProjectDTO
+func ProjectModelToDTO(project models.Project) dtos.Project {
+	var parentDTO *dtos.Project
 	if project.Parent != nil {
 		parentDTO = new(ProjectModelToDTO(*project.Parent))
 	}
 
-	assets := make([]dtos.AssetDTO, len(project.Assets))
+	assets := make([]dtos.Asset, len(project.Assets))
 	for i, asset := range project.Assets {
 		assets[i] = AssetModelToDTO(asset)
 	}
 
-	return dtos.ProjectDTO{
+	return dtos.Project{
 		Avatar:                   project.Avatar,
 		ID:                       project.ID,
 		Name:                     project.Name,

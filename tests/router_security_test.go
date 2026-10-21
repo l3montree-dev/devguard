@@ -114,22 +114,6 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/dependency-proxy/:secret/pypi/packages/*":                                                                        shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/pypi/simple/:package":                                                                   shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/pypi/simple/:package/":                                                                  shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/go":                                                                                             shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/go/*":                                                                                           shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/deb/*":                                                                                          shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/composer/*":                                                                                     shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/maven/*":                                                                                        shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:package":                                                                                   shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:package/":                                                                                  shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:package/-/*":                                                                               shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:scope/:name":                                                                               shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:scope/:name/":                                                                              shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/:scope/:name/-/*":                                                                           shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/npm/-/*":                                                                                        shared.RoleGuest,
-	"POST /api/v1/dependency-proxy/npm/-/*":                                                                                       shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/pypi/packages/*":                                                                                shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/pypi/simple/:package":                                                                           shared.RoleGuest,
-	"GET /api/v1/dependency-proxy/pypi/simple/:package/":                                                                          shared.RoleGuest,
 	"GET /api/v1/health/":                                                                                                         shared.RoleGuest,
 	"GET /api/v1/info/":                                                                                                           shared.RoleGuest,
 	"GET /api/v1/instance-settings/":                                                                                              shared.RoleGuest,
@@ -282,14 +266,6 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/vulndb/purl-inspect/:purl":                                                     shared.RoleGuest,
 	"GET /api/v1/whoami/":                                                                       shared.RoleGuest,
 	"GET /v2/":                                                                                  shared.RoleGuest,
-	"GET /v2/:registry/:image/blobs/:digest/":                                                   shared.RoleGuest,
-	"GET /v2/:registry/:image/manifests/:reference/":                                            shared.RoleGuest,
-	"GET /v2/:registry/:image/referrers/:digest/":                                               shared.RoleGuest,
-	"GET /v2/:registry/:image/tags/list/":                                                       shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/blobs/:digest/":                                        shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/manifests/:reference/":                                 shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/referrers/:digest/":                                    shared.RoleGuest,
-	"GET /v2/:registry/:namespace/:image/tags/list/":                                            shared.RoleGuest,
 	"GET /v2/:secret/:registry/:namespace/:image/blobs/:digest/":                                shared.RoleGuest,
 	"GET /v2/:secret/:registry/:namespace/:image/manifests/:reference/":                         shared.RoleGuest,
 	"GET /v2/:secret/:registry/:namespace/:image/referrers/:digest/":                            shared.RoleGuest,
@@ -299,10 +275,6 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /v2/:secret/:registry/:ns1/:ns2/:image/referrers/:digest/":                             shared.RoleGuest,
 	"GET /v2/:secret/:registry/:ns1/:ns2/:image/tags/list/":                                     shared.RoleGuest,
 	"HEAD /v2/": shared.RoleGuest,
-	"HEAD /v2/:registry/:image/blobs/:digest/":                                                                                                               shared.RoleGuest,
-	"HEAD /v2/:registry/:image/manifests/:reference/":                                                                                                        shared.RoleGuest,
-	"HEAD /v2/:registry/:namespace/:image/blobs/:digest/":                                                                                                    shared.RoleGuest,
-	"HEAD /v2/:registry/:namespace/:image/manifests/:reference/":                                                                                             shared.RoleGuest,
 	"HEAD /v2/:secret/:registry/:namespace/:image/blobs/:digest/":                                                                                            shared.RoleGuest,
 	"HEAD /v2/:secret/:registry/:namespace/:image/manifests/:reference/":                                                                                     shared.RoleGuest,
 	"HEAD /v2/:secret/:registry/:ns1/:ns2/:image/blobs/:digest/":                                                                                             shared.RoleGuest,
@@ -322,7 +294,6 @@ var routeMinLevel = map[string]shared.Role{
 	"POST /api/v1/admin/daemons/vulndb/trigger/":                                                                                                             shared.RoleOwner,
 	"POST /api/v1/attestations/":                                                                                                                             shared.RoleMember,
 	"POST /api/v1/dependency-proxy/:secret/npm/*":                                                                                                            shared.RoleGuest,
-	"POST /api/v1/dependency-proxy/npm/*":                                                                                                                    shared.RoleGuest,
 	"POST /api/v1/organizations/":                                                                                                                            shared.RoleMember,
 	"POST /api/v1/organizations/:organization/compliance-postures/:frameworkControlID/":                                                                      shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/compliance-postures/:frameworkControlID/components/:complianceComponentID/":                                    shared.RoleAdmin,
@@ -446,6 +417,7 @@ func setupIntotoTestKey(t *testing.T) {
 }
 
 type seededResources struct {
+	orgID                 uuid.UUID
 	orgSlug               string
 	projectSlug           string
 	assetSlug             string
@@ -504,6 +476,10 @@ func buildFullRouterServer(t *testing.T, public bool) (*echo.Echo, *TestApp) {
 	patService := mocks.NewPersonalAccessTokenService(t)
 	patService.On("VerifyRequestSignature", mock.Anything, mock.Anything).Maybe().
 		Return(func(_ context.Context, req *http.Request) (shared.AuthSession, error) {
+			// simulates an organization access token minted for the given org ID
+			if orgID := req.Header.Get("X-Test-Org-Token"); orgID != "" {
+				return shared.NewSession(orgID, shared.SessionActorOrg, []string{"manage", "scan"}, false), nil
+			}
 			actor := req.Header.Get("X-Test-Actor")
 			if actor == "" || actor == actorPublicVisitor {
 				return nil, fmt.Errorf("no session for public visitor")
@@ -629,6 +605,7 @@ func seedRBACFixture(t *testing.T, e *echo.Echo, app *TestApp, public bool, slug
 	}
 
 	return seededResources{
+		orgID:                 org.ID,
 		orgSlug:               org.Slug,
 		projectSlug:           project.Slug,
 		assetSlug:             createdAsset.Slug,
@@ -717,4 +694,38 @@ func TestRoutesEnforceAccessLevelsOnPublicResources(t *testing.T) {
 func TestRoutesEnforceAccessLevelsOnPrivateResources(t *testing.T) {
 	e, app := buildFullRouterServer(t, false)
 	runAccessLevelSweep(t, e, app, false)
+}
+
+func TestOrgTokenCannotAccessForeignOrganizationRoutes(t *testing.T) {
+	e, app := buildFullRouterServer(t, false)
+
+	attacker := seedRBACFixture(t, e, app, false, "attacker")
+	victim := seedRBACFixture(t, e, app, false, "victim")
+
+	var routes, deferred []*echo.Route
+	for _, route := range e.Routes() {
+		if route.Method == "echo_route_not_found" || !strings.Contains(route.Path, ":organization") {
+			continue
+		}
+		if selfDestructivePaths[route.Method+" "+route.Path] {
+			deferred = append(deferred, route)
+			continue
+		}
+		routes = append(routes, route)
+	}
+	routes = append(routes, deferred...)
+
+	for _, route := range routes {
+		if accessLevelFor(t, route.Method, route.Path) == shared.RoleGuest {
+			continue
+		}
+
+		req := httptest.NewRequest(route.Method, fillParams(route.Path, victim), nil)
+		req.Header.Set("X-Test-Org-Token", attacker.orgID.String())
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Contains(t, []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound}, rec.Code,
+			"route %s %s returned %d for an org token of a foreign organization (want 401/403/404)", route.Method, route.Path, rec.Code)
+	}
 }

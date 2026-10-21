@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -44,9 +45,10 @@ type ProjectController struct {
 	projectService         shared.ProjectService
 	webhookRepository      shared.WebhookIntegrationRepository
 	scanService            shared.ScanService
+	broker                 events.Broker
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker) *ProjectController {
 	return &ProjectController{
 		projectRepository:      repository,
 		assetRepository:        assetRepository,
@@ -58,6 +60,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 		projectService:         projectService,
 		webhookRepository:      webhookRepository,
 		scanService:            scanService,
+		broker:                 broker,
 	}
 }
 
@@ -93,7 +96,7 @@ func (projectController *ProjectController) Create(ctx shared.Context) error {
 	return ctx.JSON(200, newProject)
 }
 
-func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
+func FetchMembersOfProject(ctx shared.Context) ([]dtos.User, error) {
 	project := shared.GetProject(ctx)
 	// get rbac
 	rbac := shared.GetRBAC(ctx)
@@ -103,7 +106,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 	if len(members) == 0 {
-		return []dtos.UserDTO{}, nil
+		return []dtos.User{}, nil
 	}
 	// get the auth admin client from the context
 	authAdminClient := shared.GetAuthAdminClient(ctx)
@@ -114,16 +117,16 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
-	users := utils.Map(m, func(i client.Identity) dtos.UserDTO {
+	users := utils.Map(m, func(i client.Identity) dtos.User {
 		name := shared.IdentityName(i.Traits)
 		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
 		if err != nil {
-			return dtos.UserDTO{
+			return dtos.User{
 				ID:   i.Id,
 				Name: name,
 			}
 		}
-		return dtos.UserDTO{
+		return dtos.User{
 			ID:   i.Id,
 			Name: name,
 			Role: string(role),
@@ -140,7 +143,7 @@ func FetchMembersOfProject(ctx shared.Context) ([]dtos.UserDTO, error) {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {array} dtos.UserDTO
+// @Success 200 {array} dtos.User
 // @Router /organizations/{organization}/projects/{projectSlug}/members [get]
 func (projectController *ProjectController) Members(c shared.Context) error {
 	members, err := FetchMembersOfProject(c)
@@ -336,7 +339,7 @@ func (projectController *ProjectController) Delete(c shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {object} dtos.ProjectDetailsDTO
+// @Success 200 {object} dtos.ProjectDetails
 // @Router /organizations/{organization}/projects/{projectSlug} [get]
 func (projectController *ProjectController) Read(c shared.Context) error {
 	// just get the project from the context
@@ -366,16 +369,16 @@ func (projectController *ProjectController) Read(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch webhooks").WithInternal(err)
 	}
 
-	resp := dtos.ProjectDetailsDTO{
-		ProjectDTO: transformer.ProjectModelToDTO(project),
-		Members:    members,
-		Webhooks:   webhooks,
+	resp := dtos.ProjectDetails{
+		Project:  transformer.ProjectModelToDTO(project),
+		Members:  members,
+		Webhooks: webhooks,
 	}
 
 	return c.JSON(200, resp)
 }
 
-func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegrationDTO, error) {
+func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dtos.WebhookIntegration, error) {
 
 	orgID := shared.GetOrg(c).GetID()
 	projectID := shared.GetProject(c).GetID()
@@ -385,8 +388,8 @@ func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
 	}
 
-	return utils.Map(webhooks, func(w models.WebhookIntegration) dtos.WebhookIntegrationDTO {
-		return dtos.WebhookIntegrationDTO{
+	return utils.Map(webhooks, func(w models.WebhookIntegration) dtos.WebhookIntegration {
+		return dtos.WebhookIntegration{
 			ID:          w.ID.String(),
 			Name:        *w.Name,
 			Description: *w.Description,
@@ -406,7 +409,7 @@ func (projectController *ProjectController) getWebhooks(c shared.Context) ([]dto
 // @Param projectSlug path string true "Project slug"
 // @Param search query string false "Search query for filtering sub-projects and assets"
 // @Param parentId query string false "Only list children of this project ID"
-// @Success 200 {object} shared.Paged[dtos.ProjectAssetDTO]
+// @Success 200 {object} shared.Paged[dtos.ProjectAsset]
 // @Router /organizations/{organization}/projects/{projectSlug}/resources [get]
 func (projectController *ProjectController) ListSubProjectsAndAssets(c shared.Context) error {
 
@@ -449,7 +452,7 @@ func (projectController *ProjectController) List(c shared.Context) error {
 // @Param search query string false "Search query"
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
-// @Success 200 {object} shared.Paged[dtos.ProjectDTO]
+// @Success 200 {object} shared.Paged[dtos.Project]
 // @Router /organizations/{organization}/projects/search/ [get]
 func (projectController *ProjectController) SearchProjectsWithSubProjectsAndAssets(c shared.Context) error {
 
@@ -469,7 +472,7 @@ func (projectController *ProjectController) SearchProjectsWithSubProjectsAndAsse
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.ProjectPatchRequest true "Request body"
-// @Success 200 {object} dtos.ProjectDetailsDTO
+// @Success 200 {object} dtos.ProjectDetails
 // @Router /organizations/{organization}/projects/{projectSlug} [patch]
 func (projectController *ProjectController) Update(c shared.Context) error {
 	reqCtx := c.Request().Context()
@@ -517,9 +520,9 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 
 	project.Assets = assets
 
-	resp := dtos.ProjectDetailsDTO{
-		ProjectDTO: transformer.ProjectModelToDTO(project),
-		Members:    members,
+	resp := dtos.ProjectDetails{
+		Project: transformer.ProjectModelToDTO(project),
+		Members: members,
 	}
 	return c.JSON(200, resp)
 }
@@ -610,7 +613,7 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param providerID path string true "External provider ID"
-// @Param body body dtos.ExternalSubprojectRequestDTO true "Request body"
+// @Param body body dtos.ExternalSubprojectRequest true "Request body"
 // @Success 200
 // @Router /organizations/{organization}/projects/{projectSlug}/external/{providerID} [post]
 func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx shared.Context) error {
@@ -620,7 +623,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return echo.NewHTTPError(400, fmt.Sprintf("could not read request body: %s", err.Error())).WithInternal(err)
 	}
 
-	var probe dtos.ExternalSubprojectRequestDTO
+	var probe dtos.ExternalSubprojectRequest
 	if err := json.Unmarshal(body, &probe); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not parse request body: %s", err.Error())).WithInternal(err)
 	}
@@ -729,13 +732,15 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	}
 
 	userAgent := ctx.Request().UserAgent()
-	_, _, _, err = projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
+	opened, _, _, err := projectController.scanService.ScanNormalizedSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, wholeSBOM, ownerID, &userAgent)
 	if err != nil {
 		slog.Error("trivy operator: scan failed", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "scan failed"})
 	}
 
 	tx.Commit()
+	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
+	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), projectController.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 	return ctx.JSON(200, map[string]string{"message": "project and asset created, SBOM processed and scan started successfully"})
 }
 

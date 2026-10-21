@@ -10,9 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
-	"github.com/l3montree-dev/devguard/daemons"
+	"github.com/l3montree-dev/devguard/events/listeners"
+
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
@@ -69,14 +71,6 @@ func initCLITracing() func() {
 	}
 }
 
-func markMirrored(configService shared.ConfigService, key string) error {
-	return configService.SetJSONConfig(context.Background(), key, struct {
-		Time time.Time `json:"time"`
-	}{
-		Time: time.Now(),
-	})
-}
-
 func NewDaemonCommand() *cobra.Command {
 	daemon := cobra.Command{
 		Use:   "daemon",
@@ -100,7 +94,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "recommendations", "fixedVersions", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{listeners.DaemonVulnDB, listeners.DaemonVEXRuleRecommendations, listeners.DaemonFixedVersions}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -108,17 +102,20 @@ func newTriggerCommand() *cobra.Command {
 func newRunPipelineForAssetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "runPipeline [asset-id]",
-		Short: "Run the asset pipeline for a single asset",
+		Short: "Run the asset pipeline for a single asset - or every asset if no asset id is provided",
 		Long: `Runs the full asset pipeline (scan, risk recalculation, ticket sync, etc.) for a single asset.
 Useful for debugging. You can further scope with --assetVersionSlug flag.
 
 Use --dryRun to run in safe read-only mode: the database connection is opened
 with default_transaction_read_only=on and all ticket mutations (open, close,
 update) are replaced by log lines showing what would have happened.`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			assetID := args[0]
+			assetID := ""
+			if len(args) > 0 {
+				assetID = args[0]
+			}
 			assetVersion, _ := cmd.Flags().GetString("assetVersionSlug")
 			dryRun, _ := cmd.Flags().GetBool("dryRun")
 			stages, _ := cmd.Flags().GetStringArray("stage")
@@ -127,16 +124,22 @@ update) are replaced by log lines showing what would have happened.`,
 	}
 	cmd.Flags().StringP("assetVersionSlug", "v", "", "Scope to a specific asset version name")
 	cmd.Flags().Bool("dryRun", true, "Read-only mode: log ticket operations instead of executing them, never write to the database (default: true, use --dryRun=false to apply changes)")
-	cmd.Flags().StringArray("stage", []string{}, "Run only the specified pipeline stage(s), can be repeated (e.g. --stage SyncTickets --stage CollectStats). Valid values: SyncTickets, ResolveDifferencesInTicketState, ScanAsset, SyncUpstream, CollectStats, RecalculateRiskForVulnerabilities, AutoReopenTickets, DeleteOldAssetVersions, ResolveFixedVersions")
+	cmd.Flags().StringArray("stage", []string{}, "Run only the specified pipeline stage(s), can be repeated (e.g. --stage SyncTickets --stage CollectStats). Valid values: SyncTickets, ResolveDifferencesInTicketState, ScanAsset, SyncUpstream, CollectStats, RecalculateRiskForVulnerabilities, DeleteOldAssetVersions, ResolveFixedVersions")
 
 	return cmd
 }
 
 func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stages []string) error {
-	assetID, err := uuid.Parse(assetIDStr)
-	if err != nil {
-		slog.Error("invalid asset ID", "assetID", assetIDStr, "err", err)
-		return err
+	// without an asset id the pipeline runs for every asset
+	allAssets := assetIDStr == ""
+	var assetID uuid.UUID
+	if !allAssets {
+		var err error
+		assetID, err = uuid.Parse(assetIDStr)
+		if err != nil {
+			slog.Error("invalid asset ID", "assetID", assetIDStr, "err", err)
+			return err
+		}
 	}
 
 	var daemonRunner shared.DaemonRunner
@@ -154,14 +157,15 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 		fx.Supply(poolCfg),
 		fx.NopLogger,
 		database.Module,
-		fx.Provide(database.NewPostgreSQLBroker),
+		fx.Provide(events.NewBroker),
+		events.Module,
 		repositories.Module,
 		services.ServiceModule,
 		accesscontrol.AccessControlModule,
 		controllers.ControllerModule,
 		integrations.Module,
 		vulndb.Module,
-		daemons.Module,
+		listeners.Module,
 		fixedversion.Module,
 		fx.Populate(&daemonRunner, &dependencyVulnRepository, &dependencyVulnService, &assetRepository, &assetVersionRepository),
 	}
@@ -177,17 +181,23 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 	if err := app.Err(); err != nil {
 		return err
 	}
-	runner := daemonRunner.(*daemons.DaemonRunner)
+	runner := daemonRunner.(*listeners.DaemonRunner)
 
 	shutdownTracing := initCLITracing()
 	defer shutdownTracing()
 
 	slog.Info("running asset pipeline", "assetID", assetID, "dryRun", dryRun, "stages", stages, "assetVersionSlug", assetVersionSlug)
-	runner.SetDebugOptions(daemons.DebugOptions{
+	runner.SetDebugOptions(listeners.DebugOptions{
 		LimitToAssetVersionSlug: assetVersionSlug,
 		LimitToStages:           stages,
 		DryRun:                  dryRun,
 	})
+
+	if allAssets {
+		runner.RunAssetPipeline(context.Background(), true)
+		slog.Info("successfully ran asset pipeline for all assets")
+		return nil
+	}
 
 	if err := runner.RunDaemonPipelineForAsset(context.Background(), assetID); err != nil {
 		slog.Error("pipeline failed", "assetID", assetID, "err", err)
@@ -207,7 +217,8 @@ func triggerDaemon(selectedDaemons []string) error {
 		fx.Supply(database.GetPoolConfigFromEnv()),
 		fx.NopLogger,
 		database.Module,
-		fx.Provide(database.NewPostgreSQLBroker),
+		events.Module,
+		fx.Provide(events.NewBroker),
 		// Include all the standard modules
 		repositories.Module,
 		services.ServiceModule,
@@ -215,7 +226,7 @@ func triggerDaemon(selectedDaemons []string) error {
 		controllers.ControllerModule,
 		integrations.Module,
 		vulndb.Module,
-		daemons.Module,
+		listeners.Module,
 		fixedversion.Module,
 
 		// Invoke the daemon trigger function with all dependencies
@@ -226,7 +237,7 @@ func triggerDaemon(selectedDaemons []string) error {
 			slog.Info("starting background jobs", "time", time.Now())
 			var start time.Time
 
-			if emptyOrContains(selectedDaemons, "openSourceInsights") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonOpenSourceInsights) {
 				start = time.Now()
 				err := runner.UpdateOpenSourceInsightInformation(context.Background())
 				if err != nil {
@@ -236,7 +247,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("deps dev information updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "sbomGarbageCollection") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonSBOMGarbageCollection) {
 				start = time.Now()
 				err := runner.CollectSBOMGarbage(context.Background())
 				if err != nil {
@@ -246,7 +257,7 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("SBOM garbage collection completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "externalEntityGarbageCollection") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonExternalEntityGarbage) {
 				start = time.Now()
 				err := runner.CollectExternalEntityGarbage(context.Background())
 				if err != nil {
@@ -256,44 +267,43 @@ func triggerDaemon(selectedDaemons []string) error {
 				slog.Info("external entity garbage collection completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "vulndb") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonVulnDB) {
 				start = time.Now()
 				if err := runner.UpdateVulnDB(context.Background()); err != nil {
 					slog.Error("could not update vulndb", "err", err)
 					return
 				}
-				if err := markMirrored(configService, "vulndb.vulndb"); err != nil {
-					slog.Error("could not mark vulndb.vulndb as mirrored", "err", err)
-				}
 				slog.Info("vulndb updated", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "fixedVersions") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonFixedVersions) {
 				start = time.Now()
 				if err := runner.UpdateFixedVersions(context.Background()); err != nil {
 					slog.Error("could not update component properties", "err", err)
 					return
 				}
-				if err := markMirrored(configService, "vulndb.componentProperties"); err != nil {
-					slog.Error("could not mark vulndb.componentProperties as mirrored", "err", err)
-				}
 				slog.Info("component properties updated", "duration", time.Since(start))
 			}
+			if emptyOrContains(selectedDaemons, "scan") {
+				start = time.Now()
+				if err := runner.ScanAllAssets(context.Background()); err != nil {
+					slog.Error("could not run scan daemon", "err", err)
+					return
+				}
+				slog.Info("scan daemon completed", "duration", time.Since(start))
+			}
 
-			if emptyOrContains(selectedDaemons, "assetPipeline") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonAssetPipeline) {
 				start = time.Now()
 				runner.RunAssetPipeline(context.Background(), true)
 				slog.Info("asset pipeline run completed", "duration", time.Since(start))
 			}
 
-			if emptyOrContains(selectedDaemons, "recommendations") {
+			if emptyOrContains(selectedDaemons, listeners.DaemonVEXRuleRecommendations) {
 				start = time.Now()
 				if err := runner.RunVEXRuleRecommendationDaemon(context.Background()); err != nil {
 					slog.Error("could not build and save recommendations for all", "err", err)
 					return
-				}
-				if err := markMirrored(configService, "vexrules.recommendations"); err != nil {
-					slog.Error("could not mark vexrules.recommendations as mirrored", "err", err)
 				}
 				slog.Info("recommendations built and saved for all", "duration", time.Since(start))
 			}

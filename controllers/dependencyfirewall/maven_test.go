@@ -130,11 +130,6 @@ func TestMavenEcosystemTrimPrefix(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "without secret",
-			path:     "/api/v1/dependency-proxy/maven/com/fake/artifact/maven-metadata.xml",
-			expected: "com/fake/artifact/maven-metadata.xml",
-		},
-		{
 			name:     "with secret",
 			path:     "/api/v1/dependency-proxy/550e8400-e29b-41d4-a716-446655440000/maven/com/fake/artifact/1.2.3/artifact-1.2.3.jar",
 			expected: "com/fake/artifact/1.2.3/artifact-1.2.3.jar",

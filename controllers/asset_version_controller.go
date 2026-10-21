@@ -10,6 +10,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -28,6 +29,7 @@ type AssetVersionController struct {
 	statisticsService        shared.StatisticsService
 	artifactService          shared.ArtifactService
 	dependencyVulnService    shared.DependencyVulnService
+	broker                   events.Broker
 }
 
 func NewAssetVersionController(
@@ -40,7 +42,7 @@ func NewAssetVersionController(
 	statisticsService shared.StatisticsService,
 	artifactService shared.ArtifactService,
 	dependencyVulnService shared.DependencyVulnService,
-
+	broker events.Broker,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -52,6 +54,7 @@ func NewAssetVersionController(
 		statisticsService:        statisticsService,
 		artifactService:          artifactService,
 		dependencyVulnService:    dependencyVulnService,
+		broker:                   broker,
 	}
 }
 
@@ -64,7 +67,7 @@ func NewAssetVersionController(
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {object} dtos.AssetVersionDTO
+// @Success 200 {object} dtos.AssetVersion
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/ [get]
 func (a *AssetVersionController) Read(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -80,7 +83,7 @@ func (a *AssetVersionController) Read(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param body body object{name=string,tag=bool,defaultBranch=bool} true "Request body"
-// @Success 201 {object} dtos.AssetVersionDTO
+// @Success 201 {object} dtos.AssetVersion
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/ [post]
 func (a *AssetVersionController) Create(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -134,6 +137,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err
 	}
+	events.NotifyAssetVersionDeleted(ctx.Request().Context(), a.broker, assetVersion.AssetID)
 	return ctx.JSON(200, "deleted asset version successfully")
 }
 
@@ -145,7 +149,7 @@ func (a *AssetVersionController) Delete(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {array} dtos.AssetVersionDTO
+// @Success 200 {array} dtos.AssetVersion
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/ [get]
 func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -238,7 +242,7 @@ func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName query string false "Artifact name"
-// @Success 200 {array} dtos.DependencyVulnDTO
+// @Success 200 {array} dtos.DependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/affected-components/ [get]
 func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	artifactName := ctx.QueryParam("artifactName")
@@ -249,7 +253,7 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, utils.Map(dependencyVulns, func(m models.DependencyVuln) dtos.DependencyVulnDTO {
+	return ctx.JSON(200, utils.Map(dependencyVulns, func(m models.DependencyVuln) dtos.DependencyVuln {
 		return transformer.DependencyVulnToDTO(m)
 	}))
 }
@@ -403,33 +407,6 @@ func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 	})
 }
 
-// RefetchLicenses forces re-fetching license information for all components of the current asset version
-// @Summary Refetch license information for all components
-// @Tags Asset Versions
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param artifactName query string false "Artifact name"
-// @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components/licenses/refresh/ [post]
-func (a *AssetVersionController) RefetchLicenses(ctx shared.Context) error {
-	assetVersion := shared.GetAssetVersion(ctx)
-	artifactName := ctx.Param("artifactName")
-
-	_, err := a.componentService.GetAndSaveLicenseInformation(ctx.Request().Context(), nil, assetVersion, utils.EmptyThenNil(artifactName), true)
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, map[string]any{
-		"message": "refetched licenses for all components",
-	})
-}
-
 var latexReplacer = strings.NewReplacer(
 	"\\", "\\textbackslash{}",
 	"&", "\\&",
@@ -457,7 +434,7 @@ func escapeLatex(input string) string {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {array} dtos.ArtifactDTO
+// @Success 200 {array} dtos.Artifact
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [get]
 func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 
@@ -494,9 +471,9 @@ func (a *AssetVersionController) MakeDefault(ctx shared.Context) error {
 	assetVersion.DefaultBranch = true
 	return ctx.JSON(200, assetVersion)
 }
-func extractInformationSourceFromPurl(purl string) dtos.InformationSourceDTO {
+func extractInformationSourceFromPurl(purl string) dtos.InformationSource {
 
-	InformationSourcesDTO := dtos.InformationSourceDTO{}
+	InformationSourcesDTO := dtos.InformationSource{}
 	if strings.HasPrefix(purl, "vex:") {
 		InformationSourcesDTO.Type = "vex"
 		InformationSourcesDTO.URL = strings.TrimPrefix(purl, "vex:")
@@ -540,19 +517,19 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	}
 	// fetch all root nodes
 	reqCtx := ctx.Request().Context()
-	errgroup := utils.ErrGroup[map[string][]dtos.InformationSourceDTO](10)
+	errgroup := utils.ErrGroup[map[string][]dtos.InformationSource](10)
 	for _, artifact := range artifacts {
-		errgroup.Go(func() (map[string][]dtos.InformationSourceDTO, error) {
+		errgroup.Go(func() (map[string][]dtos.InformationSource, error) {
 			sboms, err := a.assetVersionService.ListSBOMs(reqCtx, nil, assetVersion, artifact.ArtifactName)
 			if err != nil {
 				return nil, err
 			}
-			return map[string][]dtos.InformationSourceDTO{
+			return map[string][]dtos.InformationSource{
 				artifact.ArtifactName: utils.UniqBy(utils.Map(sboms, func(
 					s models.SBOM,
-				) dtos.InformationSourceDTO {
+				) dtos.InformationSource {
 					return extractInformationSourceFromPurl(s.Source)
-				}), func(s dtos.InformationSourceDTO) dtos.InformationSourceDTO {
+				}), func(s dtos.InformationSource) dtos.InformationSource {
 					return s
 				}),
 			}, nil
@@ -563,7 +540,7 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not fetch root nodes of artifacts").WithInternal(err)
 	}
 
-	result := make(map[string][]dtos.InformationSourceDTO)
+	result := make(map[string][]dtos.InformationSource)
 	// merge the maps
 	for _, r := range results {
 		maps.Copy(result, r)

@@ -33,15 +33,13 @@ import (
 
 type assetVersionRepository struct {
 	db *gorm.DB
-	utils.FireAndForgetSynchronizer
 	utils.Repository[uuid.UUID, models.AssetVersion, *gorm.DB]
 }
 
-func NewAssetVersionRepository(db *gorm.DB, synchronizer utils.FireAndForgetSynchronizer) *assetVersionRepository {
+func NewAssetVersionRepository(db *gorm.DB) *assetVersionRepository {
 	return &assetVersionRepository{
-		db:                        db,
-		Repository:                newGormRepository[uuid.UUID, models.AssetVersion](db),
-		FireAndForgetSynchronizer: synchronizer,
+		db:         db,
+		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),
 	}
 }
 
@@ -89,13 +87,6 @@ func (repository *assetVersionRepository) Delete(ctx context.Context, tx *gorm.D
 	if err != nil {
 		return err
 	}
-
-	linkedCtx := shared.CreateLinkedCtx(ctx)
-	repository.FireAndForget(func() {
-		if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
-			slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-		}
-	})
 
 	return nil
 }
@@ -302,12 +293,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(ctx context.Con
 		if err != nil {
 			return 0, err
 		}
-		linkedCtx := shared.CreateLinkedCtx(ctx)
-		repository.FireAndForget(func() {
-			if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
-				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-			}
-		})
 
 	}
 
@@ -361,12 +346,6 @@ func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(ctx cont
 		if err != nil {
 			return 0, err
 		}
-		linkedCtx := shared.CreateLinkedCtx(ctx)
-		repository.FireAndForget(func() {
-			if err := repository.CleanupOrphanedRecords(linkedCtx); err != nil {
-				slog.Error("Failed to clean up orphaned records after deleting artifact", "err", err)
-			}
-		})
 	}
 	return count, nil
 }

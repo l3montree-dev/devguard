@@ -32,7 +32,6 @@ func TestDependencyVulnControllerGetRecommendation(t *testing.T) {
 			depVulnRepo,
 			mocks.NewDependencyVulnService(t),
 			mocks.NewProjectService(t),
-			mocks.NewStatisticsService(t),
 			mocks.NewVulnEventRepository(t),
 			nil,
 			mocks.NewCveRepository(t),

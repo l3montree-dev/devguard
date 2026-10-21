@@ -49,7 +49,7 @@ func NewCompliancePostureController(compliancePostureRepository shared.Complianc
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param frameworkControlID path string true "Framework Control ID"
-// @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [get]
 func (c *CompliancePostureController) OrgRead(ctx shared.Context) error {
 	return c.Read(ctx)
@@ -63,7 +63,7 @@ func (c *CompliancePostureController) OrgRead(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param frameworkControlID path string true "Framework Control ID"
-// @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [get]
 func (c *CompliancePostureController) ProjectRead(ctx shared.Context) error {
 	return c.Read(ctx)
@@ -79,7 +79,7 @@ func (c *CompliancePostureController) ProjectRead(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param frameworkControlID path string true "Framework Control ID"
-// @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [get]
 func (c *CompliancePostureController) AssetVersionRead(ctx shared.Context) error {
 	return c.Read(ctx)
@@ -111,7 +111,7 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControlDTO]
+// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControl]
 // @Router /organizations/{organization}/compliance-postures [get]
 func (c *CompliancePostureController) OrgListPaged(ctx shared.Context) error {
 	return c.ListPaged(ctx)
@@ -124,7 +124,7 @@ func (c *CompliancePostureController) OrgListPaged(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControlDTO]
+// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControl]
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures [get]
 func (c *CompliancePostureController) ProjectListPaged(ctx shared.Context) error {
 	return c.ListPaged(ctx)
@@ -139,7 +139,7 @@ func (c *CompliancePostureController) ProjectListPaged(ctx shared.Context) error
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControlDTO]
+// @Success 200 {object} shared.Paged[dtos.CompliancePostureWithControl]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures [get]
 func (c *CompliancePostureController) AssetVersionListPaged(ctx shared.Context) error {
 	return c.ListPaged(ctx)
@@ -165,7 +165,7 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, struct {
-		shared.Paged[dtos.CompliancePostureWithControlDTO]
+		shared.Paged[dtos.CompliancePostureWithControl]
 		Frameworks []string `json:"frameworks"`
 	}{
 		Paged:      postures,
@@ -179,7 +179,7 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {object} dtos.CompliancePostureStatsDTO
+// @Success 200 {object} dtos.CompliancePostureStats
 // @Router /organizations/{organization}/compliance-postures/stats [get]
 func (c *CompliancePostureController) OrgStats(ctx shared.Context) error {
 	return c.Stats(ctx)
@@ -192,7 +192,7 @@ func (c *CompliancePostureController) OrgStats(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {object} dtos.CompliancePostureStatsDTO
+// @Success 200 {object} dtos.CompliancePostureStats
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/stats [get]
 func (c *CompliancePostureController) ProjectStats(ctx shared.Context) error {
 	return c.Stats(ctx)
@@ -207,7 +207,7 @@ func (c *CompliancePostureController) ProjectStats(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {object} dtos.CompliancePostureStatsDTO
+// @Success 200 {object} dtos.CompliancePostureStats
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/stats [get]
 func (c *CompliancePostureController) AssetVersionStats(ctx shared.Context) error {
 	return c.Stats(ctx)
@@ -256,7 +256,7 @@ func getFrameworkControlIDFromCtx(ctx shared.Context) (string, error) {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param frameworkControlID path string true "Framework Control ID"
-// @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Param body body object{status=string,justification=string} true "Event data"
 // @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) OrgCreateEvent(ctx shared.Context) error {
@@ -271,7 +271,7 @@ func (c *CompliancePostureController) OrgCreateEvent(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param frameworkControlID path string true "Framework Control ID"
-// @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Param body body object{status=string,justification=string} true "Event data"
 // @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) ProjectCreateEvent(ctx shared.Context) error {
@@ -288,7 +288,7 @@ func (c *CompliancePostureController) ProjectCreateEvent(ctx shared.Context) err
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param frameworkControlID path string true "Framework Control ID"
-// @Success 200 {object} dtos.CompliancePostureWithDetailsDTO
+// @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Param body body object{status=string,justification=string} true "Event data"
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [post]
 func (c *CompliancePostureController) AssetVersionCreateEvent(ctx shared.Context) error {

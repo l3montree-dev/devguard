@@ -13,16 +13,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package daemons
+package listeners
 
 import (
-	"context"
-	"log/slog"
 	"slices"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/l3montree-dev/devguard/monitoring"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/shared"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/fx"
@@ -34,8 +31,8 @@ type DebugOptions struct {
 	LimitToAssetVersionSlug string
 	// LimitToStages, when non-empty, skips all pipeline stages not in the list.
 	// Valid values match the stage method names: "SyncTickets",
-	// "ResolveDifferencesInTicketState", "ScanAsset", "SyncUpstream",
-	// "CollectStats", "RecalculateRiskForVulnerabilities", "AutoReopenTickets",
+	// "ResolveDifferencesInTicketState", "SyncUpstream",
+	// "CollectStats", "RecalculateRiskForVulnerabilities",
 	// "DeleteOldAssetVersions", "ResolveFixedVersions".
 	LimitToStages []string
 	// DryRun skips all database writes. External system mutations are separately
@@ -46,7 +43,7 @@ type DebugOptions struct {
 // DaemonRunner encapsulates daemon dependencies and lifecycle
 type DaemonRunner struct {
 	db                              shared.DB
-	broker                          shared.PubSubBroker
+	broker                          events.Broker
 	configService                   shared.ConfigService
 	rbacProvider                    shared.RBACProvider
 	integrationAggregate            shared.IntegrationAggregate
@@ -55,22 +52,16 @@ type DaemonRunner struct {
 	assetRepository                 shared.AssetRepository
 	projectRepository               shared.ProjectRepository
 	orgRepository                   shared.OrganizationRepository
-	artifactService                 shared.ArtifactService
 	componentRepository             shared.ComponentRepository
 	componentService                shared.ComponentService
+	licenseRiskService              shared.LicenseRiskService
 	dependencyVulnService           shared.DependencyVulnService
 	dependencyVulnRepository        shared.DependencyVulnRepository
 	componentProjectRepository      shared.ComponentProjectRepository
-	vulnEventRepository             shared.VulnEventRepository
 	statisticsService               shared.StatisticsService
 	artifactRepository              shared.ArtifactRepository
 	cveRepository                   shared.CveRepository
-	cweRepository                   shared.CweRepository
-	exploitsRepository              shared.ExploitRepository
-	affectedComponentsRepository    shared.AffectedComponentRepository
 	scanService                     shared.ScanService
-	leaderElector                   shared.LeaderElector
-	maliciousPackageChecker         shared.MaliciousPackageChecker
 	vulnDBImportService             shared.VulnDBService
 	vexRuleRepository               shared.VEXRuleRepository
 	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository
@@ -79,6 +70,7 @@ type DaemonRunner struct {
 	externalReferenceRepository     shared.ExternalReferenceRepository
 	sbomRepository                  shared.SBOMRepository
 	externalEntityProviderService   shared.ExternalEntityProviderService
+	firstPartyVulnService           shared.FirstPartyVulnService
 	pgxpool                         *pgxpool.Pool
 
 	debugOptions         DebugOptions
@@ -105,7 +97,7 @@ func (runner *DaemonRunner) DebugMode() bool {
 // NewDaemonRunner creates a new daemon runner with injected dependencies
 func NewDaemonRunner(
 	db shared.DB,
-	broker shared.PubSubBroker,
+	broker events.Broker,
 	configService shared.ConfigService,
 	rbacProvider shared.RBACProvider,
 	integrationAggregate shared.IntegrationAggregate,
@@ -114,22 +106,16 @@ func NewDaemonRunner(
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	orgRepository shared.OrganizationRepository,
-	artifactService shared.ArtifactService,
 	componentRepository shared.ComponentRepository,
 	componentService shared.ComponentService,
+	licenseRiskService shared.LicenseRiskService,
 	dependencyVulnService shared.DependencyVulnService,
 	dependencyVulnRepository shared.DependencyVulnRepository,
 	componentProjectRepository shared.ComponentProjectRepository,
-	vulnEventRepository shared.VulnEventRepository,
 	statisticsService shared.StatisticsService,
 	artifactRepository shared.ArtifactRepository,
 	cveRepository shared.CveRepository,
-	cweRepository shared.CweRepository,
-	exploitsRepository shared.ExploitRepository,
-	affectedComponentsRepository shared.AffectedComponentRepository,
 	scanService shared.ScanService,
-	leaderElector shared.LeaderElector,
-	maliciousPackageChecker shared.MaliciousPackageChecker,
 	vulnDBImportService shared.VulnDBService,
 	vexRuleRepository shared.VEXRuleRepository,
 	vexRuleRecommendationRepository shared.VEXRuleRecommendationRepository,
@@ -139,6 +125,7 @@ func NewDaemonRunner(
 	fixedVersionResolver shared.FixedVersionResolver,
 	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 	externalEntityProviderService shared.ExternalEntityProviderService,
+	firstPartyVulnService shared.FirstPartyVulnService,
 	pool *pgxpool.Pool,
 ) *DaemonRunner {
 	return &DaemonRunner{
@@ -152,22 +139,16 @@ func NewDaemonRunner(
 		assetRepository:                 assetRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
-		artifactService:                 artifactService,
 		componentRepository:             componentRepository,
 		componentService:                componentService,
+		licenseRiskService:              licenseRiskService,
 		dependencyVulnService:           dependencyVulnService,
 		dependencyVulnRepository:        dependencyVulnRepository,
 		componentProjectRepository:      componentProjectRepository,
-		vulnEventRepository:             vulnEventRepository,
 		statisticsService:               statisticsService,
 		artifactRepository:              artifactRepository,
 		cveRepository:                   cveRepository,
-		cweRepository:                   cweRepository,
-		exploitsRepository:              exploitsRepository,
-		affectedComponentsRepository:    affectedComponentsRepository,
 		scanService:                     scanService,
-		leaderElector:                   leaderElector,
-		maliciousPackageChecker:         maliciousPackageChecker,
 		vulnDBImportService:             vulnDBImportService,
 		vexRuleRepository:               vexRuleRepository,
 		vexRuleRecommendationRepository: vexRuleRecommendationRepository,
@@ -177,34 +158,8 @@ func NewDaemonRunner(
 		fixedVersionResolver:            fixedVersionResolver,
 		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
 		externalEntityProviderService:   externalEntityProviderService,
+		firstPartyVulnService:           firstPartyVulnService,
 		pgxpool:                         pool,
-	}
-}
-
-// Start initiates all background daemons
-func (runner *DaemonRunner) Start(ctx context.Context) {
-	go func() {
-		runner.tick()
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			runner.tick()
-		}
-	}()
-}
-
-func (runner *DaemonRunner) tick() {
-	if runner.leaderElector.IsLeader() {
-		slog.Info("this instance is the leader - running background jobs with a timeout of 2 hours")
-		tickCtx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
-		runner.runDaemons(tickCtx)
-		runner.RunAssetPipeline(tickCtx, false)
-		if err := tickCtx.Err(); err != nil {
-			monitoring.AlertAndSaveInErrorLog(tickCtx, nil, monitoring.AlertContext{}, "error during daemon tick", err)
-		}
-		cancel()
-	} else {
-		slog.Info("not the leader - skipping background jobs")
 	}
 }
 

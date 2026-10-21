@@ -15,9 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vulndb/scan"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -51,7 +51,7 @@ type VulnDBService struct {
 	configService     shared.ConfigService
 	pool              *pgxpool.Pool
 	ghVexFetcher      shared.GitHubVexFetcher
-	purlComparer      *scan.PurlComparer // used to flush the cache after import
+	broker            events.Broker
 }
 
 func NewVulnDBService(
@@ -63,7 +63,7 @@ func NewVulnDBService(
 	configService shared.ConfigService,
 	ghVexFetcher shared.GitHubVexFetcher,
 	pool *pgxpool.Pool,
-	purlComparer *scan.PurlComparer,
+	riverInstance events.Broker,
 ) *VulnDBService {
 	return &VulnDBService{
 		osv:               NewOSVService(affectedCmpRepository, cveRepository, cveRelationshipRepository, pool),
@@ -77,7 +77,7 @@ func NewVulnDBService(
 		configService:     configService,
 		pool:              pool,
 		ghVexFetcher:      ghVexFetcher,
-		purlComparer:      purlComparer,
+		broker:            riverInstance,
 	}
 }
 
@@ -95,8 +95,7 @@ func (service *VulnDBService) ExportRC(ctx context.Context) error {
 func (service *VulnDBService) ExportRCWithDiff(ctx context.Context, localArchive bool) error {
 	slog.Info("quick-diff: importing previous artifact to establish baseline")
 	if err := service.ImportRC(ctx, shared.ImportOptions{LocalArchive: localArchive}); err != nil {
-		slog.Info("quick-diff: failed to import previous artifact, proceeding with export without diff", "error", err)
-		return service.exportRC(ctx, false)
+		return fmt.Errorf("could not import previous artifact for quick-diff: %w", err)
 	}
 	return service.exportRC(ctx, true)
 }
@@ -539,14 +538,15 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 		if opts.Debug {
 			showImportDebug(ctx, tx, workingDir, failingTables)
 		}
-		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "vulndb integrity check failed", err)
+
+		monitoring.AlertAndSaveInErrorLog(ctx, nil, monitoring.AlertContext{}, "vulndb import failed", err)
 		span.SetAttributes(
 			attribute.StringSlice("vulndb.failing_tables", failingTables),
 		)
 		if rbErr := tx.Rollback(ctx); rbErr != nil && rbErr != pgx.ErrTxClosed {
-			return fmt.Errorf("integrity validation failed and rollback failed: %w (rollback error: %v)", err, rbErr)
+			return fmt.Errorf("vulndb import failed and rollback failed: %w (rollback error: %v)", err, rbErr)
 		}
-		return fmt.Errorf("integrity validation failed: %w", err)
+		return fmt.Errorf("vulndb import failed: %w", err)
 	}
 
 	slog.Info("successfully passed integrity validation", "importTimestamp", integrity.ImportTimestamp)
@@ -562,15 +562,15 @@ func (service *VulnDBService) ImportRC(ctx context.Context, opts shared.ImportOp
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
-	// flush the purl comparer cache since its values are now outdated
-	service.purlComparer.FlushCache()
-
 	refreshStart := time.Now()
 	if _, err := conn.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY cve_ecosystem"); err != nil {
 		return fmt.Errorf("could not refresh cve_ecosystem: %w", err)
 	}
 	slog.Info("refreshed cve_ecosystem", "took", time.Since(refreshStart))
 
+	if err := service.broker.Publish(ctx, events.VulnDBUpdated, nil); err != nil {
+		slog.Warn("could not publish sucessful vulndb import")
+	}
 	slog.Info("finished vulndb import", "totalTime", time.Since(start), "timestamp", integrity.ImportTimestamp)
 	return nil
 }

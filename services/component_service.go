@@ -20,23 +20,17 @@ type ComponentService struct {
 	sbomRepository             shared.SBOMRepository
 	openSourceInsightsService  shared.OpenSourceInsightService
 	componentProjectRepository shared.ComponentProjectRepository
-	licenseRiskService         shared.LicenseRiskService
-	artifactRepository         shared.ArtifactRepository
-	utils.FireAndForgetSynchronizer
 }
 
 var _ shared.ComponentService = (*ComponentService)(nil) // Ensure ComponentService implements shared.ComponentService interface
 
-func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, sbomRepository shared.SBOMRepository, licenseRiskService shared.LicenseRiskService, artifactRepository shared.ArtifactRepository, synchronizer utils.FireAndForgetSynchronizer) *ComponentService {
+func NewComponentService(openSourceInsightsService shared.OpenSourceInsightService, componentProjectRepository shared.ComponentProjectRepository, componentRepository shared.ComponentRepository, sbomRepository shared.SBOMRepository) *ComponentService {
 
 	return &ComponentService{
 		componentRepository:        componentRepository,
 		sbomRepository:             sbomRepository,
 		componentProjectRepository: componentProjectRepository,
 		openSourceInsightsService:  openSourceInsightsService,
-		licenseRiskService:         licenseRiskService,
-		artifactRepository:         artifactRepository,
-		FireAndForgetSynchronizer:  synchronizer,
 	}
 }
 
@@ -178,7 +172,8 @@ func (s *ComponentService) FetchComponentProject(ctx context.Context, component 
 	return component, nil
 }
 
-func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName *string, forceRefresh bool) ([]models.Component, error) {
+// GetAndSaveLicenseInformation fetches the licenses of the components which have none yet - the license risks follow in their own pipeline step
+func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName *string) ([]models.Component, error) {
 	var sboms []models.SBOM
 	var err error
 	if artifactName != nil {
@@ -216,9 +211,14 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 		if !exists {
 			component = models.Component{ID: id}
 		}
-		if forceRefresh || component.License == nil {
+		if component.License == nil {
 			componentsWithoutLicense = append(componentsWithoutLicense, component)
 		}
+	}
+
+	if len(componentsWithoutLicense) == 0 {
+		slog.Info("no components without license found, skipping license fetch")
+		return known, nil
 	}
 
 	slog.Info("getting license information for components", "amount", len(componentsWithoutLicense))
@@ -256,37 +256,6 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 			allComponents = append(allComponents, component)
 		}
 	}
-
-	// Detach cancellation but KEEP the trace context
-	bgCtx := context.WithoutCancel(ctx)
-
-	s.FireAndForget(func() {
-		allComponents = utils.Filter(allComponents, func(component models.Component) bool {
-			//check if the purl is valid and has a version
-			_, err = packageurl.FromString(component.ID)
-			return err == nil
-		})
-		// find potential license risks
-		if artifactName == nil {
-			// fetch all artifacts for the asset version - we need this to link the license risks to the artifacts
-			artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(bgCtx, nil, assetVersion.AssetID, assetVersion.Name)
-			if err != nil {
-				slog.Error("could not fetch artifacts for asset version", "err", err, "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-				return
-			}
-			for _, artifact := range artifacts {
-				err = s.licenseRiskService.FindLicenseRisksInComponents(bgCtx, nil, "system", nil, assetVersion, allComponents, artifact.ArtifactName)
-				if err != nil {
-					slog.Error("could not find license risks in components", "err", err, "artifactName", artifact.ArtifactName)
-				}
-			}
-		} else {
-			err = s.licenseRiskService.FindLicenseRisksInComponents(ctx, nil, "system", nil, assetVersion, allComponents, *artifactName)
-			if err != nil {
-				slog.Error("could not find license risks in components", "err", err, "artifactName", *artifactName)
-			}
-		}
-	})
 
 	return allComponents, nil
 }

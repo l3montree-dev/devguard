@@ -1,20 +1,15 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
-	"time"
 
-	"go.opentelemetry.io/otel/trace"
-
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/vulndb"
 
@@ -32,29 +27,26 @@ type dependencyVulnsByPackage struct {
 	DependencyVulnCount int     `json:"vulnCount"`
 	TotalRisk           float64 `json:"totalRisk"`
 	//TODO: change the name to DependencyVulns
-	DependencyVulns []dtos.DependencyVulnDTO `json:"vulns"`
+	DependencyVulns []dtos.DependencyVuln `json:"vulns"`
 }
 
 type DependencyVulnController struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	dependencyVulnService    shared.DependencyVulnService
 	projectService           shared.ProjectService
-	statisticsService        shared.StatisticsService
 	vulnEventRepository      shared.VulnEventRepository
 	cveRepository            shared.CveRepository
-	// mark public to let it be overridden in tests
-	utils.FireAndForgetSynchronizer
+	broker                   events.Broker
 }
 
-func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, statisticsService shared.StatisticsService, vulnEventRepository shared.VulnEventRepository, synchronizer utils.FireAndForgetSynchronizer, cveRepository shared.CveRepository) *DependencyVulnController {
+func NewDependencyVulnController(dependencyVulnRepository shared.DependencyVulnRepository, dependencyVulnService shared.DependencyVulnService, projectService shared.ProjectService, vulnEventRepository shared.VulnEventRepository, broker events.Broker, cveRepository shared.CveRepository) *DependencyVulnController {
 	return &DependencyVulnController{
-		dependencyVulnRepository:  dependencyVulnRepository,
-		dependencyVulnService:     dependencyVulnService,
-		projectService:            projectService,
-		statisticsService:         statisticsService,
-		vulnEventRepository:       vulnEventRepository,
-		FireAndForgetSynchronizer: synchronizer,
-		cveRepository:             cveRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
+		projectService:           projectService,
+		vulnEventRepository:      vulnEventRepository,
+		broker:                   broker,
+		cveRepository:            cveRepository,
 	}
 }
 
@@ -236,7 +228,7 @@ func (controller *DependencyVulnController) ListPaged(ctx shared.Context) error 
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
 // @Param body body object{comment=string} true "Request body"
-// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Success 200 {object} dtos.DetailedDependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID}/mitigate [post]
 func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 	type justification struct {
@@ -289,7 +281,7 @@ func (controller *DependencyVulnController) Mitigate(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
-// @Success 200 {object} dtos.DetailedDependencyVulnWithRelationsDTO
+// @Success 200 {object} dtos.DetailedDependencyVulnWithRelations
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [get]
 func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 	dependencyVulnID, _, err := shared.GetVulnID(ctx)
@@ -308,9 +300,9 @@ func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not get advisories for dependency vuln").WithInternal(err)
 	}
 	// convert the related CVEs to DTOs
-	relatedDTOs := map[dtos.RelationshipType][]dtos.CVEDTO{}
+	relatedDTOs := map[dtos.RelationshipType][]dtos.CVE{}
 	for relationshipType, cves := range related {
-		relatedDTOs[relationshipType] = utils.Map(cves, func(cve models.CVE) dtos.CVEDTO {
+		relatedDTOs[relationshipType] = utils.Map(cves, func(cve models.CVE) dtos.CVE {
 			return transformer.CVEToDTO(cve)
 		})
 	}
@@ -321,9 +313,9 @@ func (controller *DependencyVulnController) Read(ctx shared.Context) error {
 		dependencyVuln.CVE.Vector = vector
 	}
 
-	return ctx.JSON(200, dtos.DetailedDependencyVulnWithRelationsDTO{
-		DetailedDependencyVulnDTO: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
-		Related:                   relatedDTOs,
+	return ctx.JSON(200, dtos.DetailedDependencyVulnWithRelations{
+		DetailedDependencyVuln: transformer.DependencyVulnToDetailedDTO(dependencyVuln),
+		Related:                relatedDTOs,
 	})
 }
 
@@ -360,79 +352,6 @@ func (controller *DependencyVulnController) Hints(ctx shared.Context) error {
 	return ctx.JSON(200, hints)
 }
 
-// @Summary Sync dependency vulnerabilities with third party integrations
-// @Tags Vulnerabilities
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param body body object true "Request body"
-// @Success 200 {object} object
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/sync [post]
-func (controller *DependencyVulnController) SyncDependencyVulns(ctx shared.Context) error {
-	asset := shared.GetAsset(ctx)
-	assetVersion := shared.GetAssetVersion(ctx)
-	org := shared.GetOrg(ctx)
-	project := shared.GetProject(ctx)
-	userAgent := ctx.Request().UserAgent()
-
-	type vulnReq struct {
-		VulnID uuid.UUID         `json:"vulnId"`
-		Event  dtos.VulnEventDTO `json:"event"`
-	}
-
-	type requestBody struct {
-		VulnsReq []vulnReq `json:"vulnsReq"`
-	}
-
-	var requestData requestBody
-
-	err := json.NewDecoder(ctx.Request().Body).Decode(&requestData)
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
-	}
-
-	vulns := make([]models.DependencyVuln, 0, len(requestData.VulnsReq))
-
-	for _, r := range requestData.VulnsReq {
-		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, r.VulnID)
-		if err != nil {
-			slog.Error("could not find dependencyVuln", "err", err, "externalID", r.VulnID)
-			continue
-		}
-		vulns = append(vulns, dependencyVuln)
-		events := dependencyVuln.Events
-
-		dependencyVuln.Events = events
-		statemachine.Apply(&dependencyVuln, events[len(events)-1])
-
-		//update the dependencyVuln and its events
-		err = controller.dependencyVulnRepository.Save(ctx.Request().Context(), nil, &dependencyVuln)
-		if err != nil {
-			return err
-		}
-
-		for _, event := range events {
-			if err := controller.vulnEventRepository.Save(ctx.Request().Context(), nil, &event); err != nil {
-				return err
-			}
-		}
-	}
-
-	linkedCtx := trace.ContextWithSpan(context.Background(), trace.SpanFromContext(ctx.Request().Context()))
-	controller.FireAndForget(func() {
-		err := controller.dependencyVulnService.SyncIssues(linkedCtx, org, project, asset, assetVersion, vulns, &userAgent)
-		if err != nil {
-			slog.Error("could not create issues for vulnerabilities", "err", err)
-		}
-	})
-
-	return ctx.JSON(200, map[string]any{"message": "sync completed"})
-}
-
 // @Summary Create vulnerability event
 // @Tags Vulnerabilities
 // @Security CookieAuth
@@ -444,7 +363,7 @@ func (controller *DependencyVulnController) SyncDependencyVulns(ctx shared.Conte
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param dependencyVulnID path string true "Vulnerability ID"
 // @Param body body dtos.CreateEventRequest true "Request body"
-// @Success 200 {object} dtos.DetailedDependencyVulnDTO
+// @Success 200 {object} dtos.DetailedDependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/{dependencyVulnID} [post]
 func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -462,9 +381,9 @@ func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) erro
 	ownerID := shared.GetSession(ctx).GetActorName()
 
 	//check the last event which is not a rawRiskAssessmentUpdated event. If it was created by a VEX rule, we cannot create a new event.
-	events := dependencyVuln.Events
-	for i := len(events) - 1; i >= 0; i-- {
-		event := events[i]
+	vulnEvents := dependencyVuln.Events
+	for i := len(vulnEvents) - 1; i >= 0; i-- {
+		event := vulnEvents[i]
 		if event.Type == dtos.EventTypeRawRiskAssessmentUpdated {
 			continue
 		} else if event.CreatedByVexRule && event.Type != dtos.EventTypeReopened {
@@ -500,13 +419,7 @@ func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) erro
 	//update risk history if the risk has changed
 	eventType := dtos.VulnEventType(statusType)
 
-	for _, artifact := range dependencyVuln.Artifacts {
-		if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-			if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), nil, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
-				slog.Error("could not recalculate risk history", "err", err)
-			}
-		}
-	}
+	events.NotifyVulnEventCreated(ctx.Request().Context(), controller.broker, asset.ID, eventType)
 
 	err = thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 		Ctx:   ctx,
@@ -534,8 +447,8 @@ func (controller *DependencyVulnController) CreateEvent(ctx shared.Context) erro
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param body body dtos.BatchDependencyVulnStatus true "Request body"
-// @Success 200 {array} dtos.DetailedDependencyVulnDTO
+// @Param body body dtos.BatchDependencyVulnStatusRequest true "Request body"
+// @Success 200 {array} dtos.DetailedDependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/dependency-vulns/batch [post]
 func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
@@ -543,7 +456,7 @@ func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context)
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	ownerID := shared.GetSession(ctx).GetActorName()
 
-	var status dtos.BatchDependencyVulnStatus
+	var status dtos.BatchDependencyVulnStatusRequest
 	err := json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
@@ -563,7 +476,7 @@ func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context)
 	}
 
 	eventType := dtos.VulnEventType(status.StatusType)
-	updatedVulns := make([]dtos.DetailedDependencyVulnDTO, 0, len(status.VulnIDs))
+	updatedVulns := make([]dtos.DetailedDependencyVuln, 0, len(status.VulnIDs))
 
 	for _, vulnID := range status.VulnIDs {
 		dependencyVuln, err := controller.dependencyVulnRepository.Read(ctx.Request().Context(), nil, vulnID)
@@ -579,14 +492,6 @@ func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context)
 			continue
 		}
 
-		for _, artifact := range dependencyVuln.Artifacts {
-			if eventType == dtos.EventTypeAccepted || eventType == dtos.EventTypeFalsePositive || eventType == dtos.EventTypeReopened {
-				if err := controller.statisticsService.UpdateArtifactRiskAggregation(ctx.Request().Context(), nil, &artifact, asset.ID, time.Now().Add(-30*time.Minute), time.Now()); err != nil {
-					slog.Error("could not recalculate risk history", "err", err)
-				}
-			}
-		}
-
 		if err := thirdPartyIntegration.HandleEvent(ctx.Request().Context(), shared.VulnEvent{
 			Ctx:   ctx,
 			Event: ev,
@@ -595,6 +500,10 @@ func (controller *DependencyVulnController) BatchCreateEvent(ctx shared.Context)
 		}
 
 		updatedVulns = append(updatedVulns, transformer.DependencyVulnToDetailedDTO(dependencyVuln))
+	}
+
+	if len(updatedVulns) > 0 {
+		events.NotifyVulnEventCreated(ctx.Request().Context(), controller.broker, asset.ID, eventType)
 	}
 
 	return ctx.JSON(200, updatedVulns)

@@ -139,7 +139,7 @@ func (componentController *ComponentController) LicenseDistribution(ctx shared.C
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Success 200 {object} shared.Paged[dtos.ComponentDependencyDTO]
+// @Success 200 {object} shared.Paged[dtos.ComponentDependency]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/components [get]
 func (componentController *ComponentController) ListPaged(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
@@ -180,7 +180,7 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 		} else {
 			forest, err = componentController.assetVersionService.LoadArtifactSBOMs(ctx.Request().Context(), nil, assetVersion, artifactName)
 			if err != nil {
-				return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
+				return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependency{}))
 			}
 		}
 
@@ -188,7 +188,7 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 		componentIDs := forest.ComponentIDs()
 
 		if len(componentIDs) == 0 {
-			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependencyDTO{}))
+			return ctx.JSON(200, shared.NewPaged(pageInfo, 0, []dtos.ComponentDependency{}))
 		}
 
 		// Add filter for these component IDs
@@ -213,7 +213,7 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 		return err
 	}
 
-	var componentsDTO = make([]dtos.ComponentDependencyDTO, 0, len(components.Data))
+	var componentsDTO = make([]dtos.ComponentDependency, 0, len(components.Data))
 
 	for _, component := range components.Data {
 		componentsDTO = append(componentsDTO, transformer.ComponentDependencyToDTO(component))
@@ -229,7 +229,7 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
+// @Success 200 {object} shared.Paged[dtos.ComponentOccurrence]
 // @Router /organizations/{organization}/projects/{projectSlug}/components [get]
 func (componentController *ComponentController) SearchComponentOccurrences(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
@@ -271,7 +271,7 @@ func (componentController *ComponentController) SearchComponentOccurrences(ctx s
 // @Param page query int false "Page number"
 // @Param pageSize query int false "Page size"
 // @Param search query string false "Search term"
-// @Success 200 {object} shared.Paged[dtos.ComponentOccurrenceDTO]
+// @Success 200 {object} shared.Paged[dtos.ComponentOccurrence]
 // @Router /organizations/{organization}/components [get]
 func (componentController *ComponentController) SearchComponentOccurrencesByOrganization(ctx shared.Context) error {
 	organization := shared.GetOrg(ctx)

@@ -22,8 +22,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/l3montree-dev/devguard/daemons"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/require"
@@ -159,11 +159,11 @@ func (f *TestFixture) CreateAssetVersion(assetID uuid.UUID, name string, isDefau
 }
 
 // CreateDaemonRunner creates a DaemonRunner instance with all dependencies from the test app
-func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
+func (f *TestFixture) CreateDaemonRunner() *listeners.DaemonRunner {
 	f.T.Helper()
 
 	// Create a daemon runner using the NewDaemonRunner constructor with all dependencies from TestApp
-	return daemons.NewDaemonRunner(
+	return listeners.NewDaemonRunner(
 		f.DB,
 		f.App.Broker,
 		f.App.ConfigService,
@@ -174,22 +174,16 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.AssetRepository,
 		f.App.ProjectRepository,
 		f.App.OrgRepository,
-		f.App.ArtifactService,
 		f.App.ComponentRepository,
 		f.App.ComponentService,
+		f.App.LicenseRiskService,
 		f.App.DependencyVulnService,
 		f.App.DependencyVulnRepository,
 		f.App.ComponentProjectRepository,
-		f.App.VulnEventRepository,
 		f.App.StatisticsService,
 		f.App.ArtifactRepository,
 		f.App.CveRepository,
-		f.App.CweRepository,
-		f.App.ExploitRepository,
-		f.App.AffectedComponentRepository,
 		f.App.ScanService,
-		&testLeaderElector{}, // Use simple test leader elector
-		f.App.MaliciousPackageChecker,
 		f.App.VulnDBService,
 		f.App.VexRuleRepository,
 		f.App.VexRuleRecommendationRepository,
@@ -199,6 +193,7 @@ func (f *TestFixture) CreateDaemonRunner() *daemons.DaemonRunner {
 		f.App.FixedVersionResolver,
 		f.App.UpstreamVEXRuleRepository,
 		f.App.ExternalEntityProviderService,
+		f.App.FirstPartyVulnService,
 		f.Pool,
 	)
 }
