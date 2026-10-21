@@ -36,10 +36,15 @@ func InitLogger() {
 	// slog.HandlerOptions
 	w := os.Stderr
 
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(os.Getenv("LOG_LEVEL"))); err != nil {
+		level = slog.LevelDebug
+	}
+
 	// set global logger with custom options
 	slog.SetDefault(slog.New(
 		tint.NewTextHandler(w, &tint.Options{
-			Level:      slog.LevelDebug,
+			Level:      level,
 			AddSource:  true,
 			TimeFormat: time.Kitchen,
 		}),
