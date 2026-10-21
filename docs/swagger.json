@@ -32031,6 +32031,106 @@
                 ]
             }
         },
+        "/slsa/build-provenance": {
+            "post": {
+                "description": "Verifies the OIDC workload identity token of the CI job with its issuer, writes the verified\nidentity into the provenance and signs it. Returns a DSSE envelope, or a sigstore bundle if a\ntransparency log is configured.",
+                "parameters": [
+                    {
+                        "description": "OIDC workload identity token of the CI job",
+                        "in": "header",
+                        "name": "X-Workload-Identity-Token",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        },
+                        "text/plain": {
+                            "schema": {
+                                "title": "provenance",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "in-toto v1 statement with a SLSA v1 provenance predicate",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "signed build provenance"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "invalid build provenance"
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "missing or invalid workload identity token"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Sign SLSA build provenance with the verified identity of the CI job",
+                "tags": [
+                    "SLSA"
+                ]
+            }
+        },
+        "/slsa/public-key": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/x-pem-file": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "description": "PEM encoded public key"
+                    }
+                },
+                "summary": "Get the public key devguard signs SLSA build provenance with",
+                "tags": [
+                    "SLSA"
+                ]
+            }
+        },
         "/trigger-sync": {
             "get": {
                 "responses": {

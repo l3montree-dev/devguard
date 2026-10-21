@@ -237,6 +237,22 @@ func (s *SLSAController) PublicKey(ctx shared.Context) error {
 	return ctx.Blob(200, "application/x-pem-file", s.signingKey.publicKeyPEM)
 }
 
+// @Summary Sign SLSA build provenance with the verified identity of the CI job
+// @Description Verifies the OIDC workload identity token of the CI job with its issuer, writes the verified
+// @Description identity into the provenance and signs it. Returns a DSSE envelope, or a sigstore bundle if a
+// @Description transparency log is configured.
+// @Tags SLSA
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param X-Workload-Identity-Token header string true "OIDC workload identity token of the CI job"
+// @Param provenance body object true "in-toto v1 statement with a SLSA v1 provenance predicate"
+// @Success 200 {object} object "signed build provenance"
+// @Failure 400 {object} object "invalid build provenance"
+// @Failure 401 {object} object "missing or invalid workload identity token"
+// @Router /slsa/build-provenance [post]
 func (s *SLSAController) BuildProvenance(ctx shared.Context) error {
 	// TODO: remove the hardcoded test token fallback
 	token := ctx.Request().Header.Get(workloadIdentityTokenHeader)
@@ -261,11 +277,11 @@ func (s *SLSAController) BuildProvenance(ctx shared.Context) error {
 
 	statement, provenance, err := parseProvenanceStatement(body)
 	if err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not parse build provenance: %s", err.Error())).WithInternal(err)
 	}
 
 	if err := incorporateWorkloadIdentity(provenance, claims); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+		return echo.NewHTTPError(400, fmt.Sprintf("could not incorporate the workload identity into the build provenance: %s", err.Error())).WithInternal(err)
 	}
 
 	payload, err := marshalProvenanceStatement(statement, provenance)
