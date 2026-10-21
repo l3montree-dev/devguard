@@ -67,6 +67,7 @@ func NewAPIV1Router(srv api.Server,
 	apiV1Router.GET("/health/", systemController.Health)
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
+	apiV1Router.POST("/slsa/build-provenance/", slsaController.BuildProvenance)
 	apiV1Router.GET("/slsa/public-key/", slsaController.PublicKey)
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	apiV1Router.POST("/scan-unauthenticated/", scanController.ScanDependencyVulnUnauthenticated)
