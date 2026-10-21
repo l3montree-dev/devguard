@@ -46,7 +46,9 @@ var (
 	pypiProxyPrefixRe   = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/pypi(?:/|$)`)
 	pypiFilenameRe      = regexp.MustCompile(`^(.+?)-(\d[^-]*?)(?:-.+\.whl|\.zip|\.tar(?:\.gz|\.bz2|\.xz|\.lz|\.lzma)?|\.t[bgx]z|\.tlz)$`)
 	pypiNameSeparatorRe = regexp.MustCompile(`[-_.]+`)
-	pypiAbsoluteURLRe   = regexp.MustCompile(`(?:https?:)?//[^"'\s#]*/`)
+	// matches only the scheme and authority of an absolute (or scheme-relative) URL,
+	// so the upstream path is preserved when the URL is rewritten onto the proxy.
+	pypiAbsoluteURLRe = regexp.MustCompile(`(?:https?:)?//[^/"'\s#]+`)
 )
 
 // PythonDependencyProxyController handles PyPI dependency proxy requests.
@@ -401,7 +403,8 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		c.Response().Header().Set("Content-Type", contentType)
 	}
 
-	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(pypiProxyPrefixRe.FindString(c.Request().URL.Path)+"packages/"))
+	proxyPrefix := strings.TrimSuffix(pypiProxyPrefixRe.FindString(c.Request().URL.Path), "/")
+	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(proxyPrefix))
 
 	return pypi.writeResponse(c, data, requestPath, false)
 }
