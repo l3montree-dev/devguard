@@ -53,49 +53,81 @@ const inTotoPayloadType = "application/vnd.in-toto+json"
 
 var supportedSigningAlgorithms = []jose.SignatureAlgorithm{jose.RS256, jose.ES256}
 
-// WorkloadIdentityClaims are the claims of a GitLab CI id_token.
-// See https://docs.gitlab.com/ci/secrets/id_token_authentication/#token-payload
+// WorkloadIdentityClaims are the claims of a CI workload identity token. The fields cover the
+// GitLab CI id_token and the GitHub Actions OIDC token - the claim sets do not overlap, so which
+// of them is populated also tells us which build platform issued the token.
+// See https://docs.gitlab.com/ci/secrets/id_token_authentication/#token-payload and
+// https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
 type WorkloadIdentityClaims struct {
 	Issuer    string `json:"iss"`
 	Subject   string `json:"sub"`
-	Audience  any    `json:"aud"` // string or []string
-	JTI       string `json:"jti"`
-	IssuedAt  int64  `json:"iat"`
-	NotBefore int64  `json:"nbf"`
-	ExpiresAt int64  `json:"exp"`
+	Audience  any    `json:"aud,omitempty"` // string or []string
+	JTI       string `json:"jti,omitempty"`
+	IssuedAt  int64  `json:"iat,omitempty"`
+	NotBefore int64  `json:"nbf,omitempty"`
+	ExpiresAt int64  `json:"exp,omitempty"`
 
-	ProjectID         string `json:"project_id"`
-	ProjectPath       string `json:"project_path"`
-	ProjectVisibility string `json:"project_visibility"`
-	NamespaceID       string `json:"namespace_id"`
-	NamespacePath     string `json:"namespace_path"`
+	// gitlab
+	ProjectID         string `json:"project_id,omitempty"`
+	ProjectPath       string `json:"project_path,omitempty"`
+	ProjectVisibility string `json:"project_visibility,omitempty"`
+	NamespaceID       string `json:"namespace_id,omitempty"`
+	NamespacePath     string `json:"namespace_path,omitempty"`
 
-	UserID          string `json:"user_id"`
-	UserLogin       string `json:"user_login"`
-	UserEmail       string `json:"user_email"`
-	UserAccessLevel string `json:"user_access_level"`
+	UserID          string `json:"user_id,omitempty"`
+	UserLogin       string `json:"user_login,omitempty"`
+	UserEmail       string `json:"user_email,omitempty"`
+	UserAccessLevel string `json:"user_access_level,omitempty"`
 
-	PipelineID     string `json:"pipeline_id"`
-	PipelineSource string `json:"pipeline_source"`
-	JobID          string `json:"job_id"`
-	JobSource      string `json:"job_source"`
-	JobProjectID   string `json:"job_project_id"`
-	JobProjectPath string `json:"job_project_path"`
+	PipelineID     string `json:"pipeline_id,omitempty"`
+	PipelineSource string `json:"pipeline_source,omitempty"`
+	JobID          string `json:"job_id,omitempty"`
+	JobSource      string `json:"job_source,omitempty"`
+	JobProjectID   string `json:"job_project_id,omitempty"`
+	JobProjectPath string `json:"job_project_path,omitempty"`
 
-	Ref          string `json:"ref"`
-	RefType      string `json:"ref_type"`
-	RefPath      string `json:"ref_path"`
-	RefProtected string `json:"ref_protected"`
-	SHA          string `json:"sha"`
+	RefPath string `json:"ref_path,omitempty"`
+
+	CIConfigRefURI string `json:"ci_config_ref_uri,omitempty"`
+	CIConfigSHA    string `json:"ci_config_sha,omitempty"`
+
+	RunnerID int64 `json:"runner_id,omitempty"`
+
+	// github
+	Repository           string `json:"repository,omitempty"`
+	RepositoryID         string `json:"repository_id,omitempty"`
+	RepositoryOwner      string `json:"repository_owner,omitempty"`
+	RepositoryOwnerID    string `json:"repository_owner_id,omitempty"`
+	RepositoryVisibility string `json:"repository_visibility,omitempty"`
+
+	// the reusable workflow which ran this job, or the entry workflow if the job is not reusable
+	JobWorkflowRef string `json:"job_workflow_ref,omitempty"`
+	JobWorkflowSHA string `json:"job_workflow_sha,omitempty"`
+	WorkflowRef    string `json:"workflow_ref,omitempty"`
+	WorkflowSHA    string `json:"workflow_sha,omitempty"`
+	Workflow       string `json:"workflow,omitempty"`
+
+	RunID      string `json:"run_id,omitempty"`
+	RunNumber  string `json:"run_number,omitempty"`
+	RunAttempt string `json:"run_attempt,omitempty"`
+
+	Actor     string `json:"actor,omitempty"`
+	ActorID   string `json:"actor_id,omitempty"`
+	EventName string `json:"event_name,omitempty"`
+
+	// shared
+	Ref          string `json:"ref,omitempty"`
+	RefType      string `json:"ref_type,omitempty"`
+	RefProtected string `json:"ref_protected,omitempty"`
+	SHA          string `json:"sha,omitempty"`
 
 	Environment          string `json:"environment,omitempty"`
 	EnvironmentProtected string `json:"environment_protected,omitempty"`
 
-	CIConfigRefURI string `json:"ci_config_ref_uri"`
-	CIConfigSHA    string `json:"ci_config_sha"`
+	RunnerEnvironment string `json:"runner_environment,omitempty"`
 
-	RunnerID          int64  `json:"runner_id"`
-	RunnerEnvironment string `json:"runner_environment"`
+	// every claim of the verified token, including the ones not mapped above
+	Raw map[string]any `json:"-"`
 }
 
 type SLSAController struct {
@@ -300,6 +332,9 @@ func (s *SLSAController) verifyWorkloadIdentityToken(ctx context.Context, rawTok
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("could not parse token claims: %w", err)
 	}
+	if err := idToken.Claims(&claims.Raw); err != nil {
+		return nil, fmt.Errorf("could not parse token claims: %w", err)
+	}
 	return &claims, nil
 }
 
@@ -379,10 +414,84 @@ func marshalProvenanceStatement(statement *attestationv1.Statement, provenance *
 	return protojson.Marshal(statement)
 }
 
+// builderIdentity is the platform independent view of a workload identity token: everything the
+// build platform told us about who ran this build, and from which source.
+type builderIdentity struct {
+	// the source repository as a git uri, without a ref
+	repositoryURI string
+	// the full ref the build ran on, e.g. refs/heads/main
+	ref string
+	// the commit the build ran on
+	commit string
+	// the build configuration which ran the build - what verifiers pin against
+	builderID      string
+	builderVersion map[string]string
+	// the url of the concrete run
+	invocationID string
+}
+
+// resolveBuilderIdentity maps the claims of a verified token onto the fields SLSA provenance needs.
+// Each build platform has its own claim names, so this is where support for a platform is added.
+func resolveBuilderIdentity(claims *WorkloadIdentityClaims) (*builderIdentity, error) {
+	issuer := strings.TrimSuffix(claims.Issuer, "/")
+
+	switch {
+	case claims.ProjectPath != "" && claims.CIConfigRefURI != "":
+		// gitlab: the issuer is the gitlab instance, so the repository lives below it
+		repositoryURI := fmt.Sprintf("git+%s/%s", issuer, claims.ProjectPath)
+		return &builderIdentity{
+			repositoryURI:  repositoryURI,
+			ref:            claims.RefPath,
+			commit:         claims.SHA,
+			builderID:      fmt.Sprintf("https://%s", claims.CIConfigRefURI),
+			builderVersion: map[string]string{"ciConfigSha": claims.CIConfigSHA},
+			invocationID:   fmt.Sprintf("%s/%s/-/jobs/%s", issuer, claims.ProjectPath, claims.JobID),
+		}, nil
+
+	case claims.Repository != "" && claims.JobWorkflowRef != "":
+		// github: the issuer is the token service, not the forge, so the forge is derived from it
+		forge, err := githubForgeURL(issuer)
+		if err != nil {
+			return nil, err
+		}
+		identity := &builderIdentity{
+			repositoryURI: fmt.Sprintf("git+%s/%s", forge, claims.Repository),
+			ref:           claims.Ref,
+			commit:        claims.SHA,
+			// job_workflow_ref names the reusable workflow which ran the job - the trusted builder
+			builderID:      fmt.Sprintf("%s/%s", forge, claims.JobWorkflowRef),
+			builderVersion: map[string]string{"jobWorkflowSha": claims.JobWorkflowSHA},
+			invocationID:   fmt.Sprintf("%s/%s/actions/runs/%s", forge, claims.Repository, claims.RunID),
+		}
+		if claims.RunAttempt != "" {
+			identity.invocationID = fmt.Sprintf("%s/attempts/%s", identity.invocationID, claims.RunAttempt)
+		}
+		return identity, nil
+	}
+
+	return nil, fmt.Errorf("unsupported workload identity token: expected the claims of a gitlab id token or a github actions oidc token")
+}
+
+// githubForgeURL returns the base url of the github instance which issued the token.
+// github.com uses a dedicated token service, github enterprise server issues from its own host.
+func githubForgeURL(issuer string) (string, error) {
+	if issuer == "https://token.actions.githubusercontent.com" {
+		return "https://github.com", nil
+	}
+	parsed, err := url.Parse(issuer)
+	if err != nil {
+		return "", fmt.Errorf("could not parse issuer %q: %w", issuer, err)
+	}
+	if parsed.Host == "" {
+		return "", fmt.Errorf("issuer %q has no host", issuer)
+	}
+	return fmt.Sprintf("https://%s", parsed.Host), nil
+}
+
 func incorporateWorkloadIdentity(provenance *provenancev1.Provenance, claims *WorkloadIdentityClaims) error {
-	// the claim mapping below is gitlab specific
-	if claims.ProjectPath == "" || claims.CIConfigRefURI == "" {
-		return fmt.Errorf("only gitlab id tokens are supported for now")
+	identity, err := resolveBuilderIdentity(claims)
+	if err != nil {
+		return err
 	}
 
 	if provenance.BuildDefinition == nil {
@@ -395,23 +504,20 @@ func incorporateWorkloadIdentity(provenance *provenancev1.Provenance, claims *Wo
 		provenance.RunDetails.Metadata = &provenancev1.BuildMetadata{}
 	}
 
-	issuer := strings.TrimSuffix(claims.Issuer, "/")
-	repositoryURI := fmt.Sprintf("git+%s/%s", issuer, claims.ProjectPath)
-
 	// the source repository is taken from the token. A client provided entry for the same repository must not contradict it
 	resolvedDependencies := make([]*attestationv1.ResourceDescriptor, 0, len(provenance.BuildDefinition.ResolvedDependencies)+1)
 	for _, dependency := range provenance.BuildDefinition.ResolvedDependencies {
-		if dependency.Uri == repositoryURI || strings.HasPrefix(dependency.Uri, repositoryURI+"@") {
-			if commit, ok := dependency.Digest["gitCommit"]; ok && commit != claims.SHA {
-				return fmt.Errorf("resolved dependency %q has commit %q but the workload identity token was issued for commit %q", dependency.Uri, commit, claims.SHA)
+		if dependency.Uri == identity.repositoryURI || strings.HasPrefix(dependency.Uri, identity.repositoryURI+"@") {
+			if commit, ok := dependency.Digest["gitCommit"]; ok && commit != identity.commit {
+				return fmt.Errorf("resolved dependency %q has commit %q but the workload identity token was issued for commit %q", dependency.Uri, commit, identity.commit)
 			}
 			continue
 		}
 		resolvedDependencies = append(resolvedDependencies, dependency)
 	}
 	resolvedDependencies = append(resolvedDependencies, &attestationv1.ResourceDescriptor{
-		Uri:    fmt.Sprintf("%s@%s", repositoryURI, claims.RefPath),
-		Digest: map[string]string{"gitCommit": claims.SHA},
+		Uri:    fmt.Sprintf("%s@%s", identity.repositoryURI, identity.ref),
+		Digest: map[string]string{"gitCommit": identity.commit},
 	})
 	provenance.BuildDefinition.ResolvedDependencies = resolvedDependencies
 
@@ -425,24 +531,25 @@ func incorporateWorkloadIdentity(provenance *provenancev1.Provenance, claims *Wo
 	// the builder identity is what verifiers check against - e.g. "is this a devguard ci component"
 	// the issuer is part of it, since the builder is only as trustworthy as the issuer claiming it
 	provenance.RunDetails.Builder = &provenancev1.Builder{
-		Id: fmt.Sprintf("https://%s?iss=%s", claims.CIConfigRefURI, url.QueryEscape(claims.Issuer)),
-		Version: map[string]string{
-			"ciConfigSha": claims.CIConfigSHA,
-		},
+		Id:      fmt.Sprintf("%s?iss=%s", identity.builderID, url.QueryEscape(claims.Issuer)),
+		Version: identity.builderVersion,
 	}
-	provenance.RunDetails.Metadata.InvocationId = fmt.Sprintf("%s/%s/-/jobs/%s", issuer, claims.ProjectPath, claims.JobID)
+	provenance.RunDetails.Metadata.InvocationId = identity.invocationID
 
 	return nil
 }
 
 func workloadIdentityInternalParameters(claims *WorkloadIdentityClaims) (*structpb.Struct, error) {
-	b, err := json.Marshal(claims)
-	if err != nil {
-		return nil, err
-	}
-	var workloadIdentity map[string]any
-	if err := json.Unmarshal(b, &workloadIdentity); err != nil {
-		return nil, err
+	// prefer the raw claims, so claims we do not map are recorded as well
+	workloadIdentity := claims.Raw
+	if workloadIdentity == nil {
+		b, err := json.Marshal(claims)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(b, &workloadIdentity); err != nil {
+			return nil, err
+		}
 	}
 	return structpb.NewStruct(map[string]any{
 		"devguard": map[string]any{

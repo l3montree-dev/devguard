@@ -101,7 +101,68 @@ func TestIncorporateWorkloadIdentity(t *testing.T) {
 		assert.Error(t, incorporateWorkloadIdentity(provenance, claims))
 	})
 
-	t.Run("should reject tokens which are not gitlab id tokens", func(t *testing.T) {
+	t.Run("should map github actions claims onto the reusable workflow which ran the job", func(t *testing.T) {
+		statement, provenance, err := parseProvenanceStatement([]byte(clientProvenance))
+		require.NoError(t, err)
+
+		claims := &WorkloadIdentityClaims{
+			Issuer:          "https://token.actions.githubusercontent.com",
+			Subject:         "repo:l3montree-dev/slsa-test:ref:refs/heads/main",
+			Repository:      "l3montree-dev/slsa-test",
+			RepositoryOwner: "l3montree-dev",
+			JobWorkflowRef:  "l3montree-dev/trusted-builder/.github/workflows/build.yml@refs/heads/main",
+			JobWorkflowSHA:  "8d1f0a2b6c4e9f3a5d7b1c0e2f4a6b8d0c2e4f68",
+			Ref:             "refs/heads/main",
+			SHA:             "dae726b903315dd798caaa492d7a7c983a27dc20",
+			RunID:           "17422331122",
+			RunAttempt:      "1",
+		}
+
+		require.NoError(t, incorporateWorkloadIdentity(provenance, claims))
+		payload, err := marshalProvenanceStatement(statement, provenance)
+		require.NoError(t, err)
+
+		var result map[string]any
+		require.NoError(t, json.Unmarshal(payload, &result))
+
+		predicate := result["predicate"].(map[string]any)
+		buildDefinition := predicate["buildDefinition"].(map[string]any)
+		runDetails := predicate["runDetails"].(map[string]any)
+		builder := runDetails["builder"].(map[string]any)
+
+		assert.Equal(t, "https://github.com/l3montree-dev/trusted-builder/.github/workflows/build.yml@refs/heads/main?iss=https%3A%2F%2Ftoken.actions.githubusercontent.com", builder["id"])
+		assert.Equal(t, map[string]any{"jobWorkflowSha": "8d1f0a2b6c4e9f3a5d7b1c0e2f4a6b8d0c2e4f68"}, builder["version"])
+		assert.Equal(t, "https://github.com/l3montree-dev/slsa-test/actions/runs/17422331122/attempts/1", runDetails["metadata"].(map[string]any)["invocationId"])
+
+		assert.Contains(t, buildDefinition["resolvedDependencies"], map[string]any{
+			"uri":    "git+https://github.com/l3montree-dev/slsa-test@refs/heads/main",
+			"digest": map[string]any{"gitCommit": "dae726b903315dd798caaa492d7a7c983a27dc20"},
+		})
+		// client provided dependencies for other repositories are kept - only the identity fields
+		// and the entry for the token's own repository are authoritative
+		assert.Len(t, buildDefinition["resolvedDependencies"], 3)
+	})
+
+	t.Run("should derive the forge from the issuer of a github enterprise server token", func(t *testing.T) {
+		_, provenance, err := parseProvenanceStatement([]byte(clientProvenance))
+		require.NoError(t, err)
+
+		require.NoError(t, incorporateWorkloadIdentity(provenance, &WorkloadIdentityClaims{
+			Issuer:         "https://github.example.com/_services/token",
+			Repository:     "org/repo",
+			JobWorkflowRef: "org/trusted/.github/workflows/build.yml@refs/heads/main",
+			Ref:            "refs/heads/main",
+			SHA:            "dae726b903315dd798caaa492d7a7c983a27dc20",
+			RunID:          "42",
+		}))
+
+		assert.Equal(t,
+			"https://github.example.com/org/trusted/.github/workflows/build.yml@refs/heads/main?iss=https%3A%2F%2Fgithub.example.com%2F_services%2Ftoken",
+			provenance.RunDetails.Builder.Id)
+		assert.Equal(t, "https://github.example.com/org/repo/actions/runs/42", provenance.RunDetails.Metadata.InvocationId)
+	})
+
+	t.Run("should reject tokens which belong to no supported build platform", func(t *testing.T) {
 		_, provenance, err := parseProvenanceStatement([]byte(clientProvenance))
 		require.NoError(t, err)
 
