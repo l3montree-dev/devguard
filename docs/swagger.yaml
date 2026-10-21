@@ -152,6 +152,28 @@ components:
       - description
       - implementationStatus
       type: object
+    controllers_dependencyfirewall.CacheStats:
+      properties:
+        entries:
+          type: integer
+        evictions:
+          type: integer
+        hits:
+          type: integer
+        maxBytes:
+          type: integer
+        misses:
+          type: integer
+        sizeBytes:
+          type: integer
+      required:
+      - entries
+      - evictions
+      - hits
+      - maxBytes
+      - misses
+      - sizeBytes
+      type: object
     cyclonedx.Advisory:
       properties:
         title:
@@ -10903,8 +10925,24 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
       type: integer
       x-enum-varnames:
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
       - minDuration
       - maxDuration
       - Nanosecond
@@ -11358,6 +11396,20 @@ paths:
       security:
       - AdminSignedAuth: []
       summary: Update instance settings
+      tags:
+      - Admin
+  /admin/statistics/dependency-proxy-cache/:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers_dependencyfirewall.CacheStats'
+          description: OK
+      security:
+      - AdminSignedAuth: []
+      summary: Get instance-wide dependency proxy cache statistics
       tags:
       - Admin
   /admin/statistics/usage/:
@@ -12692,6 +12744,29 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Get organization dependency proxy URLs
+      tags:
+      - Dependency Firewall
+  /organizations/{organization}/dependency-proxy/cache-stats/:
+    get:
+      parameters:
+      - description: organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers_dependencyfirewall.CacheStats'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get organization dependency proxy cache statistics
       tags:
       - Dependency Firewall
   /organizations/{organization}/dependency-vulns:
@@ -21233,6 +21308,68 @@ paths:
         results are not saved)
       tags:
       - Scanning
+  /slsa/build-provenance:
+    post:
+      description: |-
+        Verifies the OIDC workload identity token of the CI job with its issuer, writes the verified
+        identity into the provenance and signs it. Returns a DSSE envelope, or a sigstore bundle if a
+        transparency log is configured.
+      parameters:
+      - description: OIDC workload identity token of the CI job
+        in: header
+        name: X-Workload-Identity-Token
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+          text/plain:
+            schema:
+              title: provenance
+              type: object
+        description: in-toto v1 statement with a SLSA v1 provenance predicate
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: signed build provenance
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: invalid build provenance
+        "401":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: missing or invalid workload identity token
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Sign SLSA build provenance with the verified identity of the CI job
+      tags:
+      - SLSA
+  /slsa/public-key:
+    get:
+      responses:
+        "200":
+          content:
+            application/x-pem-file:
+              schema:
+                type: string
+          description: PEM encoded public key
+      summary: Get the public key devguard signs SLSA build provenance with
+      tags:
+      - SLSA
   /trigger-sync:
     get:
       responses:

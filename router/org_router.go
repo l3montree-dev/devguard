@@ -76,6 +76,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/logs/", logController.ListPagedForOrganization, middlewares.NeededScope([]string{"scan"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead))
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	organizationRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetOrgDependencyProxyURLs)
+	organizationRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetOrgCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderController.TriggerSync)
 	organizationRouter.GET("/settings/", orgController.AdminSettings, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
@@ -98,6 +99,7 @@ func NewOrgRouter(
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	organizationRouter.GET("/projects/", projectController.List)
+	organizationRouter.POST("/projects/", projectController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectProject, shared.ActionCreate))
 	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.OrgListRepositories)
 
@@ -110,7 +112,6 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.OrgTest)
 	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
 	organizationUpdateAccessControlRequired.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration)
-	organizationUpdateAccessControlRequired.POST("/projects/", projectController.Create)
 	organizationUpdateAccessControlRequired.POST("/pats/", patController.CreateForOrg)
 
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)

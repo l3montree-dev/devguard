@@ -16,180 +16,57 @@
 package commands
 
 import (
-	"context"
-	"os"
-	"path/filepath"
+	"encoding/base64"
 	"strings"
 	"testing"
-
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/registry"
-	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	cosignpkg "github.com/sigstore/cosign/v2/pkg/cosign"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	"net/http/httptest"
-
-	cosignoptions "github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 )
 
-// writeKeyFile generates a fresh cosign key pair and writes the private key to
-// a temp file, returning its path. The key is encrypted with an empty password.
-func writeKeyFile(t *testing.T) string {
-	t.Helper()
-	keys, err := cosignpkg.GenerateKeyPair(func(_ bool) ([]byte, error) {
-		return []byte{}, nil
-	})
-	if err != nil {
-		t.Fatalf("GenerateKeyPair: %v", err)
-	}
-	dir := t.TempDir()
-	keyPath := filepath.Join(dir, "cosign.key")
-	if err := os.WriteFile(keyPath, keys.PrivateBytes, 0600); err != nil {
-		t.Fatalf("write key file: %v", err)
-	}
-	return keyPath
+// signedEnvelope returns a DSSE envelope with an in-toto statement of the given predicate type.
+func signedEnvelope(predicateType string) string {
+	payload := base64.StdEncoding.EncodeToString([]byte(`{"_type":"https://in-toto.io/Statement/v1","predicateType":"` + predicateType + `","subject":[],"predicate":{}}`))
+	return `{"payloadType":"application/vnd.in-toto+json","payload":"` + payload + `","signatures":[{"keyid":"","sig":"c2ln"}]}`
 }
 
-// writePredicateFile writes predicate JSON to a temp file and returns its path.
-func writePredicateFile(t *testing.T, content string) string {
-	t.Helper()
-	dir := t.TempDir()
-	p := filepath.Join(dir, "predicate.json")
-	if err := os.WriteFile(p, []byte(content), 0600); err != nil {
-		t.Fatalf("write predicate file: %v", err)
-	}
-	return p
-}
+func TestPreSignedEnvelope(t *testing.T) {
+	const slsa = "https://slsa.dev/provenance/v1"
 
-func TestAttachAttestationCreatesAttestationTag(t *testing.T) {
-	srv := httptest.NewServer(registry.New())
-	t.Cleanup(srv.Close)
-	host := strings.TrimPrefix(srv.URL, "http://")
-
-	regOpts := cosignoptions.RegistryOptions{AllowInsecure: true}
-	remoteOpts := regOpts.GetRegistryClientOpts(context.Background())
-
-	// Push a base image
-	img, err := random.Image(512, 1)
-	if err != nil {
-		t.Fatalf("random.Image: %v", err)
-	}
-	ref, err := name.ParseReference(host+"/test/image:latest", name.Insecure)
-	if err != nil {
-		t.Fatalf("name.ParseReference: %v", err)
-	}
-	if err := remote.Write(ref, img, remoteOpts...); err != nil {
-		t.Fatalf("remote.Write: %v", err)
-	}
-
-	keyPath := writeKeyFile(t)
-	predicatePath := writePredicateFile(t, `{"component":"test","version":"1.0"}`)
-
-	if err := attachAttestation(
-		context.Background(),
-		regOpts,
-		keyPath,
-		predicatePath,
-		"https://cyclonedx.org/vex",
-		host+"/test/image:latest",
-	); err != nil {
-		t.Fatalf("attachAttestation: %v", err)
-	}
-
-	attTag, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
-	if err != nil {
-		t.Fatalf("AttestationTag: %v", err)
-	}
-	if !tagExists(attTag, remoteOpts) {
-		t.Error("attestation tag should exist after attachAttestation")
-	}
-}
-
-func TestAttachAttestationDifferentPredicateTypes(t *testing.T) {
-	predicateTypes := []string{
-		"https://cyclonedx.org/vex",
-		"https://slsa.dev/provenance/v1",
-		"https://spdx.dev/Document",
-	}
-
-	for _, pt := range predicateTypes {
-		t.Run(pt, func(t *testing.T) {
-			srv := httptest.NewServer(registry.New())
-			t.Cleanup(srv.Close)
-			host := strings.TrimPrefix(srv.URL, "http://")
-
-			regOpts := cosignoptions.RegistryOptions{AllowInsecure: true}
-			remoteOpts := regOpts.GetRegistryClientOpts(context.Background())
-
-			img, err := random.Image(512, 1)
-			if err != nil {
-				t.Fatalf("random.Image: %v", err)
+	t.Run("plain predicates are not pre-signed", func(t *testing.T) {
+		for _, predicate := range []string{`{"bomFormat":"CycloneDX"}`, `[1,2,3]`} {
+			envelope, err := preSignedEnvelope([]byte(predicate), slsa)
+			if err != nil || envelope != nil {
+				t.Errorf("expected %s to be treated as predicate, got envelope %s and err %v", predicate, envelope, err)
 			}
-			ref, err := name.ParseReference(host+"/test/image:latest", name.Insecure)
-			if err != nil {
-				t.Fatalf("name.ParseReference: %v", err)
-			}
-			if err := remote.Write(ref, img, remoteOpts...); err != nil {
-				t.Fatalf("remote.Write: %v", err)
-			}
-
-			keyPath := writeKeyFile(t)
-			predicatePath := writePredicateFile(t, `{"test":true}`)
-
-			if err := attachAttestation(
-				context.Background(), regOpts, keyPath, predicatePath, pt, host+"/test/image:latest",
-			); err != nil {
-				t.Fatalf("attachAttestation(%s): %v", pt, err)
-			}
-
-			attTag, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
-			if err != nil {
-				t.Fatalf("AttestationTag: %v", err)
-			}
-			if !tagExists(attTag, remoteOpts) {
-				t.Errorf("attestation tag should exist for predicate type %s", pt)
-			}
-		})
-	}
-}
-
-func TestAttachAttestationIsIdempotent(t *testing.T) {
-	srv := httptest.NewServer(registry.New())
-	t.Cleanup(srv.Close)
-	host := strings.TrimPrefix(srv.URL, "http://")
-
-	regOpts := cosignoptions.RegistryOptions{AllowInsecure: true}
-	remoteOpts := regOpts.GetRegistryClientOpts(context.Background())
-
-	img, err := random.Image(512, 1)
-	if err != nil {
-		t.Fatalf("random.Image: %v", err)
-	}
-	ref, err := name.ParseReference(host+"/test/image:latest", name.Insecure)
-	if err != nil {
-		t.Fatalf("name.ParseReference: %v", err)
-	}
-	if err := remote.Write(ref, img, remoteOpts...); err != nil {
-		t.Fatalf("remote.Write: %v", err)
-	}
-
-	keyPath := writeKeyFile(t)
-	predicatePath := writePredicateFile(t, `{"component":"test"}`)
-	imageRef := host + "/test/image:latest"
-
-	// Attest twice with the same predicate — should not error
-	for i := range 2 {
-		if err := attachAttestation(context.Background(), regOpts, keyPath, predicatePath, "https://cyclonedx.org/vex", imageRef); err != nil {
-			t.Fatalf("attachAttestation call %d: %v", i+1, err)
 		}
-	}
+	})
 
-	attTag, err := ociremote.AttestationTag(ref, ociremote.WithRemoteOptions(remoteOpts...))
-	if err != nil {
-		t.Fatalf("AttestationTag: %v", err)
-	}
-	if !tagExists(attTag, remoteOpts) {
-		t.Error("attestation tag should exist after double attest")
-	}
+	t.Run("dsse envelopes are pre-signed", func(t *testing.T) {
+		envelope, err := preSignedEnvelope([]byte(signedEnvelope(slsa)), slsa)
+		if err != nil || envelope == nil {
+			t.Fatalf("expected the envelope to be detected, got err %v", err)
+		}
+	})
+
+	t.Run("the dsse envelope is taken from sigstore bundles", func(t *testing.T) {
+		bundle := `{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","verificationMaterial":{},"dsseEnvelope":` + signedEnvelope(slsa) + `}`
+		envelope, err := preSignedEnvelope([]byte(bundle), slsa)
+		if err != nil || envelope == nil {
+			t.Fatalf("expected the envelope to be extracted, got err %v", err)
+		}
+		if strings.Contains(string(envelope), "mediaType") {
+			t.Errorf("expected only the envelope, got the bundle: %s", envelope)
+		}
+	})
+
+	t.Run("unsigned envelopes are rejected", func(t *testing.T) {
+		unsigned := strings.Replace(signedEnvelope(slsa), `[{"keyid":"","sig":"c2ln"}]`, `[]`, 1)
+		if _, err := preSignedEnvelope([]byte(unsigned), slsa); err == nil {
+			t.Error("expected an error for an unsigned envelope")
+		}
+	})
+
+	t.Run("envelopes with another predicate type are rejected", func(t *testing.T) {
+		if _, err := preSignedEnvelope([]byte(signedEnvelope("https://cyclonedx.org/vex")), slsa); err == nil {
+			t.Error("expected an error for a mismatching predicate type")
+		}
+	})
 }

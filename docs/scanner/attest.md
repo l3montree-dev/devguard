@@ -39,6 +39,10 @@ The first argument is a path to a local predicate JSON file. Pass "-" to read fr
 Optionally provide a container image reference as the second argument to also attach the
 attestation directly to the image in the OCI registry using cosign.
 
+Already signed input - a DSSE envelope or a sigstore bundle containing one, like the SLSA
+provenance signed by 'devguard-scanner provenance sign' - is attached and uploaded as-is,
+without signing it again. Its statement must have the predicate type given by --predicateType.
+
 ```shell
 devguard-scanner attest <predicate> [container-image] [flags]
 ```
@@ -51,6 +55,10 @@ devguard-scanner attest <predicate> [container-image] [flags]
 
   # Attest with SLSA provenance
   devguard-scanner attest provenance.json ghcr.io/org/image:tag --predicateType https://slsa.dev/provenance/v1
+
+  # Attach SLSA provenance signed by DevGuard as-is
+  devguard-scanner provenance sign build.provenance.json > build.provenance.dsse.json
+  devguard-scanner attest build.provenance.dsse.json ghcr.io/org/image:tag --predicateType https://slsa.dev/provenance/v1
 
   # Pipe curl output directly into attest (no shell needed)
   devguard-scanner curl https://api.example.com/sbom.json --token=... | devguard-scanner attest - ghcr.io/org/image:tag --predicateType https://cyclonedx.org/bom

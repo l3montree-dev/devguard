@@ -55,8 +55,8 @@ func trimWithRegex(path string, re *regexp.Regexp) string {
 
 type DependencyProxyCache struct {
 	CacheDir string
-	// MaxSizeMB bounds the size of the in-memory-tracked, disk-backed package
-	// cache. Defaults to 1024 (1GB) if unset.
+	// MaxSizeMB bounds the size of each organization's in-memory-tracked,
+	// disk-backed package cache. Defaults to 1024 (1GB) per organization if unset.
 	MaxSizeMB int
 }
 
@@ -64,6 +64,7 @@ type DependencyProxyConfigs struct {
 	Rules         []string          `json:"rules"`
 	MinReleaseAge int               `json:"minReleaseAge"` // in hours
 	Registries    map[string]string `json:"registries"`
+	OrgID         uuid.UUID         `json:"-"`
 }
 
 func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
@@ -80,7 +81,7 @@ type DependencyProxyController struct {
 	orgRepository          shared.OrganizationRepository
 	dependencyProxyService shared.DependencyProxySecretService
 	maliciousChecker       shared.MaliciousPackageChecker
-	cache                  *cache
+	caches                 *orgCaches
 	client                 *http.Client
 }
 
@@ -99,7 +100,7 @@ func NewDependencyProxyController(
 	return &DependencyProxyController{
 		dependencyProxyService: dependencyProxyService,
 		maliciousChecker:       maliciousChecker,
-		cache:                  newCache(config.CacheDir, config.MaxSizeMB),
+		caches:                 newOrgCaches(config.CacheDir, config.MaxSizeMB),
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
@@ -175,6 +176,32 @@ func (d *DependencyProxyController) passthroughUpstreamResponse(c shared.Context
 // @Router /organizations/{organization}/dependency-proxy-urls/ [get]
 func (d *DependencyProxyController) GetOrgDependencyProxyURLs(ctx shared.Context) error {
 	return d.GetDependencyProxyURLs(ctx)
+}
+
+// @Summary Get organization dependency proxy cache statistics
+// @Tags Dependency Firewall
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "organization slug"
+// @Success 200 {object} dependencyfirewall.CacheStats
+// @Router /organizations/{organization}/dependency-proxy/cache-stats/ [get]
+func (d *DependencyProxyController) GetOrgCacheStats(ctx shared.Context) error {
+	org := shared.GetOrg(ctx)
+	e, err := d.caches.forOrg(org.ID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get cache stats for org").WithInternal(err)
+	}
+	return ctx.JSON(http.StatusOK, e.Stats())
+}
+
+// @Summary Get instance-wide dependency proxy cache statistics
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} dependencyfirewall.CacheStats
+// @Router /admin/statistics/dependency-proxy-cache/ [get]
+func (d *DependencyProxyController) GetInstanceCacheStats(ctx shared.Context) error {
+	return ctx.JSON(http.StatusOK, d.caches.Stats())
 }
 
 // @Summary Get project dependency proxy URLs
@@ -281,18 +308,25 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, asset.ProjectID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		if err != nil {
+			return configs, fmt.Errorf("failed to read project: %w", err)
+		}
+		configs.OrgID = project.OrganizationID
 	case "project":
 		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
 		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
+		configs.OrgID = project.OrganizationID
 	case "organization":
 		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read organization: %w", err)
 		}
 		configFilesJSON = org.ConfigFiles["dependency-proxy-configs"]
+		configs.OrgID = org.ID
 	default:
 		return configs, fmt.Errorf("invalid proxy scope: %s", scope)
 	}

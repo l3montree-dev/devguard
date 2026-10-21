@@ -28,20 +28,27 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
+	"go.uber.org/fx"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
+func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM, svc shared.OpenSourceInsightService) error {
 	if config.RuntimeBaseConfig.UpstreamPURL != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		for i, upstreamPurl := range config.RuntimeBaseConfig.UpstreamPURL {
 			upstreamPURL, err := packageurl.FromString(upstreamPurl)
 			if err != nil {
@@ -50,6 +57,13 @@ func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
 			if upstreamPURL.Version == "" {
 				return fmt.Errorf("invalid --upstreamPURL %q: it should contain a version", upstreamPurl)
 			}
+			if _, err := svc.GetVersion(ctx, upstreamPURL); err != nil {
+				slog.Warn("could not resolve and verify upstreamPURL, there might be a typo or it may not exist", "upstreamPURL", upstreamPurl, "err", err)
+				if _, ok := packageurl.KnownTypes[upstreamPURL.Type]; !ok {
+					slog.Warn("the provided upstreamPURL does not seem to be in known types", "upstreamPURL", upstreamPurl)
+				}
+			}
+
 			upstreamPURLString := upstreamPURL.String()
 
 			cmp := cyclonedx.Component{
@@ -63,7 +77,11 @@ func addSupplementaryUpstreamPURLManually(bom *cyclonedx.BOM) error {
 						Identities: &[]cyclonedx.EvidenceIdentity{
 							{
 								Methods: &[]cyclonedx.EvidenceIdentityMethod{
-									{Technique: cyclonedx.EvidenceIdentityTechniqueOther, Confidence: new(float32(1.0)), Value: "user-declared"},
+									{
+										Technique:  cyclonedx.EvidenceIdentityTechniqueAttestation,
+										Confidence: new(float32(1.0)),
+										Value:      "user-declared",
+									},
 								},
 							},
 						},
@@ -607,7 +625,7 @@ func writeSBOMIfRequested(bom []byte) error {
 	return nil
 }
 
-func scanExternalImage(ctx context.Context) error {
+func scanExternalImage(ctx context.Context, openSourceInsightService shared.OpenSourceInsightService) error {
 	var err error
 	var attestations = []map[string]any{}
 	if !config.RuntimeBaseConfig.IgnoreUpstreamAttestations {
@@ -630,7 +648,7 @@ func scanExternalImage(ctx context.Context) error {
 		return err
 	}
 
-	err = addSupplementaryUpstreamPURLManually(bom)
+	err = addSupplementaryUpstreamPURLManually(bom, openSourceInsightService)
 	if err != nil {
 		return err
 	}
@@ -787,7 +805,7 @@ func discoverSupplementarySBOMsForPath(pathOrTar, sbomPath string) ([]*cyclonedx
 	return scanner.DiscoverSupplementarySBOMsInImage(img, sbomPath)
 }
 
-func scanLocalFilePath(ctx context.Context) error {
+func scanLocalFilePath(ctx context.Context, openSourceInsightService shared.OpenSourceInsightService) error {
 	// check if sbom file or need to generate sbom
 	var file []byte
 	var err error
@@ -812,7 +830,7 @@ func scanLocalFilePath(ctx context.Context) error {
 			return err
 		}
 
-		err = addSupplementaryUpstreamPURLManually(bom)
+		err = addSupplementaryUpstreamPURLManually(bom, openSourceInsightService)
 		if err != nil {
 			return err
 		}
@@ -875,6 +893,16 @@ func handleScanResponse(body io.Reader) error {
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {
+	var openSourceInsightService shared.OpenSourceInsightService
+	app := fx.New(
+		fx.NopLogger,
+		services.ServiceModule,
+		fx.Populate(&openSourceInsightService),
+	)
+	if err := app.Err(); err != nil {
+		return err
+	}
+
 	ctx := cmd.Context()
 	args, config.RuntimeExtraArgs = splitPassthroughArgs(cmd, args)
 	if len(args) > 0 && args[0] != "" && strings.Contains(args[0], ":") {
@@ -896,13 +924,13 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 	// in case it's a docker image we need to scan the image and try to download attestations
 	if config.RuntimeBaseConfig.Image != "" {
-		return scanExternalImage(ctx)
+		return scanExternalImage(ctx, openSourceInsightService)
 	} else if config.RuntimeBaseConfig.Path != "" {
-		return scanLocalFilePath(ctx)
+		return scanLocalFilePath(ctx, openSourceInsightService)
 	}
 	// default to scan current directory
 	config.RuntimeBaseConfig.Path = "."
-	return scanLocalFilePath(ctx)
+	return scanLocalFilePath(ctx, openSourceInsightService)
 }
 
 func NewSCACommand() *cobra.Command {

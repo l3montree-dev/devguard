@@ -20,7 +20,67 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/google/uuid"
 )
+
+func TestOrgCachesReturnsSameCacheForSameOrg(t *testing.T) {
+	o := newOrgCaches(t.TempDir(), 10)
+	orgID := uuid.New()
+
+	first, err := o.forOrg(orgID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	second, err := o.forOrg(orgID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if first != second {
+		t.Fatal("expected the same cache instance for the same org")
+	}
+}
+
+func TestOrgCachesReturnsDifferentCacheForDifferentOrgs(t *testing.T) {
+	o := newOrgCaches(t.TempDir(), 10)
+	orgID := uuid.New()
+	orgID2 := uuid.New()
+
+	first, err := o.forOrg(orgID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	second, err := o.forOrg(orgID2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if first == second {
+		t.Fatal("expected different cache instance for the two orgs")
+	}
+}
+
+func TestOrgCachesIsolatesEntriesBetweenOrgs(t *testing.T) {
+	o := newOrgCaches(t.TempDir(), 10)
+
+	orgA, err := o.forOrg(uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	orgB, err := o.forOrg(uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err := orgA.Set("pkg", cacheValue{data: []byte("org a content")}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := orgB.Get("pkg"); ok {
+		t.Fatal("expected cache miss for other org")
+	}
+}
 
 func TestCacheSetAndGet(t *testing.T) {
 	c := newCache(t.TempDir(), 10)

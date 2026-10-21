@@ -92,10 +92,12 @@ func (s *assetService) CreateAsset(ctx context.Context, rbac shared.AccessContro
 		return nil, err
 	}
 
-	// make the current user the admin of the asset
-	if err := rbac.GrantRoleInAsset(ctx, session, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
-		slog.Error("error assigning current user as asset admin", "err", err)
-		return nil, err
+	if session.GetSessionActorType() == shared.SessionActorUser {
+		// make the current user the admin of the asset
+		if err := rbac.GrantRoleInAsset(ctx, session, shared.RoleAdmin, newAsset.GetID().String()); err != nil {
+			slog.Error("error assigning current user as asset admin", "err", err)
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit().Error; err != nil {
