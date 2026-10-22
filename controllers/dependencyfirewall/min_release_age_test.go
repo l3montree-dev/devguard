@@ -32,27 +32,21 @@ import (
 
 // newMinReleaseAgeController builds a proxy controller whose configs resolve to
 // the given MinReleaseAge (in hours) for any request carrying the proxy secret.
-func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyProxyController, uuid.UUID, uuid.UUID) {
+func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyProxyController, uuid.UUID) {
 	t.Helper()
 
 	secret := uuid.New()
 	assetID := uuid.New()
-	projectID := uuid.New()
-	orgID := uuid.New()
 
 	secretService := mocks.NewDependencyProxySecretService(t)
 	secretService.EXPECT().GetModelBySecret(mock.Anything, secret).Return("asset", assetID, nil).Maybe()
 
 	assetRepository := mocks.NewAssetRepository(t)
 	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{
-		ProjectID: projectID,
 		ConfigFiles: databasetypes.JSONB{
 			"dependency-proxy-configs": fmt.Sprintf(`{"rules":"","minReleaseAge":%d}`, minReleaseAge),
 		},
 	}, nil).Maybe()
-
-	projectRepository := mocks.NewProjectRepository(t)
-	projectRepository.EXPECT().Read(mock.Anything, mock.Anything, projectID).Return(models.Project{OrganizationID: orgID}, nil).Maybe()
 
 	maliciousChecker := mocks.NewMaliciousPackageChecker(t)
 	maliciousChecker.EXPECT().GetMaliciousComponents(mock.Anything, mock.Anything, mock.Anything).
@@ -61,11 +55,10 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 	return &DependencyProxyController{
 		dependencyProxyService: secretService,
 		assetRepository:        assetRepository,
-		projectRepository:      projectRepository,
 		maliciousChecker:       maliciousChecker,
-		caches:                 newOrgCaches(t.TempDir(), 10),
+		caches:                 newSecretCaches(t.TempDir(), 10),
 		client:                 http.DefaultClient,
-	}, secret, orgID
+	}, secret
 }
 
 // newProxyRequest builds an echo context for a proxy request that carries the secret.
@@ -102,16 +95,16 @@ func TestNPMMinReleaseAgeOnCacheHit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			d, secret, orgID := newMinReleaseAgeController(t, 24)
+			d, secret := newMinReleaseAgeController(t, 24)
 			controller := NewNPMDependencyProxyController(d)
 
-			orgCache, err := d.caches.forOrg(orgID)
+			secretCache, err := d.caches.forSecret(secret)
 			if err != nil {
-				t.Fatalf("failed to get org cache: %v", err)
+				t.Fatalf("failed to get secret cache: %v", err)
 			}
 
 			requestPath := "/lodash/-/lodash-4.17.21.tgz"
-			if err := orgCache.Set("npm/tarball"+requestPath, cacheValue{
+			if err := secretCache.Set("npm/tarball"+requestPath, cacheValue{
 				data:        []byte("tarball"),
 				releaseTime: time.Now().Add(-tc.releaseAge),
 			}); err != nil {
@@ -152,16 +145,16 @@ func TestGoMinReleaseAgeOnCacheHit(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			d, secret, orgID := newMinReleaseAgeController(t, 24)
+			d, secret := newMinReleaseAgeController(t, 24)
 			controller := NewGoDependencyProxyController(d)
 
-			orgCache, err := d.caches.forOrg(orgID)
+			secretCache, err := d.caches.forSecret(secret)
 			if err != nil {
-				t.Fatalf("failed to get org cache: %v", err)
+				t.Fatalf("failed to get secret cache: %v", err)
 			}
 
 			requestPath := "github.com/foo/bar/@v/v1.2.3.info"
-			if err := orgCache.Set("go/"+requestPath, cacheValue{
+			if err := secretCache.Set("go/"+requestPath, cacheValue{
 				data:        []byte(`{"Version":"v1.2.3"}`),
 				releaseTime: time.Now().Add(-tc.releaseAge),
 			}); err != nil {

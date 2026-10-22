@@ -83,14 +83,14 @@ func newCache(basePath string, sizeInMB int) *cache {
 	}
 }
 
-type orgCaches struct {
-	basePath string
-	sizeMB   int
-	orgCount atomic.Int32
-	caches   sync.Map
+type secretCaches struct {
+	basePath   string
+	sizeMB     int
+	cacheCount atomic.Int32
+	caches     sync.Map
 }
 
-func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
+func newSecretCaches(baseDir string, sizeInMB int) *secretCaches {
 	entries, _ := os.ReadDir(baseDir)
 	for _, entry := range entries {
 		if err := os.RemoveAll(filepath.Join(baseDir, entry.Name())); err != nil {
@@ -98,28 +98,28 @@ func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
 		}
 	}
 
-	return &orgCaches{
+	return &secretCaches{
 		basePath: baseDir,
 		sizeMB:   sizeInMB,
 	}
 }
 
-func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
-	if orgID == uuid.Nil {
-		return nil, fmt.Errorf("no orgID found")
+func (s *secretCaches) forSecret(secret uuid.UUID) (*cache, error) {
+	if secret == uuid.Nil {
+		return nil, fmt.Errorf("no secret found")
 	}
-	if c, ok := o.caches.Load(orgID); ok {
+	if c, ok := s.caches.Load(secret); ok {
 		return c.(*cache), nil
 	}
-	path := filepath.Join(o.basePath, orgID.String())
+	path := filepath.Join(s.basePath, secret.String())
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
-	c, loaded := o.caches.LoadOrStore(orgID, newCache(path, o.sizeMB))
+	c, loaded := s.caches.LoadOrStore(secret, newCache(path, s.sizeMB))
 	if !loaded {
-		count := o.orgCount.Add(1)
-		newSize := o.sizeMB / int(count)
-		o.caches.Range(func(_, v any) bool {
+		count := s.cacheCount.Add(1)
+		newSize := s.sizeMB / int(count)
+		s.caches.Range(func(_, v any) bool {
 			v.(*cache).changeMaxSize(newSize)
 			return true
 		})
@@ -127,9 +127,9 @@ func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
 	return c.(*cache), nil
 }
 
-func (o *orgCaches) Stats() CacheStats {
+func (s *secretCaches) Stats() CacheStats {
 	totalStats := CacheStats{}
-	o.caches.Range(func(_, v any) bool {
+	s.caches.Range(func(_, v any) bool {
 		s := v.(*cache).Stats()
 		totalStats.SizeBytes += s.SizeBytes
 		totalStats.MaxBytes += s.MaxBytes

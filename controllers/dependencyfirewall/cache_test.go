@@ -24,61 +24,61 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestOrgCachesReturnsSameCacheForSameOrg(t *testing.T) {
-	o := newOrgCaches(t.TempDir(), 10)
-	orgID := uuid.New()
+func TestSecretCachesReturnsSameCacheForSameSecret(t *testing.T) {
+	s := newSecretCaches(t.TempDir(), 10)
+	secret := uuid.New()
 
-	first, err := o.forOrg(orgID)
+	first, err := s.forSecret(secret)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	second, err := o.forOrg(orgID)
+	second, err := s.forSecret(secret)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if first != second {
-		t.Fatal("expected the same cache instance for the same org")
+		t.Fatal("expected the same cache instance for the same secret")
 	}
 }
 
-func TestOrgCachesReturnsDifferentCacheForDifferentOrgs(t *testing.T) {
-	o := newOrgCaches(t.TempDir(), 10)
-	orgID := uuid.New()
-	orgID2 := uuid.New()
+func TestSecretCachesReturnsDifferentCacheForDifferentSecrets(t *testing.T) {
+	s := newSecretCaches(t.TempDir(), 10)
+	secret1 := uuid.New()
+	secret2 := uuid.New()
 
-	first, err := o.forOrg(orgID)
+	first, err := s.forSecret(secret1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	second, err := o.forOrg(orgID2)
+	second, err := s.forSecret(secret2)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if first == second {
-		t.Fatal("expected different cache instance for the two orgs")
+		t.Fatal("expected different cache instance for the two secrets")
 	}
 }
 
-func TestOrgCachesIsolatesEntriesBetweenOrgs(t *testing.T) {
-	o := newOrgCaches(t.TempDir(), 10)
+func TestSecretCachesIsolatesEntriesBetweenSecrets(t *testing.T) {
+	s := newSecretCaches(t.TempDir(), 10)
 
-	orgA, err := o.forOrg(uuid.New())
+	secretA, err := s.forSecret(uuid.New())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	orgB, err := o.forOrg(uuid.New())
+	secretB, err := s.forSecret(uuid.New())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if err := orgA.Set("pkg", cacheValue{data: []byte("org a content")}); err != nil {
+	if err := secretA.Set("pkg", cacheValue{data: []byte("secret a content")}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, ok := orgB.Get("pkg"); ok {
-		t.Fatal("expected cache miss for other org")
+	if _, ok := secretB.Get("pkg"); ok {
+		t.Fatal("expected cache miss for other secret")
 	}
 }
 

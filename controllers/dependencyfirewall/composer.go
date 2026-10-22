@@ -198,7 +198,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
-	orgCache, err := d.caches.forOrg(configs.OrgID)
+	secretCache, err := d.caches.forSecret(configs.Secret)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
 	}
@@ -217,7 +217,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	c.SetRequest(c.Request().WithContext(ctx))
 
 	cacheKey := "composer/" + requestPath
-	if err := orgCache.ValidateKey(cacheKey); err != nil {
+	if err := secretCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "composer", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -236,12 +236,12 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "composer", "path", requestPath, "status", status, "reason", reason)
-		orgCache.Remove(cacheKey)
+		secretCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, composer, requestPath, reason, status)
 	}
 
-	if !bypassCache(c.Request()) && orgCache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
-		if entry, ok := orgCache.Get(cacheKey); ok {
+	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
+		if entry, ok := secretCache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "composer", "path", requestPath)
 			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
 				return d.blockTooNewPackage(c, composer, requestPath, entry.releaseTime, configs.MinReleaseAge)
@@ -296,7 +296,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	}
 
 	if !releaseTime.IsZero() {
-		if err := orgCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
+		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "composer", "error", err)
 		}
 	}

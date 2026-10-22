@@ -10923,14 +10923,6 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -10957,14 +10949,6 @@ components:
       - Second
       - Minute
       - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -12762,7 +12746,8 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get organization dependency proxy cache statistics
+      summary: Get dependency proxy cache statistics for an organization, project
+        or asset
       tags:
       - Dependency Firewall
   /organizations/{organization}/dependency-vulns:
@@ -14413,6 +14398,30 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Get asset dependency proxy URLs
+      tags:
+      - Dependency Firewall
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/dependency-proxy/cache-stats/:
+    get:
+      parameters:
+      - description: organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers_dependencyfirewall.CacheStats'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get dependency proxy cache statistics for an organization, project
+        or asset
       tags:
       - Dependency Firewall
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references:
@@ -19367,6 +19376,30 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Get project dependency proxy URLs
+      tags:
+      - Dependency Firewall
+  /organizations/{organization}/projects/{projectSlug}/dependency-proxy/cache-stats/:
+    get:
+      parameters:
+      - description: organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/controllers_dependencyfirewall.CacheStats'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get dependency proxy cache statistics for an organization, project
+        or asset
       tags:
       - Dependency Firewall
   /organizations/{organization}/projects/{projectSlug}/dependency-vulns:
