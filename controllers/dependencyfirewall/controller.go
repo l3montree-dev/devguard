@@ -64,7 +64,7 @@ type DependencyProxyConfigs struct {
 	Rules         []string          `json:"rules"`
 	MinReleaseAge int               `json:"minReleaseAge"` // in hours
 	Registries    map[string]string `json:"registries"`
-	OrgID         uuid.UUID         `json:"-"`
+	Secret        uuid.UUID         `json:"-"`
 }
 
 func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
@@ -81,7 +81,7 @@ type DependencyProxyController struct {
 	orgRepository          shared.OrganizationRepository
 	dependencyProxyService shared.DependencyProxySecretService
 	maliciousChecker       shared.MaliciousPackageChecker
-	caches                 *orgCaches
+	caches                 *secretCaches
 	client                 *http.Client
 }
 
@@ -100,7 +100,7 @@ func NewDependencyProxyController(
 	return &DependencyProxyController{
 		dependencyProxyService: dependencyProxyService,
 		maliciousChecker:       maliciousChecker,
-		caches:                 newOrgCaches(config.CacheDir, config.MaxSizeMB),
+		caches:                 newSecretCaches(config.CacheDir, config.MaxSizeMB),
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
@@ -178,7 +178,7 @@ func (d *DependencyProxyController) GetOrgDependencyProxyURLs(ctx shared.Context
 	return d.GetDependencyProxyURLs(ctx)
 }
 
-// @Summary Get organization dependency proxy cache statistics
+// @Summary Get dependency proxy cache statistics for an organization, project or asset
 // @Tags Dependency Firewall
 // @Security CookieAuth
 // @Security PATAuth
@@ -186,11 +186,16 @@ func (d *DependencyProxyController) GetOrgDependencyProxyURLs(ctx shared.Context
 // @Param organization path string true "organization slug"
 // @Success 200 {object} dependencyfirewall.CacheStats
 // @Router /organizations/{organization}/dependency-proxy/cache-stats/ [get]
-func (d *DependencyProxyController) GetOrgCacheStats(ctx shared.Context) error {
-	org := shared.GetOrg(ctx)
-	e, err := d.caches.forOrg(org.ID)
+// @Router /organizations/{organization}/projects/{projectSlug}/dependency-proxy/cache-stats/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/dependency-proxy/cache-stats/ [get]
+func (d *DependencyProxyController) GetSecretCacheStats(ctx shared.Context) error {
+	secret, err := d.secretFromContext(ctx)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get cache stats for org").WithInternal(err)
+		return err
+	}
+	e, err := d.caches.forSecret(secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get cache stats for the secret").WithInternal(err)
 	}
 	return ctx.JSON(http.StatusOK, e.Stats())
 }
@@ -231,37 +236,41 @@ func (d *DependencyProxyController) GetAssetDependencyProxyURLs(ctx shared.Conte
 	return d.GetDependencyProxyURLs(ctx)
 }
 
+func (d *DependencyProxyController) secretFromContext(ctx shared.Context) (uuid.UUID, error) {
+	reqCtx := ctx.Request().Context()
+	if asset, err := shared.MaybeGetAsset(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByAssetID(reqCtx, asset.GetID())
+		if err != nil {
+			return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for asset: %v", err))
+		}
+		return proxy.Secret, nil
+	}
+	if project, err := shared.MaybeGetProject(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByProjectID(reqCtx, project.GetID())
+		if err != nil {
+			return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for project: %v", err))
+		}
+		return proxy.Secret, nil
+	}
+	if org, err := shared.MaybeGetOrganization(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByOrgID(reqCtx, org.GetID())
+		if err != nil {
+			return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for organization: %v", err))
+		}
+		return proxy.Secret, nil
+	}
+	return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to determine scope for dependency proxy")
+}
+
 func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) error {
 	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
 	if registryURL == "" {
 		registryURL = "https://api.main.devguard.org/api/v1/dependency-proxy"
 	}
 
-	var secret uuid.UUID
-
-	reqCtx := ctx.Request().Context()
-	if asset, err := shared.MaybeGetAsset(ctx); err == nil {
-		proxy, err := d.dependencyProxyService.GetOrCreateByAssetID(reqCtx, asset.GetID())
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for asset: %v", err))
-		}
-		secret = proxy.Secret
-	} else if project, err := shared.MaybeGetProject(ctx); err == nil {
-		proxy, err := d.dependencyProxyService.GetOrCreateByProjectID(reqCtx, project.GetID())
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for project: %v", err))
-		}
-		secret = proxy.Secret
-	} else if org, err := shared.MaybeGetOrganization(ctx); err == nil {
-		proxy, err := d.dependencyProxyService.GetOrCreateByOrgID(reqCtx, org.GetID())
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for organization: %v", err))
-		}
-		secret = proxy.Secret
-	}
-
-	if secret == uuid.Nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to determine scope for dependency proxy")
+	secret, err := d.secretFromContext(ctx)
+	if err != nil {
+		return err
 	}
 
 	proxies := map[string]string{}
@@ -293,6 +302,7 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	if err != nil {
 		return configs, fmt.Errorf("invalid dependency proxy secret: %w", err)
 	}
+	configs.Secret = uuidSecret
 
 	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
 	if err != nil {
@@ -308,25 +318,18 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
-		project, err := d.projectRepository.Read(c.Request().Context(), nil, asset.ProjectID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
-		if err != nil {
-			return configs, fmt.Errorf("failed to read project: %w", err)
-		}
-		configs.OrgID = project.OrganizationID
 	case "project":
 		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
 		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
-		configs.OrgID = project.OrganizationID
 	case "organization":
 		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read organization: %w", err)
 		}
 		configFilesJSON = org.ConfigFiles["dependency-proxy-configs"]
-		configs.OrgID = org.ID
 	default:
 		return configs, fmt.Errorf("invalid proxy scope: %s", scope)
 	}

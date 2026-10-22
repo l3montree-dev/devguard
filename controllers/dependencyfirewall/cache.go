@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,7 +43,7 @@ type cacheValue struct {
 
 type cacheEntry struct {
 	hash        [32]byte
-	size        int
+	size        int64
 	path        string
 	releaseTime time.Time
 	contentType string
@@ -54,41 +55,50 @@ type CacheStats struct {
 	SizeBytes int64 `json:"sizeBytes"`
 	MaxBytes  int64 `json:"maxBytes"`
 	Entries   int   `json:"entries"`
-	Hits      int   `json:"hits"`
-	Misses    int   `json:"misses"`
-	Evictions int   `json:"evictions"`
+	Hits      int64 `json:"hits"`
+	Misses    int64 `json:"misses"`
+	Evictions int64 `json:"evictions"`
 }
 
 type cache struct {
-	mu          sync.Mutex
-	currentSize int
-	hits        int
-	misses      int
-	evictions   int
-	// maxSize is the maximum size of the cache in bytes.
-	maxSize  int
-	basePath string
-	cache    map[string]cacheEntry
-	lru      map[string]time.Time
+	secret      uuid.UUID
+	currentSize *atomic.Int64
+	hits        *atomic.Int64
+	misses      *atomic.Int64
+	evictions   *atomic.Int64
+	basePath    string
+	cache       sync.Map
+	parent      *secretCaches
 }
 
-func newCache(basePath string, sizeInMB int) *cache {
-	return &cache{
-		currentSize: 0,
-		maxSize:     sizeInMB * 1024 * 1024, // convert MB to bytes
+func (s *secretCaches) newCache(secret uuid.UUID, basePath string) *cache {
+	c := &cache{
+		currentSize: new(atomic.Int64),
+		secret:      secret,
 		basePath:    basePath,
-		cache:       make(map[string]cacheEntry),
-		lru:         make(map[string]time.Time),
+		cache:       sync.Map{},
+		parent:      s,
+		hits:        new(atomic.Int64),
+		misses:      new(atomic.Int64),
+		evictions:   new(atomic.Int64),
 	}
+	s.caches.Store(secret, c)
+	return c
 }
 
-type orgCaches struct {
-	basePath string
-	sizeMB   int
-	caches   sync.Map
+type secretCaches struct {
+	basePath    string
+	sizeMB      int64
+	caches      sync.Map
+	currentSize *atomic.Int64
+	lru         sync.Map
 }
 
-func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
+func secretCacheKey(secret uuid.UUID, key string) string {
+	return fmt.Sprintf("%s:%s", secret.String(), key)
+}
+
+func newSecretCaches(baseDir string, sizeInMB int) *secretCaches {
 	entries, _ := os.ReadDir(baseDir)
 	for _, entry := range entries {
 		if err := os.RemoveAll(filepath.Join(baseDir, entry.Name())); err != nil {
@@ -96,30 +106,90 @@ func newOrgCaches(baseDir string, sizeInMB int) *orgCaches {
 		}
 	}
 
-	return &orgCaches{
-		basePath: baseDir,
-		sizeMB:   sizeInMB,
+	return &secretCaches{
+		basePath:    baseDir,
+		sizeMB:      int64(sizeInMB),
+		lru:         sync.Map{},
+		currentSize: new(atomic.Int64),
 	}
 }
 
-func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
-	if orgID == uuid.Nil {
-		return nil, fmt.Errorf("no orgID found")
+func (s *secretCaches) markUsed(secret uuid.UUID, key string) {
+	if secret == uuid.Nil {
+		return
 	}
-	if c, ok := o.caches.Load(orgID); ok {
+	s.lru.Store(secretCacheKey(secret, key), time.Now())
+}
+
+func (s *secretCaches) removeUsed(secret uuid.UUID, key string, size int64) {
+	if secret == uuid.Nil {
+		return
+	}
+	s.lru.Delete(secretCacheKey(secret, key))
+	s.currentSize.Add(-size)
+}
+
+func (s *secretCaches) increaseSizeAndMaybeEvict(newContentSize int64, secret uuid.UUID, keep string) {
+	s.currentSize.Add(newContentSize)
+	keepElement := secretCacheKey(secret, keep)
+
+	for s.currentSize.Load() > s.sizeMB*1024*1024 {
+		var oldestKey string
+		var oldestTime time.Time
+		first := true
+		s.lru.Range(func(key, value any) bool {
+			if key.(string) == keepElement {
+				return true
+			}
+			if first || value.(time.Time).Before(oldestTime) {
+				oldestTime = value.(time.Time)
+				oldestKey = key.(string)
+				first = false
+			}
+			return true
+		})
+
+		if oldestKey == "" {
+			break
+		}
+		s.lru.Delete(oldestKey)
+		parts := strings.SplitN(oldestKey, ":", 2)
+		if len(parts) != 2 {
+			slog.Warn("invalid cache key format", "key", oldestKey)
+			continue
+		}
+		oldestSecret, err := uuid.Parse(parts[0])
+		if err != nil {
+			slog.Warn("failed to parse secret UUID from cache key", "key", oldestKey, "error", err)
+			continue
+		}
+		c, err := s.forSecret(oldestSecret)
+		if err != nil {
+			slog.Warn("failed to get cache for secret during eviction", "secret", oldestSecret, "error", err)
+			continue
+		}
+		c.Remove(parts[1])
+	}
+}
+
+func (s *secretCaches) forSecret(secret uuid.UUID) (*cache, error) {
+	if secret == uuid.Nil {
+		return nil, fmt.Errorf("no secret found")
+	}
+	if c, ok := s.caches.Load(secret); ok {
 		return c.(*cache), nil
 	}
-	path := filepath.Join(o.basePath, orgID.String())
+	path := filepath.Join(s.basePath, secret.String())
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
-	c, _ := o.caches.LoadOrStore(orgID, newCache(path, o.sizeMB))
+	c, _ := s.caches.LoadOrStore(secret, s.newCache(secret, path))
 	return c.(*cache), nil
 }
 
-func (o *orgCaches) Stats() CacheStats {
+func (s *secretCaches) Stats() CacheStats {
 	totalStats := CacheStats{}
-	o.caches.Range(func(_, v any) bool {
+	s.caches.Range(func(_, v any) bool {
 		s := v.(*cache).Stats()
 		totalStats.SizeBytes += s.SizeBytes
 		totalStats.MaxBytes += s.MaxBytes
@@ -133,81 +203,71 @@ func (o *orgCaches) Stats() CacheStats {
 }
 
 func (c *cache) Get(key string) (cacheValue, bool) {
-	c.mu.Lock()
-	e, exists := c.cache[key]
+
+	e, exists := c.cache.Load(key)
 	if !exists {
-		c.misses++
-	}
-	c.mu.Unlock()
-	if !exists {
+		c.misses.Add(1)
 		return cacheValue{}, false
 	}
 
-	content, err := os.ReadFile(e.path)
+	entry := e.(cacheEntry)
+
+	content, err := os.ReadFile(entry.path)
 	if err != nil {
 		// If we can't read the file, treat it as a cache miss
 		return cacheValue{}, false
 	}
 	// check if the hash of the content matches the stored hash
-	if actual := sha256.Sum256(content); actual != e.hash {
-		slog.Warn("hash mismatch for cache entry", "key", key, "expected", fmt.Sprintf("%x", e.hash), "actual", fmt.Sprintf("%x", actual))
+	if actual := sha256.Sum256(content); actual != entry.hash {
+		slog.Warn("hash mismatch for cache entry", "key", key, "expected", fmt.Sprintf("%x", entry.hash), "actual", fmt.Sprintf("%x", actual))
 		// remove the corrupted cache entry
 		c.Remove(key)
 		return cacheValue{}, false
 	}
 
-	c.mu.Lock()
 	// Update the LRU map to mark this entry as recently used
-	c.lru[key] = time.Now()
-	c.hits++
-	c.mu.Unlock()
+	c.parent.markUsed(c.secret, key)
+	c.hits.Add(1)
 	return cacheValue{
 		data:        content,
-		releaseTime: e.releaseTime,
-		contentType: e.contentType,
-		digest:      e.digest,
+		releaseTime: entry.releaseTime,
+		contentType: entry.contentType,
+		digest:      entry.digest,
 	}, true
 }
 
 // Fresh reports whether the entry for key was stored more recently than maxAge.
 // A missing entry is never fresh.
 func (c *cache) Fresh(key string, maxAge time.Duration) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	e, exists := c.cache[key]
+	e, exists := c.cache.Load(key)
 	if !exists {
 		return false
 	}
-	return time.Since(e.storedAt) < maxAge
+	return time.Since(e.(cacheEntry).storedAt) < maxAge
 }
 
 func (c *cache) Remove(key string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.removeLocked(key)
-}
-
-// removeLocked removes an entry from the cache. Callers must hold c.mu.
-func (c *cache) removeLocked(key string) {
-	e, exists := c.cache[key]
+	e, exists := c.cache.Load(key)
 	if !exists {
 		return
 	}
+	entry := e.(cacheEntry)
 	// Remove the file from disk
-	if err := os.Remove(e.path); err != nil && !os.IsNotExist(err) {
-		slog.Warn("failed to remove cache file", "path", e.path, "error", err)
+	if err := os.Remove(entry.path); err != nil && !os.IsNotExist(err) {
+		slog.Warn("failed to remove cache file", "path", entry.path, "error", err)
 	}
 	// Update the current size of the cache
-	c.currentSize -= e.size
-	// Remove from cache and LRU map
-	delete(c.cache, key)
-	delete(c.lru, key)
+	c.currentSize.Add(-entry.size)
+	c.evictions.Add(1)
+	// we need to remove the entry from the LRU map in the parent secretCaches
+	c.parent.removeUsed(c.secret, key, entry.size)
 }
 
 func (c *cache) Set(key string, v cacheValue) error {
 	content := v.data
-	// Check if the content size exceeds the maximum cache size
-	if len(content) > c.maxSize {
+	tooLarge := int64(len(content)) > c.parent.sizeMB*1024*1024
+
+	if tooLarge {
 		return fmt.Errorf("content size exceeds maximum cache size")
 	}
 
@@ -220,49 +280,26 @@ func (c *cache) Set(key string, v cacheValue) error {
 		return err
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	// If we're overwriting an existing entry, drop its old size first
-	if existing, exists := c.cache[key]; exists {
-		c.currentSize -= existing.size
+	if existing, exists := c.cache.Load(key); exists {
+		e := existing.(cacheEntry)
+		c.currentSize.Add(-e.size)
+		c.parent.removeUsed(c.secret, key, e.size)
 	}
-	c.currentSize += len(content)
+	c.currentSize.Add(int64(len(content)))
 
-	// If the current size exceeds the maximum size, evict least recently used entries
-	for c.currentSize > c.maxSize {
-		var oldestKey string
-		var oldestTime time.Time
-		first := true
-		for k, t := range c.lru {
-			if k == key {
-				// never evict the entry we're currently inserting
-				continue
-			}
-			if first || t.Before(oldestTime) {
-				oldestTime = t
-				oldestKey = k
-				first = false
-			}
-		}
-		if oldestKey == "" {
-			break // No more entries to evict
-		}
-		c.evictions++
-		c.removeLocked(oldestKey)
-	}
-
-	c.cache[key] = cacheEntry{
+	c.cache.Store(key, cacheEntry{
 		hash:        sha256.Sum256(content),
-		size:        len(content),
+		size:        int64(len(content)),
 		path:        path,
 		releaseTime: v.releaseTime,
 		contentType: v.contentType,
 		digest:      v.digest,
 		storedAt:    time.Now(),
-	}
-	// Update the LRU map to mark this entry as recently used
-	c.lru[key] = time.Now()
+	})
+
+	c.parent.increaseSizeAndMaybeEvict(int64(len(content)), c.secret, key)
+	c.parent.markUsed(c.secret, key)
 
 	return nil
 }
@@ -310,14 +347,17 @@ func bypassCache(r *http.Request) bool {
 }
 
 func (c *cache) Stats() CacheStats {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	count := 0
+	c.cache.Range(func(_, _ any) bool {
+		count++
+		return true
+	})
 	return CacheStats{
-		SizeBytes: int64(c.currentSize),
-		MaxBytes:  int64(c.maxSize),
-		Entries:   len(c.cache),
-		Hits:      c.hits,
-		Misses:    c.misses,
-		Evictions: c.evictions,
+		SizeBytes: c.currentSize.Load(),
+		MaxBytes:  int64(c.parent.sizeMB * 1024 * 1024),
+		Entries:   count,
+		Hits:      c.hits.Load(),
+		Misses:    c.misses.Load(),
+		Evictions: c.evictions.Load(),
 	}
 }
