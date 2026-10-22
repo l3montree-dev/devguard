@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/uuid"
@@ -83,7 +85,13 @@ func TestSecretCachesIsolatesEntriesBetweenSecrets(t *testing.T) {
 }
 
 func TestCacheSetAndGet(t *testing.T) {
-	c := newCache(t.TempDir(), 10)
+	s := &secretCaches{
+		basePath:    "",
+		sizeMB:      10,
+		lru:         sync.Map{},
+		currentSize: new(atomic.Int64),
+	}
+	c := s.newCache(uuid.New(), t.TempDir())
 	data := []byte("test package content")
 
 	if err := c.Set("pkg", cacheValue{data: data}); err != nil {
@@ -100,8 +108,13 @@ func TestCacheSetAndGet(t *testing.T) {
 }
 
 func TestCacheGetDetectsCorruption(t *testing.T) {
-	dir := t.TempDir()
-	c := newCache(dir, 10)
+	s := &secretCaches{
+		basePath:    "",
+		sizeMB:      10,
+		lru:         sync.Map{},
+		currentSize: new(atomic.Int64),
+	}
+	c := s.newCache(uuid.New(), t.TempDir())
 	data := []byte("original package content")
 
 	if err := c.Set("pkg", cacheValue{data: data}); err != nil {
@@ -131,7 +144,14 @@ func TestCacheGetDetectsCorruption(t *testing.T) {
 
 func TestCacheRemove(t *testing.T) {
 	dir := t.TempDir()
-	c := newCache(dir, 10)
+
+	s := &secretCaches{
+		basePath:    "",
+		sizeMB:      10,
+		lru:         sync.Map{},
+		currentSize: new(atomic.Int64),
+	}
+	c := s.newCache(uuid.New(), dir)
 
 	if err := c.Set("malicious-pkg", cacheValue{data: []byte("fake malicious content")}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -155,9 +175,15 @@ func TestCacheRemove(t *testing.T) {
 }
 
 func TestCacheEvictsLeastRecentlyUsedWhenOverCapacity(t *testing.T) {
+	s := &secretCaches{
+		basePath:    "",
+		sizeMB:      1, // 1MB cache
+		lru:         sync.Map{},
+		currentSize: new(atomic.Int64),
+	}
 	dir := t.TempDir()
 	// 1MB cache; each entry below is ~600KB so a third insert forces eviction.
-	c := newCache(dir, 1)
+	c := s.newCache(uuid.New(), dir)
 	chunk := make([]byte, 600*1024)
 
 	if err := c.Set("a", cacheValue{data: chunk}); err != nil {
@@ -172,6 +198,44 @@ func TestCacheEvictsLeastRecentlyUsedWhenOverCapacity(t *testing.T) {
 	}
 	if _, ok := c.Get("b"); !ok {
 		t.Fatal("expected most recently inserted entry to survive")
+	}
+}
+
+func TestCacheBudgetIsSharedAcrossAllSecrets(t *testing.T) {
+	s := newSecretCaches(t.TempDir(), 1) // 1MB shared across every secret
+
+	a, err := s.forSecret(uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b, err := s.forSecret(uuid.New())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	chunk := make([]byte, 600*1024)
+	if err := a.Set("a", cacheValue{data: chunk}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// The second secret pushes the shared budget over capacity, so the entry
+	// of the *other* secret has to be evicted.
+	if err := b.Set("b", cacheValue{data: chunk}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := a.Get("a"); ok {
+		t.Fatal("expected entry of the other secret to be evicted by the shared budget")
+	}
+	if _, ok := b.Get("b"); !ok {
+		t.Fatal("expected most recently inserted entry to survive")
+	}
+
+	total := s.Stats().SizeBytes
+	if max := s.sizeMB * 1024 * 1024; total > max {
+		t.Fatalf("total size across all caches %d exceeds shared maximum %d", total, max)
+	}
+	if want := int64(len(chunk)); total != want {
+		t.Fatalf("expected total size across all caches to be %d, got %d", want, total)
 	}
 }
 
