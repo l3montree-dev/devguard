@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,6 +86,7 @@ func newCache(basePath string, sizeInMB int) *cache {
 type orgCaches struct {
 	basePath string
 	sizeMB   int
+	orgCount atomic.Int32
 	caches   sync.Map
 }
 
@@ -113,7 +115,15 @@ func (o *orgCaches) forOrg(orgID uuid.UUID) (*cache, error) {
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
-	c, _ := o.caches.LoadOrStore(orgID, newCache(path, o.sizeMB))
+	c, loaded := o.caches.LoadOrStore(orgID, newCache(path, o.sizeMB))
+	if !loaded {
+		count := o.orgCount.Add(1)
+		newSize := o.sizeMB / int(count)
+		o.caches.Range(func(_, v any) bool {
+			v.(*cache).changeMaxSize(newSize)
+			return true
+		})
+	}
 	return c.(*cache), nil
 }
 
@@ -130,6 +140,36 @@ func (o *orgCaches) Stats() CacheStats {
 		return true
 	})
 	return totalStats
+}
+
+func (c *cache) changeMaxSize(sizeInMB int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.maxSize = sizeInMB * 1024 * 1024
+	c.evictLocked("")
+}
+
+func (c *cache) evictLocked(keep string) {
+	for c.currentSize > c.maxSize {
+		var oldestKey string
+		var oldestTime time.Time
+		first := true
+		for k, t := range c.lru {
+			if k == keep {
+				continue
+			}
+			if first || t.Before(oldestTime) {
+				oldestTime = t
+				oldestKey = k
+				first = false
+			}
+		}
+		if oldestKey == "" {
+			break
+		}
+		c.evictions++
+		c.removeLocked(oldestKey)
+	}
 }
 
 func (c *cache) Get(key string) (cacheValue, bool) {
@@ -206,8 +246,10 @@ func (c *cache) removeLocked(key string) {
 
 func (c *cache) Set(key string, v cacheValue) error {
 	content := v.data
-	// Check if the content size exceeds the maximum cache size
-	if len(content) > c.maxSize {
+	c.mu.Lock()
+	tooLarge := len(content) > c.maxSize
+	c.mu.Unlock()
+	if tooLarge {
 		return fmt.Errorf("content size exceeds maximum cache size")
 	}
 
@@ -229,28 +271,7 @@ func (c *cache) Set(key string, v cacheValue) error {
 	}
 	c.currentSize += len(content)
 
-	// If the current size exceeds the maximum size, evict least recently used entries
-	for c.currentSize > c.maxSize {
-		var oldestKey string
-		var oldestTime time.Time
-		first := true
-		for k, t := range c.lru {
-			if k == key {
-				// never evict the entry we're currently inserting
-				continue
-			}
-			if first || t.Before(oldestTime) {
-				oldestTime = t
-				oldestKey = k
-				first = false
-			}
-		}
-		if oldestKey == "" {
-			break // No more entries to evict
-		}
-		c.evictions++
-		c.removeLocked(oldestKey)
-	}
+	c.evictLocked(key)
 
 	c.cache[key] = cacheEntry{
 		hash:        sha256.Sum256(content),
