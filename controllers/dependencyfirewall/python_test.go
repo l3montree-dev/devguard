@@ -103,6 +103,7 @@ func newSecretScopedController(t *testing.T) *DependencyProxyController {
 	return &DependencyProxyController{
 		dependencyProxyService: proxyService,
 		assetRepository:        assetRepository,
+		caches:                 newSecretCaches(t.TempDir(), 10),
 	}
 }
 
@@ -205,6 +206,7 @@ func TestProxyPyPISimpleBlocksMaliciousBeforeUpstreamFetch(t *testing.T) {
 }
 
 func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
+
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/simple/Typing_Extensions/", nil)
 	rec := httptest.NewRecorder()
@@ -230,19 +232,14 @@ func TestProxyPyPISimpleNormalizesPackageNameFromParam(t *testing.T) {
 }
 
 func TestProxyPyPIPackageFailsClosedOnMaliciousCheckError(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/dependency-proxy/"+testProxySecret+"/pypi/packages/ab/cd/requests-2.32.3.tar.gz/", nil)
-	c := e.NewContext(req, httptest.NewRecorder())
-	c.SetParamNames("secret")
-	c.SetParamValues(testProxySecret)
+	d, secret := newMinReleaseAgeController(t, 0)
+	c, _ := newProxyRequest(secret, "/api/v1/dependency-proxy/"+secret.String()+"/pypi/packages/ab/cd/requests-2.32.3.tar.gz/")
 
 	checker := mocks.NewMaliciousPackageChecker(t)
 	checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, errors.New("db down"))
-
-	d := newSecretScopedController(t)
 	d.maliciousChecker = checker
-	d.cache = newCache(t.TempDir(), 10)
 	d.client = &http.Client{Transport: simpleIndexTransport{}}
+
 	ctrl := &PythonDependencyProxyController{DependencyProxyController: d}
 
 	err := ctrl.ProxyPyPIPackage(c)
@@ -258,11 +255,12 @@ type pypiFileTransport struct {
 
 func (p pypiFileTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	body := "sdist"
-	if req.URL.Path == "/pypi/requests/json" {
-		if p.uploadTime.IsZero() {
-			return &http.Response{StatusCode: http.StatusNotFound, Body: http.NoBody}, nil
+	if req.URL.Path == "/simple/requests" {
+		uploadTime := ""
+		if !p.uploadTime.IsZero() {
+			uploadTime = fmt.Sprintf(`,"upload-time":%q`, p.uploadTime.Format(time.RFC3339Nano))
 		}
-		body = fmt.Sprintf(`{"releases":{"2.32.3":[{"upload_time_iso_8601":%q}]}}`, p.uploadTime.Format(time.RFC3339Nano))
+		body = fmt.Sprintf(`{"files":[{"filename":"requests-2.32.3.tar.gz","url":"https://files.pythonhosted.org/packages/ab/cd/requests-2.32.3.tar.gz"%s}]}`, uploadTime)
 	}
 	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}, nil
 }
@@ -300,7 +298,7 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 					dependencyProxyService: proxyService,
 					assetRepository:        assetRepository,
 					maliciousChecker:       checker,
-					cache:                  newCache(t.TempDir(), 10),
+					caches:                 newSecretCaches(t.TempDir(), 10),
 					client:                 &http.Client{Transport: pypiFileTransport{uploadTime: tc.uploadTime}},
 				},
 			}

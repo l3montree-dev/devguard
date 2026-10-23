@@ -38,6 +38,7 @@ func NewSessionRouter(
 	scanController *controllers.ScanController,
 	attestationController *controllers.AttestationController,
 	patController *controllers.PatController,
+	slsaController *controllers.SLSAController,
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	organizationRepository shared.OrganizationRepository,

@@ -71,6 +71,7 @@ func NewProjectRouter(
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
 	projectRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetProjectDependencyProxyURLs)
+	projectRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON)
 	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML)

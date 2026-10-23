@@ -173,7 +173,16 @@ func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error 
 
 	slog.Info("Proxy request", "proxy", "deb", "type", "metadata", "method", c.Request().Method, "path", requestPath)
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, debRegistry, requestPath, c.Request().Header, nil)
+	configs, err := d.GetDependencyProxyConfigs(c)
+	if err != nil {
+		slog.Error("Error getting dependency proxy configs", "error", err)
+		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
+			return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, configs.getRegistry(deb, debRegistry), requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -203,6 +212,11 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	secretCache, err := d.caches.forSecret(configs.Secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	requestPath := deb.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.deb",
@@ -223,7 +237,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	slog.Info("Proxy request", "proxy", "deb", "type", "package", "method", c.Request().Method, "path", requestPath)
 
 	cacheKey := "deb/" + requestPath
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := secretCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "deb", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -236,14 +250,16 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "deb", "path", requestPath, "status", status, "reason", reason)
-		d.cache.Remove(cacheKey)
+		secretCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, deb, requestPath, reason, status)
 	}
 
-	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, debCacheTTL) {
-		if entry, ok := d.cache.Get(cacheKey); ok {
+	registry := configs.getRegistry(deb, debRegistry)
+
+	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, debCacheTTL) {
+		if entry, ok := secretCache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "deb", "path", requestPath)
-			notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, debRegistry, packageName, pkgVersion, entry.releaseTime), configs)
+			notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, entry.releaseTime), configs)
 			if notAllowed {
 				slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
 				return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
@@ -258,7 +274,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, debRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, deb, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -272,7 +288,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	}
 
 	releaseTime := debReleaseTime(headers)
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, debRegistry, packageName, pkgVersion, releaseTime), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
@@ -281,7 +297,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	if releaseTime.IsZero() {
 		slog.Warn("Could not determine release time", "proxy", "deb", "package", packageName, "version", pkgVersion)
 	} else {
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
+		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "deb", "error", err)
 		}
 	}

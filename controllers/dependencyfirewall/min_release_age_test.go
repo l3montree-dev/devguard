@@ -56,7 +56,7 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 		dependencyProxyService: secretService,
 		assetRepository:        assetRepository,
 		maliciousChecker:       maliciousChecker,
-		cache:                  newCache(t.TempDir(), 10),
+		caches:                 newSecretCaches(t.TempDir(), 10),
 		client:                 http.DefaultClient,
 	}, secret
 }
@@ -98,6 +98,11 @@ func TestNPMMinReleaseAgeOnCacheHit(t *testing.T) {
 			d, secret := newMinReleaseAgeController(t, 24)
 			controller := NewNPMDependencyProxyController(d)
 
+			secretCache, err := d.caches.forSecret(secret)
+			if err != nil {
+				t.Fatalf("failed to get secret cache: %v", err)
+			}
+
 			npmMetadata.Set("npm/metadata/lodash", npmMetadataCacheEntry{
 				data:        []byte(fmt.Sprintf(`{"name":"lodash","time":{"4.17.21":%q}}`, time.Now().Add(-tc.releaseAge).UTC().Format(time.RFC3339))),
 				contentType: "application/json",
@@ -105,7 +110,7 @@ func TestNPMMinReleaseAgeOnCacheHit(t *testing.T) {
 			t.Cleanup(func() { npmMetadata.Delete("npm/metadata/lodash") })
 
 			requestPath := "/lodash/-/lodash-4.17.21.tgz"
-			if err := d.cache.Set("npm/tarball"+requestPath, cacheValue{
+			if err := secretCache.Set("npm/tarball"+requestPath, cacheValue{
 				data:        []byte("tarball"),
 				releaseTime: time.Now().Add(-tc.releaseAge),
 			}); err != nil {
@@ -149,8 +154,13 @@ func TestGoMinReleaseAgeOnCacheHit(t *testing.T) {
 			d, secret := newMinReleaseAgeController(t, 24)
 			controller := NewGoDependencyProxyController(d)
 
+			secretCache, err := d.caches.forSecret(secret)
+			if err != nil {
+				t.Fatalf("failed to get secret cache: %v", err)
+			}
+
 			requestPath := "github.com/foo/bar/@v/v1.2.3.info"
-			if err := d.cache.Set("go/"+requestPath, cacheValue{
+			if err := secretCache.Set("go/"+requestPath, cacheValue{
 				data:        []byte(`{"Version":"v1.2.3"}`),
 				releaseTime: time.Now().Add(-tc.releaseAge),
 			}); err != nil {

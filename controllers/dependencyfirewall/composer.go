@@ -198,6 +198,11 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	secretCache, err := d.caches.forSecret(configs.Secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	requestPath := composer.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.composer",
@@ -212,7 +217,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	c.SetRequest(c.Request().WithContext(ctx))
 
 	cacheKey := "composer/" + requestPath
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := secretCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "composer", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -225,31 +230,36 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "composer", "path", requestPath, "status", status, "reason", reason)
-		d.cache.Remove(cacheKey)
+		secretCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, composer, requestPath, reason, status)
 	}
 
-	distURL, releaseTime, err := d.resolveComposerDist(ctx, packageName, version)
+	registry := configs.getRegistry(composer, composerMetadataRegistry)
+	distURL, releaseTime, err := d.resolveComposerDist(ctx, packageName, version, registry)
 	if err != nil {
 		span.RecordError(err)
 		slog.Warn("Could not resolve dist url", "proxy", "composer", "package", packageName, "version", version, "error", err)
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("could not resolve %s@%s", packageName, version))
 	}
 
-	if err := checkComposerDistHost(distURL); err != nil {
+	registryURL, err := url.Parse(registry)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "invalid composer registry")
+	}
+	if err := checkDistHost(distURL, append([]string{registryURL.Hostname()}, composerDistHosts...)...); err != nil {
 		span.RecordError(err)
 		slog.Warn("Blocked dist url", "proxy", "composer", "package", packageName, "version", version, "url", distURL, "error", err)
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("blocked dist url: %v", err))
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(composer, composerMetadataRegistry, packageName, version, releaseTime), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(composer, registry, packageName, version, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "composer", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, composer, requestPath, notAllowedReason)
 	}
 
-	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
-		if entry, ok := d.cache.Get(cacheKey); ok {
+	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
+		if entry, ok := secretCache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "composer", "path", requestPath)
 			if entry.contentType != "" {
 				c.Response().Header().Set("Content-Type", entry.contentType)
@@ -273,7 +283,7 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 	}
 
 	if !releaseTime.IsZero() {
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
+		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "composer", "error", err)
 		}
 	}
@@ -324,8 +334,9 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 		return d.blockMaliciousPackage(c, composer, requestPath, reason, status)
 	}
 
+	registry := configs.getRegistry(composer, composerMetadataRegistry)
 	data, headers, statusCode, err := d.fetchFromUpstream(
-		ctx, composer, composerMetadataRegistry, requestPath, c.Request().Header, nil,
+		ctx, composer, registry, requestPath, c.Request().Header, nil,
 	)
 
 	if err != nil {
@@ -348,7 +359,7 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 		if isMaliciousVersion(composer, malicious, v) {
 			return false
 		}
-		blocked, _ := d.CheckNotAllowedPackage(newPackage(composer, composerMetadataRegistry, packageName, v, released), configs)
+		blocked, _ := d.CheckNotAllowedPackage(newPackage(composer, registry, packageName, v, released), configs)
 		return !blocked
 	})
 	if err != nil {
@@ -475,10 +486,10 @@ func filterComposerMetadata(data []byte, proxyBaseURL string, allowed func(versi
 	return out, removed, nil
 }
 
-func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Context, packageName, version string) (string, time.Time, error) {
+func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Context, packageName, version, registry string) (string, time.Time, error) {
 	metadataPath := fmt.Sprintf("p2/%s.json", packageName)
 
-	data, _, statusCode, err := d.fetchFromUpstream(ctx, composer, composerMetadataRegistry, metadataPath, http.Header{}, nil)
+	data, _, statusCode, err := d.fetchFromUpstream(ctx, composer, registry, metadataPath, http.Header{}, nil)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -522,24 +533,6 @@ func (d *ComposerDependencyProxyController) resolveComposerDist(ctx context.Cont
 	}
 
 	return "", time.Time{}, fmt.Errorf("%s@%s not found upstream", packageName, version)
-}
-
-// checkComposerDistHost keeps a tampered or compromised upstream entry from turning this
-// proxy into a fetcher for arbitrary hosts.
-func checkComposerDistHost(distURL string) error {
-	parsed, err := url.Parse(distURL)
-	if err != nil {
-		return fmt.Errorf("invalid dist url")
-	}
-	if parsed.Scheme != "https" {
-		return fmt.Errorf("dist url is not https")
-	}
-	for _, host := range composerDistHosts {
-		if parsed.Hostname() == host {
-			return nil
-		}
-	}
-	return fmt.Errorf("dist host %s is not allowed", parsed.Hostname())
 }
 
 func composerCacheTTL(requestPath string) time.Duration {

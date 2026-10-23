@@ -921,10 +921,11 @@ type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 type Role string
 
 const (
-	RoleOwner  Role = "owner"
-	RoleAdmin  Role = "admin"
-	RoleMember Role = "member"
-	RoleGuest  Role = "guest"
+	RoleInstanceAdmin Role = "instance-admin"
+	RoleOwner         Role = "owner"
+	RoleAdmin         Role = "admin"
+	RoleMember        Role = "member"
+	RoleGuest         Role = "guest"
 
 	// this is mainly for backwards compatibility - and to have a default value
 	// noone should ever have the role unknown. This happens, if you logged into devguard before the "real permission sync" - not forwarding permission sync

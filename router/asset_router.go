@@ -56,6 +56,7 @@ func NewAssetRouter(
 	assetRouter.GET("/components/licenses/", componentController.AssetLicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 	assetRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetAssetDependencyProxyURLs)
+	assetRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
 	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))

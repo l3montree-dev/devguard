@@ -150,6 +150,11 @@ func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	secretCache, err := d.caches.forSecret(configs.Secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	slog.Info("Proxy request", "proxy", "go", "method", c.Request().Method, "path", requestPath)
 
 	// Checksum database requests (GOSUMDB via the proxy) carry no module contents.
@@ -162,15 +167,15 @@ func (d *GoDependencyProxyController) ProxyGo(c shared.Context) error {
 	// Requests with an explicit version (.info, .mod, .zip) go through the versioned handler.
 	// Requests for @latest or @v/list go through the latest handler.
 	if version != "" {
-		return d.proxyGoExplicitVersion(c, ctx, span, golang, configs, requestPath)
+		return d.proxyGoExplicitVersion(c, ctx, span, golang, configs, requestPath, secretCache)
 	}
-	return d.proxyGoLatest(c, ctx, span, golang, configs, requestPath, packageName)
+	return d.proxyGoLatest(c, ctx, span, golang, configs, requestPath, packageName, secretCache)
 }
 
 // proxyGoExplicitVersion handles Go proxy requests for a specific version (.info, .mod, .zip).
-func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath string) error {
+func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath string, secretCache *cache) error {
 	cacheKey := "go/" + requestPath
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := secretCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "go", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -182,24 +187,25 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 	}
 	if blocked {
 		slog.Warn("Blocked malicious package", "proxy", "go", "path", requestPath, "reason", reason)
-		d.cache.Remove(cacheKey)
+		secretCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, http.StatusForbidden)
 	}
 
+	registry := configs.getRegistry(golang, goProxyURL)
 	moduleName, version := golang.parsePackage(requestPath)
-	releaseTime, err := d.fetchGoReleaseTime(ctx, moduleName, version)
+	releaseTime, err := d.fetchGoReleaseTime(ctx, moduleName, version, registry, secretCache)
 	if err != nil {
 		slog.Warn("Could not determine release time", "proxy", "go", "module", moduleName, "version", version, "error", err)
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, moduleName, version, releaseTime), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(golang, registry, moduleName, version, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
 	}
 
-	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, goCacheTTL(requestPath)) {
-		if entry, ok := d.cache.Get(cacheKey); ok {
+	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, goCacheTTL(requestPath)) {
+		if entry, ok := secretCache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "go", "path", requestPath)
 			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 			return eco.writeResponse(c, entry.data, requestPath, true)
@@ -208,7 +214,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, goProxyURL, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -222,7 +228,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 	}
 
 	if !releaseTime.IsZero() {
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "go", "error", err)
 		}
 	}
@@ -238,7 +244,7 @@ func (d *GoDependencyProxyController) proxyGoExplicitVersion(c shared.Context, c
 }
 
 // proxyGoLatest handles Go proxy requests for @latest and @v/list (version-resolution requests).
-func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath, packageName string) error {
+func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx context.Context, span trace.Span, eco ecosystem, configs DependencyProxyConfigs, requestPath, packageName string, secretCache *cache) error {
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
 	// Package-level check first (like the npm metadata request): modules flagged as
@@ -253,8 +259,10 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 		return d.blockMaliciousPackage(c, eco, requestPath, reason, status)
 	}
 
+	registry := configs.getRegistry(golang, goProxyURL)
+
 	// Fetch from upstream — we need the response to resolve the version before we can check rules.
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, goProxyURL, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, eco, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -279,8 +287,8 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 			if isMaliciousVersion(eco, malicious, version) {
 				return false
 			}
-			releaseTime, _ := d.fetchGoReleaseTime(ctx, packageName, version)
-			blocked, _ := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, packageName, version, releaseTime), configs)
+			releaseTime, _ := d.fetchGoReleaseTime(ctx, packageName, version, registry, secretCache)
+			blocked, _ := d.CheckNotAllowedPackage(newPackage(golang, registry, packageName, version, releaseTime), configs)
 			return !blocked
 		})
 		if removed > 0 {
@@ -293,7 +301,7 @@ func (d *GoDependencyProxyController) proxyGoLatest(c shared.Context, ctx contex
 	resolvedVersion, releaseTime, _ := extractGoVersionAndReleaseTime(data)
 
 	if resolvedVersion != "" {
-		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(golang, goProxyURL, packageName, resolvedVersion, releaseTime), configs)
+		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(golang, registry, packageName, resolvedVersion, releaseTime), configs)
 		if notAllowed {
 			slog.Warn("Blocked not allowed package", "proxy", "go", "path", requestPath, "reason", notAllowedReason)
 			return d.blockNotAllowedPackage(c, eco, requestPath, notAllowedReason)
@@ -339,14 +347,14 @@ func (d *GoDependencyProxyController) proxyGoSumDB(c shared.Context, ctx context
 // fetchGoReleaseTime returns the release time of module@version from the version's .info
 // file, preferring the cached copy. A fetched .info is cached as well, so the explicit
 // .info request and the version list filtering share it.
-func (d *GoDependencyProxyController) fetchGoReleaseTime(ctx context.Context, moduleName, version string) (time.Time, error) {
+func (d *GoDependencyProxyController) fetchGoReleaseTime(ctx context.Context, moduleName, version, registry string, secretCache *cache) (time.Time, error) {
 	infoPath := moduleName + "/@v/" + version + ".info"
 	cacheKey := "go/" + infoPath
-	if entry, ok := d.cache.Get(cacheKey); ok && !entry.releaseTime.IsZero() {
+	if entry, ok := secretCache.Get(cacheKey); ok && !entry.releaseTime.IsZero() {
 		return entry.releaseTime, nil
 	}
 
-	data, _, statusCode, err := d.fetchFromUpstream(ctx, golang, goProxyURL, infoPath, http.Header{}, nil)
+	data, _, statusCode, err := d.fetchFromUpstream(ctx, golang, registry, infoPath, http.Header{}, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -357,7 +365,7 @@ func (d *GoDependencyProxyController) fetchGoReleaseTime(ctx context.Context, mo
 	if !ok {
 		return time.Time{}, fmt.Errorf("no release time in %s", infoPath)
 	}
-	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+	if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "go", "error", err)
 	}
 	return releaseTime, nil

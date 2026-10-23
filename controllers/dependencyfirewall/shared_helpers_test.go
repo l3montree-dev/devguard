@@ -20,8 +20,10 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -102,7 +104,12 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 
 func TestCacheValidateKeyPreventsTraversal(t *testing.T) {
 	dir := t.TempDir()
-	c := newCache(dir, 10)
+	s := &secretCaches{
+		basePath:    dir,
+		sizeMB:      10,
+		currentSize: new(atomic.Int64),
+	}
+	c := s.newCache(uuid.New(), dir)
 
 	t.Run("normal key stays in cache root", func(t *testing.T) {
 		if err := c.ValidateKey("npm/tarball/lodash/-/lodash-4.17.21.tgz"); err != nil {

@@ -98,7 +98,7 @@ func TestReadEventsByAssetIDAndAssetVersionName(t *testing.T) {
 		assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 		assert.Len(t, body.Data, 1)
 		assert.Equal(t, "pkg:npm/express@4.18.2", body.Data[0]["packageName"])
-		assert.Equal(t, "CVE-2024-1234", body.Data[0]["vulnerabilityName"])
+		assert.Equal(t, "CVE-2024-1234", body.Data[0]["resourceIdentifier"])
 	})
 }
 

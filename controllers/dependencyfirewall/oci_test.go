@@ -20,9 +20,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -91,41 +94,48 @@ func TestOCIEcosystemParsePackage(t *testing.T) {
 
 func TestOCIManifestFresh(t *testing.T) {
 	dir := t.TempDir()
-	d := &DependencyProxyController{cache: newCache(dir, 10)}
+	s := &secretCaches{
+		basePath:    "",
+		sizeMB:      10,
+		lru:         sync.Map{},
+		currentSize: new(atomic.Int64),
+	}
+	c := s.newCache(uuid.New(), dir)
+	d := &DependencyProxyController{}
 
 	t.Run("missing entry is not fresh", func(t *testing.T) {
-		if d.ociManifestFresh("nginx-manifest", "/v2/docker.io/library/nginx/manifests/latest") {
+		if d.ociManifestFresh("nginx-manifest", "/v2/docker.io/library/nginx/manifests/latest", c) {
 			t.Fatal("expected false for missing entry")
 		}
 	})
 
 	t.Run("digest-pinned manifest is always fresh", func(t *testing.T) {
-		if !d.ociManifestFresh("nginx-manifest-digest", "/v2/docker.io/library/nginx/manifests/sha256_deadbeef") {
+		if !d.ociManifestFresh("nginx-manifest-digest", "/v2/docker.io/library/nginx/manifests/sha256_deadbeef", c) {
 			t.Fatal("expected digest manifest to be fresh regardless of cache state")
 		}
 	})
 
 	t.Run("tag manifest within TTL is fresh", func(t *testing.T) {
 		key := "nginx-manifest-latest"
-		if err := d.cache.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
+		if err := c.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
 			t.Fatal(err)
 		}
-		if !d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/latest") {
+		if !d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/latest", c) {
 			t.Fatal("expected fresh tag manifest to be fresh")
 		}
 	})
 
 	t.Run("tag manifest past TTL is not fresh", func(t *testing.T) {
 		key := "nginx-manifest-old-tag"
-		if err := d.cache.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
+		if err := c.Set(key, cacheValue{data: []byte("manifest")}); err != nil {
 			t.Fatal(err)
 		}
-		d.cache.mu.Lock()
-		e := d.cache.cache[key]
+
+		entry, _ := c.cache.Load(key)
+		e := entry.(cacheEntry)
 		e.storedAt = time.Now().Add(-2 * time.Hour)
-		d.cache.cache[key] = e
-		d.cache.mu.Unlock()
-		if d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/old-tag") {
+		c.cache.Store(key, e)
+		if d.ociManifestFresh(key, "/v2/docker.io/library/nginx/manifests/old-tag", c) {
 			t.Fatal("expected stale tag manifest to not be fresh")
 		}
 	})
@@ -157,20 +167,20 @@ func TestOCISafeCachePath(t *testing.T) {
 
 func TestIsAllowedRegistry(t *testing.T) {
 	cases := map[string]bool{
-		"docker.io":         true,
-		"ghcr.io":           true,
-		"quay.io":           true,
-		"gcr.io":            true,
-		"registry.k8s.io":   true,
-		"public.ecr.aws":    true,
-		"mcr.microsoft.com": true,
+		"docker.io":           true,
+		"ghcr.io":             true,
+		"quay.io":             true,
+		"gcr.io":              true,
+		"registry.k8s.io":     true,
+		"public.ecr.aws":      true,
+		"mcr.microsoft.com":   true,
 		"registry.gitlab.com": true,
-		"evil.com":          false,
-		"unknown.io":        false,
-		"1.2.3.4":           false, // IPv4 literal
-		"::1":               false, // IPv6 literal
-		"docker.io:443":     false, // host:port form
-		"":                  false,
+		"evil.com":            false,
+		"unknown.io":          false,
+		"1.2.3.4":             false, // IPv4 literal
+		"::1":                 false, // IPv6 literal
+		"docker.io:443":       false, // host:port form
+		"":                    false,
 	}
 	for input, want := range cases {
 		if got := isAllowedRegistry(input); got != want {

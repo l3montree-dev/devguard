@@ -39,6 +39,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"gopkg.in/yaml.v3"
 )
 
 var depProxyTracer = otel.Tracer("devguard/dependency-proxy")
@@ -55,13 +56,23 @@ func trimWithRegex(path string, re *regexp.Regexp) string {
 
 type DependencyProxyCache struct {
 	CacheDir string
-	// MaxSizeMB bounds the size of the in-memory-tracked, disk-backed package
-	// cache. Defaults to 1024 (1GB) if unset.
+	// MaxSizeMB bounds the size of each organization's in-memory-tracked,
+	// disk-backed package cache. Defaults to 1024 (1GB) per organization if unset.
 	MaxSizeMB int
 }
 
 type DependencyProxyConfigs struct {
-	Rules []packagerules.CompiledRule
+	Rules      []packagerules.CompiledRule `yaml:"-"`
+	Registries map[string]string           `yaml:"registries"`
+	Secret     uuid.UUID                   `yaml:"-"`
+}
+
+func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
+	individualRegistry := c.Registries[eco.name()]
+	if individualRegistry == "" {
+		return defaultRegistry
+	}
+	return individualRegistry
 }
 
 type DependencyProxyController struct {
@@ -70,7 +81,7 @@ type DependencyProxyController struct {
 	orgRepository          shared.OrganizationRepository
 	dependencyProxyService shared.DependencyProxySecretService
 	maliciousChecker       shared.MaliciousPackageChecker
-	cache                  *cache
+	caches                 *secretCaches
 	client                 *http.Client
 }
 
@@ -89,7 +100,7 @@ func NewDependencyProxyController(
 	return &DependencyProxyController{
 		dependencyProxyService: dependencyProxyService,
 		maliciousChecker:       maliciousChecker,
-		cache:                  newCache(config.CacheDir, config.MaxSizeMB),
+		caches:                 newSecretCaches(config.CacheDir, config.MaxSizeMB),
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
@@ -167,6 +178,37 @@ func (d *DependencyProxyController) GetOrgDependencyProxyURLs(ctx shared.Context
 	return d.GetDependencyProxyURLs(ctx)
 }
 
+// @Summary Get dependency proxy cache statistics for an organization, project or asset
+// @Tags Dependency Firewall
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "organization slug"
+// @Success 200 {object} dependencyfirewall.CacheStats
+// @Router /organizations/{organization}/dependency-proxy/cache-stats/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/dependency-proxy/cache-stats/ [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/dependency-proxy/cache-stats/ [get]
+func (d *DependencyProxyController) GetSecretCacheStats(ctx shared.Context) error {
+	secret, err := d.secretFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	e, err := d.caches.forSecret(secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get cache stats for the secret").WithInternal(err)
+	}
+	return ctx.JSON(http.StatusOK, e.Stats())
+}
+
+// @Summary Get instance-wide dependency proxy cache statistics
+// @Tags Admin
+// @Security AdminSignedAuth
+// @Success 200 {object} dependencyfirewall.CacheStats
+// @Router /admin/statistics/dependency-proxy-cache/ [get]
+func (d *DependencyProxyController) GetInstanceCacheStats(ctx shared.Context) error {
+	return ctx.JSON(http.StatusOK, d.caches.Stats())
+}
+
 // @Summary Get project dependency proxy URLs
 // @Tags Dependency Firewall
 // @Security CookieAuth
@@ -194,37 +236,41 @@ func (d *DependencyProxyController) GetAssetDependencyProxyURLs(ctx shared.Conte
 	return d.GetDependencyProxyURLs(ctx)
 }
 
+func (d *DependencyProxyController) secretFromContext(ctx shared.Context) (uuid.UUID, error) {
+	reqCtx := ctx.Request().Context()
+	if asset, err := shared.MaybeGetAsset(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByAssetID(reqCtx, asset.GetID())
+		if err != nil {
+			return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for asset: %v", err))
+		}
+		return proxy.Secret, nil
+	}
+	if project, err := shared.MaybeGetProject(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByProjectID(reqCtx, project.GetID())
+		if err != nil {
+			return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for project: %v", err))
+		}
+		return proxy.Secret, nil
+	}
+	if org, err := shared.MaybeGetOrganization(ctx); err == nil {
+		proxy, err := d.dependencyProxyService.GetOrCreateByOrgID(reqCtx, org.GetID())
+		if err != nil {
+			return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for organization: %v", err))
+		}
+		return proxy.Secret, nil
+	}
+	return uuid.Nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to determine scope for dependency proxy")
+}
+
 func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) error {
 	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
 	if registryURL == "" {
 		registryURL = "https://api.main.devguard.org/api/v1/dependency-proxy"
 	}
 
-	var secret uuid.UUID
-
-	reqCtx := ctx.Request().Context()
-	if asset, err := shared.MaybeGetAsset(ctx); err == nil {
-		proxy, err := d.dependencyProxyService.GetOrCreateByAssetID(reqCtx, asset.GetID())
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for asset: %v", err))
-		}
-		secret = proxy.Secret
-	} else if project, err := shared.MaybeGetProject(ctx); err == nil {
-		proxy, err := d.dependencyProxyService.GetOrCreateByProjectID(reqCtx, project.GetID())
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for project: %v", err))
-		}
-		secret = proxy.Secret
-	} else if org, err := shared.MaybeGetOrganization(ctx); err == nil {
-		proxy, err := d.dependencyProxyService.GetOrCreateByOrgID(reqCtx, org.GetID())
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to get or create dependency proxy for organization: %v", err))
-		}
-		secret = proxy.Secret
-	}
-
-	if secret == uuid.Nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to determine scope for dependency proxy")
+	secret, err := d.secretFromContext(ctx)
+	if err != nil {
+		return err
 	}
 
 	proxies := map[string]string{}
@@ -256,6 +302,7 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	if err != nil {
 		return configs, fmt.Errorf("invalid dependency proxy secret: %w", err)
 	}
+	configs.Secret = uuidSecret
 
 	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
 	if err != nil {
@@ -292,33 +339,55 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 		if !ok {
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
-		return parseDependencyProxyConfigs(s)
+		parsed, err := parseDependencyProxyConfigs(s)
+		parsed.Secret = configs.Secret
+		return parsed, err
 	}
 
 	return configs, nil
 }
 
-var compiledRulesCache = utils.NewTTLCache[string, []packagerules.CompiledRule](10*time.Minute, 1000, nil)
+var compiledConfigsCache = utils.NewTTLCache[string, DependencyProxyConfigs](10*time.Minute, 1000, nil)
 
 func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
-	if rules, ok := compiledRulesCache.Get(s); ok {
-		return DependencyProxyConfigs{Rules: rules}, nil
+	if configs, ok := compiledConfigsCache.Get(s); ok {
+		return configs, nil
+	}
+
+	var configs DependencyProxyConfigs
+	if err := yaml.Unmarshal([]byte(s), &configs); err != nil {
+		return configs, err
 	}
 
 	rules, err := packagerules.ParseConfig(s)
 	if err != nil {
-		return DependencyProxyConfigs{}, err
+		return configs, err
 	}
+	configs.Rules = rules
 
-	compiledRulesCache.Set(s, rules)
+	compiledConfigsCache.Set(s, configs)
 
-	return DependencyProxyConfigs{Rules: rules}, nil
+	return configs, nil
 }
 
 // GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
 // parameter and delegates to LoadConfigsBySecret.
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
+}
+
+func checkDistHost(distURL string, allowedHosts ...string) error {
+	parsed, err := url.Parse(distURL)
+	if err != nil {
+		return fmt.Errorf("invalid dist url")
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("dist url is not https")
+	}
+	if !slices.Contains(allowedHosts, parsed.Hostname()) {
+		return fmt.Errorf("dist host %s is not allowed", parsed.Hostname())
+	}
+	return nil
 }
 
 func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) packagerules.Package {

@@ -66,3 +66,6 @@ nix-cache-push::
 
 migrate:
 	go run ./cmd/devguard-cli migrate
+
+vulndb::
+	go run ./cmd/devguard-cli vulndb import

@@ -47,9 +47,9 @@ func ProvideDependencyProxyCache() dependencyfirewall.DependencyProxyCache {
 
 	maxSizeMB := os.Getenv("DEPENDENCY_PROXY_CACHE_MAX_SIZE_MB")
 	if maxSizeMB != "" {
-		slog.Info("Using custom dependency proxy cache max size", "size", maxSizeMB)
+		slog.Info("Using custom total dependency proxy cache max size for all organizations", "size", maxSizeMB)
 	} else {
-		slog.Info("Using default dependency proxy cache max size", "size", "1024MB")
+		slog.Info("Using default total dependency proxy cache max size for all organizations", "size", "1024MB")
 		maxSizeMB = "1024"
 	}
 
@@ -148,4 +148,5 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewLogController),
 
 	fx.Provide(NewAdvisoryController),
+	fx.Provide(NewSLSAController),
 )

@@ -171,6 +171,11 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	secretCache, err := d.caches.forSecret(configs.Secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	requestPath := maven.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.maven",
@@ -191,7 +196,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	slog.Info("Proxy request", "proxy", "maven", "type", "package", "method", c.Request().Method, "path", requestPath)
 
 	cacheKey := "maven/" + requestPath
-	if err := d.cache.ValidateKey(cacheKey); err != nil {
+	if err := secretCache.ValidateKey(cacheKey); err != nil {
 		slog.Warn("Invalid cache path", "proxy", "maven", "path", requestPath, "error", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
@@ -204,14 +209,16 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	}
 	if status != 0 {
 		slog.Warn("Blocked malicious package", "proxy", "maven", "path", requestPath, "status", status, "reason", reason)
-		d.cache.Remove(cacheKey)
+		secretCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, maven, requestPath, reason, status)
 	}
 
-	if !bypassCache(c.Request()) && d.cache.Fresh(cacheKey, mavenCacheTTL(requestPath)) {
-		if entry, ok := d.cache.Get(cacheKey); ok {
+	registry := configs.getRegistry(maven, mavenRegistry)
+
+	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, mavenCacheTTL(requestPath)) {
+		if entry, ok := secretCache.Get(cacheKey); ok {
 			slog.Debug("Cache hit", "proxy", "maven", "path", requestPath)
-			notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, version, entry.releaseTime), configs)
+			notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, registry, packageName, version, entry.releaseTime), configs)
 			if notAllowed {
 				slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
 				return d.blockNotAllowedPackage(c, maven, requestPath, notAllowedReason)
@@ -227,7 +234,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -241,7 +248,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	}
 
 	releaseTime := mavenReleaseTime(headers)
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, version, releaseTime), configs)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, registry, packageName, version, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, maven, requestPath, notAllowedReason)
@@ -250,7 +257,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	if releaseTime.IsZero() {
 		slog.Warn("Could not determine release time", "proxy", "maven", "package", packageName, "version", version)
 	} else {
-		if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
+		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "maven", "error", err)
 		}
 	}
@@ -297,6 +304,11 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
 	}
 
+	secretCache, err := d.caches.forSecret(configs.Secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
+	}
+
 	requestPath := maven.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.maven",
@@ -329,7 +341,9 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, requestPath, c.Request().Header, nil)
+	registry := configs.getRegistry(maven, mavenRegistry)
+
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -358,8 +372,8 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 			if isMaliciousVersion(maven, malicious, v) {
 				return false
 			}
-			releaseTime, _ := d.fetchMavenReleaseTime(ctx, packageName, v)
-			blocked, _ := d.CheckNotAllowedPackage(newPackage(maven, mavenRegistry, packageName, v, releaseTime), configs)
+			releaseTime, _ := d.fetchMavenReleaseTime(ctx, packageName, v, registry, secretCache)
+			blocked, _ := d.CheckNotAllowedPackage(newPackage(maven, registry, packageName, v, releaseTime), configs)
 			return !blocked
 		})
 		if removed > 0 {
@@ -377,7 +391,7 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 // the version's POM is the only source. The POM is used rather than the JAR because it is
 // small and always exists, even for pom-packaging artifacts. The cache key matches the one
 // proxyMavenPackage uses, so a POM that was proxied normally is reused here.
-func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version string) (time.Time, error) {
+func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version, registry string, secretCache *cache) (time.Time, error) {
 	groupID, artifactID, ok := strings.Cut(packageName, "/")
 	if !ok {
 		return time.Time{}, fmt.Errorf("invalid maven coordinates %q", packageName)
@@ -386,11 +400,11 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 		strings.ReplaceAll(groupID, ".", "/"), artifactID, version, artifactID, version)
 
 	cacheKey := "maven/" + pomPath
-	if entry, ok := d.cache.Get(cacheKey); ok && !entry.releaseTime.IsZero() {
+	if entry, ok := secretCache.Get(cacheKey); ok && !entry.releaseTime.IsZero() {
 		return entry.releaseTime, nil
 	}
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, pomPath, http.Header{}, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, pomPath, http.Header{}, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -401,7 +415,7 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 	if releaseTime.IsZero() {
 		return time.Time{}, fmt.Errorf("no Last-Modified header for %s", pomPath)
 	}
-	if err := d.cache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
+	if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime, contentType: headers.Get("Content-Type")}); err != nil {
 		slog.Warn("Failed to cache response", "proxy", "maven", "error", err)
 	}
 	return releaseTime, nil
