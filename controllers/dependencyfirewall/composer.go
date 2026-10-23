@@ -222,12 +222,6 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, composer, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "composer", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, composer, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, version := composer.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, composer, packageName, version)
@@ -238,20 +232,6 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		slog.Warn("Blocked malicious package", "proxy", "composer", "path", requestPath, "status", status, "reason", reason)
 		secretCache.Remove(cacheKey)
 		return d.blockMaliciousPackage(c, composer, requestPath, reason, status)
-	}
-
-	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
-		if entry, ok := secretCache.Get(cacheKey); ok {
-			slog.Debug("Cache hit", "proxy", "composer", "path", requestPath)
-			if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, composer, requestPath, entry.releaseTime, configs.MinReleaseAge)
-			}
-			if entry.contentType != "" {
-				c.Response().Header().Set("Content-Type", entry.contentType)
-			}
-			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			return composer.writeResponse(c, entry.data, requestPath, true)
-		}
 	}
 
 	registry := configs.getRegistry(composer, composerMetadataRegistry)
@@ -272,13 +252,20 @@ func (d *ComposerDependencyProxyController) proxyComposerDist(c shared.Context) 
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("blocked dist url: %v", err))
 	}
 
-	if configs.MinReleaseAge > 0 {
-		if releaseTime.IsZero() {
-			slog.Warn("Could not determine release time", "proxy", "composer", "package", packageName, "version", version)
-			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not determine release time of %s@%s", packageName, version))
-		}
-		if time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, composer, requestPath, releaseTime, configs.MinReleaseAge)
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(composer, registry, packageName, version, releaseTime), configs)
+	if notAllowed {
+		slog.Warn("Blocked not allowed package", "proxy", "composer", "path", requestPath, "reason", notAllowedReason)
+		return d.blockNotAllowedPackage(c, composer, requestPath, notAllowedReason)
+	}
+
+	if !bypassCache(c.Request()) && secretCache.Fresh(cacheKey, composerCacheTTL(requestPath)) {
+		if entry, ok := secretCache.Get(cacheKey); ok {
+			slog.Debug("Cache hit", "proxy", "composer", "path", requestPath)
+			if entry.contentType != "" {
+				c.Response().Header().Set("Content-Type", entry.contentType)
+			}
+			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+			return composer.writeResponse(c, entry.data, requestPath, true)
 		}
 	}
 
@@ -339,11 +326,6 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 
 	packageName, version := composer.parsePackage(requestPath)
 
-	notAllowed, reason := d.CheckNotAllowedPackage(ctx, composer, requestPath, configs)
-	if notAllowed {
-		return d.blockNotAllowedPackage(c, composer, requestPath, reason)
-	}
-
 	status, reason, err := d.checkMalicious(ctx, composer, packageName, version)
 	if err != nil {
 		return maliciousCheckFailed(composer, err)
@@ -352,8 +334,9 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 		return d.blockMaliciousPackage(c, composer, requestPath, reason, status)
 	}
 
+	registry := configs.getRegistry(composer, composerMetadataRegistry)
 	data, headers, statusCode, err := d.fetchFromUpstream(
-		ctx, composer, configs.getRegistry(composer, composerMetadataRegistry), requestPath, c.Request().Header, nil,
+		ctx, composer, registry, requestPath, c.Request().Header, nil,
 	)
 
 	if err != nil {
@@ -367,13 +350,18 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	filtered, removed, err := filterComposerMetadata(data, composerProxyBaseURL(c),
-		time.Duration(configs.MinReleaseAge)*time.Hour,
-		func(v string) bool {
-			blocked, _ := matchRules(composer.packageIdentifier(packageName, v), configs.Rules)
-			return !blocked
-		},
-	)
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, composer.name(), packageName)
+	if err != nil {
+		return maliciousCheckFailed(composer, err)
+	}
+
+	filtered, removed, err := filterComposerMetadata(data, composerProxyBaseURL(c), func(v string, released time.Time) bool {
+		if isMaliciousVersion(composer, malicious, v) {
+			return false
+		}
+		blocked, _ := d.CheckNotAllowedPackage(newPackage(composer, registry, packageName, v, released), configs)
+		return !blocked
+	})
 	if err != nil {
 		span.RecordError(err)
 		slog.Error("Could not rewrite composer metadata", "proxy", "composer", "package", packageName, "error", err)
@@ -402,7 +390,7 @@ func composerProxyBaseURL(c shared.Context) string {
 	return origin + composerPath
 }
 
-func filterComposerMetadata(data []byte, proxyBaseURL string, minAge time.Duration, allowed func(version string) bool) ([]byte, int, error) {
+func filterComposerMetadata(data []byte, proxyBaseURL string, allowed func(version string, released time.Time) bool) ([]byte, int, error) {
 	var doc composerP2Document
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return nil, 0, fmt.Errorf("could not decode composer metadata: %w", err)
@@ -431,11 +419,6 @@ func filterComposerMetadata(data []byte, proxyBaseURL string, minAge time.Durati
 				return nil, 0, fmt.Errorf("could not decode version of %s: %w", name, err)
 			}
 
-			if !allowed(version) {
-				removed++
-				continue
-			}
-
 			var releasedAt string
 			if err := json.Unmarshal(fields["time"], &releasedAt); err != nil {
 				return nil, 0, fmt.Errorf("could not decode time of %s: %w", name, err)
@@ -446,7 +429,7 @@ func filterComposerMetadata(data []byte, proxyBaseURL string, minAge time.Durati
 				return nil, 0, fmt.Errorf("could not parse time of %s@%s: %w", name, version, err)
 			}
 
-			if minAge > 0 && time.Since(released) < minAge {
+			if !allowed(version, released) {
 				removed++
 				continue
 			}
