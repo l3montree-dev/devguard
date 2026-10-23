@@ -14,7 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
-func timeToCEL(t time.Time) string {
+func TimeToCEL(t time.Time) string {
 	return t.Format(time.RFC3339Nano)
 }
 
@@ -101,16 +101,16 @@ func (vuln DependencyVuln) ToCELMap() map[string]any {
 		"assetVersionName":     vuln.AssetVersionName,
 		"vulnAssetId":          vuln.AssetID.String(),
 		"state":                string(vuln.State),
-		"lastStateChange":      timeToCEL(vuln.LastStateChange),
+		"lastStateChange":      TimeToCEL(vuln.LastStateChange),
 		"manualTicketCreation": vuln.ManualTicketCreation,
-		"createdAt":            timeToCEL(vuln.CreatedAt),
-		"updatedAt":            timeToCEL(vuln.UpdatedAt),
+		"createdAt":            TimeToCEL(vuln.CreatedAt),
+		"updatedAt":            TimeToCEL(vuln.UpdatedAt),
 
 		// DependencyVuln's own fields
 		"cveId":              vuln.CVEID,
 		"componentPurl":      vuln.ComponentPurl,
 		"vulnerabilityPath":  stringSliceToAny(vuln.VulnerabilityPath),
-		"riskRecalculatedAt": timeToCEL(vuln.RiskRecalculatedAt),
+		"riskRecalculatedAt": TimeToCEL(vuln.RiskRecalculatedAt),
 		"signature":          float64(vuln.Signature),
 		"assetSignature":     float64(vuln.AssetSignature),
 	}

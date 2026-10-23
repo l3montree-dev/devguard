@@ -17,6 +17,8 @@ package celrules
 
 import (
 	"time"
+
+	"github.com/l3montree-dev/devguard/database/models"
 )
 
 type Package struct {
@@ -40,10 +42,6 @@ type Provenance struct {
 	Builder          string
 }
 
-func timeToCEL(t time.Time) string {
-	return t.Format(time.RFC3339Nano)
-}
-
 func (p Package) ToCELMap() map[string]any {
 	m := map[string]any{
 		"name":      p.Name,
@@ -54,7 +52,7 @@ func (p Package) ToCELMap() map[string]any {
 	}
 
 	if !p.ReleasedAt.IsZero() {
-		m["releasedAt"] = timeToCEL(p.ReleasedAt)
+		m["releasedAt"] = models.TimeToCEL(p.ReleasedAt)
 	}
 
 	if p.Publisher != nil {
