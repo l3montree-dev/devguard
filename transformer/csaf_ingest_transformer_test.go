@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/l3montree-dev/devguard/vexrules"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,11 +54,11 @@ func TestCSAFtoVexRules(t *testing.T) {
 	}
 
 	expectedExpressions := []string{
-		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
+		celrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", celrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
 		}),
-		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
+		celrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", celrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/github.com/open-policy-agent/opa@v1.18.2",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",

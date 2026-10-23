@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package packagerules
+package celrules
 
 import (
 	"testing"
@@ -26,14 +26,14 @@ import (
 func TestRules(t *testing.T) {
 	tests := []struct {
 		name        string
-		rules       []Rule
+		rules       []PackageRule
 		pkg         Package
 		wantBlocked bool
 		wantRule    string
 	}{
 		{
 			name: "no rule fits",
-			rules: []Rule{
+			rules: []PackageRule{
 				{Name: "deny package X", Action: ActionDeny, Expr: `pkg.name == "X"`},
 			},
 			pkg: Package{
@@ -44,7 +44,7 @@ func TestRules(t *testing.T) {
 		},
 		{
 			name: "deny fits",
-			rules: []Rule{
+			rules: []PackageRule{
 				{Name: "deny < 7 days", Action: ActionDeny, Expr: `now() - timestamp(pkg.releasedAt) < duration("168h")`},
 			},
 			pkg: Package{
@@ -56,7 +56,7 @@ func TestRules(t *testing.T) {
 		},
 		{
 			name: "allow after deny",
-			rules: []Rule{
+			rules: []PackageRule{
 				{Name: "deny < 7 days", Action: ActionDeny, Expr: `now() - timestamp(pkg.releasedAt) < duration("168h")`},
 				{Name: "allow pkg trusted", Action: ActionAllow, Expr: `pkg.name == "trusted"`},
 			},
@@ -69,7 +69,7 @@ func TestRules(t *testing.T) {
 		},
 		{
 			name: "deny after allow",
-			rules: []Rule{
+			rules: []PackageRule{
 				{Name: "allow pkg trusted", Action: ActionAllow, Expr: `pkg.name == "trusted"`},
 				{Name: "deny < 7 days", Action: ActionDeny, Expr: `now() - timestamp(pkg.releasedAt) < duration("168h")`},
 			},
@@ -84,10 +84,10 @@ func TestRules(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			compiledRules, err := CompileRules(tt.rules)
+			compiledRules, err := CompilePackageRules(tt.rules)
 			require.NoError(t, err)
 
-			blocked, ruleName, err := Evaluate(compiledRules, tt.pkg)
+			blocked, ruleName, err := EvaluatePackage(compiledRules, tt.pkg)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.wantBlocked, blocked)
@@ -97,7 +97,7 @@ func TestRules(t *testing.T) {
 }
 
 func TestCompileRulesInvalidAction(t *testing.T) {
-	_, err := CompileRules([]Rule{
+	_, err := CompilePackageRules([]PackageRule{
 		{Name: "action is foo", Action: "foo", Expr: `pkg.name == "x"`},
 	})
 	assert.Error(t, err)

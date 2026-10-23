@@ -15,11 +15,6 @@
 
 package dtos
 
-import (
-	"github.com/l3montree-dev/devguard/packagerules"
-	"gopkg.in/yaml.v3"
-)
-
 // DependencyProxyConfig is the config-file payload persisted for the dependency proxy.
 type DependencyProxyConfig struct {
 	Registries map[string]string `yaml:"registries" validate:"omitempty,dive,keys,oneof=npm go pypi maven composer deb,endkeys,required,url"`
@@ -28,17 +23,3 @@ type DependencyProxyConfig struct {
 // dependencyProxyConfigFileID is the key under which dependency-proxy settings
 // are stored in an org/project/asset ConfigFiles map.
 const DependencyProxyConfigFileID = "dependency-proxy-configs"
-
-// validateConfigFile validates a config-file payload before it is persisted.
-// Only config files with known schemas are checked; unknown ones pass through.
-func ValidateConfigFile(content []byte) error {
-	var cfg DependencyProxyConfig
-	if err := yaml.Unmarshal(content, &cfg); err != nil {
-		return err
-	}
-	if err := V.Struct(cfg); err != nil {
-		return err
-	}
-	_, err := packagerules.ParseConfig(string(content))
-	return err
-}

@@ -30,8 +30,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/packagerules"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -62,9 +63,21 @@ type DependencyProxyCache struct {
 }
 
 type DependencyProxyConfigs struct {
-	Rules      []packagerules.CompiledRule `yaml:"-"`
-	Registries map[string]string           `yaml:"registries"`
-	Secret     uuid.UUID                   `yaml:"-"`
+	Rules      []celrules.CompiledPackageRule `yaml:"-"`
+	Registries map[string]string              `yaml:"registries"`
+	Secret     uuid.UUID                      `yaml:"-"`
+}
+
+func ValidateConfigFile(content []byte) error {
+	var cfg dtos.DependencyProxyConfig
+	if err := yaml.Unmarshal(content, &cfg); err != nil {
+		return err
+	}
+	if err := dtos.V.Struct(cfg); err != nil {
+		return err
+	}
+	_, err := celrules.ParsePackageRules(string(content))
+	return err
 }
 
 func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
@@ -359,7 +372,7 @@ func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
 		return configs, err
 	}
 
-	rules, err := packagerules.ParseConfig(s)
+	rules, err := celrules.ParsePackageRules(s)
 	if err != nil {
 		return configs, err
 	}
@@ -390,8 +403,8 @@ func checkDistHost(distURL string, allowedHosts ...string) error {
 	return nil
 }
 
-func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) packagerules.Package {
-	return packagerules.Package{
+func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) celrules.Package {
+	return celrules.Package{
 		Name:       name,
 		Version:    version,
 		Ecosystem:  eco.name(),
@@ -401,8 +414,8 @@ func newPackage(eco ecosystem, registry, name, version string, releasedAt time.T
 	}
 }
 
-func (d *DependencyProxyController) CheckNotAllowedPackage(pkg packagerules.Package, configs DependencyProxyConfigs) (bool, string) {
-	blocked, ruleName, err := packagerules.Evaluate(configs.Rules, pkg)
+func (d *DependencyProxyController) CheckNotAllowedPackage(pkg celrules.Package, configs DependencyProxyConfigs) (bool, string) {
+	blocked, ruleName, err := celrules.EvaluatePackage(configs.Rules, pkg)
 	if err != nil {
 		return true, fmt.Sprintf("failed to evaluate rule %s: %v", ruleName, err)
 	}

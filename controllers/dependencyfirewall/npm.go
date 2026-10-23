@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/l3montree-dev/devguard/packagerules"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -509,8 +509,8 @@ func parseNPMMetadata(data []byte) (npmPackageMetadata, error) {
 	return m, nil
 }
 
-func (m npmPackageMetadata) toPackage(version string) packagerules.Package {
-	p := packagerules.Package{
+func (m npmPackageMetadata) toPackage(version string) celrules.Package {
+	p := celrules.Package{
 		Name:       m.Name,
 		Version:    version,
 		Ecosystem:  "npm",
@@ -518,7 +518,7 @@ func (m npmPackageMetadata) toPackage(version string) packagerules.Package {
 		Purl:       npmEcosystem{}.packageIdentifier(m.Name, version),
 	}
 	if m.Versions[version].NpmUser.Name != "" {
-		p.Publisher = &packagerules.Publisher{Name: m.Versions[version].NpmUser.Name}
+		p.Publisher = &celrules.Publisher{Name: m.Versions[version].NpmUser.Name}
 	}
 
 	var prevVersion string
@@ -545,10 +545,10 @@ func (m npmPackageMetadata) toPackage(version string) packagerules.Package {
 	return p
 }
 
-func ExtractNPMPackageFromMetadata(data []byte, version string) (packagerules.Package, error) {
+func ExtractNPMPackageFromMetadata(data []byte, version string) (celrules.Package, error) {
 	m, err := parseNPMMetadata(data)
 	if err != nil {
-		return packagerules.Package{}, err
+		return celrules.Package{}, err
 	}
 	return m.toPackage(version), nil
 }

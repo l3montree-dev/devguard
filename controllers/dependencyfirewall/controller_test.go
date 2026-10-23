@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/packagerules"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,29 +39,29 @@ func TestCheckNotAllowedPackage(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		pkg         packagerules.Package
+		pkg         celrules.Package
 		wantBlocked bool
 		wantReason  string
 	}{
 		{
 			name:        "blocks new package",
-			pkg:         packagerules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-time.Hour)},
+			pkg:         celrules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-time.Hour)},
 			wantBlocked: true,
 			wantReason:  "block-new",
 		},
 		{
 			name:        "allows old package",
-			pkg:         packagerules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-30 * 24 * time.Hour)},
+			pkg:         celrules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-30 * 24 * time.Hour)},
 			wantBlocked: false,
 		},
 		{
 			name:        "allow rule overrides deny",
-			pkg:         packagerules.Package{Name: "trusted", ReleasedAt: time.Now().Add(-time.Hour)},
+			pkg:         celrules.Package{Name: "trusted", ReleasedAt: time.Now().Add(-time.Hour)},
 			wantBlocked: false,
 		},
 		{
 			name:        "fails closed on evaluation error",
-			pkg:         packagerules.Package{Name: "lodash"},
+			pkg:         celrules.Package{Name: "lodash"},
 			wantBlocked: true,
 			wantReason:  "block-new",
 		},
@@ -82,7 +82,7 @@ func TestCheckNotAllowedPackage(t *testing.T) {
 
 func TestCheckNotAllowedPackageWithoutRules(t *testing.T) {
 	d := &DependencyProxyController{}
-	blocked, reason := d.CheckNotAllowedPackage(packagerules.Package{Name: "lodash"}, DependencyProxyConfigs{})
+	blocked, reason := d.CheckNotAllowedPackage(celrules.Package{Name: "lodash"}, DependencyProxyConfigs{})
 	assert.False(t, blocked)
 	assert.Empty(t, reason)
 }

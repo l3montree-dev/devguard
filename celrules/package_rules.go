@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package packagerules
+package celrules
 
 import (
 	"fmt"
@@ -28,42 +28,42 @@ const (
 	ActionDeny  Action = "deny"
 )
 
-type Rule struct {
+type PackageRule struct {
 	Name   string `yaml:"name"`
 	Action Action `yaml:"action"`
 	Expr   string `yaml:"expr"`
 }
 
-type CompiledRule struct {
-	Rule    Rule
+type CompiledPackageRule struct {
+	Rule    PackageRule
 	Program cel.Program
 }
 
-func CompileRules(rules []Rule) ([]CompiledRule, error) {
-	var compiledRules []CompiledRule
+func CompilePackageRules(rules []PackageRule) ([]CompiledPackageRule, error) {
+	var compiledRules []CompiledPackageRule
 
 	for _, rule := range rules {
 		if rule.Action != ActionAllow && rule.Action != ActionDeny {
 			return nil, fmt.Errorf("failed to validate action for rule %s", rule.Name)
 		}
 
-		prg, err := Compile(rule.Expr)
+		prg, err := compilePackageExpr(rule.Expr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate expression for rule %s: %w", rule.Name, err)
 		}
 
-		compiledRules = append(compiledRules, CompiledRule{Rule: rule, Program: prg})
+		compiledRules = append(compiledRules, CompiledPackageRule{Rule: rule, Program: prg})
 	}
 
 	return compiledRules, nil
 }
 
-func Evaluate(rules []CompiledRule, p Package) (bool, string, error) {
+func EvaluatePackage(rules []CompiledPackageRule, p Package) (bool, string, error) {
 	blocked := false
 	ruleName := ""
 
 	for _, rule := range rules {
-		evaluation, err := Eval(rule.Program, p)
+		evaluation, err := evalPackage(rule.Program, p)
 		if err != nil {
 			return true, rule.Rule.Name, fmt.Errorf("failed to evaluate for rule %s: %w", rule.Rule.Name, err)
 		}

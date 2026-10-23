@@ -21,10 +21,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -84,8 +84,8 @@ func TestVEXRuleClosesAllOpenVulnsWithSameCVEAndPath(t *testing.T) {
 		assert.Equal(t, dtos.VulnStateOpen, fetchVuln(featureBranch).State)
 
 		path := fetchVuln(defaultBranch).VulnerabilityPath
-		celExpression := vexrules.ToCELExpression("CVE-2025-46569",
-			vexrules.PathPattern(append([]string{"ROOT"}, path...)))
+		celExpression := celrules.ToCELExpression("CVE-2025-46569",
+			celrules.PathPattern(append([]string{"ROOT"}, path...)))
 
 		body, err := json.Marshal(dtos.CreateVEXRuleRequest{
 			Title:                   "opa is not reachable from our code",

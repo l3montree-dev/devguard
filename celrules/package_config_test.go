@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package packagerules
+package celrules
 
 import (
 	"testing"
@@ -68,7 +68,7 @@ func TestParseConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rules, err := ParseConfig(tt.input)
+			rules, err := ParsePackageRules(tt.input)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

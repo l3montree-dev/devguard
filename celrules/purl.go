@@ -13,27 +13,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package packagerules
+package celrules
 
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v3"
+	"github.com/Masterminds/semver"
+	"github.com/package-url/packageurl-go"
 )
 
-func ParseConfig(content string) ([]CompiledRule, error) {
-	var cfg struct {
-		Rules []Rule `yaml:"rules"`
+func PurlVersionMatches(patternPurl, pathPurl packageurl.PackageURL) (bool, error) {
+	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
+		return false, nil
 	}
 
-	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse yaml: %w", err)
-	}
-
-	compiledRules, err := CompileRules(cfg.Rules)
+	constraint, err := semver.NewConstraint(patternPurl.Version)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile rules: %w", err)
+		return false, fmt.Errorf("invalid pattern version constraint: %w", err)
 	}
-
-	return compiledRules, nil
+	version, err := semver.NewVersion(pathPurl.Version)
+	if err != nil {
+		return false, fmt.Errorf("invalid path version: %w", err)
+	}
+	return constraint.Check(version), nil
 }

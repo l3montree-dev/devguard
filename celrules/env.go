@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package packagerules
+package celrules
 
 import (
 	"errors"
@@ -24,15 +24,11 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/package-url/packageurl-go"
 )
 
-var CelEnv = sync.OnceValues(func() (*cel.Env, error) {
-	return newCelEnv()
-})
-
-func newCelEnv() (*cel.Env, error) {
+var baseEnv = sync.OnceValues(func() (*cel.Env, error) {
 	return cel.NewEnv(
-		cel.Variable("pkg", cel.AnyType),
 		cel.Function("now",
 			cel.Overload("now_timestamp", []*cel.Type{}, cel.TimestampType,
 				cel.FunctionBinding(func(args ...ref.Val) ref.Val {
@@ -40,15 +36,39 @@ func newCelEnv() (*cel.Env, error) {
 				}),
 			),
 		),
+		cel.Function("matchesPurl",
+			cel.Overload("matchesPurl_string_string", []*cel.Type{cel.StringType, cel.StringType}, cel.BoolType,
+				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
+					purl, ok := lhs.Value().(string)
+					if !ok {
+						return types.NewErr("matchesPurl: invalid purl argument: %v", lhs)
+					}
+					pattern, ok := rhs.Value().(string)
+					if !ok {
+						return types.NewErr("matchesPurl: invalid pattern argument: %v", rhs)
+					}
+					purlObj, err := packageurl.FromString(purl)
+					if err != nil {
+						return types.NewErr("matchesPurl: invalid purl: %v", err)
+					}
+					patternObj, err := packageurl.FromString(pattern)
+					if err != nil {
+						return types.NewErr("matchesPurl: invalid pattern purl: %v", err)
+					}
+
+					matches, err := PurlVersionMatches(patternObj, purlObj)
+					if err != nil {
+						return types.NewErr("matchesPurl: %v", err)
+					}
+
+					return types.Bool(matches)
+				}),
+			),
+		),
 	)
-}
+})
 
-func Compile(expression string) (cel.Program, error) {
-	env, err := CelEnv()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
-	}
-
+func compile(env *cel.Env, expression string) (cel.Program, error) {
 	ast, iss := env.Compile(expression)
 	if iss != nil && iss.Err() != nil {
 		return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
@@ -61,10 +81,8 @@ func Compile(expression string) (cel.Program, error) {
 	return prg, nil
 }
 
-func Eval(prg cel.Program, p Package) (bool, error) {
-	pkg := p.ToCELMap()
-
-	out, _, err := prg.Eval(map[string]any{"pkg": pkg})
+func evalBool(prg cel.Program, activation map[string]any) (bool, error) {
+	out, _, err := prg.Eval(activation)
 	if err != nil {
 		return false, fmt.Errorf("failed to evaluate CEL expression: %w", err)
 	}

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package packagerules
+package celrules
 
 import (
 	"testing"
@@ -57,14 +57,17 @@ func TestEval(t *testing.T) {
 		{name: "missing release time is blocked without has", pkg: Package{
 			Name: "lodash", Ecosystem: "npm",
 		}, want: true, rule: `!has(pkg.releasedAt) || now() - timestamp(pkg.releasedAt) < duration("120h")`},
+		{name: "lodash in vulnerable range", pkg: Package{
+			Name: "lodash", Purl: "pkg:npm/lodash@4.17.20",
+		}, want: true, rule: `matchesPurl(pkg.purl, "pkg:npm/lodash@<4.17.21")`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prg, err := Compile(tt.rule)
+			prg, err := compilePackageExpr(tt.rule)
 			require.NoError(t, err)
 
-			result, err := Eval(prg, tt.pkg)
+			result, err := evalPackage(prg, tt.pkg)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want, result)
@@ -73,9 +76,9 @@ func TestEval(t *testing.T) {
 }
 
 func TestEvalMissingReleaseTimeErrors(t *testing.T) {
-	prg, err := Compile(`now() - timestamp(pkg.releasedAt) < duration("120h")`)
+	prg, err := compilePackageExpr(`now() - timestamp(pkg.releasedAt) < duration("120h")`)
 	require.NoError(t, err)
 
-	_, err = Eval(prg, Package{Name: "nginx"})
+	_, err = evalPackage(prg, Package{Name: "nginx"})
 	assert.Error(t, err)
 }
