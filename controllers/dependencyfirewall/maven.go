@@ -156,6 +156,7 @@ func mavenContentType(path string) string {
 // @param secret path string true "dependency proxy secret"
 // @Success 200 {file} binary
 // @Router /dependency-proxy/{secret}/maven/{path} [get]
+// @Router /dependency-proxy/{secret}/maven/{path} [head]
 func (d *MavenDependencyProxyController) ProxyMaven(c shared.Context) error {
 	if strings.Contains(c.Request().URL.Path, "maven-metadata.xml") {
 		return d.proxyMavenMetadata(c)
