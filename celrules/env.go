@@ -24,8 +24,16 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 )
+
+type programKey struct {
+	env        *cel.Env
+	expression string
+}
+
+var programCache = utils.NewTTLCache[programKey, cel.Program](time.Hour, 10_000, nil)
 
 var baseEnv = sync.OnceValues(func() (*cel.Env, error) {
 	return cel.NewEnv(
@@ -69,15 +77,25 @@ var baseEnv = sync.OnceValues(func() (*cel.Env, error) {
 })
 
 func compile(env *cel.Env, expression string) (cel.Program, error) {
+	key := programKey{env: env, expression: expression}
+	cachedPrg, cacheHit := programCache.Get(key)
+	if cacheHit {
+		return cachedPrg, nil
+	}
 	ast, iss := env.Compile(expression)
 	if iss != nil && iss.Err() != nil {
 		return nil, fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
+	}
+
+	if ast.OutputType() != cel.BoolType && ast.OutputType() != cel.DynType {
+		return nil, fmt.Errorf("failed to compile CEL expression. Type is not a bool: %s", ast.OutputType())
 	}
 
 	prg, err := env.Program(ast)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build CEL program: %w", err)
 	}
+	programCache.Set(key, prg)
 	return prg, nil
 }
 

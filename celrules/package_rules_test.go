@@ -102,3 +102,15 @@ func TestCompileRulesInvalidAction(t *testing.T) {
 	})
 	assert.Error(t, err)
 }
+
+func TestCompileRulesNonBoolExpression(t *testing.T) {
+	_, err := CompilePackageRules([]PackageRule{
+		{Name: "returns int", Action: ActionDeny, Expr: `pkg.name.size()`},
+	})
+	assert.Error(t, err)
+
+	_, err = CompilePackageRules([]PackageRule{
+		{Name: "returns dyn", Action: ActionDeny, Expr: `pkg.trusted`},
+	})
+	assert.NoError(t, err)
+}

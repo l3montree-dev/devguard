@@ -147,14 +147,6 @@ func (d *DebDependencyProxyController) ProxyDeb(c shared.Context) error {
 }
 
 func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error {
-	if _, err := d.GetDependencyProxyConfigs(c); err != nil {
-		slog.Error("Error getting dependency proxy configs", "error", err)
-		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
-			return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid")
-		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load dependency proxy configuration")
-	}
-
 	requestPath := deb.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.deb",

@@ -360,13 +360,7 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	return configs, nil
 }
 
-var compiledConfigsCache = utils.NewTTLCache[string, DependencyProxyConfigs](10*time.Minute, 1000, nil)
-
 func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
-	if configs, ok := compiledConfigsCache.Get(s); ok {
-		return configs, nil
-	}
-
 	var configs DependencyProxyConfigs
 	if err := yaml.Unmarshal([]byte(s), &configs); err != nil {
 		return configs, err
@@ -377,8 +371,6 @@ func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
 		return configs, err
 	}
 	configs.Rules = rules
-
-	compiledConfigsCache.Set(s, configs)
 
 	return configs, nil
 }
