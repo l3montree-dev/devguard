@@ -135,6 +135,23 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) dtos.JiraInte
 	}
 }
 
+func ObfuscateRedmineIntegrations(integration models.RedmineIntegration) dtos.RedmineIntegration {
+	return dtos.RedmineIntegration{
+		ID:                 integration.ID.String(),
+		Name:               integration.Name,
+		ObfuscatedToken:    integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
+		URL:                integration.URL,
+		TrackerID:          integration.TrackerID,
+		DefaultStatusID:    integration.DefaultStatusID,
+		CloseStatusID:      integration.CloseStatusID,
+		LowPriorityID:      integration.LowPriorityID,
+		MediumPriorityID:   integration.MediumPriorityID,
+		HighPriorityID:     integration.HighPriorityID,
+		CriticalPriorityID: integration.CriticalPriorityID,
+		MermaidIntegration: string(integration.MermaidIntegration),
+	}
+}
+
 func obfuscateWebhookIntegrations(integration models.WebhookIntegration) dtos.WebhookIntegration {
 	return dtos.WebhookIntegration{
 		ID:          integration.ID.String(),
@@ -180,6 +197,7 @@ func OrgDTOFromModel(org models.Org) dtos.Org {
 		GithubAppInstallations:   utils.Map(org.GithubAppInstallations, GithubAppInstallationToDTO),
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
+		RedmineIntegrations:      utils.Map(org.RedmineIntegrations, ObfuscateRedmineIntegrations),
 		ConfigFiles:              org.ConfigFiles,
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,

@@ -9498,6 +9498,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9529,6 +9536,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -9700,6 +9708,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9733,6 +9748,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -10151,6 +10167,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -10191,6 +10214,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -10935,6 +10959,137 @@
                 },
                 "required": [
                     "recommendedVersion"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "obfuscatedToken": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "obfuscatedToken",
+                    "trackerId",
+                    "url"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineIntegrationProperties": {
+                "properties": {
+                    "priorities": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedminePriority"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "statuses": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineStatus"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "trackers": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineTracker"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "priorities",
+                    "statuses",
+                    "trackers"
+                ],
+                "type": "object"
+            },
+            "dtos.RedminePriority": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineStatus": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineTracker": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
                 ],
                 "type": "object"
             },
@@ -13689,6 +13844,19 @@
                 ],
                 "type": "object"
             },
+            "github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType": {
+                "enum": [
+                    "none",
+                    "macro",
+                    "commonmark"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "None",
+                    "Macro",
+                    "CommonMark"
+                ]
+            },
             "github_com_l3montree-dev_devguard_database_models.Org": {
                 "properties": {
                     "configFiles": {
@@ -13767,6 +13935,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -13805,6 +13980,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -14049,6 +14225,73 @@
                     "ProjectTypeDefault",
                     "ProjectTypeDynamic"
                 ]
+            },
+            "github_com_l3montree-dev_devguard_database_models.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "org": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org"
+                    },
+                    "orgId": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "createdAt",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "org",
+                    "orgId",
+                    "trackerId",
+                    "updatedAt",
+                    "url"
+                ],
+                "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.SupplyChain": {
                 "properties": {
@@ -14742,6 +14985,26 @@
                     1000000,
                     1000000000,
                     60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
@@ -14764,6 +15027,26 @@
                     "Hour",
                     "minDuration",
                     "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -18200,6 +18483,258 @@
                     }
                 ],
                 "summary": "Delete a Jira integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/test-and-save/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "string"
+                                    },
+                                    "url": {
+                                        "type": "string"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine credentials",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test and save Rdemine integration credentials",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete a Redmine integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegrationProperties"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Retrieve Redmine integration properties (trackers, statuses, priorities)",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "closeStatus": {
+                                        "type": "integer"
+                                    },
+                                    "criticalPriority": {
+                                        "type": "integer"
+                                    },
+                                    "defaultStatus": {
+                                        "type": "integer"
+                                    },
+                                    "highPriority": {
+                                        "type": "integer"
+                                    },
+                                    "lowPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mediumPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mermaidIntegration": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine integration settings",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update Redmine integration settings",
                 "tags": [
                     "Integrations"
                 ]
