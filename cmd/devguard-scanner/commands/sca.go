@@ -889,7 +889,7 @@ func handleScanResponse(body io.Reader) error {
 	if err := cyclonedx.NewBOMDecoder(bytes.NewReader(bodyBytes), cyclonedx.BOMFileFormatJSON).Decode(&bom); err != nil {
 		return errors.Wrap(err, "could not parse CycloneDX VEX response")
 	}
-	return scanner.PrintCycloneDXVexResults(bom, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref)
+	return scanner.PrintCycloneDXVexResults(bom, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, config.RuntimeBaseConfig.ArtifactName)
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {

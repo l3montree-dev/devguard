@@ -18,6 +18,7 @@ package scanner
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -99,7 +100,7 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 		if err != nil {
 			slog.Debug("could not build asset slug path for link", "err", err)
 		} else {
-			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetSlugPath, slug.Make(assetVersionName)))
+			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", strings.TrimRight(webUI, "/"), assetSlugPath, slug.Make(assetVersionName)))
 			fmt.Printf("See all code risks at:\n%s\n", link)
 		}
 	}
@@ -114,7 +115,7 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 
 // PrintCycloneDXVexResults prints a table from a CycloneDX BOM VEX response.
 // Columns match PrintScaResults but without the Path column.
-func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI, ref string) error {
+func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI, ref, artifactName string) error {
 	vulns := bom.Vulnerabilities
 	if vulns == nil || len(*vulns) == 0 {
 		slog.Info("No vulnerabilities found")
@@ -269,7 +270,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		if err != nil {
 			slog.Debug("could not build asset slug path for link", "err", err)
 		} else {
-			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetSlugPath, slug.Make(ref)))
+			link := text.FgBlue.Sprint(dependencyRisksLink(webUI, assetSlugPath, ref, artifactName))
 			fmt.Printf("See all dependency risks at:\n%s\n", link)
 		}
 	}
@@ -278,4 +279,14 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		return fmt.Errorf("%d open vulnerabilities exceed the configured risk threshold", thresholdViolations)
 	}
 	return nil
+}
+
+func dependencyRisksLink(webUI, assetSlugPath, ref, artifactName string) string {
+	link := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", strings.TrimRight(webUI, "/"), assetSlugPath, slug.Make(ref))
+	if artifactName != "" {
+		q := url.Values{}
+		q.Set("artifact", artifactName)
+		link += "?" + q.Encode()
+	}
+	return link
 }

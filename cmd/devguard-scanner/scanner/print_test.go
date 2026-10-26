@@ -30,14 +30,14 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 
 	t.Run("should return nil when no vulnerabilities found", func(t *testing.T) {
 		bom := cdx.BOM{}
-		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "", "")
 		assert.Nil(t, err)
 	})
 
 	t.Run("should return nil when vulnerabilities slice is empty", func(t *testing.T) {
 		vulns := []cdx.Vulnerability{}
 		bom := cdx.BOM{Vulnerabilities: &vulns}
-		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "", "")
 		assert.Nil(t, err)
 	})
 
@@ -53,7 +53,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 			},
 		}
 		bom := cdx.BOM{Vulnerabilities: &vulns}
-		err := PrintCycloneDXVexResults(bom, "low", "low", assetName, webUI, "")
+		err := PrintCycloneDXVexResults(bom, "low", "low", assetName, webUI, "", "")
 		assert.Nil(t, err)
 	})
 
@@ -85,7 +85,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 					},
 				}
 				bom := cdx.BOM{Vulnerabilities: &vulns}
-				err := PrintCycloneDXVexResults(bom, tc.threshold, "critical", assetName, webUI, "")
+				err := PrintCycloneDXVexResults(bom, tc.threshold, "critical", assetName, webUI, "", "")
 				if tc.shouldFail {
 					assert.NotNil(t, err)
 					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
@@ -124,7 +124,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 					},
 				}
 				bom := cdx.BOM{Vulnerabilities: &vulns}
-				err := PrintCycloneDXVexResults(bom, "critical", tc.threshold, assetName, webUI, "")
+				err := PrintCycloneDXVexResults(bom, "critical", tc.threshold, assetName, webUI, "", "")
 				if tc.shouldFail {
 					assert.NotNil(t, err)
 					assert.Contains(t, err.Error(), "exceed the configured risk threshold")
@@ -150,7 +150,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 			{BOMRef: "comp-1", PackageURL: "pkg:golang/github.com/example/lib@v1.2.3"},
 		}
 		bom := cdx.BOM{Vulnerabilities: &vulns, Components: &comps}
-		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "")
+		err := PrintCycloneDXVexResults(bom, "critical", "critical", assetName, webUI, "", "")
 		assert.Nil(t, err)
 	})
 
@@ -163,7 +163,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 			},
 		}
 		bom := cdx.BOM{Vulnerabilities: &vulns}
-		err := PrintCycloneDXVexResults(bom, "unknown", "invalid", assetName, webUI, "")
+		err := PrintCycloneDXVexResults(bom, "unknown", "invalid", assetName, webUI, "", "")
 		assert.Nil(t, err)
 	})
 }
@@ -273,7 +273,7 @@ func TestPrintCycloneDXVexResultsRiskIsNotCVSS(t *testing.T) {
 	}
 
 	// the devguard risk (2.0) is low, only the cvss (9.5) is critical - failOnRisk must not trigger
-	err := PrintCycloneDXVexResults(bom, "critical", "", "", "", "")
+	err := PrintCycloneDXVexResults(bom, "critical", "", "", "", "", "")
 	assert.NoError(t, err)
 }
 
@@ -291,7 +291,7 @@ func TestPrintCycloneDXVexResultsWithoutDevGuardRating(t *testing.T) {
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
-	err := PrintCycloneDXVexResults(bom, "critical", "", "", "", "")
+	err := PrintCycloneDXVexResults(bom, "critical", "", "", "", "", "")
 	w.Close()
 	os.Stdout = old
 	out, _ := io.ReadAll(r)
@@ -299,4 +299,15 @@ func TestPrintCycloneDXVexResultsWithoutDevGuardRating(t *testing.T) {
 	// no devguard risk: the risk column shows "-" and failOnRisk does not trigger
 	assert.NoError(t, err)
 	assert.Regexp(t, `CVE-2024-0001\S*\s*\|\s*(\S*-\S*)\s*\|`, string(out))
+}
+
+func TestDependencyRisksLink(t *testing.T) {
+	t.Run("adds artifact filter", func(t *testing.T) {
+		got := dependencyRisksLink("https://devguard.example.de", "org/projects/p/assets/a", "main", "pkg:oci/mongodb-7-0")
+		assert.Equal(t, "https://devguard.example.de/org/projects/p/assets/a/refs/main/dependency-risks/?artifact=pkg%3Aoci%2Fmongodb-7-0", got)
+	})
+	t.Run("no artifact name means no filter", func(t *testing.T) {
+		got := dependencyRisksLink("https://app.devguard.org/", "org/projects/p/assets/a", "main", "")
+		assert.Equal(t, "https://app.devguard.org/org/projects/p/assets/a/refs/main/dependency-risks/", got)
+	})
 }
