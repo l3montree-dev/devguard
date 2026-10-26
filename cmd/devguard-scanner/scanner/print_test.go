@@ -14,9 +14,12 @@
 package scanner
 
 import (
+	"io"
+	"os"
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/stretchr/testify/assert"
 )
@@ -77,7 +80,7 @@ func TestPrintCycloneDXVexResults(t *testing.T) {
 					{
 						ID: "CVE-2023-12345",
 						Ratings: &[]cdx.VulnerabilityRating{
-							{Score: &tc.risk},
+							{Score: &tc.risk, Method: dtos.ScoringMethodDevGuard},
 						},
 					},
 				}
@@ -251,4 +254,49 @@ func TestPrintSarifResults(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "1 unhandled vulnerabilities")
 	})
+}
+
+// https://github.com/l3montree-dev/devguard/issues/3077
+func TestPrintCycloneDXVexResultsRiskIsNotCVSS(t *testing.T) {
+	cvss := 9.5
+	risk := 2.0
+	bom := cdx.BOM{
+		Components: &[]cdx.Component{{BOMRef: "pkg:npm/foo@1.0.0", PackageURL: "pkg:npm/foo@1.0.0", Version: "1.0.0"}},
+		Vulnerabilities: &[]cdx.Vulnerability{{
+			ID: "CVE-2024-0001",
+			Ratings: &[]cdx.VulnerabilityRating{
+				{Score: &cvss, Method: cdx.ScoringMethodCVSSv31},
+				{Score: &risk, Method: dtos.ScoringMethodDevGuard},
+			},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/foo@1.0.0"}},
+		}},
+	}
+
+	// the devguard risk (2.0) is low, only the cvss (9.5) is critical - failOnRisk must not trigger
+	err := PrintCycloneDXVexResults(bom, "critical", "", "", "", "")
+	assert.NoError(t, err)
+}
+
+func TestPrintCycloneDXVexResultsWithoutDevGuardRating(t *testing.T) {
+	cvss := 9.5
+	bom := cdx.BOM{
+		Components: &[]cdx.Component{{BOMRef: "pkg:npm/foo@1.0.0", PackageURL: "pkg:npm/foo@1.0.0", Version: "1.0.0"}},
+		Vulnerabilities: &[]cdx.Vulnerability{{
+			ID:      "CVE-2024-0001",
+			Ratings: &[]cdx.VulnerabilityRating{{Score: &cvss, Method: cdx.ScoringMethodCVSSv31}},
+			Affects: &[]cdx.Affects{{Ref: "pkg:npm/foo@1.0.0"}},
+		}},
+	}
+
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	err := PrintCycloneDXVexResults(bom, "critical", "", "", "", "")
+	w.Close()
+	os.Stdout = old
+	out, _ := io.ReadAll(r)
+
+	// no devguard risk: the risk column shows "-" and failOnRisk does not trigger
+	assert.NoError(t, err)
+	assert.Regexp(t, `CVE-2024-0001\S*\s*\|\s*(\S*-\S*)\s*\|`, string(out))
 }

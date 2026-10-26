@@ -25,6 +25,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
@@ -136,7 +137,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		cvss := 0.0
 		if v.Ratings != nil {
 			for _, r := range *v.Ratings {
-				if r.Score != nil && (r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31) {
+				if r.Score != nil && (r.Method != dtos.ScoringMethodDevGuard) {
 					cvss = *r.Score
 				}
 			}
@@ -169,15 +170,17 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 
 		risk := 0.0
+		hasRisk := false
 		cvss := 0.0
 		if v.Ratings != nil {
 			for _, r := range *v.Ratings {
 				if r.Score != nil {
-					if r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31 {
+					if r.Method != dtos.ScoringMethodDevGuard {
 						cvss = *r.Score
-					}
-					if *r.Score > risk {
+					} else {
+						// its the risk value
 						risk = *r.Score
+						hasRisk = true
 					}
 				}
 			}
@@ -238,6 +241,11 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 		prevLibrary = libraryName
 
+		riskStr := "-"
+		if hasRisk {
+			riskStr = fmt.Sprintf("%.2f", risk)
+		}
+
 		colorRow := func(s string) string { return s }
 		if exceedsThreshold {
 			colorRow = func(s string) string { return text.FgRed.Sprint(s) }
@@ -246,7 +254,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		tw.AppendRow(table.Row{
 			libraryName,
 			colorRow(v.ID),
-			colorRow(fmt.Sprintf("%.2f", risk)),
+			colorRow(riskStr),
 			colorRow(fmt.Sprintf("%.1f", cvss)),
 			colorRow(installedVersion),
 			colorRow(fixedVersion),

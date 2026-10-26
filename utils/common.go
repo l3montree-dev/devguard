@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strings"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -224,4 +225,26 @@ func ValidatePurlFields(purl packageurl.PackageURL) error {
 		return fmt.Errorf("invalid purl version: %q", purl.Version)
 	}
 	return nil
+}
+
+func ScoreToSeverity(score float64) cdx.Severity {
+	if score >= 9.0 {
+		return cdx.SeverityCritical
+	} else if score >= 7.0 {
+		return cdx.SeverityHigh
+	} else if score >= 4.0 {
+		return cdx.SeverityMedium
+	}
+	return cdx.SeverityLow
+}
+
+func VectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
+	if strings.Contains(vector, "CVSS:3.0") {
+		return cdx.ScoringMethodCVSSv3
+	} else if strings.Contains(vector, "CVSS:2.0") {
+		return cdx.ScoringMethodCVSSv2
+	} else if strings.Contains(vector, "CVSS:3.1") {
+		return cdx.ScoringMethodCVSSv31
+	}
+	return cdx.ScoringMethodCVSSv4
 }
