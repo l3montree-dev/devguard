@@ -254,7 +254,6 @@ func (s *SLSAController) PublicKey(ctx shared.Context) error {
 // @Failure 401 {object} object "missing or invalid workload identity token"
 // @Router /slsa/build-provenance [post]
 func (s *SLSAController) BuildProvenance(ctx shared.Context) error {
-	// TODO: remove the hardcoded test token fallback
 	token := ctx.Request().Header.Get(workloadIdentityTokenHeader)
 	if token == "" {
 		return echo.NewHTTPError(401, "missing workload identity token in "+workloadIdentityTokenHeader+" header")
