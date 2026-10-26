@@ -2,6 +2,49 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.17.0] - 2026-10-26
+
+### Security
+
+- This release fixes some security issues. We will release further information later.
+
+### Added
+
+- **SLSA build provenance signing** — `POST /slsa/build-provenance/` takes an in-toto v1 statement with a SLSA v1 provenance predicate and the CI job's OIDC workload identity token (`X-Workload-Identity-Token` header). DevGuard verifies the token with its issuer, writes the verified identity into the provenance and signs it.
+- **Custom upstream registries for the dependency proxy** — dependency proxy configs take a new `registries` map (`npm`, `go`, `pypi`, `maven`, `composer`, `deb` → URL), so a proxy can sit in front of a private or mirrored registry instead of the public default
+- **Dependency proxy cache statistics** — `GET /admin/statistics/dependency-proxy-cache/` returns stats for the whole instance, and `GET …/dependency-proxy/cache-stats/` returns them per organization, project and asset (requires `manage` scope and update permission)
+- **Supplementary components in `devguard-scanner sca`** — `--upstreamPURL` adds components that no package manifest lists (for example vendored dependencies in a container image) to the SBOM. `--upstreamVCS` (`vcsType:vcsURL@vcsRevision`) adds VCS information and is matched to `--upstreamPURL` by index. Both flags can be repeated, and the scanner validates the given purls and warns about suspicious ones
+- `NumberForAssetsWithSBOM` on the instance dashboard
+- The scanner now links to the scanned artifact's dependency risks, using an `?artifact=` query parameter ([#2601](https://github.com/l3montree-dev/devguard/issues/2601))
+- `FindLicenseRisks` asset pipeline stage
+- `make vulndb` imports the vulnerability database, for faster local setup
+- `jq` is now part of the scanner image. Static binaries are copied out of the Nix store so their paths are predictable
+- River UI added to `docker-compose.yaml`, available on port `4040`
+
+### Changed
+
+- **Background jobs run on River Queue** — the daemons and the asset pipeline are now [River](https://riverqueue.com) jobs. River's tables live in the regular DevGuard database and its migrations run automatically, so no extra infrastructure is needed. Leader election and the old worker package have been removed
+- **Overhauled vulnerability scan in the asset pipeline** — vulnerable paths are now resolved in memory with a breadth-first search over the SBOM merkle tree, which stops early when the number of paths explodes.
+- **Auto reopen is now a VEX rule** — the per-asset `vulnAutoReopenAfterDays` setting is replaced by a "reopened" VEX rule that is evaluated against accepted vulnerabilities.
+- **Unauthenticated dependency proxy routes removed** — the dependency proxy (npm, Go, PyPI, Maven, Composer, Debian and OCI) is now only served under the secret-scoped `/dependency-proxy/{secret}/…` and `/v2/{secret}/…` routes. `DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED` no longer has any effect. **Breaking** for clients that used the routes without a secret
+- **Dependency proxy cache split per organization** — every organization (secret) gets its own cache. `DEPENDENCY_PROXY_CACHE_MAX_SIZE_MB` (default 1024) is now the total size for the whole instance and is spread across all caches.
+- **Breaking:** `vulnerabilityName` in vuln events was renamed to `resourceIdentifier`
+- Request DTOs now have upper length limits on free-text fields (for example title 256, description 4000), and a new semgrep rule flags unbounded string fields. DTO types lost their `DTO` suffix
+- Project tokens need `manage` scope and project create permission to create releases, and the same scope and permission model applies to creating projects
+- `LOG_LEVEL` is now respected (`debug`, `info`, `warn`, `error`). The default is still `debug`
+- GitHub App installation callbacks return proper HTTP errors, and failures to save the installation now return 500 instead of 400
+- Removed `POST …/components/licenses/refresh/` and `POST …/dependency-vulns/sync/`. Licenses and dependency vulnerabilities are refreshed by the asset pipeline
+
+### Fixed
+
+- **Scanner showed CVSS as risk** — `devguard-scanner` treated any CVSS rating as the risk value and only recognised CVSS 3.x ratings. Risk is now read only from the `DevGuard` rating and shows `-` when there is none, and the scan endpoint reports the correct CVSS version for each vector ([#3077](https://github.com/l3montree-dev/devguard/issues/3077))
+- PAT public keys with leading zero bytes were encoded incorrectly, which could break PAT authentication for those keys
+- Project tokens can create assets, and organization tokens can create projects
+- Event links for compliance posture events now include `framework_control_id`, so the frontend can build them
+- Project avatars are kept in search results
+- Kratos database password mismatch in `initdb.sql`
+- Trailing slashes in the web UI URL no longer produce double slashes in scanner links
+
 ## [v1.16.1] - 2026-10-08
 
 ### Added
