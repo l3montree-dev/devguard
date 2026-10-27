@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/vulndb"
 )
@@ -119,4 +120,17 @@ func GenerateComment(author string, commentText string, justification string) st
 	sb.WriteString(fmt.Sprintf("<sub>%s</sub>", DEVGUARD_COMMENT_TEXT))
 
 	return sb.String()
+}
+
+func FormatComponentTree(settings models.RedmineIntegration, dependencyVuln *models.DependencyVuln) *string {
+	componentTree := ""
+	switch settings.MermaidIntegration {
+	case models.CommonMark:
+		componentTree = "```" + commonint.MermaidFlowChart([][]string{dependencyVuln.VulnerabilityPath}) + "```\n\n"
+	case models.Macro:
+		componentTree = "{{" + commonint.MermaidFlowChart([][]string{dependencyVuln.VulnerabilityPath}) + "}}\n\n"
+	default:
+		return nil
+	}
+	return &componentTree
 }

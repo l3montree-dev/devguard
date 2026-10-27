@@ -68,8 +68,8 @@ type IssueCreateOptions struct {
 	ProjectID   int     `json:"project_id" structs:"project_id"`
 	Subject     *string `json:"subject" structs:"subject"`
 	Description *string `json:"description,omitempty" structs:"description,omitempty"`
-	StatusID    int     `json:"status_id,omitempty" structs:"status_id,omitempty"`
-	PriorityID  int     `json:"priority_id,omitempty" structs:"priority_id,omitempty"`
+	StatusID    *int    `json:"status_id,omitempty" structs:"status_id,omitempty"`
+	PriorityID  *int    `json:"priority_id,omitempty" structs:"priority_id,omitempty"`
 	TrackerID   int     `json:"tracker_id,omitempty" structs:"tracker_id,omitempty"`
 }
 
@@ -80,8 +80,8 @@ type IssueCreateRequest struct {
 type IssueEditOptions struct {
 	Subject     *string `json:"subject,omitempty" structs:"subject,omitempty"`
 	Description *string `json:"description,omitempty" structs:"description,omitempty"`
-	StatusID    int     `json:"status_id,omitempty" structs:"status_id,omitempty"`
-	PriorityID  int     `json:"priority_id,omitempty" structs:"priority_id,omitempty"`
+	StatusID    *int    `json:"status_id,omitempty" structs:"status_id,omitempty"`
+	PriorityID  *int    `json:"priority_id,omitempty" structs:"priority_id,omitempty"`
 	Notes       string  `json:"notes,omitempty" structs:"notes,omitempty"`
 }
 
