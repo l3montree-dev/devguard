@@ -70,59 +70,9 @@ rec {
       pkgs.bash
       pkgs.coreutils
       pkgs.gnutar
-      barman
+      pkgs.barman
     ];
   };
-
-  # Barman Cloud needs the s3, azure and google clients. Their python dependencies are bumped to versions nixpkgs does
-  # not ship yet, because the image scan fails on high severity vulnerabilities in them - drop an override once
-  # nixpkgs caught up. Only the python set barman is built with is affected.
-  python = pkgs.python3.override {
-    self = python;
-    packageOverrides = pyfinal: pyprev: {
-      aiohttp = pyprev.aiohttp.overridePythonAttrs (old: rec {
-        version = "3.14.4";
-        src = pkgs.fetchFromGitHub {
-          owner = "aio-libs";
-          repo = "aiohttp";
-          tag = "v${version}";
-          hash = "sha256-ArlEDpuUQJ6Ueup7tL9H1Nd3/TgajMaHtg4pJiSGOy8=";
-        };
-      });
-      # the python bindings build against the brotli library
-      brotli = pyprev.brotli.override {
-        brotli = pkgs.brotli.overrideAttrs (old: rec {
-          version = "1.2.1";
-          src = pkgs.fetchFromGitHub {
-            owner = "google";
-            repo = "brotli";
-            tag = "v${version}";
-            hash = "sha256-llY72cYffDv0ugsH0p89xIPEbElV4L8u7U/Fe8hT3gI=";
-          };
-        });
-      };
-      certifi = pyprev.certifi.overridePythonAttrs (old: rec {
-        version = "2026.10.19";
-        src = pkgs.fetchFromGitHub {
-          owner = "certifi";
-          repo = "python-certifi";
-          rev = version;
-          hash = "sha256-eiNK0yRcaOr0HW/kCc+0oOUXOl0jh+2rT41qBdDrVK8=";
-        };
-      });
-      pyjwt = pyprev.pyjwt.overridePythonAttrs (old: rec {
-        version = "2.14.0";
-        src = pkgs.fetchFromGitHub {
-          owner = "jpadilla";
-          repo = "pyjwt";
-          tag = version;
-          hash = "sha256-SxJ2GQt1pfm8iAeTB2RmH2kliGeQ6whkM5nuesI1s/U=";
-        };
-      });
-    };
-  };
-
-  barman = pkgs.barman.override { python3Packages = python.pkgs; };
 
   postgresql = pkgs.postgresql_16.withPackages (p: [
     p.pg-semver
