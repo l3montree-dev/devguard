@@ -149,6 +149,7 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      id-token: write
     with:
       nix-target-amd64: devguard-amd64
       nix-target-arm64: devguard-arm64
@@ -175,6 +176,7 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      id-token: write
     with:
       nix-target-amd64: devguard-scanner-amd64
       nix-target-arm64: devguard-scanner-arm64
@@ -201,6 +203,7 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      id-token: write
     with:
       upstream-version: "v26.2.0"
       nix-target-amd64: kratos-amd64
@@ -227,6 +230,7 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      id-token: write
     with:
       upstream-version: "16.15"
       nix-target-amd64: postgresql-amd64
