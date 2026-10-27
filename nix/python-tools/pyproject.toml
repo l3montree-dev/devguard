@@ -14,5 +14,5 @@ exclude-newer-package = { semgrep = "2026-10-20T21:32:31.377Z", checkov = "2026-
 # These constraints are enforced during `uv lock` and captured in uv.lock —
 # no manual Nix overrides needed.
 constraint-dependencies = [
-
+    
 ]
