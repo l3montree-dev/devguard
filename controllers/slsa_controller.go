@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -211,6 +212,13 @@ func loadProvenanceSigningKey() (*provenanceSigningKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse signing key %q: %w", keyPath, err)
 	}
+	// use the key id verifiers can compute from the published public key (sha256 of its DER encoding) instead of the
+	// TUF key id securesystemslib derives from its own key format
+	publicKeyBlock, _ := pem.Decode([]byte(key.KeyVal.Public))
+	if publicKeyBlock == nil {
+		return nil, fmt.Errorf("signing key %q has no pem encoded public key", keyPath)
+	}
+	key.KeyID = utils.HashBytes(publicKeyBlock.Bytes)
 	signer, err := signerverifier.NewECDSASignerVerifierFromSSLibKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("signing key %q is not an ecdsa key: %w", keyPath, err)

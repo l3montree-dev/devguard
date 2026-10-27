@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -37,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -158,14 +158,8 @@ func (s tokenSigner) Sign(_ context.Context, data []byte) ([]byte, error) {
 	return ecdsa.SignASN1(rand.Reader, s.key, digest[:])
 }
 
-// KeyID is the hex sha256 of the DER encoded public key
 func (s tokenSigner) KeyID() (string, error) {
-	der, err := x509.MarshalPKIXPublicKey(&s.key.PublicKey)
-	if err != nil {
-		return "", err
-	}
-	digest := sha256.Sum256(der)
-	return hex.EncodeToString(digest[:]), nil
+	return utils.PublicKeyID(&s.key.PublicKey)
 }
 
 func writeProvenance(output string, content []byte) error {
