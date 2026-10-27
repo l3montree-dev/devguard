@@ -95,7 +95,6 @@ func (i *RedmineIntegration) Delete(ctx shared.Context) error {
 		})
 	}
 
-	// parse the id
 	parsedID, err := uuid.Parse(id)
 	if err != nil {
 		return ctx.JSON(400, map[string]any{
@@ -145,15 +144,12 @@ func (i *RedmineIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRep
 	repos := []dtos.GitRepository{}
 
 	if org.RedmineIntegrations != nil {
-		slog.Info("found Redmine integration for organization", "orgID", org.GetID(), "integrationCount", len(org.RedmineIntegrations))
 		redmineClient, err := NewRedmineBatchClient(i.redmineIntegrationRepository, org.RedmineIntegrations)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Redmine client: %w", err)
 		}
 
-		// get the repos
 		r, err := redmineClient.ListRepositories(ctx.QueryParam("search"))
-		slog.Info("listing repositories for Redmine integration", "orgID", org.GetID(), "reposCount", len(r), "err", err)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get repositories from Redmine: %w", err)
 		}
@@ -163,9 +159,9 @@ func (i *RedmineIntegration) ListRepositories(ctx shared.Context) ([]dtos.GitRep
 		})...)
 		return repos, nil
 	}
+
 	slog.Warn("no Redmine integration found for organization", "orgID", org.GetID())
 	return nil, fmt.Errorf("no Redmine integration found for organization %s", org.GetID())
-
 }
 
 func redmineTicketIDToIssueID(id string) (int, error) {
@@ -185,7 +181,6 @@ func extractIntegrationIDFromRepoID(repoID string) (uuid.UUID, error) {
 }
 
 func extractProjectIDFromRepoID(repoID string) (int, error) {
-	slog.Info("extracting project ID from repo ID", "repoID", repoID)
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
 }
 
@@ -365,8 +360,6 @@ func (i *RedmineIntegration) CreateIssue(ctx context.Context, asset models.Asset
 	vuln.SetTicketURL(fmt.Sprintf("%s/issues/%d", client.BaseURL, createdIssue.ID))
 	vuln.SetManualTicketCreation(userID != "system")
 
-	slog.Info("created redmine ticket", "assetID", asset.ID, "vulnID", vuln.GetID(), "ticketURL", fmt.Sprintf("%s/issues/%d", client.BaseURL, createdIssue.ID))
-
 	vulnEvent := models.NewMitigateEvent(
 		vuln.GetID(),
 		vuln.GetType(),
@@ -416,7 +409,7 @@ func (i *RedmineIntegration) UpdateIssue(ctx context.Context, asset models.Asset
 
 	if err != nil {
 		//check if err is 404 - if so, we can not reopen the issue
-		if err.Error() == `failed to create issue comment, status code: 404, response: {"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}` {
+		if err.Error() == `failed to edit issue, status code: 404, response: ` {
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, false, userAgent)
 			// save the event
@@ -468,8 +461,6 @@ func (i *RedmineIntegration) updateDependencyVulnTicket(
 		StatusID:    expectedIssueState,
 		PriorityID:  priority,
 	}
-
-	slog.Info("updating redmine ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(*expectedIssueState))
 
 	err = client.EditIssue(ctx, ticketID, issue)
 	if err != nil {
@@ -540,7 +531,6 @@ func (i *RedmineIntegration) TestAndSave(ctx shared.Context) error {
 		OrgID:       (shared.GetOrg(ctx).GetID()),
 	}
 
-	// check if the token valid and get the account ID
 	client, err := NewRedmineClient(data.Token, data.URL)
 	if err != nil {
 		slog.Error("failed to create Redmine client", "err", err)

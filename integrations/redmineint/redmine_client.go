@@ -125,8 +125,6 @@ func (c *Client) EditIssue(ctx context.Context, issueID int, issue *IssueEditOpt
 		slog.Error("Failed to marshal issue", "error", err)
 		return fmt.Errorf("failed to marshal issue: %w", err)
 	}
-	// Log the last 100 characters of the body for debugging purposes
-	slog.Debug("Editing issue", "issueID", issueID, "issue", string(bodyBytes)[max(0, len(string(bodyBytes))-100):])
 
 	body := bytes.NewBuffer(bodyBytes)
 	resp, err := c.redmineRequest(ctx, http.MethodPut, fmt.Sprintf("/issues/%s.json", strconv.Itoa(issueID)), nil, body)
@@ -213,7 +211,6 @@ func (c *Client) redmineRequest(ctx context.Context, method string, url string, 
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	slog.Debug("Making Redmine request", "method", method, "url", req.URL.String(), "query", query, "key", c.AccessToken)
 	req.Header.Set("X-Redmine-API-Key", c.AccessToken)
 
 	return utils.EgressClient.Do(req)
