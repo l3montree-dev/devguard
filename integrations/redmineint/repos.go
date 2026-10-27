@@ -46,21 +46,16 @@ type IssueResponse struct {
 }
 
 type Issue struct {
-	ID           int         `json:"id" structs:"id"`
-	Project      NamedId     `json:"project" structs:"project"`
-	Tracker      NamedId     `json:"tracker" structs:"tracker"`
-	Status       IssueStatus `json:"status" structs:"status"`
-	Priority     NamedId     `json:"priority" structs:"priority"`
-	Author       NamedId     `json:"author" structs:"author"`
-	FixedVersion NamedId     `json:"fixed_version,omitempty" structs:"fixed_version,omitempty"`
-	Parent       Id          `json:"parent,omitempty" structs:"parent,omitempty"`
-	Subject      string      `json:"subject" structs:"subject"`
-	Description  string      `json:"description,omitempty" structs:"description,omitempty"`
-	// StartDate    *Time         `json:"start_date,omitempty" structs:"start_date,omitempty"`
-	// DueDate      *Time         `json:"due_date,omitempty" structs:"due_date,omitempty"`
-	// CreatedOn    *Time         `json:"created_on,omitempty" structs:"created_on,omitempty"`
-	// UpdatedOn    *Time         `json:"updated_on,omitempty" structs:"updated_on,omitempty"`
-	// ClosedOn     *Time         `json:"closed_on,omitempty" structs:"closed_on,omitempty"`
+	ID           int           `json:"id" structs:"id"`
+	Project      NamedId       `json:"project" structs:"project"`
+	Tracker      NamedId       `json:"tracker" structs:"tracker"`
+	Status       IssueStatus   `json:"status" structs:"status"`
+	Priority     NamedId       `json:"priority" structs:"priority"`
+	Author       NamedId       `json:"author" structs:"author"`
+	FixedVersion NamedId       `json:"fixed_version,omitempty" structs:"fixed_version,omitempty"`
+	Parent       Id            `json:"parent,omitempty" structs:"parent,omitempty"`
+	Subject      string        `json:"subject" structs:"subject"`
+	Description  string        `json:"description,omitempty" structs:"description,omitempty"`
 	CustomFields []CustomField `json:"custom_fields,omitempty" structs:"custom_fields,omitempty"`
 }
 
