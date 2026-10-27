@@ -24,14 +24,6 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 			return nil
 		}
 
-		assetVersionName := shared.GetAssetVersion(event.Ctx).Name
-
-		projectSlug, err := shared.GetProjectSlug(event.Ctx)
-
-		if err != nil {
-			return err
-		}
-
 		vulnID, vulnType, err := shared.GetVulnID(event.Ctx)
 
 		if err != nil {
@@ -55,14 +47,7 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 			vuln = &v
 		}
 
-		orgSlug, err := shared.GetOrgSlug(event.Ctx)
-		if err != nil {
-			return err
-		}
-
-		session := shared.GetSession(event.Ctx)
-
-		return i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetActorName(), userAgent)
+		return i.createIssueFromEvent(event.Ctx, asset, vuln, event.Justification, userAgent)
 	case shared.VulnEvent:
 		ev := event.Event
 
@@ -131,8 +116,11 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 			comments = GenerateComment(member.Name, "marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))
 		case dtos.EventTypeReopened:
 			comments = GenerateComment(member.Name, "reopened the vulnerability", utils.SafeDereference(ev.Justification))
-			// TODO: Recreate closed issues
-			// err = i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, utils.SafeDereference(ev.Justification), session.GetActorName(), userAgent)
+			err := i.createIssueFromEvent(event.Ctx, asset, vuln, utils.SafeDereference(ev.Justification), userAgent)
+			if err != nil {
+				slog.Error("failed to recreate issue for reopened vulnerability", "err", err, "vulnID", vuln.GetID())
+				return fmt.Errorf("failed to recreate issue for reopened vulnerability: %w", err)
+			}
 		case dtos.EventTypeComment:
 			comments = GenerateComment(member.Name, "commented on DevGuard", utils.SafeDereference(ev.Justification))
 		}
@@ -157,4 +145,22 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 	}
 	return nil
 
+}
+
+func (i *RedmineIntegration) createIssueFromEvent(ctx shared.Context, asset models.Asset, vuln models.Vuln, justification string, userAgent *string) error {
+	assetVersionName := shared.GetAssetVersion(ctx).Name
+	projectSlug, err := shared.GetProjectSlug(ctx)
+	if err != nil {
+		slog.Error("failed to get project slug", "err", err)
+		return err
+	}
+	orgSlug, err := shared.GetOrgSlug(ctx)
+	if err != nil {
+		slog.Error("failed to get org slug", "err", err)
+		return err
+	}
+	session := shared.GetSession(ctx)
+
+	err = i.CreateIssue(ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, justification, session.GetActorName(), userAgent)
+	return nil
 }
