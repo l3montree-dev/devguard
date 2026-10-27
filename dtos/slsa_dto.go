@@ -17,3 +17,6 @@ package dtos
 
 const SLSAProvenanceV1PredicateType = "https://slsa.dev/provenance/v1"
 const SLSACIWorkflowBuildType = "https://devguard.org/slsa/build-types/ci-workflow/v1"
+
+// SLSASelfSignedBuilderID marks provenance signed with a devguard token instead of by DevGuard - no build platform verified it (SLSA Build L1)
+const SLSASelfSignedBuilderID = "https://devguard.org/slsa/builders/self-signed/v1"
