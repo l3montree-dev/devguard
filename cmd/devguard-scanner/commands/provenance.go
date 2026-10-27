@@ -80,10 +80,13 @@ func newSignProvenanceCommand() *cobra.Command {
 DevGuard verifies the OIDC workload identity token of the CI job with its issuer and writes the
 verified identity into the provenance before signing it:
 
-  predicate.runDetails.builder.id                                         the ci config which ran the build, including the issuer
-  predicate.buildDefinition.internalParameters.devguard.workloadIdentity  all claims of the verified token
+  predicate.runDetails.builder.id                                         the ci config which ran the build
+  predicate.buildDefinition.externalParameters.workflow                   the ci config which started the run
+  predicate.buildDefinition.internalParameters.devguard.workloadIdentity  the non personal claims of the verified token
+  predicate.buildDefinition.resolvedDependencies                          the source commit of the run
 
-Every field describing who built the artifact is overwritten. Subjects and the build description
+Every field describing the build platform is overwritten. Only the subjects,
+predicate.buildDefinition.externalParameters.inputs and the startedOn and finishedOn timestamps
 are kept as sent.
 
 The token must be issued for the audience of the DevGuard API. In GitLab request it with:
