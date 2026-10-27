@@ -186,7 +186,7 @@ func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) e
 func (c *IntegrationController) TestAndSaveRedmineIntegration(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
-	slog.Info("Testing and saving Redmine integration", "redmine", redmine)
+
 	if redmine == nil {
 		slog.Error("Redmine integration not enabled")
 		return ctx.JSON(404, "Redmine integration not enabled")

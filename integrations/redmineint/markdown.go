@@ -30,8 +30,6 @@ func Markdown(exp vulndb.Explanation, baseURL, orgSlug, projectSlug, assetSlug, 
 
 	str.WriteString("### Description\n")
 	str.WriteString(exp.CVEDescription)
-	str.WriteString("\n\n<script>alert('evil')</script>")
-	str.WriteString("\n\n<img src/onerror=alert(1)>")
 	str.WriteString("\n\n")
 	str.WriteString("### Affected component \n")
 	artifactNames := strings.Fields(exp.ArtifactNames)
@@ -65,13 +63,11 @@ func Markdown(exp vulndb.Explanation, baseURL, orgSlug, projectSlug, assetSlug, 
 	fmt.Fprintf(&str, "| CVSS-BE | `%.1f` | %s | \n", exp.WithEnvironment, exp.CVSSBEMessage)
 	fmt.Fprintf(&str, "| CVSS-B | `%.1f` | %s | \n", exp.BaseScore, exp.CVSSMessage)
 	str.WriteString("\n")
-	//TODO: change it
+
 	fmt.Fprintf(&str, "More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, exp.DependencyVulnID)
-	// add information about slash commands
-	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
 
-	// TODO: Add webhook support
+	// TODO: Redmine webhooks are currently not implemented. Once they are, we can add the issue commands.
 	// utils.AddSlashCommandsToDependencyVuln(&str)
 	return str.String()
 }
@@ -102,6 +98,7 @@ func GenerateFirstPartyIssueDescription(firstPartyVuln models.FirstPartyVuln, ba
 
 	sb.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID))
 
+	// TODO: Redmine webhooks are currently not implemented. Once they are, we can add the issue commands.
 	// sb.WriteString(fmt.Sprintf("\n\n<details>\n<summary>Issue Commands</summary>\n\n%s\n\n</details>\n", SlashCommandsForFirstPartyVuln()))
 	return sb.String()
 }

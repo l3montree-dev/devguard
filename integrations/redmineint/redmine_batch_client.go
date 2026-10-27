@@ -3,7 +3,6 @@ package redmineint
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -29,7 +28,7 @@ func NewRedmineBatchClient(r shared.RedmineIntegrationRepository, redmineIntegra
 		if err != nil {
 			return nil, fmt.Errorf("failed to get Redmine client for integration ID %s: %w", redmineIntegration.ID, err)
 		}
-		slog.Debug("Creating Redmine client for integration", "integration_id", redmineIntegration.ID, "url", redmineIntegration.URL, "access_token", redmineIntegration.AccessToken)
+
 		client := Client{
 			RedmineIntegrationID: redmineIntegration.ID,
 			AccessToken:          redmineIntegration.AccessToken,
