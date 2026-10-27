@@ -32,6 +32,19 @@ func sanitizeAPIURL(apiURL string) string {
 	return apiURL
 }
 
+// isValidPathList checks every entry of a comma separated list of paths - commands like 'provenance generate' take several files
+func isValidPathList(paths string) error {
+	for path := range strings.SplitSeq(paths, ",") {
+		if path = strings.TrimSpace(path); path == "" {
+			continue
+		}
+		if err := isValidPath(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // IsValidPath checks if a string is a valid file path
 func isValidPath(path string) error {
 	// Check for null bytes
