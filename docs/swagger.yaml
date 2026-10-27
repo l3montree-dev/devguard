@@ -544,6 +544,7 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
+          description: New in 1.7
         issuerName:
           type: string
         notValidAfter:
@@ -1875,7 +1876,6 @@ components:
       - workflows
       type: object
     cyclonedx.Hash:
-      description: New in 1.7
       properties:
         alg:
           $ref: '#/components/schemas/cyclonedx.HashAlgorithm'
@@ -2752,6 +2752,7 @@ components:
           uniqueItems: false
         manufacture:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
+          description: 'Deprecated: Use Component Manufacturer instead.'
         manufacturer:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         properties:
@@ -2805,7 +2806,6 @@ components:
       - phone
       type: object
     cyclonedx.OrganizationalEntity:
-      description: 'Deprecated: Use Component Manufacturer instead.'
       properties:
         address:
           $ref: '#/components/schemas/cyclonedx.PostalAddress'
@@ -3026,6 +3026,7 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
+          description: New in 1.7
         format:
           type: string
         id:
@@ -5701,6 +5702,10 @@ components:
           type: string
         type:
           $ref: '#/components/schemas/dtos.ExternalReferenceType'
+          enum:
+          - cyclonedx
+          - csaf
+          - openvex
         url:
           maxLength: 2048
           type: string
@@ -5740,6 +5745,10 @@ components:
           type: string
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
+          enum:
+          - accepted
+          - falsePositive
+          - reopened
         justification:
           maxLength: 4000
           type: string
@@ -5811,7 +5820,6 @@ components:
       - waitDuration
       type: object
     dtos.DatabaseSpecifics:
-      description: specific additional information, not standardized
       properties:
         cwe_ids:
           description: array of cwe ids associated with this vulnerability
@@ -6306,9 +6314,6 @@ components:
       - csaf
       - openvex
       - unknown
-      - cyclonedx
-      - csaf
-      - openvex
       type: string
       x-enum-varnames:
       - ExternalReferenceTypeCycloneDX
@@ -6847,12 +6852,6 @@ components:
       - low
       - high
       - X
-      - X
-      - low
-      - high
-      - X
-      - low
-      - high
       type: string
       x-enum-varnames:
       - MACLow
@@ -6865,16 +6864,6 @@ components:
       - local
       - physical
       - X
-      - X
-      - network
-      - adjacent
-      - local
-      - physical
-      - X
-      - network
-      - adjacent
-      - local
-      - physical
       type: string
       x-enum-varnames:
       - MAVNetwork
@@ -6888,14 +6877,6 @@ components:
       - low
       - high
       - X
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
       type: string
       x-enum-varnames:
       - MPRNone
@@ -6904,30 +6885,6 @@ components:
       - MPRNotDefined
     dtos.ModifiedRequirementLevel:
       enum:
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
-      - X
-      - none
-      - low
-      - high
       - X
       - none
       - low
@@ -6943,12 +6900,6 @@ components:
       - unchanged
       - changed
       - X
-      - X
-      - unchanged
-      - changed
-      - X
-      - unchanged
-      - changed
       type: string
       x-enum-varnames:
       - MSUnchanged
@@ -6956,12 +6907,6 @@ components:
       - MSNotDefined
     dtos.ModifiedUserInteraction:
       enum:
-      - X
-      - none
-      - required
-      - X
-      - none
-      - required
       - X
       - none
       - required
@@ -6984,6 +6929,7 @@ components:
           uniqueItems: false
         database_specific:
           $ref: '#/components/schemas/dtos.DatabaseSpecifics'
+          description: specific additional information, not standardized
         details:
           type: string
         id:
@@ -7088,6 +7034,11 @@ components:
             $ref: '#/components/schemas/dtos.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -7115,6 +7066,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -7237,6 +7189,11 @@ components:
             $ref: '#/components/schemas/dtos.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -7266,6 +7223,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -7571,6 +7529,11 @@ components:
             $ref: '#/components/schemas/dtos.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -7605,6 +7568,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -7837,6 +7801,7 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.Project'
+          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -7982,6 +7947,7 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.Project'
+          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -8143,6 +8109,98 @@ components:
       required:
       - recommendedVersion
       type: object
+    dtos.RedmineIntegration:
+      properties:
+        closeStatusId:
+          type: integer
+        criticalPriorityId:
+          type: integer
+        defaultStatusId:
+          type: integer
+        highPriorityId:
+          type: integer
+        id:
+          type: string
+        lowPriorityId:
+          type: integer
+        mediumPriorityId:
+          type: integer
+        mermaidIntegration:
+          type: string
+        name:
+          type: string
+        obfuscatedToken:
+          type: string
+        trackerId:
+          type: integer
+        url:
+          type: string
+      required:
+      - closeStatusId
+      - criticalPriorityId
+      - defaultStatusId
+      - highPriorityId
+      - id
+      - lowPriorityId
+      - mediumPriorityId
+      - mermaidIntegration
+      - name
+      - obfuscatedToken
+      - trackerId
+      - url
+      type: object
+    dtos.RedmineIntegrationProperties:
+      properties:
+        priorities:
+          items:
+            $ref: '#/components/schemas/dtos.RedminePriority'
+          type: array
+          uniqueItems: false
+        statuses:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineStatus'
+          type: array
+          uniqueItems: false
+        trackers:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineTracker'
+          type: array
+          uniqueItems: false
+      required:
+      - priorities
+      - statuses
+      - trackers
+      type: object
+    dtos.RedminePriority:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      type: object
+    dtos.RedmineStatus:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      type: object
+    dtos.RedmineTracker:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      type: object
     dtos.Relationship:
       properties:
         relationshipType:
@@ -8288,24 +8346,6 @@ components:
       type: object
     dtos.RequirementLevel:
       enum:
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
-      - low
-      - medium
-      - high
       - low
       - medium
       - high
@@ -8723,6 +8763,10 @@ components:
           uniqueItems: false
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
+          enum:
+          - accepted
+          - falsePositive
+          - reopened
       required:
       - celExpression
       - eventType
@@ -8944,12 +8988,6 @@ components:
       - removedComplianceComponent
       - detected
       - rawRiskAssessmentUpdated
-      - accepted
-      - falsePositive
-      - reopened
-      - accepted
-      - falsePositive
-      - reopened
       type: string
       x-enum-varnames:
       - EventTypeFixed
@@ -9285,8 +9323,6 @@ components:
       - versionStart
       type: object
     github_com_l3montree-dev_devguard_database_models.Artifact:
-      description: 'Ensure foreign key field order matches Artifact primary key: ArtifactName,
-        AssetVersionName, AssetID'
       properties:
         artifactName:
           type: string
@@ -9677,6 +9713,8 @@ components:
       properties:
         artifact:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
+          description: 'Ensure foreign key field order matches Artifact primary key:
+            ArtifactName, AssetVersionName, AssetID'
         artifactName:
           type: string
         assetId:
@@ -9801,6 +9839,9 @@ components:
           type: string
         target_cve_data:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
+          description: |-
+            TargetCVEData is populated by GORM nested preload. It is nil when the target
+            CVE does not exist in this database — no DB-level FK constraint is added.
       required:
       - relationship_type
       - source_cve
@@ -10211,6 +10252,16 @@ components:
       - updatedAt
       - vulnAssetId
       type: object
+    github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType:
+      enum:
+      - none
+      - macro
+      - commonmark
+      type: string
+      x-enum-varnames:
+      - None
+      - Macro
+      - CommonMark
     github_com_l3montree-dev_devguard_database_models.Org:
       properties:
         configFiles:
@@ -10265,6 +10316,11 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -10297,6 +10353,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -10479,6 +10536,55 @@ components:
       x-enum-varnames:
       - ProjectTypeDefault
       - ProjectTypeDynamic
+    github_com_l3montree-dev_devguard_database_models.RedmineIntegration:
+      properties:
+        closeStatusId:
+          type: integer
+        createdAt:
+          type: string
+        criticalPriorityId:
+          type: integer
+        defaultStatusId:
+          type: integer
+        highPriorityId:
+          type: integer
+        id:
+          type: string
+        lowPriorityId:
+          type: integer
+        mediumPriorityId:
+          type: integer
+        mermaidIntegration:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType'
+        name:
+          type: string
+        org:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
+        orgId:
+          type: string
+        trackerId:
+          type: integer
+        updatedAt:
+          type: string
+        url:
+          type: string
+      required:
+      - closeStatusId
+      - createdAt
+      - criticalPriorityId
+      - defaultStatusId
+      - highPriorityId
+      - id
+      - lowPriorityId
+      - mediumPriorityId
+      - mermaidIntegration
+      - name
+      - org
+      - orgId
+      - trackerId
+      - updatedAt
+      - url
+      type: object
     github_com_l3montree-dev_devguard_database_models.SupplyChain:
       properties:
         assetId:
@@ -10511,6 +10617,7 @@ components:
       properties:
         asset:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
+          description: Relationships
         assetId:
           description: Composite key components (for indexing and queries)
           type: string
@@ -10969,28 +11076,22 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
       type: integer
       x-enum-varnames:
       - minDuration
@@ -11001,28 +11102,22 @@ components:
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
     transformer.MinimalTree:
       properties:
         dependencies:
@@ -13028,6 +13123,154 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Test and save Jira integration credentials
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Redmine integration ID
+        in: path
+        name: redmine_integration_id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete a Redmine integration access token
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Redmine integration ID
+        in: path
+        name: redmine_integration_id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.RedmineIntegrationProperties'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Retrieve Redmine integration properties (trackers, statuses, priorities)
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Redmine integration ID
+        in: path
+        name: redmine_integration_id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                closeStatus:
+                  type: integer
+                criticalPriority:
+                  type: integer
+                defaultStatus:
+                  type: integer
+                highPriority:
+                  type: integer
+                lowPriority:
+                  type: integer
+                mediumPriority:
+                  type: integer
+                mermaidIntegration:
+                  type: string
+                tracker:
+                  type: integer
+              title: body
+              type: object
+        description: Redmine integration settings
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.RedmineIntegration'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Update Redmine integration settings
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/test-and-save/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                token:
+                  type: string
+                tracker:
+                  type: string
+                url:
+                  type: string
+              title: body
+              type: object
+        description: Redmine credentials
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.RedmineIntegration'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Test and save Rdemine integration credentials
       tags:
       - Integrations
   /organizations/{organization}/integrations/repositories:
@@ -18516,10 +18759,16 @@ paths:
           type: string
       requestBody:
         content:
-          application/x-www-form-urlencoded:
+          multipart/form-data:
             schema:
-              title: file
-              type: file
+              properties:
+                file:
+                  description: SBOM file
+                  format: binary
+                  type: string
+              required:
+              - file
+              type: object
         description: SBOM file
         required: true
       responses:

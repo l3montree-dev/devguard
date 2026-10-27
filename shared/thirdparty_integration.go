@@ -15,6 +15,7 @@ const (
 	GitHubIntegrationID  IntegrationID = "github"
 	AggregateID          IntegrationID = "aggregate"
 	JiraIntegrationID    IntegrationID = "jira"
+	RedmineIntegrationID IntegrationID = "redmine"
 	WebhookIntegrationID IntegrationID = "webhook"
 )
 
