@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.17.1] - 2026-10-27
+
+### Fixed
+
+- **SLSA build provenance builder id** — `devguard-scanner` v1.17.0 set `runDetails.builder.id` in generated SLSA provenance to `https://devguard.org` instead of `devguard.org`. Admission policies that pin the builder id to `devguard.org`, like the Kyverno `verify-image-signatures` policy of the Helm chart, rejected the v1.17.0 images. The id is `devguard.org` again. Provenance already attested on v1.17.0 images keeps `https://devguard.org`, so policies that verify it need to accept both values (the Helm chart does since its next release)
+- **`devguard-cli vulndb export` failed to start** 
+
+---
+
 ## [v1.17.0] - 2026-10-26
 
 ### Security
