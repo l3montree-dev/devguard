@@ -236,21 +236,22 @@ func (i *RedmineIntegration) createDependencyVulnIssue(ctx context.Context, depe
 	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
 	assetSlug := asset.Slug
-	// TODO: Add component tree to the issue description
-	// componentTree := "{{" + commonint.MermaidFlowChart([][]string{dependencyVuln.VulnerabilityPath}) + "}}\n\n"
+	settings, err := i.redmineIntegrationRepository.Read(ctx, nil, client.RedmineIntegrationID)
+	if err != nil {
+		slog.Error("failed to read Redmine integration settings", "err", err, "integrationID", client.RedmineIntegrationID)
+		return nil, fmt.Errorf("failed to read Redmine integration settings: %w", err)
+	}
+	priority := riskToPriorityID(settings, *dependencyVuln.RiskAssessment)
 
-	// TODO: Tracker
-	// TODO: Priority
-	// the priority schema could be customized by redmine, so we do not which priorities are available, a direct request to the Redmine API to check the priorities of a project is not possible.
-	// a possible workaround is to ask which priority schema are available, then check which projects are using which priority schema, and then check the priorities of the project.
-	//so for now we will just set the priority to "highest" if the risk is critical or high
-	// check if the risk is critical or high and set the priority accordingly
+	componentTree := FormatComponentTree(settings, dependencyVuln)
+
 	issue := &IssueCreateOptions{
 		ProjectID:   projectID,
 		Subject:     new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: new(Markdown(exp, i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, nil)),
-		StatusID:    1, // TODO: Set status based on settings
-		TrackerID:   1, // TODO: Set tracker based on settings
+		Description: new(Markdown(exp, i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
+		StatusID:    settings.DefaultStatusID,
+		TrackerID:   settings.TrackerID,
+		PriorityID:  priority,
 	}
 
 	createdIssue, err := client.CreateIssue(ctx, issue)
@@ -269,13 +270,18 @@ func (i *RedmineIntegration) createDependencyVulnIssue(ctx context.Context, depe
 }
 
 func (i *RedmineIntegration) createLicenseRiskIssue(ctx context.Context, licenseRisk *models.LicenseRisk, asset models.Asset, client *Client, assetVersionSlug, justification, orgSlug, projectSlug string, projectID int) (*Issue, error) {
+	settings, err := i.redmineIntegrationRepository.Read(ctx, nil, client.RedmineIntegrationID)
+	if err != nil {
+		slog.Error("failed to read Redmine integration settings", "err", err, "integrationID", client.RedmineIntegrationID)
+		return nil, fmt.Errorf("failed to read Redmine integration settings: %w", err)
+	}
 
 	issue := &IssueCreateOptions{
 		ProjectID:   projectID,
 		Subject:     new(licenseRisk.Title()),
 		Description: new(commonint.RenderMarkdownForLicenseRisk(*licenseRisk, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
-		StatusID:    1, // New
-		TrackerID:   1, // Bug
+		StatusID:    settings.DefaultStatusID,
+		TrackerID:   settings.TrackerID,
 	}
 
 	createdIssue, err := client.CreateIssue(ctx, issue)
@@ -294,14 +300,18 @@ func (i *RedmineIntegration) createLicenseRiskIssue(ctx context.Context, license
 }
 
 func (i *RedmineIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client *Client, assetVersionSlug string, justification string, orgSlug string, projectSlug string, projectID int) (*Issue, error) {
-	// TODO: Tracker
-	// TODO: Priority
+	settings, err := i.redmineIntegrationRepository.Read(ctx, nil, client.RedmineIntegrationID)
+	if err != nil {
+		slog.Error("failed to read Redmine integration settings", "err", err, "integrationID", client.RedmineIntegrationID)
+		return nil, fmt.Errorf("failed to read Redmine integration settings: %w", err)
+	}
+
 	issue := &IssueCreateOptions{
 		ProjectID:   projectID,
 		Subject:     new(firstPartyVuln.Title()),
 		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
-		StatusID:    1, // New
-		TrackerID:   1, // Bug
+		StatusID:    settings.DefaultStatusID,
+		TrackerID:   settings.TrackerID,
 	}
 
 	createdIssue, err := client.CreateIssue(ctx, issue)
@@ -422,7 +432,15 @@ func (i *RedmineIntegration) UpdateIssue(ctx context.Context, asset models.Asset
 	return nil
 }
 
-func (i *RedmineIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *Client, assetVersionSlug string, orgSlug string, projectSlug string) error {
+func (i *RedmineIntegration) updateDependencyVulnTicket(
+	ctx context.Context,
+	dependencyVuln *models.DependencyVuln,
+	asset models.Asset,
+	client *Client,
+	assetVersionSlug string,
+	orgSlug string,
+	projectSlug string,
+) error {
 	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
@@ -433,18 +451,25 @@ func (i *RedmineIntegration) updateDependencyVulnTicket(ctx context.Context, dep
 		return fmt.Errorf("failed to parse Redmine ticket ID: %w", err)
 	}
 
-	assetSlug := asset.Slug
-	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
-	// componentTree := "{{" + commonint.MermaidFlowChart([][]string{dependencyVuln.VulnerabilityPath}) + "}}\n\n"
-
-	// TODO: Severity
-	// TODO: State
-	issue := &IssueEditOptions{
-		Subject:     new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: new(Markdown(exp, i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, nil)),
+	settings, err := i.redmineIntegrationRepository.Read(ctx, nil, client.RedmineIntegrationID)
+	if err != nil {
+		slog.Error("failed to read Redmine integration settings", "err", err, "integrationID", client.RedmineIntegrationID)
+		return fmt.Errorf("failed to read Redmine integration settings: %w", err)
 	}
 
-	slog.Info("updating redmine ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedIssueState))
+	assetSlug := asset.Slug
+	expectedIssueState := expectedIssueStateToId(settings, commonint.GetExpectedIssueState(asset, dependencyVuln))
+	priority := riskToPriorityID(settings, *dependencyVuln.RiskAssessment)
+	componentTree := FormatComponentTree(settings, dependencyVuln)
+
+	issue := &IssueEditOptions{
+		Subject:     new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
+		Description: new(Markdown(exp, i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
+		StatusID:    expectedIssueState,
+		PriorityID:  priority,
+	}
+
+	slog.Info("updating redmine ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(*expectedIssueState))
 
 	err = client.EditIssue(ctx, ticketID, issue)
 	if err != nil {
@@ -463,13 +488,18 @@ func (i *RedmineIntegration) updateFirstPartyVulnTicket(ctx context.Context, fir
 		return fmt.Errorf("failed to parse Redmine ticket ID: %w", err)
 	}
 
-	// expectedIssueState := commonint.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln)
+	settings, err := i.redmineIntegrationRepository.Read(ctx, nil, client.RedmineIntegrationID)
+	if err != nil {
+		slog.Error("failed to read Redmine integration settings", "err", err, "integrationID", client.RedmineIntegrationID)
+		return fmt.Errorf("failed to read Redmine integration settings: %w", err)
+	}
 
-	// TODO: Severity
-	// TODO: State
+	expectedIssueState := expectedIssueStateToId(settings, commonint.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln))
+
 	issue := &IssueEditOptions{
 		Subject:     new(firstPartyVuln.Title()),
 		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		StatusID:    expectedIssueState,
 	}
 
 	err = client.EditIssue(ctx, ticketID, issue)
@@ -646,8 +676,27 @@ func (i *RedmineIntegration) UpdateIntegrationSettings(ctx shared.Context) error
 	return ctx.JSON(200, transformer.ObfuscateRedmineIntegrations(integration))
 }
 
-// func (i *RedmineIntegration) GetComponentTree(ctx shared.Context) error {
-//
+func expectedIssueStateToId(settings models.RedmineIntegration, state commonint.ExpectedIssueState) *int {
+	switch state {
+	case commonint.ExpectedIssueStateClosed:
+		return settings.CloseStatusID
+	default:
+		return settings.DefaultStatusID
+	}
+}
+
+func riskToPriorityID(settings models.RedmineIntegration, risk float64) *int {
+	switch {
+	case risk < 4:
+		return settings.LowPriorityID
+	case risk < 7:
+		return settings.MediumPriorityID
+	case risk < 9:
+		return settings.HighPriorityID
+	default:
+		return settings.CriticalPriorityID
+	}
+}
 
 func transform[T, V any](ts []T, fn func(T) V) []V {
 	result := make([]V, len(ts))
