@@ -2,12 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.17.2]
+
+### Added
+
+- **`devguard-scanner provenance generate`** — generates the unsigned in-toto statement with a SLSA v1 provenance predicate for the artifacts a CI run built, to be passed on to `provenance sign`. `--image` takes built images (reference with digest), `--path` takes built files to hash, `--input key=value` (repeatable) records the workflow inputs under `externalParameters.inputs`, `--startedOn` / `--finishedOn` set the build times (RFC3339) and `--output` writes to a file instead of stdout
+- Path flags of the scanner accept comma separated lists of paths
+
+### Changed
+
+- **SLSA build provenance references the workflow** — the signed provenance records the CI configuration that started the run (repository, path and ref, derived from `workflow_ref` on GitHub and `ci_config_ref_uri` on GitLab) instead of recording all token claims in `internalParameters`. For GitLab the `ci_config_ref_uri` has to belong to the instance that issued the token, otherwise the request is rejected
+- The error returned for untrusted issuers now tells verifiers to pin the full `builder.id` including the host
+
+### Fixed
+
+- **SLSA signing key id mismatch** — the signature key id is now the sha256 of the DER encoded public key, which verifiers can compute from the published public key, instead of the TUF key id derived by securesystemslib
+
+### Dependencies
+
+- Updated all Go and Python dependencies
+
+---
+
 ## [v1.17.1] - 2026-10-27
 
 ### Fixed
 
 - **SLSA build provenance builder id** — `devguard-scanner` v1.17.0 set `runDetails.builder.id` in generated SLSA provenance to `https://devguard.org` instead of `devguard.org`. Admission policies that pin the builder id to `devguard.org`, like the Kyverno `verify-image-signatures` policy of the Helm chart, rejected the v1.17.0 images. The id is `devguard.org` again. Provenance already attested on v1.17.0 images keeps `https://devguard.org`, so policies that verify it need to accept both values (the Helm chart does since its next release)
-- **`devguard-cli vulndb export` failed to start** 
+- **`devguard-cli vulndb export` failed to start** — the events module was missing from the command's setup. It is registered again
 
 ---
 
