@@ -17,6 +17,7 @@ package fixedversion
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"regexp"
@@ -27,9 +28,7 @@ import (
 	"unsafe"
 
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
-	"github.com/ulikunitz/xz"
 	"golang.org/x/sync/singleflight"
 	"pault.ag/go/debian/control"
 	"pault.ag/go/debian/dependency"
@@ -140,13 +139,7 @@ const (
 	packageIndexTTL = 12 * time.Hour
 	// a failed download is not retried for every vuln - each attempt might take up to the client timeout
 	packageIndexRetryAfter = 5 * time.Minute
-	// Packages.xz of debian main is around 10MB - the limit only guards against unexpected responses
-	maxPackagesXZSize = 100 << 20
 )
-
-// Packages.xz is around 10MB and deb.debian.org is not always fast - the default egress timeout of 30s is not enough,
-// especially if several suites and archs are downloaded at the same time
-var packagesXZClient = utils.NewEgressClient(5 * time.Minute)
 
 type packageIndexFailure struct {
 	err error
@@ -225,32 +218,9 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 }
 
 func fetchPackageIndex(suite, arch string) (*packageIndex, error) {
-	url := "https://deb.debian.org/debian/dists/" + suite + "/main/binary-" + arch + "/Packages.xz"
-	resp, err := packagesXZClient.Get(url)
+	_, paragraphReader, err := shared.FetchDebPackages(context.Background(), shared.DebRegistry, "debian", suite, "main", arch)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Packages.xz: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Packages.xz returned %d", resp.StatusCode)
-	}
-
-	// read the whole file before decompressing - the client timeout covers reading the body,
-	// decompressing and parsing while streaming takes longer than that
-	compressed, err := io.ReadAll(io.LimitReader(resp.Body, maxPackagesXZSize))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read Packages.xz: %w", err)
-	}
-
-	xzReader, err := xz.NewReader(bytes.NewReader(compressed))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create xz reader: %w", err)
-	}
-
-	paragraphReader, err := control.NewParagraphReader(xzReader, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create paragraph reader: %w", err)
 	}
 
 	idx, err := buildPackageIndex(paragraphReader)

@@ -27,6 +27,7 @@ type Package struct {
 	Ecosystem  string
 	Purl       string
 	Registry   string
+	Suite      string
 	ReleasedAt time.Time
 	Publisher  *Publisher
 	Provenance *Provenance
@@ -49,6 +50,7 @@ func (p Package) ToCELMap() map[string]any {
 		"ecosystem": p.Ecosystem,
 		"purl":      p.Purl,
 		"registry":  p.Registry,
+		"suite":     p.Suite,
 	}
 
 	if !p.ReleasedAt.IsZero() {

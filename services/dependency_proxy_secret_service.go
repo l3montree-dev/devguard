@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/profile"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -76,4 +78,51 @@ func (s *dependencyProxySecretService) GetModelBySecret(ctx context.Context, sec
 	}
 
 	return scope, modelID, nil
+}
+
+func generateDebSigningKey() (privateKey, publicKey string, err error) {
+	key, err := crypto.PGPWithProfile(profile.RFC4880()).KeyGeneration().AddUserId("DevGuard Dependency Proxy", "noreply@devguard.org").New().GenerateKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	privKey, err := key.Armor()
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKey, err := key.GetArmoredPublicKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	return privKey, pubKey, nil
+}
+
+func (s *dependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (privateKey, publicKey string, err error) {
+	privKey, pubKey, found, err := s.dependencyProxySecretRepository.GetDebSigningKey(ctx, nil, secret)
+	if err != nil {
+		return "", "", err
+	}
+	if found {
+		return privKey, pubKey, nil
+	}
+
+	privKey, pubKey, err = generateDebSigningKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	if err = s.dependencyProxySecretRepository.SetDebSigningKeyIfMissing(ctx, nil, secret, privKey, pubKey); err != nil {
+		return "", "", err
+	}
+
+	privKey, pubKey, found, err = s.dependencyProxySecretRepository.GetDebSigningKey(ctx, nil, secret)
+	if err != nil {
+		return "", "", err
+	}
+	if found {
+		return privKey, pubKey, nil
+	}
+	return "", "", fmt.Errorf("signing key missing after creation")
 }

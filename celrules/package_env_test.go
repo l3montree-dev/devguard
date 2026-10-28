@@ -60,6 +60,12 @@ func TestEval(t *testing.T) {
 		{name: "lodash in vulnerable range", pkg: Package{
 			Name: "lodash", Purl: "pkg:npm/lodash@4.17.20",
 		}, want: true, rule: `matchesPurl(pkg.purl, "pkg:npm/lodash@<4.17.21")`},
+		{name: "debian security suite", pkg: Package{
+			Name: "debian/curl", Ecosystem: "deb", Suite: "trixie-security",
+		}, want: true, rule: `pkg.suite.endsWith("-security")`},
+		{name: "empty suite does not error", pkg: Package{
+			Name: "lodash", Ecosystem: "npm",
+		}, want: false, rule: `pkg.suite.endsWith("-security")`},
 	}
 
 	for _, tt := range tests {
