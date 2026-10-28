@@ -89,9 +89,7 @@ func (c *Client) CreateIssue(ctx context.Context, issue *IssueCreateOptions) (*I
 		return nil, fmt.Errorf("failed to marshal issue: %w", err)
 	}
 
-	slog.Debug("Creating issue", "issue", string(bodyBytes))
 	body := bytes.NewBuffer(bodyBytes)
-
 	resp, err := c.redmineRequest(ctx, http.MethodPost, "/issues.json", nil, body)
 	if err != nil {
 		slog.Error("Failed to create issue", "error", err)
