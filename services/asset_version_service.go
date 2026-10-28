@@ -355,15 +355,15 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 		vuln.Ratings = &[]cdx.VulnerabilityRating{
 			{
 				Vector:   cve.Vector,
-				Method:   vectorToCVSSScoringMethod(cve.Vector),
+				Method:   utils.VectorToCVSSScoringMethod(cve.Vector),
 				Score:    &cvss,
-				Severity: scoreToSeverity(cvss),
+				Severity: utils.ScoreToSeverity(cvss),
 			},
 			{
 				Vector:        risk.Vector,
 				Method:        "DevGuard",
 				Score:         &risk.Risk,
-				Severity:      scoreToSeverity(risk.Risk),
+				Severity:      utils.ScoreToSeverity(risk.Risk),
 				Justification: risk.String(),
 			},
 		}
@@ -372,28 +372,6 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 	}
 
 	return transformer.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
-}
-
-func scoreToSeverity(score float64) cdx.Severity {
-	if score >= 9.0 {
-		return cdx.SeverityCritical
-	} else if score >= 7.0 {
-		return cdx.SeverityHigh
-	} else if score >= 4.0 {
-		return cdx.SeverityMedium
-	}
-	return cdx.SeverityLow
-}
-
-func vectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
-	if strings.Contains(vector, "CVSS:3.0") {
-		return cdx.ScoringMethodCVSSv3
-	} else if strings.Contains(vector, "CVSS:2.0") {
-		return cdx.ScoringMethodCVSSv2
-	} else if strings.Contains(vector, "CVSS:3.1") {
-		return cdx.ScoringMethodCVSSv31
-	}
-	return cdx.ScoringMethodCVSSv4
 }
 
 func dependencyVulnStateToImpactAnalysisState(state dtos.VulnState) cdx.ImpactAnalysisState {

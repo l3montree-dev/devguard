@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -35,6 +36,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	provenancev1 "github.com/in-toto/attestation/go/predicates/provenance/v1"
 	attestationv1 "github.com/in-toto/attestation/go/v1"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -157,8 +159,8 @@ func NewSLSAController() *SLSAController {
 	}
 	if len(trustedIssuers) == 0 {
 		slog.Warn("SLSA_OIDC_TRUSTED_ISSUERS is not set. Workload identity tokens from every https issuer are accepted. " +
-			"DevGuard only attests what the issuer claimed: the issuer is recorded in the signed provenance at predicate.buildDefinition.internalParameters.devguard.workloadIdentity.iss " +
-			"Verifiers MUST check the issuer before trusting predicate.runDetails.builder.id")
+			"Every predicate.runDetails.builder.id is bound to the host of its issuer, so verifiers MUST pin the full builder id including the host - " +
+			"a pattern like '*/org/repo/*' matches builds attested by any issuer")
 	}
 
 	audience := os.Getenv("SLSA_OIDC_AUDIENCE")
@@ -210,6 +212,13 @@ func loadProvenanceSigningKey() (*provenanceSigningKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse signing key %q: %w", keyPath, err)
 	}
+	// use the key id verifiers can compute from the published public key (sha256 of its DER encoding) instead of the
+	// TUF key id securesystemslib derives from its own key format
+	publicKeyBlock, _ := pem.Decode([]byte(key.KeyVal.Public))
+	if publicKeyBlock == nil {
+		return nil, fmt.Errorf("signing key %q has no pem encoded public key", keyPath)
+	}
+	key.KeyID = utils.HashBytes(publicKeyBlock.Bytes)
 	signer, err := signerverifier.NewECDSASignerVerifierFromSSLibKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("signing key %q is not an ecdsa key: %w", keyPath, err)
@@ -254,7 +263,6 @@ func (s *SLSAController) PublicKey(ctx shared.Context) error {
 // @Failure 401 {object} object "missing or invalid workload identity token"
 // @Router /slsa/build-provenance [post]
 func (s *SLSAController) BuildProvenance(ctx shared.Context) error {
-	// TODO: remove the hardcoded test token fallback
 	token := ctx.Request().Header.Get(workloadIdentityTokenHeader)
 	if token == "" {
 		return echo.NewHTTPError(401, "missing workload identity token in "+workloadIdentityTokenHeader+" header")
@@ -387,8 +395,6 @@ func unverifiedIssuer(rawToken string) (string, error) {
 	return claims.Issuer, nil
 }
 
-const slsaProvenanceV1 = "https://slsa.dev/provenance/v1"
-
 // parseProvenanceStatement parses an in-toto v1 statement with a SLSA v1 provenance predicate.
 func parseProvenanceStatement(data []byte) (*attestationv1.Statement, *provenancev1.Provenance, error) {
 	var statement attestationv1.Statement
@@ -398,8 +404,8 @@ func parseProvenanceStatement(data []byte) (*attestationv1.Statement, *provenanc
 	if err := statement.Validate(); err != nil {
 		return nil, nil, fmt.Errorf("invalid in-toto statement: %w", err)
 	}
-	if statement.PredicateType != slsaProvenanceV1 {
-		return nil, nil, fmt.Errorf("unsupported predicate type %q, expected %q", statement.PredicateType, slsaProvenanceV1)
+	if statement.PredicateType != dtos.SLSAProvenanceV1PredicateType {
+		return nil, nil, fmt.Errorf("unsupported predicate type %q, expected %q", statement.PredicateType, dtos.SLSAProvenanceV1PredicateType)
 	}
 
 	predicate, err := protojson.Marshal(statement.Predicate)
@@ -439,6 +445,8 @@ type builderIdentity struct {
 	ref string
 	// the commit the build ran on
 	commit string
+	// the CI configuration which started the run
+	workflow workflowReference
 	// the build configuration which ran the build - what verifiers pin against
 	builderID      string
 	builderVersion map[string]string
@@ -455,10 +463,25 @@ func resolveBuilderIdentity(claims *WorkloadIdentityClaims) (*builderIdentity, e
 	case claims.ProjectPath != "" && claims.CIConfigRefURI != "":
 		// gitlab: the issuer is the gitlab instance, so the repository lives below it
 		repositoryURI := fmt.Sprintf("git+%s/%s", issuer, claims.ProjectPath)
+		// e.g. gitlab.com/group/project//.gitlab-ci.yml@refs/heads/main
+		location, ref, err := splitWorkflowRef(claims.CIConfigRefURI)
+		if err != nil {
+			return nil, err
+		}
+		configRepository, configPath, ok := strings.Cut(location, "//")
+		if !ok {
+			return nil, fmt.Errorf("ci_config_ref_uri %q has no path", claims.CIConfigRefURI)
+		}
+		// the builder id is derived from ci_config_ref_uri, so it must point to the instance which issued the token.
+		// Otherwise any issuer could claim to have run the ci config of another instance
+		if instance := strings.TrimPrefix(issuer, "https://") + "/"; !strings.HasPrefix(configRepository, instance) {
+			return nil, fmt.Errorf("ci_config_ref_uri %q does not belong to the issuer %q", claims.CIConfigRefURI, claims.Issuer)
+		}
 		return &builderIdentity{
 			repositoryURI:  repositoryURI,
 			ref:            claims.RefPath,
 			commit:         claims.SHA,
+			workflow:       workflowReference{repository: "https://" + configRepository, path: configPath, ref: ref},
 			builderID:      fmt.Sprintf("https://%s", claims.CIConfigRefURI),
 			builderVersion: map[string]string{"ciConfigSha": claims.CIConfigSHA},
 			invocationID:   fmt.Sprintf("%s/%s/-/jobs/%s", issuer, claims.ProjectPath, claims.JobID),
@@ -470,10 +493,20 @@ func resolveBuilderIdentity(claims *WorkloadIdentityClaims) (*builderIdentity, e
 		if err != nil {
 			return nil, err
 		}
+		// workflow_ref names the workflow which started the run, e.g. owner/repo/.github/workflows/build.yml@refs/heads/main
+		location, ref, err := splitWorkflowRef(claims.WorkflowRef)
+		if err != nil {
+			return nil, err
+		}
+		parts := strings.SplitN(location, "/", 3)
+		if len(parts) != 3 {
+			return nil, fmt.Errorf("workflow_ref %q has no path", claims.WorkflowRef)
+		}
 		identity := &builderIdentity{
 			repositoryURI: fmt.Sprintf("git+%s/%s", forge, claims.Repository),
 			ref:           claims.Ref,
 			commit:        claims.SHA,
+			workflow:      workflowReference{repository: fmt.Sprintf("%s/%s/%s", forge, parts[0], parts[1]), path: parts[2], ref: ref},
 			// job_workflow_ref names the reusable workflow which ran the job - the trusted builder
 			builderID:      fmt.Sprintf("%s/%s", forge, claims.JobWorkflowRef),
 			builderVersion: map[string]string{"jobWorkflowSha": claims.JobWorkflowSHA},
@@ -504,67 +537,116 @@ func githubForgeURL(issuer string) (string, error) {
 	return fmt.Sprintf("https://%s", parsed.Host), nil
 }
 
+// workflowReference points to the CI configuration file which started a run
+type workflowReference struct {
+	// the repository containing the configuration file, as https url
+	repository string
+	path       string
+	ref        string
+}
+
+// splitWorkflowRef splits a "<location>@<ref>" claim like github's workflow_ref or gitlab's ci_config_ref_uri.
+func splitWorkflowRef(workflowRef string) (location string, ref string, err error) {
+	i := strings.LastIndex(workflowRef, "@")
+	if i <= 0 || i == len(workflowRef)-1 {
+		return "", "", fmt.Errorf("invalid workflow reference %q, expected <location>@<ref>", workflowRef)
+	}
+	return workflowRef[:i], workflowRef[i+1:], nil
+}
+
+// incorporateWorkloadIdentity sets everything the build platform knows from the verified token and drops the
+// client provided values of those fields. The client only describes what was built (the subjects), how the
+// workflow was called (externalParameters.inputs) and when (runDetails.metadata startedOn and finishedOn).
 func incorporateWorkloadIdentity(provenance *provenancev1.Provenance, claims *WorkloadIdentityClaims) error {
 	identity, err := resolveBuilderIdentity(claims)
 	if err != nil {
 		return err
 	}
 
-	if provenance.BuildDefinition == nil {
-		provenance.BuildDefinition = &provenancev1.BuildDefinition{}
+	externalParameters, err := workflowExternalParameters(identity.workflow, provenance.GetBuildDefinition().GetExternalParameters().GetFields()["inputs"])
+	if err != nil {
+		return err
 	}
-	if provenance.RunDetails == nil {
-		provenance.RunDetails = &provenancev1.RunDetails{}
-	}
-	if provenance.RunDetails.Metadata == nil {
-		provenance.RunDetails.Metadata = &provenancev1.BuildMetadata{}
-	}
-
-	// the source repository is taken from the token. A client provided entry for the same repository must not contradict it
-	resolvedDependencies := make([]*attestationv1.ResourceDescriptor, 0, len(provenance.BuildDefinition.ResolvedDependencies)+1)
-	for _, dependency := range provenance.BuildDefinition.ResolvedDependencies {
-		if dependency.Uri == identity.repositoryURI || strings.HasPrefix(dependency.Uri, identity.repositoryURI+"@") {
-			if commit, ok := dependency.Digest["gitCommit"]; ok && commit != identity.commit {
-				return fmt.Errorf("resolved dependency %q has commit %q but the workload identity token was issued for commit %q", dependency.Uri, commit, identity.commit)
-			}
-			continue
-		}
-		resolvedDependencies = append(resolvedDependencies, dependency)
-	}
-	resolvedDependencies = append(resolvedDependencies, &attestationv1.ResourceDescriptor{
-		Uri:    fmt.Sprintf("%s@%s", identity.repositoryURI, identity.ref),
-		Digest: map[string]string{"gitCommit": identity.commit},
-	})
-	provenance.BuildDefinition.ResolvedDependencies = resolvedDependencies
-
-	// internal parameters are set by the build platform - which is us. Never keep client provided values.
 	internalParameters, err := workloadIdentityInternalParameters(claims)
 	if err != nil {
 		return err
 	}
-	provenance.BuildDefinition.InternalParameters = internalParameters
 
-	// the builder identity is what verifiers check against - e.g. "is this a devguard ci component"
-	// the issuer is part of it, since the builder is only as trustworthy as the issuer claiming it
-	provenance.RunDetails.Builder = &provenancev1.Builder{
-		Id:      fmt.Sprintf("%s?iss=%s", identity.builderID, url.QueryEscape(claims.Issuer)),
-		Version: identity.builderVersion,
+	metadata := provenance.GetRunDetails().GetMetadata()
+	provenance.BuildDefinition = &provenancev1.BuildDefinition{
+		BuildType:          dtos.SLSACIWorkflowBuildType,
+		ExternalParameters: externalParameters,
+		InternalParameters: internalParameters,
+		ResolvedDependencies: []*attestationv1.ResourceDescriptor{{
+			Uri:    fmt.Sprintf("%s@%s", identity.repositoryURI, identity.ref),
+			Digest: map[string]string{"gitCommit": identity.commit},
+		}},
 	}
-	provenance.RunDetails.Metadata.InvocationId = identity.invocationID
-
+	provenance.RunDetails = &provenancev1.RunDetails{
+		// the builder identity is what verifiers check against - e.g. "is this a devguard ci component"
+		Builder: &provenancev1.Builder{
+			Id:      identity.builderID,
+			Version: identity.builderVersion,
+		},
+		Metadata: &provenancev1.BuildMetadata{
+			InvocationId: identity.invocationID,
+			StartedOn:    metadata.GetStartedOn(),
+			FinishedOn:   metadata.GetFinishedOn(),
+		},
+	}
 	return nil
 }
 
+func workflowExternalParameters(workflow workflowReference, inputs *structpb.Value) (*structpb.Struct, error) {
+	externalParameters := map[string]any{
+		"workflow": map[string]any{
+			"repository": workflow.repository,
+			"path":       workflow.path,
+			"ref":        workflow.ref,
+		},
+	}
+	if inputs != nil {
+		if inputs.GetStructValue() == nil {
+			return nil, fmt.Errorf("externalParameters.inputs must be an object")
+		}
+		externalParameters["inputs"] = inputs.GetStructValue().AsMap()
+	}
+	return structpb.NewStruct(externalParameters)
+}
+
+// recordedClaims are the workload identity claims written into the provenance. Signed provenance is uploaded to the
+// transparency log, which might be public - claims identifying the person who triggered the run (user_email, user_login,
+// user_id, actor, actor_id) are left out, as are claims only describing the token itself (jti, iat, nbf, exp).
+var recordedClaims = []string{
+	"iss", "sub", "aud",
+	// gitlab
+	"project_id", "project_path", "project_visibility", "namespace_id", "namespace_path",
+	"pipeline_id", "pipeline_source", "job_id", "job_project_id", "job_project_path",
+	"ref_path", "ci_config_ref_uri", "ci_config_sha", "runner_id",
+	// github
+	"repository", "repository_id", "repository_owner", "repository_owner_id", "repository_visibility",
+	"job_workflow_ref", "job_workflow_sha", "workflow_ref", "workflow_sha", "workflow",
+	"run_id", "run_number", "run_attempt", "event_name",
+	// shared
+	"ref", "ref_type", "ref_protected", "sha", "environment", "environment_protected", "runner_environment",
+}
+
 func workloadIdentityInternalParameters(claims *WorkloadIdentityClaims) (*structpb.Struct, error) {
-	// prefer the raw claims, so claims we do not map are recorded as well
-	workloadIdentity := claims.Raw
-	if workloadIdentity == nil {
+	allClaims := claims.Raw
+	if allClaims == nil {
 		b, err := json.Marshal(claims)
 		if err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(b, &workloadIdentity); err != nil {
+		if err := json.Unmarshal(b, &allClaims); err != nil {
 			return nil, err
+		}
+	}
+
+	workloadIdentity := make(map[string]any, len(recordedClaims))
+	for _, name := range recordedClaims {
+		if value, ok := allClaims[name]; ok {
+			workloadIdentity[name] = value
 		}
 	}
 	return structpb.NewStruct(map[string]any{

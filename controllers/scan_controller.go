@@ -532,7 +532,7 @@ func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) er
 		vuln := cdx.Vulnerability{ID: v.CVEID}
 		if v.CVE != nil && v.CVE.CVSS > 0 {
 			score := float64(v.CVE.CVSS)
-			vuln.Ratings = &[]cdx.VulnerabilityRating{{Score: &score, Method: cdx.ScoringMethodCVSSv31}}
+			vuln.Ratings = &[]cdx.VulnerabilityRating{{Score: &score, Method: utils.VectorToCVSSScoringMethod(v.CVE.Vector)}}
 		}
 		if v.ComponentFixedVersion != nil {
 			vuln.Recommendation = *v.ComponentFixedVersion
