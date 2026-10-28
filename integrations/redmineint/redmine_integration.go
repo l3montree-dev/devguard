@@ -304,7 +304,7 @@ func (i *RedmineIntegration) createFirstPartyVulnIssue(ctx context.Context, firs
 	issue := &IssueCreateOptions{
 		ProjectID:   projectID,
 		Subject:     new(firstPartyVuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(GenerateFirstPartyIssueDescription(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		StatusID:    settings.DefaultStatusID,
 		TrackerID:   settings.TrackerID,
 	}
