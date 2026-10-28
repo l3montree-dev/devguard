@@ -17,6 +17,7 @@ package dependencyfirewall
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -32,26 +33,30 @@ import (
 	"pault.ag/go/debian/control"
 )
 
-func writeDebPackages(packages []shared.DebPackage) (raw, compressed []byte, err error) {
-	var rawBuf, xzBuf bytes.Buffer
-	writer, err := xz.NewWriter(&xzBuf)
+func writeDebPackages(packages []shared.DebPackage) (raw, xzData, gzData []byte, err error) {
+	var rawBuf, xzBuf, gzBuf bytes.Buffer
+	xzWriter, err := xz.NewWriter(&xzBuf)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	out := io.MultiWriter(&rawBuf, writer)
+	gzWriter := gzip.NewWriter(&gzBuf)
+	out := io.MultiWriter(&rawBuf, xzWriter, gzWriter)
 
 	for _, pkg := range packages {
 		if err := pkg.Paragraph.WriteTo(out); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if _, err := io.WriteString(out, "\n"); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
-	if err := writer.Close(); err != nil {
-		return nil, nil, err
+	if err := xzWriter.Close(); err != nil {
+		return nil, nil, nil, err
 	}
-	return rawBuf.Bytes(), xzBuf.Bytes(), nil
+	if err := gzWriter.Close(); err != nil {
+		return nil, nil, nil, err
+	}
+	return rawBuf.Bytes(), xzBuf.Bytes(), gzBuf.Bytes(), nil
 }
 
 func updateDebRelease(release shared.DebRelease, files map[string][]byte) control.Paragraph {

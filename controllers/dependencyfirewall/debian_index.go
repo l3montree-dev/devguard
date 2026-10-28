@@ -96,7 +96,7 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 				blocked := d.checkDebPackages(configs, registry, suite, base.DebPackages)
 				groups := groupDebPackages(base.DebPackages, blocked)
 				replacements := d.findDebReplacements(ctx, configs, registry, archive, suite, base.DebPackages, groups)
-				raw, compressed, err := writeDebPackages(d.applyDebReplacements(ctx, archive, suite, component, arch, base.DebPackages, groups, replacements))
+				raw, xzData, gzData, err := writeDebPackages(d.applyDebReplacements(ctx, archive, suite, component, arch, base.DebPackages, groups, replacements))
 				if err != nil {
 					return err
 				}
@@ -104,7 +104,8 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 				defer mu.Unlock()
 				release = base.DebRelease
 				files[component+"/binary-"+arch+"/Packages"] = raw
-				files[component+"/binary-"+arch+"/Packages.xz"] = compressed
+				files[component+"/binary-"+arch+"/Packages.xz"] = xzData
+				files[component+"/binary-"+arch+"/Packages.gz"] = gzData
 				return nil
 			})
 		}
