@@ -16,7 +16,9 @@
 package utils
 
 import (
+	"crypto"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/binary"
 	"fmt"
 
@@ -45,4 +47,14 @@ func HashToUUID(s string) uuid.UUID {
 
 func HashBytes(b []byte) string {
 	return fmt.Sprintf("%x", sha256.Sum256(b))
+}
+
+// PublicKeyID is the hex sha256 of the DER (PKIX) encoded public key - the key id of signatures devguard creates.
+// Verifiers can compute it from the published PEM.
+func PublicKeyID(publicKey crypto.PublicKey) (string, error) {
+	der, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return "", err
+	}
+	return HashBytes(der), nil
 }

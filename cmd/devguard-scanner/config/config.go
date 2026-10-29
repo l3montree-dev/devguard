@@ -130,7 +130,7 @@ func ParseBaseConfig(runningCMD string) {
 	}
 
 	if RuntimeBaseConfig.Path != "" {
-		if err := isValidPath(RuntimeBaseConfig.Path); err != nil {
+		if err := isValidPathList(RuntimeBaseConfig.Path); err != nil {
 			panic(err)
 		}
 	}

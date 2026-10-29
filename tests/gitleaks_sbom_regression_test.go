@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func createCveXCrypto(db shared.DB) {
 
 	affectedComponent := models.AffectedComponent{
 		PurlWithoutVersion: "pkg:golang/golang.org/x/crypto",
-		SemverFixed:        new("0.52.0"),
+		SemverFixed:        new(normalize.Semver("0.52.0")),
 	}
 	if err := db.Create(&affectedComponent).Error; err != nil {
 		panic(err)

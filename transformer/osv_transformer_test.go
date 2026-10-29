@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/package-url/packageurl-go"
 )
@@ -164,12 +165,12 @@ func TestProcessRange(t *testing.T) {
 }
 
 func semverComponent(purl packageurl.PackageURL, introduced, fixed string) models.AffectedComponent {
-	var semverIntroduced, semverFixed *string
+	var semverIntroduced, semverFixed *normalize.Semver
 	if introduced != "" {
-		semverIntroduced = &introduced
+		semverIntroduced = normalize.SemverPtr(&introduced)
 	}
 	if fixed != "" {
-		semverFixed = &fixed
+		semverFixed = normalize.SemverPtr(&fixed)
 	}
 	return newAffectedComponent("test-ecosystem", purl, semverIntroduced, semverFixed, nil, nil, nil)
 }
@@ -196,8 +197,8 @@ func componentsEqual(a, b models.AffectedComponent) bool {
 	return a.PurlWithoutVersion == b.PurlWithoutVersion &&
 		a.Ecosystem == b.Ecosystem &&
 		strPtrEqual(a.Version, b.Version) &&
-		strPtrEqual(a.SemverIntroduced, b.SemverIntroduced) &&
-		strPtrEqual(a.SemverFixed, b.SemverFixed) &&
+		strPtrEqual(a.SemverIntroduced.StringPtr(), b.SemverIntroduced.StringPtr()) &&
+		strPtrEqual(a.SemverFixed.StringPtr(), b.SemverFixed.StringPtr()) &&
 		strPtrEqual(a.VersionIntroduced, b.VersionIntroduced) &&
 		strPtrEqual(a.VersionFixed, b.VersionFixed)
 }
@@ -312,7 +313,7 @@ outer:
 
 		if c.SemverIntroduced != nil && c.SemverFixed != nil {
 			for _, r := range expectedRanges {
-				if *c.SemverIntroduced == r[0] && *c.SemverFixed == r[1] {
+				if c.SemverIntroduced.String() == r[0] && c.SemverFixed.String() == r[1] {
 					// this is what we expect, so we can continue with the next component
 					continue outer
 				}

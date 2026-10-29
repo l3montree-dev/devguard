@@ -30,7 +30,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -208,7 +207,7 @@ func assertProvenanceIdentity(t *testing.T, issuer *testOIDCIssuer, payload []by
 
 	predicate := statement["predicate"].(map[string]any)
 	builder := predicate["runDetails"].(map[string]any)["builder"].(map[string]any)
-	assert.Equal(t, "https://"+issuer.host()+"/l3montree/slsa-test//.gitlab-ci.yml@refs/heads/main?iss="+url.QueryEscape(issuer.server.URL), builder["id"])
+	assert.Equal(t, "https://"+issuer.host()+"/l3montree/slsa-test//.gitlab-ci.yml@refs/heads/main", builder["id"])
 
 	workloadIdentity := predicate["buildDefinition"].(map[string]any)["internalParameters"].(map[string]any)["devguard"].(map[string]any)["workloadIdentity"].(map[string]any)
 	assert.Equal(t, issuer.server.URL, workloadIdentity["iss"])
@@ -231,6 +230,10 @@ func TestBuildProvenance(t *testing.T) {
 		payload, err := envelope.DecodeB64Payload()
 		require.NoError(t, err)
 		require.Len(t, envelope.Signatures, 1)
+		publicKeyDER, err := x509.MarshalPKIXPublicKey(publicKey)
+		require.NoError(t, err)
+		keyID := sha256.Sum256(publicKeyDER)
+		assert.Equal(t, hex.EncodeToString(keyID[:]), envelope.Signatures[0].KeyID, "verifiers select the key by its id, computed from the published public key")
 		signature, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
 		require.NoError(t, err)
 		digest := sha256.Sum256(dsse.PAE(envelope.PayloadType, payload))

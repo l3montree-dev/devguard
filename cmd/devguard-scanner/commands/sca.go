@@ -286,8 +286,17 @@ func warnAboutUnidentifiableComponents(bom *cyclonedx.BOM, extras []*cyclonedx.B
 		if c.Type != cyclonedx.ComponentTypeApplication {
 			continue
 		}
-		if c.PackageURL != "" || hasVersionedDescendant(c.BOMRef, childrenByRef, realDescendantCache) {
-			continue // trivy already resolved this one, no action needed
+		if c.PackageURL != "" {
+			continue
+		}
+		if hasVersionedDescendant(c.BOMRef, childrenByRef, realDescendantCache) {
+			// trivy resolved this one, but a compiled golang binary only yields the
+			// flat module list from its build info, without who-requires-whom
+			if !suppliedPaths[c.Name] && filepath.Base(c.Name) != "go.mod" && hasOnlyFlatGolangDescendants(c.BOMRef, childrenByRef) {
+				slog.Warn("identified a golang binary with a shallow dependency tree - every module is attached directly to it, without the dependencies between them; provide a supplementary SBOM describing it (rooted at this exact path) under --sbomPath to enrich it", "path", c.Name)
+				printSupplementarySBOMExample(c.Name)
+			}
+			continue
 		}
 		if suppliedPaths[c.Name] {
 			enriched++
@@ -315,6 +324,35 @@ func dependencyChildrenByRef(deps *[]cyclonedx.Dependency) map[string][]string {
 		}
 	}
 	return childrenByRef
+}
+
+// hasOnlyFlatGolangDescendants reports whether the versioned golang purls
+// reachable from ref (looking through unversioned intermediate nodes such as
+// the main module) are all leaves - i.e. there is a module list but no tree
+// between the modules, which is what trivy reports for a compiled binary.
+func hasOnlyFlatGolangDescendants(ref string, childrenByRef map[string][]string) bool {
+	visited := map[string]bool{ref: true}
+	queue := []string{ref}
+	found := false
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, child := range childrenByRef[cur] {
+			if visited[child] {
+				continue
+			}
+			visited[child] = true
+			if strings.HasPrefix(child, "pkg:") && strings.Contains(child, "@") {
+				if !strings.HasPrefix(child, "pkg:golang/") || len(childrenByRef[child]) > 0 {
+					return false
+				}
+				found = true
+				continue
+			}
+			queue = append(queue, child)
+		}
+	}
+	return found
 }
 
 // hasVersionedDescendant reports whether ref has a versioned purl (pkg:...@version)
