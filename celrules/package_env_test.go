@@ -109,3 +109,60 @@ func TestEvalMissingReleaseTimeErrors(t *testing.T) {
 	_, err = evalPackage(prg, Package{Name: "nginx"})
 	assert.Error(t, err)
 }
+
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantRules int
+		wantErr   bool
+	}{
+		{
+			name: "valid rules",
+			input: `rules:
+  - name: block-new
+    action: deny
+    expr: now() - timestamp(pkg.releasedAt) < duration("120h")
+  - name: allow-trusted
+    action: allow
+    expr: pkg.name == "trusted"
+`,
+			wantRules: 2,
+		},
+		{
+			name:      "empty config",
+			input:     "",
+			wantRules: 0,
+		},
+		{
+			name: "invalid expression",
+			input: `rules:
+  - name: broken
+    action: deny
+    expr: pkg.name ==
+`,
+			wantErr: true,
+		},
+		{
+			name: "invalid action",
+			input: `rules:
+  - name: broken
+    action: foo
+    expr: pkg.name == "x"
+`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rules, err := ParsePackageRules(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Len(t, rules, tt.wantRules)
+		})
+	}
+}
