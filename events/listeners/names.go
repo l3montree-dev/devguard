@@ -4,6 +4,8 @@ package listeners
 // The admin endpoints persist them as config keys for their cooldown - do not rename.
 const (
 	DaemonVEXRuleRecommendations    = "vexrules.recommendations"
+	DaemonVEXRuleExchangeSubmit     = "vexrules.exchange.submit"
+	DaemonVEXRuleExchangeFetch      = "vexrules.exchange.fetch"
 	DaemonSBOMGarbageCollection     = "maintain.sbomGarbageCollection"
 	DaemonOpenSourceInsights        = "vulndb.opensourceinsights"
 	DaemonVulnDB                    = "vulndb.vulndb"

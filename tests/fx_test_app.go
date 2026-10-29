@@ -125,6 +125,7 @@ type TestApp struct {
 	DaemonRunner                  shared.DaemonRunner
 	FixedVersionResolver          shared.FixedVersionResolver
 	ExternalEntityProviderService shared.ExternalEntityProviderService
+	VEXRuleExchangeClient         shared.VEXRuleExchangeClient
 }
 
 // TestAppOptions configures the test application

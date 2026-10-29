@@ -43,6 +43,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewAdvisoryService, fx.As(new(shared.AdvisoryService)))),
 	fx.Provide(fx.Annotate(NewCompliancePostureService, fx.As(new(shared.CompliancePostureService)))),
 	fx.Provide(fx.Annotate(NewGitHubVexFetcher, fx.As(new(shared.GitHubVexFetcher)))),
+	fx.Provide(fx.Annotate(NewVEXRuleExchangeClient, fx.As(new(shared.VEXRuleExchangeClient)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(shared.LogService)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(monitoring.AlertLogService)))),
 	fx.Provide(func(db shared.DB, broker events.Broker) *scan.PurlComparer {
