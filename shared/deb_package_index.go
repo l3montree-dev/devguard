@@ -145,6 +145,9 @@ func FetchDebPackages(ctx context.Context, registry, archive, suite, component, 
 	distURL := registry + "/" + archive + "/dists/" + suite + "/"
 
 	releaseReader, err := utils.DoGetRequestWithContext(ctx, distURL+"InRelease", debPackagesClient)
+	if err != nil && !IsDebianRegistry(registry) {
+		releaseReader, err = utils.DoGetRequestWithContext(ctx, distURL+"Release", debPackagesClient)
+	}
 	if err != nil {
 		return DebRelease{}, nil, err
 	}
