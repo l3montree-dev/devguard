@@ -41,18 +41,33 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 	// productID -> purl. Base products use their purl as their product id, but we also read
 	// the identification helper so combined (relationship) products resolve too.
 	productIDToPurl := map[string]string{}
+	addProduct := func(fpn *gocsaf.FullProductName) {
+		if fpn == nil || fpn.ProductID == nil {
+			return
+		}
+		purl := ""
+		if fpn.ProductIdentificationHelper != nil && fpn.ProductIdentificationHelper.PURL != nil {
+			purl = string(*fpn.ProductIdentificationHelper.PURL)
+		}
+		productIDToPurl[string(*fpn.ProductID)] = purl
+	}
 	if advisory.ProductTree.FullProductNames != nil {
 		for _, fpn := range *advisory.ProductTree.FullProductNames {
-			if fpn == nil || fpn.ProductID == nil {
-				continue
-			}
-			purl := ""
-			if fpn.ProductIdentificationHelper != nil && fpn.ProductIdentificationHelper.PURL != nil {
-				purl = string(*fpn.ProductIdentificationHelper.PURL)
-			}
-			productIDToPurl[string(*fpn.ProductID)] = purl
+			addProduct(fpn)
 		}
 	}
+	// products may also be declared in the (nested) branches tree, e.g. rancher/vexhub does that
+	var walkBranches func(branches gocsaf.Branches)
+	walkBranches = func(branches gocsaf.Branches) {
+		for _, b := range branches {
+			if b == nil {
+				continue
+			}
+			addProduct(b.Product)
+			walkBranches(b.Branches)
+		}
+	}
+	walkBranches(advisory.ProductTree.Branches)
 
 	// combined (leaf/intermediate) product id -> the relationship that declares it
 	relByProductID := map[string]*gocsaf.Relationship{}

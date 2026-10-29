@@ -31,7 +31,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 8
+	CurrentHashVersion = 9
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -49,7 +49,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 		}
 		config = models.Config{
 			Key: HashMigrationVersionKey,
-			Val: "4",
+			Val: fmt.Sprint(CurrentHashVersion),
 		}
 		// save initial version - no migration needed if empty
 		if err := db.Create(&config).Error; err != nil {
@@ -93,20 +93,31 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 		}
 
 		if currentVersion < 4 {
-			// Clear the last import timestamp so ImportRC runs as a full import.
-			ctx := context.Background()
-			if err := configService.SetJSONConfig(ctx, "vulndb.lastRCImport", ""); err != nil {
-				slog.Warn("could not clear vulndb.lastRCImport config", "err", err)
-			}
-			slog.Info("triggering full vulndb import after hash migration")
-			if err := vulndbService.ImportRC(ctx, shared.ImportOptions{}); err != nil {
-				return fmt.Errorf("full vulndb import after hash migration failed: %w", err)
+			if err := runFullVulnDBImport(vulndbService, configService); err != nil {
+				return err
 			}
 
 			// Persist the new version so this migration does not re-run on the next startup.
 			config.Val = strconv.Itoa(CurrentHashVersion)
 			if err := db.Save(&config).Error; err != nil {
 				return fmt.Errorf("failed to update hash migration version after v4: %w", err)
+			}
+		}
+
+		// the semver columns switched from pg_semver to bytea. The schema migration
+		// truncated the affected component tables instead of converting them, so they
+		// have to be repopulated. Below 4 the import above already did that.
+		// Runs before v5-v7 since those persist CurrentHashVersion - a failed import
+		// must not be marked as done.
+		if currentVersion >= 4 && currentVersion < 9 {
+			if err := runFullVulnDBImport(vulndbService, configService); err != nil {
+				return fmt.Errorf("failed to reimport vulndb after semver column change (v9): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v9: %w", err)
 			}
 		}
 
@@ -202,6 +213,19 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)
 	}
 
+	return nil
+}
+
+func runFullVulnDBImport(vulndbService shared.VulnDBService, configService shared.ConfigService) error {
+	// Clear the last import timestamp so ImportRC runs as a full import.
+	ctx := context.Background()
+	if err := configService.SetJSONConfig(ctx, "vulndb.lastRCImport", ""); err != nil {
+		slog.Warn("could not clear vulndb.lastRCImport config", "err", err)
+	}
+	slog.Info("triggering full vulndb import after hash migration")
+	if err := vulndbService.ImportRC(ctx, shared.ImportOptions{}); err != nil {
+		return fmt.Errorf("full vulndb import after hash migration failed: %w", err)
+	}
 	return nil
 }
 

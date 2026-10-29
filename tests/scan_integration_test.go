@@ -14,6 +14,7 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -1944,7 +1945,7 @@ func createCVE2025_46569(db shared.DB) {
 
 	affectedComponent := models.AffectedComponent{
 		PurlWithoutVersion: "pkg:golang/github.com/open-policy-agent/opa",
-		SemverFixed:        new("1.4.0"),
+		SemverFixed:        new(normalize.Semver("1.4.0")),
 	}
 
 	err = db.Create(&affectedComponent).Error

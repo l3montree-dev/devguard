@@ -1,4 +1,4 @@
-name: VulnDB Workflow v4.1
+name: VulnDB Workflow v5
 
 on:
   workflow_dispatch:
@@ -31,17 +31,6 @@ jobs:
           - 5432:5432
         options: '--health-cmd="pg_isready -U devguard" --shm-size=1g --health-interval=10s --health-timeout=5s --health-retries=5 --tmpfs /docker-entrypoint-initdb.d --tmpfs /run/postgresql'
     steps:
-      - name: Install postgresql client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-16
-      - name: Create semver extension
-        run: |
-          PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "CREATE EXTENSION IF NOT EXISTS semver;"
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5 - https://github.com/actions/checkout/releases/tag/v5.0.0
         with:
@@ -84,9 +73,9 @@ jobs:
 
       - name: Push the database archive to GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v4.1:latest \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v5:latest \
             vulndb.tar.zst
       - name: Push the archive signature to the GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v4.1:latest.sig \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v5:latest.sig \
             vulndb.tar.zst.sig
