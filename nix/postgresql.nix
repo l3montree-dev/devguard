@@ -75,7 +75,6 @@ rec {
   };
 
   postgresql = pkgs.postgresql_16.withPackages (p: [
-    p.pg-semver
     p.pgaudit
   ]);
 

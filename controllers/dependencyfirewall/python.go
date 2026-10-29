@@ -92,7 +92,7 @@ func (pypiEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, vers
 	}
 
 	if comp.SemverIntroduced != nil {
-		introduced, err := pep440.Parse(*comp.SemverIntroduced)
+		introduced, err := pep440.Parse(comp.SemverIntroduced.String())
 		if err != nil {
 			return true // if we cannot parse the introduced version, we assume it is affected to be safe
 		}
@@ -102,7 +102,7 @@ func (pypiEcosystem) MatchesVersion(comp models.MaliciousAffectedComponent, vers
 	}
 
 	if comp.SemverFixed != nil {
-		fixed, err := pep440.Parse(*comp.SemverFixed)
+		fixed, err := pep440.Parse(comp.SemverFixed.String())
 		if err != nil {
 			return true // if we cannot parse the fixed version, we assume it is affected to be safe
 		}

@@ -76,7 +76,7 @@ func semverMatchesVersion(comp models.MaliciousAffectedComponent, version string
 	}
 
 	if comp.SemverIntroduced != nil {
-		introduced, err := semver.ParseTolerant(*comp.SemverIntroduced)
+		introduced, err := semver.ParseTolerant(comp.SemverIntroduced.String())
 		if err != nil {
 			return true // if we cannot parse the introduced version, we assume it is affected to be safe
 		}
@@ -86,7 +86,7 @@ func semverMatchesVersion(comp models.MaliciousAffectedComponent, version string
 	}
 
 	if comp.SemverFixed != nil {
-		fixed, err := semver.ParseTolerant(*comp.SemverFixed)
+		fixed, err := semver.ParseTolerant(comp.SemverFixed.String())
 		if err != nil {
 			return true // if we cannot parse the fixed version, we assume it is affected to be safe
 		}

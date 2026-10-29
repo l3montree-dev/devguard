@@ -24,9 +24,11 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/hashmigrations"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // TestAdvisoryUpdateDoesNotDuplicateAffectedPackages covers
@@ -242,7 +244,13 @@ func TestHashMigrationV5DoesNotBreakAdvisoryCreation(t *testing.T) {
 			ON CONFLICT (key) DO UPDATE SET val = '4'
 		`).Error)
 
-		err := hashmigrations.RunHashMigrationsIfNeeded(f.Pool, nil, nil, nil)
+		// v9 triggers a full vulndb import, which is not under test here
+		configService := mocks.NewConfigService(t)
+		configService.On("SetJSONConfig", mock.Anything, "vulndb.lastRCImport", "").Return(nil)
+		vulndbService := mocks.NewVulnDBService(t)
+		vulndbService.On("ImportRC", mock.Anything, shared.ImportOptions{}).Return(nil)
+
+		err := hashmigrations.RunHashMigrationsIfNeeded(f.Pool, nil, vulndbService, configService)
 		assert.Nil(t, err, "hash migration v5 itself must succeed")
 
 		controller := f.App.AdvisoryController

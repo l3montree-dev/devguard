@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +72,7 @@ func TestFixedVersionDaemonUpdateFixedVersions(t *testing.T) {
 		fixableCVE := createTestCVEForFixedVersion(f, "CVE-2025-FIXVER-001")
 		affectedComponent, err := createTestAffectedComponent(fixablePurl, []models.CVE{fixableCVE})
 		assert.NoError(t, err)
-		affectedComponent.SemverFixed = new("1.2.3")
+		affectedComponent.SemverFixed = new(normalize.Semver("1.2.3"))
 		assert.NoError(t, f.DB.Create(&affectedComponent).Error)
 
 		// this cve affects the same purl but is not referenced by any affected component

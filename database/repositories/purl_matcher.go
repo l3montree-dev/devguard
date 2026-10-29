@@ -130,10 +130,11 @@ func BatchedVersionPredicates(interpretation normalize.VersionInterpretationType
 	case normalize.SemanticVersionString:
 		return []string{
 			exactVersion,
-			// the semver ranges, minus anything the exact branch already returned
-			`((ac.semver_introduced IS NULL AND ac.semver_fixed > q.version::semver)
-				OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed IS NULL)
-				OR (ac.semver_introduced <= q.version::semver AND ac.semver_fixed > q.version::semver))
+			// the semver ranges, minus anything the exact branch already returned.
+			// q.semver is q.version encoded with normalize.SemverToBytes
+			`((ac.semver_introduced IS NULL AND ac.semver_fixed > q.semver)
+				OR (ac.semver_introduced <= q.semver AND ac.semver_fixed IS NULL)
+				OR (ac.semver_introduced <= q.semver AND ac.semver_fixed > q.semver))
 			AND ac.version IS DISTINCT FROM q.version AND ac.version IS DISTINCT FROM q.original_version`,
 		}
 	default:

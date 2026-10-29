@@ -13,8 +13,6 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-CREATE EXTENSION IF NOT EXISTS semver;
-
 CREATE DATABASE kratos;
 CREATE USER kratos PASSWORD 'change-me-definitely-when-not-testing';
 GRANT ALL PRIVILEGES ON DATABASE kratos to kratos;
