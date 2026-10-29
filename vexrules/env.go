@@ -17,23 +17,20 @@ package vexrules
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"sync"
 
-	"crypto/sha256"
-	"encoding/hex"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/google/cel-go/cel"
-	celast "github.com/google/cel-go/common/ast"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
-	"github.com/google/cel-go/parser"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"github.com/package-url/packageurl-go"
@@ -303,56 +300,10 @@ func stringListField(mapVal ref.Val, key string) ([]string, error) {
 }
 
 func IdentityOfRule(rule models.UpstreamVEXRule) (string, error) {
-	// the identity of a vex rule is inside the cel expression AND the assessment.
-	identity := string(rule.EventType) + "||" + string(rule.MechanicalJustification) + "||"
-
-	// now we need to parse the CEL expression. Since it might contain && and || which semantically do not differ based on the order of the expressions, we need to sort the expressions inside the CEL expression to get a consistent identity for the same rule.
-	// we can do so by parsing the expression into the AST
-	celEnv, err := CelEnv()
+	normalized, err := normalize.NormalizeCELExpression(rule.CELExpression)
 	if err != nil {
-		return "", fmt.Errorf("failed to create CEL environment: %w", err)
+		return "", err
 	}
-
-	ast, iss := celEnv.Compile(rule.CELExpression)
-	if iss != nil && iss.Err() != nil {
-		return "", fmt.Errorf("failed to compile CEL expression: %w", iss.Err())
-	}
-
-	info := ast.NativeRep().SourceInfo()
-	canonical := canonicalExprString(ast.NativeRep().Expr(), info)
-
-	sum := sha256.Sum256([]byte(identity + canonical))
+	sum := sha256.Sum256([]byte(string(rule.EventType) + "||" + string(rule.MechanicalJustification) + "||" + normalized.CELExpression))
 	return hex.EncodeToString(sum[:]), nil
-}
-
-// canonicalExprString renders an expression to source text via cel-go's own
-// unparser, except for && and || calls: since those are commutative, their
-// (recursively flattened) operands are sorted before joining, so operand
-// order doesn't affect the result.
-func canonicalExprString(e celast.Expr, info *celast.SourceInfo) string {
-	if e.Kind() == celast.CallKind {
-		if fn := e.AsCall().FunctionName(); fn == "_&&_" || fn == "_||_" {
-			var operands []string
-			for _, o := range flattenCalls(e, fn) {
-				operands = append(operands, canonicalExprString(o, info))
-			}
-			sort.Strings(operands)
-			return fn + "(" + strings.Join(operands, ",") + ")"
-		}
-	}
-	s, _ := parser.Unparse(e, info)
-	return s
-}
-
-// flattenCalls collects the operands of a chain of same-function calls,
-// e.g. a && b && c parses as _&&_(_&&_(a,b),c); this returns [a,b,c].
-func flattenCalls(e celast.Expr, fn string) []celast.Expr {
-	if e.Kind() != celast.CallKind || e.AsCall().FunctionName() != fn {
-		return []celast.Expr{e}
-	}
-	var operands []celast.Expr
-	for _, a := range e.AsCall().Args() {
-		operands = append(operands, flattenCalls(a, fn)...)
-	}
-	return operands
 }

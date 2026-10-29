@@ -65,7 +65,9 @@ func TestDaemonPipelineApplyVEXRulesAppliesExistingRuleToExistingVuln(t *testing
 		rule.Title = "accept this CVE"
 		rule.Justification = "test justification"
 		rule.EventType = dtos.EventTypeAccepted
-		rule.SetCELExpression(fmt.Sprintf(`vuln.cveId == %q`, cve.CVE))
+		rule.CELExpression = fmt.Sprintf(`vuln.cveId == %q`, cve.CVE)
+		rule.EnsureID()
+		rule.SetCVEScopeFromCELExpression()
 		err = f.DB.Create(&rule).Error
 		assert.NoError(t, err)
 
@@ -143,7 +145,9 @@ func TestDaemonPipelineApplyVEXRulesReopensAcceptedVuln(t *testing.T) {
 		rule.Title = "reopen this CVE"
 		rule.Justification = "test justification"
 		rule.EventType = dtos.EventTypeReopened
-		rule.SetCELExpression(fmt.Sprintf(`vuln.cveId == %q`, cve.CVE))
+		rule.CELExpression = fmt.Sprintf(`vuln.cveId == %q`, cve.CVE)
+		rule.EnsureID()
+		rule.SetCVEScopeFromCELExpression()
 		err = f.DB.Create(&rule).Error
 		assert.NoError(t, err)
 

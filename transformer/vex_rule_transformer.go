@@ -111,11 +111,14 @@ func VEXRuleToOriginRecommendationDTO(rule models.VEXRule, originProjectSlug, or
 }
 
 func UpstreamVEXRuleToVEXRule(rule models.UpstreamVEXRule, createdByID string, assetID uuid.UUID) models.VEXRule {
-	return models.VEXRule{
+	vexRule := models.VEXRule{
 		UpstreamVEXRule: rule,
 		AssetID:         assetID,
 		CreatedByID:     createdByID,
 	}
+	// the id of the upstream rule does not contain the asset, so it is replaced before rules are compared by id
+	vexRule.EnsureID()
+	return vexRule
 }
 
 func AllUpstreamVEXRulesToVEXRules(rules []models.UpstreamVEXRule, createdByID string, assetID uuid.UUID) []models.VEXRule {

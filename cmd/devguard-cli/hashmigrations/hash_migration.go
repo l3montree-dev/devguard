@@ -129,7 +129,7 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 
 			// cve_scope was added as a plain column with no backfill - existing
 			// vex_rules/upstream_vex_rules rows need it computed from their
-			// cel_expression, same as SetCELExpression/EnsureID now do for new rows.
+			// cel_expression, same as SetCVEScopeFromCELExpression now does for new rows.
 			if err := runVEXRuleCVEScopeBackfill(pool); err != nil {
 				return fmt.Errorf("failed to backfill VEX rule cve_scope (v5): %w", err)
 			}
@@ -207,6 +207,20 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			config.Val = strconv.Itoa(CurrentHashVersion)
 			if err := db.Save(&config).Error; err != nil {
 				return fmt.Errorf("failed to update hash migration version after v7: %w", err)
+			}
+		}
+
+		if currentVersion < 9 {
+			// the vex_rules id now hashes the asset together with the rule content, so a changed
+			// assessment of an upstream VEX document gets a new id instead of being ignored by the diff
+			if err := runVEXRuleIDMigration(pool); err != nil {
+				return fmt.Errorf("failed to recalculate vex_rules ids (v9): %w", err)
+			}
+
+			// Persist the new version so this migration does not re-run on the next startup.
+			config.Val = strconv.Itoa(CurrentHashVersion)
+			if err := db.Save(&config).Error; err != nil {
+				return fmt.Errorf("failed to update hash migration version after v9: %w", err)
 			}
 		}
 
@@ -538,7 +552,7 @@ func runVulnEventsSecurityAdvisoryConstraintFix(pool *pgxpool.Pool) error {
 
 // runVEXRuleCVEScopeBackfill computes cve_scope for every existing vex_rules
 // and upstream_vex_rules row from its cel_expression. cve_scope was added as a
-// plain column with no backfill, and SetCELExpression/EnsureID only compute it
+// plain column with no backfill, and SetCVEScopeFromCELExpression only computes it
 // going forward - existing rows are stuck at NULL until this runs.
 func runVEXRuleCVEScopeBackfill(pool *pgxpool.Pool) error {
 	start := time.Now()
@@ -551,7 +565,7 @@ func runVEXRuleCVEScopeBackfill(pool *pgxpool.Pool) error {
 		var upstreamRules []models.UpstreamVEXRule
 		if err := tx.FindInBatches(&upstreamRules, 2_000, func(_ *gorm.DB, _ int) error {
 			for i := range upstreamRules {
-				upstreamRules[i].CVEScope = models.ExtractCVEScopeFromCELExpression(upstreamRules[i].CELExpression)
+				upstreamRules[i].SetCVEScopeFromCELExpression()
 				if err := tx.Save(&upstreamRules[i]).Error; err != nil {
 					return fmt.Errorf("failed to save upstream_vex_rules row %s: %w", upstreamRules[i].ID, err)
 				}
@@ -564,7 +578,7 @@ func runVEXRuleCVEScopeBackfill(pool *pgxpool.Pool) error {
 		var vexRules []models.VEXRule
 		if err := tx.FindInBatches(&vexRules, 2_000, func(_ *gorm.DB, _ int) error {
 			for i := range vexRules {
-				vexRules[i].CVEScope = models.ExtractCVEScopeFromCELExpression(vexRules[i].CELExpression)
+				vexRules[i].SetCVEScopeFromCELExpression()
 				if err := tx.Save(&vexRules[i]).Error; err != nil {
 					return fmt.Errorf("failed to save vex_rules row %s: %w", vexRules[i].ID, err)
 				}
@@ -574,6 +588,93 @@ func runVEXRuleCVEScopeBackfill(pool *pgxpool.Pool) error {
 			return fmt.Errorf("failed to backfill vex_rules cve_scope: %w", err)
 		}
 
+		return nil
+	})
+}
+
+// vexRuleIDMapping maps the old id of a vex rule to the id it has with the current formula.
+type vexRuleIDMapping struct {
+	OldID string `gorm:"column:old_id"`
+	NewID string `gorm:"column:new_id"`
+}
+
+// runVEXRuleIDMigration recalculates the id of every vex_rules row with VEXRule.EnsureID and moves the
+// references in vuln_events along. Rows of the same asset with the same content get the same new id,
+// only one of them is kept. The recommendations of local rules are deleted instead of moved, the
+// recommendation daemon rebuilds them in its next run anyway.
+func runVEXRuleIDMigration(pool *pgxpool.Pool) error {
+	start := time.Now()
+	defer func() {
+		slog.Info("vex_rules id migration completed", "duration", time.Since(start))
+	}()
+	db := database.NewGormDB(pool)
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		// rows whose id is already the current one, they keep it
+		keptIDs := make(map[string]struct{})
+		var mappings []vexRuleIDMapping
+		var duplicateIDs []string
+
+		var vexRules []models.VEXRule
+		if err := tx.Select("id", "asset_id", "cel_expression", "vex_source", "title", "justification", "mechanical_justification", "event_type").
+			FindInBatches(&vexRules, 2_000, func(_ *gorm.DB, _ int) error {
+				for _, rule := range vexRules {
+					oldID := rule.ID
+					rule.EnsureID()
+					if rule.ID == oldID {
+						keptIDs[oldID] = struct{}{}
+						continue
+					}
+					mappings = append(mappings, vexRuleIDMapping{OldID: oldID, NewID: rule.ID})
+				}
+				return nil
+			}).Error; err != nil {
+			return fmt.Errorf("failed to load vex_rules: %w", err)
+		}
+
+		// only the first row with a new id is renamed, the others are deleted and their events moved to it
+		for _, mapping := range mappings {
+			if _, taken := keptIDs[mapping.NewID]; taken {
+				duplicateIDs = append(duplicateIDs, mapping.OldID)
+				continue
+			}
+			keptIDs[mapping.NewID] = struct{}{}
+		}
+		slog.Info("recalculating vex_rules ids", "changed", len(mappings), "duplicates", len(duplicateIDs))
+		if len(mappings) == 0 {
+			return nil
+		}
+
+		if err := tx.Exec(`CREATE TEMP TABLE _vex_rule_id_mappings (old_id TEXT PRIMARY KEY, new_id TEXT NOT NULL) ON COMMIT DROP`).Error; err != nil {
+			return fmt.Errorf("failed to create vex rule id mapping table: %w", err)
+		}
+		if err := tx.Table("_vex_rule_id_mappings").CreateInBatches(mappings, 2_000).Error; err != nil {
+			return fmt.Errorf("failed to store vex rule id mappings: %w", err)
+		}
+
+		// the foreign key has no ON UPDATE CASCADE, so the referencing rows would block the update
+		if err := tx.Exec(`DELETE FROM vex_rule_recommendations WHERE vex_rule_id IS NOT NULL`).Error; err != nil {
+			return fmt.Errorf("failed to delete recommendations of vex rules: %w", err)
+		}
+		if err := tx.Exec(`
+			UPDATE vuln_events e SET vex_rule_id = m.new_id
+			FROM _vex_rule_id_mappings m
+			WHERE e.vex_rule_id = m.old_id
+		`).Error; err != nil {
+			return fmt.Errorf("failed to move vuln_events to the new vex rule ids: %w", err)
+		}
+		if len(duplicateIDs) > 0 {
+			if err := tx.Exec(`DELETE FROM vex_rules WHERE id IN ?`, duplicateIDs).Error; err != nil {
+				return fmt.Errorf("failed to delete duplicate vex rules: %w", err)
+			}
+		}
+		if err := tx.Exec(`
+			UPDATE vex_rules r SET id = m.new_id
+			FROM _vex_rule_id_mappings m
+			WHERE r.id = m.old_id
+		`).Error; err != nil {
+			return fmt.Errorf("failed to update vex_rules ids: %w", err)
+		}
 		return nil
 	})
 }

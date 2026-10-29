@@ -142,7 +142,6 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 					EventType:     et,
 					CELExpression: vexrules.ToCELExpression(cveID, pattern),
 				}
-				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 		}

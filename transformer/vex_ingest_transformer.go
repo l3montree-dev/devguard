@@ -153,7 +153,6 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 					EventType:     eventType,
 					CELExpression: vexrules.ToCELExpression(vuln.ID, pp),
 				}
-				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
 			}
 			continue
@@ -187,7 +186,6 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 			CELExpression: vexrules.ToCELExpression(vuln.ID, pattern),
 		}
 
-		rule.SetCELExpression(rule.CELExpression)
 		rules = append(rules, rule)
 	}
 
@@ -226,7 +224,6 @@ func OpenVEXToRules(doc *vex.VEX, source string) ([]models.UpstreamVEXRule, erro
 				EventType:               eventType,
 				CELExpression:           vexrules.ToCELExpression(cveID, pattern),
 			}
-			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
 		}
 	}

@@ -47,7 +47,9 @@ func TestVexRuleRepositoryFindOpenVexRulesByAssetIDs(t *testing.T) {
 				EventType:     eventType,
 			},
 		}
-		rule.SetCELExpression(`vuln.cveId == "CVE-2025-0000" && ` + string(eventType))
+		rule.CELExpression = `vuln.cveId == "CVE-2025-0000" && ` + string(eventType)
+		rule.EnsureID()
+		rule.SetCVEScopeFromCELExpression()
 		require.NoError(t, db.Create(&rule).Error)
 		return rule
 	}

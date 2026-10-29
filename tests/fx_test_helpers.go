@@ -194,6 +194,7 @@ func (f *TestFixture) CreateDaemonRunner() *listeners.DaemonRunner {
 		f.App.UpstreamVEXRuleRepository,
 		f.App.ExternalEntityProviderService,
 		f.App.FirstPartyVulnService,
+		f.App.VEXRuleExchangeClient,
 		f.Pool,
 	)
 }

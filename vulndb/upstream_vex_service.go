@@ -41,30 +41,32 @@ func FetchVexRulesFromGitHubSources(ctx context.Context, ghVexFetcher shared.Git
 	for i := range rules {
 		rules[i].EnsureID()
 	}
-	return utils.DeduplicateSlice(rules, func(r models.UpstreamVEXRule) string { return r.ID }), nil
+	rules = utils.DeduplicateSlice(rules, func(r models.UpstreamVEXRule) string { return r.ID })
+
+	// the scope is only derived here: it is exported with the rules, so importers take it over without parsing every expression
+	for i := range rules {
+		rules[i].SetCVEScopeFromCELExpression()
+	}
+	return rules, nil
 }
 
 // insertSystemVexRulesBulk streams system VEX rules into the given staging table
 // (created up front by CreateStagingTables). Call flushUpstreamVEXRulesStagingTable
 // (export path, where the live table is already truncated) or SyncAllTables
 // (import path, EXCEPT-based sync against a possibly non-empty live table) once
-// afterwards. rules must already be deduplicated by id - FetchVexRulesFromGitHubSources
-// guarantees this for freshly-fetched rules, and rows decoded from upstream_vex_rules.gob
-// carry whatever id that fetch already produced.
+// afterwards. rules must already be deduplicated by id and carry their cve scope -
+// FetchVexRulesFromGitHubSources guarantees this for freshly-fetched rules, and rows decoded
+// from upstream_vex_rules.gob carry whatever id and scope that fetch already produced.
 func insertSystemVexRulesBulk(ctx context.Context, tx pgx.Tx, rules []models.UpstreamVEXRule, table string) error {
 	if len(rules) == 0 {
 		return nil
-	}
-
-	for i := range rules {
-		rules[i].EnsureID()
 	}
 
 	if _, err := tx.CopyFrom(ctx, pgx.Identifier{table},
 		[]string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression", "cve_scope"},
 		pgx.CopyFromSlice(len(rules), func(i int) ([]any, error) {
 			r := rules[i]
-			return []any{r.ID, r.VexSource, r.Title, r.Justification, string(r.MechanicalJustification), string(r.EventType), r.CELExpression, models.ExtractCVEScopeFromCELExpression(r.CELExpression)}, nil
+			return []any{r.ID, r.VexSource, r.Title, r.Justification, string(r.MechanicalJustification), string(r.EventType), r.CELExpression, r.CVEScope}, nil
 		})); err != nil {
 		return fmt.Errorf("could not copy system vex rules into staging table: %w", err)
 	}

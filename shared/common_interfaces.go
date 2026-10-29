@@ -48,6 +48,8 @@ type DaemonRunner interface {
 	UpdateVulnDB(ctx context.Context) error
 	UpdateOpenSourceInsightInformation(ctx context.Context) error
 	RunVEXRuleRecommendationDaemon(ctx context.Context) error
+	RunVEXRuleExchangeSubmitDaemon(ctx context.Context) error
+	RunVEXRuleExchangeFetchDaemon(ctx context.Context) error
 	CollectSBOMGarbage(ctx context.Context) error
 	CollectExternalEntityGarbage(ctx context.Context) error
 	ScanAllAssets(ctx context.Context) error
@@ -578,6 +580,14 @@ type ScanService interface {
 type ConfigRepository interface {
 	Save(ctx context.Context, tx DB, config *models.Config) error
 	GetDB(ctx context.Context, tx DB) DB
+}
+
+type VEXRuleExchangeClient interface {
+	Enabled() bool
+	Fingerprint() string
+	Register(ctx context.Context) error
+	SubmitVEXRules(ctx context.Context, rules []dtos.VEXExchangeRuleDTO) error
+	FetchRecommendations(ctx context.Context) ([]dtos.VEXExchangeRecommendationDTO, error)
 }
 
 type GitHubVexFetcher interface {

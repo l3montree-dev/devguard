@@ -46,6 +46,8 @@ type NotifyTopic string
 // Job topics. They are persisted as river job kinds - do not rename while jobs of the old name may still be queued.
 const (
 	TopicVEXRuleRecommendations       NotifyTopic = "daemon.vexRuleRecommendations"
+	TopicVEXRuleExchangeSubmit        NotifyTopic = "daemon.vexRuleExchangeSubmit"
+	TopicVEXRuleExchangeFetch         NotifyTopic = "daemon.vexRuleExchangeFetch"
 	TopicCleanupOrphanedRecords       NotifyTopic = "daemon.cleanupOrphanedRecords"
 	TopicSBOMGarbageCollection        NotifyTopic = "daemon.sbomGarbageCollection"
 	TopicOpenSourceInsights           NotifyTopic = "daemon.openSourceInsights"

@@ -303,6 +303,108 @@ func (_c *DaemonRunner_RunDaemonPipelineForAsset_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// RunVEXRuleExchangeFetchDaemon provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) RunVEXRuleExchangeFetchDaemon(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RunVEXRuleExchangeFetchDaemon")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunVEXRuleExchangeFetchDaemon'
+type DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call struct {
+	*mock.Call
+}
+
+// RunVEXRuleExchangeFetchDaemon is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) RunVEXRuleExchangeFetchDaemon(ctx any) *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call {
+	return &DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call{Call: _e.mock.On("RunVEXRuleExchangeFetchDaemon", ctx)}
+}
+
+func (_c *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call) Run(run func(ctx context.Context)) *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call) Return(err error) *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_RunVEXRuleExchangeFetchDaemon_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RunVEXRuleExchangeSubmitDaemon provides a mock function for the type DaemonRunner
+func (_mock *DaemonRunner) RunVEXRuleExchangeSubmitDaemon(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RunVEXRuleExchangeSubmitDaemon")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RunVEXRuleExchangeSubmitDaemon'
+type DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call struct {
+	*mock.Call
+}
+
+// RunVEXRuleExchangeSubmitDaemon is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *DaemonRunner_Expecter) RunVEXRuleExchangeSubmitDaemon(ctx any) *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call {
+	return &DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call{Call: _e.mock.On("RunVEXRuleExchangeSubmitDaemon", ctx)}
+}
+
+func (_c *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call) Run(run func(ctx context.Context)) *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call) Return(err error) *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call) RunAndReturn(run func(ctx context.Context) error) *DaemonRunner_RunVEXRuleExchangeSubmitDaemon_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RunVEXRuleRecommendationDaemon provides a mock function for the type DaemonRunner
 func (_mock *DaemonRunner) RunVEXRuleRecommendationDaemon(ctx context.Context) error {
 	ret := _mock.Called(ctx)

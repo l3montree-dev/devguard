@@ -16,7 +16,10 @@
 package models
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 // VEXRule represents a rule for automatically marking vulnerabilities based on VEX statements.
@@ -43,21 +46,14 @@ func (VEXRule) TableName() string {
 	return "vex_rules"
 }
 
-// SetCELExpression sets the CELExpression, recalculates the ID, and re-derives
-// CVEScope - mirrors UpstreamVEXRule.SetCELExpression, but with the ID formula
-// VEXRule actually uses (asset-scoped, not a content hash), which is why this
-// method exists instead of relying on the embedded one.
-func (r *VEXRule) SetCELExpression(expression string) {
-	r.CELExpression = expression
-	r.ID = CalculateVEXRuleID(r.AssetID, r.CELExpression, r.VexSource)
-	r.CVEScope = ExtractCVEScopeFromCELExpression(r.CELExpression)
+func CalculateVEXRuleID(assetID uuid.UUID, upstreamVEXRuleID string) string {
+	return utils.HashString(fmt.Sprintf("%s/%s", assetID.String(), upstreamVEXRuleID))
 }
 
-// EnsureID calculates the ID if it hasn't been set yet.
 func (r *VEXRule) EnsureID() {
-	if r.ID == "" {
-		r.ID = CalculateVEXRuleID(r.AssetID, r.CELExpression, r.VexSource)
-	}
+
+	r.ID = CalculateVEXRuleID(r.AssetID, CalculateUpstreamVEXRuleID(r.CELExpression, r.VexSource, r.Title, r.Justification, r.MechanicalJustification, r.EventType))
+
 }
 
 // VEXRuleRecommendation is either an upstream-rule match (UpstreamVEXRuleID set) or a
