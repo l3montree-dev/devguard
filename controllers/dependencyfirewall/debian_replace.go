@@ -100,7 +100,7 @@ func (d *DebDependencyProxyController) applyDebReplacements(ctx context.Context,
 		}
 
 		for j, i := range indices {
-			result[i].Paragraph = oldEntries[j]
+			result[i] = shared.DebPackage{Paragraph: oldEntries[j], ReleasedAt: r.firstSeen}
 		}
 	}
 

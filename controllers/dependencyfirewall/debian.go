@@ -353,7 +353,10 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	releaseTime := debReleaseTime(headers)
+	releaseTime, ok := d.indexedReleaseTime(configs, requestPath)
+	if !ok {
+		releaseTime = debReleaseTime(headers)
+	}
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)

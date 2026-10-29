@@ -38,15 +38,39 @@ const (
 )
 
 type debIndex struct {
-	files map[string][]byte
-	size  int
+	files        map[string][]byte
+	releaseTimes map[string]time.Time
+	size         int
+}
+
+func debIndexKey(configs DependencyProxyConfigs, archive, suite string) string {
+	return configs.Secret.String() + "/" + configs.getRegistry(deb, shared.DebRegistry) + "/" + archive + "/" + suite
 }
 
 func (d *DebDependencyProxyController) getDebIndex(ctx context.Context, configs DependencyProxyConfigs, archive, suite string) (*debIndex, error) {
-	key := configs.Secret.String() + "/" + configs.getRegistry(deb, shared.DebRegistry) + "/" + archive + "/" + suite
-	return d.debIndexes.GetOrLoad(key, func() (*debIndex, error) {
+	return d.debIndexes.GetOrLoad(debIndexKey(configs, archive, suite), func() (*debIndex, error) {
 		return d.buildDebIndex(context.WithoutCancel(ctx), configs, archive, suite)
 	})
+}
+
+func (d *DebDependencyProxyController) indexedReleaseTime(configs DependencyProxyConfigs, requestPath string) (time.Time, bool) {
+	archive, filename, ok := strings.Cut(requestPath, "/")
+	if !ok {
+		return time.Time{}, false
+	}
+	for _, suite := range shared.DebSuites[archive] {
+		idx, ok := d.debIndexes.Get(debIndexKey(configs, archive, suite))
+		if !ok {
+			continue
+		}
+		if releasedAt, ok := idx.releaseTimes[filename]; ok {
+			if releasedAt.IsZero() {
+				return time.Now(), true
+			}
+			return releasedAt, true
+		}
+	}
+	return time.Time{}, false
 }
 
 func (d *DebDependencyProxyController) loadDebPackageIndex(ctx context.Context, registry, archive, suite, component, arch string) (shared.DebPackageIndex, error) {
@@ -82,6 +106,7 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 	var mu sync.Mutex
 	var release shared.DebRelease
 	files := make(map[string][]byte)
+	releaseTimes := make(map[string]time.Time)
 	var group errgroup.Group
 	for _, component := range shared.DebComponents {
 		for _, arch := range shared.DebArchitectures {
@@ -96,12 +121,16 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 				blocked := d.checkDebPackages(configs, registry, suite, base.DebPackages)
 				groups := groupDebPackages(base.DebPackages, blocked)
 				replacements := d.findDebReplacements(ctx, configs, registry, archive, suite, base.DebPackages, groups)
-				raw, xzData, gzData, err := writeDebPackages(d.applyDebReplacements(ctx, archive, suite, component, arch, base.DebPackages, groups, replacements))
+				packages := d.applyDebReplacements(ctx, archive, suite, component, arch, base.DebPackages, groups, replacements)
+				raw, xzData, gzData, err := writeDebPackages(packages)
 				if err != nil {
 					return err
 				}
 				mu.Lock()
 				defer mu.Unlock()
+				for _, pkg := range packages {
+					releaseTimes[pkg.Paragraph.Values["Filename"]] = pkg.ReleasedAt
+				}
 				release = base.DebRelease
 				files[component+"/binary-"+arch+"/Packages"] = raw
 				files[component+"/binary-"+arch+"/Packages.xz"] = xzData
@@ -137,7 +166,7 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 	files["Release.gpg"] = releaseGPG
 
 	slog.Info("Built debian index", "archive", archive, "suite", suite, "took", time.Since(start))
-	return &debIndex{files: files, size: size}, nil
+	return &debIndex{files: files, releaseTimes: releaseTimes, size: size}, nil
 }
 
 func (idx *debIndex) lookup(rest string) ([]byte, bool) {
