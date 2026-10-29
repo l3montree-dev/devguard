@@ -300,14 +300,16 @@ func (r *vexRuleRepository) FindByID(ctx context.Context, tx *gorm.DB, id string
 }
 
 func (r *vexRuleRepository) Create(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
-	// Ensure the ID is calculated
+	// Ensure the ID and CVE scope are calculated
 	rule.EnsureID()
+	rule.SetCVEScopeFromCELExpression()
 	return r.GetDB(ctx, tx).Create(rule).Error
 }
 
 func (r *vexRuleRepository) Upsert(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
-	// Ensure the ID is calculated
+	// Ensure the ID and CVE scope are calculated
 	rule.EnsureID()
+	rule.SetCVEScopeFromCELExpression()
 	return r.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(rule).Error
@@ -316,6 +318,7 @@ func (r *vexRuleRepository) Upsert(ctx context.Context, tx *gorm.DB, rule *model
 func (r *vexRuleRepository) Update(ctx context.Context, tx *gorm.DB, rule *models.VEXRule) error {
 	// Recalculate ID if path pattern changed
 	rule.EnsureID()
+	rule.SetCVEScopeFromCELExpression()
 	return r.GetDB(ctx, tx).Save(rule).Error
 }
 
@@ -337,9 +340,10 @@ func (r *vexRuleRepository) UpsertBatch(ctx context.Context, tx *gorm.DB, rules 
 	if len(rules) == 0 {
 		return nil
 	}
-	// Ensure IDs are calculated
+	// Ensure IDs and CVE scopes are calculated
 	for i := range rules {
 		rules[i].EnsureID()
+		rules[i].SetCVEScopeFromCELExpression()
 	}
 
 	// Deduplicate by ID - postgres cannot affect the same row twice within a single

@@ -174,9 +174,7 @@ func (gh gitHubVexFetcher) FetchVexFromGitHub(ctx context.Context, targetURL str
 		allRules = append(allRules, rules...)
 	}
 
-	return utils.DeduplicateSlice(allRules, func(el models.UpstreamVEXRule) string {
-		return el.ID
-	}), nil
+	return allRules, nil
 }
 
 func parseGitHubURL(rawURL string) (owner string, repo string, err error) {

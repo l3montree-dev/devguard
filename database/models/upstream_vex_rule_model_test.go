@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExtractCVEScopeFromCELExpression(t *testing.T) {
+func TestSetCVEScopeFromCELExpression(t *testing.T) {
 	tests := []struct {
 		name     string
 		expr     string
@@ -28,6 +28,16 @@ func TestExtractCVEScopeFromCELExpression(t *testing.T) {
 			expected: new("CVE-2025-61725"),
 		},
 		{
+			name:     "CVE check AND-ed after matchesPattern",
+			expr:     `matchesPattern(vuln, ["*", "pkg:golang/example/pkg@1.0.0"]) && vuln.cveId == "CVE-2025-61725"`,
+			expected: new("CVE-2025-61725"),
+		},
+		{
+			name:     "CVE check in the middle of a longer && chain",
+			expr:     `vuln.componentPurl == "pkg:npm/a" && (vuln.cveId == "CVE-2025-61725" && matchesPattern(vuln, ["*"]))`,
+			expected: new("CVE-2025-61725"),
+		},
+		{
 			name:     "CVE check OR-ed with another condition is not scoped",
 			expr:     `vuln.cveId == "CVE-2025-61725" || matchesPattern(vuln, ["*", "pkg:golang/example/pkg@1.0.0"])`,
 			expected: nil,
@@ -35,6 +45,16 @@ func TestExtractCVEScopeFromCELExpression(t *testing.T) {
 		{
 			name:     "no cveId reference at all",
 			expr:     `matchesPattern(vuln, ["*", "pkg:golang/example/pkg@1.0.0"])`,
+			expected: nil,
+		},
+		{
+			name:     "CVE check nested in an || is not scoped",
+			expr:     `matchesPattern(vuln, ["*"]) && (vuln.cveId == "CVE-2025-61725" || vuln.cveId == "CVE-2025-1")`,
+			expected: nil,
+		},
+		{
+			name:     "invalid expression is not scoped",
+			expr:     `vuln.cveId == "CVE-2025-61725" && `,
 			expected: nil,
 		},
 		{
@@ -46,7 +66,10 @@ func TestExtractCVEScopeFromCELExpression(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractCVEScopeFromCELExpression(tt.expr)
+			rule := UpstreamVEXRule{CELExpression: tt.expr}
+			rule.SetCVEScopeFromCELExpression()
+			got := rule.CVEScope
+			assert.Equal(t, tt.expr, rule.CELExpression, "the expression must not be changed")
 			if tt.expected == nil {
 				assert.Nil(t, got)
 				return

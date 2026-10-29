@@ -290,7 +290,6 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 	tx := c.vexRuleRepository.Begin(reqCtx)
 	defer tx.Rollback()
 
-	rule.EnsureID()
 	if err := c.vexRuleRepository.Create(reqCtx, tx, rule); err != nil {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
