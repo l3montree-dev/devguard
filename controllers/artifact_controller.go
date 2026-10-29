@@ -670,10 +670,10 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 		AppVersion:         escapeLatex(assetVersion.Name),
 		ReportCreationDate: escapeLatex(time.Now().Format("2006-01-02 15:04")),
 
-		AmountCritical: distribution.CVEPurlCriticalCVSS,
-		AmountHigh:     distribution.CVEPurlHighCVSS,
-		AmountMedium:   distribution.CVEPurlMediumCVSS,
-		AmountLow:      distribution.CVEPurlLowCVSS,
+		AmountCritical: len(distribution.CVEPurlCriticalCVSS),
+		AmountHigh:     len(distribution.CVEPurlHighCVSS),
+		AmountMedium:   len(distribution.CVEPurlMediumCVSS),
+		AmountLow:      len(distribution.CVEPurlLowCVSS),
 
 		AvgFixTimeCritical: fmt.Sprintf("%d Tage", int(avgCritical.Hours()/24)),
 		AvgFixTimeHigh:     fmt.Sprintf("%d Tage", int(avgHigh.Hours()/24)),

@@ -68,24 +68,24 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 
 		switch {
 		case risk >= 0.0 && risk < 4.0:
-			distribution.Low++
+			distribution.Low = append(distribution.Low, dependencyVuln.ID.String())
 		case risk >= 4.0 && risk < 7.0:
-			distribution.Medium++
+			distribution.Medium = append(distribution.Medium, dependencyVuln.ID.String())
 		case risk >= 7.0 && risk < 9.0:
-			distribution.High++
+			distribution.High = append(distribution.High, dependencyVuln.ID.String())
 		case risk >= 9.0 && risk <= 10.0:
-			distribution.Critical++
+			distribution.Critical = append(distribution.Critical, dependencyVuln.ID.String())
 		}
 
 		switch {
 		case cvss >= 0.0 && cvss < 4.0:
-			distribution.LowCVSS++
+			distribution.LowCVSS = append(distribution.LowCVSS, dependencyVuln.ID.String())
 		case cvss >= 4.0 && cvss < 7.0:
-			distribution.MediumCVSS++
+			distribution.MediumCVSS = append(distribution.MediumCVSS, dependencyVuln.ID.String())
 		case cvss >= 7.0 && cvss < 9.0:
-			distribution.HighCVSS++
+			distribution.HighCVSS = append(distribution.HighCVSS, dependencyVuln.ID.String())
 		case cvss >= 9.0 && cvss <= 10.0:
-			distribution.CriticalCVSS++
+			distribution.CriticalCVSS = append(distribution.CriticalCVSS, dependencyVuln.ID.String())
 		}
 
 		distributionPerComponent[componentName] = distribution
@@ -293,25 +293,25 @@ func (s *statisticsService) GetRemediationTimeAveragesForRelease(ctx context.Con
 	return s.statisticsRepository.AverageRemediationTimesForRelease(ctx, nil, releaseID)
 }
 
-func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
 	for _, vuln := range dependencyVulns {
 		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		switch {
 		case risk >= 0.0 && risk < 4.0:
-			low++
+			low = append(low, vuln.ID.String())
 		case risk >= 4.0 && risk < 7.0:
-			medium++
+			medium = append(medium, vuln.ID.String())
 		case risk >= 7.0 && risk < 9.0:
-			high++
+			high = append(high, vuln.ID.String())
 		case risk >= 9.0 && risk <= 10.0:
-			critical++
+			critical = append(critical, vuln.ID.String())
 		}
 	}
 	return
 }
 
 // very redundant, this has to be refactored later
-func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
 	for _, vuln := range dependencyVulns {
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
 			continue
@@ -320,19 +320,19 @@ func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVul
 		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		switch {
 		case risk >= 0.0 && risk < 4.0:
-			low++
+			low = append(low, vuln.ID.String())
 		case risk >= 4.0 && risk < 7.0:
-			medium++
+			medium = append(medium, vuln.ID.String())
 		case risk >= 7.0 && risk < 9.0:
-			high++
+			high = append(high, vuln.ID.String())
 		case risk >= 9.0 && risk <= 10.0:
-			critical++
+			critical = append(critical, vuln.ID.String())
 		}
 	}
 	return
 }
 
-func calculateFixableSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+func calculateFixableSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
 	for _, vuln := range dependencyVulns {
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
 			continue
@@ -341,20 +341,23 @@ func calculateFixableSeverityCountsByCvss(dependencyVulns []models.DependencyVul
 		cvss := float64(vuln.GetCVE().CVSS)
 		switch {
 		case cvss >= 0.0 && cvss < 4.0:
-			low++
+			low = append(low, vuln.ID.String())
 		case cvss >= 4.0 && cvss < 7.0:
-			medium++
+			medium = append(medium, vuln.ID.String())
 		case cvss >= 7.0 && cvss < 9.0:
-			high++
+			high = append(high, vuln.ID.String())
 		case cvss >= 9.0 && cvss <= 10.0:
-			critical++
+			critical = append(critical, vuln.ID.String())
 		}
 	}
 	return
 }
 
-func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
-	uniqueCombinations := make(map[string]float64)
+func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	uniqueCombinations := make(map[string]struct {
+		risk           float64
+		combinationKey string
+	})
 
 	// get the highest risk for each unique CVE+PURL combination to avoid double counting vulnerabilities that affect multiple components
 	for _, vuln := range dependencyVulns {
@@ -362,28 +365,34 @@ func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln)
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
 		existingRisk, exists := uniqueCombinations[combinationKey]
-		if !exists || risk > existingRisk {
-			uniqueCombinations[combinationKey] = risk
+		if !exists || risk > existingRisk.risk {
+			uniqueCombinations[combinationKey] = struct {
+				risk           float64
+				combinationKey string
+			}{
+				risk:           risk,
+				combinationKey: combinationKey,
+			}
 		}
 	}
 
-	for _, risk := range uniqueCombinations {
+	for _, unique := range uniqueCombinations {
 		switch {
-		case risk >= 0.0 && risk < 4.0:
-			low++
-		case risk >= 4.0 && risk < 7.0:
-			medium++
-		case risk >= 7.0 && risk < 9.0:
-			high++
-		case risk >= 9.0 && risk <= 10.0:
-			critical++
+		case unique.risk >= 0.0 && unique.risk < 4.0:
+			low = append(low, unique.combinationKey)
+		case unique.risk >= 4.0 && unique.risk < 7.0:
+			medium = append(medium, unique.combinationKey)
+		case unique.risk >= 7.0 && unique.risk < 9.0:
+			high = append(high, unique.combinationKey)
+		case unique.risk >= 9.0 && unique.risk <= 10.0:
+			critical = append(critical, unique.combinationKey)
 		}
 	}
 	return
 }
 
-func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
-	uniqueCombinations := make(map[string]float64)
+func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	uniqueCombinations := make(map[string]dtos.UniqueRiskCVSSTrack)
 
 	// get the highest risk for each unique CVE+PURL combination to avoid double counting vulnerabilities that affect multiple components
 	for _, vuln := range dependencyVulns {
@@ -394,28 +403,31 @@ func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.Dependen
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
 		existingRisk, exists := uniqueCombinations[combinationKey]
-		if !exists || risk > existingRisk {
-			uniqueCombinations[combinationKey] = risk
+		if !exists || risk > existingRisk.RiskCVSS {
+			uniqueCombinations[combinationKey] = dtos.UniqueRiskCVSSTrack{
+				RiskCVSS:                    risk,
+				UniqueCombinationIdentifier: combinationKey,
+			}
 		}
 	}
 
-	for _, risk := range uniqueCombinations {
+	for _, unique := range uniqueCombinations {
 		switch {
-		case risk >= 0.0 && risk < 4.0:
-			low++
-		case risk >= 4.0 && risk < 7.0:
-			medium++
-		case risk >= 7.0 && risk < 9.0:
-			high++
-		case risk >= 9.0 && risk <= 10.0:
-			critical++
+		case unique.RiskCVSS >= 0.0 && unique.RiskCVSS < 4.0:
+			low = append(low, unique.UniqueCombinationIdentifier)
+		case unique.RiskCVSS >= 4.0 && unique.RiskCVSS < 7.0:
+			medium = append(medium, unique.UniqueCombinationIdentifier)
+		case unique.RiskCVSS >= 7.0 && unique.RiskCVSS < 9.0:
+			high = append(high, unique.UniqueCombinationIdentifier)
+		case unique.RiskCVSS >= 9.0 && unique.RiskCVSS <= 10.0:
+			critical = append(critical, unique.UniqueCombinationIdentifier)
 		}
 	}
 	return
 }
 
-func calculateUniqueFixableCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
-	uniqueCombinations := make(map[string]float64)
+func calculateUniqueFixableCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	uniqueCombinations := make(map[string]dtos.UniqueRiskCVSSTrack)
 
 	for _, vuln := range dependencyVulns {
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
@@ -425,27 +437,30 @@ func calculateUniqueFixableCVEPurlCountsByCvss(dependencyVulns []models.Dependen
 		combinationKey := fmt.Sprintf("%s|%s", vuln.CVEID, vuln.ComponentPurl)
 
 		existingCvss, exists := uniqueCombinations[combinationKey]
-		if !exists || cvss > existingCvss {
-			uniqueCombinations[combinationKey] = cvss
+		if !exists || cvss > existingCvss.RiskCVSS {
+			uniqueCombinations[combinationKey] = dtos.UniqueRiskCVSSTrack{
+				RiskCVSS:                    cvss,
+				UniqueCombinationIdentifier: combinationKey,
+			}
 		}
 	}
 
-	for _, cvss := range uniqueCombinations {
+	for _, unique := range uniqueCombinations {
 		switch {
-		case cvss >= 0.0 && cvss < 4.0:
-			low++
-		case cvss >= 4.0 && cvss < 7.0:
-			medium++
-		case cvss >= 7.0 && cvss < 9.0:
-			high++
-		case cvss >= 9.0 && cvss <= 10.0:
-			critical++
+		case unique.RiskCVSS >= 0.0 && unique.RiskCVSS < 4.0:
+			low = append(low, unique.UniqueCombinationIdentifier)
+		case unique.RiskCVSS >= 4.0 && unique.RiskCVSS < 7.0:
+			medium = append(medium, unique.UniqueCombinationIdentifier)
+		case unique.RiskCVSS >= 7.0 && unique.RiskCVSS < 9.0:
+			high = append(high, unique.UniqueCombinationIdentifier)
+		case unique.RiskCVSS >= 9.0 && unique.RiskCVSS <= 10.0:
+			critical = append(critical, unique.UniqueCombinationIdentifier)
 		}
 	}
 	return
 }
 
-func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
 	uniqueCombinations := make(map[string]struct{})
 
 	for _, vuln := range dependencyVulns {
@@ -458,13 +473,13 @@ func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln)
 
 		switch {
 		case cvss >= 0.0 && cvss < 4.0:
-			low++
+			low = append(low, combinationKey)
 		case cvss >= 4.0 && cvss < 7.0:
-			medium++
+			medium = append(medium, combinationKey)
 		case cvss >= 7.0 && cvss < 9.0:
-			high++
+			high = append(high, combinationKey)
 		case cvss >= 9.0 && cvss <= 10.0:
-			critical++
+			critical = append(critical, combinationKey)
 		}
 
 		uniqueCombinations[combinationKey] = struct{}{}
@@ -472,18 +487,18 @@ func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln)
 	return
 }
 
-func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
 	for _, vuln := range dependencyVulns {
 		cvss := float64(vuln.GetCVE().CVSS)
 		switch {
 		case cvss >= 0.0 && cvss < 4.0:
-			low++
+			low = append(low, vuln.ID.String())
 		case cvss >= 4.0 && cvss < 7.0:
-			medium++
+			medium = append(medium, vuln.ID.String())
 		case cvss >= 7.0 && cvss < 9.0:
-			high++
+			high = append(high, vuln.ID.String())
 		case cvss >= 9.0 && cvss <= 10.0:
-			critical++
+			critical = append(critical, vuln.ID.String())
 		}
 	}
 	return

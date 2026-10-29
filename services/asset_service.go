@@ -176,17 +176,17 @@ func (s *assetService) GetCVSSBadgeSVG(ctx context.Context, latest *models.Artif
 		Low:      latest.CVEPurlLowCVSS,
 	}
 
-	if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {
+	if len(CVSS.Critical) == 0 && len(CVSS.High) == 0 && len(CVSS.Medium) == 0 && len(CVSS.Low) == 0 {
 		return shared.GetBadgeSVG("CVSS", []shared.BadgeValues{
 			{Key: "all clear", Value: 0, Color: "#008000"},
 		})
 	}
 
 	values := []shared.BadgeValues{
-		{Key: "C", Value: CVSS.Critical, Color: "#8B0000"},
-		{Key: "H", Value: CVSS.High, Color: "#B22222"},
-		{Key: "M", Value: CVSS.Medium, Color: "#CD5C5C"},
-		{Key: "L", Value: CVSS.Low, Color: "#F08080"},
+		{Key: "C", Value: len(CVSS.Critical), Color: "#8B0000"},
+		{Key: "H", Value: len(CVSS.High), Color: "#B22222"},
+		{Key: "M", Value: len(CVSS.Medium), Color: "#CD5C5C"},
+		{Key: "L", Value: len(CVSS.Low), Color: "#F08080"},
 	}
 	return shared.GetBadgeSVG("CVSS", values)
 

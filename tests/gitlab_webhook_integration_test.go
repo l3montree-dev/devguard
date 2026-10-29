@@ -288,7 +288,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 				History: models.History{
 					Day: time.Now().UTC(),
 					Distribution: models.Distribution{
-						Critical: 1,
+						Critical: []string{"testdepvulnid"},
 					},
 				},
 			}

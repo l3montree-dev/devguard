@@ -763,8 +763,7 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash",
-                        "description": "New in 1.7"
+                        "$ref": "#/components/schemas/cyclonedx.Hash"
                     },
                     "issuerName": {
                         "type": "string"
@@ -2491,6 +2490,7 @@
                 "type": "object"
             },
             "cyclonedx.Hash": {
+                "description": "New in 1.7",
                 "properties": {
                     "alg": {
                         "$ref": "#/components/schemas/cyclonedx.HashAlgorithm"
@@ -3667,8 +3667,7 @@
                         "uniqueItems": false
                     },
                     "manufacture": {
-                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity",
-                        "description": "Deprecated: Use Component Manufacturer instead."
+                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
                     },
                     "manufacturer": {
                         "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
@@ -3744,6 +3743,7 @@
                 "type": "object"
             },
             "cyclonedx.OrganizationalEntity": {
+                "description": "Deprecated: Use Component Manufacturer instead.",
                 "properties": {
                     "address": {
                         "$ref": "#/components/schemas/cyclonedx.PostalAddress"
@@ -4047,8 +4047,7 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash",
-                        "description": "New in 1.7"
+                        "$ref": "#/components/schemas/cyclonedx.Hash"
                     },
                     "format": {
                         "type": "string"
@@ -7668,12 +7667,7 @@
                         "type": "string"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/dtos.ExternalReferenceType",
-                        "enum": [
-                            "cyclonedx",
-                            "csaf",
-                            "openvex"
-                        ]
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
                     },
                     "url": {
                         "maxLength": 2048,
@@ -7726,12 +7720,7 @@
                         "type": "string"
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType",
-                        "enum": [
-                            "accepted",
-                            "falsePositive",
-                            "reopened"
-                        ]
+                        "$ref": "#/components/schemas/dtos.VulnEventType"
                     },
                     "justification": {
                         "maxLength": 4000,
@@ -7830,6 +7819,7 @@
                 "type": "object"
             },
             "dtos.DatabaseSpecifics": {
+                "description": "specific additional information, not standardized",
                 "properties": {
                     "cwe_ids": {
                         "description": "array of cwe ids associated with this vulnerability",
@@ -8502,7 +8492,10 @@
                     "cyclonedx",
                     "csaf",
                     "openvex",
-                    "unknown"
+                    "unknown",
+                    "cyclonedx",
+                    "csaf",
+                    "openvex"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9249,7 +9242,13 @@
                 "enum": [
                     "low",
                     "high",
-                    "X"
+                    "X",
+                    "X",
+                    "low",
+                    "high",
+                    "X",
+                    "low",
+                    "high"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9264,7 +9263,17 @@
                     "adjacent",
                     "local",
                     "physical",
-                    "X"
+                    "X",
+                    "X",
+                    "network",
+                    "adjacent",
+                    "local",
+                    "physical",
+                    "X",
+                    "network",
+                    "adjacent",
+                    "local",
+                    "physical"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9280,7 +9289,15 @@
                     "none",
                     "low",
                     "high",
-                    "X"
+                    "X",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9292,6 +9309,30 @@
             },
             "dtos.ModifiedRequirementLevel": {
                 "enum": [
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
+                    "X",
+                    "none",
+                    "low",
+                    "high",
                     "X",
                     "none",
                     "low",
@@ -9309,7 +9350,13 @@
                 "enum": [
                     "unchanged",
                     "changed",
-                    "X"
+                    "X",
+                    "X",
+                    "unchanged",
+                    "changed",
+                    "X",
+                    "unchanged",
+                    "changed"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9320,6 +9367,12 @@
             },
             "dtos.ModifiedUserInteraction": {
                 "enum": [
+                    "X",
+                    "none",
+                    "required",
+                    "X",
+                    "none",
+                    "required",
                     "X",
                     "none",
                     "required"
@@ -9348,8 +9401,7 @@
                         "uniqueItems": false
                     },
                     "database_specific": {
-                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics",
-                        "description": "specific additional information, not standardized"
+                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics"
                     },
                     "details": {
                         "type": "string"
@@ -9922,103 +9974,231 @@
             "dtos.OrgRiskHistory": {
                 "properties": {
                     "critical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "criticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "day": {
                         "type": "string"
                     },
                     "fixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "high": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "highCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "low": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "lowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "medium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "mediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     }
                 },
                 "required": [
@@ -10516,8 +10696,7 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.Project",
-                        "description": "recursive structure"
+                        "$ref": "#/components/schemas/dtos.Project"
                     },
                     "parentId": {
                         "type": "string"
@@ -10714,8 +10893,7 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.Project",
-                        "description": "recursive structure"
+                        "$ref": "#/components/schemas/dtos.Project"
                     },
                     "parentId": {
                         "type": "string"
@@ -11141,6 +11319,24 @@
                 "enum": [
                     "low",
                     "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
+                    "high",
+                    "low",
+                    "medium",
                     "high"
                 ],
                 "type": "string",
@@ -11180,101 +11376,221 @@
                         "type": "number"
                     },
                     "critical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "criticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "day": {
                         "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
                         "type": "string"
                     },
                     "fixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixedDependencyVulns": {
                         "type": "integer"
                     },
                     "high": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "highCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "low": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "lowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "maxClosedRisk": {
                         "type": "number"
@@ -11283,10 +11599,18 @@
                         "type": "number"
                     },
                     "medium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "mediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "minClosedRisk": {
                         "type": "number"
@@ -11372,58 +11696,130 @@
                         "type": "number"
                     },
                     "critical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "criticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "day": {
                         "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
@@ -11433,43 +11829,91 @@
                         "type": "boolean"
                     },
                     "fixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixedDependencyVulns": {
                         "type": "integer"
                     },
                     "high": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "highCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "low": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "lowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "maxClosedRisk": {
                         "type": "number"
@@ -11478,10 +11922,18 @@
                         "type": "number"
                     },
                     "medium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "mediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "minClosedRisk": {
                         "type": "number"
@@ -11707,12 +12159,7 @@
                         "uniqueItems": false
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType",
-                        "enum": [
-                            "accepted",
-                            "falsePositive",
-                            "reopened"
-                        ]
+                        "$ref": "#/components/schemas/dtos.VulnEventType"
                     }
                 },
                 "required": [
@@ -12003,7 +12450,13 @@
                     "attachedComplianceComponent",
                     "removedComplianceComponent",
                     "detected",
-                    "rawRiskAssessmentUpdated"
+                    "rawRiskAssessmentUpdated",
+                    "accepted",
+                    "falsePositive",
+                    "reopened",
+                    "accepted",
+                    "falsePositive",
+                    "reopened"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -12441,6 +12894,7 @@
                 "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.Artifact": {
+                "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID",
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -12513,101 +12967,223 @@
                         "type": "number"
                     },
                     "critical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "criticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlFixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLow": {
-                        "type": "integer"
+                        "description": "dependencyVuln.cve_id",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "cvePurlMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "day": {
                         "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
                         "type": "string"
                     },
                     "fixableCritical": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableCriticalCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHigh": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableHighCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLow": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableLowCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMedium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixableMediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "fixedDependencyVulns": {
                         "type": "integer"
                     },
                     "high": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "highCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "low": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "lowCvss": {
-                        "type": "integer"
+                        "description": "dependencyVuln.id",
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "maxClosedRisk": {
                         "type": "number"
@@ -12616,10 +13192,18 @@
                         "type": "number"
                     },
                     "medium": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "mediumCvss": {
-                        "type": "integer"
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "minClosedRisk": {
                         "type": "number"
@@ -12964,8 +13548,7 @@
             "github_com_l3montree-dev_devguard_database_models.Attestation": {
                 "properties": {
                     "artifact": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact",
-                        "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
                     },
                     "artifactName": {
                         "type": "string"
@@ -13133,8 +13716,7 @@
                         "type": "string"
                     },
                     "target_cve_data": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE",
-                        "description": "TargetCVEData is populated by GORM nested preload. It is nil when the target\nCVE does not exist in this database — no DB-level FK constraint is added."
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE"
                     }
                 },
                 "required": [
@@ -14092,8 +14674,7 @@
             "github_com_l3montree-dev_devguard_database_models.VEXRule": {
                 "properties": {
                     "asset": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset",
-                        "description": "Relationships"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
                     },
                     "assetId": {
                         "description": "Composite key components (for indexing and queries)",
@@ -14737,6 +15318,32 @@
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14770,6 +15377,32 @@
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -27434,19 +28067,10 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "multipart/form-data": {
+                        "application/x-www-form-urlencoded": {
                             "schema": {
-                                "properties": {
-                                    "file": {
-                                        "description": "SBOM file",
-                                        "format": "binary",
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "file"
-                                ],
-                                "type": "object"
+                                "title": "file",
+                                "type": "file"
                             }
                         }
                     },

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type ArtifactRiskHistory struct {
@@ -25,45 +26,45 @@ type ArtifactRiskHistoryWithVersion struct {
 }
 
 type Distribution struct {
-	Low      int `json:"low"`
-	High     int `json:"high"`
-	Medium   int `json:"medium"`
-	Critical int `json:"critical"`
+	Low      pq.StringArray `json:"low" gorm:"type:text[]"`
+	High     pq.StringArray `json:"high" gorm:"type:text[]"`
+	Medium   pq.StringArray `json:"medium" gorm:"type:text[]"`
+	Critical pq.StringArray `json:"critical" gorm:"type:text[]"`
 
-	FixableLow      int `json:"fixableLow"`
-	FixableMedium   int `json:"fixableMedium"`
-	FixableHigh     int `json:"fixableHigh"`
-	FixableCritical int `json:"fixableCritical"`
+	FixableLow      pq.StringArray `json:"fixableLow" gorm:"type:text[]"`
+	FixableMedium   pq.StringArray `json:"fixableMedium" gorm:"type:text[]"`
+	FixableHigh     pq.StringArray `json:"fixableHigh" gorm:"type:text[]"`
+	FixableCritical pq.StringArray `json:"fixableCritical" gorm:"type:text[]"`
 
-	LowCVSS      int `json:"lowCvss"`
-	MediumCVSS   int `json:"mediumCvss"`
-	HighCVSS     int `json:"highCvss"`
-	CriticalCVSS int `json:"criticalCvss"`
+	LowCVSS      pq.StringArray `json:"lowCvss" gorm:"type:text[]"` // dependencyVuln.id
+	MediumCVSS   pq.StringArray `json:"mediumCvss" gorm:"type:text[]"`
+	HighCVSS     pq.StringArray `json:"highCvss" gorm:"type:text[]"`
+	CriticalCVSS pq.StringArray `json:"criticalCvss" gorm:"type:text[]"`
 
-	FixableLowCVSS      int `json:"fixableLowCvss"`
-	FixableMediumCVSS   int `json:"fixableMediumCvss"`
-	FixableHighCVSS     int `json:"fixableHighCvss"`
-	FixableCriticalCVSS int `json:"fixableCriticalCvss"`
+	FixableLowCVSS      pq.StringArray `json:"fixableLowCvss" gorm:"type:text[]"`
+	FixableMediumCVSS   pq.StringArray `json:"fixableMediumCvss" gorm:"type:text[]"`
+	FixableHighCVSS     pq.StringArray `json:"fixableHighCvss" gorm:"type:text[]"`
+	FixableCriticalCVSS pq.StringArray `json:"fixableCriticalCvss" gorm:"type:text[]"`
 
-	CVEPurlLow      int `json:"cvePurlLow"`
-	CVEPurlMedium   int `json:"cvePurlMedium"`
-	CVEPurlHigh     int `json:"cvePurlHigh"`
-	CVEPurlCritical int `json:"cvePurlCritical"`
+	CVEPurlLow      pq.StringArray `json:"cvePurlLow" gorm:"type:text[]"` // dependencyVuln.cve_id
+	CVEPurlMedium   pq.StringArray `json:"cvePurlMedium" gorm:"type:text[]"`
+	CVEPurlHigh     pq.StringArray `json:"cvePurlHigh" gorm:"type:text[]"`
+	CVEPurlCritical pq.StringArray `json:"cvePurlCritical" gorm:"type:text[]"`
 
-	CVEPurlFixableLow      int `json:"cvePurlFixableLow"`
-	CVEPurlFixableMedium   int `json:"cvePurlFixableMedium"`
-	CVEPurlFixableHigh     int `json:"cvePurlFixableHigh"`
-	CVEPurlFixableCritical int `json:"cvePurlFixableCritical"`
+	CVEPurlFixableLow      pq.StringArray `json:"cvePurlFixableLow" gorm:"type:text[]"`
+	CVEPurlFixableMedium   pq.StringArray `json:"cvePurlFixableMedium" gorm:"type:text[]"`
+	CVEPurlFixableHigh     pq.StringArray `json:"cvePurlFixableHigh" gorm:"type:text[]"`
+	CVEPurlFixableCritical pq.StringArray `json:"cvePurlFixableCritical" gorm:"type:text[]"`
 
-	CVEPurlLowCVSS      int `json:"cvePurlLowCvss"`
-	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
-	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
-	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
+	CVEPurlLowCVSS      pq.StringArray `json:"cvePurlLowCvss" gorm:"type:text[]"`
+	CVEPurlMediumCVSS   pq.StringArray `json:"cvePurlMediumCvss" gorm:"type:text[]"`
+	CVEPurlHighCVSS     pq.StringArray `json:"cvePurlHighCvss" gorm:"type:text[]"`
+	CVEPurlCriticalCVSS pq.StringArray `json:"cvePurlCriticalCvss" gorm:"type:text[]"`
 
-	CVEPurlFixableLowCVSS      int `json:"cvePurlFixableLowCvss"`
-	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCvss"`
-	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCvss"`
-	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCvss"`
+	CVEPurlFixableLowCVSS      pq.StringArray `json:"cvePurlFixableLowCvss" gorm:"type:text[]"`
+	CVEPurlFixableMediumCVSS   pq.StringArray `json:"cvePurlFixableMediumCvss" gorm:"type:text[]"`
+	CVEPurlFixableHighCVSS     pq.StringArray `json:"cvePurlFixableHighCvss" gorm:"type:text[]"`
+	CVEPurlFixableCriticalCVSS pq.StringArray `json:"cvePurlFixableCriticalCvss" gorm:"type:text[]"`
 }
 
 type History struct {

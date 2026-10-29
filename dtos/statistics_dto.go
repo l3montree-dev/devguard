@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type DependencyVulnAggregationState struct {
@@ -23,45 +24,45 @@ type OrgStructureDistribution struct {
 }
 
 type Distribution struct {
-	Low      int `json:"low"`
-	High     int `json:"high"`
-	Medium   int `json:"medium"`
-	Critical int `json:"critical"`
+	Low      pq.StringArray `json:"low"`
+	High     pq.StringArray `json:"high"`
+	Medium   pq.StringArray `json:"medium"`
+	Critical pq.StringArray `json:"critical"`
 
-	FixableLow      int `json:"fixableLow"`
-	FixableMedium   int `json:"fixableMedium"`
-	FixableHigh     int `json:"fixableHigh"`
-	FixableCritical int `json:"fixableCritical"`
+	FixableLow      pq.StringArray `json:"fixableLow"`
+	FixableMedium   pq.StringArray `json:"fixableMedium"`
+	FixableHigh     pq.StringArray `json:"fixableHigh"`
+	FixableCritical pq.StringArray `json:"fixableCritical"`
 
-	LowCVSS      int `json:"lowCvss"`
-	MediumCVSS   int `json:"mediumCvss"`
-	HighCVSS     int `json:"highCvss"`
-	CriticalCVSS int `json:"criticalCvss"`
+	LowCVSS      pq.StringArray `json:"lowCvss"`
+	MediumCVSS   pq.StringArray `json:"mediumCvss"`
+	HighCVSS     pq.StringArray `json:"highCvss"`
+	CriticalCVSS pq.StringArray `json:"criticalCvss"`
 
-	FixableLowCVSS      int `json:"fixableLowCvss"`
-	FixableMediumCVSS   int `json:"fixableMediumCvss"`
-	FixableHighCVSS     int `json:"fixableHighCvss"`
-	FixableCriticalCVSS int `json:"fixableCriticalCvss"`
+	FixableLowCVSS      pq.StringArray `json:"fixableLowCvss"`
+	FixableMediumCVSS   pq.StringArray `json:"fixableMediumCvss"`
+	FixableHighCVSS     pq.StringArray `json:"fixableHighCvss"`
+	FixableCriticalCVSS pq.StringArray `json:"fixableCriticalCvss"`
 
-	CVEPurlLow      int `json:"cvePurlLow"`
-	CVEPurlMedium   int `json:"cvePurlMedium"`
-	CVEPurlHigh     int `json:"cvePurlHigh"`
-	CVEPurlCritical int `json:"cvePurlCritical"`
+	CVEPurlLow      pq.StringArray `json:"cvePurlLow"`
+	CVEPurlMedium   pq.StringArray `json:"cvePurlMedium"`
+	CVEPurlHigh     pq.StringArray `json:"cvePurlHigh"`
+	CVEPurlCritical pq.StringArray `json:"cvePurlCritical"`
 
-	CVEPurlFixableLow      int `json:"cvePurlFixableLow"`
-	CVEPurlFixableMedium   int `json:"cvePurlFixableMedium"`
-	CVEPurlFixableHigh     int `json:"cvePurlFixableHigh"`
-	CVEPurlFixableCritical int `json:"cvePurlFixableCritical"`
+	CVEPurlFixableLow      pq.StringArray `json:"cvePurlFixableLow"`
+	CVEPurlFixableMedium   pq.StringArray `json:"cvePurlFixableMedium"`
+	CVEPurlFixableHigh     pq.StringArray `json:"cvePurlFixableHigh"`
+	CVEPurlFixableCritical pq.StringArray `json:"cvePurlFixableCritical"`
 
-	CVEPurlLowCVSS      int `json:"cvePurlLowCvss"`
-	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
-	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
-	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
+	CVEPurlLowCVSS      pq.StringArray `json:"cvePurlLowCvss"`
+	CVEPurlMediumCVSS   pq.StringArray `json:"cvePurlMediumCvss"`
+	CVEPurlHighCVSS     pq.StringArray `json:"cvePurlHighCvss"`
+	CVEPurlCriticalCVSS pq.StringArray `json:"cvePurlCriticalCvss"`
 
-	CVEPurlFixableLowCVSS      int `json:"cvePurlFixableLowCvss"`
-	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCvss"`
-	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCvss"`
-	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCvss"`
+	CVEPurlFixableLowCVSS      pq.StringArray `json:"cvePurlFixableLowCvss"`
+	CVEPurlFixableMediumCVSS   pq.StringArray `json:"cvePurlFixableMediumCvss"`
+	CVEPurlFixableHighCVSS     pq.StringArray `json:"cvePurlFixableHighCvss"`
+	CVEPurlFixableCriticalCVSS pq.StringArray `json:"cvePurlFixableCriticalCvss"`
 }
 
 type VulnSeverityDistribution struct {
@@ -295,4 +296,9 @@ type InstanceUsageStatistics struct {
 	NumberOfTicketSyncedProjects          int `gorm:"column:number_of_ticket_synced_projects"`
 	NumberOfProjectsWithGitlabIntegration int `gorm:"column:number_of_projects_with_gitlab_integration"`
 	NumberOfAssetsWithSBOM                int `gorm:"column:number_of_assets_with_sbom"`
+}
+
+type UniqueRiskCVSSTrack struct {
+	RiskCVSS                    float64
+	UniqueCombinationIdentifier string
 }

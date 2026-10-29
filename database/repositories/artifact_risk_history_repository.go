@@ -142,12 +142,12 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryForOrg(ctx context.Context
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT
 		day,
-		SUM(low) low, SUM(medium) medium, SUM(high) high, SUM(critical) critical,
-		SUM(fixable_low) fixable_low, SUM(fixable_medium) fixable_medium, SUM(fixable_high) fixable_high, SUM(fixable_critical) fixable_critical,
-		SUM(low_cvss) low_cvss, SUM(medium_cvss) medium_cvss, SUM(high_cvss) high_cvss, SUM(critical_cvss) critical_cvss,
-		SUM(cve_purl_low) cve_purl_low, SUM(cve_purl_medium) cve_purl_medium, SUM(cve_purl_high) cve_purl_high, SUM(cve_purl_critical) cve_purl_critical,
-		SUM(cve_purl_fixable_low) cve_purl_fixable_low, SUM(cve_purl_fixable_medium) cve_purl_fixable_medium, SUM(cve_purl_fixable_high) cve_purl_fixable_high, SUM(cve_purl_fixable_critical) cve_purl_fixable_critical,
-		SUM(cve_purl_low_cvss) cve_purl_low_cvss, SUM(cve_purl_medium_cvss) cve_purl_medium_cvss, SUM(cve_purl_high_cvss) cve_purl_high_cvss, SUM(cve_purl_critical_cvss) cve_purl_critical_cvss
+		low, medium, high, critical,
+		fixable_low, fixable_medium fixable_medium, fixable_high, fixable_critical,
+		low_cvss, medium_cvss, high_cvss, critical_cvss,
+		cve_purl_low, cve_purl_medium, cve_purl_high, cve_purl_critical,
+		cve_purl_fixable_low, cve_purl_fixable_medium, cve_purl_fixable_high, cve_purl_fixable_critical,
+		cve_purl_low_cvss, cve_purl_medium_cvss, cve_purl_high_cvss, cve_purl_critical_cvss
 	FROM
 		artifact_risk_history a
 	LEFT JOIN
@@ -160,7 +160,6 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryForOrg(ctx context.Context
 		a.day >= ?
 	AND
 		a.day <= ?
-	GROUP BY day
 	ORDER BY day ASC;`, orgID, start, end).Find(&history).Error
 	return history, err
 }
