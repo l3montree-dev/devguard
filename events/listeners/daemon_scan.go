@@ -308,7 +308,7 @@ func (runner *DaemonRunner) computeAffectedPurls(ctx context.Context, conn *pgxp
 		}
 		for _, rawPurl := range rawPurlsByCanonical[candidate.Purl.String()] {
 			for i := range candidate.Components {
-				fixed := candidate.Components[i].SemverFixed
+				fixed := candidate.Components[i].SemverFixed.StringPtr()
 				if fixed == nil {
 					fixed = candidate.Components[i].VersionFixed
 				}

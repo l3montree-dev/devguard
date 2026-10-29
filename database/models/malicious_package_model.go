@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -66,15 +67,15 @@ func (mp MaliciousPackage) ToOSV() dtos.OSV {
 
 // MaliciousAffectedComponent stores affected component information for malicious packages
 type MaliciousAffectedComponent struct {
-	ID                 string  `json:"id" gorm:"primaryKey;"`
-	MaliciousPackageID string  `json:"maliciousPackageId" gorm:"index"`
-	PurlWithoutVersion string  `json:"purl" gorm:"type:text;column:purl;index"`
-	Ecosystem          string  `json:"ecosystem" gorm:"type:text;"`
-	Version            *string `json:"version" gorm:"index"`
-	SemverIntroduced   *string `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed        *string `json:"semverEnd" gorm:"type:semver;index"`
-	VersionIntroduced  *string `json:"versionIntroduced" gorm:"index"`
-	VersionFixed       *string `json:"versionFixed" gorm:"index"`
+	ID                 string            `json:"id" gorm:"primaryKey;"`
+	MaliciousPackageID string            `json:"maliciousPackageId" gorm:"index"`
+	PurlWithoutVersion string            `json:"purl" gorm:"type:text;column:purl;index"`
+	Ecosystem          string            `json:"ecosystem" gorm:"type:text;"`
+	Version            *string           `json:"version" gorm:"index"`
+	SemverIntroduced   *normalize.Semver `json:"semverStart" gorm:"type:bytea;index"`
+	SemverFixed        *normalize.Semver `json:"semverEnd" gorm:"type:bytea;index"`
+	VersionIntroduced  *string           `json:"versionIntroduced" gorm:"index"`
+	VersionFixed       *string           `json:"versionFixed" gorm:"index"`
 }
 
 func (MaliciousAffectedComponent) TableName() string {
@@ -87,8 +88,8 @@ func (mac MaliciousAffectedComponent) CalculateHash() string {
 		mac.PurlWithoutVersion,
 		mac.Ecosystem,
 		utils.SafeDereference(mac.Version),
-		utils.SafeDereference(mac.SemverIntroduced),
-		utils.SafeDereference(mac.SemverFixed),
+		mac.SemverIntroduced.String(),
+		mac.SemverFixed.String(),
 		utils.SafeDereference(mac.VersionIntroduced),
 		utils.SafeDereference(mac.VersionFixed),
 	)

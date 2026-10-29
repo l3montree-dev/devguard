@@ -127,8 +127,8 @@ func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.Affecte
 		PurlWithoutVersion: ac.PurlWithoutVersion,
 		Ecosystem:          ac.Ecosystem,
 		Version:            ac.Version,
-		SemverIntroduced:   ac.SemverIntroduced,
-		SemverFixed:        ac.SemverFixed,
+		SemverIntroduced:   ac.SemverIntroduced.StringPtr(),
+		SemverFixed:        ac.SemverFixed.StringPtr(),
 		VersionIntroduced:  ac.VersionIntroduced,
 		VersionFixed:       ac.VersionFixed,
 	}

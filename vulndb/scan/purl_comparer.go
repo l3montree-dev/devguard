@@ -310,6 +310,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 	searchPurls := make([]string, 0, len(candidates))
 	versions := make([]string, 0, len(candidates))
 	originalVersions := make([]string, 0, len(candidates))
+	semvers := make([][]byte, 0, len(candidates))
 	for _, c := range candidates {
 		key := c.lookupKey()
 		if _, ok := seen[key]; ok {
@@ -319,9 +320,19 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 		searchPurls = append(searchPurls, c.matchCtx.SearchPurl)
 		versions = append(versions, c.matchCtx.NormalizedVersion)
 		originalVersions = append(originalVersions, c.matchCtx.OriginalVersion)
+
+		// only semver shapes compare against the semver range columns
+		var semver []byte
+		if shape.interpretation == normalize.SemanticVersionString {
+			var err error
+			if semver, err = normalize.SemverToBytes(c.matchCtx.NormalizedVersion); err != nil {
+				return nil, errors.Wrap(err, "could not encode semver")
+			}
+		}
+		semvers = append(semvers, semver)
 	}
 
-	args := []any{searchPurls, versions, originalVersions}
+	args := []any{searchPurls, versions, originalVersions, semvers}
 
 	var ecosystemCondition string
 	if len(shape.ecosystemPattern) > 0 {
@@ -363,7 +374,7 @@ func (comparer *PurlComparer) matchAffectedComponents(ctx context.Context, shape
 
 	// The wanted packages are unnested once in a CTE so every branch joins the same rows.
 	query := `WITH q AS (
-			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version, unnest($3::text[]) AS original_version
+			SELECT unnest($1::text[]) AS purl, unnest($2::text[]) AS version, unnest($3::text[]) AS original_version, unnest($4::bytea[]) AS semver
 		) ` + strings.Join(branches, " UNION ALL ")
 
 	var matches []struct {
@@ -442,7 +453,7 @@ func vulnsFromAffectedComponents(purl packageurl.PackageURL, affectedComponents 
 			if cve.Withdrawn != nil {
 				continue
 			}
-			fixed := affectedComponent.SemverFixed
+			fixed := affectedComponent.SemverFixed.StringPtr()
 			if fixed == nil {
 				fixed = affectedComponent.VersionFixed
 			}

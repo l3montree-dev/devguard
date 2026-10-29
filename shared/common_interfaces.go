@@ -258,7 +258,6 @@ type ExploitRepository interface {
 
 type AffectedComponentRepository interface {
 	utils.Repository[string, models.AffectedComponent, DB]
-	CreateAffectedComponentsUsingUnnest(ctx context.Context, tx DB, components []models.AffectedComponent) error
 }
 
 type MaliciousPackageChecker interface {

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 
 	"gorm.io/gorm"
@@ -32,11 +33,11 @@ type AffectedComponent struct {
 	PurlWithoutVersion string `json:"purl" gorm:"type:text;column:purl;index"`
 	Ecosystem          string `json:"ecosystem" gorm:"type:text;"`
 
-	Version           *string `json:"version" gorm:"index"` // either version or semver is defined
-	SemverIntroduced  *string `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed       *string `json:"semverEnd" gorm:"type:semver;index"`
-	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
-	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
+	Version           *string           `json:"version" gorm:"index"` // either version or semver is defined
+	SemverIntroduced  *normalize.Semver `json:"semverStart" gorm:"type:bytea;index"`
+	SemverFixed       *normalize.Semver `json:"semverEnd" gorm:"type:bytea;index"`
+	VersionIntroduced *string           `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
+	VersionFixed      *string           `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 
 	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnDelete:CASCADE"`
 }
@@ -51,8 +52,8 @@ func (affectedComponent AffectedComponent) CalculateHash() int64 {
 		affectedComponent.PurlWithoutVersion,
 		affectedComponent.Ecosystem,
 		utils.SafeDereference(affectedComponent.Version),
-		utils.SafeDereference(affectedComponent.SemverIntroduced),
-		utils.SafeDereference(affectedComponent.SemverFixed),
+		affectedComponent.SemverIntroduced.String(),
+		affectedComponent.SemverFixed.String(),
 		utils.SafeDereference(affectedComponent.VersionIntroduced),
 		utils.SafeDereference(affectedComponent.VersionFixed),
 	)
