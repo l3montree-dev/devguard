@@ -1306,81 +1306,6 @@ func (_c *DependencyProxySecretRepository_SaveBatch_Call) RunAndReturn(run func(
 	return _c
 }
 
-// SetDebSigningKeyIfMissing provides a mock function for the type DependencyProxySecretRepository
-func (_mock *DependencyProxySecretRepository) SetDebSigningKeyIfMissing(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string) error {
-	ret := _mock.Called(ctx, tx, secret, privateKey, publicKey)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetDebSigningKeyIfMissing")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, secret, privateKey, publicKey)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetDebSigningKeyIfMissing'
-type DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call struct {
-	*mock.Call
-}
-
-// SetDebSigningKeyIfMissing is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - secret uuid.UUID
-//   - privateKey string
-//   - publicKey string
-func (_e *DependencyProxySecretRepository_Expecter) SetDebSigningKeyIfMissing(ctx any, tx any, secret any, privateKey any, publicKey any) *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call {
-	return &DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call{Call: _e.mock.On("SetDebSigningKeyIfMissing", ctx, tx, secret, privateKey, publicKey)}
-}
-
-func (_c *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call) Run(run func(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string)) *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call) Return(err error) *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string) error) *DependencyProxySecretRepository_SetDebSigningKeyIfMissing_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Transaction provides a mock function for the type DependencyProxySecretRepository
 func (_mock *DependencyProxySecretRepository) Transaction(ctx context.Context, fn func(tx shared.DB) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -1506,6 +1431,81 @@ func (_c *DependencyProxySecretRepository_UpdateSecret_Call) Return(dependencyPr
 }
 
 func (_c *DependencyProxySecretRepository_UpdateSecret_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)) *DependencyProxySecretRepository_UpdateSecret_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateSigningKey provides a mock function for the type DependencyProxySecretRepository
+func (_mock *DependencyProxySecretRepository) UpdateSigningKey(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string) error {
+	ret := _mock.Called(ctx, tx, secret, privateKey, publicKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateSigningKey")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, secret, privateKey, publicKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyProxySecretRepository_UpdateSigningKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSigningKey'
+type DependencyProxySecretRepository_UpdateSigningKey_Call struct {
+	*mock.Call
+}
+
+// UpdateSigningKey is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - secret uuid.UUID
+//   - privateKey string
+//   - publicKey string
+func (_e *DependencyProxySecretRepository_Expecter) UpdateSigningKey(ctx any, tx any, secret any, privateKey any, publicKey any) *DependencyProxySecretRepository_UpdateSigningKey_Call {
+	return &DependencyProxySecretRepository_UpdateSigningKey_Call{Call: _e.mock.On("UpdateSigningKey", ctx, tx, secret, privateKey, publicKey)}
+}
+
+func (_c *DependencyProxySecretRepository_UpdateSigningKey_Call) Run(run func(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string)) *DependencyProxySecretRepository_UpdateSigningKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_UpdateSigningKey_Call) Return(err error) *DependencyProxySecretRepository_UpdateSigningKey_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_UpdateSigningKey_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string) error) *DependencyProxySecretRepository_UpdateSigningKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

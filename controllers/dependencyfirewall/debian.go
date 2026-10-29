@@ -217,7 +217,7 @@ func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error 
 
 	if archive, suite, rest, ok := parseDebDistPath(requestPath); ok {
 		if configs.getRegistry(deb, shared.DebRegistry) == shared.DebRegistry && !shared.IsDebSuiteSupported(archive, suite) {
-			return echo.NewHTTPError(http.StatusNotFound, "debian suite "+archive+"/"+suite+" is not supported")
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("debian suite %s/%s is not supported", archive, suite))
 		}
 		idx, err := d.getDebIndex(ctx, configs, archive, suite)
 		if shared.IsNotFound(err) {

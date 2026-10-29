@@ -584,7 +584,7 @@ func (projectController *ProjectController) UpdateConfigFile(ctx shared.Context)
 
 	if configID == dtos.DependencyProxyConfigFileID {
 		if err := dependencyfirewall.ValidateConfigFile(body); err != nil {
-			return echo.NewHTTPError(400, err.Error())
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
 		}
 	}
 

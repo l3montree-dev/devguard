@@ -88,7 +88,7 @@ func TestCSAFtoVexRulesWithProductsInBranches(t *testing.T) {
 
 	require.NotEmpty(t, rules)
 	assert.Contains(t, rules[0].CELExpression, "CVE-2025-22873")
-	assert.Equal(t, vexrules.ToCELExpression("CVE-2025-22873", vexrules.PathPattern{
+	assert.Equal(t, celrules.ToCELExpression("CVE-2025-22873", celrules.PathPattern{
 		"pkg:golang/datadog-lambda-extension/recorder-extension",
 		"pkg:golang/stdlib@v1.22.7",
 	}), rules[0].CELExpression)

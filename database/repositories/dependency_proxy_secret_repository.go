@@ -139,7 +139,6 @@ func (r *dependencyProxySecretRepository) GetDebSigningKey(ctx context.Context, 
 	return privKey, *proxy.DebSigningPublicKey, true, nil
 }
 
-// SetDebSigningKeyIfMissing stores the key pair unless one is already set. It reports whether this call stored it.
 func (r *dependencyProxySecretRepository) UpdateDebSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
 	encryptedText, err := r.encryptionService.EncryptAndWrapData(privateKey)
 	if err != nil {
