@@ -24,7 +24,7 @@ import (
 	"github.com/google/cel-go/cel"
 )
 
-var PackageCelEnv = sync.OnceValues(func() (*cel.Env, error) {
+var packageCelEnv = sync.OnceValues(func() (*cel.Env, error) {
 	return newPackageCelEnv()
 })
 
@@ -34,19 +34,6 @@ func newPackageCelEnv() (*cel.Env, error) {
 		return nil, err
 	}
 	return base.Extend(cel.Variable("pkg", cel.AnyType))
-}
-
-func compilePackageExpr(expression string) (cel.Program, error) {
-	env, err := PackageCelEnv()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
-	}
-
-	return compile(env, expression)
-}
-
-func evalPackage(prg cel.Program, p Package) (bool, error) {
-	return evalBool(prg, map[string]any{"pkg": p.ToCELMap()})
 }
 
 func ParsePackageRules(content string) ([]CompiledPackageRule, error) {
