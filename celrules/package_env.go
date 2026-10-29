@@ -16,10 +16,7 @@
 package celrules
 
 import (
-	"fmt"
 	"sync"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/google/cel-go/cel"
 )
@@ -34,21 +31,4 @@ func newPackageCelEnv() (*cel.Env, error) {
 		return nil, err
 	}
 	return base.Extend(cel.Variable("pkg", cel.AnyType))
-}
-
-func ParsePackageRules(content string) ([]CompiledPackageRule, error) {
-	var cfg struct {
-		Rules []PackageRule `yaml:"rules"`
-	}
-
-	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse yaml: %w", err)
-	}
-
-	compiledRules, err := CompilePackageRules(cfg.Rules)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile rules: %w", err)
-	}
-
-	return compiledRules, nil
 }
