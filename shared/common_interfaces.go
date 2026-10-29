@@ -156,7 +156,7 @@ type DependencyProxySecretRepository interface {
 	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
 	GetDebSigningKey(ctx context.Context, tx DB, secret uuid.UUID) (privateKey, publicKey string, found bool, err error)
-	SetDebSigningKeyIfMissing(ctx context.Context, tx DB, secret uuid.UUID, privateKey, publicKey string) error
+	UpdateSigningKey(ctx context.Context, tx DB, secret uuid.UUID, privateKey, publicKey string) (err error)
 }
 
 type DependencyProxySecretService interface {
