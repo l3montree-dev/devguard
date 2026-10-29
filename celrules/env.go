@@ -37,6 +37,7 @@ var programCache = utils.NewTTLCache[programKey, cel.Program](time.Hour, 10_000,
 
 var baseEnv = sync.OnceValues(func() (*cel.Env, error) {
 	return cel.NewEnv(
+		cel.OptionalTypes(),
 		cel.Function("now",
 			cel.Overload("now_timestamp", []*cel.Type{}, cel.TimestampType,
 				cel.FunctionBinding(func(args ...ref.Val) ref.Val {

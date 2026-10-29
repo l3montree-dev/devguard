@@ -66,6 +66,27 @@ func TestEval(t *testing.T) {
 		{name: "empty suite does not error", pkg: Package{
 			Name: "lodash", Ecosystem: "npm",
 		}, want: false, rule: `pkg.suite.endsWith("-security")`},
+		{name: "optional: nil publisher falls back to default", pkg: Package{
+			Name: "express",
+		}, want: false, rule: `pkg.?publisher.?changedSinceLastVersion.orValue(false)`},
+		{name: "optional: publisher changed", pkg: Package{
+			Name: "express", Publisher: &Publisher{Name: "evil", ChangedSinceLastVersion: true},
+		}, want: true, rule: `pkg.?publisher.?changedSinceLastVersion.orValue(false)`},
+		{name: "optional: nil publisher name compares against default", pkg: Package{
+			Name: "express",
+		}, want: false, rule: `pkg.?publisher.?name.orValue("") == "evil"`},
+		{name: "optional: publisher name matches", pkg: Package{
+			Name: "express", Publisher: &Publisher{Name: "evil"},
+		}, want: true, rule: `pkg.?publisher.?name.orValue("") == "evil"`},
+		{name: "optional: nil provenance has no value", pkg: Package{
+			Name: "express",
+		}, want: false, rule: `pkg.?provenance.hasValue()`},
+		{name: "optional: provenance has value", pkg: Package{
+			Name: "express", Provenance: &Provenance{SourceRepository: "github.com/expressjs/express"},
+		}, want: true, rule: `pkg.?provenance.hasValue()`},
+		{name: "optional: missing release time uses default", pkg: Package{
+			Name: "lodash",
+		}, want: false, rule: `pkg.?releasedAt.hasValue() && now() - timestamp(pkg.releasedAt) < duration("120h")`},
 	}
 
 	for _, tt := range tests {
