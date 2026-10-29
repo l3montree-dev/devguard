@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -355,7 +354,7 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 		return maliciousCheckFailed(composer, err)
 	}
 
-	filtered, removed, err := filterComposerMetadata(data, composerProxyBaseURL(c), func(v string, released time.Time) bool {
+	filtered, removed, err := filterComposerMetadata(data, proxyBaseURL(c, composerProxyPrefixRe), func(v string, released time.Time) bool {
 		if isMaliciousVersion(composer, malicious, v) {
 			return false
 		}
@@ -373,21 +372,6 @@ func (d *ComposerDependencyProxyController) proxyComposerMetadata(c shared.Conte
 	}
 
 	return composer.writeResponse(c, filtered, requestPath, false)
-}
-
-func composerProxyBaseURL(c shared.Context) string {
-	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
-	if registryURL == "" {
-		registryURL = "https://api.main.devguard.org/api/v1/dependency-proxy"
-	}
-	origin := strings.TrimSuffix(strings.TrimSuffix(registryURL, "/"), "/api/v1/dependency-proxy")
-
-	composerPath := composerProxyPrefixRe.FindString(c.Request().URL.Path)
-	if !strings.HasSuffix(composerPath, "/") {
-		composerPath += "/"
-	}
-
-	return origin + composerPath
 }
 
 func filterComposerMetadata(data []byte, proxyBaseURL string, allowed func(version string, released time.Time) bool) ([]byte, int, error) {

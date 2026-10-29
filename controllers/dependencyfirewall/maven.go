@@ -249,6 +249,9 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	}
 
 	releaseTime := mavenReleaseTime(headers)
+	if releaseTime.IsZero() && registry != mavenRegistry && version != "" {
+		releaseTime, _ = d.fetchMavenReleaseTime(ctx, packageName, version, registry, secretCache)
+	}
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, registry, packageName, version, releaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "maven", "path", requestPath, "reason", notAllowedReason)
@@ -413,6 +416,9 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 		return time.Time{}, fmt.Errorf("upstream returned status %d for %s", statusCode, pomPath)
 	}
 	releaseTime := mavenReleaseTime(headers)
+	if releaseTime.IsZero() && registry != mavenRegistry {
+		releaseTime = d.centralReleaseTime(ctx, pomPath)
+	}
 	if releaseTime.IsZero() {
 		return time.Time{}, fmt.Errorf("no Last-Modified header for %s", pomPath)
 	}
@@ -420,6 +426,14 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 		slog.Warn("Failed to cache response", "proxy", "maven", "error", err)
 	}
 	return releaseTime, nil
+}
+
+func (d *MavenDependencyProxyController) centralReleaseTime(ctx context.Context, pomPath string) time.Time {
+	_, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, mavenRegistry, pomPath, http.Header{}, nil)
+	if err != nil || statusCode != http.StatusOK {
+		return time.Time{}
+	}
+	return mavenReleaseTime(headers)
 }
 
 // filterMavenMetadata removes versions from a maven-metadata.xml document. Versions are

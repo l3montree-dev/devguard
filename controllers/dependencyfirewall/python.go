@@ -49,6 +49,7 @@ var (
 	// matches only the scheme and authority of an absolute (or scheme-relative) URL,
 	// so the upstream path is preserved when the URL is rewritten onto the proxy.
 	pypiAbsoluteURLRe = regexp.MustCompile(`(?:https?:)?//[^/"'\s#]+`)
+	pypiRelativeURLRe = regexp.MustCompile(`("url"\s*:\s*"|href=")/([^/])`)
 )
 
 // PythonDependencyProxyController handles PyPI dependency proxy requests.
@@ -396,6 +397,7 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 	}
 
 	proxyPrefix := strings.TrimSuffix(pypiProxyPrefixRe.FindString(c.Request().URL.Path), "/")
+	data = pypiRelativeURLRe.ReplaceAll(data, []byte("${1}"+proxyPrefix+"/packages/${2}"))
 	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(proxyPrefix))
 
 	return pypi.writeResponse(c, data, requestPath, false)

@@ -364,6 +364,10 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		data = filtered
 	}
 
+	if registry != npmRegistry {
+		data = rewriteNPMTarballURLs(data, registry, proxyBaseURL(c, npmProxyPrefixRe))
+	}
+
 	if contentType := headers.Get("Content-Type"); contentType != "" {
 		c.Response().Header().Set("Content-Type", contentType)
 	}
@@ -488,6 +492,11 @@ func (d *NPMDependencyProxyController) fetchNPMRegistryAPIFromUpstream(ctx conte
 	}
 
 	return data, resp.Header, resp.StatusCode, nil
+}
+
+func rewriteNPMTarballURLs(data []byte, registry, proxyBaseURL string) []byte {
+	tarballRe := regexp.MustCompile(`("tarball"\s*:\s*")` + regexp.QuoteMeta(strings.TrimSuffix(registry, "/")+"/"))
+	return tarballRe.ReplaceAll(data, []byte("${1}"+proxyBaseURL))
 }
 
 type npmPackageMetadata struct {

@@ -381,6 +381,21 @@ func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) 
 	return d.LoadConfigsBySecret(c, c.Param("secret"))
 }
 
+func proxyBaseURL(c shared.Context, prefixRe *regexp.Regexp) string {
+	registryURL := os.Getenv("DEPENDENCY_PROXY_BASE_URL")
+	if registryURL == "" {
+		registryURL = "https://api.main.devguard.org/api/v1/dependency-proxy"
+	}
+	origin := strings.TrimSuffix(strings.TrimSuffix(registryURL, "/"), "/api/v1/dependency-proxy")
+
+	prefix := prefixRe.FindString(c.Request().URL.Path)
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	return origin + prefix
+}
+
 func checkDistHost(distURL string, allowedHosts ...string) error {
 	parsed, err := url.Parse(distURL)
 	if err != nil {
