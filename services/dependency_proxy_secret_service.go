@@ -108,7 +108,6 @@ type debSigningKeyPair struct {
 }
 
 func (s *dependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
-
 	keyPair, err, _ := s.inflight.Do(fmt.Sprintf("deb-signing-key-%s", secret), func() (any, error) {
 		privateKey, publicKey, found, err := s.dependencyProxySecretRepository.GetDebSigningKey(ctx, nil, secret)
 		if err != nil || found {
