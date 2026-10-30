@@ -477,8 +477,8 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	configContent := string(body)
 
 	if configID == dtos.DependencyProxyConfigFileID {
-		if err := dtos.ValidateConfigFile(body); err != nil {
-			return err
+		if err := dtos.ValidateDependencyProxyConfigFile(body); err != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
 		}
 	}
 

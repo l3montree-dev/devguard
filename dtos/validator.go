@@ -15,8 +15,10 @@
 package dtos
 
 import (
+	"strings"
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -27,6 +29,11 @@ var V = func() *validator.Validate {
 		ts := fl.Field().Int()
 		now := time.Now().Unix()
 		return ts > now && ts <= now+31536000
+	})
+
+	v.RegisterValidation("pgp_keyring", func(fl validator.FieldLevel) bool { //nolint:errcheck
+		keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(fl.Field().String()))
+		return err == nil && len(keyring) > 0
 	})
 	return v
 }()

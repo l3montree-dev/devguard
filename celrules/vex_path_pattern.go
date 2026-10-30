@@ -12,14 +12,13 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package vexrules
+package celrules
 
 import (
 	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/Masterminds/semver"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 )
@@ -140,22 +139,6 @@ func elementMatches(patternElem, pathElem string) bool {
 		return false
 	}
 	return matches
-}
-
-func PurlVersionMatches(patternPurl, pathPurl packageurl.PackageURL) (bool, error) {
-	if patternPurl.Type != pathPurl.Type || patternPurl.Namespace != pathPurl.Namespace || patternPurl.Name != pathPurl.Name {
-		return false, nil
-	}
-
-	constraint, err := semver.NewConstraint(patternPurl.Version)
-	if err != nil {
-		return false, fmt.Errorf("invalid pattern version constraint: %w", err)
-	}
-	version, err := semver.NewVersion(pathPurl.Version)
-	if err != nil {
-		return false, fmt.Errorf("invalid path version: %w", err)
-	}
-	return constraint.Check(version), nil
 }
 
 // matchPattern checks if the pattern exactly matches the path.

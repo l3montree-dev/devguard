@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
@@ -142,17 +142,17 @@ func (runner *DaemonRunner) evalScopedUpstreamCandidates(ctx context.Context, tx
 		return errors.Wrap(err, "failed to fetch scoped VEX rule candidates")
 	}
 
-	vulnsMaps, err := vexrules.PrepareVulnsForEvalMap(ctx, representativeVulns)
+	vulnsMaps, err := celrules.PrepareVulnsForEvalMap(ctx, representativeVulns)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare representative vulns for evaluation")
 	}
 
-	compiled, err := vexrules.CompileRules(ctx, rules)
+	compiled, err := celrules.CompileVEXRules(ctx, rules)
 	if err != nil {
 		return errors.Wrap(err, "failed to compile scoped VEX rule candidates")
 	}
 
-	recommendations, err := vexrules.EvalCompiledRules(ctx, compiled, utils.Values(vulnsMaps))
+	recommendations, err := celrules.EvalCompiledVEXRules(ctx, compiled, utils.Values(vulnsMaps))
 	if err != nil {
 		return errors.Wrap(err, "failed to evaluate scoped VEX rule candidates")
 	}
@@ -193,11 +193,12 @@ func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx s
 	}
 
 	// vex_rules is small (a few thousand rows at most) - compiling and
-	// evaluating against the full set here, relying on EvalCompiledRules to
-	// narrow each scoped rule to just the vulns sharing its CVE, is cheaper
+	// evaluating against the full set here, relying on
+	// EvalCompiledVEXRules to narrow each scoped rule to just the vulns
+	// sharing its CVE, is cheaper
 	// than a separate join-based candidate-finding pass would be; that only
 	// pays off for upstream_vex_rules, which is orders of magnitude bigger.
-	compiled, err := vexrules.CompileRulesForSoftMatching(ctx, utils.Map(allRules, func(r models.VEXRule) models.UpstreamVEXRule {
+	compiled, err := celrules.CompileVEXRulesForSoftMatching(ctx, utils.Map(allRules, func(r models.VEXRule) models.UpstreamVEXRule {
 		return r.UpstreamVEXRule
 	}))
 	if err != nil {
@@ -209,12 +210,12 @@ func (runner *DaemonRunner) softMatchCrowdsourcedRules(ctx context.Context, tx s
 			return nil, nil, errors.Wrap(err, "failed to fetch distinct representative vulns")
 		}
 
-		vulnsMaps, err := vexrules.PrepareVulnsForEvalMap(ctx, representativeVulns)
+		vulnsMaps, err := celrules.PrepareVulnsForEvalMap(ctx, representativeVulns)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to prepare representative vulns for evaluation")
 		}
 
-		matches, err := vexrules.EvalCompiledRules(ctx, compiled, utils.Values(vulnsMaps))
+		matches, err := celrules.EvalCompiledVEXRules(ctx, compiled, utils.Values(vulnsMaps))
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to soft-match VEX rules for crowdsourced vexing")
 		}
@@ -252,7 +253,7 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 	}
 	createdRecommendationsCount := 0
 
-	compiledMatchedRules, err := vexrules.CompileRules(ctx, utils.Map(utils.Values(matchedVEXRules), func(r models.VEXRule) models.UpstreamVEXRule {
+	compiledMatchedRules, err := celrules.CompileVEXRules(ctx, utils.Map(utils.Values(matchedVEXRules), func(r models.VEXRule) models.UpstreamVEXRule {
 		return r.UpstreamVEXRule
 	}))
 	if err != nil {
@@ -265,12 +266,12 @@ func (runner *DaemonRunner) confirmCrowdsourcedRecommendations(ctx context.Conte
 		}
 
 		// convert the vulns into a map for easy lookup, keyed by vuln ID
-		vulnMaps, err := vexrules.PrepareVulnsForEvalMap(ctx, vulns)
+		vulnMaps, err := celrules.PrepareVulnsForEvalMap(ctx, vulns)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare vulns for evaluation")
 		}
 
-		matches, err := vexrules.EvalCompiledRules(ctx, compiledMatchedRules, utils.Values(vulnMaps))
+		matches, err := celrules.EvalCompiledVEXRules(ctx, compiledMatchedRules, utils.Values(vulnMaps))
 		if err != nil {
 			return errors.Wrap(err, "failed to evaluate VEX rules for crowdsourced vexing")
 		}

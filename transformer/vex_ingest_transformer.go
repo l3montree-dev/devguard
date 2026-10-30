@@ -26,11 +26,11 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/package-url/packageurl-go"
 
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 // CycloneDXVEXToRules converts the vulnerabilities of a CycloneDX VEX BOM into VEX rules.
@@ -122,7 +122,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 		}
 
 		// now create the path pattern
-		var pathPattern []vexrules.PathPattern
+		var pathPattern []celrules.PathPattern
 		// first check if we have a concrete properties object with the path pattern (created by devguard itself, see DependencyVulnsToCycloneDXVEX)
 		if vuln.Properties != nil {
 			patterns := utils.Filter(*vuln.Properties, func(p cdx.Property) bool {
@@ -130,7 +130,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 			})
 			if len(patterns) > 0 {
 				for _, p := range patterns {
-					var pp vexrules.PathPattern
+					var pp celrules.PathPattern
 					err := json.Unmarshal([]byte(p.Value), &pp)
 					if err != nil {
 						slog.Info("failed to unmarshal path pattern from vuln properties, skipping this property", "value", p.Value, "error", err)
@@ -147,11 +147,11 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 			// but we still want to create a VEX rule for each path pattern found in the properties
 			for _, pp := range pathPattern {
 				rule := models.UpstreamVEXRule{
-					Title:         vexrules.VexRuleTitle(vuln.ID, pp),
+					Title:         celrules.VexRuleTitle(vuln.ID, pp),
 					VexSource:     source,
 					Justification: justification,
 					EventType:     eventType,
-					CELExpression: vexrules.ToCELExpression(vuln.ID, pp),
+					CELExpression: celrules.ToCELExpression(vuln.ID, pp),
 				}
 				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
@@ -165,7 +165,7 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 			purlString = purl.String()
 		}
 
-		var pattern vexrules.PathPattern
+		var pattern celrules.PathPattern
 
 		if componentPurl.String() != "" {
 			componentPurlStr, err := normalize.PURLToString(componentPurl)
@@ -173,18 +173,18 @@ func CycloneDXVEXToRules(bom *cdx.BOM, source string) ([]models.UpstreamVEXRule,
 				slog.Info("failed to unescape component purl for path pattern, continuing anyway", "purl", componentPurl.String(), "error", err)
 				componentPurlStr = componentPurl.String()
 			}
-			pattern = vexrules.PathPattern{componentPurlStr, vexrules.PathPatternWildcard, purlString}
+			pattern = celrules.PathPattern{componentPurlStr, celrules.PathPatternWildcard, purlString}
 		} else {
 			// If no metadata component PURL, use the affected package directly
-			pattern = vexrules.PathPattern{purlString}
+			pattern = celrules.PathPattern{purlString}
 		}
 
 		rule := models.UpstreamVEXRule{
-			Title:         vexrules.VexRuleTitle(vuln.ID, pattern),
+			Title:         celrules.VexRuleTitle(vuln.ID, pattern),
 			VexSource:     source,
 			Justification: justification,
 			EventType:     eventType,
-			CELExpression: vexrules.ToCELExpression(vuln.ID, pattern),
+			CELExpression: celrules.ToCELExpression(vuln.ID, pattern),
 		}
 
 		rule.SetCELExpression(rule.CELExpression)
@@ -219,12 +219,12 @@ func OpenVEXToRules(doc *vex.VEX, source string) ([]models.UpstreamVEXRule, erro
 		// collect the path patterns the statement scopes to
 		for _, pattern := range openVexStatementPatterns(statement) {
 			rule := models.UpstreamVEXRule{
-				Title:                   vexrules.VexRuleTitle(cveID, pattern),
+				Title:                   celrules.VexRuleTitle(cveID, pattern),
 				VexSource:               source,
 				MechanicalJustification: dtos.MechanicalJustificationType(statement.Justification),
 				Justification:           statement.ImpactStatement,
 				EventType:               eventType,
-				CELExpression:           vexrules.ToCELExpression(cveID, pattern),
+				CELExpression:           celrules.ToCELExpression(cveID, pattern),
 			}
 			rule.SetCELExpression(rule.CELExpression)
 			rules = append(rules, rule)
@@ -300,8 +300,8 @@ func mapOpenVexStatusToEventType(status vex.Status) (dtos.VulnEventType, error) 
 // product lists subcomponents, the pattern narrows to that product/subcomponent pair:
 // ["*", productPurl, "*", subcomponentPurl]. Otherwise it falls back to the
 // component-level wildcard ["*", productPurl].
-func openVexStatementPatterns(statement vex.Statement) []vexrules.PathPattern {
-	var patterns []vexrules.PathPattern
+func openVexStatementPatterns(statement vex.Statement) []celrules.PathPattern {
+	var patterns []celrules.PathPattern
 	for _, product := range statement.Products {
 		productPurl := componentPurl(product.Component)
 		if len(product.Subcomponents) > 0 {
@@ -310,13 +310,13 @@ func openVexStatementPatterns(statement vex.Statement) []vexrules.PathPattern {
 			}
 			for _, sub := range product.Subcomponents {
 				if p := componentPurl(sub.Component); p != "" {
-					patterns = append(patterns, vexrules.PathPattern{vexrules.PathPatternWildcard, productPurl, vexrules.PathPatternWildcard, p})
+					patterns = append(patterns, celrules.PathPattern{celrules.PathPatternWildcard, productPurl, celrules.PathPatternWildcard, p})
 				}
 			}
 			continue
 		}
 		if productPurl != "" {
-			patterns = append(patterns, vexrules.PathPattern{vexrules.PathPatternWildcard, productPurl})
+			patterns = append(patterns, celrules.PathPattern{celrules.PathPatternWildcard, productPurl})
 		}
 	}
 	return patterns

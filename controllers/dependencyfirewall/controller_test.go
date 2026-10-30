@@ -16,95 +16,73 @@
 package dependencyfirewall
 
 import (
-	"context"
-	"strings"
 	"testing"
+	"time"
+
+	"github.com/l3montree-dev/devguard/celrules"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckNotAllowedPackage(t *testing.T) {
 	d := &DependencyProxyController{}
 
-	testCases := []struct {
-		name               string
-		eco                ecosystem
-		path               string
-		rules              []string
-		expectedBlocked    bool
-		expectedReasonPart string
+	configs, err := parseDependencyProxyConfigs(`rules:
+  - name: block-new
+    action: deny
+    expr: now() - timestamp(pkg.releasedAt) < duration("120h")
+  - name: allow-trusted
+    action: allow
+    expr: pkg.name == "trusted"
+`)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		pkg         celrules.Package
+		wantBlocked bool
+		wantReason  string
 	}{
 		{
-			name:               "blocks matching package and version",
-			eco:                npm,
-			path:               "/lodash/-/lodash-4.17.21.tgz",
-			rules:              []string{"pkg:npm/lodash@4.17.21"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:npm/lodash@4.17.21",
+			name:        "blocks new package",
+			pkg:         celrules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-time.Hour)},
+			wantBlocked: true,
+			wantReason:  "block-new",
 		},
 		{
-			name:               "last matching negate rule allows package",
-			eco:                npm,
-			path:               "/react/-/react-17.0.0.tgz",
-			rules:              []string{"*", "!pkg:npm/react@17.0.0"},
-			expectedBlocked:    false,
-			expectedReasonPart: "",
+			name:        "allows old package",
+			pkg:         celrules.Package{Name: "lodash", ReleasedAt: time.Now().Add(-30 * 24 * time.Hour)},
+			wantBlocked: false,
 		},
 		{
-			name:               "blocks npm tarball path matching wildcard version rule",
-			eco:                npm,
-			path:               "/left-pad/-/left-pad-1.3.0.tgz",
-			rules:              []string{"pkg:npm/left-pad@*"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:npm/left-pad@*",
+			name:        "allow rule overrides deny",
+			pkg:         celrules.Package{Name: "trusted", ReleasedAt: time.Now().Add(-time.Hour)},
+			wantBlocked: false,
 		},
 		{
-			name:               "returns not blocked for unresolvable package path",
-			eco:                npm,
-			path:               "/",
-			rules:              []string{"*"},
-			expectedBlocked:    false,
-			expectedReasonPart: "",
-		},
-		{
-			name:               "blocks matching go module prefix",
-			eco:                golang,
-			path:               "/github.com/some/module/@v/v1.2.3.info",
-			rules:              []string{"pkg:go/github.com/some/module*"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:go/github.com/some/module*",
-		},
-		{
-			name:               "blocks matching pypi simple package",
-			eco:                pypi,
-			path:               "/simple/requests/",
-			rules:              []string{"pkg:pypi/requests*"},
-			expectedBlocked:    true,
-			expectedReasonPart: "pkg:pypi/requests*",
+			name:        "fails closed on evaluation error",
+			pkg:         celrules.Package{Name: "lodash"},
+			wantBlocked: true,
+			wantReason:  "block-new",
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			blocked, reason := d.CheckNotAllowedPackage(
-				context.Background(),
-				tc.eco,
-				tc.path,
-				DependencyProxyConfigs{Rules: tc.rules},
-			)
-
-			if blocked != tc.expectedBlocked {
-				t.Fatalf("expected blocked=%v, got blocked=%v (reason=%q)", tc.expectedBlocked, blocked, reason)
-			}
-
-			if tc.expectedReasonPart == "" {
-				if reason != "" {
-					t.Fatalf("expected empty reason, got %q", reason)
-				}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blocked, reason := d.CheckNotAllowedPackage(tt.pkg, configs)
+			assert.Equal(t, tt.wantBlocked, blocked)
+			if tt.wantReason == "" {
+				assert.Empty(t, reason)
 				return
 			}
-
-			if !strings.Contains(reason, tc.expectedReasonPart) {
-				t.Fatalf("expected reason to contain %q, got %q", tc.expectedReasonPart, reason)
-			}
+			assert.Contains(t, reason, tt.wantReason)
 		})
 	}
+}
+
+func TestCheckNotAllowedPackageWithoutRules(t *testing.T) {
+	d := &DependencyProxyController{}
+	blocked, reason := d.CheckNotAllowedPackage(celrules.Package{Name: "lodash"}, DependencyProxyConfigs{})
+	assert.False(t, blocked)
+	assert.Empty(t, reason)
 }

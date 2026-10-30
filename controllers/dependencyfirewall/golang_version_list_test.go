@@ -16,69 +16,57 @@
 package dependencyfirewall
 
 import (
-	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFilterGoVersionList(t *testing.T) {
-	now := time.Now()
-	times := map[string]time.Time{
-		"v0.9.0":  now.Add(-200 * time.Hour),
-		"v1.0.0":  now.Add(-100 * time.Hour),
-		"v1.1.0":  now.Add(-1 * time.Hour),
-		"v1.9.0":  now.Add(-100 * time.Hour),
-		"v1.10.0": now.Add(-1 * time.Hour),
-	}
-	var lookedUp []string
-	releaseTime := func(v string) (time.Time, error) {
-		lookedUp = append(lookedUp, v)
-		if t, ok := times[v]; ok {
-			return t, nil
-		}
-		return time.Time{}, errors.New("unknown")
-	}
-	allowAll := func(string) bool { return true }
 	list := []byte("v0.9.0\nv1.0.0\nv1.1.0\n")
 
-	t.Run("without minimum age only rules filter", func(t *testing.T) {
-		lookedUp = nil
-		out, removed := filterGoVersionList(list, 0, releaseTime, func(v string) bool { return v != "v1.0.0" })
-		assert.Equal(t, "v0.9.0\nv1.1.0\n", string(out))
-		assert.Equal(t, 1, removed)
-		assert.Empty(t, lookedUp, "no release times needed without a minimum age")
+	var checked []string
+	allowedExcept := func(blocked ...string) func(string) bool {
+		return func(v string) bool {
+			checked = append(checked, v)
+			for _, b := range blocked {
+				if v == b {
+					return false
+				}
+			}
+			return true
+		}
+	}
+
+	t.Run("keeps everything when the highest version is allowed", func(t *testing.T) {
+		checked = nil
+		out, removed := filterGoVersionList(list, allowedExcept())
+		assert.Equal(t, string(list), string(out))
+		assert.Equal(t, 0, removed)
+		assert.Equal(t, []string{"v1.1.0"}, checked)
 	})
 
-	t.Run("removes too new versions above the first old enough one", func(t *testing.T) {
-		lookedUp = nil
-		out, removed := filterGoVersionList(list, 24*time.Hour, releaseTime, allowAll)
+	t.Run("removes blocked versions above the first allowed one", func(t *testing.T) {
+		checked = nil
+		out, removed := filterGoVersionList(list, allowedExcept("v1.1.0"))
 		assert.Equal(t, "v0.9.0\nv1.0.0\n", string(out))
 		assert.Equal(t, 1, removed)
-		// stops at v1.0.0 - v0.9.0 is kept without a lookup
-		assert.Equal(t, []string{"v1.1.0", "v1.0.0"}, lookedUp)
+		assert.Equal(t, []string{"v1.1.0", "v1.0.0"}, checked, "stops at the first allowed version")
 	})
 
-	t.Run("versions with unknown release time are removed", func(t *testing.T) {
-		out, _ := filterGoVersionList([]byte("v1.0.0\nv3.0.0\n"), 24*time.Hour, releaseTime, allowAll)
-		assert.Equal(t, "v1.0.0\n", string(out))
+	t.Run("keeps lower versions without checking them", func(t *testing.T) {
+		checked = nil
+		out, _ := filterGoVersionList(list, allowedExcept("v1.1.0", "v0.9.0"))
+		assert.Equal(t, "v0.9.0\nv1.0.0\n", string(out))
+		assert.NotContains(t, checked, "v0.9.0")
 	})
 
 	t.Run("compares semver, not strings", func(t *testing.T) {
-		out, _ := filterGoVersionList([]byte("v1.9.0\nv1.10.0\n"), 24*time.Hour, releaseTime, allowAll)
+		out, _ := filterGoVersionList([]byte("v1.9.0\nv1.10.0\n"), allowedExcept("v1.10.0"))
 		assert.Equal(t, "v1.9.0\n", string(out))
 	})
 
-	t.Run("rules are applied before the minimum age", func(t *testing.T) {
-		lookedUp = nil
-		out, _ := filterGoVersionList(list, 24*time.Hour, releaseTime, func(v string) bool { return v != "v1.1.0" })
-		assert.Equal(t, "v0.9.0\nv1.0.0\n", string(out))
-		assert.Equal(t, []string{"v1.0.0"}, lookedUp, "rule-blocked versions are not looked up")
-	})
-
 	t.Run("empty when nothing is allowed", func(t *testing.T) {
-		out, removed := filterGoVersionList(list, 24*time.Hour, releaseTime, func(string) bool { return false })
+		out, removed := filterGoVersionList(list, func(string) bool { return false })
 		assert.Empty(t, out)
 		assert.Equal(t, 3, removed)
 	})
