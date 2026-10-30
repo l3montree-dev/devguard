@@ -23,6 +23,7 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCSAFtoVexRules(t *testing.T) {
@@ -65,4 +66,30 @@ func TestCSAFtoVexRules(t *testing.T) {
 		}),
 	}
 	assert.ElementsMatch(t, expectedExpressions, gotExpressions, "CEL expressions do not match expected")
+}
+
+func TestCSAFtoVexRulesWithProductsInBranches(t *testing.T) {
+	// rancher/vexhub declares its products under product_tree.branches instead of full_product_names
+	data, err := os.ReadFile("testdata/csaf_vex_branches.json")
+	if err != nil {
+		t.Fatalf("could not read testdata/csaf_vex_branches.json: %v", err)
+	}
+
+	var advisory gocsaf.Advisory
+	err = json.Unmarshal(data, &advisory)
+	if err != nil {
+		t.Fatalf("could not unmarshal testdata/csaf_vex_branches.json: %v", err)
+	}
+
+	rules, err := CSAFVEXToRules(&advisory, "test")
+	if err != nil {
+		t.Fatalf("CSAFVEXToRules failed: %v", err)
+	}
+
+	require.NotEmpty(t, rules)
+	assert.Contains(t, rules[0].CELExpression, "CVE-2025-22873")
+	assert.Equal(t, vexrules.ToCELExpression("CVE-2025-22873", vexrules.PathPattern{
+		"pkg:golang/datadog-lambda-extension/recorder-extension",
+		"pkg:golang/stdlib@v1.22.7",
+	}), rules[0].CELExpression)
 }

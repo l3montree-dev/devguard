@@ -16,8 +16,8 @@ CREATE TABLE public.affected_packages (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     ecosystem TEXT NOT NULL,
     package_name TEXT,
-    semver_introduced public.semver,
-    semver_fixed public.semver
+    semver_introduced text,
+    semver_fixed text
 );
 
 CREATE TABLE public.advisories_affected_packages (

@@ -211,8 +211,8 @@ func TestFromOSV(t *testing.T) {
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
-		assert.Equal(t, "1.14.14", *affectedComponents[0].SemverIntroduced)
-		assert.Equal(t, "1.14.15", *affectedComponents[0].SemverFixed)
+		assert.Equal(t, "1.14.14", affectedComponents[0].SemverIntroduced.String())
+		assert.Equal(t, "1.14.15", affectedComponents[0].SemverFixed.String())
 	})
 
 	t.Run("try GHSA-2v6x-frw8-7r7f.json", func(t *testing.T) {

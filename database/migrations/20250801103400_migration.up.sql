@@ -16,13 +16,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
---
--- Name: semver; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS semver WITH SCHEMA public;
-
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -43,8 +36,8 @@ CREATE TABLE IF NOT EXISTS public.affected_components (
     qualifiers text,
     subpath text,
     version text,
-    semver_introduced public.semver,
-    semver_fixed public.semver,
+    semver_introduced bytea,
+    semver_fixed bytea,
     version_introduced text,
     version_fixed text
 );
