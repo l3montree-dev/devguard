@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"golang.org/x/sync/errgroup"
 	"pault.ag/go/debian/control"
@@ -41,14 +42,14 @@ type debCandidate struct {
 	parsed version.Version
 }
 
-func (d *DebDependencyProxyController) checkDebPackages(configs DependencyProxyConfigs, registry, suite string, packages []shared.DebPackage) map[int]string {
+func (d *DebDependencyProxyController) checkDebPackages(configs DependencyProxyConfigs, registryConfig dtos.DebianRegistryConfig, suite string, packages []shared.DebPackage) map[int]string {
 	result := make(map[int]string)
 	for i, pkg := range packages {
 		releasedAt := pkg.ReleasedAt
 		if releasedAt.IsZero() {
 			releasedAt = time.Now()
 		}
-		if notAllowed, reason := d.checkDebPackage(configs, registry, suite, pkg.Paragraph.Values["Package"], pkg.Paragraph.Values["Version"], releasedAt); notAllowed {
+		if notAllowed, reason := d.checkDebPackage(configs, registryConfig, suite, pkg.Paragraph.Values["Package"], pkg.Paragraph.Values["Version"], releasedAt); notAllowed {
 			result[i] = reason
 		}
 	}
@@ -83,20 +84,20 @@ func groupDebPackages(packages []shared.DebPackage, blocked map[int]string) map[
 	return groups
 }
 
-func (d *DebDependencyProxyController) checkDebPackage(configs DependencyProxyConfigs, registry, suite, name, pkgVersion string, releasedAt time.Time) (bool, string) {
-	celPkg := newPackage(deb, registry, "debian/"+name, pkgVersion, releasedAt)
+func (d *DebDependencyProxyController) checkDebPackage(configs DependencyProxyConfigs, registryConfig dtos.DebianRegistryConfig, suite, name, pkgVersion string, releasedAt time.Time) (bool, string) {
+	celPkg := newPackage(deb, registryConfig.GetURL(), "debian/"+name, pkgVersion, releasedAt)
 	celPkg.Suite = suite
 	return d.CheckNotAllowedPackage(celPkg, configs)
 }
 
-func (d *DebDependencyProxyController) findDebReplacements(ctx context.Context, configs DependencyProxyConfigs, registry, archive, suite string, packages []shared.DebPackage, groups map[string][]int) map[string]debReplacement {
+func (d *DebDependencyProxyController) findDebReplacements(ctx context.Context, configs DependencyProxyConfigs, registryConfig dtos.DebianRegistryConfig, archive, suite string, packages []shared.DebPackage, groups map[string][]int) map[string]debReplacement {
 	var mu sync.Mutex
 	result := make(map[string]debReplacement, len(groups))
 	var group errgroup.Group
 	group.SetLimit(debReplacementConcurrency)
 	for key, indices := range groups {
 		group.Go(func() error {
-			replacement := d.findDebReplacement(ctx, configs, registry, archive, suite, packages, indices)
+			replacement := d.findDebReplacement(ctx, configs, registryConfig, archive, suite, packages, indices)
 			mu.Lock()
 			defer mu.Unlock()
 			result[key] = replacement
@@ -107,7 +108,7 @@ func (d *DebDependencyProxyController) findDebReplacements(ctx context.Context, 
 	return result
 }
 
-func (d *DebDependencyProxyController) findDebReplacement(ctx context.Context, configs DependencyProxyConfigs, registry, archive, suite string, packages []shared.DebPackage, indices []int) debReplacement {
+func (d *DebDependencyProxyController) findDebReplacement(ctx context.Context, configs DependencyProxyConfigs, registryConfig dtos.DebianRegistryConfig, archive, suite string, packages []shared.DebPackage, indices []int) debReplacement {
 	rep := packages[indices[0]].Paragraph
 	entries, err := d.debReleaseTimeService.FetchMetasnap(ctx, archive, rep.Values["Package"], rep.Values["Architecture"])
 	if err != nil {
@@ -136,16 +137,16 @@ func (d *DebDependencyProxyController) findDebReplacement(ctx context.Context, c
 	})
 
 	for _, candidate := range candidates {
-		if d.debGroupAllowed(configs, registry, suite, packages, indices, candidate.entry) {
+		if d.debGroupAllowed(configs, registryConfig, suite, packages, indices, candidate.entry) {
 			return debReplacement{version: candidate.entry.Version, firstSeen: candidate.entry.FirstSeen, found: true}
 		}
 	}
 	return debReplacement{}
 }
 
-func (d *DebDependencyProxyController) debGroupAllowed(configs DependencyProxyConfigs, registry, suite string, packages []shared.DebPackage, indices []int, entry shared.MetasnapEntry) bool {
+func (d *DebDependencyProxyController) debGroupAllowed(configs DependencyProxyConfigs, registryConfig dtos.DebianRegistryConfig, suite string, packages []shared.DebPackage, indices []int, entry shared.MetasnapEntry) bool {
 	for _, i := range indices {
-		if notAllowed, _ := d.checkDebPackage(configs, registry, suite, packages[i].Paragraph.Values["Package"], entry.Version, entry.FirstSeen); notAllowed {
+		if notAllowed, _ := d.checkDebPackage(configs, registryConfig, suite, packages[i].Paragraph.Values["Package"], entry.Version, entry.FirstSeen); notAllowed {
 			return false
 		}
 	}

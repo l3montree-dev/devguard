@@ -23,12 +23,15 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/celrules"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"pault.ag/go/debian/control"
 )
+
+var debRegistry = dtos.DebianRegistryConfig{URLRegistryConfig: dtos.URLRegistryConfig{URL: shared.DebRegistry}}
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
@@ -84,22 +87,22 @@ func TestCheckDebPackages(t *testing.T) {
 	young := packages(time.Now().Add(-2 * 24 * time.Hour))
 
 	t.Run("blocks young curl only", func(t *testing.T) {
-		blocked := d.checkDebPackages(debRulesConfigs(t, curlYoungRule), shared.DebRegistry, "trixie", young)
+		blocked := d.checkDebPackages(debRulesConfigs(t, curlYoungRule), debRegistry, "trixie", young)
 		assert.Len(t, blocked, 1)
 		assert.Contains(t, blocked, 1)
 	})
 
 	t.Run("allows old curl", func(t *testing.T) {
-		assert.Empty(t, d.checkDebPackages(debRulesConfigs(t, curlYoungRule), shared.DebRegistry, "trixie", packages(time.Now().Add(-10*24*time.Hour))))
+		assert.Empty(t, d.checkDebPackages(debRulesConfigs(t, curlYoungRule), debRegistry, "trixie", packages(time.Now().Add(-10*24*time.Hour))))
 	})
 
 	t.Run("unknown release time counts as now", func(t *testing.T) {
-		blocked := d.checkDebPackages(debRulesConfigs(t, curlYoungRule), shared.DebRegistry, "trixie", packages(time.Time{}))
+		blocked := d.checkDebPackages(debRulesConfigs(t, curlYoungRule), debRegistry, "trixie", packages(time.Time{}))
 		assert.Len(t, blocked, 1)
 	})
 
 	t.Run("suite rule blocks everything in security suite", func(t *testing.T) {
-		blocked := d.checkDebPackages(debRulesConfigs(t, `pkg.suite.endsWith("-security")`), shared.DebRegistry, "trixie-security", young)
+		blocked := d.checkDebPackages(debRulesConfigs(t, `pkg.suite.endsWith("-security")`), debRegistry, "trixie-security", young)
 		assert.Len(t, blocked, 2)
 	})
 }
@@ -131,7 +134,7 @@ func TestFindDebReplacements(t *testing.T) {
 
 	t.Run("picks newest allowed version of the same suite", func(t *testing.T) {
 		d := debRulesController(t, metasnap)
-		result := d.findDebReplacements(t.Context(), debRulesConfigs(t, curlYoungRule), shared.DebRegistry, "debian", "trixie", packages, groups)
+		result := d.findDebReplacements(t.Context(), debRulesConfigs(t, curlYoungRule), debRegistry, "debian", "trixie", packages, groups)
 		replacement := result["curl@8.14.1-2+deb13u6"]
 		assert.True(t, replacement.found)
 		assert.Equal(t, "8.14.1-2+deb13u5", replacement.version)
@@ -139,7 +142,7 @@ func TestFindDebReplacements(t *testing.T) {
 
 	t.Run("no replacement when every version is blocked", func(t *testing.T) {
 		d := debRulesController(t, metasnap)
-		result := d.findDebReplacements(t.Context(), debRulesConfigs(t, `pkg.name == "debian/libcurl4t64"`), shared.DebRegistry, "debian", "trixie", packages, groups)
+		result := d.findDebReplacements(t.Context(), debRulesConfigs(t, `pkg.name == "debian/libcurl4t64"`), debRegistry, "debian", "trixie", packages, groups)
 		assert.False(t, result["curl@8.14.1-2+deb13u6"].found)
 	})
 }

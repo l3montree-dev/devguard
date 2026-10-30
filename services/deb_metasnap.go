@@ -91,7 +91,7 @@ func metasnapFirstSeen(entries []shared.MetasnapEntry, version, suite string) (t
 func (s DebReleaseTimeService) resolveReleasedAt(ctx context.Context, archive, suite, component, arch string, packages []control.Paragraph, previous []shared.DebPackage) ([]time.Time, error) {
 	snapshotTime := time.Now().Add(-debSnapshotAge)
 
-	_, snapshotPackages, err := s.LoadDebPackages(ctx, shared.DebSnapshotRegistry, shared.DebSnapshotPath(archive, snapshotTime), suite, component, arch)
+	_, snapshotPackages, err := s.LoadDebPackages(ctx, shared.DefaultDebConfig(), shared.DebSnapshotPath(archive, snapshotTime), suite, component, arch)
 	if err != nil {
 		return nil, err
 	}

@@ -30,6 +30,8 @@ type dependencyProxySecretRepository struct {
 	encryptionService shared.DBEncryptionService
 }
 
+var _ shared.DependencyProxySecretRepository = (*dependencyProxySecretRepository)(nil)
+
 func NewDependencyProxyRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *dependencyProxySecretRepository {
 	return &dependencyProxySecretRepository{db: db, Repository: newGormRepository[uuid.UUID, models.DependencyProxySecret](db), encryptionService: encryptionService}
 }

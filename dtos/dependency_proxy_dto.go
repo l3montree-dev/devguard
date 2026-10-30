@@ -15,11 +15,81 @@
 
 package dtos
 
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
+
+type URLRegistryConfig struct {
+	URL string `validate:"required,url"`
+}
+
+func (c URLRegistryConfig) GetURL() string { return c.URL }
+
+// DebianRegistryConfig is a custom debian registry. Its Release must be signed by Keyring,
+// because the proxy re-signs the index with its own key.
+type DebianRegistryConfig struct {
+	URLRegistryConfig `yaml:",inline"`
+	Keyring           *string `yaml:"keyring" validate:"pgp_keyring"`
+}
+
+type RegistryConfig interface {
+	GetURL() string
+}
+
+type RegistryConfigs map[string]RegistryConfig
+
+func (r RegistryConfigs) DebConfig() *DebianRegistryConfig {
+	if config, ok := r["deb"]; ok {
+		if debConfig, ok := config.(DebianRegistryConfig); ok {
+			return &debConfig
+		}
+	}
+	return nil
+}
+
+func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]yaml.Node
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+
+	*r = make(RegistryConfigs, len(raw))
+	for eco, value := range raw {
+		switch eco {
+		case "deb":
+			var config DebianRegistryConfig
+			if err := value.Decode(&config); err != nil {
+				return fmt.Errorf("registries.%s: %w", eco, err)
+			}
+			(*r)[eco] = config
+		case "npm", "go", "pypi", "maven", "composer":
+			var url string
+			if err := value.Decode(&url); err != nil {
+				return fmt.Errorf("registries.%s: %w", eco, err)
+			}
+			(*r)[eco] = URLRegistryConfig{URL: url}
+		default:
+			return fmt.Errorf("registries.%s: unsupported ecosystem", eco)
+		}
+	}
+	return nil
+}
+
 // DependencyProxyConfig is the config-file payload persisted for the dependency proxy.
 type DependencyProxyConfig struct {
-	Registries map[string]string `yaml:"registries" validate:"omitempty,dive,keys,oneof=npm go pypi maven composer deb,endkeys,required,url"`
+	Registries RegistryConfigs `yaml:"registries" validate:"dive,keys,oneof=npm go pypi maven composer deb,endkeys,required"`
 }
 
 // dependencyProxyConfigFileID is the key under which dependency-proxy settings
 // are stored in an org/project/asset ConfigFiles map.
 const DependencyProxyConfigFileID = "dependency-proxy-configs"
+
+func ValidateDependencyProxyConfigFile(content []byte) error {
+	var cfg DependencyProxyConfig
+	if err := yaml.Unmarshal(content, &cfg); err != nil {
+		return err
+	}
+	return V.Struct(cfg)
+}

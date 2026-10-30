@@ -24,11 +24,15 @@ import (
 	"io"
 	"io/fs"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
+	"github.com/l3montree-dev/devguard/dtos"
+
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/ulikunitz/xz"
 	"pault.ag/go/debian/control"
@@ -88,46 +92,130 @@ func (r DebRelease) File(path string) (control.FileHash, bool) {
 //go:embed debian-keyring/*.asc
 var debianKeyringFiles embed.FS
 
-var debianKeyring = sync.OnceValues(func() (openpgp.EntityList, error) {
+var debianKeyring = sync.OnceValues(func() (string, error) {
 	files, err := fs.Glob(debianKeyringFiles, "debian-keyring/*.asc")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	var keyring openpgp.EntityList
+	var str strings.Builder
 	for _, name := range files {
 		data, err := debianKeyringFiles.ReadFile(name)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		entities, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(data))
-		if err != nil {
-			return nil, fmt.Errorf("failed to read %s: %w", name, err)
-		}
-		keyring = append(keyring, entities...)
+		str.Write(data)
+		str.WriteString("\n")
 	}
-	return keyring, nil
+	return str.String(), nil
 })
+
+func DefaultDebConfig() dtos.DebianRegistryConfig {
+	keyring, err := debianKeyring()
+	if err != nil {
+		panic(fmt.Errorf("failed to load debian keyring: %w", err))
+	}
+
+	return dtos.DebianRegistryConfig{
+		URLRegistryConfig: dtos.URLRegistryConfig{
+			URL: DebRegistry,
+		},
+		Keyring: &keyring,
+	}
+}
+
+func SnapshotDebConfig() dtos.DebianRegistryConfig {
+	return dtos.DebianRegistryConfig{
+		URLRegistryConfig: dtos.URLRegistryConfig{
+			URL: DebSnapshotRegistry,
+		},
+		Keyring: DefaultDebConfig().Keyring,
+	}
+}
 
 var ErrDebFileNotListed = errors.New("file not listed in InRelease")
 
-func IsDebianRegistry(registry string) bool {
-	return registry == DebRegistry || registry == DebSnapshotRegistry
+func parseArmoredKeyring(armored *string) (*openpgp.EntityList, error) {
+	if armored == nil || *armored == "" {
+		return nil, nil
+	}
+
+	r := strings.NewReader(*armored)
+	var keyring openpgp.EntityList
+	for {
+		block, err := armor.Decode(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("invalid armored keyring: %w", err)
+		}
+		entities, err := openpgp.ReadKeyRing(block.Body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid armored keyring: %w", err)
+		}
+		keyring = append(keyring, entities...)
+	}
+
+	if len(keyring) == 0 {
+		return nil, fmt.Errorf("invalid armored keyring: no keys found")
+	}
+
+	return &keyring, nil
 }
 
-func verifyDebianSignature(signedRelease *clearsign.Block) error {
-	if signedRelease == nil {
-		return errors.New("not signed")
-	}
-
-	keyring, err := debianKeyring()
-	if err != nil {
-		return err
-	}
-	if _, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(signedRelease.Bytes), signedRelease.ArmoredSignature.Body, nil); err != nil {
+func verifyReleaseSignature(keyring openpgp.EntityList, signed []byte, signature io.Reader) error {
+	if _, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(signed), signature, nil); err != nil {
 		return fmt.Errorf("invalid signature: %w", err)
 	}
 	return nil
+}
+
+func readLimited(ctx context.Context, url string) ([]byte, error) {
+	reader, err := utils.DoGetRequestWithContext(ctx, url, debPackagesClient)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	return io.ReadAll(io.LimitReader(reader, maxInReleaseSize))
+}
+
+// if no keyring is provided, we will not verify anything
+func fetchRelease(ctx context.Context, keyring *openpgp.EntityList, distURL string) ([]byte, error) {
+	inRelease, err := readLimited(ctx, distURL+"InRelease")
+	if err == nil && keyring != nil {
+		signedRelease, _ := clearsign.Decode(inRelease)
+		if signedRelease == nil {
+			return nil, fmt.Errorf("%sInRelease: not signed", distURL)
+		}
+
+		if err := verifyReleaseSignature(*keyring, signedRelease.Bytes, signedRelease.ArmoredSignature.Body); err != nil {
+			return nil, fmt.Errorf("%sInRelease: %w", distURL, err)
+		}
+		return signedRelease.Bytes, nil
+	}
+
+	release, err := readLimited(ctx, distURL+"Release")
+	if err != nil {
+		return nil, err
+	}
+	signature, err := readLimited(ctx, distURL+"Release.gpg")
+	if err != nil && keyring != nil {
+		// we were expecting it to exist and be valid, but it doesn't exist or is invalid
+		return nil, fmt.Errorf("%sRelease.gpg: %w", distURL, err)
+	} else if err != nil {
+		// we don't have a keyring, so we can't verify the signature, but we can still return the release
+		return release, nil
+	}
+
+	block, err := armor.Decode(bytes.NewReader(signature))
+	if err != nil {
+		return nil, fmt.Errorf("%sRelease.gpg: %w", distURL, err)
+	}
+	if err := verifyReleaseSignature(*keyring, release, block.Body); err != nil {
+		return nil, fmt.Errorf("%sRelease: %w", distURL, err)
+	}
+	return release, nil
 }
 
 func DebPackageKey(pkg control.Paragraph) string {
@@ -140,32 +228,20 @@ func DebSnapshotPath(prefix string, snapshotTime time.Time) string {
 
 var debPackagesClient = utils.NewEgressClient(5 * time.Minute)
 
-func FetchDebPackages(ctx context.Context, registry, archive, suite, component, arch string) (DebRelease, *control.ParagraphReader, error) {
+// FetchDebPackages loads a suite's Packages index. The Release must be signed by armoredKeyring,
+// or by the bundled debian keyring if armoredKeyring is empty.
+func FetchDebPackages(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive, suite, component, arch string) (DebRelease, *control.ParagraphReader, error) {
 	packagesPath := component + "/binary-" + arch + "/Packages.xz"
-	distURL := registry + "/" + archive + "/dists/" + suite + "/"
+	distURL := registryConfig.GetURL() + "/" + archive + "/dists/" + suite + "/"
 
-	releaseReader, err := utils.DoGetRequestWithContext(ctx, distURL+"InRelease", debPackagesClient)
-	if err != nil && !IsDebianRegistry(registry) {
-		releaseReader, err = utils.DoGetRequestWithContext(ctx, distURL+"Release", debPackagesClient)
-	}
-	if err != nil {
-		return DebRelease{}, nil, err
-	}
-	defer releaseReader.Close()
-
-	releaseData, err := io.ReadAll(io.LimitReader(releaseReader, maxInReleaseSize))
+	keyring, err := parseArmoredKeyring(registryConfig.Keyring)
 	if err != nil {
 		return DebRelease{}, nil, err
 	}
 
-	signedRelease, _ := clearsign.Decode(releaseData)
-	if IsDebianRegistry(registry) {
-		if err := verifyDebianSignature(signedRelease); err != nil {
-			return DebRelease{}, nil, fmt.Errorf("%sInRelease: %w", distURL, err)
-		}
-	}
-	if signedRelease != nil {
-		releaseData = signedRelease.Bytes
+	releaseData, err := fetchRelease(ctx, keyring, distURL)
+	if err != nil {
+		return DebRelease{}, nil, err
 	}
 
 	var release DebRelease
