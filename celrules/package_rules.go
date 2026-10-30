@@ -17,6 +17,7 @@ package celrules
 
 import (
 	"fmt"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 
@@ -73,8 +74,8 @@ func CompilePackageRules(rules []PackageRule) ([]CompiledPackageRule, error) {
 }
 
 func EvaluatePackage(rules []CompiledPackageRule, p Package) (bool, string, error) {
-	blocked := false
-	ruleName := ""
+	slices.Reverse(rules)
+	defer slices.Reverse(rules) // Ensure the original order is restored after evaluation
 
 	for _, rule := range rules {
 		evaluation, err := evalPackage(rule.Program, p)
@@ -83,11 +84,10 @@ func EvaluatePackage(rules []CompiledPackageRule, p Package) (bool, string, erro
 		}
 
 		if evaluation {
-			blocked = rule.Rule.Action == ActionDeny
-			ruleName = rule.Rule.Name
+			return rule.Rule.Action == ActionDeny, rule.Rule.Name, nil
 		}
 	}
-	return blocked, ruleName, nil
+	return false, "No rule matched", nil
 }
 
 func evalPackage(prg cel.Program, p Package) (bool, error) {

@@ -27,11 +27,11 @@ type URLRegistryConfig struct {
 
 func (c URLRegistryConfig) GetURL() string { return c.URL }
 
-// DebianRegistryConfig is a custom debian registry. Its Release must be signed by Keyring,
-// because the proxy re-signs the index with its own key.
+// DebianRegistryConfig is a custom debian registry. If Keyring is set, its Release must be signed by it
+// and the proxy re-signs the index with its own key - otherwise the index is served unsigned.
 type DebianRegistryConfig struct {
 	URLRegistryConfig `yaml:",inline"`
-	Keyring           *string `yaml:"keyring" validate:"pgp_keyring"`
+	Keyring           *string `yaml:"keyring" validate:"omitempty,pgp_keyring"`
 }
 
 type RegistryConfig interface {
