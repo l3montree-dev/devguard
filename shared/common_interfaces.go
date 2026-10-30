@@ -26,6 +26,7 @@ import (
 	"github.com/gocsaf/csaf/v3/csaf"
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"pault.ag/go/debian/control"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -154,6 +155,8 @@ type DependencyProxySecretRepository interface {
 	GetOrCreateByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.DependencyProxySecret, error)
 	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
+	GetDebSigningKey(ctx context.Context, tx DB, secret uuid.UUID) (privateKey, publicKey string, found bool, err error)
+	UpdateSigningKey(ctx context.Context, tx DB, secret uuid.UUID, privateKey, publicKey string) (err error)
 }
 
 type DependencyProxySecretService interface {
@@ -162,6 +165,7 @@ type DependencyProxySecretService interface {
 	GetOrCreateByAssetID(ctx context.Context, assetID uuid.UUID) (models.DependencyProxySecret, error)
 	UpdateSecret(ctx context.Context, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
+	GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (privateKey, publicKey string, err error)
 }
 
 type DBEncryptionService interface {
@@ -661,6 +665,13 @@ type ConfigService interface {
 	GetJSONConfig(ctx context.Context, key string, v any) error
 	SetJSONConfig(ctx context.Context, key string, v any) error
 	GetInstanceSettings(ctx context.Context) (InstanceSettings, error)
+}
+
+type DebReleaseTimeService interface {
+	Collect(ctx context.Context) error
+	Load(ctx context.Context, archive, suite, component, arch string) (DebPackageIndex, error)
+	LoadDebPackages(ctx context.Context, registry, archive, suite, component, arch string) (DebRelease, []control.Paragraph, error)
+	FetchMetasnap(ctx context.Context, archive, name, arch string) ([]MetasnapEntry, error)
 }
 
 type StatisticsRepository interface {

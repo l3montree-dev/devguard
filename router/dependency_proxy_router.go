@@ -4,6 +4,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/labstack/echo/v4"
 )
@@ -43,7 +45,7 @@ func registerPyPIRoutes(group *echo.Group, pythonController *dependencyfirewall.
 
 func registerMavenRoutes(group *echo.Group, mavenController *dependencyfirewall.MavenDependencyProxyController) {
 	// Maven packages and metadata share one path tree
-	group.GET("/maven/*", mavenController.ProxyMaven)
+	group.Match([]string{http.MethodGet, http.MethodHead}, "/maven/*", mavenController.ProxyMaven)
 }
 
 func registerComposerRoutes(group *echo.Group, composerController *dependencyfirewall.ComposerDependencyProxyController) {
@@ -54,6 +56,10 @@ func registerDebRoutes(group *echo.Group, debController *dependencyfirewall.DebD
 	group.GET("/deb/*", debController.ProxyDeb)
 }
 
+func registerAlpineRoutes(group *echo.Group, alpineController *dependencyfirewall.AlpineDependencyProxyController) {
+	group.GET("/apk/*", alpineController.ProxyAlpine)
+}
+
 func NewDependencyProxyRouter(
 	apiV1Group APIV1Router,
 	npmController *dependencyfirewall.NPMDependencyProxyController,
@@ -62,6 +68,7 @@ func NewDependencyProxyRouter(
 	mavenController *dependencyfirewall.MavenDependencyProxyController,
 	composerController *dependencyfirewall.ComposerDependencyProxyController,
 	debController *dependencyfirewall.DebDependencyProxyController,
+	alpineController *dependencyfirewall.AlpineDependencyProxyController,
 ) DependencyProxyRouter {
 	secretGroup := apiV1Group.Group.Group("/dependency-proxy/:secret")
 
@@ -71,6 +78,7 @@ func NewDependencyProxyRouter(
 	registerMavenRoutes(secretGroup, mavenController)
 	registerComposerRoutes(secretGroup, composerController)
 	registerDebRoutes(secretGroup, debController)
+	registerAlpineRoutes(secretGroup, alpineController)
 
 	return DependencyProxyRouter{Group: secretGroup}
 }

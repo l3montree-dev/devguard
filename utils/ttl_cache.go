@@ -19,6 +19,8 @@ import (
 	"container/list"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 // TTLCache is a concurrency-safe in-memory cache whose entries expire after a fixed
@@ -130,4 +132,32 @@ func (c *TTLCache[K, V]) removeElement(elem *list.Element) {
 	entry := c.order.Remove(elem).(*ttlCacheEntry[K, V])
 	delete(c.entries, entry.key)
 	c.size -= entry.size
+}
+
+type LoadingCache[V any] struct {
+	*TTLCache[string, V]
+	inflight singleflight.Group
+}
+
+func NewLoadingCache[V any](ttl time.Duration, maxSize int, sizeOf func(V) int) *LoadingCache[V] {
+	return &LoadingCache[V]{TTLCache: NewTTLCache[string](ttl, maxSize, sizeOf)}
+}
+
+func (c *LoadingCache[V]) GetOrLoad(key string, load func() (V, error)) (V, error) {
+	if value, ok := c.Get(key); ok {
+		return value, nil
+	}
+
+	value, err, _ := c.inflight.Do(key, func() (any, error) {
+		value, err := load()
+		if err == nil {
+			c.Set(key, value)
+		}
+		return value, err
+	})
+	if err != nil {
+		var zero V
+		return zero, err
+	}
+	return value.(V), nil
 }

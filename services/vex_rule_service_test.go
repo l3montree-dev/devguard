@@ -7,10 +7,10 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/openvex/go-vex/pkg/vex"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,7 +18,7 @@ import (
 // celFor builds a CEL expression that matches a specific CVE ID and path pattern,
 // mirroring how transformers build VEXRule.CELExpression for tests.
 func celFor(cveID string, pattern []string) string {
-	return vexrules.ToCELExpression(cveID, vexrules.PathPattern(pattern))
+	return celrules.ToCELExpression(cveID, celrules.PathPattern(pattern))
 }
 
 func TestCreateVulnEventFromVEXRule(t *testing.T) {
@@ -425,7 +425,7 @@ func TestParseVEXRulesInBOMComponentPurlWithEncodedAtSign(t *testing.T) {
 		"vuln PURL should contain the properly unescaped @")
 
 	// Verify the wildcard is present between the two purls
-	assert.Contains(t, celExpr, vexrules.PathPatternWildcard,
+	assert.Contains(t, celExpr, celrules.PathPatternWildcard,
 		"middle element should be the wildcard")
 }
 
@@ -442,7 +442,7 @@ func TestParseVEXRulesFromOpenVEXReportSelectValidProductID(t *testing.T) {
 					ID: "pkg:npm/@myorg/myapp@1.0.0",
 				},
 			},
-			wantPathPattern: []string{vexrules.PathPatternWildcard, "pkg:npm/@myorg/myapp@1.0.0"},
+			wantPathPattern: []string{celrules.PathPatternWildcard, "pkg:npm/@myorg/myapp@1.0.0"},
 		},
 		{
 			name: "uses purl identifier when present",
@@ -454,7 +454,7 @@ func TestParseVEXRulesFromOpenVEXReportSelectValidProductID(t *testing.T) {
 					},
 				},
 			},
-			wantPathPattern: []string{vexrules.PathPatternWildcard, "pkg:npm/@myorg/myapp@1.0.0"},
+			wantPathPattern: []string{celrules.PathPatternWildcard, "pkg:npm/@myorg/myapp@1.0.0"},
 		},
 	}
 	ts := time.Now().UTC()
@@ -593,11 +593,11 @@ func TestParseVEXRulesFromOpenVEXReportNormalAndMultipleStatements(t *testing.T)
 		mechanicalJustification string
 		eventType               dtos.VulnEventType
 	}{
-		{cve: "CVE-2024-1111", path: []string{vexrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		{cve: "CVE-2024-1111", path: []string{celrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
 		// the vulnerable package is the subcomponent, not its containing product - see openVexStatementPurls
-		{cve: "CVE-2024-2222", path: []string{vexrules.PathPatternWildcard, "pkg:golang/lib@2.0", vexrules.PathPatternWildcard, "pkg:golang/lib/sub@2.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
-		{cve: "CVE-2024-2222", path: []string{vexrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
-		{cve: "CVE-2024-3333", path: []string{vexrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: "", eventType: dtos.EventTypeComment},
+		{cve: "CVE-2024-2222", path: []string{celrules.PathPatternWildcard, "pkg:golang/lib@2.0", celrules.PathPatternWildcard, "pkg:golang/lib/sub@2.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		{cve: "CVE-2024-2222", path: []string{celrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: string(vex.ComponentNotPresent), eventType: dtos.EventTypeFalsePositive},
+		{cve: "CVE-2024-3333", path: []string{celrules.PathPatternWildcard, "pkg:golang/app@1.0"}, mechanicalJustification: "", eventType: dtos.EventTypeComment},
 	}
 
 	assert.Len(t, rules, len(expected), "number of generated rules should match expected")

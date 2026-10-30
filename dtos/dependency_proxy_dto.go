@@ -15,30 +15,11 @@
 
 package dtos
 
-import (
-	"encoding/json"
-)
-
 // DependencyProxyConfig is the config-file payload persisted for the dependency proxy.
 type DependencyProxyConfig struct {
-	Rules         string            `json:"rules"`
-	MinReleaseAge int               `json:"minReleaseAge" validate:"gte=0,lte=87600"` // in hours, capped at 10 years
-	Registries    map[string]string `json:"registries" validate:"omitempty,dive,keys,oneof=npm go pypi maven composer deb,endkeys,required,url"`
+	Registries map[string]string `yaml:"registries" validate:"omitempty,dive,keys,oneof=npm go pypi maven composer deb,endkeys,required,url"`
 }
 
 // dependencyProxyConfigFileID is the key under which dependency-proxy settings
 // are stored in an org/project/asset ConfigFiles map.
 const DependencyProxyConfigFileID = "dependency-proxy-configs"
-
-// validateConfigFile validates a config-file payload before it is persisted.
-// Only config files with known schemas are checked; unknown ones pass through.
-func ValidateConfigFile(content []byte) error {
-	var cfg DependencyProxyConfig
-	if err := json.Unmarshal(content, &cfg); err != nil {
-		return err
-	}
-	if err := V.Struct(cfg); err != nil {
-		return err
-	}
-	return nil
-}

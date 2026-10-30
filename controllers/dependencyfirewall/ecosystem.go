@@ -122,6 +122,8 @@ func EcosystemFromString(eco string) ecosystem {
 		return composerEcosystem{}
 	case "deb":
 		return debEcosystem{}
+	case "apk":
+		return alpineEcosystem{}
 	default:
 		return nil
 	}

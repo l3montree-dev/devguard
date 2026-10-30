@@ -49,6 +49,7 @@ var (
 	// matches only the scheme and authority of an absolute (or scheme-relative) URL,
 	// so the upstream path is preserved when the URL is rewritten onto the proxy.
 	pypiAbsoluteURLRe = regexp.MustCompile(`(?:https?:)?//[^/"'\s#]+`)
+	pypiRelativeURLRe = regexp.MustCompile(`("url"\s*:\s*"|href=")/([^/])`)
 )
 
 // PythonDependencyProxyController handles PyPI dependency proxy requests.
@@ -206,12 +207,6 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, pypi, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, version := pypi.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, pypi, packageName, version)
@@ -225,39 +220,32 @@ func (d *PythonDependencyProxyController) ProxyPyPIPackage(c shared.Context) err
 		return d.blockMaliciousPackage(c, pypi, requestPath, reason, http.StatusForbidden)
 	}
 
+	registry := configs.getRegistry(pypi, pypiRegistry)
+
 	if entry, ok := secretCache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "pypi", "path", requestPath)
-		if configs.MinReleaseAge > 0 {
-			if time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-				return d.blockTooNewPackage(c, pypi, requestPath, entry.releaseTime, configs.MinReleaseAge)
-			}
-			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			return pypi.writeResponse(c, entry.data, requestPath, true)
-		} else {
-			span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
-			return pypi.writeResponse(c, entry.data, requestPath, true)
+		notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(pypi, registry, packageName, version, entry.releaseTime), configs)
+		if notAllowed {
+			slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
+			return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
 		}
+		span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
+		return pypi.writeResponse(c, entry.data, requestPath, true)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	// Always resolve the release time, even without MinReleaseAge: the cache is shared
-	// across proxy secrets, so an entry stored for one config must be checkable under
-	// another. Files are only cached together with a known release time.
-	fileURL, releaseTime, err := d.resolvePyPIFile(ctx, configs.getRegistry(pypi, pypiRegistry), packageName, filepath.Base(requestPath))
+	fileURL, releaseTime, err := d.resolvePyPIFile(ctx, registry, packageName, filepath.Base(requestPath))
 	if err != nil {
 		span.RecordError(err)
 		slog.Warn("Could not resolve file url", "proxy", "pypi", "package", packageName, "version", version, "error", err)
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("could not resolve %s", requestPath))
 	}
-	if releaseTime.IsZero() {
-		slog.Warn("Could not determine release time", "proxy", "pypi", "package", packageName, "version", version)
-		if configs.MinReleaseAge > 0 {
-			// Fail closed: without a publish date the MinReleaseAge policy cannot be verified.
-			return d.blockNotAllowedPackage(c, pypi, requestPath, fmt.Sprintf("Release time of package %s@%s could not be determined", packageName, version))
-		}
-	} else if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-		return d.blockTooNewPackage(c, pypi, requestPath, releaseTime, configs.MinReleaseAge)
+
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(pypi, registry, packageName, version, releaseTime), configs)
+	if notAllowed {
+		slog.Warn("Blocked not allowed package", "proxy", "pypi", "path", requestPath, "reason", notAllowedReason)
+		return d.blockNotAllowedPackage(c, pypi, requestPath, notAllowedReason)
 	}
 
 	data, headers, statusCode, err := d.fetchFromUpstream(ctx, pypi, fileURL, "", c.Request().Header, nil)
@@ -370,7 +358,8 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 	headers := c.Request().Header
 	headers.Set("Accept", "application/vnd.pypi.simple.v1+json")
 
-	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, config.getRegistry(pypi, pypiRegistry), requestPath, headers)
+	registry := config.getRegistry(pypi, pypiRegistry)
+	data, headers, statusCode, err := d.fetchPyPIFromUpstream(ctx, registry, requestPath, headers)
 
 	if err != nil {
 		span.RecordError(err)
@@ -384,13 +373,17 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if config.MinReleaseAge > 0 || len(config.Rules) > 0 {
-		minAge := time.Duration(config.MinReleaseAge) * time.Hour
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, pypi.name(), pkgName)
+	if err != nil {
+		return maliciousCheckFailed(pypi, err)
+	}
+
+	if len(config.Rules) > 0 || len(malicious) > 0 {
 		data, err = filterPyPiSimpleIndex(data, func(version string, published time.Time) bool {
-			if config.MinReleaseAge > 0 && (published.IsZero() || time.Since(published) < minAge) {
+			if isMaliciousVersion(pypi, malicious, version) {
 				return false
 			}
-			blocked, _ := matchRules(pypi.packageIdentifier(pkgName, version), config.Rules)
+			blocked, _ := d.CheckNotAllowedPackage(newPackage(pypi, registry, pkgName, version, published), config)
 			return !blocked
 		})
 		if err != nil {
@@ -404,6 +397,7 @@ func (d *PythonDependencyProxyController) ProxyPyPISimple(c shared.Context) erro
 	}
 
 	proxyPrefix := strings.TrimSuffix(pypiProxyPrefixRe.FindString(c.Request().URL.Path), "/")
+	data = pypiRelativeURLRe.ReplaceAll(data, []byte("${1}"+proxyPrefix+"/packages/${2}"))
 	data = pypiAbsoluteURLRe.ReplaceAllLiteral(data, []byte(proxyPrefix))
 
 	return pypi.writeResponse(c, data, requestPath, false)

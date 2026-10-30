@@ -71,6 +71,10 @@ func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) er
 	return runner.externalEntityProviderService.CollectGarbage(ctx)
 }
 
+func (runner *DaemonRunner) CollectDebReleaseTimes(ctx context.Context) error {
+	return runner.debReleaseTimeService.Collect(ctx)
+}
+
 // job wraps fn into a queue handler: it bounds the run time, unmarshals the payload and alerts if fn fails.
 // A record deleted in the meantime is no failure - there is nothing left to do, so the job is not retried.
 func job[P events.Payload](errMsg string, fn func(ctx context.Context, payload P) error) events.NotifyHandler {
@@ -116,6 +120,7 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage, nil},
 		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation, nil},
 		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage, nil},
+		{events.TopicCollectDebReleaseTimes, "40 * * * *", "could not collect debian release times", runner.CollectDebReleaseTimes, nil},
 		// the sweep only enqueues the due steps of every asset, see assetPipelineSteps
 		{events.TopicAssetPipeline, "*/5 * * * *", "could not sweep asset pipeline", runner.sweepAssetPipeline, nil},
 

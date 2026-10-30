@@ -21,13 +21,13 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/crowdsourcevexing"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -79,13 +79,11 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	return ev, nil
 }
 
-
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
 	events := vuln.GetEvents()
 	if len(events) == 0 {
 		return false
 	}
-
 
 	probe := vuln
 	statemachine.Apply(&probe, event)
@@ -129,19 +127,19 @@ func MatchRulesToVulns(ctx context.Context, rules []models.UpstreamVEXRule, vuln
 	}
 
 	// prepare the vulns for evaluation by converting them to CEL-compatible maps
-	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx, vulns)
+	vulnMaps, err := celrules.PrepareVulnsForEval(ctx, vulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare vulns for evaluation: %w", err)
 	}
 
-	compiledRules, err := vexrules.CompileRules(ctx, rules)
+	compiledRules, err := celrules.CompileVEXRules(ctx, rules)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile VEX rules: %w", err)
 	}
 
 	// matches is keyed by vulnID and value is a list of ruleIDs that match that vuln
 	// we need to convert it to a map keyed by ruleID and value is a list of matching vulns
-	matches, err := vexrules.EvalCompiledRules(ctx, compiledRules, vulnMaps)
+	matches, err := celrules.EvalCompiledVEXRules(ctx, compiledRules, vulnMaps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate CEL expressions for VEX rules: %w", err)
 	}
@@ -316,16 +314,16 @@ func MatchingRules(ctx context.Context, vulns []models.DependencyVuln, vexRules 
 		ruleByID[rule.ID] = rule
 	}
 
-	compiledRules, err := vexrules.CompileRules(ctx, utils.Map(vexRules, transformer.VEXRuleToUpstreamVEXRule))
+	compiledRules, err := celrules.CompileVEXRules(ctx, utils.Map(vexRules, transformer.VEXRuleToUpstreamVEXRule))
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile VEX rules: %w", err)
 	}
-	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx, vulns)
+	vulnMaps, err := celrules.PrepareVulnsForEval(ctx, vulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare vulns for evaluation: %w", err)
 	}
 
-	matches, err := vexrules.EvalCompiledRules(ctx, compiledRules, vulnMaps)
+	matches, err := celrules.EvalCompiledVEXRules(ctx, compiledRules, vulnMaps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate CEL expressions for VEX rules: %w", err)
 	}
@@ -403,25 +401,25 @@ func ComputeVEXRuleRecommendations(
 		mapOfRules[rule.ID] = rule
 	}
 
-	compiledVexRules, err := vexrules.CompileRules(ctx, transformer.VEXRulesToUpstreamVEXRules(allRules))
+	compiledVexRules, err := celrules.CompileVEXRules(ctx, transformer.VEXRulesToUpstreamVEXRules(allRules))
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile all VEX rules: %w", err)
 	}
-	compiledUpstreamRules, err := vexrules.CompileRules(ctx, upstreamRules)
+	compiledUpstreamRules, err := celrules.CompileVEXRules(ctx, upstreamRules)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile all upstream VEX rules: %w", err)
 	}
 
-	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx, allVulns)
+	vulnMaps, err := celrules.PrepareVulnsForEval(ctx, allVulns)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare vulns for evaluation: %w", err)
 	}
 
-	vexRuleResults, err := vexrules.EvalCompiledRules(ctx, compiledVexRules, vulnMaps)
+	vexRuleResults, err := celrules.EvalCompiledVEXRules(ctx, compiledVexRules, vulnMaps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate VEX rules: %w", err)
 	}
-	upstreamRuleResults, err := vexrules.EvalCompiledRules(ctx, compiledUpstreamRules, vulnMaps)
+	upstreamRuleResults, err := celrules.EvalCompiledVEXRules(ctx, compiledUpstreamRules, vulnMaps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate upstream VEX rules: %w", err)
 	}

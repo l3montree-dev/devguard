@@ -82,8 +82,8 @@ func (cve CVE) ToCELMap() map[string]any {
 		"id":               float64(cve.ID),
 		"contentHash":      float64(cve.ContentHash),
 		"cve":              cve.CVE,
-		"datePublished":    timeToCEL(cve.DatePublished),
-		"dateLastModified": timeToCEL(cve.DateLastModified),
+		"datePublished":    TimeToCEL(cve.DatePublished),
+		"dateLastModified": TimeToCEL(cve.DateLastModified),
 		"description":      cve.Description,
 		"cvss":             float64(cve.CVSS),
 		"references":       cve.References,
@@ -114,7 +114,7 @@ func (cve CVE) ToCELMap() map[string]any {
 		{"euvdExploitAdd", cve.EUVDExploitAdd},
 	} {
 		if dp.val != nil {
-			m[dp.key] = timeToCEL(time.Time(*dp.val))
+			m[dp.key] = TimeToCEL(time.Time(*dp.val))
 		} else {
 			m[dp.key] = nil
 		}

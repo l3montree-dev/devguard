@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"github.com/l3montree-dev/devguard/vexrules"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,11 +55,11 @@ func TestCSAFtoVexRules(t *testing.T) {
 	}
 
 	expectedExpressions := []string{
-		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
+		celrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", celrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
 		}),
-		vexrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", vexrules.PathPattern{
+		celrules.ToCELExpression("GHSA-fxhp-mv3v-67qp", celrules.PathPattern{
 			"pkg:golang/github.com/l3montree-dev/devguard@main",
 			"pkg:golang/github.com/open-policy-agent/opa@v1.18.2",
 			"pkg:golang/oras.land/oras-go/v2@v2.6.1",
@@ -88,7 +88,7 @@ func TestCSAFtoVexRulesWithProductsInBranches(t *testing.T) {
 
 	require.NotEmpty(t, rules)
 	assert.Contains(t, rules[0].CELExpression, "CVE-2025-22873")
-	assert.Equal(t, vexrules.ToCELExpression("CVE-2025-22873", vexrules.PathPattern{
+	assert.Equal(t, celrules.ToCELExpression("CVE-2025-22873", celrules.PathPattern{
 		"pkg:golang/datadog-lambda-extension/recorder-extension",
 		"pkg:golang/stdlib@v1.22.7",
 	}), rules[0].CELExpression)

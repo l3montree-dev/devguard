@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/gorm"
 )
@@ -26,10 +27,11 @@ import (
 type dependencyProxySecretRepository struct {
 	db *gorm.DB
 	utils.Repository[uuid.UUID, models.DependencyProxySecret, *gorm.DB]
+	encryptionService shared.DBEncryptionService
 }
 
-func NewDependencyProxyRepository(db *gorm.DB) *dependencyProxySecretRepository {
-	return &dependencyProxySecretRepository{db: db, Repository: newGormRepository[uuid.UUID, models.DependencyProxySecret](db)}
+func NewDependencyProxyRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *dependencyProxySecretRepository {
+	return &dependencyProxySecretRepository{db: db, Repository: newGormRepository[uuid.UUID, models.DependencyProxySecret](db), encryptionService: encryptionService}
 }
 
 func (r *dependencyProxySecretRepository) GetOrCreateByOrgID(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) (models.DependencyProxySecret, error) {
@@ -87,13 +89,10 @@ func (r *dependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Conte
 func (r *dependencyProxySecretRepository) UpdateSecret(ctx context.Context, tx *gorm.DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error) {
 	exec := func(db *gorm.DB) error {
 		newSecret := uuid.New()
-		if err := db.Delete(&models.DependencyProxySecret{}, "secret = ?", proxy.Secret).Error; err != nil {
+		if err := db.Model(&models.DependencyProxySecret{}).Where("secret = ?", proxy.Secret).Update("secret", newSecret).Error; err != nil {
 			return err
 		}
 		proxy.Secret = newSecret
-		if err := db.Create(&proxy).Error; err != nil {
-			return err
-		}
 		return nil
 	}
 	var err error
@@ -120,4 +119,34 @@ func (r *dependencyProxySecretRepository) GetBySecret(ctx context.Context, tx *g
 	}
 
 	return proxy, nil
+}
+
+func (r *dependencyProxySecretRepository) GetDebSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (string, string, bool, error) {
+	var proxy models.DependencyProxySecret
+	if err := r.GetDB(ctx, tx).First(&proxy, "secret = ?", secret).Error; err != nil {
+		return "", "", false, err
+	}
+
+	if proxy.DebSigningPrivateKey == nil || proxy.DebSigningPublicKey == nil {
+		return "", "", false, nil
+	}
+
+	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.DebSigningPrivateKey)
+	if err != nil {
+		return "", "", false, err
+	}
+
+	return privKey, *proxy.DebSigningPublicKey, true, nil
+}
+
+func (r *dependencyProxySecretRepository) UpdateSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
+	encryptedText, err := r.encryptionService.EncryptAndWrapData(privateKey)
+	if err != nil {
+		return err
+	}
+
+	res := r.GetDB(ctx, tx).Model(&models.DependencyProxySecret{}).
+		Where("secret = ?", secret).
+		Updates(map[string]any{"deb_signing_private_key": encryptedText, "deb_signing_public_key": publicKey})
+	return res.Error
 }
