@@ -120,7 +120,7 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage, nil},
 		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation, nil},
 		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage, nil},
-		{events.TopicCollectDebReleaseTimes, "40 * * * *", "could not collect debian release times", runner.CollectDebReleaseTimes, nil},
+		{events.TopicCollectDebReleaseTimes, "40 */12 * * *","could not collect debian release times", runner.CollectDebReleaseTimes, nil},
 		// the sweep only enqueues the due steps of every asset, see assetPipelineSteps
 		{events.TopicAssetPipeline, "*/5 * * * *", "could not sweep asset pipeline", runner.sweepAssetPipeline, nil},
 

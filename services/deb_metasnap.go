@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -91,7 +90,7 @@ func metasnapFirstSeen(entries []shared.MetasnapEntry, version, suite string) (t
 func (s DebReleaseTimeService) resolveReleasedAt(ctx context.Context, archive, suite, component, arch string, packages []control.Paragraph, previous []shared.DebPackage) ([]time.Time, error) {
 	snapshotTime := time.Now().Add(-debSnapshotAge)
 
-	_, snapshotPackages, err := s.LoadDebPackages(ctx, shared.DefaultDebConfig(), shared.DebSnapshotPath(archive, snapshotTime), suite, component, arch)
+	_, snapshotPackages, err := s.LoadDebPackages(ctx, shared.SnapshotDebConfig(), shared.DebSnapshotPath(archive, snapshotTime), suite, component, arch)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +128,7 @@ func (s DebReleaseTimeService) resolveReleasedAt(ctx context.Context, archive, s
 			pkg := packages[i]
 			entries, err := s.FetchMetasnap(ctx, archive, pkg.Values["Package"], pkg.Values["Architecture"])
 			if err != nil {
-				slog.Warn("could not fetch metasnap data", "package", pkg.Values["Package"], "error", err)
+				// slog.Warn("could not fetch metasnap data", "package", pkg.Values["Package"], "error", err)
 				return nil
 			}
 
