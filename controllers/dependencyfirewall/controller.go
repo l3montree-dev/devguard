@@ -293,6 +293,7 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	proxies["debian"] = registryURL + "/" + secret.String() + "/deb/debian"
 	proxies["maven"] = registryURL + "/" + secret.String() + "/maven/"
 	proxies["composer"] = registryURL + "/" + secret.String() + "/composer/"
+	proxies["alpine"] = registryURL + "/" + secret.String() + "/apk/alpine"
 	// OCI: images are pulled via the root /v2/ endpoint so standard Docker clients work.
 	// Usage: docker pull <ociPrefix>/docker.io/library/nginx:latest
 	ociBaseURL := os.Getenv("OCI_REGISTRY_BASE_URL")
@@ -408,6 +409,19 @@ func checkDistHost(distURL string, allowedHosts ...string) error {
 		return fmt.Errorf("dist host %s is not allowed", parsed.Hostname())
 	}
 	return nil
+}
+
+func lastModifiedTime(headers http.Header) time.Time {
+	lastModified := headers.Get("Last-Modified")
+	if lastModified == "" {
+		return time.Time{}
+	}
+	t, err := http.ParseTime(lastModified)
+	if err != nil {
+		slog.Debug("Could not parse Last-Modified header", "value", lastModified, "error", err)
+		return time.Time{}
+	}
+	return t
 }
 
 func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) celrules.Package {

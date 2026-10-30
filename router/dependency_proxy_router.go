@@ -56,6 +56,10 @@ func registerDebRoutes(group *echo.Group, debController *dependencyfirewall.DebD
 	group.GET("/deb/*", debController.ProxyDeb)
 }
 
+func registerAlpineRoutes(group *echo.Group, alpineController *dependencyfirewall.AlpineDependencyProxyController) {
+	group.GET("/apk/*", alpineController.ProxyAlpine)
+}
+
 func NewDependencyProxyRouter(
 	apiV1Group APIV1Router,
 	npmController *dependencyfirewall.NPMDependencyProxyController,
@@ -64,6 +68,7 @@ func NewDependencyProxyRouter(
 	mavenController *dependencyfirewall.MavenDependencyProxyController,
 	composerController *dependencyfirewall.ComposerDependencyProxyController,
 	debController *dependencyfirewall.DebDependencyProxyController,
+	alpineController *dependencyfirewall.AlpineDependencyProxyController,
 ) DependencyProxyRouter {
 	secretGroup := apiV1Group.Group.Group("/dependency-proxy/:secret")
 
@@ -73,6 +78,7 @@ func NewDependencyProxyRouter(
 	registerMavenRoutes(secretGroup, mavenController)
 	registerComposerRoutes(secretGroup, composerController)
 	registerDebRoutes(secretGroup, debController)
+	registerAlpineRoutes(secretGroup, alpineController)
 
 	return DependencyProxyRouter{Group: secretGroup}
 }

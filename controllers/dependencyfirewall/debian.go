@@ -355,7 +355,7 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 
 	releaseTime, ok := d.indexedReleaseTime(configs, requestPath)
 	if !ok {
-		releaseTime = debReleaseTime(headers)
+		releaseTime = lastModifiedTime(headers)
 	}
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, releaseTime), configs)
 	if notAllowed {
@@ -376,17 +376,4 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	}
 
 	return deb.writeResponse(c, data, requestPath, false)
-}
-
-func debReleaseTime(headers http.Header) time.Time {
-	lastModified := headers.Get("Last-Modified")
-	if lastModified == "" {
-		return time.Time{}
-	}
-	t, err := http.ParseTime(lastModified)
-	if err != nil {
-		slog.Debug("Could not parse Last-Modified header", "proxy", "deb", "value", lastModified, "error", err)
-		return time.Time{}
-	}
-	return t
 }
