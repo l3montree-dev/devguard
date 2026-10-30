@@ -139,7 +139,7 @@ func (r *dependencyProxySecretRepository) GetDebSigningKey(ctx context.Context, 
 	return privKey, *proxy.DebSigningPublicKey, true, nil
 }
 
-func (r *dependencyProxySecretRepository) UpdateDebSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
+func (r *dependencyProxySecretRepository) UpdateSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
 	encryptedText, err := r.encryptionService.EncryptAndWrapData(privateKey)
 	if err != nil {
 		return err
