@@ -18,6 +18,9 @@ package celrules
 import (
 	"fmt"
 
+	"gopkg.in/yaml.v3"
+
+	"github.com/go-playground/validator/v10"
 	"github.com/google/cel-go/cel"
 )
 
@@ -29,22 +32,33 @@ const (
 )
 
 type PackageRule struct {
-	Name   string `yaml:"name"`
-	Action Action `yaml:"action"`
-	Expr   string `yaml:"expr"`
+	Name   string `yaml:"name" validate:"required"`
+	Action Action `yaml:"action" validate:"required,oneof=allow deny"`
+	Expr   string `yaml:"expr" validate:"required"`
 }
+
+var ruleValidator = validator.New()
 
 type CompiledPackageRule struct {
 	Rule    PackageRule
 	Program cel.Program
 }
 
+func compilePackageExpr(expression string) (cel.Program, error) {
+	env, err := packageCelEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
+	}
+
+	return compile(env, expression)
+}
+
 func CompilePackageRules(rules []PackageRule) ([]CompiledPackageRule, error) {
 	var compiledRules []CompiledPackageRule
 
 	for _, rule := range rules {
-		if rule.Action != ActionAllow && rule.Action != ActionDeny {
-			return nil, fmt.Errorf("failed to validate action for rule %s", rule.Name)
+		if err := ruleValidator.Struct(rule); err != nil {
+			return nil, fmt.Errorf("failed to validate rule %s: %w", rule.Name, err)
 		}
 
 		prg, err := compilePackageExpr(rule.Expr)
@@ -74,4 +88,25 @@ func EvaluatePackage(rules []CompiledPackageRule, p Package) (bool, string, erro
 		}
 	}
 	return blocked, ruleName, nil
+}
+
+func evalPackage(prg cel.Program, p Package) (bool, error) {
+	return evalBool(prg, map[string]any{"pkg": p.ToCELMap()})
+}
+
+func ParsePackageRules(content string) ([]CompiledPackageRule, error) {
+	var cfg struct {
+		Rules []PackageRule `yaml:"rules"`
+	}
+
+	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse yaml: %w", err)
+	}
+
+	compiledRules, err := CompilePackageRules(cfg.Rules)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile rules: %w", err)
+	}
+
+	return compiledRules, nil
 }

@@ -114,3 +114,147 @@ func TestCompileRulesNonBoolExpression(t *testing.T) {
 	})
 	assert.NoError(t, err)
 }
+
+func TestEval(t *testing.T) {
+	tests := []struct {
+		name string
+		pkg  Package
+		want bool
+		rule string
+	}{
+		{name: "1 hour old", pkg: Package{
+			Name: "express", ReleasedAt: time.Now().Add(-time.Hour),
+		}, want: true, rule: `now() - timestamp(pkg.releasedAt) < duration("72h")`},
+		{name: "5 days old", pkg: Package{
+			Name: "express2", ReleasedAt: time.Now().Add(-time.Hour * 120),
+		}, want: false, rule: `now() - timestamp(pkg.releasedAt) < duration("72h")`},
+		{name: "evil scope", pkg: Package{
+			Name: "@evil-scope/foo", Purl: "pkg:npm/%40evil-scope/foo@1.0.0",
+		}, want: true, rule: `pkg.name.startsWith("@evil-scope/")`},
+		{name: "good scope", pkg: Package{
+			Name: "@good-scope/foo", Purl: "pkg:npm/%40good-scope/foo@1.0.0",
+		}, want: false, rule: `pkg.name.startsWith("@evil-scope/")`},
+		{name: "no provenance", pkg: Package{
+			Name: "express",
+		}, want: true, rule: `!has(pkg.provenance) || !pkg.provenance.sourceRepository.startsWith("github.com/expressjs/")`},
+		{name: "provenance from expressjs", pkg: Package{
+			Name: "express", Provenance: &Provenance{SourceRepository: "github.com/expressjs/express"},
+		}, want: false, rule: `!has(pkg.provenance) || !pkg.provenance.sourceRepository.startsWith("github.com/expressjs/")`},
+		{name: "provenance from other repo", pkg: Package{
+			Name: "express", Provenance: &Provenance{SourceRepository: "github.com/evil/express"},
+		}, want: true, rule: `!has(pkg.provenance) || !pkg.provenance.sourceRepository.startsWith("github.com/expressjs/")`},
+		{name: "missing release time is skipped with has", pkg: Package{
+			Name: "nginx", Ecosystem: "oci",
+		}, want: false, rule: `has(pkg.releasedAt) && now() - timestamp(pkg.releasedAt) < duration("120h")`},
+		{name: "missing release time is blocked without has", pkg: Package{
+			Name: "lodash", Ecosystem: "npm",
+		}, want: true, rule: `!has(pkg.releasedAt) || now() - timestamp(pkg.releasedAt) < duration("120h")`},
+		{name: "lodash in vulnerable range", pkg: Package{
+			Name: "lodash", Purl: "pkg:npm/lodash@4.17.20",
+		}, want: true, rule: `matchesPurl(pkg.purl, "pkg:npm/lodash@<4.17.21")`},
+		{name: "debian security suite", pkg: Package{
+			Name: "debian/curl", Ecosystem: "deb", Suite: "trixie-security",
+		}, want: true, rule: `pkg.suite.endsWith("-security")`},
+		{name: "empty suite does not error", pkg: Package{
+			Name: "lodash", Ecosystem: "npm",
+		}, want: false, rule: `pkg.suite.endsWith("-security")`},
+		{name: "optional: nil publisher falls back to default", pkg: Package{
+			Name: "express",
+		}, want: false, rule: `pkg.?publisher.?changedSinceLastVersion.orValue(false)`},
+		{name: "optional: publisher changed", pkg: Package{
+			Name: "express", Publisher: &Publisher{Name: "evil", ChangedSinceLastVersion: true},
+		}, want: true, rule: `pkg.?publisher.?changedSinceLastVersion.orValue(false)`},
+		{name: "optional: nil publisher name compares against default", pkg: Package{
+			Name: "express",
+		}, want: false, rule: `pkg.?publisher.?name.orValue("") == "evil"`},
+		{name: "optional: publisher name matches", pkg: Package{
+			Name: "express", Publisher: &Publisher{Name: "evil"},
+		}, want: true, rule: `pkg.?publisher.?name.orValue("") == "evil"`},
+		{name: "optional: nil provenance has no value", pkg: Package{
+			Name: "express",
+		}, want: false, rule: `pkg.?provenance.hasValue()`},
+		{name: "optional: provenance has value", pkg: Package{
+			Name: "express", Provenance: &Provenance{SourceRepository: "github.com/expressjs/express"},
+		}, want: true, rule: `pkg.?provenance.hasValue()`},
+		{name: "optional: missing release time uses default", pkg: Package{
+			Name: "lodash",
+		}, want: false, rule: `pkg.?releasedAt.hasValue() && now() - timestamp(pkg.releasedAt) < duration("120h")`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prg, err := compilePackageExpr(tt.rule)
+			require.NoError(t, err)
+
+			result, err := evalPackage(prg, tt.pkg)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func TestEvalMissingReleaseTimeErrors(t *testing.T) {
+	prg, err := compilePackageExpr(`now() - timestamp(pkg.releasedAt) < duration("120h")`)
+	require.NoError(t, err)
+
+	_, err = evalPackage(prg, Package{Name: "nginx"})
+	assert.Error(t, err)
+}
+
+func TestParseConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantRules int
+		wantErr   bool
+	}{
+		{
+			name: "valid rules",
+			input: `rules:
+  - name: block-new
+    action: deny
+    expr: now() - timestamp(pkg.releasedAt) < duration("120h")
+  - name: allow-trusted
+    action: allow
+    expr: pkg.name == "trusted"
+`,
+			wantRules: 2,
+		},
+		{
+			name:      "empty config",
+			input:     "",
+			wantRules: 0,
+		},
+		{
+			name: "invalid expression",
+			input: `rules:
+  - name: broken
+    action: deny
+    expr: pkg.name ==
+`,
+			wantErr: true,
+		},
+		{
+			name: "invalid action",
+			input: `rules:
+  - name: broken
+    action: foo
+    expr: pkg.name == "x"
+`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rules, err := ParsePackageRules(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Len(t, rules, tt.wantRules)
+		})
+	}
+}
