@@ -168,7 +168,7 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 
 	// only sign the Release file if the upstream registry is verified with a keyring - otherwise we won't sign it.
 	if debRegistryConfig.Keyring != nil {
-		privateKey, _, err := d.dependencyProxyService.GetOrCreateSigningKey(ctx, configs.Secret)
+		privateKey, _, err := d.dependencyProxyService.GetSigningKey(ctx, configs.Secret)
 		if err != nil {
 			return nil, err
 		}

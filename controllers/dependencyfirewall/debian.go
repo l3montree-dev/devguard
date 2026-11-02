@@ -180,7 +180,7 @@ func (d *DebDependencyProxyController) proxyDebKeyring(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid").WithInternal(err)
 	}
 
-	_, publicKey, err := d.dependencyProxyService.GetOrCreateSigningKey(c.Request().Context(), configs.Secret)
+	_, publicKey, err := d.dependencyProxyService.GetSigningKey(c.Request().Context(), configs.Secret)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load signing key").WithInternal(err)
 	}

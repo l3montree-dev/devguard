@@ -16,7 +16,10 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/profile"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
@@ -46,7 +49,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByOrgID(ctx context.Context
 				OrgID: &orgID,
 			}
 
-			err = r.Create(ctx, tx, &newProxy)
+			err = r.createWithSigningKey(ctx, tx, &newProxy)
 			return newProxy, err
 		}
 		return proxy, err
@@ -63,7 +66,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByProjectID(ctx context.Con
 			newProxy := models.DependencyProxySecret{
 				ProjectID: &projectID,
 			}
-			err = r.Create(ctx, tx, &newProxy)
+			err = r.createWithSigningKey(ctx, tx, &newProxy)
 			return newProxy, err
 		}
 		return proxy, err
@@ -80,7 +83,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Conte
 			newProxy := models.DependencyProxySecret{
 				AssetID: &assetID,
 			}
-			err = r.Create(ctx, tx, &newProxy)
+			err = r.createWithSigningKey(ctx, tx, &newProxy)
 			return newProxy, err
 		}
 		return proxy, err
@@ -91,10 +94,20 @@ func (r *dependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Conte
 func (r *dependencyProxySecretRepository) UpdateSecret(ctx context.Context, tx *gorm.DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error) {
 	exec := func(db *gorm.DB) error {
 		newSecret := uuid.New()
-		if err := db.Model(&models.DependencyProxySecret{}).Where("secret = ?", proxy.Secret).Update("secret", newSecret).Error; err != nil {
+		encryptedPrivateKey, publicKey, err := r.generateEncryptedSigningKey()
+		if err != nil {
+			return err
+		}
+		if err := db.Model(&models.DependencyProxySecret{}).Where("secret = ?", proxy.Secret).Updates(map[string]any{
+			"secret":              newSecret,
+			"signing_private_key": encryptedPrivateKey,
+			"signing_public_key":  publicKey,
+		}).Error; err != nil {
 			return err
 		}
 		proxy.Secret = newSecret
+		proxy.SigningPrivateKey = &encryptedPrivateKey
+		proxy.SigningPublicKey = &publicKey
 		return nil
 	}
 	var err error
@@ -123,32 +136,64 @@ func (r *dependencyProxySecretRepository) GetBySecret(ctx context.Context, tx *g
 	return proxy, nil
 }
 
-func (r *dependencyProxySecretRepository) GetSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (string, string, bool, error) {
-	var proxy models.DependencyProxySecret
-	if err := r.GetDB(ctx, tx).First(&proxy, "secret = ?", secret).Error; err != nil {
-		return "", "", false, err
-	}
-
-	if proxy.SigningPrivateKey == nil || proxy.SigningPublicKey == nil {
-		return "", "", false, nil
-	}
-
-	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.SigningPrivateKey)
+func generateSigningKey() (string, string, error) {
+	key, err := crypto.PGPWithProfile(profile.RFC4880()).KeyGeneration().AddUserId("DevGuard Dependency Proxy", "noreply@devguard.org").New().GenerateKey()
 	if err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
 
-	return privKey, *proxy.SigningPublicKey, true, nil
+	privKey, err := key.Armor()
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKey, err := key.GetArmoredPublicKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	return privKey, pubKey, nil
 }
 
-func (r *dependencyProxySecretRepository) UpdateSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
-	encryptedText, err := r.encryptionService.EncryptAndWrapData(privateKey)
+func (r *dependencyProxySecretRepository) generateEncryptedSigningKey() (string, string, error) {
+	privateKey, publicKey, err := generateSigningKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	encryptedPrivateKey, err := r.encryptionService.EncryptAndWrapData(privateKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return encryptedPrivateKey, publicKey, nil
+}
+
+func (r *dependencyProxySecretRepository) createWithSigningKey(ctx context.Context, tx *gorm.DB, proxy *models.DependencyProxySecret) error {
+	encryptedPrivateKey, publicKey, err := r.generateEncryptedSigningKey()
 	if err != nil {
 		return err
 	}
 
-	res := r.GetDB(ctx, tx).Model(&models.DependencyProxySecret{}).
-		Where("secret = ?", secret).
-		Updates(map[string]any{"signing_private_key": encryptedText, "signing_public_key": publicKey})
-	return res.Error
+	proxy.SigningPrivateKey = &encryptedPrivateKey
+	proxy.SigningPublicKey = &publicKey
+	return r.Create(ctx, tx, proxy)
+}
+
+func (r *dependencyProxySecretRepository) GetSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (string, string, error) {
+	var proxy models.DependencyProxySecret
+	if err := r.GetDB(ctx, tx).First(&proxy, "secret = ?", secret).Error; err != nil {
+		return "", "", err
+	}
+
+	if proxy.SigningPrivateKey == nil || proxy.SigningPublicKey == nil {
+		return "", "", fmt.Errorf("dependency proxy secret has no signing key")
+	}
+
+	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.SigningPrivateKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return privKey, *proxy.SigningPublicKey, nil
 }

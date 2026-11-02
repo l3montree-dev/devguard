@@ -14,7 +14,7 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ALTER TABLE public.dependency_proxy_secrets
-    RENAME COLUMN deb_signing_private_key TO signing_private_key
+    RENAME COLUMN deb_signing_private_key TO signing_private_key;
 
 ALTER TABLE public.dependency_proxy_secrets
     RENAME COLUMN deb_signing_public_key TO signing_public_key;
