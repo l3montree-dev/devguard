@@ -94,7 +94,7 @@ func (r *dependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Conte
 func (r *dependencyProxySecretRepository) UpdateSecret(ctx context.Context, tx *gorm.DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error) {
 	exec := func(db *gorm.DB) error {
 		newSecret := uuid.New()
-		encryptedPrivateKey, publicKey, err := r.generateEncryptedSigningKey()
+		encryptedPrivateKey, publicKey, err := generateEncryptedSigningKey(r.encryptionService)
 		if err != nil {
 			return err
 		}
@@ -155,13 +155,13 @@ func generateSigningKey() (string, string, error) {
 	return privKey, pubKey, nil
 }
 
-func (r *dependencyProxySecretRepository) generateEncryptedSigningKey() (string, string, error) {
+func generateEncryptedSigningKey(encryptionService shared.DBEncryptionService) (string, string, error) {
 	privateKey, publicKey, err := generateSigningKey()
 	if err != nil {
 		return "", "", err
 	}
 
-	encryptedPrivateKey, err := r.encryptionService.EncryptAndWrapData(privateKey)
+	encryptedPrivateKey, err := encryptionService.EncryptAndWrapData(privateKey)
 	if err != nil {
 		return "", "", err
 	}
@@ -170,7 +170,7 @@ func (r *dependencyProxySecretRepository) generateEncryptedSigningKey() (string,
 }
 
 func (r *dependencyProxySecretRepository) createWithSigningKey(ctx context.Context, tx *gorm.DB, proxy *models.DependencyProxySecret) error {
-	encryptedPrivateKey, publicKey, err := r.generateEncryptedSigningKey()
+	encryptedPrivateKey, publicKey, err := generateEncryptedSigningKey(r.encryptionService)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (r *dependencyProxySecretRepository) BackfillSigningKeys(ctx context.Contex
 
 	updated := 0
 	for _, proxy := range proxies {
-		encryptedPrivateKey, publicKey, err := r.generateEncryptedSigningKey()
+		encryptedPrivateKey, publicKey, err := generateEncryptedSigningKey(r.encryptionService)
 		if err != nil {
 			return updated, err
 		}
