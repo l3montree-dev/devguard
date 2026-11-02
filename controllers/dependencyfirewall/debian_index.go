@@ -75,6 +75,40 @@ func (d *DebDependencyProxyController) indexedReleaseTime(configs DependencyProx
 	return time.Time{}, false
 }
 
+// upstream package lists are shared by all secrets - only the rule checks, replacements and signing are per secret
+type debUpstreamIndex struct {
+	index shared.DebPackageIndex
+	size  int
+}
+
+func (d *DebDependencyProxyController) getDebPackageIndex(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive, suite, component, arch string) (shared.DebPackageIndex, error) {
+	// the keyring is part of the key - a list loaded with one keyring must not serve a config with another
+	var keyring string
+	if registryConfig.Keyring != nil {
+		keyring = *registryConfig.Keyring
+	}
+	keyringHash := sha256.Sum256([]byte(keyring))
+	key := registryConfig.GetURL() + "/" + hex.EncodeToString(keyringHash[:8]) + "/" + archive + "/" + suite + "/" + component + "/" + arch
+
+	upstream, err := d.debUpstreamIndexes.GetOrLoad(key, func() (*debUpstreamIndex, error) {
+		index, err := d.loadDebPackageIndex(context.WithoutCancel(ctx), registryConfig, archive, suite, component, arch)
+		if err != nil {
+			return nil, err
+		}
+		size := 0
+		for _, pkg := range index.DebPackages {
+			for field, value := range pkg.Paragraph.Values {
+				size += len(field) + len(value)
+			}
+		}
+		return &debUpstreamIndex{index: index, size: size}, nil
+	})
+	if err != nil {
+		return shared.DebPackageIndex{}, err
+	}
+	return upstream.index, nil
+}
+
 func (d *DebDependencyProxyController) loadDebPackageIndex(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive, suite, component, arch string) (shared.DebPackageIndex, error) {
 	debianIndex, err := d.debReleaseTimeService.Load(ctx, archive, suite, component, arch)
 	if registryConfig.GetURL() == shared.DebRegistry {
@@ -116,7 +150,7 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 	for _, component := range shared.DebComponents {
 		for _, arch := range shared.DebArchitectures {
 			group.Go(func() error {
-				base, err := d.loadDebPackageIndex(ctx, *debRegistryConfig, archive, suite, component, arch)
+				base, err := d.getDebPackageIndex(ctx, *debRegistryConfig, archive, suite, component, arch)
 				if errors.Is(err, shared.ErrDebFileNotListed) {
 					return nil
 				}

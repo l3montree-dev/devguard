@@ -157,7 +157,7 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco e
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-// maxUpstreamResponseBytes bounds a single proxied upstream response - responses are held in memory.
+// responses are held in memory
 const maxUpstreamResponseBytes = 2 << 30 // 2GB
 
 func ensureReadMethod(c shared.Context) error {
@@ -312,6 +312,16 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	proxies["maven"] = registryURL + "/" + secret.String() + "/maven/"
 	proxies["composer"] = registryURL + "/" + secret.String() + "/composer/"
 	proxies["alpine"] = registryURL + "/" + secret.String() + "/apk/alpine"
+	// apk finds the key only under its exact name, so the url ends in the file name for /etc/apk/keys/
+	alpineKey, err := d.alpineSigningKey(ctx.Request().Context(), secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load signing key").WithInternal(err)
+	}
+	alpineKeyFile, err := alpineKeyName(&alpineKey.PublicKey)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to encode signing key").WithInternal(err)
+	}
+	proxies["alpineKey"] = registryURL + "/" + secret.String() + "/apk/" + alpineKeyFile
 	// OCI: images are pulled via the root /v2/ endpoint so standard Docker clients work.
 	// Usage: docker pull <ociPrefix>/docker.io/library/nginx:latest
 	ociBaseURL := os.Getenv("OCI_REGISTRY_BASE_URL")

@@ -20,8 +20,7 @@ import (
 	"io"
 )
 
-// ReadLimited reads r fully but fails once it exceeds limit. Unlike a bare io.LimitReader it never returns
-// a silently truncated body, which would otherwise be used as if it were complete.
+// unlike a bare io.LimitReader this fails instead of returning a silently truncated body
 func ReadLimited(r io.Reader, limit int64) ([]byte, error) {
 	data, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {

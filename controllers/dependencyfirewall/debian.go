@@ -47,6 +47,7 @@ var debProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/deb(?
 type DebDependencyProxyController struct {
 	*DependencyProxyController
 	debIndexes            *utils.LoadingCache[*debIndex]
+	debUpstreamIndexes    *utils.LoadingCache[*debUpstreamIndex]
 	debReleaseTimeService shared.DebReleaseTimeService
 }
 
@@ -54,6 +55,7 @@ func NewDebDependencyProxyController(controller *DependencyProxyController, debR
 	return &DebDependencyProxyController{
 		DependencyProxyController: controller,
 		debIndexes:                utils.NewLoadingCache(debIndexTTL, debIndexMaxBytes, func(idx *debIndex) int { return idx.size }),
+		debUpstreamIndexes:        utils.NewLoadingCache(debIndexTTL, debIndexMaxBytes, func(idx *debUpstreamIndex) int { return idx.size }),
 		debReleaseTimeService:     debReleaseTimeService,
 	}
 }
@@ -355,7 +357,12 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context, request
 	if !ok {
 		releaseTime = lastModifiedTime(headers)
 	}
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, releaseTime), configs)
+	ruleReleaseTime := releaseTime
+	if ruleReleaseTime.IsZero() {
+		// an unknown release time counts as brand new - min release age rules block instead of silently allowing
+		ruleReleaseTime = time.Now()
+	}
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, ruleReleaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
