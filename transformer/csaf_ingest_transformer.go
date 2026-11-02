@@ -111,11 +111,44 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 			}
 		}
 
+		mechanicalJustification := map[string]dtos.MechanicalJustificationType{}
+		for _, flag := range vuln.Flags {
+			if flag == nil || flag.Label == nil || flag.ProductIds == nil {
+				continue
+			}
+			for _, pid := range *flag.ProductIds {
+				if pid != nil {
+					mechanicalJustification[string(*pid)] = dtos.MechanicalJustificationType(*flag.Label)
+				}
+			}
+		}
+
+		descriptions := make([]string, 0, len(vuln.Notes))
+		for _, note := range vuln.Notes {
+			if note != nil && note.NoteCategory != nil && *note.NoteCategory == gocsaf.CSAFNoteCategoryDescription && note.Text != nil {
+				descriptions = append(descriptions, *note.Text)
+			}
+		}
+
+		justificationFor := func(productID string, i int) string {
+			if d := remediationDetail[productID]; d != "" {
+				return d
+			}
+			if i < len(descriptions) {
+				return descriptions[i]
+			}
+			// fewer notes than products: fall back to the first one
+			if len(descriptions) > 0 {
+				return descriptions[0]
+			}
+			return ""
+		}
+
 		appendRules := func(products *gocsaf.Products, eventType dtos.VulnEventType) {
 			if products == nil {
 				return
 			}
-			for _, pid := range *products {
+			for i, pid := range *products {
 				if pid == nil {
 					continue
 				}
@@ -136,11 +169,12 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 				}
 
 				rule := models.UpstreamVEXRule{
-					Title:         celrules.VexRuleTitle(cveID, pattern),
-					VexSource:     source,
-					Justification: remediationDetail[productID],
-					EventType:     et,
-					CELExpression: celrules.ToCELExpression(cveID, pattern),
+					Title:                   celrules.VexRuleTitle(cveID, pattern),
+					VexSource:               source,
+					Justification:           justificationFor(productID, i),
+					MechanicalJustification: mechanicalJustification[productID],
+					EventType:               et,
+					CELExpression:           celrules.ToCELExpression(cveID, pattern),
 				}
 				rule.SetCELExpression(rule.CELExpression)
 				rules = append(rules, rule)
