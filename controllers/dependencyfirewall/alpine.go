@@ -156,15 +156,15 @@ func (alpineEcosystem) writeResponse(c shared.Context, data []byte, path string,
 // @Success 200 {file} binary
 // @Router /dependency-proxy/{secret}/apk/{path} [get]
 func (d *AlpineDependencyProxyController) ProxyAlpine(c shared.Context) error {
-	path := strings.TrimSuffix(c.Request().URL.Path, "/")
-	if strings.HasSuffix(path, ".apk") {
-		return d.proxyAlpinePackage(c)
+	// sanitized once - dispatch, package checks and the upstream fetch must all see the same path
+	requestPath := alpine.trimPrefix(c.Request().URL.Path)
+	if strings.HasSuffix(requestPath, ".apk") {
+		return d.proxyAlpinePackage(c, requestPath)
 	}
-	return d.proxyAlpineMetadata(c)
+	return d.proxyAlpineMetadata(c, requestPath)
 }
 
-func (d *AlpineDependencyProxyController) proxyAlpineMetadata(c shared.Context) error {
-	requestPath := alpine.trimPrefix(c.Request().URL.Path)
+func (d *AlpineDependencyProxyController) proxyAlpineMetadata(c shared.Context, requestPath string) error {
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy."+alpine.name(),
 		trace.WithAttributes(attribute.String("proxy.ecosystem", alpine.name()),
@@ -211,7 +211,7 @@ func (d *AlpineDependencyProxyController) proxyAlpineMetadata(c shared.Context) 
 	return alpine.writeResponse(c, data, requestPath, false)
 }
 
-func (d *AlpineDependencyProxyController) proxyAlpinePackage(c shared.Context) error {
+func (d *AlpineDependencyProxyController) proxyAlpinePackage(c shared.Context, requestPath string) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -225,8 +225,6 @@ func (d *AlpineDependencyProxyController) proxyAlpinePackage(c shared.Context) e
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
 	}
-
-	requestPath := alpine.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy."+alpine.name(),
 		trace.WithAttributes(

@@ -164,14 +164,15 @@ func (debEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 // @Success 200 {file} binary
 // @Router /dependency-proxy/{secret}/deb/{path} [get]
 func (d *DebDependencyProxyController) ProxyDeb(c shared.Context) error {
-	path := strings.TrimSuffix(c.Request().URL.Path, "/")
-	if strings.HasSuffix(path, ".deb") {
-		return d.proxyDebPackage(c)
+	// sanitized once - dispatch, package checks and the upstream fetch must all see the same path
+	requestPath := deb.trimPrefix(c.Request().URL.Path)
+	if strings.HasSuffix(requestPath, ".deb") {
+		return d.proxyDebPackage(c, requestPath)
 	}
-	if strings.HasSuffix(path, "/"+debKeyringFile) {
+	if strings.HasSuffix("/"+requestPath, "/"+debKeyringFile) {
 		return d.proxyDebKeyring(c)
 	}
-	return d.proxyDebMetadata(c)
+	return d.proxyDebMetadata(c, requestPath)
 }
 
 func (d *DebDependencyProxyController) proxyDebKeyring(c shared.Context) error {
@@ -187,9 +188,7 @@ func (d *DebDependencyProxyController) proxyDebKeyring(c shared.Context) error {
 	return c.Blob(http.StatusOK, "application/pgp-keys", []byte(publicKey))
 }
 
-func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error {
-	requestPath := deb.trimPrefix(c.Request().URL.Path)
-
+func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context, requestPath string) error {
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.deb",
 		trace.WithAttributes(attribute.String("proxy.ecosystem", "deb"),
 			attribute.String("proxy.type", "metadata"),
@@ -268,7 +267,7 @@ func parseDebDistPath(path string) (archive, suite, rest string, ok bool) {
 	return archive, suite, rest, true
 }
 
-func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
+func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context, requestPath string) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -282,8 +281,6 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
 	}
-
-	requestPath := deb.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.deb",
 		trace.WithAttributes(

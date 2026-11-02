@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	pathpkg "path"
 	"regexp"
 	"slices"
 	"strings"
@@ -50,9 +51,15 @@ func trimWithRegex(path string, re *regexp.Regexp) string {
 	encoded := re.ReplaceAllString(path, "")
 	decoded, err := url.PathUnescape(encoded)
 	if err != nil {
-		return encoded
+		decoded = encoded
 	}
-	return decoded
+	// collapse dot segments like url.JoinPath does before the upstream fetch - otherwise routing and the
+	// package checks see a different path than the one fetched (e.g. "evil.apk/x/.." fetches "evil.apk")
+	cleaned := strings.TrimPrefix(pathpkg.Clean("/"+decoded), "/")
+	if cleaned != "" && strings.HasSuffix(decoded, "/") {
+		cleaned += "/"
+	}
+	return cleaned
 }
 
 type DependencyProxyCache struct {
