@@ -87,7 +87,7 @@ func EvaluatePackage(rules []CompiledPackageRule, p Package) (bool, string, erro
 			return rule.Rule.Action == ActionDeny, rule.Rule.Name, nil
 		}
 	}
-	return false, "No rule matched", nil
+	return false, "", nil
 }
 
 func evalPackage(prg cel.Program, p Package) (bool, error) {

@@ -207,10 +207,6 @@ func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error 
 	slog.Info("Proxy request", "proxy", "deb", "type", "metadata", "method", c.Request().Method, "path", requestPath)
 
 	configs, err := d.GetDependencyProxyConfigs(c)
-	debConfig := configs.Registries.DebConfig()
-	if debConfig == nil {
-
-	}
 
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
