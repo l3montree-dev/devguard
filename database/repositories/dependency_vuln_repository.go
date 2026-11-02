@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"iter"
 	"log/slog"
@@ -288,8 +289,11 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 		q = f.Where(q)
 	}
 
+	searchQuery := "(\"CVE\".description ILIKE @search OR dependency_vulns.cve_id ILIKE @search OR component_purl ILIKE @search OR dependency_vulns.cve_id IN (SELECT target_cve FROM cve_relationships WHERE relationship_type = 'alias' AND source_cve ILIKE @search UNION SELECT source_cve FROM cve_relationships WHERE relationship_type = 'alias' AND target_cve ILIKE @search))"
+	searchArg := sql.Named("search", "%"+search+"%")
+
 	if search != "" && len(search) > 2 {
-		q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q.Where(searchQuery, searchArg)
 	}
 
 	err := q.Session(&gorm.Session{}).Distinct("dependency_vulns.component_purl").Count(&count).Error
@@ -311,7 +315,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 	}
 
 	if search != "" && len(search) > 2 {
-		packageNameQuery.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		packageNameQuery.Where(searchQuery, searchArg)
 	}
 
 	// apply sorting
