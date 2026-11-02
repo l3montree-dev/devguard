@@ -278,14 +278,14 @@ func decryptSecrets(secrets secretsInDB, decryptionService *services.DBEncryptio
 	}
 
 	for i := range secrets.DependencyProxies {
-		if secrets.DependencyProxies[i].DebSigningPrivateKey == nil {
+		if secrets.DependencyProxies[i].SigningPrivateKey == nil {
 			continue
 		}
-		decryptedKey, err := decryptionService.MaybeDecryptData(*secrets.DependencyProxies[i].DebSigningPrivateKey)
+		decryptedKey, err := decryptionService.MaybeDecryptData(*secrets.DependencyProxies[i].SigningPrivateKey)
 		if err != nil {
 			return secretsInDB{}, fmt.Errorf("could not decrypt dependency proxy signing key: %w", err)
 		}
-		secrets.DependencyProxies[i].DebSigningPrivateKey = &decryptedKey
+		secrets.DependencyProxies[i].SigningPrivateKey = &decryptedKey
 	}
 	slog.Info("successfully decrypted existing secrets")
 	return secrets, nil
@@ -336,14 +336,14 @@ func encryptSecrets(secrets secretsInDB, encryptionService *services.DBEncryptio
 	}
 
 	for i := range secrets.DependencyProxies {
-		if secrets.DependencyProxies[i].DebSigningPrivateKey == nil {
+		if secrets.DependencyProxies[i].SigningPrivateKey == nil {
 			continue
 		}
-		encryptedKey, err := encryptionService.EncryptAndWrapData(*secrets.DependencyProxies[i].DebSigningPrivateKey)
+		encryptedKey, err := encryptionService.EncryptAndWrapData(*secrets.DependencyProxies[i].SigningPrivateKey)
 		if err != nil {
 			return secretsInDB{}, fmt.Errorf("could not encrypt dependency proxy signing key: %w", err)
 		}
-		secrets.DependencyProxies[i].DebSigningPrivateKey = &encryptedKey
+		secrets.DependencyProxies[i].SigningPrivateKey = &encryptedKey
 	}
 	slog.Info("successfully re-encrypted existing secrets")
 	return secrets, nil

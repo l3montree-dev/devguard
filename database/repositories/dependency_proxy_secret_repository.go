@@ -129,16 +129,16 @@ func (r *dependencyProxySecretRepository) GetDebSigningKey(ctx context.Context, 
 		return "", "", false, err
 	}
 
-	if proxy.DebSigningPrivateKey == nil || proxy.DebSigningPublicKey == nil {
+	if proxy.SigningPrivateKey == nil || proxy.SigningPublicKey == nil {
 		return "", "", false, nil
 	}
 
-	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.DebSigningPrivateKey)
+	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.SigningPrivateKey)
 	if err != nil {
 		return "", "", false, err
 	}
 
-	return privKey, *proxy.DebSigningPublicKey, true, nil
+	return privKey, *proxy.SigningPublicKey, true, nil
 }
 
 func (r *dependencyProxySecretRepository) UpdateDebSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
