@@ -180,6 +180,30 @@ func (r *dependencyProxySecretRepository) createWithSigningKey(ctx context.Conte
 	return r.Create(ctx, tx, proxy)
 }
 
+func (r *dependencyProxySecretRepository) BackfillSigningKeys(ctx context.Context, tx *gorm.DB) (int, error) {
+	var proxies []models.DependencyProxySecret
+	if err := r.GetDB(ctx, tx).Where("signing_private_key IS NULL OR signing_public_key IS NULL").Find(&proxies).Error; err != nil {
+		return 0, err
+	}
+
+	updated := 0
+	for _, proxy := range proxies {
+		encryptedPrivateKey, publicKey, err := r.generateEncryptedSigningKey()
+		if err != nil {
+			return updated, err
+		}
+		// the IS NULL guard keeps concurrent backfills from overwriting each other's keys
+		res := r.GetDB(ctx, tx).Model(&models.DependencyProxySecret{}).
+			Where("secret = ? AND (signing_private_key IS NULL OR signing_public_key IS NULL)", proxy.Secret).
+			Updates(map[string]any{"signing_private_key": encryptedPrivateKey, "signing_public_key": publicKey})
+		if res.Error != nil {
+			return updated, res.Error
+		}
+		updated += int(res.RowsAffected)
+	}
+	return updated, nil
+}
+
 func (r *dependencyProxySecretRepository) GetSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (string, string, error) {
 	var proxy models.DependencyProxySecret
 	if err := r.GetDB(ctx, tx).First(&proxy, "secret = ?", secret).Error; err != nil {

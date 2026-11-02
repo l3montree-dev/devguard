@@ -91,11 +91,12 @@ func runMigrations() error {
 			daemonRunner shared.DaemonRunner,
 			vulndbService shared.VulnDBService,
 			configService shared.ConfigService,
+			dependencyProxySecretService shared.DependencyProxySecretService,
 		) {
 			slog.Info("checking if hash migrations are needed...")
 			start := time.Now()
 
-			if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner, vulndbService, configService); err != nil {
+			if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner, vulndbService, configService, dependencyProxySecretService); err != nil {
 				slog.Error("hash migration failed", "err", err)
 				migrationErr = err
 				return

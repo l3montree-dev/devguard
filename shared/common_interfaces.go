@@ -156,6 +156,7 @@ type DependencyProxySecretRepository interface {
 	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
 	GetSigningKey(ctx context.Context, tx DB, secret uuid.UUID) (privateKey, publicKey string, err error)
+	BackfillSigningKeys(ctx context.Context, tx DB) (updated int, err error)
 }
 
 type DependencyProxySecretService interface {
@@ -165,6 +166,7 @@ type DependencyProxySecretService interface {
 	UpdateSecret(ctx context.Context, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
 	GetSigningKey(ctx context.Context, secret uuid.UUID) (privateKey, publicKey string, err error)
+	BackfillSigningKeys(ctx context.Context) (updated int, err error)
 }
 
 type DBEncryptionService interface {

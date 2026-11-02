@@ -31,12 +31,12 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 10
+	CurrentHashVersion = 11
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
 
-func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner, vulndbService shared.VulnDBService, configService shared.ConfigService) error {
+func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRunner, vulndbService shared.VulnDBService, configService shared.ConfigService, dependencyProxySecretService shared.DependencyProxySecretService) error {
 	// Check current version from config table
 	var config models.Config
 	db := database.NewGormDB(pool)
@@ -175,6 +175,15 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			if err := runDependencyProxyConfigMigration(pool); err != nil {
 				return fmt.Errorf("failed to migrate dependency proxy configs (v10): %w", err)
 			}
+		}
+
+		if currentVersion < 11 {
+			// signing keys are now created together with the dependency proxy secret - existing secrets need one
+			updated, err := dependencyProxySecretService.BackfillSigningKeys(context.Background())
+			if err != nil {
+				return fmt.Errorf("failed to backfill dependency proxy signing keys (v11): %w", err)
+			}
+			slog.Info("backfilled dependency proxy signing keys", "count", updated)
 		}
 
 		// persisted only once every migration succeeded - a failed migration re-runs on the next startup
