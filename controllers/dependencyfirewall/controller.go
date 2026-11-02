@@ -64,28 +64,16 @@ type DependencyProxyCache struct {
 
 type DependencyProxyConfigs struct {
 	Rules      []celrules.CompiledPackageRule `yaml:"-"`
-	Registries map[string]string              `yaml:"registries"`
+	Registries dtos.RegistryConfigs           `yaml:"registries"`
 	Secret     uuid.UUID                      `yaml:"-"`
-}
-
-func ValidateConfigFile(content []byte) error {
-	var cfg dtos.DependencyProxyConfig
-	if err := yaml.Unmarshal(content, &cfg); err != nil {
-		return err
-	}
-	if err := dtos.V.Struct(cfg); err != nil {
-		return err
-	}
-	_, err := celrules.ParsePackageRules(string(content))
-	return err
 }
 
 func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
 	individualRegistry := c.Registries[eco.name()]
-	if individualRegistry == "" {
+	if individualRegistry == nil {
 		return defaultRegistry
 	}
-	return individualRegistry
+	return individualRegistry.GetURL()
 }
 
 type DependencyProxyController struct {

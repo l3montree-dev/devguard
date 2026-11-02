@@ -122,7 +122,7 @@ func (s *dependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Cont
 			return debSigningKeyPair{}, err
 		}
 
-		if err := s.dependencyProxySecretRepository.UpdateSigningKey(ctx, nil, secret, newPrivateKey, newPublicKey); err != nil {
+		if err := s.dependencyProxySecretRepository.UpdateDebSigningKey(ctx, nil, secret, newPrivateKey, newPublicKey); err != nil {
 			return debSigningKeyPair{}, err
 		}
 		return debSigningKeyPair{

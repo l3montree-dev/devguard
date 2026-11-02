@@ -218,7 +218,7 @@ func (d *DebianResolver) getPackagesXZ(suite, arch string) (*packageIndex, error
 }
 
 func fetchPackageIndex(suite, arch string) (*packageIndex, error) {
-	_, paragraphReader, err := shared.FetchDebPackages(context.Background(), shared.DebRegistry, "debian", suite, "main", arch)
+	_, paragraphReader, err := shared.FetchDebPackages(context.Background(), shared.DefaultDebConfig(), "debian", suite, "main", arch)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Packages.xz: %w", err)
 	}

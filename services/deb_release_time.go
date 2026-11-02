@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"pault.ag/go/debian/control"
@@ -87,8 +88,8 @@ func decodeDebPackageIndex(s string) (shared.DebPackageIndex, error) {
 	return debPkgIndex, nil
 }
 
-func (s DebReleaseTimeService) LoadDebPackages(ctx context.Context, registry, archive, suite, component, arch string) (shared.DebRelease, []control.Paragraph, error) {
-	release, paragraphReader, err := shared.FetchDebPackages(ctx, registry, archive, suite, component, arch)
+func (s DebReleaseTimeService) LoadDebPackages(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive, suite, component, arch string) (shared.DebRelease, []control.Paragraph, error) {
+	release, paragraphReader, err := shared.FetchDebPackages(ctx, registryConfig, archive, suite, component, arch)
 	if err != nil {
 		return shared.DebRelease{}, nil, err
 	}
@@ -101,7 +102,8 @@ func (s DebReleaseTimeService) LoadDebPackages(ctx context.Context, registry, ar
 }
 
 func (s DebReleaseTimeService) collectDebPackageIndex(ctx context.Context, archive, suite, component, arch string) error {
-	release, debPackages, err := s.LoadDebPackages(ctx, shared.DebRegistry, archive, suite, component, arch)
+	defaultDebConfig := shared.DefaultDebConfig()
+	release, debPackages, err := s.LoadDebPackages(ctx, defaultDebConfig, archive, suite, component, arch)
 	if err != nil {
 		return err
 	}

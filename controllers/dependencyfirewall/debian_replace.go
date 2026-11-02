@@ -38,7 +38,7 @@ func (d *DebDependencyProxyController) loadDebSnapshotIndex(ctx context.Context,
 		return loaded[snapshotTime], nil
 	}
 
-	_, snapshotPackages, err := d.debReleaseTimeService.LoadDebPackages(ctx, shared.DebSnapshotRegistry, shared.DebSnapshotPath(archive, snapshotTime), suite, component, arch)
+	_, snapshotPackages, err := d.debReleaseTimeService.LoadDebPackages(ctx, shared.SnapshotDebConfig(), shared.DebSnapshotPath(archive, snapshotTime), suite, component, arch)
 	if err != nil {
 		return nil, err
 	}

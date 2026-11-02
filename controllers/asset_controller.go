@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/controllers/dependencyfirewall"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/services"
@@ -478,7 +477,7 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	configContent := string(body)
 
 	if configID == dtos.DependencyProxyConfigFileID {
-		if err := dependencyfirewall.ValidateConfigFile(body); err != nil {
+		if err := dtos.ValidateDependencyProxyConfigFile(body); err != nil {
 			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
 		}
 	}

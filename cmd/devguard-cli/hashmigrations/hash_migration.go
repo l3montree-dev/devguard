@@ -31,7 +31,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 9
+	CurrentHashVersion = 10
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -96,28 +96,14 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			if err := runFullVulnDBImport(vulndbService, configService); err != nil {
 				return err
 			}
-
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v4: %w", err)
-			}
 		}
 
 		// the semver columns switched from pg_semver to bytea. The schema migration
 		// truncated the affected component tables instead of converting them, so they
 		// have to be repopulated. Below 4 the import above already did that.
-		// Runs before v5-v7 since those persist CurrentHashVersion - a failed import
-		// must not be marked as done.
 		if currentVersion >= 4 && currentVersion < 9 {
 			if err := runFullVulnDBImport(vulndbService, configService); err != nil {
 				return fmt.Errorf("failed to reimport vulndb after semver column change (v9): %w", err)
-			}
-
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v9: %w", err)
 			}
 		}
 
@@ -133,12 +119,6 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			if err := runVEXRuleCVEScopeBackfill(pool); err != nil {
 				return fmt.Errorf("failed to backfill VEX rule cve_scope (v5): %w", err)
 			}
-
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v5: %w", err)
-			}
 		}
 
 		if currentVersion < 6 {
@@ -152,12 +132,6 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			if err := runVulnEventsSecurityAdvisoryConstraintFix(pool); err != nil {
 				return fmt.Errorf("failed to fix vuln_events security_advisory_id constraint (v6): %w", err)
 			}
-
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v6: %w", err)
-			}
 		}
 
 		// v8 runs before v7 on purpose: the backfill below stores SBOMs through
@@ -169,14 +143,6 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			// in order to achieve better deduplication
 			if err := rewireMerkleTreeRootsAndSplitNodes(pool); err != nil {
 				return fmt.Errorf("failed fixing artifact names in merkle subtree hashes (v8): %w", err)
-			}
-
-			// below 7, the v7 backfill still has to run and persists the version itself
-			if currentVersion >= 7 {
-				config.Val = strconv.Itoa(CurrentHashVersion)
-				if err := db.Save(&config).Error; err != nil {
-					return fmt.Errorf("failed to update hash migration version after v8: %w", err)
-				}
 			}
 
 			startVacuum := time.Now()
@@ -202,12 +168,19 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			if err := runMerkleBackfill(pool); err != nil {
 				return fmt.Errorf("failed to backfill merkle sboms (v7): %w", err)
 			}
+		}
 
-			// Persist the new version so this migration does not re-run on the next startup.
-			config.Val = strconv.Itoa(CurrentHashVersion)
-			if err := db.Save(&config).Error; err != nil {
-				return fmt.Errorf("failed to update hash migration version after v7: %w", err)
+		if currentVersion < 10 {
+			// the dependency proxy switched from json glob rules + minReleaseAge to yaml cel rules
+			if err := runDependencyProxyConfigMigration(pool); err != nil {
+				return fmt.Errorf("failed to migrate dependency proxy configs (v10): %w", err)
 			}
+		}
+
+		// persisted only once every migration succeeded - a failed migration re-runs on the next startup
+		config.Val = strconv.Itoa(CurrentHashVersion)
+		if err := db.Save(&config).Error; err != nil {
+			return fmt.Errorf("failed to update hash migration version: %w", err)
 		}
 
 		slog.Info("Hash migrations completed successfully", "version", CurrentHashVersion)

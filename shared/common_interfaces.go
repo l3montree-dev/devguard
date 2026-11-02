@@ -156,7 +156,7 @@ type DependencyProxySecretRepository interface {
 	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
 	GetDebSigningKey(ctx context.Context, tx DB, secret uuid.UUID) (privateKey, publicKey string, found bool, err error)
-	UpdateSigningKey(ctx context.Context, tx DB, secret uuid.UUID, privateKey, publicKey string) (err error)
+	UpdateDebSigningKey(ctx context.Context, tx DB, secret uuid.UUID, privateKey, publicKey string) (err error)
 }
 
 type DependencyProxySecretService interface {
@@ -670,7 +670,7 @@ type ConfigService interface {
 type DebReleaseTimeService interface {
 	Collect(ctx context.Context) error
 	Load(ctx context.Context, archive, suite, component, arch string) (DebPackageIndex, error)
-	LoadDebPackages(ctx context.Context, registry, archive, suite, component, arch string) (DebRelease, []control.Paragraph, error)
+	LoadDebPackages(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive, suite, component, arch string) (DebRelease, []control.Paragraph, error)
 	FetchMetasnap(ctx context.Context, archive, name, arch string) ([]MetasnapEntry, error)
 }
 

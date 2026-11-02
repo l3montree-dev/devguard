@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	mock "github.com/stretchr/testify/mock"
 	"pault.ag/go/debian/control"
@@ -264,8 +265,8 @@ func (_c *DebReleaseTimeService_Load_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // LoadDebPackages provides a mock function for the type DebReleaseTimeService
-func (_mock *DebReleaseTimeService) LoadDebPackages(ctx context.Context, registry string, archive string, suite string, component string, arch string) (shared.DebRelease, []control.Paragraph, error) {
-	ret := _mock.Called(ctx, registry, archive, suite, component, arch)
+func (_mock *DebReleaseTimeService) LoadDebPackages(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive string, suite string, component string, arch string) (shared.DebRelease, []control.Paragraph, error) {
+	ret := _mock.Called(ctx, registryConfig, archive, suite, component, arch)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadDebPackages")
@@ -274,23 +275,23 @@ func (_mock *DebReleaseTimeService) LoadDebPackages(ctx context.Context, registr
 	var r0 shared.DebRelease
 	var r1 []control.Paragraph
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, string, string) (shared.DebRelease, []control.Paragraph, error)); ok {
-		return returnFunc(ctx, registry, archive, suite, component, arch)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.DebianRegistryConfig, string, string, string, string) (shared.DebRelease, []control.Paragraph, error)); ok {
+		return returnFunc(ctx, registryConfig, archive, suite, component, arch)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, string, string) shared.DebRelease); ok {
-		r0 = returnFunc(ctx, registry, archive, suite, component, arch)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, dtos.DebianRegistryConfig, string, string, string, string) shared.DebRelease); ok {
+		r0 = returnFunc(ctx, registryConfig, archive, suite, component, arch)
 	} else {
 		r0 = ret.Get(0).(shared.DebRelease)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, string, string) []control.Paragraph); ok {
-		r1 = returnFunc(ctx, registry, archive, suite, component, arch)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, dtos.DebianRegistryConfig, string, string, string, string) []control.Paragraph); ok {
+		r1 = returnFunc(ctx, registryConfig, archive, suite, component, arch)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]control.Paragraph)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, string, string, string) error); ok {
-		r2 = returnFunc(ctx, registry, archive, suite, component, arch)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, dtos.DebianRegistryConfig, string, string, string, string) error); ok {
+		r2 = returnFunc(ctx, registryConfig, archive, suite, component, arch)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -304,24 +305,24 @@ type DebReleaseTimeService_LoadDebPackages_Call struct {
 
 // LoadDebPackages is a helper method to define mock.On call
 //   - ctx context.Context
-//   - registry string
+//   - registryConfig dtos.DebianRegistryConfig
 //   - archive string
 //   - suite string
 //   - component string
 //   - arch string
-func (_e *DebReleaseTimeService_Expecter) LoadDebPackages(ctx any, registry any, archive any, suite any, component any, arch any) *DebReleaseTimeService_LoadDebPackages_Call {
-	return &DebReleaseTimeService_LoadDebPackages_Call{Call: _e.mock.On("LoadDebPackages", ctx, registry, archive, suite, component, arch)}
+func (_e *DebReleaseTimeService_Expecter) LoadDebPackages(ctx any, registryConfig any, archive any, suite any, component any, arch any) *DebReleaseTimeService_LoadDebPackages_Call {
+	return &DebReleaseTimeService_LoadDebPackages_Call{Call: _e.mock.On("LoadDebPackages", ctx, registryConfig, archive, suite, component, arch)}
 }
 
-func (_c *DebReleaseTimeService_LoadDebPackages_Call) Run(run func(ctx context.Context, registry string, archive string, suite string, component string, arch string)) *DebReleaseTimeService_LoadDebPackages_Call {
+func (_c *DebReleaseTimeService_LoadDebPackages_Call) Run(run func(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive string, suite string, component string, arch string)) *DebReleaseTimeService_LoadDebPackages_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 dtos.DebianRegistryConfig
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(dtos.DebianRegistryConfig)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -356,7 +357,7 @@ func (_c *DebReleaseTimeService_LoadDebPackages_Call) Return(debRelease shared.D
 	return _c
 }
 
-func (_c *DebReleaseTimeService_LoadDebPackages_Call) RunAndReturn(run func(ctx context.Context, registry string, archive string, suite string, component string, arch string) (shared.DebRelease, []control.Paragraph, error)) *DebReleaseTimeService_LoadDebPackages_Call {
+func (_c *DebReleaseTimeService_LoadDebPackages_Call) RunAndReturn(run func(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive string, suite string, component string, arch string) (shared.DebRelease, []control.Paragraph, error)) *DebReleaseTimeService_LoadDebPackages_Call {
 	_c.Call.Return(run)
 	return _c
 }

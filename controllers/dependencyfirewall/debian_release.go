@@ -83,36 +83,31 @@ func updateDebRelease(release shared.DebRelease, files map[string][]byte) contro
 	return control.Paragraph{Values: values, Order: order}
 }
 
-func signDebRelease(privateKey string, release control.Paragraph) (releaseText, inRelease, releaseGPG []byte, err error) {
-	var buf bytes.Buffer
-	if err := release.WriteTo(&buf); err != nil {
-		return nil, nil, nil, err
-	}
-
+func signDebRelease(releaseText []byte, privateKey string) (inRelease, releaseGPG []byte, err error) {
 	key, err := crypto.NewKeyFromArmored(privateKey)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	pgp := crypto.PGPWithProfile(profile.RFC4880())
 
 	clearSigner, err := pgp.Sign().SigningKey(key).New()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	inRelease, err = clearSigner.SignCleartext(buf.Bytes())
+	inRelease, err = clearSigner.SignCleartext(releaseText)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	detachedSigner, err := pgp.Sign().SigningKey(key).Detached().New()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	releaseGPG, err = detachedSigner.Sign(buf.Bytes(), crypto.Armor)
+	releaseGPG, err = detachedSigner.Sign(releaseText, crypto.Armor)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return buf.Bytes(), inRelease, releaseGPG, nil
+	return inRelease, releaseGPG, nil
 }

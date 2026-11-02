@@ -22,6 +22,7 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 	"github.com/l3montree-dev/devguard/celrules"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -92,4 +93,73 @@ func TestCSAFtoVexRulesWithProductsInBranches(t *testing.T) {
 		"pkg:golang/datadog-lambda-extension/recorder-extension",
 		"pkg:golang/stdlib@v1.22.7",
 	}), rules[0].CELExpression)
+}
+
+func TestCSAFtoVexRulesJustifications(t *testing.T) {
+	data, err := os.ReadFile("testdata/csaf_vex_branches.json")
+	if err != nil {
+		t.Fatalf("could not read testdata/csaf_vex_branches.json: %v", err)
+	}
+
+	var advisory gocsaf.Advisory
+	err = json.Unmarshal(data, &advisory)
+	if err != nil {
+		t.Fatalf("could not unmarshal testdata/csaf_vex_branches.json: %v", err)
+	}
+
+	rules, err := CSAFVEXToRules(&advisory, "test")
+	if err != nil {
+		t.Fatalf("CSAFVEXToRules failed: %v", err)
+	}
+	require.NotEmpty(t, rules)
+
+	// mechanical justification comes from the flag label, justification from the description note
+	assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, rules[0].MechanicalJustification)
+	assert.Contains(t, rules[0].Justification, "Govulncheck determined that the vulnerable code isn't called")
+	for _, r := range rules {
+		assert.NotEmpty(t, r.MechanicalJustification, r.Title)
+		assert.NotEmpty(t, r.Justification, r.Title)
+	}
+}
+
+func TestCSAFtoVexRulesOneDescriptionNotePerProduct(t *testing.T) {
+	// rancher/vexhub writes one description note per product, in the same order as known_not_affected
+	doc := `{
+	  "document": {"category": "csaf_vex", "csaf_version": "2.0", "title": "t", "publisher": {"category": "vendor", "name": "n", "namespace": "https://example.com"}, "tracking": {"id": "t", "status": "final", "version": "1", "current_release_date": "2026-01-01T00:00:00Z", "initial_release_date": "2026-01-01T00:00:00Z", "revision_history": [{"date": "2026-01-01T00:00:00Z", "number": "1", "summary": "s"}]}},
+	  "product_tree": {
+	    "branches": [
+	      {"category": "product_name", "name": "a", "product": {"name": "a", "product_id": "app", "product_identification_helper": {"purl": "pkg:golang/app"}}},
+	      {"category": "product_name", "name": "b", "product": {"name": "b", "product_id": "app-v3", "product_identification_helper": {"purl": "pkg:golang/app@v3.6.7"}}},
+	      {"category": "product_name", "name": "c", "product": {"name": "c", "product_id": "stdlib", "product_identification_helper": {"purl": "pkg:golang/stdlib@v1.24.11"}}}
+	    ],
+	    "relationships": [
+	      {"category": "default_component_of", "full_product_name": {"name": "x", "product_id": "stdlib-in-app"}, "product_reference": "stdlib", "relates_to_product_reference": "app"},
+	      {"category": "default_component_of", "full_product_name": {"name": "y", "product_id": "stdlib-in-app-v3"}, "product_reference": "stdlib", "relates_to_product_reference": "app-v3"}
+	    ]
+	  },
+	  "vulnerabilities": [{
+	    "cve": "CVE-2025-61726",
+	    "flags": [{"label": "vulnerable_code_not_in_execute_path", "product_ids": ["stdlib-in-app", "stdlib-in-app-v3"]}],
+	    "notes": [
+	      {"category": "description", "text": "concerns pkg:golang/app"},
+	      {"category": "description", "text": "concerns pkg:golang/app@v3.6.7"}
+	    ],
+	    "product_status": {"known_not_affected": ["stdlib-in-app", "stdlib-in-app-v3"]}
+	  }]
+	}`
+
+	var advisory gocsaf.Advisory
+	require.NoError(t, json.Unmarshal([]byte(doc), &advisory))
+
+	rules, err := CSAFVEXToRules(&advisory, "test")
+	require.NoError(t, err)
+	require.Len(t, rules, 2)
+
+	assert.Equal(t, "concerns pkg:golang/app", rules[0].Justification)
+	assert.Contains(t, rules[0].CELExpression, `"pkg:golang/app"`)
+	assert.Equal(t, "concerns pkg:golang/app@v3.6.7", rules[1].Justification)
+	assert.Contains(t, rules[1].CELExpression, "pkg:golang/app@v3.6.7")
+	for _, r := range rules {
+		assert.Equal(t, dtos.VulnerableCodeNotInExecutePath, r.MechanicalJustification)
+	}
 }

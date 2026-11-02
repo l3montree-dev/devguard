@@ -16,6 +16,7 @@
 package dependencyfirewall
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -28,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"golang.org/x/sync/errgroup"
 )
@@ -73,16 +75,16 @@ func (d *DebDependencyProxyController) indexedReleaseTime(configs DependencyProx
 	return time.Time{}, false
 }
 
-func (d *DebDependencyProxyController) loadDebPackageIndex(ctx context.Context, registry, archive, suite, component, arch string) (shared.DebPackageIndex, error) {
+func (d *DebDependencyProxyController) loadDebPackageIndex(ctx context.Context, registryConfig dtos.DebianRegistryConfig, archive, suite, component, arch string) (shared.DebPackageIndex, error) {
 	debianIndex, err := d.debReleaseTimeService.Load(ctx, archive, suite, component, arch)
-	if registry == shared.DebRegistry {
+	if registryConfig.GetURL() == shared.DebRegistry {
 		return debianIndex, err
 	}
 	if err != nil && !shared.IsNotFound(err) {
 		return shared.DebPackageIndex{}, err
 	}
 
-	release, packages, err := d.debReleaseTimeService.LoadDebPackages(ctx, registry, archive, suite, component, arch)
+	release, packages, err := d.debReleaseTimeService.LoadDebPackages(ctx, registryConfig, archive, suite, component, arch)
 	if err != nil {
 		return shared.DebPackageIndex{}, err
 	}
@@ -101,7 +103,10 @@ func (d *DebDependencyProxyController) loadDebPackageIndex(ctx context.Context, 
 
 func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, configs DependencyProxyConfigs, archive, suite string) (*debIndex, error) {
 	start := time.Now()
-	registry := configs.getRegistry(deb, shared.DebRegistry)
+	debRegistryConfig := configs.Registries.DebConfig()
+	if debRegistryConfig == nil {
+		debRegistryConfig = new(shared.DefaultDebConfig())
+	}
 
 	var mu sync.Mutex
 	var release shared.DebRelease
@@ -111,16 +116,16 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 	for _, component := range shared.DebComponents {
 		for _, arch := range shared.DebArchitectures {
 			group.Go(func() error {
-				base, err := d.loadDebPackageIndex(ctx, registry, archive, suite, component, arch)
+				base, err := d.loadDebPackageIndex(ctx, *debRegistryConfig, archive, suite, component, arch)
 				if errors.Is(err, shared.ErrDebFileNotListed) {
 					return nil
 				}
 				if err != nil {
 					return err
 				}
-				blocked := d.checkDebPackages(configs, registry, suite, base.DebPackages)
+				blocked := d.checkDebPackages(configs, *debRegistryConfig, suite, base.DebPackages)
 				groups := groupDebPackages(base.DebPackages, blocked)
-				replacements := d.findDebReplacements(ctx, configs, registry, archive, suite, base.DebPackages, groups)
+				replacements := d.findDebReplacements(ctx, configs, *debRegistryConfig, archive, suite, base.DebPackages, groups)
 				packages := d.applyDebReplacements(ctx, archive, suite, component, arch, base.DebPackages, groups, replacements)
 				raw, xzData, gzData, err := writeDebPackages(packages)
 				if err != nil {
@@ -146,24 +151,35 @@ func (d *DebDependencyProxyController) buildDebIndex(ctx context.Context, config
 		return nil, fmt.Errorf("%s/%s has no supported component or architecture", archive, suite)
 	}
 
-	privateKey, _, err := d.dependencyProxyService.GetOrCreateDebSigningKey(ctx, configs.Secret)
-	if err != nil {
-		return nil, err
-	}
-	releaseText, inRelease, releaseGPG, err := signDebRelease(privateKey, updateDebRelease(release, files))
-	if err != nil {
+	updatedRelease := updateDebRelease(release, files)
+	var buf bytes.Buffer
+	if err := updatedRelease.WriteTo(&buf); err != nil {
 		return nil, err
 	}
 
-	size := len(inRelease) + len(releaseText) + len(releaseGPG)
+	releaseText := buf.Bytes()
+	size := len(releaseText)
 	for _, data := range slices.Collect(maps.Values(files)) {
 		size += len(data)
 		hash := sha256.Sum256(data)
 		files["by-hash/"+hex.EncodeToString(hash[:])] = data
 	}
-	files["InRelease"] = inRelease
 	files["Release"] = releaseText
-	files["Release.gpg"] = releaseGPG
+
+	// only sign the Release file if the upstream registry is verified with a keyring - otherwise we won't sign it.
+	if debRegistryConfig.Keyring != nil {
+		privateKey, _, err := d.dependencyProxyService.GetOrCreateDebSigningKey(ctx, configs.Secret)
+		if err != nil {
+			return nil, err
+		}
+		inRelease, releaseGPG, err := signDebRelease(releaseText, privateKey)
+		if err != nil {
+			return nil, err
+		}
+		size += len(inRelease) + len(releaseGPG)
+		files["InRelease"] = inRelease
+		files["Release.gpg"] = releaseGPG
+	}
 
 	slog.Info("Built debian index", "archive", archive, "suite", suite, "took", time.Since(start))
 	return &debIndex{files: files, releaseTimes: releaseTimes, size: size}, nil
