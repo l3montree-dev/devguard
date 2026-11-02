@@ -182,6 +182,72 @@ func (_c *DependencyProxySecretRepository_All_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// BackfillSigningKeys provides a mock function for the type DependencyProxySecretRepository
+func (_mock *DependencyProxySecretRepository) BackfillSigningKeys(ctx context.Context, tx shared.DB) (int, error) {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BackfillSigningKeys")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) (int, error)); ok {
+		return returnFunc(ctx, tx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) int); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyProxySecretRepository_BackfillSigningKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BackfillSigningKeys'
+type DependencyProxySecretRepository_BackfillSigningKeys_Call struct {
+	*mock.Call
+}
+
+// BackfillSigningKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *DependencyProxySecretRepository_Expecter) BackfillSigningKeys(ctx any, tx any) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	return &DependencyProxySecretRepository_BackfillSigningKeys_Call{Call: _e.mock.On("BackfillSigningKeys", ctx, tx)}
+}
+
+func (_c *DependencyProxySecretRepository_BackfillSigningKeys_Call) Run(run func(ctx context.Context, tx shared.DB)) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_BackfillSigningKeys_Call) Return(updated int, err error) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	_c.Call.Return(updated, err)
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_BackfillSigningKeys_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) (int, error)) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function for the type DependencyProxySecretRepository
 func (_mock *DependencyProxySecretRepository) Begin(ctx context.Context) shared.DB {
 	ret := _mock.Called(ctx)

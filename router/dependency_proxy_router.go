@@ -70,7 +70,7 @@ func NewDependencyProxyRouter(
 	debController *dependencyfirewall.DebDependencyProxyController,
 	alpineController *dependencyfirewall.AlpineDependencyProxyController,
 ) DependencyProxyRouter {
-	secretGroup := apiV1Group.Group.Group("/dependency-proxy/:secret")
+	secretGroup := apiV1Group.Group.Group("/dependency-proxy/:secret", dependencyfirewall.SecurityHeadersMiddleware)
 
 	registerNPMRoutes(secretGroup, npmController)
 	registerGoRoutes(secretGroup, goController)

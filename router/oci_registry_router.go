@@ -38,7 +38,7 @@ type OCIRegistryRouter struct {
 }
 
 func NewOCIRegistryRouter(srv api.Server, ociController *dependencyfirewall.OCIDependencyProxyController) OCIRegistryRouter {
-	v2 := srv.Echo.Group("/v2")
+	v2 := srv.Echo.Group("/v2", dependencyfirewall.SecurityHeadersMiddleware)
 
 	// Version check — Docker always sends this first.
 	v2.GET("/", ociController.ProxyOCIVersionCheck)

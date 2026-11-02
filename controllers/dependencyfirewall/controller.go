@@ -149,13 +149,16 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco e
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := utils.ReadLimited(resp.Body, maxUpstreamResponseBytes)
 	if err != nil {
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	return data, resp.Header, resp.StatusCode, nil
 }
+
+// maxUpstreamResponseBytes bounds a single proxied upstream response - responses are held in memory.
+const maxUpstreamResponseBytes = 2 << 30 // 2GB
 
 func ensureReadMethod(c shared.Context) error {
 	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
@@ -164,8 +167,28 @@ func ensureReadMethod(c shared.Context) error {
 	return nil
 }
 
+func SecurityHeadersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+		c.Response().Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+		return next(c)
+	}
+}
+
+func isOriginStateHeader(key string) bool {
+	switch http.CanonicalHeaderKey(key) {
+	case "Set-Cookie", "Set-Cookie2", "Clear-Site-Data", "Refresh", "Strict-Transport-Security",
+		"Content-Security-Policy", "Content-Security-Policy-Report-Only", "X-Content-Type-Options":
+		return true
+	}
+	return strings.HasPrefix(http.CanonicalHeaderKey(key), "Access-Control-")
+}
+
 func (d *DependencyProxyController) passthroughUpstreamResponse(c shared.Context, headers http.Header, statusCode int, data []byte) error {
 	for key, values := range headers {
+		if isOriginStateHeader(key) {
+			continue
+		}
 		for _, value := range values {
 			c.Response().Header().Add(key, value)
 		}
