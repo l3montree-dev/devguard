@@ -83,7 +83,7 @@ func (s *dependencyProxySecretService) GetModelBySecret(ctx context.Context, sec
 	return scope, modelID, nil
 }
 
-func generateDebSigningKey() (string, string, error) {
+func generateSigningKey() (string, string, error) {
 	key, err := crypto.PGPWithProfile(profile.RFC4880()).KeyGeneration().AddUserId("DevGuard Dependency Proxy", "noreply@devguard.org").New().GenerateKey()
 	if err != nil {
 		return "", "", err
@@ -102,30 +102,30 @@ func generateDebSigningKey() (string, string, error) {
 	return privKey, pubKey, nil
 }
 
-type debSigningKeyPair struct {
+type signingKeyPair struct {
 	privateKey string
 	publicKey  string
 }
 
-func (s *dependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
-	keyPair, err, _ := s.inflight.Do(fmt.Sprintf("deb-signing-key-%s", secret), func() (any, error) {
-		privateKey, publicKey, found, err := s.dependencyProxySecretRepository.GetDebSigningKey(ctx, nil, secret)
+func (s *dependencyProxySecretService) GetOrCreateSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
+	keyPair, err, _ := s.inflight.Do(fmt.Sprintf("signing-key-%s", secret), func() (any, error) {
+		privateKey, publicKey, found, err := s.dependencyProxySecretRepository.GetSigningKey(ctx, nil, secret)
 		if err != nil || found {
-			return debSigningKeyPair{
+			return signingKeyPair{
 				privateKey: privateKey,
 				publicKey:  publicKey,
 			}, err
 		}
 
-		newPrivateKey, newPublicKey, err := generateDebSigningKey()
+		newPrivateKey, newPublicKey, err := generateSigningKey()
 		if err != nil {
-			return debSigningKeyPair{}, err
+			return signingKeyPair{}, err
 		}
 
-		if err := s.dependencyProxySecretRepository.UpdateDebSigningKey(ctx, nil, secret, newPrivateKey, newPublicKey); err != nil {
-			return debSigningKeyPair{}, err
+		if err := s.dependencyProxySecretRepository.UpdateSigningKey(ctx, nil, secret, newPrivateKey, newPublicKey); err != nil {
+			return signingKeyPair{}, err
 		}
-		return debSigningKeyPair{
+		return signingKeyPair{
 			privateKey: newPrivateKey,
 			publicKey:  newPublicKey,
 		}, nil
@@ -134,7 +134,7 @@ func (s *dependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Cont
 		return "", "", err
 	}
 
-	pair := keyPair.(debSigningKeyPair)
+	pair := keyPair.(signingKeyPair)
 
 	return pair.privateKey, pair.publicKey, nil
 }

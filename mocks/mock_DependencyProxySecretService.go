@@ -320,12 +320,12 @@ func (_c *DependencyProxySecretService_GetOrCreateByProjectID_Call) RunAndReturn
 	return _c
 }
 
-// GetOrCreateDebSigningKey provides a mock function for the type DependencyProxySecretService
-func (_mock *DependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
+// GetOrCreateSigningKey provides a mock function for the type DependencyProxySecretService
+func (_mock *DependencyProxySecretService) GetOrCreateSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
 	ret := _mock.Called(ctx, secret)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetOrCreateDebSigningKey")
+		panic("no return value specified for GetOrCreateSigningKey")
 	}
 
 	var r0 string
@@ -352,19 +352,19 @@ func (_mock *DependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.
 	return r0, r1, r2
 }
 
-// DependencyProxySecretService_GetOrCreateDebSigningKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrCreateDebSigningKey'
-type DependencyProxySecretService_GetOrCreateDebSigningKey_Call struct {
+// DependencyProxySecretService_GetOrCreateSigningKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrCreateSigningKey'
+type DependencyProxySecretService_GetOrCreateSigningKey_Call struct {
 	*mock.Call
 }
 
-// GetOrCreateDebSigningKey is a helper method to define mock.On call
+// GetOrCreateSigningKey is a helper method to define mock.On call
 //   - ctx context.Context
 //   - secret uuid.UUID
-func (_e *DependencyProxySecretService_Expecter) GetOrCreateDebSigningKey(ctx any, secret any) *DependencyProxySecretService_GetOrCreateDebSigningKey_Call {
-	return &DependencyProxySecretService_GetOrCreateDebSigningKey_Call{Call: _e.mock.On("GetOrCreateDebSigningKey", ctx, secret)}
+func (_e *DependencyProxySecretService_Expecter) GetOrCreateSigningKey(ctx any, secret any) *DependencyProxySecretService_GetOrCreateSigningKey_Call {
+	return &DependencyProxySecretService_GetOrCreateSigningKey_Call{Call: _e.mock.On("GetOrCreateSigningKey", ctx, secret)}
 }
 
-func (_c *DependencyProxySecretService_GetOrCreateDebSigningKey_Call) Run(run func(ctx context.Context, secret uuid.UUID)) *DependencyProxySecretService_GetOrCreateDebSigningKey_Call {
+func (_c *DependencyProxySecretService_GetOrCreateSigningKey_Call) Run(run func(ctx context.Context, secret uuid.UUID)) *DependencyProxySecretService_GetOrCreateSigningKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -382,12 +382,12 @@ func (_c *DependencyProxySecretService_GetOrCreateDebSigningKey_Call) Run(run fu
 	return _c
 }
 
-func (_c *DependencyProxySecretService_GetOrCreateDebSigningKey_Call) Return(privateKey string, publicKey string, err error) *DependencyProxySecretService_GetOrCreateDebSigningKey_Call {
+func (_c *DependencyProxySecretService_GetOrCreateSigningKey_Call) Return(privateKey string, publicKey string, err error) *DependencyProxySecretService_GetOrCreateSigningKey_Call {
 	_c.Call.Return(privateKey, publicKey, err)
 	return _c
 }
 
-func (_c *DependencyProxySecretService_GetOrCreateDebSigningKey_Call) RunAndReturn(run func(ctx context.Context, secret uuid.UUID) (string, string, error)) *DependencyProxySecretService_GetOrCreateDebSigningKey_Call {
+func (_c *DependencyProxySecretService_GetOrCreateSigningKey_Call) RunAndReturn(run func(ctx context.Context, secret uuid.UUID) (string, string, error)) *DependencyProxySecretService_GetOrCreateSigningKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

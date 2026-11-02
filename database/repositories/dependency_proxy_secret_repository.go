@@ -123,22 +123,22 @@ func (r *dependencyProxySecretRepository) GetBySecret(ctx context.Context, tx *g
 	return proxy, nil
 }
 
-func (r *dependencyProxySecretRepository) GetDebSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (string, string, bool, error) {
+func (r *dependencyProxySecretRepository) GetSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID) (string, string, bool, error) {
 	var proxy models.DependencyProxySecret
 	if err := r.GetDB(ctx, tx).First(&proxy, "secret = ?", secret).Error; err != nil {
 		return "", "", false, err
 	}
 
-	if proxy.DebSigningPrivateKey == nil || proxy.DebSigningPublicKey == nil {
+	if proxy.SigningPrivateKey == nil || proxy.SigningPublicKey == nil {
 		return "", "", false, nil
 	}
 
-	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.DebSigningPrivateKey)
+	privKey, err := r.encryptionService.MaybeDecryptData(*proxy.SigningPrivateKey)
 	if err != nil {
 		return "", "", false, err
 	}
 
-	return privKey, *proxy.DebSigningPublicKey, true, nil
+	return privKey, *proxy.SigningPublicKey, true, nil
 }
 
 func (r *dependencyProxySecretRepository) UpdateSigningKey(ctx context.Context, tx *gorm.DB, secret uuid.UUID, privateKey, publicKey string) error {
@@ -149,6 +149,6 @@ func (r *dependencyProxySecretRepository) UpdateSigningKey(ctx context.Context, 
 
 	res := r.GetDB(ctx, tx).Model(&models.DependencyProxySecret{}).
 		Where("secret = ?", secret).
-		Updates(map[string]any{"deb_signing_private_key": encryptedText, "deb_signing_public_key": publicKey})
+		Updates(map[string]any{"signing_private_key": encryptedText, "signing_public_key": publicKey})
 	return res.Error
 }
