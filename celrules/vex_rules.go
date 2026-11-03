@@ -178,6 +178,14 @@ func PrepareVulnsForEvalMap(ctx context.Context, vulns []models.DependencyVuln) 
 }
 
 func IdentityOfRule(rule models.UpstreamVEXRule) (string, error) {
+	celEnv, err := VEXCelEnv()
+	if err != nil {
+		return "", fmt.Errorf("failed to create CEL environment: %w", err)
+	}
+	if _, issues := celEnv.Compile(rule.CELExpression); issues != nil && issues.Err() != nil {
+		return "", fmt.Errorf("failed to compile CEL expression: %w", issues.Err())
+	}
+
 	normalized, err := normalize.NormalizeCELExpression(rule.CELExpression)
 	if err != nil {
 		return "", err

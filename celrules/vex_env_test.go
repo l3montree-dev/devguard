@@ -64,6 +64,19 @@ func TestIdentityOfRuleInvalidExpression(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestIdentityOfRuleExpressionThatDoesNotTypeCheck(t *testing.T) {
+	for _, expression := range []string{
+		`matchesPatern(vuln, ["*"])`,      // misspelled function
+		`matchesPattern(vuln)`,            // wrong number of arguments
+		`vuln.cveId == "CVE-2025-1" && 1`, // operand is not a bool
+	} {
+		t.Run(expression, func(t *testing.T) {
+			_, err := IdentityOfRule(models.UpstreamVEXRule{CELExpression: expression})
+			assert.Error(t, err)
+		})
+	}
+}
+
 // evalRule reports whether rule matches vuln.
 func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyVuln) bool {
 	t.Helper()

@@ -42,7 +42,7 @@ func PrepareVEXRulesForExchange(rules []models.VEXRule) []dtos.VEXExchangeRuleDT
 }
 
 func RecommendationsToVEXExchangeRules(recommendations []dtos.VEXExchangeRecommendationDTO) ([]models.VEXExchangeRule, error) {
-	celEnv, err := baseEnv()
+	celEnv, err := VEXCelEnv()
 	if err != nil {
 		return nil, fmt.Errorf("could not create CEL environment: %w", err)
 	}

@@ -19,12 +19,12 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vexexchange"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm/clause"
@@ -47,7 +47,7 @@ func (runner *DaemonRunner) RunVEXRuleExchangeSubmitDaemon(ctx context.Context) 
 		return errors.Wrap(err, "failed to fetch VEX rules for the exchange")
 	}
 
-	submission := vexrules.PrepareVEXRulesForExchange(rules)
+	submission := celrules.PrepareVEXRulesForExchange(rules)
 	err := runner.withVEXExchangeRegistration(ctx, func() error {
 		return runner.vexRuleExchangeClient.SubmitVEXRules(ctx, submission)
 	})
@@ -74,7 +74,7 @@ func (runner *DaemonRunner) RunVEXRuleExchangeFetchDaemon(ctx context.Context) e
 		return errors.Wrap(err, "failed to fetch recommendations from the exchange server")
 	}
 
-	rules, err := vexrules.RecommendationsToVEXExchangeRules(recommendations)
+	rules, err := celrules.RecommendationsToVEXExchangeRules(recommendations)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert the recommendations of the exchange server")
 	}

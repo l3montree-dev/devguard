@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb/scan"
+	"github.com/lib/pq"
 	"github.com/package-url/packageurl-go"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
@@ -31,7 +32,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 10
+	CurrentHashVersion = 11
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -174,6 +175,14 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			// the dependency proxy switched from json glob rules + minReleaseAge to yaml cel rules
 			if err := runDependencyProxyConfigMigration(pool); err != nil {
 				return fmt.Errorf("failed to migrate dependency proxy configs (v10): %w", err)
+			}
+		}
+
+		if currentVersion < 11 {
+			// the vex_rules id now hashes the asset together with the rule content, so a changed
+			// assessment of an upstream VEX document gets a new id instead of being ignored by the diff
+			if err := runVEXRuleIDMigration(pool); err != nil {
+				return fmt.Errorf("failed to recalculate vex_rules ids (v11): %w", err)
 			}
 		}
 
@@ -623,7 +632,8 @@ func runVEXRuleIDMigration(pool *pgxpool.Pool) error {
 			return fmt.Errorf("failed to move vuln_events to the new vex rule ids: %w", err)
 		}
 		if len(duplicateIDs) > 0 {
-			if err := tx.Exec(`DELETE FROM vex_rules WHERE id IN ?`, duplicateIDs).Error; err != nil {
+			// the ids are passed as one array parameter, IN ? would bind one parameter per id
+			if err := tx.Exec(`DELETE FROM vex_rules WHERE id = ANY(?)`, pq.Array(duplicateIDs)).Error; err != nil {
 				return fmt.Errorf("failed to delete duplicate vex rules: %w", err)
 			}
 		}
