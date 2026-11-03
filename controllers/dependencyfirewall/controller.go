@@ -73,6 +73,7 @@ type DependencyProxyConfigs struct {
 	Rules      []celrules.CompiledPackageRule `yaml:"-"`
 	Registries dtos.RegistryConfigs           `yaml:"registries"`
 	Secret     uuid.UUID                      `yaml:"-"`
+	Hash       string                         `yaml:"-"`
 }
 
 func (c DependencyProxyConfigs) getRegistry(eco ecosystem, defaultRegistry string) string {
@@ -400,6 +401,7 @@ func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
 		return configs, err
 	}
 	configs.Rules = rules
+	configs.Hash = utils.HashString(s)
 
 	return configs, nil
 }

@@ -59,7 +59,7 @@ type alpineUpstreamIndex struct {
 }
 
 func (d *AlpineDependencyProxyController) getAlpineIndex(ctx context.Context, configs DependencyProxyConfigs, dir string) (*alpineIndex, error) {
-	key := configs.Secret.String() + "/" + configs.getRegistry(alpine, alpineRegistry) + "/" + dir
+	key := configs.Secret.String() + "/" + configs.Hash + "/" + configs.getRegistry(alpine, alpineRegistry) + "/" + dir
 	return d.alpineIndexes.GetOrLoad(key, func() (*alpineIndex, error) {
 		return d.loadAlpineIndex(context.WithoutCancel(ctx), configs, dir)
 	})

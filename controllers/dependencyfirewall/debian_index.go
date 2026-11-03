@@ -46,7 +46,7 @@ type debIndex struct {
 }
 
 func debIndexKey(configs DependencyProxyConfigs, archive, suite string) string {
-	return configs.Secret.String() + "/" + configs.getRegistry(deb, shared.DebRegistry) + "/" + archive + "/" + suite
+	return configs.Secret.String() + "/" + configs.Hash + "/" + configs.getRegistry(deb, shared.DebRegistry) + "/" + archive + "/" + suite
 }
 
 func (d *DebDependencyProxyController) getDebIndex(ctx context.Context, configs DependencyProxyConfigs, archive, suite string) (*debIndex, error) {
