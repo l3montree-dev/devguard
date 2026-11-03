@@ -15,6 +15,10 @@
 package dtos
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"strings"
 	"time"
 
@@ -35,5 +39,26 @@ var V = func() *validator.Validate {
 		keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(fl.Field().String()))
 		return err == nil && len(keyring) > 0
 	})
+
+	v.RegisterValidation("rsa_public_key", func(fl validator.FieldLevel) bool { //nolint:errcheck
+		_, err := ParseRSAPublicKey(fl.Field().String())
+		return err == nil
+	})
 	return v
 }()
+
+func ParseRSAPublicKey(pemKey string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(pemKey))
+	if block == nil {
+		return nil, fmt.Errorf("no PEM block found")
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	rsaKey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("public key is not an RSA key")
+	}
+	return rsaKey, nil
+}

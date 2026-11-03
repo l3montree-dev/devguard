@@ -34,6 +34,14 @@ type DebianRegistryConfig struct {
 	Keyring           *string `yaml:"keyring" validate:"omitempty,pgp_keyring"`
 }
 
+// AlpineRegistryConfig is a custom alpine registry. If Keys is set, its APKINDEX must be signed by one of
+// these PEM encoded RSA public keys and the proxy re-signs the filtered index with its own key - otherwise
+// the filtered index is served unsigned.
+type AlpineRegistryConfig struct {
+	URLRegistryConfig `yaml:",inline"`
+	Keys              []string `yaml:"keys" validate:"omitempty,dive,rsa_public_key"`
+}
+
 type RegistryConfig interface {
 	GetURL() string
 }
@@ -44,6 +52,15 @@ func (r RegistryConfigs) DebConfig() *DebianRegistryConfig {
 	if config, ok := r["deb"]; ok {
 		if debConfig, ok := config.(DebianRegistryConfig); ok {
 			return &debConfig
+		}
+	}
+	return nil
+}
+
+func (r RegistryConfigs) AlpineConfig() *AlpineRegistryConfig {
+	if config, ok := r["apk"]; ok {
+		if alpineConfig, ok := config.(AlpineRegistryConfig); ok {
+			return &alpineConfig
 		}
 	}
 	return nil
@@ -64,6 +81,12 @@ func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 				return fmt.Errorf("registries.%s: %w", eco, err)
 			}
 			(*r)[eco] = config
+		case "apk":
+			var config AlpineRegistryConfig
+			if err := value.Decode(&config); err != nil {
+				return fmt.Errorf("registries.%s: %w", eco, err)
+			}
+			(*r)[eco] = config
 		case "npm", "go", "pypi", "maven", "composer":
 			var url string
 			if err := value.Decode(&url); err != nil {
@@ -79,7 +102,7 @@ func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 
 // DependencyProxyConfig is the config-file payload persisted for the dependency proxy.
 type DependencyProxyConfig struct {
-	Registries RegistryConfigs `yaml:"registries" validate:"dive,keys,oneof=npm go pypi maven composer deb,endkeys,required"`
+	Registries RegistryConfigs `yaml:"registries" validate:"dive,keys,oneof=npm go pypi maven composer deb apk,endkeys,required"`
 }
 
 // dependencyProxyConfigFileID is the key under which dependency-proxy settings

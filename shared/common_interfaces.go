@@ -155,8 +155,8 @@ type DependencyProxySecretRepository interface {
 	GetOrCreateByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (models.DependencyProxySecret, error)
 	UpdateSecret(ctx context.Context, tx DB, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetBySecret(ctx context.Context, tx DB, secret uuid.UUID) (models.DependencyProxySecret, error)
-	GetDebSigningKey(ctx context.Context, tx DB, secret uuid.UUID) (privateKey, publicKey string, found bool, err error)
-	UpdateDebSigningKey(ctx context.Context, tx DB, secret uuid.UUID, privateKey, publicKey string) (err error)
+	GetSigningKey(ctx context.Context, tx DB, secret uuid.UUID) (privateKey, publicKey string, err error)
+	BackfillSigningKeys(ctx context.Context, tx DB) (updated int, err error)
 }
 
 type DependencyProxySecretService interface {
@@ -165,7 +165,8 @@ type DependencyProxySecretService interface {
 	GetOrCreateByAssetID(ctx context.Context, assetID uuid.UUID) (models.DependencyProxySecret, error)
 	UpdateSecret(ctx context.Context, proxy models.DependencyProxySecret) (models.DependencyProxySecret, error)
 	GetModelBySecret(ctx context.Context, secret uuid.UUID) (string, uuid.UUID, error)
-	GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (privateKey, publicKey string, err error)
+	GetSigningKey(ctx context.Context, secret uuid.UUID) (privateKey, publicKey string, err error)
+	BackfillSigningKeys(ctx context.Context) (updated int, err error)
 }
 
 type DBEncryptionService interface {

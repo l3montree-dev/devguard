@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -362,7 +362,7 @@ func (d *OCIDependencyProxyController) fetchOCIFromUpstream(ctx context.Context,
 	defer resp.Body.Close()
 	// 10 GiB ceiling — large enough for any real OCI layer, prevents unbounded memory use.
 	const maxResponseBytes = 10 << 30
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
+	data, err := utils.ReadLimited(resp.Body, maxResponseBytes)
 	if err != nil {
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}

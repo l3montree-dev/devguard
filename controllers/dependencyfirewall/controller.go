@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	pathpkg "path"
 	"regexp"
 	"slices"
 	"strings"
@@ -50,9 +51,15 @@ func trimWithRegex(path string, re *regexp.Regexp) string {
 	encoded := re.ReplaceAllString(path, "")
 	decoded, err := url.PathUnescape(encoded)
 	if err != nil {
-		return encoded
+		decoded = encoded
 	}
-	return decoded
+	// collapse dot segments like url.JoinPath does before the upstream fetch - otherwise routing and the
+	// package checks see a different path than the one fetched (e.g. "evil.apk/x/.." fetches "evil.apk")
+	cleaned := strings.TrimPrefix(pathpkg.Clean("/"+decoded), "/")
+	if cleaned != "" && strings.HasSuffix(decoded, "/") {
+		cleaned += "/"
+	}
+	return cleaned
 }
 
 type DependencyProxyCache struct {
@@ -142,13 +149,16 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco e
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := utils.ReadLimited(resp.Body, maxUpstreamResponseBytes)
 	if err != nil {
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	return data, resp.Header, resp.StatusCode, nil
 }
+
+// responses are held in memory
+const maxUpstreamResponseBytes = 2 << 30 // 2GB
 
 func ensureReadMethod(c shared.Context) error {
 	if c.Request().Method != http.MethodGet && c.Request().Method != http.MethodHead {
@@ -157,8 +167,28 @@ func ensureReadMethod(c shared.Context) error {
 	return nil
 }
 
+func SecurityHeadersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+		c.Response().Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+		return next(c)
+	}
+}
+
+func isOriginStateHeader(key string) bool {
+	switch http.CanonicalHeaderKey(key) {
+	case "Set-Cookie", "Set-Cookie2", "Clear-Site-Data", "Refresh", "Strict-Transport-Security",
+		"Content-Security-Policy", "Content-Security-Policy-Report-Only", "X-Content-Type-Options":
+		return true
+	}
+	return strings.HasPrefix(http.CanonicalHeaderKey(key), "Access-Control-")
+}
+
 func (d *DependencyProxyController) passthroughUpstreamResponse(c shared.Context, headers http.Header, statusCode int, data []byte) error {
 	for key, values := range headers {
+		if isOriginStateHeader(key) {
+			continue
+		}
 		for _, value := range values {
 			c.Response().Header().Add(key, value)
 		}
@@ -281,6 +311,17 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	proxies["debian"] = registryURL + "/" + secret.String() + "/deb/debian"
 	proxies["maven"] = registryURL + "/" + secret.String() + "/maven/"
 	proxies["composer"] = registryURL + "/" + secret.String() + "/composer/"
+	proxies["alpine"] = registryURL + "/" + secret.String() + "/apk/alpine"
+	// apk finds the key only under its exact name, so the url ends in the file name for /etc/apk/keys/
+	alpineKey, err := d.alpineSigningKey(ctx.Request().Context(), secret)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load signing key").WithInternal(err)
+	}
+	alpineKeyFile, err := alpineKeyName(&alpineKey.PublicKey)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to encode signing key").WithInternal(err)
+	}
+	proxies["alpineKey"] = registryURL + "/" + secret.String() + "/apk/" + alpineKeyFile
 	// OCI: images are pulled via the root /v2/ endpoint so standard Docker clients work.
 	// Usage: docker pull <ociPrefix>/docker.io/library/nginx:latest
 	ociBaseURL := os.Getenv("OCI_REGISTRY_BASE_URL")
@@ -396,6 +437,19 @@ func checkDistHost(distURL string, allowedHosts ...string) error {
 		return fmt.Errorf("dist host %s is not allowed", parsed.Hostname())
 	}
 	return nil
+}
+
+func lastModifiedTime(headers http.Header) time.Time {
+	lastModified := headers.Get("Last-Modified")
+	if lastModified == "" {
+		return time.Time{}
+	}
+	t, err := http.ParseTime(lastModified)
+	if err != nil {
+		slog.Debug("Could not parse Last-Modified header", "value", lastModified, "error", err)
+		return time.Time{}
+	}
+	return t
 }
 
 func newPackage(eco ecosystem, registry, name, version string, releasedAt time.Time) celrules.Package {

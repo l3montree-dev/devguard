@@ -182,6 +182,72 @@ func (_c *DependencyProxySecretRepository_All_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// BackfillSigningKeys provides a mock function for the type DependencyProxySecretRepository
+func (_mock *DependencyProxySecretRepository) BackfillSigningKeys(ctx context.Context, tx shared.DB) (int, error) {
+	ret := _mock.Called(ctx, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BackfillSigningKeys")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) (int, error)); ok {
+		return returnFunc(ctx, tx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) int); ok {
+		r0 = returnFunc(ctx, tx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
+		r1 = returnFunc(ctx, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyProxySecretRepository_BackfillSigningKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BackfillSigningKeys'
+type DependencyProxySecretRepository_BackfillSigningKeys_Call struct {
+	*mock.Call
+}
+
+// BackfillSigningKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+func (_e *DependencyProxySecretRepository_Expecter) BackfillSigningKeys(ctx any, tx any) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	return &DependencyProxySecretRepository_BackfillSigningKeys_Call{Call: _e.mock.On("BackfillSigningKeys", ctx, tx)}
+}
+
+func (_c *DependencyProxySecretRepository_BackfillSigningKeys_Call) Run(run func(ctx context.Context, tx shared.DB)) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_BackfillSigningKeys_Call) Return(updated int, err error) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	_c.Call.Return(updated, err)
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_BackfillSigningKeys_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) (int, error)) *DependencyProxySecretRepository_BackfillSigningKeys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function for the type DependencyProxySecretRepository
 func (_mock *DependencyProxySecretRepository) Begin(ctx context.Context) shared.DB {
 	ret := _mock.Called(ctx)
@@ -669,90 +735,6 @@ func (_c *DependencyProxySecretRepository_GetDB_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
-// GetDebSigningKey provides a mock function for the type DependencyProxySecretRepository
-func (_mock *DependencyProxySecretRepository) GetDebSigningKey(ctx context.Context, tx shared.DB, secret uuid.UUID) (string, string, bool, error) {
-	ret := _mock.Called(ctx, tx, secret)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDebSigningKey")
-	}
-
-	var r0 string
-	var r1 string
-	var r2 bool
-	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (string, string, bool, error)); ok {
-		return returnFunc(ctx, tx, secret)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) string); ok {
-		r0 = returnFunc(ctx, tx, secret)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) string); ok {
-		r1 = returnFunc(ctx, tx, secret)
-	} else {
-		r1 = ret.Get(1).(string)
-	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, uuid.UUID) bool); ok {
-		r2 = returnFunc(ctx, tx, secret)
-	} else {
-		r2 = ret.Get(2).(bool)
-	}
-	if returnFunc, ok := ret.Get(3).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r3 = returnFunc(ctx, tx, secret)
-	} else {
-		r3 = ret.Error(3)
-	}
-	return r0, r1, r2, r3
-}
-
-// DependencyProxySecretRepository_GetDebSigningKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDebSigningKey'
-type DependencyProxySecretRepository_GetDebSigningKey_Call struct {
-	*mock.Call
-}
-
-// GetDebSigningKey is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - secret uuid.UUID
-func (_e *DependencyProxySecretRepository_Expecter) GetDebSigningKey(ctx any, tx any, secret any) *DependencyProxySecretRepository_GetDebSigningKey_Call {
-	return &DependencyProxySecretRepository_GetDebSigningKey_Call{Call: _e.mock.On("GetDebSigningKey", ctx, tx, secret)}
-}
-
-func (_c *DependencyProxySecretRepository_GetDebSigningKey_Call) Run(run func(ctx context.Context, tx shared.DB, secret uuid.UUID)) *DependencyProxySecretRepository_GetDebSigningKey_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_GetDebSigningKey_Call) Return(privateKey string, publicKey string, found bool, err error) *DependencyProxySecretRepository_GetDebSigningKey_Call {
-	_c.Call.Return(privateKey, publicKey, found, err)
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_GetDebSigningKey_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, secret uuid.UUID) (string, string, bool, error)) *DependencyProxySecretRepository_GetDebSigningKey_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetOrCreateByAssetID provides a mock function for the type DependencyProxySecretRepository
 func (_mock *DependencyProxySecretRepository) GetOrCreateByAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID) (models.DependencyProxySecret, error) {
 	ret := _mock.Called(ctx, tx, assetID)
@@ -965,6 +947,84 @@ func (_c *DependencyProxySecretRepository_GetOrCreateByProjectID_Call) Return(de
 }
 
 func (_c *DependencyProxySecretRepository_GetOrCreateByProjectID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID) (models.DependencyProxySecret, error)) *DependencyProxySecretRepository_GetOrCreateByProjectID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetSigningKey provides a mock function for the type DependencyProxySecretRepository
+func (_mock *DependencyProxySecretRepository) GetSigningKey(ctx context.Context, tx shared.DB, secret uuid.UUID) (string, string, error) {
+	ret := _mock.Called(ctx, tx, secret)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSigningKey")
+	}
+
+	var r0 string
+	var r1 string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (string, string, error)); ok {
+		return returnFunc(ctx, tx, secret)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) string); ok {
+		r0 = returnFunc(ctx, tx, secret)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) string); ok {
+		r1 = returnFunc(ctx, tx, secret)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r2 = returnFunc(ctx, tx, secret)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// DependencyProxySecretRepository_GetSigningKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSigningKey'
+type DependencyProxySecretRepository_GetSigningKey_Call struct {
+	*mock.Call
+}
+
+// GetSigningKey is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - secret uuid.UUID
+func (_e *DependencyProxySecretRepository_Expecter) GetSigningKey(ctx any, tx any, secret any) *DependencyProxySecretRepository_GetSigningKey_Call {
+	return &DependencyProxySecretRepository_GetSigningKey_Call{Call: _e.mock.On("GetSigningKey", ctx, tx, secret)}
+}
+
+func (_c *DependencyProxySecretRepository_GetSigningKey_Call) Run(run func(ctx context.Context, tx shared.DB, secret uuid.UUID)) *DependencyProxySecretRepository_GetSigningKey_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_GetSigningKey_Call) Return(privateKey string, publicKey string, err error) *DependencyProxySecretRepository_GetSigningKey_Call {
+	_c.Call.Return(privateKey, publicKey, err)
+	return _c
+}
+
+func (_c *DependencyProxySecretRepository_GetSigningKey_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, secret uuid.UUID) (string, string, error)) *DependencyProxySecretRepository_GetSigningKey_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1359,81 +1419,6 @@ func (_c *DependencyProxySecretRepository_Transaction_Call) Return(err error) *D
 }
 
 func (_c *DependencyProxySecretRepository_Transaction_Call) RunAndReturn(run func(ctx context.Context, fn func(tx shared.DB) error) error) *DependencyProxySecretRepository_Transaction_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// UpdateDebSigningKey provides a mock function for the type DependencyProxySecretRepository
-func (_mock *DependencyProxySecretRepository) UpdateDebSigningKey(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string) error {
-	ret := _mock.Called(ctx, tx, secret, privateKey, publicKey)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateDebSigningKey")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, secret, privateKey, publicKey)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// DependencyProxySecretRepository_UpdateDebSigningKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateDebSigningKey'
-type DependencyProxySecretRepository_UpdateDebSigningKey_Call struct {
-	*mock.Call
-}
-
-// UpdateDebSigningKey is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - secret uuid.UUID
-//   - privateKey string
-//   - publicKey string
-func (_e *DependencyProxySecretRepository_Expecter) UpdateDebSigningKey(ctx any, tx any, secret any, privateKey any, publicKey any) *DependencyProxySecretRepository_UpdateDebSigningKey_Call {
-	return &DependencyProxySecretRepository_UpdateDebSigningKey_Call{Call: _e.mock.On("UpdateDebSigningKey", ctx, tx, secret, privateKey, publicKey)}
-}
-
-func (_c *DependencyProxySecretRepository_UpdateDebSigningKey_Call) Run(run func(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string)) *DependencyProxySecretRepository_UpdateDebSigningKey_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_UpdateDebSigningKey_Call) Return(err error) *DependencyProxySecretRepository_UpdateDebSigningKey_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *DependencyProxySecretRepository_UpdateDebSigningKey_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, secret uuid.UUID, privateKey string, publicKey string) error) *DependencyProxySecretRepository_UpdateDebSigningKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

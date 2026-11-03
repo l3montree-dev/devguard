@@ -43,6 +43,7 @@ rec {
       ../shared/debian-keyring/archive-key-13.asc
       ../shared/debian-keyring/release-12.asc
       ../shared/debian-keyring/release-13.asc
+      ../controllers/dependencyfirewall/alpine-keys
     ];
   };
 

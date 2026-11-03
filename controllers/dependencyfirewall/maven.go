@@ -158,14 +158,16 @@ func mavenContentType(path string) string {
 // @Router /dependency-proxy/{secret}/maven/{path} [get]
 // @Router /dependency-proxy/{secret}/maven/{path} [head]
 func (d *MavenDependencyProxyController) ProxyMaven(c shared.Context) error {
-	if strings.Contains(c.Request().URL.Path, "maven-metadata.xml") {
-		return d.proxyMavenMetadata(c)
+	// sanitized once - dispatch, package checks and the upstream fetch must all see the same path
+	requestPath := maven.trimPrefix(c.Request().URL.Path)
+	if strings.Contains(requestPath, "maven-metadata.xml") {
+		return d.proxyMavenMetadata(c, requestPath)
 	}
-	return d.proxyMavenPackage(c)
+	return d.proxyMavenPackage(c, requestPath)
 }
 
 // proxyMavenPackage handles explicit-version Maven package downloads.
-func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) error {
+func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context, requestPath string) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -176,8 +178,6 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context) err
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
 	}
-
-	requestPath := maven.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.maven",
 		trace.WithAttributes(
@@ -298,7 +298,7 @@ func mavenReleaseTime(headers http.Header) time.Time {
 // proxyMavenMetadata handles maven-metadata.xml requests. The version list must not
 // be served from cache, and no concrete version is known yet, so only rules and
 // all-version malicious entries can be evaluated here.
-func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) error {
+func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context, requestPath string) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -312,8 +312,6 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context) er
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
 	}
-
-	requestPath := maven.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.maven",
 		trace.WithAttributes(

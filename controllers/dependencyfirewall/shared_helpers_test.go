@@ -82,6 +82,8 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 	headers.Add("X-Test", "a")
 	headers.Add("X-Test", "b")
 	headers.Set("Content-Type", "application/json")
+	headers.Set("Set-Cookie", "session=attacker")
+	headers.Set("Access-Control-Allow-Origin", "https://evil.example")
 	body := []byte(`{"ok":true}`)
 
 	if err := d.passthroughUpstreamResponse(c, headers, http.StatusAccepted, body); err != nil {
@@ -99,6 +101,12 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 	}
 	if got := rec.Header().Get("Content-Type"); got != "application/json" {
 		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+	if got := rec.Header().Get("Set-Cookie"); got != "" {
+		t.Fatalf("expected Set-Cookie to be dropped, got %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected Access-Control-Allow-Origin to be dropped, got %q", got)
 	}
 }
 

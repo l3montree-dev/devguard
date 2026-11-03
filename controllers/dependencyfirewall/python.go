@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -31,6 +30,7 @@ import (
 	pep440 "github.com/aquasecurity/go-pep440-version"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -468,7 +468,7 @@ func (d *PythonDependencyProxyController) fetchPyPIFromUpstream(ctx context.Cont
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := utils.ReadLimited(resp.Body, maxUpstreamResponseBytes)
 	if err != nil {
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}

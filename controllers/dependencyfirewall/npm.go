@@ -416,7 +416,7 @@ func (d *NPMDependencyProxyController) ProxyNPMRegistryAPI(c shared.Context) err
 	case http.MethodGet, http.MethodHead:
 	case http.MethodPost:
 		var err error
-		body, err = io.ReadAll(c.Request().Body)
+		body, err = utils.ReadLimited(c.Request().Body, 32<<20)
 		if err != nil {
 			slog.Error("Error reading request body", "proxy", "npm", "error", err)
 			return echo.NewHTTPError(http.StatusBadRequest, "Failed to read request body")
@@ -482,7 +482,7 @@ func (d *NPMDependencyProxyController) fetchNPMRegistryAPIFromUpstream(ctx conte
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := utils.ReadLimited(resp.Body, maxUpstreamResponseBytes)
 	if err != nil {
 		return nil, nil, resp.StatusCode, fmt.Errorf("failed to read response: %w", err)
 	}

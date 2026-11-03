@@ -47,6 +47,7 @@ var debProxyPrefixRe = regexp.MustCompile(`^/api/v1/dependency-proxy/[^/]+/deb(?
 type DebDependencyProxyController struct {
 	*DependencyProxyController
 	debIndexes            *utils.LoadingCache[*debIndex]
+	debUpstreamIndexes    *utils.LoadingCache[*debUpstreamIndex]
 	debReleaseTimeService shared.DebReleaseTimeService
 }
 
@@ -54,6 +55,7 @@ func NewDebDependencyProxyController(controller *DependencyProxyController, debR
 	return &DebDependencyProxyController{
 		DependencyProxyController: controller,
 		debIndexes:                utils.NewLoadingCache(debIndexTTL, debIndexMaxBytes, func(idx *debIndex) int { return idx.size }),
+		debUpstreamIndexes:        utils.NewLoadingCache(debIndexTTL, debIndexMaxBytes, func(idx *debUpstreamIndex) int { return idx.size }),
 		debReleaseTimeService:     debReleaseTimeService,
 	}
 }
@@ -164,14 +166,15 @@ func (debEcosystem) writeResponse(c shared.Context, data []byte, path string, ca
 // @Success 200 {file} binary
 // @Router /dependency-proxy/{secret}/deb/{path} [get]
 func (d *DebDependencyProxyController) ProxyDeb(c shared.Context) error {
-	path := strings.TrimSuffix(c.Request().URL.Path, "/")
-	if strings.HasSuffix(path, ".deb") {
-		return d.proxyDebPackage(c)
+	// sanitized once - dispatch, package checks and the upstream fetch must all see the same path
+	requestPath := deb.trimPrefix(c.Request().URL.Path)
+	if strings.HasSuffix(requestPath, ".deb") {
+		return d.proxyDebPackage(c, requestPath)
 	}
-	if strings.HasSuffix(path, "/"+debKeyringFile) {
+	if strings.HasSuffix("/"+requestPath, "/"+debKeyringFile) {
 		return d.proxyDebKeyring(c)
 	}
-	return d.proxyDebMetadata(c)
+	return d.proxyDebMetadata(c, requestPath)
 }
 
 func (d *DebDependencyProxyController) proxyDebKeyring(c shared.Context) error {
@@ -180,16 +183,14 @@ func (d *DebDependencyProxyController) proxyDebKeyring(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "dependency proxy secret is required or invalid").WithInternal(err)
 	}
 
-	_, publicKey, err := d.dependencyProxyService.GetOrCreateDebSigningKey(c.Request().Context(), configs.Secret)
+	_, publicKey, err := d.dependencyProxyService.GetSigningKey(c.Request().Context(), configs.Secret)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load signing key").WithInternal(err)
 	}
 	return c.Blob(http.StatusOK, "application/pgp-keys", []byte(publicKey))
 }
 
-func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context) error {
-	requestPath := deb.trimPrefix(c.Request().URL.Path)
-
+func (d *DebDependencyProxyController) proxyDebMetadata(c shared.Context, requestPath string) error {
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.deb",
 		trace.WithAttributes(attribute.String("proxy.ecosystem", "deb"),
 			attribute.String("proxy.type", "metadata"),
@@ -268,7 +269,7 @@ func parseDebDistPath(path string) (archive, suite, rest string, ok bool) {
 	return archive, suite, rest, true
 }
 
-func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
+func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context, requestPath string) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -282,8 +283,6 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to load cache").WithInternal(err)
 	}
-
-	requestPath := deb.trimPrefix(c.Request().URL.Path)
 
 	ctx, span := depProxyTracer.Start(c.Request().Context(), "dependency-proxy.deb",
 		trace.WithAttributes(
@@ -356,9 +355,14 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 
 	releaseTime, ok := d.indexedReleaseTime(configs, requestPath)
 	if !ok {
-		releaseTime = debReleaseTime(headers)
+		releaseTime = lastModifiedTime(headers)
 	}
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, releaseTime), configs)
+	ruleReleaseTime := releaseTime
+	if ruleReleaseTime.IsZero() {
+		// an unknown release time counts as brand new - min release age rules block instead of silently allowing
+		ruleReleaseTime = time.Now()
+	}
+	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(deb, registry, packageName, pkgVersion, ruleReleaseTime), configs)
 	if notAllowed {
 		slog.Warn("Blocked not allowed package", "proxy", "deb", "path", requestPath, "reason", notAllowedReason)
 		return d.blockNotAllowedPackage(c, deb, requestPath, notAllowedReason)
@@ -377,17 +381,4 @@ func (d *DebDependencyProxyController) proxyDebPackage(c shared.Context) error {
 	}
 
 	return deb.writeResponse(c, data, requestPath, false)
-}
-
-func debReleaseTime(headers http.Header) time.Time {
-	lastModified := headers.Get("Last-Modified")
-	if lastModified == "" {
-		return time.Time{}
-	}
-	t, err := http.ParseTime(lastModified)
-	if err != nil {
-		slog.Debug("Could not parse Last-Modified header", "proxy", "deb", "value", lastModified, "error", err)
-		return time.Time{}
-	}
-	return t
 }

@@ -250,7 +250,9 @@ func TestHashMigrationV5DoesNotBreakAdvisoryCreation(t *testing.T) {
 		vulndbService := mocks.NewVulnDBService(t)
 		vulndbService.On("ImportRC", mock.Anything, shared.ImportOptions{}).Return(nil)
 
-		err := hashmigrations.RunHashMigrationsIfNeeded(f.Pool, nil, vulndbService, configService)
+		dependencyProxySecretService := mocks.NewDependencyProxySecretService(t)
+		dependencyProxySecretService.EXPECT().BackfillSigningKeys(mock.Anything).Return(0, nil)
+		err := hashmigrations.RunHashMigrationsIfNeeded(f.Pool, nil, vulndbService, configService, dependencyProxySecretService)
 		assert.Nil(t, err, "hash migration v5 itself must succeed")
 
 		controller := f.App.AdvisoryController
