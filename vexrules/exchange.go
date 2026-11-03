@@ -18,8 +18,6 @@ package vexrules
 import (
 	"fmt"
 	"log/slog"
-	"slices"
-	"sort"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -30,9 +28,8 @@ import (
 const ExchangeDominanceThreshold = 0.8
 
 func PrepareVEXRulesForExchange(rules []models.VEXRule) []dtos.VEXExchangeRuleDTO {
-	sorted := sortedForExchange(rules)
-	submission := make([]dtos.VEXExchangeRuleDTO, 0, len(sorted))
-	for _, rule := range sorted {
+	submission := make([]dtos.VEXExchangeRuleDTO, 0, len(rules))
+	for _, rule := range rules {
 		submission = append(submission, dtos.VEXExchangeRuleDTO{
 			CELExpression:           rule.CELExpression,
 			Title:                   rule.Title,
@@ -42,17 +39,6 @@ func PrepareVEXRulesForExchange(rules []models.VEXRule) []dtos.VEXExchangeRuleDT
 		})
 	}
 	return vexexchange.ConsistentRules(submission, ExchangeDominanceThreshold)
-}
-
-func sortedForExchange(rules []models.VEXRule) []models.VEXRule {
-	sorted := slices.Clone(rules)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		if !sorted[i].CreatedAt.Equal(sorted[j].CreatedAt) {
-			return sorted[i].CreatedAt.Before(sorted[j].CreatedAt)
-		}
-		return sorted[i].ID < sorted[j].ID
-	})
-	return sorted
 }
 
 func RecommendationsToVEXExchangeRules(recommendations []dtos.VEXExchangeRecommendationDTO) ([]models.VEXExchangeRule, error) {

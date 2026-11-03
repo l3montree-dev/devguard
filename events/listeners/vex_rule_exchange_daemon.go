@@ -40,7 +40,9 @@ func (runner *DaemonRunner) RunVEXRuleExchangeSubmitDaemon(ctx context.Context) 
 
 	var rules []models.VEXRule
 	if err := runner.vexRuleRepository.GetDB(ctx, nil).
+		Select("cel_expression", "title", "justification", "event_type", "mechanical_justification").
 		Where("was_recommended = ? AND enabled = ? AND event_type IN ?", false, true, vexexchange.EventTypes).
+		Order("created_at, id").
 		Find(&rules).Error; err != nil {
 		return errors.Wrap(err, "failed to fetch VEX rules for the exchange")
 	}

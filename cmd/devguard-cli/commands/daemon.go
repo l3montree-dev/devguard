@@ -303,16 +303,18 @@ func triggerDaemon(selectedDaemons []string) error {
 				start = time.Now()
 				if err := runner.RunVEXRuleExchangeSubmitDaemon(context.Background()); err != nil {
 					slog.Error("could not submit VEX rules to the exchange server", "err", err)
+				} else {
+					slog.Info("VEX rules submitted to the exchange server", "duration", time.Since(start))
 				}
-				slog.Info("VEX rules submitted to the exchange server", "duration", time.Since(start))
 			}
 
 			if emptyOrContains(selectedDaemons, listeners.DaemonVEXRuleExchangeFetch) {
 				start = time.Now()
 				if err := runner.RunVEXRuleExchangeFetchDaemon(context.Background()); err != nil {
 					slog.Error("could not fetch recommendations from the exchange server", "err", err)
+				} else {
+					slog.Info("recommendations fetched from the exchange server", "duration", time.Since(start))
 				}
-				slog.Info("recommendations fetched from the exchange server", "duration", time.Since(start))
 			}
 
 			if emptyOrContains(selectedDaemons, listeners.DaemonVEXRuleRecommendations) {
