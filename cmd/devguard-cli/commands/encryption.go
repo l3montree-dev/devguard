@@ -225,7 +225,7 @@ func fetchExistingSecrets(db *gorm.DB) (secretsInDB, error) {
 		return secretsInDB{}, fmt.Errorf("could not fetch oauth2 tokens: %w", err)
 	}
 
-	err = db.Raw(`SELECT * FROM dependency_proxy_secrets WHERE deb_signing_private_key IS NOT NULL;`).Find(&allSecrets.DependencyProxies).Error
+	err = db.Raw(`SELECT * FROM dependency_proxy_secrets WHERE signing_private_key IS NOT NULL;`).Find(&allSecrets.DependencyProxies).Error
 	if err != nil {
 		return secretsInDB{}, fmt.Errorf("could not fetch dependency proxy signing keys: %w", err)
 	}
