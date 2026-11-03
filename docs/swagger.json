@@ -18590,7 +18590,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "summary": "Test and save Rdemine integration credentials",
+                "summary": "Test and save Redmine integration credentials",
                 "tags": [
                     "Integrations"
                 ]
@@ -18640,7 +18640,7 @@
                 ]
             }
         },
-        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties": {
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties/": {
             "get": {
                 "parameters": [
                     {
@@ -18691,8 +18691,8 @@
                 ]
             }
         },
-        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings": {
-            "post": {
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings/": {
+            "put": {
                 "parameters": [
                     {
                         "description": "Organization slug",

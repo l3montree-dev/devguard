@@ -1,16 +1,10 @@
 package redmineint
 
-import (
-	"time"
-)
-
-type Time time.Time
-
-type Id struct {
+type ID struct {
 	ID int `json:"id" structs:"id"`
 }
 
-type NamedId struct {
+type NamedID struct {
 	ID   int    `json:"id" structs:"id"`
 	Name string `json:"name" structs:"name"`
 }
@@ -47,13 +41,13 @@ type IssueResponse struct {
 
 type Issue struct {
 	ID           int           `json:"id" structs:"id"`
-	Project      NamedId       `json:"project" structs:"project"`
-	Tracker      NamedId       `json:"tracker" structs:"tracker"`
+	Project      NamedID       `json:"project" structs:"project"`
+	Tracker      NamedID       `json:"tracker" structs:"tracker"`
 	Status       IssueStatus   `json:"status" structs:"status"`
-	Priority     NamedId       `json:"priority" structs:"priority"`
-	Author       NamedId       `json:"author" structs:"author"`
-	FixedVersion NamedId       `json:"fixed_version,omitempty" structs:"fixed_version,omitempty"`
-	Parent       Id            `json:"parent,omitempty" structs:"parent,omitempty"`
+	Priority     NamedID       `json:"priority" structs:"priority"`
+	Author       NamedID       `json:"author" structs:"author"`
+	FixedVersion NamedID       `json:"fixed_version,omitempty" structs:"fixed_version,omitempty"`
+	Parent       ID            `json:"parent,omitempty" structs:"parent,omitempty"`
 	Subject      string        `json:"subject" structs:"subject"`
 	Description  string        `json:"description,omitempty" structs:"description,omitempty"`
 	CustomFields []CustomField `json:"custom_fields,omitempty" structs:"custom_fields,omitempty"`
@@ -87,21 +81,15 @@ type IssueUpdateRequest struct {
 type Tracker struct {
 	ID            int     `json:"id" structs:"id"`
 	Name          string  `json:"name" structs:"name"`
-	DefaultStatus NamedId `json:"default_status" structs:"default_status"`
+	DefaultStatus NamedID `json:"default_status" structs:"default_status"`
 }
 
 type TrackersResponse struct {
 	Trackers []*Tracker `json:"trackers" structs:"trackers"`
 }
 
-type Status struct {
-	ID       int    `json:"id" structs:"id"`
-	Name     string `json:"name" structs:"name"`
-	IsClosed bool   `json:"is_closed" structs:"is_closed"`
-}
-
 type StatusesResponse struct {
-	Statuses []*Status `json:"issue_statuses" structs:"issue_statuses"`
+	Statuses []*IssueStatus `json:"issue_statuses" structs:"issue_statuses"`
 }
 
 type Priority struct {

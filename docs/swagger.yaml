@@ -13209,7 +13209,7 @@ paths:
       summary: Delete a Redmine integration access token
       tags:
       - Integrations
-  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties:
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties/:
     get:
       parameters:
       - description: Organization slug
@@ -13238,8 +13238,8 @@ paths:
       summary: Retrieve Redmine integration properties (trackers, statuses, priorities)
       tags:
       - Integrations
-  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings:
-    post:
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings/:
+    put:
       parameters:
       - description: Organization slug
         in: path
@@ -13329,7 +13329,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Test and save Rdemine integration credentials
+      summary: Test and save Redmine integration credentials
       tags:
       - Integrations
   /organizations/{organization}/integrations/repositories:
