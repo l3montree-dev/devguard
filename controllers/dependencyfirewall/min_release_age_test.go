@@ -44,7 +44,7 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 	assetRepository := mocks.NewAssetRepository(t)
 	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{
 		ConfigFiles: databasetypes.JSONB{
-			"dependency-proxy-configs": fmt.Sprintf(`{"rules":"","minReleaseAge":%d}`, minReleaseAge),
+			"dependency-proxy-configs": fmt.Sprintf("rules:\n  - name: min-release-age\n    action: deny\n    expr: now() - timestamp(pkg.releasedAt) < duration(\"%dh\")\n", minReleaseAge),
 		},
 	}, nil).Maybe()
 
@@ -102,6 +102,12 @@ func TestNPMMinReleaseAgeOnCacheHit(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to get secret cache: %v", err)
 			}
+
+			npmMetadata.Set("npm/metadata/lodash", npmMetadataCacheEntry{
+				data:        []byte(fmt.Sprintf(`{"name":"lodash","time":{"4.17.21":%q}}`, time.Now().Add(-tc.releaseAge).UTC().Format(time.RFC3339))),
+				contentType: "application/json",
+			})
+			t.Cleanup(func() { npmMetadata.Delete("npm/metadata/lodash") })
 
 			requestPath := "/lodash/-/lodash-4.17.21.tgz"
 			if err := secretCache.Set("npm/tarball"+requestPath, cacheValue{
@@ -179,7 +185,7 @@ func assertTooNewBlocked(t *testing.T, rec *httptest.ResponseRecorder, expectedS
 		t.Fatalf("expected status %d, got %d (body: %s)", expectedStatus, rec.Code, rec.Body.String())
 	}
 
-	blocked := rec.Header().Get("X-Too-New-Package") == "blocked"
+	blocked := rec.Header().Get("X-Not-Allowed-Package") == "blocked"
 	if blocked != expectBlocked {
 		t.Fatalf("expected blocked=%v, got blocked=%v (body: %s)", expectBlocked, blocked, rec.Body.String())
 	}

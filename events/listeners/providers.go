@@ -74,8 +74,9 @@ type DaemonRunner struct {
 	firstPartyVulnService           shared.FirstPartyVulnService
 	pgxpool                         *pgxpool.Pool
 
-	debugOptions         DebugOptions
-	fixedVersionResolver shared.FixedVersionResolver
+	debugOptions          DebugOptions
+	fixedVersionResolver  shared.FixedVersionResolver
+	debReleaseTimeService shared.DebReleaseTimeService
 }
 
 func (runner *DaemonRunner) SetDebugOptions(options DebugOptions) {
@@ -124,6 +125,7 @@ func NewDaemonRunner(
 	externalReferenceRepository shared.ExternalReferenceRepository,
 	sbomRepository shared.SBOMRepository,
 	fixedVersionResolver shared.FixedVersionResolver,
+	debReleaseTimeService shared.DebReleaseTimeService,
 	upstreamVEXRuleRepository shared.UpstreamVEXRuleRepository,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	firstPartyVulnService shared.FirstPartyVulnService,
@@ -158,6 +160,7 @@ func NewDaemonRunner(
 		externalReferenceRepository:     externalReferenceRepository,
 		sbomRepository:                  sbomRepository,
 		fixedVersionResolver:            fixedVersionResolver,
+		debReleaseTimeService:           debReleaseTimeService,
 		upstreamVEXRuleRepository:       upstreamVEXRuleRepository,
 		externalEntityProviderService:   externalEntityProviderService,
 		firstPartyVulnService:           firstPartyVulnService,

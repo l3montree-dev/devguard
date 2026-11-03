@@ -289,7 +289,7 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 			proxyService := mocks.NewDependencyProxySecretService(t)
 			proxyService.EXPECT().GetModelBySecret(mock.Anything, secret).Return("asset", assetID, nil)
 			assetRepository := mocks.NewAssetRepository(t)
-			assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ConfigFiles: databasetypes.JSONB{"dependency-proxy-configs": `{"minReleaseAge":60}`}}, nil)
+			assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ConfigFiles: databasetypes.JSONB{"dependency-proxy-configs": "rules:\n  - name: min-release-age\n    action: deny\n    expr: now() - timestamp(pkg.releasedAt) < duration(\"60h\")\n"}}, nil)
 			checker := mocks.NewMaliciousPackageChecker(t)
 			checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, nil)
 

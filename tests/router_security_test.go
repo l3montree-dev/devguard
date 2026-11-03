@@ -105,6 +105,7 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/dependency-proxy/:secret/go/*":                                                                                                                shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/deb/*":                                                                                                               shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/maven/*":                                                                                                             shared.RoleGuest,
+	"HEAD /api/v1/dependency-proxy/:secret/maven/*":                                                                                                            shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/composer/*":                                                                                                          shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/npm/:package":                                                                                                        shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/npm/:package/":                                                                                                       shared.RoleGuest,

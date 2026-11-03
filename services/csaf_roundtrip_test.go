@@ -21,22 +21,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/transformer"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// evalRule reports whether rule matches vuln, mirroring the removed vexrules.EvalRules helper.
+// evalRule reports whether rule matches vuln, mirroring the removed celrules.EvalRules helper.
 func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyVuln) bool {
 	t.Helper()
-	compiled, err := vexrules.CompileRules(context.Background(), []models.UpstreamVEXRule{rule})
+	compiled, err := celrules.CompileVEXRules(context.Background(), []models.UpstreamVEXRule{rule})
 	require.NoError(t, err)
-	vulnMaps, err := vexrules.PrepareVulnsForEval(context.Background(), []models.DependencyVuln{vuln})
+	vulnMaps, err := celrules.PrepareVulnsForEval(context.Background(), []models.DependencyVuln{vuln})
 	require.NoError(t, err)
-	matches, err := vexrules.EvalCompiledRules(context.Background(), compiled, vulnMaps)
+	matches, err := celrules.EvalCompiledVEXRules(context.Background(), compiled, vulnMaps)
 	require.NoError(t, err)
 	for _, matchingRuleIDs := range matches {
 		for _, matchingRuleID := range matchingRuleIDs {
@@ -54,7 +54,7 @@ func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyV
 // each reconstructed rule still matches the exact same DependencyVuln it was generated from.
 //
 // The CSAF product tree is always rooted at the artifact, so PathPattern carries an artifact
-// purl prefix that VulnerabilityPath itself never has (see vexrules.PathPattern.MatchesSuffixForArtifacts
+// purl prefix that VulnerabilityPath itself never has (see celrules.PathPattern.MatchesSuffixForArtifacts
 // and models.DependencyVuln.ArtifactPurls) - without stripping that prefix during matching, a
 // downloaded CSAF report re-uploaded to devguard would never match any of its own vulns.
 func TestAggregatedCSAFRoundTrip(t *testing.T) {

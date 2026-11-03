@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -154,12 +155,6 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid package path")
 	}
 
-	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(ctx, npm, requestPath, configs)
-	if notAllowed {
-		slog.Warn("Blocked not allowed package", "proxy", "npm", "path", requestPath, "reason", notAllowedReason)
-		return d.blockNotAllowedPackage(c, npm, requestPath, notAllowedReason)
-	}
-
 	// Check for malicious packages BEFORE checking cache to prevent cache poisoning.
 	packageName, version := npm.parsePackage(requestPath)
 	status, reason, err := d.checkMalicious(ctx, npm, packageName, version)
@@ -173,37 +168,42 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
+	registry := configs.getRegistry(npm, npmRegistry)
+	metadata, _, metaStatus, err := d.fetchPackageMetadata(ctx, packageName, registry)
+	if err != nil || metaStatus != http.StatusOK {
+		slog.Warn("Could not load package metadata", "proxy", "npm", "package", packageName, "error", err)
+		if len(configs.Rules) > 0 {
+			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not load metadata of %s@%s", packageName, version))
+		}
+	}
+
+	pkg, err := ExtractNPMPackageFromMetadata(metadata, version)
+	if err != nil {
+		slog.Warn("Could not extract package from metadata", "proxy", "npm", "package", packageName, "error", err)
+		if len(configs.Rules) > 0 {
+			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not load metadata of %s@%s", packageName, version))
+		}
+	}
+
+	pkg.Registry = registry
+
+	blocked, reason := d.CheckNotAllowedPackage(pkg, configs)
+	if blocked {
+		slog.Warn("Package is blocked by rules", "proxy", "npm", "package", packageName, "reason", reason)
+		return d.blockNotAllowedPackage(c, npm, requestPath, reason)
+	}
+
 	// Tarballs are immutable once published to npm, so a hash-verified hit
-	// never needs a freshness check — it's valid forever. Tarballs are only
-	// cached together with their release time, so it is always set here.
+	// never needs a freshness check — it's valid forever.
 	if entry, ok := secretCache.Get(cacheKey); ok && !bypassCache(c.Request()) {
 		slog.Debug("Cache hit", "proxy", "npm", "path", requestPath)
-		if configs.MinReleaseAge > 0 && time.Since(entry.releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, npm, requestPath, entry.releaseTime, configs.MinReleaseAge)
-		}
 		span.SetAttributes(attribute.Bool("proxy.cache_hit", true))
 		return npm.writeResponse(c, entry.data, requestPath, true)
 	}
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	// The tarball itself carries no publish date - it lives in the package metadata.
-	// Always resolve it, even without MinReleaseAge: the cache is shared across proxy
-	// secrets, so an entry stored for one config must be checkable under another.
-	releaseTime, err := d.fetchNPMReleaseTime(ctx, packageName, version, configs.getRegistry(npm, npmRegistry))
-	if err != nil {
-		slog.Warn("Could not determine release time", "proxy", "npm", "package", packageName, "version", version, "error", err)
-		if configs.MinReleaseAge > 0 {
-			// Fail closed: without a publish date the MinReleaseAge policy cannot be verified.
-			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("could not determine release time of %s@%s", packageName, version))
-		}
-	} else {
-		if configs.MinReleaseAge > 0 && time.Since(releaseTime) < time.Duration(configs.MinReleaseAge)*time.Hour {
-			return d.blockTooNewPackage(c, npm, requestPath, releaseTime, configs.MinReleaseAge)
-		}
-	}
-
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, configs.getRegistry(npm, npmRegistry), requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, registry, requestPath, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -216,8 +216,8 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return d.passthroughUpstreamResponse(c, headers, statusCode, data)
 	}
 
-	if !releaseTime.IsZero() {
-		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: releaseTime}); err != nil {
+	if !pkg.ReleasedAt.IsZero() {
+		if err := secretCache.Set(cacheKey, cacheValue{data: data, releaseTime: pkg.ReleasedAt}); err != nil {
 			slog.Warn("Failed to cache response", "proxy", "npm", "error", err)
 		}
 	}
@@ -260,25 +260,6 @@ func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context,
 		npmMetadata.Set(cacheKey, npmMetadataCacheEntry{data: data, contentType: headers.Get("Content-Type")})
 	}
 	return data, headers, status, nil
-}
-
-// fetchNPMReleaseTime returns the publish time of packageName@version from the package metadata.
-func (d *NPMDependencyProxyController) fetchNPMReleaseTime(ctx context.Context, packageName, version, registry string) (time.Time, error) {
-	metadata, _, status, err := d.fetchPackageMetadata(ctx, packageName, registry)
-	if err != nil {
-		return time.Time{}, err
-	}
-	if status != http.StatusOK {
-		return time.Time{}, fmt.Errorf("upstream returned status %d for package metadata", status)
-	}
-	releaseTime, err := d.ExtractNPMReleaseTimeFromMetadata(metadata, version)
-	if err != nil {
-		return time.Time{}, err
-	}
-	if releaseTime.IsZero() {
-		return time.Time{}, fmt.Errorf("no release time for version %s in package metadata", version)
-	}
-	return releaseTime, nil
 }
 
 // ProxyNPMMetadata handles metadata / version-resolution npm requests (no explicit version in path).
@@ -337,7 +318,8 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
-	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName, configs.getRegistry(npm, npmRegistry))
+	registry := configs.getRegistry(npm, npmRegistry)
+	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName, registry)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -353,13 +335,23 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 	// Hide versions the tarball endpoint would reject anyway (too new or blocked by a
 	// rule), so the client resolves its semver range to a version it can actually install
 	// instead of failing on the tarball download.
-	if configs.MinReleaseAge > 0 || len(configs.Rules) > 0 {
-		minAge := time.Duration(configs.MinReleaseAge) * time.Hour
-		filtered, removed, err := filterNPMMetadataVersions(data, func(version string, published time.Time) bool {
-			if configs.MinReleaseAge > 0 && (published.IsZero() || time.Since(published) < minAge) {
+	malicious, err := d.maliciousChecker.GetMaliciousComponents(ctx, npm.name(), packageName)
+	if err != nil {
+		return maliciousCheckFailed(npm, err)
+	}
+
+	if len(configs.Rules) > 0 || len(malicious) > 0 {
+		m, err := parseNPMMetadata(data)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadGateway, "Failed to parse package metadata from upstream").WithInternal(err)
+		}
+		filtered, removed, err := filterNPMMetadataVersions(data, func(version string) bool {
+			if isMaliciousVersion(npm, malicious, version) {
 				return false
 			}
-			blocked, _ := matchRules(npm.packageIdentifier(packageName, version), configs.Rules)
+			pkg := m.toPackage(version)
+			pkg.Registry = registry
+			blocked, _ := d.CheckNotAllowedPackage(pkg, configs)
 			return !blocked
 		})
 		if err != nil {
@@ -370,6 +362,10 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 			span.SetAttributes(attribute.Int("proxy.filtered_versions", removed))
 		}
 		data = filtered
+	}
+
+	if registry != npmRegistry {
+		data = rewriteNPMTarballURLs(data, registry, proxyBaseURL(c, npmProxyPrefixRe))
 	}
 
 	if contentType := headers.Get("Content-Type"); contentType != "" {
@@ -498,19 +494,72 @@ func (d *NPMDependencyProxyController) fetchNPMRegistryAPIFromUpstream(ctx conte
 	return data, resp.Header, resp.StatusCode, nil
 }
 
-// ExtractNPMReleaseTimeFromMetadata parses NPM package metadata JSON and returns the publish
-// time of the given version. A zero time is returned when the version has no publish time.
-func (d *NPMDependencyProxyController) ExtractNPMReleaseTimeFromMetadata(data []byte, version string) (time.Time, error) {
-	var metadata struct {
-		Time map[string]time.Time `json:"time"`
-	}
+func rewriteNPMTarballURLs(data []byte, registry, proxyBaseURL string) []byte {
+	tarballRe := regexp.MustCompile(`("tarball"\s*:\s*")` + regexp.QuoteMeta(strings.TrimSuffix(registry, "/")+"/"))
+	return tarballRe.ReplaceAll(data, []byte("${1}"+proxyBaseURL))
+}
 
-	if err := json.Unmarshal(data, &metadata); err != nil {
+type npmPackageMetadata struct {
+	Time     map[string]time.Time `json:"time"`
+	Name     string               `json:"name"`
+	Versions map[string]struct {
+		NpmUser struct {
+			Name string `json:"name"`
+		} `json:"_npmUser"`
+	} `json:"versions"`
+}
+
+func parseNPMMetadata(data []byte) (npmPackageMetadata, error) {
+	var m npmPackageMetadata
+	if err := json.Unmarshal(data, &m); err != nil {
 		slog.Debug("Failed to parse NPM metadata", "error", err)
-		return time.Time{}, err
+		return npmPackageMetadata{}, err
+	}
+	return m, nil
+}
+
+func (m npmPackageMetadata) toPackage(version string) celrules.Package {
+	p := celrules.Package{
+		Name:       m.Name,
+		Version:    version,
+		Ecosystem:  "npm",
+		ReleasedAt: m.Time[version],
+		Purl:       npmEcosystem{}.packageIdentifier(m.Name, version),
+	}
+	if m.Versions[version].NpmUser.Name != "" {
+		p.Publisher = &celrules.Publisher{Name: m.Versions[version].NpmUser.Name}
 	}
 
-	return metadata.Time[version], nil
+	var prevVersion string
+	var prevTime time.Time
+	for v, t := range m.Time {
+		if v == "created" || v == "modified" || v == p.Version {
+			continue
+		}
+		if t.After(p.ReleasedAt) {
+			continue
+		}
+		if t.Before(prevTime) {
+			continue
+		}
+		prevVersion = v
+		prevTime = t
+	}
+
+	if prevVersion != "" && p.Publisher != nil {
+		prevName := m.Versions[prevVersion].NpmUser.Name
+		p.Publisher.ChangedSinceLastVersion = prevName != p.Publisher.Name
+	}
+
+	return p
+}
+
+func ExtractNPMPackageFromMetadata(data []byte, version string) (celrules.Package, error) {
+	m, err := parseNPMMetadata(data)
+	if err != nil {
+		return celrules.Package{}, err
+	}
+	return m.toPackage(version), nil
 }
 
 // filterNPMMetadataVersions removes every version for which keep returns false from a full
@@ -518,7 +567,7 @@ func (d *NPMDependencyProxyController) ExtractNPMReleaseTimeFromMetadata(data []
 // version: "latest" moves to the highest remaining stable version, other tags are dropped.
 // All other fields are passed through untouched. It returns the rewritten document and the
 // number of removed versions; when nothing is removed the original bytes are returned.
-func filterNPMMetadataVersions(data []byte, keep func(version string, published time.Time) bool) ([]byte, int, error) {
+func filterNPMMetadataVersions(data []byte, keep func(version string) bool) ([]byte, int, error) {
 	var doc map[string]json.RawMessage
 	if err := json.Unmarshal(data, &doc); err != nil {
 		return nil, 0, fmt.Errorf("failed to parse npm metadata: %w", err)
@@ -539,11 +588,7 @@ func filterNPMMetadataVersions(data []byte, keep func(version string, published 
 
 	removed := 0
 	for version := range versions {
-		var published time.Time
-		if raw, ok := times[version]; ok {
-			_ = json.Unmarshal(raw, &published) // unparsable time stays zero
-		}
-		if !keep(version, published) {
+		if !keep(version) {
 			delete(versions, version)
 			delete(times, version)
 			removed++

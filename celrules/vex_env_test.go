@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vexrules
+package celrules
 
 import (
 	"context"
@@ -67,11 +67,11 @@ func TestIdentityOfRuleInvalidExpression(t *testing.T) {
 // evalRule reports whether rule matches vuln.
 func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyVuln) bool {
 	t.Helper()
-	compiled, err := CompileRules(context.Background(), []models.UpstreamVEXRule{rule})
+	compiled, err := CompileVEXRules(context.Background(), []models.UpstreamVEXRule{rule})
 	require.NoError(t, err)
 	vulnMaps, err := PrepareVulnsForEval(context.Background(), []models.DependencyVuln{vuln})
 	require.NoError(t, err)
-	matches, err := EvalCompiledRules(context.Background(), compiled, vulnMaps)
+	matches, err := EvalCompiledVEXRules(context.Background(), compiled, vulnMaps)
 	require.NoError(t, err)
 	for _, matchingRuleIDs := range matches {
 		if slices.Contains(matchingRuleIDs, rule.ID) {

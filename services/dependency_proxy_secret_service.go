@@ -19,18 +19,23 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
+	"github.com/ProtonMail/gopenpgp/v3/profile"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
+	"golang.org/x/sync/singleflight"
 )
 
 type dependencyProxySecretService struct {
 	dependencyProxySecretRepository shared.DependencyProxySecretRepository
+	inflight                        singleflight.Group
 }
 
 func NewDependencyProxyService(dependencyProxySecretRepository shared.DependencyProxySecretRepository) *dependencyProxySecretService {
 	return &dependencyProxySecretService{
 		dependencyProxySecretRepository: dependencyProxySecretRepository,
+		inflight:                        singleflight.Group{},
 	}
 }
 
@@ -76,4 +81,60 @@ func (s *dependencyProxySecretService) GetModelBySecret(ctx context.Context, sec
 	}
 
 	return scope, modelID, nil
+}
+
+func generateDebSigningKey() (string, string, error) {
+	key, err := crypto.PGPWithProfile(profile.RFC4880()).KeyGeneration().AddUserId("DevGuard Dependency Proxy", "noreply@devguard.org").New().GenerateKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	privKey, err := key.Armor()
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKey, err := key.GetArmoredPublicKey()
+	if err != nil {
+		return "", "", err
+	}
+
+	return privKey, pubKey, nil
+}
+
+type debSigningKeyPair struct {
+	privateKey string
+	publicKey  string
+}
+
+func (s *dependencyProxySecretService) GetOrCreateDebSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
+	keyPair, err, _ := s.inflight.Do(fmt.Sprintf("deb-signing-key-%s", secret), func() (any, error) {
+		privateKey, publicKey, found, err := s.dependencyProxySecretRepository.GetDebSigningKey(ctx, nil, secret)
+		if err != nil || found {
+			return debSigningKeyPair{
+				privateKey: privateKey,
+				publicKey:  publicKey,
+			}, err
+		}
+
+		newPrivateKey, newPublicKey, err := generateDebSigningKey()
+		if err != nil {
+			return debSigningKeyPair{}, err
+		}
+
+		if err := s.dependencyProxySecretRepository.UpdateDebSigningKey(ctx, nil, secret, newPrivateKey, newPublicKey); err != nil {
+			return debSigningKeyPair{}, err
+		}
+		return debSigningKeyPair{
+			privateKey: newPrivateKey,
+			publicKey:  newPublicKey,
+		}, nil
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	pair := keyPair.(debSigningKeyPair)
+
+	return pair.privateKey, pair.publicKey, nil
 }

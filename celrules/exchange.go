@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vexrules
+package celrules
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ func PrepareVEXRulesForExchange(rules []models.VEXRule) []dtos.VEXExchangeRuleDT
 }
 
 func RecommendationsToVEXExchangeRules(recommendations []dtos.VEXExchangeRecommendationDTO) ([]models.VEXExchangeRule, error) {
-	celEnv, err := CelEnv()
+	celEnv, err := baseEnv()
 	if err != nil {
 		return nil, fmt.Errorf("could not create CEL environment: %w", err)
 	}

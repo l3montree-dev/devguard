@@ -21,9 +21,9 @@ import (
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 // CSAFVEXToRules converts a CSAF advisory into VEX rules.
@@ -111,11 +111,44 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 			}
 		}
 
+		mechanicalJustification := map[string]dtos.MechanicalJustificationType{}
+		for _, flag := range vuln.Flags {
+			if flag == nil || flag.Label == nil || flag.ProductIds == nil {
+				continue
+			}
+			for _, pid := range *flag.ProductIds {
+				if pid != nil {
+					mechanicalJustification[string(*pid)] = dtos.MechanicalJustificationType(*flag.Label)
+				}
+			}
+		}
+
+		descriptions := make([]string, 0, len(vuln.Notes))
+		for _, note := range vuln.Notes {
+			if note != nil && note.NoteCategory != nil && *note.NoteCategory == gocsaf.CSAFNoteCategoryDescription && note.Text != nil {
+				descriptions = append(descriptions, *note.Text)
+			}
+		}
+
+		justificationFor := func(productID string, i int) string {
+			if d := remediationDetail[productID]; d != "" {
+				return d
+			}
+			if i < len(descriptions) {
+				return descriptions[i]
+			}
+			// fewer notes than products: fall back to the first one
+			if len(descriptions) > 0 {
+				return descriptions[0]
+			}
+			return ""
+		}
+
 		appendRules := func(products *gocsaf.Products, eventType dtos.VulnEventType) {
 			if products == nil {
 				return
 			}
-			for _, pid := range *products {
+			for i, pid := range *products {
 				if pid == nil {
 					continue
 				}
@@ -136,11 +169,12 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 				}
 
 				rule := models.UpstreamVEXRule{
-					Title:         vexrules.VexRuleTitle(cveID, pattern),
-					VexSource:     source,
-					Justification: remediationDetail[productID],
-					EventType:     et,
-					CELExpression: vexrules.ToCELExpression(cveID, pattern),
+					Title:                   celrules.VexRuleTitle(cveID, pattern),
+					VexSource:               source,
+					Justification:           justificationFor(productID, i),
+					MechanicalJustification: mechanicalJustification[productID],
+					EventType:               et,
+					CELExpression:           celrules.ToCELExpression(cveID, pattern),
 				}
 				rules = append(rules, rule)
 			}
@@ -159,7 +193,7 @@ func CSAFVEXToRules(advisory *gocsaf.Advisory, source string) ([]models.Upstream
 // artifact product referenced by relates_to_product_reference at the root of the chain.
 // Falls back to a single-element pattern when the product id has no chain but is
 // itself a PURL.
-func csafProductToPathPattern(productID string, relByProductID map[string]*gocsaf.Relationship, productIDToPurl map[string]string) vexrules.PathPattern {
+func csafProductToPathPattern(productID string, relByProductID map[string]*gocsaf.Relationship, productIDToPurl map[string]string) celrules.PathPattern {
 	var reversed []string
 	cur := productID
 	seen := map[string]bool{}
@@ -187,13 +221,13 @@ func csafProductToPathPattern(productID string, relByProductID map[string]*gocsa
 	if len(reversed) == 0 {
 		// no chain: use the product's own purl if it is one
 		if purl := purlForProductID(productIDToPurl, productID); purl != "" {
-			return vexrules.PathPattern{purl}
+			return celrules.PathPattern{purl}
 		}
 		return nil
 	}
 
 	// reversed holds [pn, ..., p1]; flip to path order [p1, ..., pn]
-	path := make(vexrules.PathPattern, len(reversed))
+	path := make(celrules.PathPattern, len(reversed))
 	for i := range reversed {
 		path[len(reversed)-1-i] = reversed[i]
 	}

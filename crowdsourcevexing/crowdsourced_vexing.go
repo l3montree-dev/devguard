@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vexrules"
 )
 
 const (
@@ -201,7 +201,7 @@ func CrowdsourcedVexing(matchingRules []models.VEXRule, organizations []Organiza
 
 	ruleIDtoIdentity := make(map[string]string)
 	for _, rule := range matchingRules {
-		identity, err := vexrules.IdentityOfRule(rule.UpstreamVEXRule)
+		identity, err := celrules.IdentityOfRule(rule.UpstreamVEXRule)
 		if err != nil {
 			return models.VEXRule{}, 0, Votes{}, fmt.Errorf("failed to get identity of rule: %w", err)
 		}

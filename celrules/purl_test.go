@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vexrules
+package celrules
 
 import (
 	"testing"
 
-	packageurl "github.com/package-url/packageurl-go"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 

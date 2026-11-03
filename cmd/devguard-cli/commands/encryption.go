@@ -198,6 +198,7 @@ type secretsInDB struct {
 	GitlabIntegrations  []models.GitLabIntegration
 	Oauth2Tokens        []models.GitLabOauth2Token
 	WebhookIntegrations []models.WebhookIntegration
+	DependencyProxies   []models.DependencyProxySecret
 }
 
 // fetch all known secrets from the database
@@ -222,6 +223,11 @@ func fetchExistingSecrets(db *gorm.DB) (secretsInDB, error) {
 	err = db.Raw(`SELECT * FROM gitlab_oauth2_tokens;`).Find(&allSecrets.Oauth2Tokens).Error
 	if err != nil {
 		return secretsInDB{}, fmt.Errorf("could not fetch oauth2 tokens: %w", err)
+	}
+
+	err = db.Raw(`SELECT * FROM dependency_proxy_secrets WHERE deb_signing_private_key IS NOT NULL;`).Find(&allSecrets.DependencyProxies).Error
+	if err != nil {
+		return secretsInDB{}, fmt.Errorf("could not fetch dependency proxy signing keys: %w", err)
 	}
 	slog.Info("successfully fetched existing secrets from the database")
 	return allSecrets, nil
@@ -270,6 +276,17 @@ func decryptSecrets(secrets secretsInDB, decryptionService *services.DBEncryptio
 		}
 		secrets.JiraIntegrations[i].AccessToken = decryptedAccessToken
 	}
+
+	for i := range secrets.DependencyProxies {
+		if secrets.DependencyProxies[i].DebSigningPrivateKey == nil {
+			continue
+		}
+		decryptedKey, err := decryptionService.MaybeDecryptData(*secrets.DependencyProxies[i].DebSigningPrivateKey)
+		if err != nil {
+			return secretsInDB{}, fmt.Errorf("could not decrypt dependency proxy signing key: %w", err)
+		}
+		secrets.DependencyProxies[i].DebSigningPrivateKey = &decryptedKey
+	}
 	slog.Info("successfully decrypted existing secrets")
 	return secrets, nil
 }
@@ -317,6 +334,17 @@ func encryptSecrets(secrets secretsInDB, encryptionService *services.DBEncryptio
 		}
 		secrets.JiraIntegrations[i].AccessToken = encryptedAccessToken
 	}
+
+	for i := range secrets.DependencyProxies {
+		if secrets.DependencyProxies[i].DebSigningPrivateKey == nil {
+			continue
+		}
+		encryptedKey, err := encryptionService.EncryptAndWrapData(*secrets.DependencyProxies[i].DebSigningPrivateKey)
+		if err != nil {
+			return secretsInDB{}, fmt.Errorf("could not encrypt dependency proxy signing key: %w", err)
+		}
+		secrets.DependencyProxies[i].DebSigningPrivateKey = &encryptedKey
+	}
 	slog.Info("successfully re-encrypted existing secrets")
 	return secrets, nil
 }
@@ -350,6 +378,13 @@ func updateSecretsInDB(db *gorm.DB, secrets secretsInDB) error {
 		err := tx.Clauses(clause.OnConflict{UpdateAll: true}).Create(&secrets.Oauth2Tokens).Error
 		if err != nil {
 			return fmt.Errorf("could not update oauth2 tokens: %w", err)
+		}
+	}
+
+	if len(secrets.DependencyProxies) > 0 {
+		err := tx.Clauses(clause.OnConflict{UpdateAll: true}).Create(&secrets.DependencyProxies).Error
+		if err != nil {
+			return fmt.Errorf("could not update dependency proxy signing keys: %w", err)
 		}
 	}
 

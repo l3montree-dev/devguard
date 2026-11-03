@@ -1,3 +1,18 @@
+// Copyright (C) 2026 l3montree GmbH
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 package dependencyfirewall
 
 import "testing"
@@ -84,6 +99,63 @@ func TestDebEcosystem(t *testing.T) {
 				name, version := deb.parsePackage(tc.path)
 				if name != tc.expectedName || version != tc.expectedVersion {
 					t.Fatalf("expected %q@%q, got %q@%q", tc.expectedName, tc.expectedVersion, name, version)
+				}
+			})
+		}
+	})
+
+	t.Run("parseDebDistPath", func(t *testing.T) {
+		cases := []struct {
+			name            string
+			path            string
+			expectedArchive string
+			expectedSuite   string
+			expectedRest    string
+			expectedOk      bool
+		}{
+			{
+				name:            "InRelease",
+				path:            "debian/dists/trixie/InRelease",
+				expectedArchive: "debian",
+				expectedSuite:   "trixie",
+				expectedRest:    "InRelease",
+				expectedOk:      true,
+			},
+			{
+				name:            "security InRelease",
+				path:            "debian-security/dists/trixie-security/InRelease",
+				expectedArchive: "debian-security",
+				expectedSuite:   "trixie-security",
+				expectedRest:    "InRelease",
+				expectedOk:      true,
+			},
+			{
+				name:            "Packages index",
+				path:            "debian/dists/trixie/main/binary-amd64/Packages.xz",
+				expectedArchive: "debian",
+				expectedSuite:   "trixie",
+				expectedRest:    "main/binary-amd64/Packages.xz",
+				expectedOk:      true,
+			},
+			{
+				name: "deb file",
+				path: "debian/pool/main/c/curl/curl_8.14.1-2_amd64.deb",
+			},
+			{
+				name: "missing rest",
+				path: "debian/dists/trixie",
+			},
+			{
+				name: "missing archive",
+				path: "/dists/trixie/InRelease",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				archive, suite, rest, ok := parseDebDistPath(tc.path)
+				if archive != tc.expectedArchive || suite != tc.expectedSuite || rest != tc.expectedRest || ok != tc.expectedOk {
+					t.Fatalf("expected %q %q %q %v, got %q %q %q %v", tc.expectedArchive, tc.expectedSuite, tc.expectedRest, tc.expectedOk, archive, suite, rest, ok)
 				}
 			})
 		}

@@ -37,6 +37,12 @@ rec {
       ../integrations/commonint/templates
       ../controllers/report-templates
       ../vulndb/cosign.pub
+      ../shared/debian-keyring/archive-key-12-security.asc
+      ../shared/debian-keyring/archive-key-12.asc
+      ../shared/debian-keyring/archive-key-13-security.asc
+      ../shared/debian-keyring/archive-key-13.asc
+      ../shared/debian-keyring/release-12.asc
+      ../shared/debian-keyring/release-13.asc
     ];
   };
 

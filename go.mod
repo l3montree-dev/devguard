@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	github.com/CycloneDX/cyclonedx-go v0.12.0
 	github.com/Masterminds/semver v1.5.0
+	github.com/ProtonMail/go-crypto v1.5.2
 	github.com/ProtonMail/gopenpgp/v2 v2.11.1
 	github.com/ProtonMail/gopenpgp/v3 v3.5.2
 	github.com/aquasecurity/go-pep440-version v0.0.1
@@ -143,7 +144,6 @@ require (
 	github.com/Intevation/gval v1.3.0 // indirect
 	github.com/Intevation/jsonpath v0.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.4 // indirect
-	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/ProtonMail/go-mime v0.0.0-20230322103455-7d82a3887f2f // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
 	github.com/agnivade/levenshtein v1.2.2 // indirect

@@ -49,4 +49,5 @@ var ServiceModule = fx.Options(
 	fx.Provide(func(db shared.DB, broker events.Broker) *scan.PurlComparer {
 		return scan.NewPurlComparer(db, broker, nil) // nil to use default cache size
 	}),
+	fx.Provide(fx.Annotate(NewDebReleaseTimeService, fx.As(new(shared.DebReleaseTimeService)))),
 )

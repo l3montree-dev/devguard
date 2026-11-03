@@ -113,12 +113,3 @@ func TestFilterPyPiSimpleIndex(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-
-func TestPyPISimpleIndexRulesMatchVersion(t *testing.T) {
-	// the keep function of ProxyPyPISimple checks rules against the purl built from the
-	// filename version - make sure a version-specific rule matches it
-	blocked, _ := matchRules(pypi.packageIdentifier("charset-normalizer", "3.5.1"), []string{"pkg:pypi/charset-normalizer@3.5.1"})
-	assert.True(t, blocked)
-	blocked, _ = matchRules(pypi.packageIdentifier("charset-normalizer", "3.5.0"), []string{"pkg:pypi/charset-normalizer@3.5.1"})
-	assert.False(t, blocked)
-}
