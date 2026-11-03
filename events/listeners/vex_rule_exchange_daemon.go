@@ -30,8 +30,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const vexRuleExchangeRegistrationKey = "vexrules.exchange.registration"
-
 func (runner *DaemonRunner) RunVEXRuleExchangeSubmitDaemon(ctx context.Context) error {
 	if !runner.vexRuleExchangeClient.Enabled() {
 		slog.Debug("VEX rule exchange is disabled, skipping the submission")
@@ -108,25 +106,8 @@ func (runner *DaemonRunner) replaceVEXExchangeRules(ctx context.Context, rules [
 }
 
 func (runner *DaemonRunner) withVEXExchangeRegistration(ctx context.Context, request func() error) error {
-	client := runner.vexRuleExchangeClient
-	if !isRegisteredAtVEXExchange(ctx, runner.configService, client.Fingerprint()) {
-		if err := client.Register(ctx); err != nil {
-			return errors.Wrap(err, "failed to register at the VEX exchange server")
-		}
-		if err := runner.configService.SetJSONConfig(ctx, vexRuleExchangeRegistrationKey, client.Fingerprint()); err != nil {
-			return err
-		}
+	if err := runner.vexRuleExchangeClient.Register(ctx); err != nil {
+		return errors.Wrap(err, "failed to register at the VEX exchange server")
 	}
 	return request()
-}
-
-func isRegisteredAtVEXExchange(ctx context.Context, configService shared.ConfigService, fingerprint string) bool {
-	var registeredFingerprint string
-	if err := configService.GetJSONConfig(ctx, vexRuleExchangeRegistrationKey, &registeredFingerprint); err != nil {
-		if !shared.IsNotFound(err) {
-			slog.Warn("could not read the VEX exchange registration, registering again", "err", err)
-		}
-		return false
-	}
-	return registeredFingerprint == fingerprint
 }

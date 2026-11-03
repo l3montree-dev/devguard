@@ -153,50 +153,6 @@ func (_c *VEXRuleExchangeClient_FetchRecommendations_Call) RunAndReturn(run func
 	return _c
 }
 
-// Fingerprint provides a mock function for the type VEXRuleExchangeClient
-func (_mock *VEXRuleExchangeClient) Fingerprint() string {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Fingerprint")
-	}
-
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func() string); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	return r0
-}
-
-// VEXRuleExchangeClient_Fingerprint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Fingerprint'
-type VEXRuleExchangeClient_Fingerprint_Call struct {
-	*mock.Call
-}
-
-// Fingerprint is a helper method to define mock.On call
-func (_e *VEXRuleExchangeClient_Expecter) Fingerprint() *VEXRuleExchangeClient_Fingerprint_Call {
-	return &VEXRuleExchangeClient_Fingerprint_Call{Call: _e.mock.On("Fingerprint")}
-}
-
-func (_c *VEXRuleExchangeClient_Fingerprint_Call) Run(run func()) *VEXRuleExchangeClient_Fingerprint_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *VEXRuleExchangeClient_Fingerprint_Call) Return(s string) *VEXRuleExchangeClient_Fingerprint_Call {
-	_c.Call.Return(s)
-	return _c
-}
-
-func (_c *VEXRuleExchangeClient_Fingerprint_Call) RunAndReturn(run func() string) *VEXRuleExchangeClient_Fingerprint_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Register provides a mock function for the type VEXRuleExchangeClient
 func (_mock *VEXRuleExchangeClient) Register(ctx context.Context) error {
 	ret := _mock.Called(ctx)

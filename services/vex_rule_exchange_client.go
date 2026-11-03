@@ -25,7 +25,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -34,11 +33,10 @@ import (
 )
 
 type vexRuleExchangeClient struct {
-	baseURL     string
-	privateKey  string
-	publicKey   string
-	fingerprint string
-	client      *http.Client
+	baseURL    string
+	privateKey string
+	publicKey  string
+	client     *http.Client
 }
 
 // vexExchangeURL is the central VEX exchange server all instances share.
@@ -86,18 +84,11 @@ func newVEXRuleExchangeClient(baseURL, hexPrivateKey string) (*vexRuleExchangeCl
 	if err != nil {
 		return nil, err
 	}
-	hexPublicKey := hex.EncodeToString(publicKeyBytes)
-	fingerprint, err := pubKeyToFingerprint(hexPublicKey)
-	if err != nil {
-		return nil, err
-	}
-
 	return &vexRuleExchangeClient{
-		baseURL:     baseURL,
-		privateKey:  hexPrivateKey,
-		publicKey:   hexPublicKey,
-		fingerprint: fingerprint,
-		client:      &http.Client{Timeout: 30 * time.Second},
+		baseURL:    baseURL,
+		privateKey: hexPrivateKey,
+		publicKey:  hex.EncodeToString(publicKeyBytes),
+		client:     &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
 
@@ -107,16 +98,11 @@ func (c *vexRuleExchangeClient) Enabled() bool {
 	return c.baseURL != "" && c.privateKey != ""
 }
 
-func (c *vexRuleExchangeClient) Fingerprint() string {
-	return c.fingerprint
-}
-
-const registerPath = "/instances/register"
-
+// Register is idempotent on the server, a known key is registered again without changes.
 func (c *vexRuleExchangeClient) Register(ctx context.Context) error {
-	return c.do(ctx, http.MethodPost, registerPath, map[string]string{
+	return c.do(ctx, http.MethodPost, "/instances/register", map[string]string{
 		"publicKey": c.publicKey,
-	}, nil, http.StatusCreated, http.StatusOK)
+	}, nil, http.StatusCreated)
 }
 
 func (c *vexRuleExchangeClient) SubmitVEXRules(ctx context.Context, rules []dtos.VEXExchangeRuleDTO) error {
@@ -134,65 +120,47 @@ func (c *vexRuleExchangeClient) FetchRecommendations(ctx context.Context) ([]dto
 	return recommendations, nil
 }
 
-func (c *vexRuleExchangeClient) do(ctx context.Context, method, path string, body any, response any, expectedStatuses ...int) error {
+func (c *vexRuleExchangeClient) do(ctx context.Context, method, path string, body any, response any, expectedStatus int) error {
 	if !c.Enabled() {
 		return fmt.Errorf("VEX rule exchange client is not enabled")
 	}
 
-	var encoded []byte
+	var bodyReader io.Reader = http.NoBody
 	if body != nil {
-		var err error
-		if encoded, err = json.Marshal(body); err != nil {
+		encoded, err := json.Marshal(body)
+		if err != nil {
 			return fmt.Errorf("could not encode request body: %w", err)
 		}
-	}
-
-	statusCode, err := c.send(ctx, method, path, encoded, response, expectedStatuses)
-	if statusCode != http.StatusUnauthorized || path == registerPath {
-		return err
-	}
-	slog.Warn("the VEX exchange server rejected the key of this instance, registering again", "err", err)
-	if err := c.Register(ctx); err != nil {
-		return err
-	}
-	_, err = c.send(ctx, method, path, encoded, response, expectedStatuses)
-	return err
-}
-
-// send returns the status code of the response, or 0 if there is none.
-func (c *vexRuleExchangeClient) send(ctx context.Context, method, path string, encoded []byte, response any, expectedStatuses []int) (int, error) {
-	var bodyReader io.Reader = http.NoBody
-	if encoded != nil {
 		bodyReader = bytes.NewReader(encoded)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
 	if err != nil {
-		return 0, fmt.Errorf("could not create request: %w", err)
+		return fmt.Errorf("could not create request: %w", err)
 	}
-	if encoded != nil {
+	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if err := signRequest(c.privateKey, req); err != nil {
-		return 0, fmt.Errorf("could not sign request: %w", err)
+		return fmt.Errorf("could not sign request: %w", err)
 	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("could not send request to VEX exchange server: %w", err)
+		return fmt.Errorf("could not send request to VEX exchange server: %w", err)
 	}
 	defer res.Body.Close()
 
-	if !slices.Contains(expectedStatuses, res.StatusCode) {
+	if res.StatusCode != expectedStatus {
 		message, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
-		return res.StatusCode, fmt.Errorf("unexpected response from VEX exchange server for %s %s: %s %s", method, path, res.Status, strings.TrimSpace(string(message)))
+		return fmt.Errorf("unexpected response from VEX exchange server for %s %s: %s %s", method, path, res.Status, strings.TrimSpace(string(message)))
 	}
 
 	if response == nil {
-		return res.StatusCode, nil
+		return nil
 	}
 	if err := json.NewDecoder(res.Body).Decode(response); err != nil {
-		return res.StatusCode, fmt.Errorf("could not decode response of VEX exchange server: %w", err)
+		return fmt.Errorf("could not decode response of VEX exchange server: %w", err)
 	}
-	return res.StatusCode, nil
+	return nil
 }

@@ -588,7 +588,6 @@ type ConfigRepository interface {
 
 type VEXRuleExchangeClient interface {
 	Enabled() bool
-	Fingerprint() string
 	Register(ctx context.Context) error
 	SubmitVEXRules(ctx context.Context, rules []dtos.VEXExchangeRuleDTO) error
 	FetchRecommendations(ctx context.Context) ([]dtos.VEXExchangeRecommendationDTO, error)
