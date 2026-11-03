@@ -45,6 +45,8 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 				return err
 			}
 			vuln = &v
+		default:
+			return fmt.Errorf("unsupported vulnerability type: %s", vulnType)
 		}
 
 		return i.createIssueFromEvent(event.Ctx, asset, vuln, event.Justification, userAgent)
@@ -72,6 +74,8 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 				return err
 			}
 			vuln = &v
+		default:
+			return fmt.Errorf("unsupported vulnerability type: %s", vulnType)
 		}
 
 		if vuln.GetTicketID() == nil {
@@ -108,7 +112,7 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 			return fmt.Errorf("failed to parse Redmine ticket ID: %w", err)
 		}
 
-		var comments string
+		comments := ""
 		switch ev.Type {
 		case dtos.EventTypeAccepted:
 			comments = GenerateComment(member.Name, "accepted the vulnerability", utils.SafeDereference(ev.Justification))
@@ -161,6 +165,5 @@ func (i *RedmineIntegration) createIssueFromEvent(ctx shared.Context, asset mode
 	}
 	session := shared.GetSession(ctx)
 
-	err = i.CreateIssue(ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, justification, session.GetActorName(), userAgent)
-	return nil
+	return i.CreateIssue(ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, justification, session.GetActorName(), userAgent)
 }

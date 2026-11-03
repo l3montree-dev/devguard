@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS public.redmine_integrations (
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
     name character varying(255) NOT NULL,
-    org_id uuid,
+    org_id uuid NOT NULL,
     access_token text,
     url text NOT NULL,
     tracker_id INT NOT NULL,

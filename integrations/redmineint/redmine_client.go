@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -59,9 +60,9 @@ func (c *Client) FetchRepos(ctx context.Context, offset int, limit int) ([]*Proj
 		return nil, fmt.Errorf("invalid offset or limit: offset must be >= 0 and limit must be > 0 and <= 100")
 	}
 
-	query := map[string]string{
-		"offset": fmt.Sprintf("%d", offset),
-		"limit":  fmt.Sprintf("%d", limit),
+	query := map[string][]string{
+		"offset": {fmt.Sprintf("%d", offset)},
+		"limit":  {fmt.Sprintf("%d", limit)},
 	}
 
 	resp, err := c.redmineRequest(ctx, http.MethodGet, "/projects.json", query, nil)
@@ -160,7 +161,7 @@ func (c *Client) FetchIssueTrackers(ctx context.Context) ([]*Tracker, error) {
 	return response.Trackers, nil
 }
 
-func (c *Client) FetchIssueStatuses(ctx context.Context) ([]*Status, error) {
+func (c *Client) FetchIssueStatuses(ctx context.Context) ([]*IssueStatus, error) {
 	resp, err := c.redmineRequest(ctx, http.MethodGet, "/issue_statuses.json", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch issue statuses: %w", err)
@@ -198,11 +199,18 @@ func (c *Client) FetchIssuePriorities(ctx context.Context) ([]*Priority, error) 
 	return response.Priorities, nil
 }
 
-func (c *Client) redmineRequest(ctx context.Context, method string, url string, query map[string]string, body io.Reader) (*http.Response, error) {
+func (c *Client) redmineRequest(ctx context.Context, method string, endpointURL string, query map[string][]string, body io.Reader) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+url, body)
+	parsedURL, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	}
+	parsedURL = parsedURL.JoinPath(endpointURL)
+	parsedURL.RawQuery = url.Values(query).Encode()
+
+	req, err := http.NewRequestWithContext(ctx, method, parsedURL.String(), body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

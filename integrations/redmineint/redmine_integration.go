@@ -597,7 +597,7 @@ func (i *RedmineIntegration) GetIntegrationProperties(ctx shared.Context) error 
 			Name: t.Name,
 		}
 	})
-	statusesDTO := transform(statuses, func(s *Status) dtos.RedmineStatus {
+	statusesDTO := transform(statuses, func(s *IssueStatus) dtos.RedmineStatus {
 		return dtos.RedmineStatus{
 			ID:   s.ID,
 			Name: s.Name,
@@ -633,12 +633,12 @@ func (i *RedmineIntegration) UpdateIntegrationSettings(ctx shared.Context) error
 
 	var data struct {
 		TrackerID          int    `json:"tracker"`
-		DefaultStatusID    *int   `json:"defaultStatus"`
-		CloseStatusID      *int   `json:"closeStatus"`
-		LowPriorityID      *int   `json:"lowPriority"`
-		MediumPriorityID   *int   `json:"mediumPriority"`
-		HighPriorityID     *int   `json:"highPriority"`
-		CriticalPriorityID *int   `json:"criticalPriority"`
+		DefaultStatusID    *int   `json:"defaultStatusId"`
+		CloseStatusID      *int   `json:"closeStatusId"`
+		LowPriorityID      *int   `json:"lowPriorityId"`
+		MediumPriorityID   *int   `json:"mediumPriorityId"`
+		HighPriorityID     *int   `json:"highPriorityId"`
+		CriticalPriorityID *int   `json:"criticalPriorityId"`
 		MermaidIntegration string `json:"mermaidIntegration"`
 	}
 

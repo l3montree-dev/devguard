@@ -174,7 +174,7 @@ func (c *IntegrationController) TestAndSaveJiraIntegration(ctx shared.Context) e
 	return nil
 }
 
-// @Summary Test and save Rdemine integration credentials
+// @Summary Test and save Redmine integration credentials
 // @Tags Integrations
 // @Security CookieAuth
 // @Security PATAuth
@@ -208,7 +208,7 @@ func (c *IntegrationController) TestAndSaveRedmineIntegration(ctx shared.Context
 // @Param organization path string true "Organization slug"
 // @Param redmine_integration_id path string true "Redmine integration ID"
 // @Success 200 {object} dtos.RedmineIntegrationProperties
-// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties [get]
+// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties/ [get]
 func (c *IntegrationController) GetRedmineIntegrationProperties(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
@@ -235,7 +235,7 @@ func (c *IntegrationController) GetRedmineIntegrationProperties(ctx shared.Conte
 // @Param redmine_integration_id path string true "Redmine integration ID"
 // @Param body body object{tracker=int,defaultStatus=int,closeStatus=int,lowPriority=int,mediumPriority=int,highPriority=int,criticalPriority=int,mermaidIntegration=string} true "Redmine integration settings"
 // @Success 200 {object} dtos.RedmineIntegration
-// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings [post]
+// @Router /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings/ [put]
 func (c *IntegrationController) UpdateRedmineIntegrationSettings(ctx shared.Context) error {
 	thirdPartyIntegration := shared.GetThirdPartyIntegration(ctx)
 	redmine := thirdPartyIntegration.GetIntegration(shared.RedmineIntegrationID)
