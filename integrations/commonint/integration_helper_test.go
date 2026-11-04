@@ -11,6 +11,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/stretchr/testify/assert"
 )
@@ -380,6 +381,39 @@ func TestPathsToMermaid(t *testing.T) {
 		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_single_1_0_0([\"pkg:npm/single\\@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 }
+func TestEscapeNodeID(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{name: "empty string becomes root", input: "", expected: "root"},
+		{name: "graph root node id becomes root", input: normalize.GraphRootNodeID, expected: "root"},
+		{name: "plain identifier stays unchanged", input: "simple_id", expected: "simple_id"},
+		{name: "replaces @", input: "a@b", expected: "a_b"},
+		{name: "replaces :", input: "a:b", expected: "a_b"},
+		{name: "replaces /", input: "a/b", expected: "a_b"},
+		{name: "replaces .", input: "a.b", expected: "a_b"},
+		{name: "replaces -", input: "a-b", expected: "a_b"},
+		{name: "escapes npm purl", input: "pkg:npm/root-dep@1.0.0", expected: "pkg_npm_root_dep_1_0_0"},
+		{name: "escapes scoped npm purl", input: "pkg:npm/@angular/core@17.0.1", expected: "pkg_npm__angular_core_17_0_1"},
+		{name: "escapes info source node", input: "sbom:package-lock.json@main", expected: "sbom_package_lock_json_main"},
+		{name: "escapes artifact node", input: "artifact:my-app", expected: "artifact_my_app"},
+		{name: "replaces whitespace", input: "a b\tc\nd", expected: "a_b_c_d"},
+		{name: "replaces purl qualifiers", input: "pkg:deb/debian/curl@7.88.1?arch=amd64&distro=debian-12", expected: "pkg_deb_debian_curl_7_88_1_arch_amd64_distro_debian_12"},
+		{name: "replaces + in versions", input: "pkg:maven/org.example/lib@1.0.0+build.5", expected: "pkg_maven_org_example_lib_1_0_0_build_5"},
+		{name: "replaces purl subpath and encoding", input: "pkg:golang/example.com/mod@v1.0.0#sub%2Fpath", expected: "pkg_golang_example_com_mod_v1_0_0_sub_2Fpath"},
+		{name: "replaces mermaid syntax characters", input: `a[b](c){d}"e'f;g|h<i>j`, expected: "a_b__c__d__e_f_g_h_i_j"},
+		{name: "replaces non-ascii characters", input: "pkg:npm/über@1.0.0", expected: "pkg_npm__ber_1_0_0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, escapeNodeID(tt.input))
+		})
+	}
+}
+
 func TestGetLabels(t *testing.T) {
 	t.Run("should return correct labels for a DependencyVuln with CVE", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
