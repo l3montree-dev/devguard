@@ -19,10 +19,22 @@ mocks::
 	mockery --config=.mockery.yaml
 
 lint::
-	docker run --rm -v ./:/app:ro -w /app golangci/golangci-lint:v2.1.6 golangci-lint run
+	docker run --rm \
+		-v ./:/app:ro \
+		-v golangci-cache:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		-v $$(go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $$(go env GOMODCACHE):/.cache/go-mod -e GOMODCACHE=/.cache/go-mod \
+		-w /app golangci/golangci-lint:v2.15.0 \
+		golangci-lint run
 
 lint-fix::
-	docker run --rm -v ./:/app:rw -w /app golangci/golangci-lint:v2.1.6 golangci-lint run --fix
+	docker run --rm \
+		-v ./:/app:rw \
+		-v golangci-cache:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		-v $$(go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $$(go env GOMODCACHE):/.cache/go-mod -e GOMODCACHE=/.cache/go-mod \
+		-w /app golangci/golangci-lint:v2.15.0 \
+		golangci-lint run --fix
 
 test::
 	go list ./... | grep -v "/mocks" | xargs go test "$1"
