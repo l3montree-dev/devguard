@@ -390,6 +390,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		}
 	}
 
+	if patchRequest.IsPublic != nil && *patchRequest.IsPublic {
+		if !shared.GetProject(ctx).IsPublic {
+			return echo.NewHTTPError(409, "project is not set to public")
+		}
+	}
+
 	updated := transformer.ApplyAssetPatchRequestToModel(patchRequest, &asset)
 	if asset.Name == "" || asset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
