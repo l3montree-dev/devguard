@@ -16,6 +16,15 @@ import (
 	"github.com/l3montree-dev/devguard/utils"
 )
 
+type IssueNotFoundError struct {
+	message string
+	issueID int
+}
+
+func (e *IssueNotFoundError) Error() string {
+	return fmt.Sprintf("Issue with id %d not found:", e.issueID, e.message)
+}
+
 type Client struct {
 	RedmineIntegrationID uuid.UUID
 	AccessToken          string
@@ -132,6 +141,15 @@ func (c *Client) EditIssue(ctx context.Context, issueID int, issue *IssueEditOpt
 		return fmt.Errorf("failed to edit issue: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		bodyContent, _ := io.ReadAll(resp.Body)
+		slog.Error("Issue not found", "status_code", resp.StatusCode, "response_body", string(bodyContent))
+		return &IssueNotFoundError{
+			message: string(bodyContent),
+			issueID: issueID,
+		}
+	}
 
 	if resp.StatusCode != http.StatusNoContent {
 		bodyContent, _ := io.ReadAll(resp.Body)

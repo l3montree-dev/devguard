@@ -2,6 +2,7 @@ package redmineint
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -120,17 +121,12 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 			comments = GenerateComment(member.Name, "marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))
 		case dtos.EventTypeReopened:
 			comments = GenerateComment(member.Name, "reopened the vulnerability", utils.SafeDereference(ev.Justification))
-			err := i.createIssueFromEvent(event.Ctx, asset, vuln, utils.SafeDereference(ev.Justification), userAgent)
-			if err != nil {
-				slog.Error("failed to recreate issue for reopened vulnerability", "err", err, "vulnID", vuln.GetID())
-				return fmt.Errorf("failed to recreate issue for reopened vulnerability: %w", err)
-			}
 		case dtos.EventTypeComment:
 			comments = GenerateComment(member.Name, "commented on DevGuard", utils.SafeDereference(ev.Justification))
 		}
 
 		if len(comments) > 0 {
-			client, _, err := i.getClientBasedOnAsset(ctx, asset)
+			client, _, _, err := i.getClientBasedOnAsset(ctx, asset)
 			if err != nil {
 				return fmt.Errorf("failed to get Redmine client for asset %s: %w", asset.ID, err)
 			}
@@ -139,7 +135,16 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 				Notes: comments,
 			}
 			err = client.EditIssue(ctx, issueID, &update)
-			if err != nil {
+
+			if _, ok := errors.AsType[*IssueNotFoundError](err); ok && ev.Type == dtos.EventTypeReopened {
+				slog.Info("issue not found, creating a new issue for reopened vulnerability", "vulnID", vuln.GetID())
+
+				err := i.createIssueFromEvent(event.Ctx, asset, vuln, utils.SafeDereference(ev.Justification), userAgent)
+				if err != nil {
+					slog.Error("failed to recreate issue for reopened vulnerability", "err", err, "vulnID", vuln.GetID())
+					return fmt.Errorf("failed to recreate issue for reopened vulnerability: %w", err)
+				}
+			} else if err != nil {
 				slog.Error("failed to edit issue", "err", err, "issueID", issueID)
 				return fmt.Errorf("failed to edit issue: %w", err)
 			}

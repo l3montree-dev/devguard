@@ -2,6 +2,7 @@ package redmineint
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -396,15 +397,11 @@ func (i *RedmineIntegration) UpdateIssue(ctx context.Context, asset models.Asset
 
 	if err != nil {
 		//check if err is 404 - if so, we can not reopen the issue
-		if err.Error() == `failed to edit issue, status code: 404, response: ` {
+		if _, ok := errors.AsType[*IssueNotFoundError](err); ok {
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", dtos.VulnerableCodeNotInExecutePath, false, userAgent)
 			// save the event
-			err = i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
-			if err != nil {
-				slog.Error("could not save dependencyVuln and event", "err", err)
-			}
-			return nil
+			return i.aggregatedVulnRepository.ApplyAndSave(ctx, nil, vuln, &vulnEvent)
 		}
 		return err
 	}
