@@ -1307,7 +1307,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  new(stateEvent),
 		Title:       new(dependencyVuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels:      new(gitlab.LabelOptions(labels)),
 	})
 	return err
@@ -1439,7 +1439,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       new(vuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels:      new(gitlab.LabelOptions(labels)),
 	}
 

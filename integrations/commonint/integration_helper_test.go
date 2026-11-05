@@ -626,7 +626,7 @@ func TestRenderMarkdown(t *testing.T) {
 			Message: new("A detailed Message"),
 			URI:     "the/uri/of/the/vuln",
 		}
-		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, true)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "TestSnippet")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L64)")
@@ -648,10 +648,29 @@ func TestRenderMarkdown(t *testing.T) {
 			URI:     "the/uri/of/the/vuln",
 		}
 
-		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, true)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
 		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/code-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
+	})
+	t.Run("should not include slash commands if disabled", func(t *testing.T) {
+		snippetContents := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{
+				{},
+			},
+		}
+		snippetJSON, err := transformer.SnippetContentsToJSON(snippetContents)
+		assert.NoError(t, err)
+		firstPartyVuln := models.FirstPartyVuln{
+			SnippetContents: snippetJSON,
+			Vulnerability: models.Vulnerability{
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
+			Message: new("A detailed Message"),
+			URI:     "the/uri/of/the/vuln",
+		}
+
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, false)
+		assert.NotContains(t, result, "# Interact with this vulnerability")
 	})
 }
 
