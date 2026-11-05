@@ -18,7 +18,16 @@ package utils
 import (
 	"fmt"
 	"io"
+	"os"
 )
+
+func CreatePrivateTempDir(prefix string) (string, func(), error) {
+	dir, err := os.MkdirTemp("", "devguard-"+prefix+"-")
+	if err != nil {
+		return "", nil, fmt.Errorf("could not create temp directory: %w", err)
+	}
+	return dir, func() { os.RemoveAll(dir) }, nil
+}
 
 // unlike a bare io.LimitReader this fails instead of returning a silently truncated body
 func ReadLimited(r io.Reader, limit int64) ([]byte, error) {

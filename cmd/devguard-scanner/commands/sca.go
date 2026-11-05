@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/services"
@@ -152,9 +151,6 @@ func prepareTrivyCommand(workdir string) {
 }
 
 func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte, error) {
-	// generate random name
-	filename := uuid.New().String() + ".json"
-
 	// check if we are scanning a dir or a single file
 	maybeFilename, isDir := maybeGetFileName(pathOrImage)
 
@@ -167,7 +163,12 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	} else {
 		workDir = utils.GetDirFromPath(pathOrImage)
 	}
-	sbomFile := filepath.Join(os.TempDir(), filename)
+	dir, cleanup, err := utils.CreatePrivateTempDir("sca")
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+	sbomFile := filepath.Join(dir, "sbom.json")
 
 	var trivyCmd *exec.Cmd
 
@@ -214,22 +215,14 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	// get the output
 	trivyCmd.Stderr = stderr
 
-	err := trivyCmd.Run()
+	err = trivyCmd.Run()
 	if err != nil {
 		return nil, errors.Wrap(err, stderr.String())
 	}
-	file, err := os.Open(sbomFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not open file")
-	}
-	// open the file and return the path
-	content, err := io.ReadAll(file)
+	content, err := os.ReadFile(sbomFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read file")
 	}
-
-	// delete the file after reading it
-	defer os.Remove(sbomFile)
 	return content, nil
 }
 
@@ -951,10 +944,11 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 	if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
 		// download any config file if exists
-		configFilePath, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
+		configFilePath, cleanup, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
 		if err != nil {
 			slog.Debug("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
 		} else {
+			defer cleanup()
 			// set the config file path in the runtime config so that it can be used by the scanner commands
 			config.RuntimeBaseConfig.ConfigFilePath = configFilePath
 		}
