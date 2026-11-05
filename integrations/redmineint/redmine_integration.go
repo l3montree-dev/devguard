@@ -351,7 +351,7 @@ func (i *RedmineIntegration) createFirstPartyVulnIssue(
 	issue := &IssueCreateOptions{
 		ProjectID:   redmineProjectID,
 		Subject:     new(firstPartyVuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, false)),
 		StatusID:    settings.DefaultStatusID,
 		TrackerID:   settings.TrackerID,
 	}
@@ -451,7 +451,7 @@ func (i *RedmineIntegration) updateFirstPartyVulnTicket(
 
 	issue := &IssueEditOptions{
 		Subject:     new(firstPartyVuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, false)),
 		StatusID:    expectedIssueState,
 	}
 

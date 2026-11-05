@@ -74,7 +74,15 @@ func GetLanguage(URI string) string {
 	return extension
 }
 
-func RenderMarkdownForFirstPartyVuln(firstPartyVuln models.FirstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string) string {
+func RenderMarkdownForFirstPartyVuln(
+	firstPartyVuln models.FirstPartyVuln,
+	baseURL,
+	orgSlug,
+	projectSlug,
+	assetSlug,
+	assetVersionSlug string,
+	includeSlashCommands bool,
+) string {
 	var str strings.Builder
 	str.WriteString("## Vulnerability Description\n\n")
 	str.WriteString(*firstPartyVuln.Message)
@@ -118,7 +126,9 @@ func RenderMarkdownForFirstPartyVuln(firstPartyVuln models.FirstPartyVuln, baseU
 	str.WriteString("\n\n")
 	fmt.Fprintf(&str, "More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/code-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, firstPartyVuln.ID)
 
-	utils.AddSlashCommandsToFirstPartyVuln(&str)
+	if includeSlashCommands {
+		utils.AddSlashCommandsToFirstPartyVuln(&str)
+	}
 
 	return str.String()
 }
