@@ -22,7 +22,7 @@ type IssueNotFoundError struct {
 }
 
 func (e *IssueNotFoundError) Error() string {
-	return fmt.Sprintf("Issue with id %d not found:", e.issueID, e.message)
+	return fmt.Sprintf("Issue with id %d not found: %s", e.issueID, e.message)
 }
 
 type Client struct {
@@ -74,7 +74,7 @@ func (c *Client) FetchRepos(ctx context.Context, offset int, limit int) ([]*Proj
 		"limit":  {fmt.Sprintf("%d", limit)},
 	}
 
-	resp, err := c.redmineRequest(ctx, http.MethodGet, "/projects.json", query, nil)
+	resp, err := c.redmineRequest(http.MethodGet, "/projects.json", query, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch projects: %w", err)
 	}
@@ -100,7 +100,7 @@ func (c *Client) CreateIssue(ctx context.Context, issue *IssueCreateOptions) (*I
 	}
 
 	body := bytes.NewBuffer(bodyBytes)
-	resp, err := c.redmineRequest(ctx, http.MethodPost, "/issues.json", nil, body)
+	resp, err := c.redmineRequest(http.MethodPost, "/issues.json", nil, body)
 	if err != nil {
 		slog.Error("Failed to create issue", "error", err)
 
@@ -135,7 +135,7 @@ func (c *Client) EditIssue(ctx context.Context, issueID int, issue *IssueEditOpt
 	}
 
 	body := bytes.NewBuffer(bodyBytes)
-	resp, err := c.redmineRequest(ctx, http.MethodPut, fmt.Sprintf("/issues/%s.json", strconv.Itoa(issueID)), nil, body)
+	resp, err := c.redmineRequest(http.MethodPut, fmt.Sprintf("/issues/%s.json", strconv.Itoa(issueID)), nil, body)
 	if err != nil {
 		slog.Error("Failed to edit issue", "error", err)
 		return fmt.Errorf("failed to edit issue: %w", err)
@@ -161,7 +161,7 @@ func (c *Client) EditIssue(ctx context.Context, issueID int, issue *IssueEditOpt
 }
 
 func (c *Client) FetchIssueTrackers(ctx context.Context) ([]*Tracker, error) {
-	resp, err := c.redmineRequest(ctx, http.MethodGet, "/trackers.json", nil, nil)
+	resp, err := c.redmineRequest(http.MethodGet, "/trackers.json", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch trackers: %w", err)
 	}
@@ -180,7 +180,7 @@ func (c *Client) FetchIssueTrackers(ctx context.Context) ([]*Tracker, error) {
 }
 
 func (c *Client) FetchIssueStatuses(ctx context.Context) ([]*IssueStatus, error) {
-	resp, err := c.redmineRequest(ctx, http.MethodGet, "/issue_statuses.json", nil, nil)
+	resp, err := c.redmineRequest(http.MethodGet, "/issue_statuses.json", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch issue statuses: %w", err)
 	}
@@ -199,7 +199,7 @@ func (c *Client) FetchIssueStatuses(ctx context.Context) ([]*IssueStatus, error)
 }
 
 func (c *Client) FetchIssuePriorities(ctx context.Context) ([]*Priority, error) {
-	resp, err := c.redmineRequest(ctx, http.MethodGet, "/enumerations/issue_priorities.json", nil, nil)
+	resp, err := c.redmineRequest(http.MethodGet, "/enumerations/issue_priorities.json", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch issue priorities: %w", err)
 	}
@@ -217,8 +217,8 @@ func (c *Client) FetchIssuePriorities(ctx context.Context) ([]*Priority, error) 
 	return response.Priorities, nil
 }
 
-func (c *Client) redmineRequest(ctx context.Context, method string, endpointURL string, query map[string][]string, body io.Reader) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+func (c *Client) redmineRequest(method string, endpointURL string, query map[string][]string, body io.Reader) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	parsedURL, err := url.Parse(c.BaseURL)

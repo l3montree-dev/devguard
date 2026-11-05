@@ -8,20 +8,20 @@ import (
 	"github.com/l3montree-dev/devguard/integrations/commonint"
 )
 
-const DEVGUARD_COMMENT_TEXT = "This comment was added via DevGuard."
+const DevguardCommentText = "This comment was added via DevGuard."
 
 func GenerateComment(author string, commentText string, justification string) string {
 	var sb strings.Builder
 
 	if author != "" && commentText != "" {
-		sb.WriteString(fmt.Sprintf("%s %s:\n\n", author, commentText))
+		fmt.Fprintf(&sb, "%s %s:\n\n", author, commentText)
 	}
 
 	if justification != "" {
-		sb.WriteString(fmt.Sprintf("%s\n\n", justification))
+		fmt.Fprintf(&sb, "%s\n\n", justification)
 	}
 
-	sb.WriteString(fmt.Sprintf("<sub>%s</sub>", DEVGUARD_COMMENT_TEXT))
+	fmt.Fprintf(&sb, "<sub>%s</sub>", DevguardCommentText)
 
 	return sb.String()
 }
