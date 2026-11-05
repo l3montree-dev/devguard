@@ -223,8 +223,10 @@ func TestAccessControlMiddleware(t *testing.T) {
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusNotFound, rec.Code)
-		assert.Error(t, err)
+		var httpErr *echo.HTTPError
+		assert.ErrorAs(t, err, &httpErr)
+		assert.Equal(t, http.StatusNotFound, httpErr.Code)
+		assert.Equal(t, "could not find organization", httpErr.Message)
 		mockPAT.AssertExpectations(t)
 	})
 
@@ -291,8 +293,9 @@ func TestAccessControlMiddleware(t *testing.T) {
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusInternalServerError, rec.Code)
-		assert.Error(t, err)
+		var httpErr *echo.HTTPError
+		assert.ErrorAs(t, err, &httpErr)
+		assert.Equal(t, http.StatusInternalServerError, httpErr.Code)
 		mockPAT.AssertExpectations(t)
 	})
 }

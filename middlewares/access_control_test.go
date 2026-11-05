@@ -170,8 +170,10 @@ func TestOrganizationAccessControl(t *testing.T) {
 		})(ctx)
 
 		// Assert
-		assert.Error(t, err)
-		assert.Equal(t, http.StatusNotFound, rec.Code)
+		var httpErr *echo.HTTPError
+		assert.ErrorAs(t, err, &httpErr)
+		assert.Equal(t, http.StatusNotFound, httpErr.Code)
+		assert.Equal(t, "could not find organization", httpErr.Message)
 		mockPAT.AssertExpectations(t)
 	})
 
