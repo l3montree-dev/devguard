@@ -70,8 +70,26 @@ rec {
       pkgs.bash
       pkgs.coreutils
       pkgs.gnutar
-      pkgs.barman
+      barman
     ];
+  };
+
+  # GHSA-2qm8-x737-gmw5: pyasn1 < 0.6.5 is not yet fixed in nixpkgs. Drop this
+  # override once nixpkgs ships pyasn1 >= 0.6.5.
+  barman = pkgs.barman.override {
+    python3Packages = pkgs.python3Packages.overrideScope (
+      final: prev: {
+        pyasn1 = prev.pyasn1.overridePythonAttrs (old: rec {
+          version = "0.6.5";
+          src = pkgs.fetchFromGitHub {
+            owner = "pyasn1";
+            repo = "pyasn1";
+            tag = "v${version}";
+            hash = "sha256-8p1OmjqnGtMIsc2dXLRIJVEFSH2zseWR46HmmKtogFw=";
+          };
+        });
+      }
+    );
   };
 
   postgresql = pkgs.postgresql_16.withPackages (p: [
