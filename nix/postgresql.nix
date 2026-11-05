@@ -78,8 +78,8 @@ rec {
   # override once nixpkgs ships pyasn1 >= 0.6.5.
   barman = pkgs.barman.override {
     python3Packages = pkgs.python3Packages.overrideScope (
-      final: prev: {
-        pyasn1 = prev.pyasn1.overridePythonAttrs (old: rec {
+      _final: prev: {
+        pyasn1 = prev.pyasn1.overridePythonAttrs (_old: rec {
           version = "0.6.5";
           src = pkgs.fetchFromGitHub {
             owner = "pyasn1";
