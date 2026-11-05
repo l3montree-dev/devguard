@@ -74,11 +74,11 @@ rec {
     ];
   };
 
-  # GHSA-2qm8-x737-gmw5: pyasn1 < 0.6.5 is not yet fixed in nixpkgs. Drop this
-  # override once nixpkgs ships pyasn1 >= 0.6.5.
   barman = pkgs.barman.override {
     python3Packages = pkgs.python3Packages.overrideScope (
       _final: prev: {
+        # GHSA-2qm8-x737-gmw5: pyasn1 < 0.6.5 is not yet fixed in nixpkgs. Drop this
+        # override once nixpkgs ships pyasn1 >= 0.6.5.
         pyasn1 = prev.pyasn1.overridePythonAttrs (_old: rec {
           version = "0.6.5";
           src = pkgs.fetchFromGitHub {
@@ -86,6 +86,17 @@ rec {
             repo = "pyasn1";
             tag = "v${version}";
             hash = "sha256-8p1OmjqnGtMIsc2dXLRIJVEFSH2zseWR46HmmKtogFw=";
+          };
+        });
+        # PYSEC-2026-4183: pyjwt < 2.15.0 is not yet fixed in nixpkgs. Drop this
+        # override once nixpkgs ships pyjwt >= 2.15.0.
+        pyjwt = prev.pyjwt.overridePythonAttrs (_old: rec {
+          version = "2.15.0";
+          src = pkgs.fetchFromGitHub {
+            owner = "jpadilla";
+            repo = "pyjwt";
+            tag = version;
+            hash = "sha256-tR0GELpuBqiyDbn2RAOlGDPiOaaGoowsDEsAP6xDL+0=";
           };
         });
       }
