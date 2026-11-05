@@ -218,7 +218,7 @@ func (c *Client) FetchIssuePriorities(ctx context.Context) ([]*Priority, error) 
 }
 
 func (c *Client) redmineRequest(ctx context.Context, method string, endpointURL string, query map[string][]string, body io.Reader) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	parsedURL, err := url.Parse(c.BaseURL)
