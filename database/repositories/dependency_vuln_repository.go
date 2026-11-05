@@ -569,22 +569,9 @@ func (repository *dependencyVulnRepository) GetOpenVulnsBySignaturesWithoutEvent
 	)
 }
 
-func (repository *dependencyVulnRepository) ApplyGroupEventAndSave(ctx context.Context, tx *gorm.DB, assetSignature int64, ev *models.VulnEvent) error {
-	scratch := &models.DependencyVuln{}
-	statemachine.Apply(scratch, *ev)
-
-	if err := repository.Repository.GetDB(ctx, tx).Model(&models.DependencyVuln{}).
-		Where("state != ? AND asset_signature = ?", dtos.VulnStateFixed, assetSignature).
-		Update("state", scratch.GetState()).Error; err != nil {
-		return err
-	}
-
-	return repository.GetDB(ctx, tx).Save(ev).Error
-}
-
-// ApplyGroupEventsAndSave is the bulk counterpart to ApplyGroupEventAndSave: instead of
-// one UPDATE + one INSERT round trip per event, it does one UPDATE covering every touched
-// asset signature and one bulk INSERT for all the events. Returns the asset signatures it
+// ApplyGroupEventsAndSave applies group events to every vuln sharing their asset signature:
+// one UPDATE covering every touched asset signature and one bulk INSERT for all the
+// events. Returns the asset signatures it
 // touched, so the caller can look up the vulns it affected (e.g. via
 // GetVulnsByAssetSignatures) without duplicating this loop at every call site.
 func (repository *dependencyVulnRepository) ApplyGroupEventsAndSave(ctx context.Context, tx *gorm.DB, events []models.VulnEvent) ([]int64, error) {
@@ -610,9 +597,9 @@ func (repository *dependencyVulnRepository) ApplyGroupEventsAndSave(ctx context.
 
 	if err := repository.GetDB(ctx, tx).Exec(`
 		UPDATE dependency_vulns dv
-		SET state = v.state
+		SET state = v.state, last_state_change = now()
 		FROM (SELECT unnest($1::bigint[]) AS asset_signature, unnest($2::text[]) AS state) v
-		WHERE dv.asset_signature = v.asset_signature AND dv.state != $3
+		WHERE dv.asset_signature = v.asset_signature AND dv.state != $3 AND dv.state != v.state
 	`, assetSignatures, states, dtos.VulnStateFixed).Error; err != nil {
 		return nil, err
 	}

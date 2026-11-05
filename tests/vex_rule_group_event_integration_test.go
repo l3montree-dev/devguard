@@ -135,9 +135,7 @@ func TestVEXRuleGroupEventLeavesVulnsWithoutOwnEvent(t *testing.T) {
 				v.ID, v.AssetVersionName)
 		}
 
-		// and the raw UPDATE never touches last_state_change, so the timestamp still
-		// points at a moment before the state actually changed
-		assert.Equal(t, stateChangeBefore.UTC(), updatedTag.LastStateChange.UTC(),
-			"last_state_change is left stale by the group UPDATE")
+		assert.True(t, updatedTag.LastStateChange.After(stateChangeBefore),
+			"last_state_change must move with the group UPDATE")
 	})
 }

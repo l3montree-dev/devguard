@@ -319,7 +319,6 @@ type DependencyVulnRepository interface {
 	ListByAssetAndAssetVersionWithoutEvents(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(ctx context.Context, tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(ctx context.Context, tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
-	ApplyGroupEventAndSave(ctx context.Context, tx DB, assetSignature int64, vulnEvent *models.VulnEvent) error
 	ApplyGroupEventsAndSave(ctx context.Context, tx DB, events []models.VulnEvent) ([]int64, error)
 	GetDependencyVulnsByDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersion(ctx context.Context, tx DB, assetVersionName string, assetID uuid.UUID, artifactName *string) ([]models.DependencyVuln, error)
