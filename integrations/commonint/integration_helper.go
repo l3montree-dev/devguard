@@ -444,8 +444,13 @@ func escapeNodeID(s string) string {
 	if s == "" || s == normalize.GraphRootNodeID {
 		return "root"
 	}
-	// Creates a safe Mermaid node ID by removing special characters
-	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
+	// Creates a safe Mermaid node ID by replacing everything except [A-Za-z0-9_]
+	return strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			return r
+		}
+		return '_'
+	}, s)
 }
 
 // beautifyNodeLabel creates a more readable label for graph nodes
@@ -486,8 +491,7 @@ func beautifyNodeLabel(nodeID string) string {
 		return artifactName
 	}
 
-	// Regular component - just escape @ sign
-	return strings.ReplaceAll(nodeID, "@", "\\@")
+	return nodeID
 }
 
 func PathsToMermaid(paths [][]string) string {
