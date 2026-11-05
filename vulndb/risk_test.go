@@ -494,7 +494,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			ShortenedComponentPurl: "npm/test-package@1.0.0",
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		// Test header
 		assert.Contains(t, result, "## CVE-2023-1234 found in npm/test-package@1.0.0")
@@ -555,7 +555,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			Risk:                   5.0,
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		assert.Contains(t, result, "## CVE-2023-5678 found in pypi/vulnerable-package@2.0.0")
 		assert.Contains(t, result, "No fix is available.")
@@ -576,7 +576,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			Risk:                   9.5,
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		assert.Contains(t, result, "> **Risk**: `9.50 (Critical)`")
 		assert.Contains(t, result, "go get critical-package@2.0.0")
@@ -596,7 +596,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			Risk:                   2.1,
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		assert.Contains(t, result, "> **Risk**: `2.10 (Low)`")
 		assert.Contains(t, result, "apt install low-risk-package=1.0.1")
@@ -616,7 +616,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			Risk:                   6.0,
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		assert.Contains(t, result, "The vulnerability is in `pkg:npm/multi-package@1.0.0`, found in artifacts `artifact1`, `artifact2`, `artifact3`.")
 	})
@@ -635,7 +635,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			Risk:                   0,
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		assert.Contains(t, result, "> **Risk**: `0.00 (Unknown)`")
 	})
@@ -654,7 +654,7 @@ func TestExplanationMarkdown(t *testing.T) {
 			Risk:                   5.5,
 		}
 
-		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent)
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, true)
 
 		// Check for proper markdown headers
 		assert.Contains(t, result, "## CVE-2023-FORMAT")
@@ -671,6 +671,44 @@ func TestExplanationMarkdown(t *testing.T) {
 		assert.Contains(t, result, "<details>")
 		assert.Contains(t, result, "<summary>See more details...</summary>")
 		assert.Contains(t, result, "</details>")
+	})
+
+	t.Run("should not include empty mermaid", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: dtos.RiskMetrics{
+				BaseScore: 2.1,
+			},
+			CVEID:                  "CVE-2023-0001",
+			CVEDescription:         "Low severity vulnerability",
+			ComponentPurl:          "pkg:deb/low-risk-package@1.0.0",
+			ArtifactNames:          "low-risk-artifact",
+			FixedVersion:           new("1.0.1"),
+			ShortenedComponentPurl: "deb/low-risk-package@1.0.0",
+			Risk:                   2.1,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, "", true)
+
+		assert.NotContains(t, result, "#	Path to component")
+	})
+
+	t.Run("should not render slash commands when disabled", func(t *testing.T) {
+		explanation := Explanation{
+			RiskMetrics: dtos.RiskMetrics{
+				BaseScore: 2.1,
+			},
+			CVEID:                  "CVE-2023-0001",
+			CVEDescription:         "Low severity vulnerability",
+			ComponentPurl:          "pkg:deb/low-risk-package@1.0.0",
+			ArtifactNames:          "low-risk-artifact",
+			FixedVersion:           new("1.0.1"),
+			ShortenedComponentPurl: "deb/low-risk-package@1.0.0",
+			Risk:                   2.1,
+		}
+
+		result := explanation.Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, mermaidPathToComponent, false)
+
+		assert.NotContains(t, result, "# Interact with this vulnerability")
 	})
 }
 
