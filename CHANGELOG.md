@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.18.0] - 2026-11-05
+
+Thanks to external contributors [@Xenira](https://github.com/Xenira) for caching the lint target, which cuts the lint time from about 4 minutes to 6 seconds, and [@lsmith77](https://github.com/lsmith77) for fixing the `publiccode.yml` source repository URL! 🎉
+
+### Added
+
+- **CEL rules for the dependency proxy** — proxy configs are now written as CEL expressions instead of fixed options. This applies to all ecosystems (npm, Go, PyPI, Maven, Composer, Aline and Debian). The package struct available in expressions has optional types, and undefined fields are guarded. Configs are validated with struct tags, and the hash of the proxy configs is part of the cache key
+- **Alpine dependency proxy** — the proxy now serves Alpine packages. The package index only lists allowed packages and is signed with a per-secret signing key. Existing secrets get a key through a backfill migration, and new secrets get one on creation
+- **Debian proxy builds its own `Packages.xz` and `Packages.gz`**, so tools like Renovate can read the filtered index. Release times are fetched twice a day
+- **Dependency proxy hides malicious versions** from the package metadata it serves
+- **Maven proxy supports `HEAD` requests** and sets the `Last-Modified` header
+- **Dependency table search by alias** — the dependency table can now be searched for CVE aliases
+- **`devguard-scanner sca` warns about shallow Go binaries** — for a compiled Go binary only the flat module list is known, without the dependencies between the modules. The scanner warns and shows how to provide a supplementary SBOM via `--sbomPath`
+- **VulnDB v5** — new workflow for exporting the vulnerability database. The `vulndb` workflow has a `diffToPrevious` input to disable the quick-diff when exporting to a new vulndb path. Scheduled runs always diff
+
+### Changed
+
+- **CSAF VEX import maps more information to VEX rules** — CSAF flags and description notes are mapped to VEX rule justifications, and products are also read from `product_tree` branches
+- **Risk assessment can be "N/A"** — CVEs without a CVSS score (`-1`) now yield `-1` for the risk and all risk metrics instead of a calculated value
+- The proxy limits the size of upstream responses, strips upstream response headers and sets content type headers on its own responses
+- `pg_semver` is no longer required. The extension is removed from the migrations, the init SQL and the Nix setup
+- The `make lint` target caches its results, which cuts the lint time considerably
+- `publiccode.yml` points `url` to the source repository
+
+### Fixed
+
+- **`last_state_change` not updated** when a group VEX rule event was applied
+- **Overview statistics showed risk and CVSS as equal**
+- **Mermaid diagrams** — all non-alphanumeric characters in node ids are sanitized, which fixes broken diagrams
+- **Danger zone validation** — an asset can no longer be made public while its project is private (the update is rejected with a `409`), and the organization and project controllers received similar checks
+- Sanitization of request paths in the dependency proxy
+
+### Dependencies
+
+- Flake update. The dependency proxy model uses new column names, which are migrated automatically
+
+---
+
 ## [v1.17.2]
 
 ### Added
