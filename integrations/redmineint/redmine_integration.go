@@ -304,7 +304,7 @@ func (i *RedmineIntegration) createDependencyVulnIssue(
 	issue := &IssueCreateOptions{
 		ProjectID:   redmineProjectID,
 		Subject:     new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: new(Markdown(exp, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionName, componentTree)),
+		Description: new(exp.Markdown(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionName, componentTree, false)),
 		StatusID:    settings.DefaultStatusID,
 		TrackerID:   settings.TrackerID,
 		PriorityID:  priority,
@@ -351,7 +351,7 @@ func (i *RedmineIntegration) createFirstPartyVulnIssue(
 	issue := &IssueCreateOptions{
 		ProjectID:   redmineProjectID,
 		Subject:     new(firstPartyVuln.Title()),
-		Description: new(GenerateFirstPartyIssueDescription(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
 		StatusID:    settings.DefaultStatusID,
 		TrackerID:   settings.TrackerID,
 	}
@@ -428,7 +428,7 @@ func (i *RedmineIntegration) updateDependencyVulnTicket(
 
 	issue := &IssueEditOptions{
 		Subject:     new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: new(Markdown(exp, i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
+		Description: new(exp.Markdown(i.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree, false)),
 		StatusID:    expectedIssueState,
 		PriorityID:  priority,
 	}

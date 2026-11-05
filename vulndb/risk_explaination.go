@@ -234,7 +234,15 @@ type Explanation struct {
 	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
-func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug string, mermaidPathToComponent string) string {
+func (e Explanation) Markdown(
+	baseURL,
+	orgSlug,
+	projectSlug,
+	assetSlug,
+	assetVersionSlug string,
+	mermaidPathToComponent string,
+	includeSlashCommands bool,
+) string {
 	var str strings.Builder
 	fmt.Fprintf(&str, "## %s found in %s \n", e.CVEID, e.ShortenedComponentPurl)
 
@@ -251,14 +259,14 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 
 	str.WriteString("### Description\n")
 	str.WriteString(e.CVEDescription)
-	str.WriteString("\n")
+	str.WriteString("\n\n")
 	str.WriteString("### Affected component \n")
 	artifactNames := strings.Fields(e.ArtifactNames)
 	for i, s := range artifactNames {
 		artifactNames[i] = fmt.Sprintf("`%s`", s)
 	}
-	fmt.Fprintf(&str, "The vulnerability is in `%s`, found in artifacts %s.\n", e.ComponentPurl, strings.Join(artifactNames, ", "))
-	str.WriteString("### Recommended fix\n")
+	fmt.Fprintf(&str, "The vulnerability is in `%s`, found in artifacts %s.", e.ComponentPurl, strings.Join(artifactNames, ", "))
+	str.WriteString("\n\n### Recommended fix\n")
 	if e.FixedVersion != nil {
 		fmt.Fprintf(&str, "Upgrade to version %s or later.\n", *e.FixedVersion)
 		str.WriteString(e.GenerateCommandsToFixPackage())
@@ -266,14 +274,16 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 		str.WriteString("No fix is available.\n")
 	}
 
-	str.WriteString("\n### Additional guidance for mitigating vulnerabilities\n")
+	str.WriteString("\n\n### Additional guidance for mitigating vulnerabilities\n")
 	str.WriteString("Visit our guides on [devguard.org](https://docs.devguard.org/how-to-guides/scanning/scan-your-project)\n")
 
 	str.WriteString("\n<details>\n\n<summary>See more details...</summary>\n")
-	str.WriteString("\n### Path to component\n")
-	str.WriteString(mermaidPathToComponent)
+	if len(mermaidPathToComponent) > 0 {
+		str.WriteString("\n### Path to component\n")
+		str.WriteString(mermaidPathToComponent)
+	}
 
-	str.WriteString("| Risk Factor  | Value | Description | \n")
+	str.WriteString("\n| Risk Factor  | Value | Description | \n")
 	str.WriteString("| ---- | ----- | ----------- | \n")
 	fmt.Fprintf(&str, "| Vulnerability Depth | `%d` | %s | \n", e.Depth, e.ComponentDepthMessage)
 	fmt.Fprintf(&str, "| EPSS | `%.2f %%` | %s | \n", e.EPSS*100, e.EPSSMessage)
@@ -284,11 +294,15 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	//TODO: change it
 	fmt.Fprintf(&str, "More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, e.DependencyVulnID)
 	str.WriteString("\n\n</details>\n")
-	// add information about slash commands
-	// ref: https://github.com/l3montree-dev/devguard/issues/180
-	str.WriteString("\n")
 
-	utils.AddSlashCommandsToDependencyVuln(&str)
+	if includeSlashCommands {
+		// add information about slash commands
+		// ref: https://github.com/l3montree-dev/devguard/issues/180
+		str.WriteString("\n")
+
+		utils.AddSlashCommandsToDependencyVuln(&str)
+	}
+
 	return str.String()
 }
 
