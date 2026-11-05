@@ -235,11 +235,11 @@ func (r *statisticsRepository) VulnClassificationByOrg(ctx context.Context, tx *
 	distribution := dtos.VulnSeverityDistribution{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT 
-		COUNT(*) FILTER (WHERE sub.risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.risk_assessment >= 0 AND sub.risk_assessment < 4) AS low_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 4 AND sub.risk_assessment < 7) AS medium_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 7 AND sub.risk_assessment < 9) AS high_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 9 AND sub.risk_assessment <= 10) AS critical_risk,
-		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 0 AND sub.cvss < 4) AS low_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
@@ -283,11 +283,11 @@ func (r *statisticsRepository) GetMostVulnerableProjectsInOrg(ctx context.Contex
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT sub.pslug, sub.pname,
 		COUNT(*) as total,
-		COUNT(*) FILTER (WHERE sub.risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.risk_assessment >= 0 AND sub.risk_assessment < 4) AS low_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 4 AND sub.risk_assessment < 7) AS medium_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 7 AND sub.risk_assessment < 9) AS high_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 9 AND sub.risk_assessment <= 10) AS critical_risk,
-		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 0 AND sub.cvss < 4) AS low_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
@@ -316,11 +316,11 @@ func (r *statisticsRepository) GetMostVulnerableAssetsInOrg(ctx context.Context,
 		sub.asset_slug,
 		sub.asset_name,
 		COUNT(*) as total,
-		COUNT(*) FILTER (WHERE sub.risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.risk_assessment >= 0 AND sub.risk_assessment < 4) AS low_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 4 AND sub.risk_assessment < 7) AS medium_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 7 AND sub.risk_assessment < 9) AS high_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 9 AND sub.risk_assessment <= 10) AS critical_risk,
-		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 0 AND sub.cvss < 4) AS low_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
@@ -355,11 +355,11 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 		sub.asset_slug,
 		sub.version_name AS asset_version_name,
 		COUNT(*) AS total,
-		COUNT(*) FILTER (WHERE sub.risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.risk_assessment >= 0 AND sub.risk_assessment < 4) AS low_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 4 AND sub.risk_assessment < 7) AS medium_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 7 AND sub.risk_assessment < 9) AS high_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 9 AND sub.risk_assessment <= 10) AS critical_risk,
-		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 0 AND sub.cvss < 4) AS low_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
@@ -573,20 +573,20 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.C
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT
 		-- remediated averages
-		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.risk_assessment < 4)), 0) AS low_risk_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.risk_assessment >= 0 AND dv.risk_assessment < 4)), 0) AS low_risk_remediated,
 		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.risk_assessment >= 4 AND dv.risk_assessment < 7)), 0) AS medium_risk_remediated,
 		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.risk_assessment >= 7 AND dv.risk_assessment < 9)), 0) AS high_risk_remediated,
 		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.risk_assessment >= 9 AND dv.risk_assessment <= 10)), 0) AS critical_risk_remediated,
-		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss < 4)), 0) AS low_cvss_remediated,
+		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 0 AND dv.cvss < 4)), 0) AS low_cvss_remediated,
 		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 4 AND dv.cvss < 7)), 0) AS medium_cvss_remediated,
 		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 7 AND dv.cvss < 9)), 0) AS high_cvss_remediated,
 		COALESCE(EXTRACT(EPOCH FROM AVG(sub.created_at - dv.created_at) FILTER (WHERE sub.created_at IS NOT NULL AND dv.cvss >= 9 AND dv.cvss <= 10)), 0) AS critical_cvss_remediated,
 		-- non-remediated averages
-		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.risk_assessment < 4)), 0) AS low_risk_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.risk_assessment >= 0 AND dv.risk_assessment < 4)), 0) AS low_risk_open,
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.risk_assessment >= 4 AND dv.risk_assessment < 7)), 0) AS medium_risk_open,
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.risk_assessment >= 7 AND dv.risk_assessment < 9)), 0) AS high_risk_open,
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.risk_assessment >= 9 AND dv.risk_assessment <= 10)), 0) AS critical_risk_open,
-		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss < 4)), 0) AS low_cvss_open,
+		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 0 AND dv.cvss < 4)), 0) AS low_cvss_open,
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 4 AND dv.cvss < 7)), 0) AS medium_cvss_open,
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 7 AND dv.cvss < 9)), 0) AS high_cvss_open,
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 9 AND dv.cvss <= 10)), 0) AS critical_cvss_open
@@ -745,11 +745,11 @@ func (r *statisticsRepository) GetMostVulnerableProjectsAcrossInstance(ctx conte
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT sub.pslug, sub.pname,
 		COUNT(*) as total,
-		COUNT(*) FILTER (WHERE sub.risk_assessment < 4) AS low_risk,
+		COUNT(*) FILTER (WHERE sub.risk_assessment >= 0 AND sub.risk_assessment < 4) AS low_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 4 AND sub.risk_assessment < 7) AS medium_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 7 AND sub.risk_assessment < 9) AS high_risk,
 		COUNT(*) FILTER (WHERE sub.risk_assessment >= 9 AND sub.risk_assessment <= 10) AS critical_risk,
-		COUNT(*) FILTER (WHERE sub.cvss < 4) AS low_cvss,
+		COUNT(*) FILTER (WHERE sub.cvss >= 0 AND sub.cvss < 4) AS low_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) AS medium_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
@@ -773,11 +773,11 @@ func (r *statisticsRepository) GetAverageOpenVulnsPerOrgAcrossInstance(ctx conte
 	average := dtos.OrgVulnAverage{}
 	err := r.GetDB(ctx, tx).Raw(`
 	SELECT
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.risk_assessment < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_low,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.risk_assessment >= 0 AND sub.risk_assessment < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_low,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.risk_assessment >= 4 AND sub.risk_assessment < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_medium,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.risk_assessment >= 7 AND sub.risk_assessment < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_high,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.risk_assessment >= 9 AND sub.risk_assessment <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS risk_avg_critical,
-		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_low,
+		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 0 AND sub.cvss < 4) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_low,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 4 AND sub.cvss < 7) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_medium,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_high,
 		COALESCE(1.0 * COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) / NULLIF((SELECT COUNT(*) FROM organizations), 0), 0) AS cvss_avg_critical

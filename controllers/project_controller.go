@@ -487,6 +487,36 @@ func (projectController *ProjectController) Update(c shared.Context) error {
 
 	project := shared.GetProject(c)
 
+	if patchRequest.IsPublic != nil && *patchRequest.IsPublic {
+		if project.Parent == nil && !shared.GetOrg(c).IsPublic {
+			return echo.NewHTTPError(409, "organization is not set to public")
+		}
+		if project.Parent != nil && !project.Parent.IsPublic {
+			return echo.NewHTTPError(409, "parent project is not set to public")
+		}
+	}
+
+	if patchRequest.IsPublic != nil && !*patchRequest.IsPublic {
+		subProjects, err := projectController.projectRepository.GetDirectChildProjects(reqCtx, nil, project.ID)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not get sub-projects").WithInternal(err)
+		}
+		for _, subProject := range subProjects {
+			if subProject.IsPublic {
+				return echo.NewHTTPError(409, fmt.Sprintf("this sub-project is still public: %s", subProject.Name))
+			}
+		}
+		assets, err := projectController.assetRepository.GetByProjectID(reqCtx, nil, project.ID)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not get assets").WithInternal(err)
+		}
+		for _, asset := range assets {
+			if asset.IsPublic {
+				return echo.NewHTTPError(409, fmt.Sprintf("this asset is still public: %s", asset.Name))
+			}
+		}
+	}
+
 	updated := transformer.ApplyProjectPatchRequestToModel(patchRequest, &project)
 
 	if project.Name == "" || project.Slug == "" {
