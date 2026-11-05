@@ -36,7 +36,7 @@ func RawRisk(cve *models.CVE, env dtos.Environmental, affectedComponentDepth int
 	// round to 2 decimal places
 	tmp = math.Round(tmp*100) / 100
 
-	return dtos.RiskCalculationReport{
+	report := dtos.RiskCalculationReport{
 		Risk: tmp,
 
 		EPSS:      utils.OrDefault(cve.EPSS, 0),
@@ -57,9 +57,21 @@ func RawRisk(cve *models.CVE, env dtos.Environmental, affectedComponentDepth int
 
 		Vector: vector,
 	}
+	if cve.CVSS == -1 {
+		report.Risk = -1
+	}
+	return report
 }
 
 func RiskCalculation(cve *models.CVE, env dtos.Environmental) (dtos.RiskMetrics, string) {
+	if cve != nil && cve.CVSS == -1 {
+		return dtos.RiskMetrics{
+			BaseScore:                            -1,
+			WithEnvironment:                      -1,
+			WithThreatIntelligence:               -1,
+			WithEnvironmentAndThreatIntelligence: -1,
+		}, cve.Vector
+	}
 	if cve == nil || cve.Vector == "" {
 		return dtos.RiskMetrics{}, ""
 	}
@@ -350,7 +362,6 @@ type cvssSetGetter interface {
 	Get(key string) (string, error)
 }
 
-
 func applyRequirements(cvss cvssSetGetter, env dtos.Environmental) {
 	cr := dtos.ToCVSS(env.ConfidentialityRequirement)
 	if cr != "" {
@@ -365,7 +376,6 @@ func applyRequirements(cvss cvssSetGetter, env dtos.Environmental) {
 		cvss.Set("AR", ar) // nolint:errcheck
 	}
 }
-
 
 func applyExposure(cvss cvssSetGetter, env dtos.Environmental) {
 	exposure := exposureValues(env)
