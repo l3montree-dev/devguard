@@ -893,7 +893,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState),
 		Title:  new(firstPartyVuln.Title()),
-		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels: &labels,
 	}
 
@@ -1004,7 +1004,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	labels := commonint.GetLabels(firstPartyVuln, orgSlug, projectSlug, asset.Slug)
 	issue := &github.IssueRequest{
 		Title:  new(firstPartyVuln.Title()),
-		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels: &labels,
 	}
 
