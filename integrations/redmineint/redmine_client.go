@@ -92,6 +92,38 @@ func (c *Client) FetchRepos(ctx context.Context, offset int, limit int) ([]*Proj
 	return response.Projects, nil
 }
 
+func (c *Client) FetchIssue(ctx context.Context, issueID int) (*Issue, error) {
+	resp, err := c.redmineRequest(http.MethodGet, fmt.Sprintf("/issues/%d.json", issueID), nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch issue: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		bodyContent, _ := io.ReadAll(resp.Body)
+		slog.Error("Issue not found", "status_code", resp.StatusCode, "response_body", string(bodyContent))
+		return nil, &IssueNotFoundError{
+			message: string(bodyContent),
+			issueID: issueID,
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		bodyContent, _ := io.ReadAll(resp.Body)
+		slog.Error("Failed to fetch issue", "status_code", resp.StatusCode, "response_body", string(bodyContent))
+		return nil, fmt.Errorf("failed to fetch issue, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
+	}
+
+	var response IssueResponse
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		slog.Error("Failed to decode issue response", "error", err)
+		return nil, fmt.Errorf("failed to decode issue response: %w", err)
+	}
+
+	return &response.Issue, nil
+}
+
 func (c *Client) CreateIssue(ctx context.Context, issue *IssueCreateOptions) (*Issue, error) {
 	bodyBytes, err := json.Marshal(IssueCreateRequest{Issue: issue})
 	if err != nil {
