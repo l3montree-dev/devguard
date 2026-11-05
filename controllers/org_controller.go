@@ -122,6 +122,18 @@ func (controller *OrgController) Update(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not decode request").WithInternal(err)
 	}
 
+	if patchRequest.IsPublic != nil && !*patchRequest.IsPublic {
+		projects, err := controller.projectRepository.GetByOrgID(ctx.Request().Context(), nil, organization.ID)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
+		}
+		for _, project := range projects {
+			if project.IsPublic {
+				return echo.NewHTTPError(409, fmt.Sprintf("this project is still public: %s", project.Name))
+			}
+		}
+	}
+
 	updated := transformer.ApplyOrgPatchRequestToModel(patchRequest, &organization)
 
 	if organization.Name == "" || organization.Slug == "" {
