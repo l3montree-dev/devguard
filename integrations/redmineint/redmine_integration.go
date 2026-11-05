@@ -422,9 +422,14 @@ func (i *RedmineIntegration) updateDependencyVulnTicket(
 ) error {
 	riskMetrics, vector := vulndb.RiskCalculation(dependencyVuln.CVE, asset.Environmental)
 	exp := vulndb.Explain(*dependencyVuln, asset, vector, riskMetrics)
-	expectedIssueState := expectedIssueStateToID(*settings, commonint.GetExpectedIssueState(asset, dependencyVuln))
 	priority := riskToPriorityID(*settings, *dependencyVuln.RiskAssessment)
 	componentTree := FormatComponentTree(*settings, dependencyVuln)
+
+	expectedIssueState, err := expectedIssueStateToID(ctx, client, ticketID, *settings, commonint.GetExpectedIssueState(asset, dependencyVuln))
+	if err != nil {
+		slog.Warn("failed to get expected issue state for dependency vuln, status will not be updated", "err", err, "vulnID", dependencyVuln.GetID(), "ticketID", ticketID)
+		expectedIssueState = nil
+	}
 
 	issue := &IssueEditOptions{
 		Subject:     new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
@@ -447,7 +452,11 @@ func (i *RedmineIntegration) updateFirstPartyVulnTicket(
 	orgSlug string,
 	projectSlug string,
 ) error {
-	expectedIssueState := expectedIssueStateToID(*settings, commonint.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln))
+	expectedIssueState, err := expectedIssueStateToID(ctx, client, ticketID, *settings, commonint.GetExpectedIssueStateForFirstPartyVuln(asset, firstPartyVuln))
+	if err != nil {
+		slog.Warn("failed to get expected issue state for first party vuln, status will not be updated", "err", err, "vulnID", firstPartyVuln.GetID(), "ticketID", ticketID)
+		expectedIssueState = nil
+	}
 
 	issue := &IssueEditOptions{
 		Subject:     new(firstPartyVuln.Title()),
@@ -493,21 +502,9 @@ func (i *RedmineIntegration) TestAndSave(ctx shared.Context) error {
 		return ctx.JSON(400, fmt.Sprintf("invalid Redmine integration data: %v", err))
 	}
 
-	trackers, err := client.FetchIssueTrackers(ctx.Request().Context())
+	tracker, err := getTracker(ctx.Request().Context(), client, data.Tracker)
 	if err != nil {
-		slog.Error("failed to fetch trackers from Redmine", "err", err)
 		return ctx.JSON(400, fmt.Sprintf("failed to fetch trackers from Redmine: %v", err))
-	}
-
-	var tracker *Tracker
-	for _, t := range trackers {
-		if t.Name == data.Tracker || strconv.Itoa(t.ID) == data.Tracker {
-			tracker = t
-			break
-		}
-	}
-	if tracker == nil {
-		return ctx.JSON(400, fmt.Sprintf("tracker %s not found in Redmine", data.Tracker))
 	}
 	redmineIntegration.TrackerID = tracker.ID
 
@@ -515,6 +512,22 @@ func (i *RedmineIntegration) TestAndSave(ctx shared.Context) error {
 		return err
 	}
 	return ctx.JSON(200, transformer.ObfuscateRedmineIntegrations(*redmineIntegration))
+}
+
+// fetches the tracker from Redmine based on the provided tracker name or ID
+func getTracker(ctx context.Context, client *Client, tracker string) (*Tracker, error) {
+	trackers, err := client.FetchIssueTrackers(ctx)
+	if err != nil {
+		slog.Error("failed to fetch trackers from Redmine", "err", err)
+		return nil, fmt.Errorf("failed to fetch trackers from Redmine: %v", err)
+	}
+
+	for _, t := range trackers {
+		if t.Name == tracker || strconv.Itoa(t.ID) == tracker {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("tracker %s not found in Redmine", tracker)
 }
 
 func (i *RedmineIntegration) GetIntegrationProperties(ctx shared.Context) error {
@@ -622,12 +635,31 @@ func (i *RedmineIntegration) UpdateIntegrationSettings(ctx shared.Context) error
 	return ctx.JSON(200, transformer.ObfuscateRedmineIntegrations(integration))
 }
 
-func expectedIssueStateToID(settings models.RedmineIntegration, state commonint.ExpectedIssueState) *int {
+func expectedIssueStateToID(
+	ctx context.Context,
+	client *Client,
+	ticketID int,
+	settings models.RedmineIntegration,
+	state commonint.ExpectedIssueState,
+) (*int, error) {
 	switch state {
 	case commonint.ExpectedIssueStateClosed:
-		return settings.CloseStatusID
+		return settings.CloseStatusID, nil
 	default:
-		return settings.DefaultStatusID
+		if settings.DefaultStatusID == nil {
+			issue, err := client.FetchIssue(ctx, ticketID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch Redmine issue %d: %w", ticketID, err)
+			}
+
+			tracker, err := getTracker(ctx, client, strconv.Itoa(issue.Tracker.ID))
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch tracker for Redmine issue %d: %w", ticketID, err)
+			}
+			return &tracker.DefaultStatus.ID, nil
+		} else {
+			return settings.DefaultStatusID, nil
+		}
 	}
 }
 
