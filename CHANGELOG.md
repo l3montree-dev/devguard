@@ -25,6 +25,8 @@ Thanks to external contributors [@Xenira](https://github.com/Xenira) for caching
 - `pg_semver` is no longer required. The extension is removed from the migrations, the init SQL and the Nix setup
 - The `make lint` target caches its results, which cuts the lint time considerably
 - `publiccode.yml` points `url` to the source repository
+- **`devguard-scanner` uses private temp directories** — SBOMs, scan results (SAST, IaC, secret scanning), the semgrep home and downloaded scanner configs are written to a fresh directory per run (config files with `0600`) and removed afterwards, instead of to fixed or guessable paths in the shared temp directory
+- **`devguard-scanner` fails on configs it cannot sanitize** — if a downloaded scanner config cannot be parsed or re-marshaled for sanitization, the scan now fails instead of using the unsanitized config
 
 ### Fixed
 
@@ -33,10 +35,13 @@ Thanks to external contributors [@Xenira](https://github.com/Xenira) for caching
 - **Mermaid diagrams** — all non-alphanumeric characters in node ids are sanitized, which fixes broken diagrams
 - **Danger zone validation** — an asset can no longer be made public while its project is private (the update is rejected with a `409`), and the organization and project controllers received similar checks
 - Sanitization of request paths in the dependency proxy
+- **Organization access errors** — a missing organization and denied access to one both return `404` with "could not find organization", and the middleware no longer writes the status code twice
+- **VulnDB v2, v3, v4 and v4.1 workflows failed** since GitHub's `ubuntu-latest` moved to Ubuntu 26, which has no `apt-key`. The PostgreSQL apt key is now set via `signed-by`, so the vulnerability database is exported for older versions again
 
 ### Dependencies
 
 - Flake update. The dependency proxy model uses new column names, which are migrated automatically
+- **PostgreSQL image** — barman's Python dependencies are patched to pyasn1 0.6.5 ([GHSA-2qm8-x737-gmw5](https://github.com/advisories/GHSA-2qm8-x737-gmw5)) and PyJWT 2.15.0 (PYSEC-2026-4183) until nixpkgs ships the fixed versions
 
 ---
 
