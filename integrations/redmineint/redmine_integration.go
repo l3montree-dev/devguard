@@ -518,7 +518,7 @@ func (i *RedmineIntegration) TestAndSave(ctx shared.Context) error {
 }
 
 func (i *RedmineIntegration) GetIntegrationProperties(ctx shared.Context) error {
-	integrationID := ctx.Param("redmineIntegrationID")
+	integrationID := ctx.Param("redmine_integration_id")
 	integrationUUID, err := uuid.Parse(integrationID)
 	if err != nil {
 		slog.Error("invalid Redmine integration ID", "err", err, "integrationID", integrationID)
@@ -574,7 +574,7 @@ func (i *RedmineIntegration) GetIntegrationProperties(ctx shared.Context) error 
 }
 
 func (i *RedmineIntegration) UpdateIntegrationSettings(ctx shared.Context) error {
-	integrationID := ctx.Param("redmineIntegrationID")
+	integrationID := ctx.Param("redmine_integration_id")
 	integrationUUID, err := uuid.Parse(integrationID)
 	if err != nil {
 		slog.Error("invalid Redmine integration ID", "err", err, "integrationID", integrationID)
