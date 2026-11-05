@@ -286,22 +286,28 @@ func getSlugsFromAssetName(assetName string) (string, string, string, error) {
 	return assetParts[0], assetParts[1], assetParts[2], nil
 }
 
-func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) (string, error) {
+func GetAndWriteConfigFile(ctx context.Context, configFileName string, assetName string) (string, func(), error) {
 	configContent, err := GetConfigFile(ctx, configFileName, assetName)
 	if err != nil {
-		return "", err
-	} else {
-		// sanitize the config (https://github.com/l3montree-dev/devguard/security/advisories/GHSA-pr5r-qq8m-ppjq)
-		configContent = sanitizeConfig(configFileName, configContent)
-		dir := os.TempDir()
-		filePath := path.Join(dir, configFileName)
-		// write the config to a file
-		err = os.WriteFile(filePath, []byte(configContent), 0644)
-		if err != nil {
-			return "", err
-		}
-		return filePath, nil
+		return "", nil, err
 	}
+	// sanitize the config (https://github.com/l3montree-dev/devguard/security/advisories/GHSA-pr5r-qq8m-ppjq)
+	configContent, err = sanitizeConfig(configFileName, configContent)
+	if err != nil {
+		return "", nil, err
+	}
+	dir, cleanup, err := utils.CreatePrivateTempDir("config")
+	if err != nil {
+		return "", nil, err
+	}
+	filePath := path.Join(dir, configFileName)
+	// write the config to a file
+	err = os.WriteFile(filePath, []byte(configContent), 0600)
+	if err != nil {
+		cleanup()
+		return "", nil, err
+	}
+	return filePath, cleanup, nil
 }
 
 var unsecureCheckovConfigProperties = []string{
@@ -313,7 +319,7 @@ var unsecureTrivyConfigProperties = []string{
 }
 
 // sanitizeConfig implements https://github.com/l3montree-dev/devguard/security/advisories/GHSA-pr5r-qq8m-ppjq
-func sanitizeConfig(configFileName string, configContent string) string {
+func sanitizeConfig(configFileName string, configContent string) (string, error) {
 	var unsecureProperties []string
 	switch configFileName {
 	case ".checkov.yml", "checkov-config.yaml":
@@ -321,26 +327,24 @@ func sanitizeConfig(configFileName string, configContent string) string {
 	case "trivy.yaml":
 		unsecureProperties = unsecureTrivyConfigProperties
 	default:
-		return configContent
+		return configContent, nil
 	}
 
 	var parsed map[string]any
 	if err := yaml.Unmarshal([]byte(configContent), &parsed); err != nil {
-		slog.Warn("could not parse config file as yaml, skipping sanitization", "file", configFileName, "err", err)
-		return configContent
+		return "", fmt.Errorf("could not parse config file %s for sanitization: %w", configFileName, err)
 	}
 	if parsed == nil {
-		return configContent
+		return configContent, nil
 	}
 
 	removeUnsecureProperties(parsed, unsecureProperties)
 
 	sanitized, err := yaml.Marshal(parsed)
 	if err != nil {
-		slog.Warn("could not re-marshal sanitized config, using original content", "file", configFileName, "err", err)
-		return configContent
+		return "", fmt.Errorf("could not re-marshal sanitized config file %s: %w", configFileName, err)
 	}
-	return string(sanitized)
+	return string(sanitized), nil
 }
 
 func removeUnsecureProperties(node any, unsecureProperties []string) {
