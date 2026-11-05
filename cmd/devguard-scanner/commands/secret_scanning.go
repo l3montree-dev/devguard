@@ -11,6 +11,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -58,19 +59,15 @@ See the gitleaks CLI reference for available flags: https://github.com/gitleaks/
 }
 
 func secretScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
-	dir := os.TempDir()
-	dir = path.Join(dir, "secret-scanning")
-
 	var sarifFilePath string
 	if outputPath != "" {
 		sarifFilePath = outputPath
 	} else {
-		// create new directory
-		err := os.MkdirAll(dir, 0755)
+		dir, cleanup, err := utils.CreatePrivateTempDir("secret-scanning")
 		if err != nil {
-			return nil, errors.Wrap(err, "could not create temp file")
+			return nil, err
 		}
-		defer os.RemoveAll(dir)
+		defer cleanup()
 		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 

@@ -11,24 +11,21 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
-	dir := os.TempDir()
-	dir = path.Join(dir, "sast")
-
 	var sarifFilePath string
 	if outputPath != "" {
 		sarifFilePath = outputPath
 	} else {
-		// create new directory
-		err := os.MkdirAll(dir, 0755)
+		dir, cleanup, err := utils.CreatePrivateTempDir("sast")
 		if err != nil {
-			return nil, errors.Wrap(err, "could not create temp file")
+			return nil, err
 		}
-		defer os.RemoveAll(dir)
+		defer cleanup()
 		sarifFilePath = path.Join(dir, "result.sarif")
 	}
 
@@ -63,8 +60,8 @@ func sastScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 
 	// Semgrep writes state/logs to $HOME/.semgrep; in restricted CI environments (e.g. GitHub
 	// Actions) the real HOME may not be writable. Override to a temp dir to avoid PermissionError.
-	semgrepHome := path.Join(os.TempDir(), "semgrep-home")
-	if err := os.MkdirAll(semgrepHome, 0755); err == nil {
+	if semgrepHome, cleanup, err := utils.CreatePrivateTempDir("semgrep-home"); err == nil {
+		defer cleanup()
 		scannerCmd.Env = append(os.Environ(), "HOME="+semgrepHome)
 	}
 
