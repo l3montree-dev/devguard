@@ -2,7 +2,6 @@ name: Mirror to GitLab
 
 on:
   push:
-    branches: ["**"]
 
 permissions: read-all
 

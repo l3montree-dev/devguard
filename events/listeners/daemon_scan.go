@@ -1082,8 +1082,6 @@ func (runner *DaemonRunner) pathsToAffectedPurl(ctx context.Context, tx pgx.Tx, 
 		return fmt.Errorf("ran into error when reading root rows: %w", err)
 	}
 
-	const maxQueueLength = 4000
-	queue := newDynamicQueue[[]int32](maxQueueLength) // queue of paths
 	toHashes := func(path []int32) []uuid.UUID {
 		hashes := make([]uuid.UUID, len(path))
 		for i, id := range path {
@@ -1093,56 +1091,7 @@ func (runner *DaemonRunner) pathsToAffectedPurl(ctx context.Context, tx pgx.Tx, 
 	}
 
 	for _, vulnerablePurl := range purls {
-		// paths stay ids until the purl is done, a root can still explode later on
-		pathsPerRoot := make(map[int32][][]int32)
-		explodedRoots := make(map[int32]struct{})
-		// seed with the vulnerable node itself so its direct parents get the root check as well
-		for _, nodeID := range purlToNodes[vulnerablePurl] {
-			queue.push([]int32{nodeID})
-		}
-
-		for {
-			next, ok := queue.pop()
-			if !ok {
-				// queue is empty continue with the next purl
-				break
-			}
-
-			for _, node := range parents[next[len(next)-1]] {
-				hasParents := len(parents[node]) > 0
-				recordable := false
-				if isNodeRoot[node] {
-					_, exploded := explodedRoots[node]
-					recordable = !exploded
-				}
-				if !recordable && !hasParents {
-					continue
-				}
-
-				// each path needs its own backing array otherwise siblings overwrite each other's last node
-				newPath := make([]int32, len(next), len(next)+1)
-				copy(newPath, next)
-				newPath = append(newPath, node)
-
-				// paths are vulnerable node -> ... -> root, the root is kept so the path can be mapped to its sboms
-				if recordable {
-
-					if len(pathsPerRoot[node]) >= normalize.MaxPathsPerSBOM {
-						// path explosion, none of the paths into this sbom are kept
-						delete(pathsPerRoot, node)
-						explodedRoots[node] = struct{}{}
-					} else {
-						// paths are never modified after creation, so sharing newPath with the queue is safe
-						pathsPerRoot[node] = append(pathsPerRoot[node], newPath)
-					}
-				}
-				// a root can also be a subtree of another sbom, so only stop where there are no more parents
-				if hasParents {
-					queue.push(newPath)
-				}
-			}
-		}
-		queue.reset()
+		pathsPerRoot, explodedRoots := pathsToRoots(purlToNodes[vulnerablePurl], parents, isNodeRoot, compareNodes)
 
 		// map iteration is random, sorting the roots by hash keeps the output order stable
 		result := purlPathResult{Purl: vulnerablePurl}
@@ -1151,7 +1100,7 @@ func (runner *DaemonRunner) pathsToAffectedPurl(ctx context.Context, tx pgx.Tx, 
 				result.Paths = append(result.Paths, toHashes(path))
 			}
 		}
-		for _, root := range slices.SortedFunc(maps.Keys(explodedRoots), compareNodes) {
+		for _, root := range explodedRoots {
 			result.ExplodedRoots = append(result.ExplodedRoots, nodeHashes[root])
 		}
 		select {
@@ -1163,6 +1112,127 @@ func (runner *DaemonRunner) pathsToAffectedPurl(ctx context.Context, tx pgx.Tx, 
 	}
 
 	return nil
+}
+
+// pathsToRoots returns the paths (vulnerable node -> ... -> root) into every root reached by at most
+// normalize.MaxPathsPerSBOM paths, and the roots reached by more, sorted by hash.
+//
+// # Counting instead of enumerating
+//
+// The number of paths into a node is the sum of the paths into all of its children. The arrows point
+// from a dependency to the package depending on it, D is reached via C and via E:
+//
+//	A (vuln) --> B --> C --> D
+//	   └-------> E ----------^
+//
+// The algorithm starts at the vulnerable node, walks up the parents and counts the paths into each node:
+//
+//	A (vuln) (1) --> B (1) --> C (1) --> D (1 + 1 = 2)
+//	   └-----------> E (1) --------------^
+//
+// The counts are capped above the limit, so a root reached by millions of paths costs no more than one
+// reached by twelve. Only the paths into the roots below the limit are enumerated.
+func pathsToRoots(seeds []int32, parents [][]int32, isNodeRoot []bool, compareNodes func(a, b int32) int) (map[int32][][]int32, []int32) {
+	// one above the first count that is too many: a root which is a vulnerable node itself subtracts
+	// its own path again and must still end up above the limit
+	const countCap = normalize.MaxPathsPerSBOM + 2
+
+	isSeed := make(map[int32]bool, len(seeds))
+	for _, seed := range seeds {
+		isSeed[seed] = true
+	}
+
+	// a node is only counted once all of its reachable children are, the reverse post order of a
+	// depth first search along the parents guarantees that. The search is iterative, a deep sbom
+	// must not exhaust the stack either
+	type frame struct {
+		node       int32
+		nextParent int
+	}
+	visited := make(map[int32]bool)
+	postOrder := make([]int32, 0)
+	stack := make([]frame, 0)
+	for _, seed := range seeds {
+		if visited[seed] {
+			continue
+		}
+		visited[seed] = true
+		stack = append(stack, frame{node: seed})
+		for len(stack) > 0 {
+			top := &stack[len(stack)-1]
+			if top.nextParent == len(parents[top.node]) {
+				postOrder = append(postOrder, top.node)
+				stack = stack[:len(stack)-1]
+				continue
+			}
+			parent := parents[top.node][top.nextParent]
+			top.nextParent++
+			if !visited[parent] {
+				visited[parent] = true
+				stack = append(stack, frame{node: parent})
+			}
+		}
+	}
+
+	// every seed starts a path of its own, every other path runs through one of the children
+	pathCount := make(map[int32]int, len(postOrder))
+	children := make(map[int32][]int32, len(postOrder))
+	for i := len(postOrder) - 1; i >= 0; i-- {
+		node := postOrder[i]
+		if isSeed[node] {
+			pathCount[node] = min(pathCount[node]+1, countCap)
+		}
+		for _, parent := range parents[node] {
+			pathCount[parent] = min(pathCount[parent]+pathCount[node], countCap)
+			children[parent] = append(children[parent], node)
+		}
+	}
+
+	pathsPerRoot := make(map[int32][][]int32)
+	explodedRoots := make([]int32, 0)
+	for _, root := range postOrder {
+		if !isNodeRoot[root] {
+			continue
+		}
+		count := pathCount[root]
+		if isSeed[root] {
+			// the vulnerable node being a root itself is no path into it
+			count--
+		}
+		if count == 0 {
+			continue
+		}
+		if count > normalize.MaxPathsPerSBOM {
+			explodedRoots = append(explodedRoots, root)
+			continue
+		}
+		pathsPerRoot[root] = enumeratePathsFromRoot(root, children, isSeed, compareNodes)
+	}
+	slices.SortFunc(explodedRoots, compareNodes)
+	return pathsPerRoot, explodedRoots
+}
+
+// enumeratePathsFromRoot walks down from the root and returns every path vulnerable node -> ... -> root.
+// children only holds nodes reachable from a vulnerable node, so every branch ends in a path.
+func enumeratePathsFromRoot(root int32, children map[int32][]int32, isSeed map[int32]bool, compareNodes func(a, b int32) int) [][]int32 {
+	paths := make([][]int32, 0)
+	// root first, the path is reversed once complete
+	downward := []int32{root}
+	var walk func(node int32)
+	walk = func(node int32) {
+		if isSeed[node] && len(downward) > 1 {
+			path := slices.Clone(downward)
+			slices.Reverse(path)
+			paths = append(paths, path)
+		}
+		for _, child := range slices.SortedFunc(slices.Values(children[node]), compareNodes) {
+			downward = append(downward, child)
+			walk(child)
+			downward = downward[:len(downward)-1]
+		}
+	}
+	walk(root)
+	return paths
 }
 
 // convert BFS result (purl to root) to dependency vuln path (first non root to purl)
@@ -1225,56 +1295,4 @@ func (runner *DaemonRunner) hydrateCVEs(ctx context.Context, vulns []models.Depe
 		}
 	}
 	return nil
-}
-
-// -----------------------------------------------------------------------------------
-//
-//	Data Structures - Dynamic Queue
-//
-// -----------------------------------------------------------------------------------
-
-type dynamicQueue[T any] struct {
-	maxSize  int
-	elements []T
-	current  int
-}
-
-func newDynamicQueue[T any](maxSize int) *dynamicQueue[T] {
-	return &dynamicQueue[T]{
-		maxSize:  maxSize,
-		elements: make([]T, 0, maxSize),
-		current:  0,
-	}
-}
-
-func (queue *dynamicQueue[T]) pop() (next T, ok bool) {
-	if queue.current >= len(queue.elements) {
-		return next, false
-	}
-	next = queue.elements[queue.current]
-	queue.current++
-	queue.shrink()
-	return next, true
-}
-
-func (queue *dynamicQueue[T]) push(element T) {
-	queue.elements = append(queue.elements, element)
-}
-
-func (queue *dynamicQueue[T]) reset() {
-	clear(queue.elements)
-	queue.elements = queue.elements[:0]
-	queue.current = 0
-}
-
-func (queue *dynamicQueue[T]) shrink() {
-	// compacting before half of the slice is consumed copies large queues over and over
-	if queue.current <= queue.maxSize/2 || queue.current < len(queue.elements)/2 {
-		return
-	}
-	// move the unread elements to the front and drop references to consumed ones so the GC can free them
-	remaining := copy(queue.elements, queue.elements[queue.current:])
-	clear(queue.elements[remaining:])
-	queue.elements = queue.elements[:remaining]
-	queue.current = 0
 }
