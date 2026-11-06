@@ -37,8 +37,6 @@ import (
 	"github.com/l3montree-dev/devguard/fixedversion"
 	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/monitoring"
-	"github.com/l3montree-dev/devguard/telemetry"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -167,21 +165,9 @@ func main() {
 			}
 			return daemonRunner.RegisterJobs(schedule)
 		}),
-		fx.Invoke(func(lc fx.Lifecycle, db shared.DB) {
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-					go telemetry.SendAPIStartup(context.Background(), telemetry.ConfigFromEnv(), &utils.EgressClient, telemetry.NewGormAPIStatsCollector(db), apiVersion())
-					return nil
-				},
-			})
-		}),
 	)
 
 	app.Run()
-}
-
-func apiVersion() string {
-	return telemetry.RuntimeVersion(config.Version)
 }
 
 type fxErrorLogger struct{}
