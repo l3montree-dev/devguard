@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -711,5 +712,23 @@ func TestTicketContentBitwiseReproducibility(t *testing.T) {
 			strings.Index(results[0], "route-b"),
 			"route-a should appear before route-b",
 		)
+	})
+}
+
+func TestGitlabLabelsOutdated(t *testing.T) {
+	t.Run("should be outdated if metadata is nil", func(t *testing.T) {
+		assert.True(t, GitlabLabelsOutdated(models.Asset{}))
+	})
+	t.Run("should be outdated for the legacy boolean value", func(t *testing.T) {
+		assert.True(t, GitlabLabelsOutdated(models.Asset{Metadata: map[string]any{"gitlabLabels": true}}))
+	})
+	t.Run("should be outdated if the timestamp is older than the refresh interval", func(t *testing.T) {
+		old := time.Now().Add(-gitlabLabelsRefreshInterval - time.Hour).Format(time.RFC3339)
+		assert.True(t, GitlabLabelsOutdated(models.Asset{Metadata: map[string]any{"gitlabLabels": old}}))
+	})
+	t.Run("should not be outdated right after marking the labels as created", func(t *testing.T) {
+		asset := models.Asset{}
+		MarkGitlabLabelsCreated(&asset)
+		assert.False(t, GitlabLabelsOutdated(asset))
 	})
 }
