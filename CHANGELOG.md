@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.18.1] - 2026-11-06
+
+### Fixed
+
+- **API ran out of memory during the hourly vulnerability scan** — the scan determines the paths from a vulnerable component to every SBOM containing it. It enumerated every single path, even though at most 11 paths per SBOM are stored. Dependency graphs in which many packages share the same dependencies (e.g. the Rust proc-macro crates around `proc-macro2`) have millions of such paths, so the scan used up all memory and the pod was OOM killed.
+---
+
 ## [v1.18.0] - 2026-11-05
 
 Thanks to external contributors [@Xenira](https://github.com/Xenira) for caching the lint target, which cuts the lint time from about 4 minutes to 6 seconds, and [@lsmith77](https://github.com/lsmith77) for fixing the `publiccode.yml` source repository URL! 🎉
