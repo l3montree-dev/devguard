@@ -4,7 +4,11 @@
 workflow:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+      auto_cancel:
+        on_new_commit: interruptible
     - if: $CI_COMMIT_TAG
+      auto_cancel:
+        on_new_commit: none
 
 stages:
   - .pre
@@ -17,6 +21,7 @@ stages:
 
 default:
   retry: 2
+  interruptible: true
   
 .common: &common
   devguard_api_url: "$DEVGUARD_API_URL"
