@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.18.2] - 2026-11-06
+
+### Changed
+
+- **Telemetry ping is sent daily** — instead of once on API startup, the instance now sends its anonymous usage ping every day at 06:00 as a daemon job.
+
+### Fixed
+
+- **`replace_pg_semver_with_bytea` migration no longer loads the `pg_semver` library** — the shared library is no longer shipped, so `ALTER COLUMN ... TYPE` and `TRUNCATE` (which rebuilds indexes) failed on it. The migration now drops the `semver_introduced` and `semver_fixed` columns of `affected_components` and `malicious_affected_components`, re-adds them as `bytea` and recreates their indexes
+- **GitLab risk labels are refreshed every 7 days** — the labels were created only once per asset and never updated afterwards
+- **Default branch not set for scans without `X-Asset-Ref`** — if the header is missing, the ref falls back to `main`, and `main` is now also used as the default branch
+- **Nix setup no longer overrides PostgreSQL Python packages**, which caused a reproducibility issue
+
+---
+
 ## [v1.18.1] - 2026-11-06
 
 ### Fixed
