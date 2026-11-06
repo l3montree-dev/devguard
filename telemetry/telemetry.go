@@ -40,7 +40,7 @@ const (
 	ComponentAPI     = "devguard-api"
 	ComponentScanner = "devguard-scanner"
 
-	EventName         = "devguard-daily-instance"
+	EventName         = "devguard-instance-start"
 	TelemetryEndpoint = "https://umami.l3montree.com/api/send"
 	WebsiteID         = "19cc127d-774c-4fb0-981d-26d110074a14"
 	DefaultTimeout    = 30 * time.Second
