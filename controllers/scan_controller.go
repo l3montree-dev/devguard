@@ -169,6 +169,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
+		defaultBranch = "main"
 	}
 	artifactName := normalize.ArtifactName(c.Request().Header.Get("X-Artifact-Name"))
 	origin := c.Request().Header.Get("X-Origin")
