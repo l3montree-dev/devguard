@@ -688,3 +688,25 @@ func GenerateFourDigitNumber() int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // we don't need a secure random number here
 	return 1000 + r.Intn(9000)
 }
+
+const gitlabLabelsMetadataKey = "gitlabLabels"
+const gitlabLabelsRefreshInterval = 7 * 24 * time.Hour
+
+func GitlabLabelsOutdated(asset models.Asset) bool {
+	s, ok := asset.Metadata[gitlabLabelsMetadataKey].(string)
+	if !ok {
+		return true
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return true
+	}
+	return t.Before(time.Now().Add(-gitlabLabelsRefreshInterval))
+}
+
+func MarkGitlabLabelsCreated(asset *models.Asset) {
+	if asset.Metadata == nil {
+		asset.Metadata = map[string]any{}
+	}
+	asset.Metadata[gitlabLabelsMetadataKey] = time.Now().UTC().Format(time.RFC3339)
+}

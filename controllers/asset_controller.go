@@ -9,6 +9,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -377,15 +378,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		//check if we have already created the labels in gitlab, if not create them
 		// do NOT update the asset in the database yet, we do this after the ticket sync
 		//we can't do this in the background task, because we need this before we save the asset
-		if asset.Metadata == nil {
-			asset.Metadata = map[string]any{}
-		}
-		if asset.Metadata["gitlabLabels"] == nil {
+		if commonint.GitlabLabelsOutdated(asset) {
 			err = a.thirdPartyIntegration.CreateLabels(reqCtx, asset)
 			if err != nil {
 				slog.Error("could not create labels in gitlab", "err", err)
 			} else {
-				asset.Metadata["gitlabLabels"] = true
+				commonint.MarkGitlabLabelsCreated(&asset)
 			}
 		}
 	}
