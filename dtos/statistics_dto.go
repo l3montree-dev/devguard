@@ -24,45 +24,88 @@ type OrgStructureDistribution struct {
 }
 
 type Distribution struct {
-	Low      pq.StringArray `json:"low"`
-	High     pq.StringArray `json:"high"`
-	Medium   pq.StringArray `json:"medium"`
-	Critical pq.StringArray `json:"critical"`
+	Low      int `json:"low"`
+	High     int `json:"high"`
+	Medium   int `json:"medium"`
+	Critical int `json:"critical"`
 
-	FixableLow      pq.StringArray `json:"fixableLow"`
-	FixableMedium   pq.StringArray `json:"fixableMedium"`
-	FixableHigh     pq.StringArray `json:"fixableHigh"`
-	FixableCritical pq.StringArray `json:"fixableCritical"`
+	FixableLow      int `json:"fixableLow"`
+	FixableMedium   int `json:"fixableMedium"`
+	FixableHigh     int `json:"fixableHigh"`
+	FixableCritical int `json:"fixableCritical"`
 
-	LowCVSS      pq.StringArray `json:"lowCvss"`
-	MediumCVSS   pq.StringArray `json:"mediumCvss"`
-	HighCVSS     pq.StringArray `json:"highCvss"`
-	CriticalCVSS pq.StringArray `json:"criticalCvss"`
+	LowCVSS      int `json:"lowCvss"`
+	MediumCVSS   int `json:"mediumCvss"`
+	HighCVSS     int `json:"highCvss"`
+	CriticalCVSS int `json:"criticalCvss"`
 
-	FixableLowCVSS      pq.StringArray `json:"fixableLowCvss"`
-	FixableMediumCVSS   pq.StringArray `json:"fixableMediumCvss"`
-	FixableHighCVSS     pq.StringArray `json:"fixableHighCvss"`
-	FixableCriticalCVSS pq.StringArray `json:"fixableCriticalCvss"`
+	FixableLowCVSS      int `json:"fixableLowCvss"`
+	FixableMediumCVSS   int `json:"fixableMediumCvss"`
+	FixableHighCVSS     int `json:"fixableHighCvss"`
+	FixableCriticalCVSS int `json:"fixableCriticalCvss"`
 
-	CVEPurlLow      pq.StringArray `json:"cvePurlLow"`
-	CVEPurlMedium   pq.StringArray `json:"cvePurlMedium"`
-	CVEPurlHigh     pq.StringArray `json:"cvePurlHigh"`
-	CVEPurlCritical pq.StringArray `json:"cvePurlCritical"`
+	CVEPurlLow      int `json:"cvePurlLow"`
+	CVEPurlMedium   int `json:"cvePurlMedium"`
+	CVEPurlHigh     int `json:"cvePurlHigh"`
+	CVEPurlCritical int `json:"cvePurlCritical"`
 
-	CVEPurlFixableLow      pq.StringArray `json:"cvePurlFixableLow"`
-	CVEPurlFixableMedium   pq.StringArray `json:"cvePurlFixableMedium"`
-	CVEPurlFixableHigh     pq.StringArray `json:"cvePurlFixableHigh"`
-	CVEPurlFixableCritical pq.StringArray `json:"cvePurlFixableCritical"`
+	CVEPurlFixableLow      int `json:"cvePurlFixableLow"`
+	CVEPurlFixableMedium   int `json:"cvePurlFixableMedium"`
+	CVEPurlFixableHigh     int `json:"cvePurlFixableHigh"`
+	CVEPurlFixableCritical int `json:"cvePurlFixableCritical"`
 
-	CVEPurlLowCVSS      pq.StringArray `json:"cvePurlLowCvss"`
-	CVEPurlMediumCVSS   pq.StringArray `json:"cvePurlMediumCvss"`
-	CVEPurlHighCVSS     pq.StringArray `json:"cvePurlHighCvss"`
-	CVEPurlCriticalCVSS pq.StringArray `json:"cvePurlCriticalCvss"`
+	CVEPurlLowCVSS      int `json:"cvePurlLowCvss"`
+	CVEPurlMediumCVSS   int `json:"cvePurlMediumCvss"`
+	CVEPurlHighCVSS     int `json:"cvePurlHighCvss"`
+	CVEPurlCriticalCVSS int `json:"cvePurlCriticalCvss"`
 
-	CVEPurlFixableLowCVSS      pq.StringArray `json:"cvePurlFixableLowCvss"`
-	CVEPurlFixableMediumCVSS   pq.StringArray `json:"cvePurlFixableMediumCvss"`
-	CVEPurlFixableHighCVSS     pq.StringArray `json:"cvePurlFixableHighCvss"`
-	CVEPurlFixableCriticalCVSS pq.StringArray `json:"cvePurlFixableCriticalCvss"`
+	CVEPurlFixableLowCVSS      int `json:"cvePurlFixableLowCvss"`
+	CVEPurlFixableMediumCVSS   int `json:"cvePurlFixableMediumCvss"`
+	CVEPurlFixableHighCVSS     int `json:"cvePurlFixableHighCvss"`
+	CVEPurlFixableCriticalCVSS int `json:"cvePurlFixableCriticalCvss"`
+
+	UniqueCrossArtifactLow      int `json:"uniqueCrossArtifactLow"`
+	UniqueCrossArtifactHigh     int `json:"uniqueCrossArtifactHigh"`
+	UniqueCrossArtifactMedium   int `json:"uniqueCrossArtifactMedium"`
+	UniqueCrossArtifactCritical int `json:"uniqueCrossArtifactCritical"`
+
+	UniqueCrossArtifactFixableLow      int `json:"uniqueCrossArtifactFixableLow"`
+	UniqueCrossArtifactFixableMedium   int `json:"uniqueCrossArtifactFixableMedium"`
+	UniqueCrossArtifactFixableHigh     int `json:"uniqueCrossArtifactFixableHigh"`
+	UniqueCrossArtifactFixableCritical int `json:"uniqueCrossArtifactFixableCritical"`
+
+	UniqueCrossArtifactLowCVSS      int `json:"uniqueCrossArtifactLowCvss"`
+	UniqueCrossArtifactMediumCVSS   int `json:"uniqueCrossArtifactMediumCvss"`
+	UniqueCrossArtifactHighCVSS     int `json:"uniqueCrossArtifactHighCvss"`
+	UniqueCrossArtifactCriticalCVSS int `json:"uniqueCrossArtifactCriticalCvss"`
+
+	UniqueCrossArtifactFixableLowCVSS      int `json:"uniqueCrossArtifactFixableLowCvss"`
+	UniqueCrossArtifactFixableMediumCVSS   int `json:"uniqueCrossArtifactFixableMediumCvss"`
+	UniqueCrossArtifactFixableHighCVSS     int `json:"uniqueCrossArtifactFixableHighCvss"`
+	UniqueCrossArtifactFixableCriticalCVSS int `json:"uniqueCrossArtifactFixableCriticalCvss"`
+
+	UniqueCrossArtifactCVEPurlLow      int `json:"uniqueCrossArtifactCvePurlLow"`
+	UniqueCrossArtifactCVEPurlMedium   int `json:"uniqueCrossArtifactCvePurlMedium"`
+	UniqueCrossArtifactCVEPurlHigh     int `json:"uniqueCrossArtifactCvePurlHigh"`
+	UniqueCrossArtifactCVEPurlCritical int `json:"uniqueCrossArtifactCvePurlCritical"`
+
+	UniqueCrossArtifactCVEPurlFixableLow      int `json:"uniqueCrossArtifactCvePurlFixableLow"`
+	UniqueCrossArtifactCVEPurlFixableMedium   int `json:"uniqueCrossArtifactCvePurlFixableMedium"`
+	UniqueCrossArtifactCVEPurlFixableHigh     int `json:"uniqueCrossArtifactCvePurlFixableHigh"`
+	UniqueCrossArtifactCVEPurlFixableCritical int `json:"uniqueCrossArtifactCvePurlFixableCritical"`
+
+	UniqueCrossArtifactCVEPurlLowCVSS      int `json:"uniqueCrossArtifactCvePurlLowCvss"`
+	UniqueCrossArtifactCVEPurlMediumCVSS   int `json:"uniqueCrossArtifactCvePurlMediumCvss"`
+	UniqueCrossArtifactCVEPurlHighCVSS     int `json:"uniqueCrossArtifactCvePurlHighCvss"`
+	UniqueCrossArtifactCVEPurlCriticalCVSS int `json:"uniqueCrossArtifactCvePurlCriticalCvss"`
+
+	UniqueCrossArtifactCVEPurlFixableLowCVSS      int `json:"uniqueCrossArtifactCvePurlFixableLowCvss"`
+	UniqueCrossArtifactCVEPurlFixableMediumCVSS   int `json:"uniqueCrossArtifactCvePurlFixableMediumCvss"`
+	UniqueCrossArtifactCVEPurlFixableHighCVSS     int `json:"uniqueCrossArtifactCvePurlFixableHighCvss"`
+	UniqueCrossArtifactCVEPurlFixableCriticalCVSS int `json:"uniqueCrossArtifactCvePurlFixableCriticalCvss"`
+
+	DiffAddedDependencyVulns   pq.StringArray `json:"diffAddedDependencyVulns"`
+	DiffRemovedDependencyVulns pq.StringArray `json:"diffRemovedDependencyVulns"`
 }
 
 type VulnSeverityDistribution struct {

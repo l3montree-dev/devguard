@@ -902,3 +902,15 @@ func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPac
 
 	return directDependencyFixedVersion, nil
 }
+
+func (repository *dependencyVulnRepository) ListWithCVE(ctx context.Context, tx *gorm.DB, ids []uuid.UUID) ([]models.DependencyVuln, error) {
+	if len(ids) == 0 {
+		return []models.DependencyVuln{}, nil
+	}
+
+	var dependencyVulns []models.DependencyVuln
+	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE").Find(&dependencyVulns, ids).Error; err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
+}

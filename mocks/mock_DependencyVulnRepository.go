@@ -3433,6 +3433,80 @@ func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersion_Call) RunAn
 	return _c
 }
 
+// ListWithCVE provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) ListWithCVE(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListWithCVE")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_ListWithCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListWithCVE'
+type DependencyVulnRepository_ListWithCVE_Call struct {
+	*mock.Call
+}
+
+// ListWithCVE is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - ids []uuid.UUID
+func (_e *DependencyVulnRepository_Expecter) ListWithCVE(ctx any, tx any, ids any) *DependencyVulnRepository_ListWithCVE_Call {
+	return &DependencyVulnRepository_ListWithCVE_Call{Call: _e.mock.On("ListWithCVE", ctx, tx, ids)}
+}
+
+func (_c *DependencyVulnRepository_ListWithCVE_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *DependencyVulnRepository_ListWithCVE_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_ListWithCVE_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_ListWithCVE_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_ListWithCVE_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.DependencyVuln, error)) *DependencyVulnRepository_ListWithCVE_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Read provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.DependencyVuln, error) {
 	ret := _mock.Called(ctx, tx, id)

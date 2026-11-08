@@ -64,4 +64,7 @@ ALTER TABLE public.artifact_risk_history
     ADD COLUMN IF NOT EXISTS cve_purl_fixable_low_cvss TEXT[],
     ADD COLUMN IF NOT EXISTS cve_purl_fixable_medium_cvss TEXT[],
     ADD COLUMN IF NOT EXISTS cve_purl_fixable_high_cvss TEXT[],
-    ADD COLUMN IF NOT EXISTS cve_purl_fixable_critical_cvss TEXT[];
+    ADD COLUMN IF NOT EXISTS cve_purl_fixable_critical_cvss TEXT[],
+    ADD COLUMN IF NOT EXISTS diff_added_dependency_vulns TEXT[],
+    ADD COLUMN IF NOT EXISTS diff_removed_dependency_vulns TEXT[];
+    

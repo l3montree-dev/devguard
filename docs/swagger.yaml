@@ -7406,167 +7406,145 @@ components:
     dtos.OrgRiskHistory:
       properties:
         critical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         criticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         day:
           type: string
+        diffAddedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        diffRemovedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         fixableCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         high:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         highCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         low:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         lowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         medium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         mediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
+        uniqueCrossArtifactCritical:
+          type: integer
+        uniqueCrossArtifactCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlCritical:
+          type: integer
+        uniqueCrossArtifactCvePurlCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableCritical:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableHigh:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableHighCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableLow:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableLowCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableMedium:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableMediumCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlHigh:
+          type: integer
+        uniqueCrossArtifactCvePurlHighCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlLow:
+          type: integer
+        uniqueCrossArtifactCvePurlLowCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlMedium:
+          type: integer
+        uniqueCrossArtifactCvePurlMediumCvss:
+          type: integer
+        uniqueCrossArtifactFixableCritical:
+          type: integer
+        uniqueCrossArtifactFixableCriticalCvss:
+          type: integer
+        uniqueCrossArtifactFixableHigh:
+          type: integer
+        uniqueCrossArtifactFixableHighCvss:
+          type: integer
+        uniqueCrossArtifactFixableLow:
+          type: integer
+        uniqueCrossArtifactFixableLowCvss:
+          type: integer
+        uniqueCrossArtifactFixableMedium:
+          type: integer
+        uniqueCrossArtifactFixableMediumCvss:
+          type: integer
+        uniqueCrossArtifactHigh:
+          type: integer
+        uniqueCrossArtifactHighCvss:
+          type: integer
+        uniqueCrossArtifactLow:
+          type: integer
+        uniqueCrossArtifactLowCvss:
+          type: integer
+        uniqueCrossArtifactMedium:
+          type: integer
+        uniqueCrossArtifactMediumCvss:
+          type: integer
       required:
       - critical
       - criticalCvss
@@ -7587,6 +7565,8 @@ components:
       - cvePurlMedium
       - cvePurlMediumCvss
       - day
+      - diffAddedDependencyVulns
+      - diffRemovedDependencyVulns
       - fixableCritical
       - fixableCriticalCvss
       - fixableHigh
@@ -7601,6 +7581,38 @@ components:
       - lowCvss
       - medium
       - mediumCvss
+      - uniqueCrossArtifactCritical
+      - uniqueCrossArtifactCriticalCvss
+      - uniqueCrossArtifactCvePurlCritical
+      - uniqueCrossArtifactCvePurlCriticalCvss
+      - uniqueCrossArtifactCvePurlFixableCritical
+      - uniqueCrossArtifactCvePurlFixableCriticalCvss
+      - uniqueCrossArtifactCvePurlFixableHigh
+      - uniqueCrossArtifactCvePurlFixableHighCvss
+      - uniqueCrossArtifactCvePurlFixableLow
+      - uniqueCrossArtifactCvePurlFixableLowCvss
+      - uniqueCrossArtifactCvePurlFixableMedium
+      - uniqueCrossArtifactCvePurlFixableMediumCvss
+      - uniqueCrossArtifactCvePurlHigh
+      - uniqueCrossArtifactCvePurlHighCvss
+      - uniqueCrossArtifactCvePurlLow
+      - uniqueCrossArtifactCvePurlLowCvss
+      - uniqueCrossArtifactCvePurlMedium
+      - uniqueCrossArtifactCvePurlMediumCvss
+      - uniqueCrossArtifactFixableCritical
+      - uniqueCrossArtifactFixableCriticalCvss
+      - uniqueCrossArtifactFixableHigh
+      - uniqueCrossArtifactFixableHighCvss
+      - uniqueCrossArtifactFixableLow
+      - uniqueCrossArtifactFixableLowCvss
+      - uniqueCrossArtifactFixableMedium
+      - uniqueCrossArtifactFixableMediumCvss
+      - uniqueCrossArtifactHigh
+      - uniqueCrossArtifactHighCvss
+      - uniqueCrossArtifactLow
+      - uniqueCrossArtifactLowCvss
+      - uniqueCrossArtifactMedium
+      - uniqueCrossArtifactMediumCvss
       type: object
     dtos.OrgSettings:
       properties:
@@ -8431,174 +8443,88 @@ components:
         averageOpenRisk:
           type: number
         critical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         criticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         day:
           description: on the day 2024-08-12 the asset had a sumRisk of 25.
           type: string
+        diffAddedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        diffRemovedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         fixableCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixedDependencyVulns:
           type: integer
         high:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         highCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         low:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         lowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         maxClosedRisk:
           type: number
         maxOpenRisk:
           type: number
         medium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         mediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         minClosedRisk:
           type: number
         minOpenRisk:
@@ -8609,6 +8535,70 @@ components:
           type: number
         sumOpenRisk:
           type: number
+        uniqueCrossArtifactCritical:
+          type: integer
+        uniqueCrossArtifactCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlCritical:
+          type: integer
+        uniqueCrossArtifactCvePurlCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableCritical:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableHigh:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableHighCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableLow:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableLowCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableMedium:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableMediumCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlHigh:
+          type: integer
+        uniqueCrossArtifactCvePurlHighCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlLow:
+          type: integer
+        uniqueCrossArtifactCvePurlLowCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlMedium:
+          type: integer
+        uniqueCrossArtifactCvePurlMediumCvss:
+          type: integer
+        uniqueCrossArtifactFixableCritical:
+          type: integer
+        uniqueCrossArtifactFixableCriticalCvss:
+          type: integer
+        uniqueCrossArtifactFixableHigh:
+          type: integer
+        uniqueCrossArtifactFixableHighCvss:
+          type: integer
+        uniqueCrossArtifactFixableLow:
+          type: integer
+        uniqueCrossArtifactFixableLowCvss:
+          type: integer
+        uniqueCrossArtifactFixableMedium:
+          type: integer
+        uniqueCrossArtifactFixableMediumCvss:
+          type: integer
+        uniqueCrossArtifactHigh:
+          type: integer
+        uniqueCrossArtifactHighCvss:
+          type: integer
+        uniqueCrossArtifactLow:
+          type: integer
+        uniqueCrossArtifactLowCvss:
+          type: integer
+        uniqueCrossArtifactMedium:
+          type: integer
+        uniqueCrossArtifactMediumCvss:
+          type: integer
       required:
       - artifactName
       - assetId
@@ -8634,6 +8624,8 @@ components:
       - cvePurlMedium
       - cvePurlMediumCvss
       - day
+      - diffAddedDependencyVulns
+      - diffRemovedDependencyVulns
       - fixableCritical
       - fixableCriticalCvss
       - fixableHigh
@@ -8656,6 +8648,38 @@ components:
       - openDependencyVulns
       - sumClosedRisk
       - sumOpenRisk
+      - uniqueCrossArtifactCritical
+      - uniqueCrossArtifactCriticalCvss
+      - uniqueCrossArtifactCvePurlCritical
+      - uniqueCrossArtifactCvePurlCriticalCvss
+      - uniqueCrossArtifactCvePurlFixableCritical
+      - uniqueCrossArtifactCvePurlFixableCriticalCvss
+      - uniqueCrossArtifactCvePurlFixableHigh
+      - uniqueCrossArtifactCvePurlFixableHighCvss
+      - uniqueCrossArtifactCvePurlFixableLow
+      - uniqueCrossArtifactCvePurlFixableLowCvss
+      - uniqueCrossArtifactCvePurlFixableMedium
+      - uniqueCrossArtifactCvePurlFixableMediumCvss
+      - uniqueCrossArtifactCvePurlHigh
+      - uniqueCrossArtifactCvePurlHighCvss
+      - uniqueCrossArtifactCvePurlLow
+      - uniqueCrossArtifactCvePurlLowCvss
+      - uniqueCrossArtifactCvePurlMedium
+      - uniqueCrossArtifactCvePurlMediumCvss
+      - uniqueCrossArtifactFixableCritical
+      - uniqueCrossArtifactFixableCriticalCvss
+      - uniqueCrossArtifactFixableHigh
+      - uniqueCrossArtifactFixableHighCvss
+      - uniqueCrossArtifactFixableLow
+      - uniqueCrossArtifactFixableLowCvss
+      - uniqueCrossArtifactFixableMedium
+      - uniqueCrossArtifactFixableMediumCvss
+      - uniqueCrossArtifactHigh
+      - uniqueCrossArtifactHighCvss
+      - uniqueCrossArtifactLow
+      - uniqueCrossArtifactLowCvss
+      - uniqueCrossArtifactMedium
+      - uniqueCrossArtifactMediumCvss
       type: object
     dtos.RiskHistoryWithVersion:
       properties:
@@ -8670,176 +8694,90 @@ components:
         averageOpenRisk:
           type: number
         critical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         criticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlFixableMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         cvePurlMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         day:
           description: on the day 2024-08-12 the asset had a sumRisk of 25.
           type: string
         defaultBranch:
           type: boolean
+        diffAddedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        diffRemovedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         fixableCritical:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableCriticalCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableHigh:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableHighCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableLow:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableLowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableMedium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixableMediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         fixedDependencyVulns:
           type: integer
         high:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         highCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         low:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         lowCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         maxClosedRisk:
           type: number
         maxOpenRisk:
           type: number
         medium:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         mediumCvss:
-          items:
-            type: string
-          type: array
-          uniqueItems: false
+          type: integer
         minClosedRisk:
           type: number
         minOpenRisk:
@@ -8854,6 +8792,70 @@ components:
           type: number
         type:
           type: string
+        uniqueCrossArtifactCritical:
+          type: integer
+        uniqueCrossArtifactCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlCritical:
+          type: integer
+        uniqueCrossArtifactCvePurlCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableCritical:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableCriticalCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableHigh:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableHighCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableLow:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableLowCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableMedium:
+          type: integer
+        uniqueCrossArtifactCvePurlFixableMediumCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlHigh:
+          type: integer
+        uniqueCrossArtifactCvePurlHighCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlLow:
+          type: integer
+        uniqueCrossArtifactCvePurlLowCvss:
+          type: integer
+        uniqueCrossArtifactCvePurlMedium:
+          type: integer
+        uniqueCrossArtifactCvePurlMediumCvss:
+          type: integer
+        uniqueCrossArtifactFixableCritical:
+          type: integer
+        uniqueCrossArtifactFixableCriticalCvss:
+          type: integer
+        uniqueCrossArtifactFixableHigh:
+          type: integer
+        uniqueCrossArtifactFixableHighCvss:
+          type: integer
+        uniqueCrossArtifactFixableLow:
+          type: integer
+        uniqueCrossArtifactFixableLowCvss:
+          type: integer
+        uniqueCrossArtifactFixableMedium:
+          type: integer
+        uniqueCrossArtifactFixableMediumCvss:
+          type: integer
+        uniqueCrossArtifactHigh:
+          type: integer
+        uniqueCrossArtifactHighCvss:
+          type: integer
+        uniqueCrossArtifactLow:
+          type: integer
+        uniqueCrossArtifactLowCvss:
+          type: integer
+        uniqueCrossArtifactMedium:
+          type: integer
+        uniqueCrossArtifactMediumCvss:
+          type: integer
       required:
       - artifactName
       - assetId
@@ -8880,6 +8882,8 @@ components:
       - cvePurlMediumCvss
       - day
       - defaultBranch
+      - diffAddedDependencyVulns
+      - diffRemovedDependencyVulns
       - fixableCritical
       - fixableCriticalCvss
       - fixableHigh
@@ -8904,6 +8908,38 @@ components:
       - sumClosedRisk
       - sumOpenRisk
       - type
+      - uniqueCrossArtifactCritical
+      - uniqueCrossArtifactCriticalCvss
+      - uniqueCrossArtifactCvePurlCritical
+      - uniqueCrossArtifactCvePurlCriticalCvss
+      - uniqueCrossArtifactCvePurlFixableCritical
+      - uniqueCrossArtifactCvePurlFixableCriticalCvss
+      - uniqueCrossArtifactCvePurlFixableHigh
+      - uniqueCrossArtifactCvePurlFixableHighCvss
+      - uniqueCrossArtifactCvePurlFixableLow
+      - uniqueCrossArtifactCvePurlFixableLowCvss
+      - uniqueCrossArtifactCvePurlFixableMedium
+      - uniqueCrossArtifactCvePurlFixableMediumCvss
+      - uniqueCrossArtifactCvePurlHigh
+      - uniqueCrossArtifactCvePurlHighCvss
+      - uniqueCrossArtifactCvePurlLow
+      - uniqueCrossArtifactCvePurlLowCvss
+      - uniqueCrossArtifactCvePurlMedium
+      - uniqueCrossArtifactCvePurlMediumCvss
+      - uniqueCrossArtifactFixableCritical
+      - uniqueCrossArtifactFixableCriticalCvss
+      - uniqueCrossArtifactFixableHigh
+      - uniqueCrossArtifactFixableHighCvss
+      - uniqueCrossArtifactFixableLow
+      - uniqueCrossArtifactFixableLowCvss
+      - uniqueCrossArtifactFixableMedium
+      - uniqueCrossArtifactFixableMediumCvss
+      - uniqueCrossArtifactHigh
+      - uniqueCrossArtifactHighCvss
+      - uniqueCrossArtifactLow
+      - uniqueCrossArtifactLowCvss
+      - uniqueCrossArtifactMedium
+      - uniqueCrossArtifactMediumCvss
       type: object
     dtos.RiskMetrics:
       properties:
@@ -9697,7 +9733,6 @@ components:
           type: array
           uniqueItems: false
         cvePurlLow:
-          description: dependencyVuln.cve_id
           items:
             type: string
           type: array
@@ -9720,6 +9755,16 @@ components:
         day:
           description: on the day 2024-08-12 the asset had a sumRisk of 25.
           type: string
+        diffAddedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        diffRemovedDependencyVulns:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         fixableCritical:
           items:
             type: string
@@ -9778,7 +9823,6 @@ components:
           type: array
           uniqueItems: false
         lowCvss:
-          description: dependencyVuln.id
           items:
             type: string
           type: array
@@ -9832,6 +9876,8 @@ components:
       - cvePurlMedium
       - cvePurlMediumCvss
       - day
+      - diffAddedDependencyVulns
+      - diffRemovedDependencyVulns
       - fixableCritical
       - fixableCriticalCvss
       - fixableHigh
@@ -11387,16 +11433,12 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -11445,16 +11487,12 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond

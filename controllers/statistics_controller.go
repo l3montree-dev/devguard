@@ -265,7 +265,12 @@ func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, results)
+	dtoResults := make(map[string]dtos.Distribution)
+	for key, componentRisk := range results {
+		dtoResults[key] = transformer.DistributionToDTO(componentRisk)
+	}
+
+	return ctx.JSON(200, dtoResults)
 }
 
 // @Summary Get average remediation times for a release

@@ -329,6 +329,7 @@ type DependencyVulnRepository interface {
 	GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx DB, packageName string) (*string, error)
 	GetByVexRuleID(ctx context.Context, tx DB, vexRuleID string) ([]models.DependencyVuln, error)
 	AttachGroupEvents(ctx context.Context, tx *gorm.DB, vulns []models.DependencyVuln, cutoff *time.Time) error
+	ListWithCVE(ctx context.Context, tx DB, ids []uuid.UUID) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -704,6 +705,7 @@ type ArtifactRiskHistoryRepository interface {
 	GetRiskHistoryWithVersion(ctx context.Context, tx DB, artifactName *string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)
 	// GetLatestRiskHistory returns the most recent snapshot row, or nil when none exists.
 	GetLatestRiskHistory(ctx context.Context, tx DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error)
+	GetLatestSnapshot(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error)
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)

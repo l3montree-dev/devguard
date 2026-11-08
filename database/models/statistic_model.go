@@ -36,7 +36,7 @@ type Distribution struct {
 	FixableHigh     pq.StringArray `json:"fixableHigh" gorm:"type:text[]"`
 	FixableCritical pq.StringArray `json:"fixableCritical" gorm:"type:text[]"`
 
-	LowCVSS      pq.StringArray `json:"lowCvss" gorm:"type:text[]"` // dependencyVuln.id
+	LowCVSS      pq.StringArray `json:"lowCvss" gorm:"type:text[]"`
 	MediumCVSS   pq.StringArray `json:"mediumCvss" gorm:"type:text[]"`
 	HighCVSS     pq.StringArray `json:"highCvss" gorm:"type:text[]"`
 	CriticalCVSS pq.StringArray `json:"criticalCvss" gorm:"type:text[]"`
@@ -46,7 +46,7 @@ type Distribution struct {
 	FixableHighCVSS     pq.StringArray `json:"fixableHighCvss" gorm:"type:text[]"`
 	FixableCriticalCVSS pq.StringArray `json:"fixableCriticalCvss" gorm:"type:text[]"`
 
-	CVEPurlLow      pq.StringArray `json:"cvePurlLow" gorm:"type:text[]"` // dependencyVuln.cve_id
+	CVEPurlLow      pq.StringArray `json:"cvePurlLow" gorm:"type:text[]"`
 	CVEPurlMedium   pq.StringArray `json:"cvePurlMedium" gorm:"type:text[]"`
 	CVEPurlHigh     pq.StringArray `json:"cvePurlHigh" gorm:"type:text[]"`
 	CVEPurlCritical pq.StringArray `json:"cvePurlCritical" gorm:"type:text[]"`
@@ -65,6 +65,9 @@ type Distribution struct {
 	CVEPurlFixableMediumCVSS   pq.StringArray `json:"cvePurlFixableMediumCvss" gorm:"type:text[]"`
 	CVEPurlFixableHighCVSS     pq.StringArray `json:"cvePurlFixableHighCvss" gorm:"type:text[]"`
 	CVEPurlFixableCriticalCVSS pq.StringArray `json:"cvePurlFixableCriticalCvss" gorm:"type:text[]"`
+
+	DiffAddedDependencyVulns   pq.StringArray `json:"diffAddedDependencyVulns" gorm:"type:text[]"`
+	DiffRemovedDependencyVulns pq.StringArray `json:"diffRemovedDependencyVulns" gorm:"type:text[]"`
 }
 
 type History struct {

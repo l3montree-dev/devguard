@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,19 @@ func NewArtifactRiskHistoryRepository(db *gorm.DB) *artifactRiskHistoryRepositor
 		Repository: newGormRepository[uint, models.ArtifactRiskHistory](db),
 	}
 }
+
+var snapshotColumns = []string{
+	"low", "medium", "high", "critical",
+	"fixable_low", "fixable_medium", "fixable_high", "fixable_critical",
+	"low_cvss", "medium_cvss", "high_cvss", "critical_cvss",
+	"fixable_low_cvss", "fixable_medium_cvss", "fixable_high_cvss", "fixable_critical_cvss",
+	"cve_purl_low", "cve_purl_medium", "cve_purl_high", "cve_purl_critical",
+	"cve_purl_fixable_low", "cve_purl_fixable_medium", "cve_purl_fixable_high", "cve_purl_fixable_critical",
+	"cve_purl_low_cvss", "cve_purl_medium_cvss", "cve_purl_high_cvss", "cve_purl_critical_cvss",
+	"cve_purl_fixable_low_cvss", "cve_purl_fixable_medium_cvss", "cve_purl_fixable_high_cvss", "cve_purl_fixable_critical_cvss",
+}
+
+var snapshotRowCondition = "(" + strings.Join(snapshotColumns, " IS NOT NULL OR ") + " IS NOT NULL)"
 
 func riskHistoryFilter(db *gorm.DB, artifactName *string, start, end time.Time) *gorm.DB {
 	if artifactName != nil {
@@ -76,6 +90,24 @@ func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context
 	var row models.ArtifactRiskHistory
 	db := r.GetDB(ctx, tx).
 		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	if artifactName != nil {
+		db = db.Where("artifact_name = ?", *artifactName)
+	}
+	err := db.Order("day DESC").Limit(1).Take(&row).Error
+	if shared.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (r *artifactRiskHistoryRepository) GetLatestSnapshot(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error) {
+	var row models.ArtifactRiskHistory
+	db := r.GetDB(ctx, tx).
+		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).
+		Where(snapshotRowCondition)
 	if artifactName != nil {
 		db = db.Where("artifact_name = ?", *artifactName)
 	}
