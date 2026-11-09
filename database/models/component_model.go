@@ -116,7 +116,7 @@ type SBOM struct {
 	ArtifactID      uuid.UUID `json:"artifactId" gorm:"column:artifact_id;primaryKey;type:uuid;"`
 	AssetID         uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;not null;"`
 	Source          string    `json:"source" gorm:"column:source;primaryKey"`
-	RootSubtreeHash uuid.UUID `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;type:uuid;primaryKey;"`
+	RootSubtreeHash uuid.UUID `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;type:uuid;not null;"`
 	UpdatedAt       time.Time `json:"updatedAt" gorm:"column:updated_at"`
 
 	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactID;references:ID;constraint:OnDelete:CASCADE;"`

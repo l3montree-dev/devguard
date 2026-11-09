@@ -52,12 +52,6 @@ func (repository *assetVersionRepository) All(ctx context.Context, tx *gorm.DB) 
 	return result, err
 }
 
-func (repository *assetVersionRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.AssetVersion, error) {
-	var asset models.AssetVersion
-	err := repository.GetDB(ctx, tx).First(&asset, "id = ?", id).Error
-	return asset, err
-}
-
 func (repository *assetVersionRepository) ReadByName(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
 	err := repository.GetDB(ctx, tx).First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
