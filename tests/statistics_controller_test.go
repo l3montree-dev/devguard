@@ -51,10 +51,11 @@ func TestGetOrgStatistics(t *testing.T) {
 		// depVuln1: CVE-A on pkg:X via direct path
 		depVuln1 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				AssetVersionID: assetVersion.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        asset.ID,
 			},
+			AssetVersionName:  assetVersion.Name,
 			CVEID:             cveA.CVE,
 			ComponentPurl:     componentX.ID,
 			VulnerabilityPath: []string{componentX.ID},
@@ -66,10 +67,11 @@ func TestGetOrgStatistics(t *testing.T) {
 		// as depVuln1, so the dedup query must collapse the two into a single count
 		depVuln2 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				AssetVersionID: assetVersion.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        asset.ID,
 			},
+			AssetVersionName:  assetVersion.Name,
 			CVEID:             cveA.CVE,
 			ComponentPurl:     componentX.ID,
 			VulnerabilityPath: []string{"pkg:npm/parent@3.0.0", componentX.ID},
@@ -80,10 +82,11 @@ func TestGetOrgStatistics(t *testing.T) {
 		// depVuln3: CVE-B on pkg:Y — unique cve+purl, medium risk
 		depVuln3 := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				AssetVersionID: assetVersion.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        asset.ID,
 			},
+			AssetVersionName:  assetVersion.Name,
 			CVEID:             cveB.CVE,
 			ComponentPurl:     componentY.ID,
 			VulnerabilityPath: []string{componentY.ID},

@@ -612,49 +612,48 @@ func (_c *AttestationRepository_GetByAssetID_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
-// GetByAssetVersionAndAssetID provides a mock function for the type AttestationRepository
-func (_mock *AttestationRepository) GetByAssetVersionAndAssetID(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersion)
+// GetByAssetVersionID provides a mock function for the type AttestationRepository
+func (_mock *AttestationRepository) GetByAssetVersionID(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.Attestation, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByAssetVersionAndAssetID")
+		panic("no return value specified for GetByAssetVersionID")
 	}
 
 	var r0 []models.Attestation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.Attestation, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Attestation, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.Attestation); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Attestation); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Attestation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersion)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// AttestationRepository_GetByAssetVersionAndAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetVersionAndAssetID'
-type AttestationRepository_GetByAssetVersionAndAssetID_Call struct {
+// AttestationRepository_GetByAssetVersionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetVersionID'
+type AttestationRepository_GetByAssetVersionID_Call struct {
 	*mock.Call
 }
 
-// GetByAssetVersionAndAssetID is a helper method to define mock.On call
+// GetByAssetVersionID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersion string
-func (_e *AttestationRepository_Expecter) GetByAssetVersionAndAssetID(ctx any, tx any, assetID any, assetVersion any) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
-	return &AttestationRepository_GetByAssetVersionAndAssetID_Call{Call: _e.mock.On("GetByAssetVersionAndAssetID", ctx, tx, assetID, assetVersion)}
+//   - assetVersionID uuid.UUID
+func (_e *AttestationRepository_Expecter) GetByAssetVersionID(ctx any, tx any, assetVersionID any) *AttestationRepository_GetByAssetVersionID_Call {
+	return &AttestationRepository_GetByAssetVersionID_Call{Call: _e.mock.On("GetByAssetVersionID", ctx, tx, assetVersionID)}
 }
 
-func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersion string)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
+func (_c *AttestationRepository_GetByAssetVersionID_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID)) *AttestationRepository_GetByAssetVersionID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -668,26 +667,21 @@ func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Run(run func(c
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Return(attestations []models.Attestation, err error) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
+func (_c *AttestationRepository_GetByAssetVersionID_Call) Return(attestations []models.Attestation, err error) *AttestationRepository_GetByAssetVersionID_Call {
 	_c.Call.Return(attestations, err)
 	return _c
 }
 
-func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
+func (_c *AttestationRepository_GetByAssetVersionID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.Attestation, error)) *AttestationRepository_GetByAssetVersionID_Call {
 	_c.Call.Return(run)
 	return _c
 }

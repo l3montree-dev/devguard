@@ -48,7 +48,7 @@ func (c *componentRepository) FindAllWithoutLicense(ctx context.Context, tx *gor
 	return components, err
 }
 
-func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx *gorm.DB, overwrittenLicenses []models.LicenseRisk, assetVersion models.AssetVersion, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
 	db := c.GetDB(ctx, tx)
 
 	// Edges come from a walk over this asset version's SBOMs. The walk stays on
@@ -58,21 +58,22 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 	// sorts already qualified with that name.
 	edges := db.Raw(`
 		WITH RECURSIVE walk AS (
-			SELECT s.asset_id, s.asset_version_name, e.subtree_hash, e.direct_dependency_subtree_hash
+			SELECT ar.asset_version_id, e.subtree_hash, e.direct_dependency_subtree_hash
 			FROM sboms s
+			JOIN artifacts ar ON ar.id = s.artifact_id
 			JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
-			WHERE s.asset_id = ? AND s.asset_version_name = ?
+			WHERE ar.asset_version_id = ?
 		UNION
-			SELECT w.asset_id, w.asset_version_name, e.subtree_hash, e.direct_dependency_subtree_hash
+			SELECT w.asset_version_id, e.subtree_hash, e.direct_dependency_subtree_hash
 			FROM walk w
 			JOIN sbom_merkle_edges e ON e.subtree_hash = w.direct_dependency_subtree_hash
 		)
-		SELECT DISTINCT w.asset_id, w.asset_version_name,
+		SELECT DISTINCT w.asset_version_id,
 		       parent.component_id AS component_id,
 		       child.component_id AS dependency_id
 		FROM walk w
 		JOIN sbom_merkle_nodes parent ON parent.node_hash = w.subtree_hash
-		JOIN sbom_merkle_nodes child ON child.node_hash = w.direct_dependency_subtree_hash`, assetID, assetVersionName)
+		JOIN sbom_merkle_nodes child ON child.node_hash = w.direct_dependency_subtree_hash`, assetVersion.ID)
 
 	query := db.Table("(?) AS component_dependencies", edges).
 		Joins("LEFT JOIN components as dependency ON dependency.id = component_dependencies.dependency_id").
@@ -100,7 +101,7 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 	selectClause := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") component_dependencies.component_id, component_dependencies.dependency_id"
 
 	if pageInfo.PageSize == -1 {
-		slog.Warn("unlimited page size requested - returning all results...", "assetVersionName", assetVersionName, "assetID", assetID)
+		slog.Warn("unlimited page size requested - returning all results...", "assetVersionName", assetVersion.Name, "assetID", assetVersion.AssetID)
 	} else {
 		query = query.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 	}
@@ -146,8 +147,8 @@ func (c *componentRepository) LoadComponentsWithProject(ctx context.Context, tx 
 	componentDependencies := make([]models.ComponentDependency, 0, len(rows))
 	for _, row := range rows {
 		componentDependencies = append(componentDependencies, models.ComponentDependency{
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
+			AssetID:          assetVersion.AssetID,
+			AssetVersionName: assetVersion.Name,
 			ComponentID:      row.ComponentID,
 			DependencyID:     row.DependencyID,
 			Component:        resolve(row.ComponentID),
@@ -195,8 +196,10 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 	// once per row. project_sboms is joined back afterwards.
 	matches := `
 		WITH RECURSIVE project_sboms AS (
-			SELECT DISTINCT s.asset_id, s.asset_version_name, s.artifact_name, s.root_subtree_hash
+			SELECT DISTINCT s.asset_id, ar.asset_version_id, av.name AS asset_version_name, ar.artifact_name, s.root_subtree_hash
 			FROM sboms s
+			JOIN artifacts ar ON ar.id = s.artifact_id
+			JOIN asset_versions av ON av.id = ar.asset_version_id
 			JOIN assets a ON a.id = s.asset_id
 			WHERE a.project_id = ANY (?)
 		), roots AS (
@@ -211,7 +214,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
 			FROM walk w
 			JOIN sbom_merkle_edges e ON e.subtree_hash = w.node_hash
 		), matches AS (
-			SELECT DISTINCT ps.asset_id, ps.asset_version_name, ps.artifact_name, n.component_id
+			SELECT DISTINCT ps.asset_id, ps.asset_version_id, ps.asset_version_name, ps.artifact_name, n.component_id
 			FROM walk w
 			JOIN sbom_merkle_nodes n ON n.node_hash = w.node_hash
 			JOIN project_sboms ps ON ps.root_subtree_hash = w.root_hash
@@ -254,7 +257,7 @@ func (c *componentRepository) SearchComponentOccurrencesByProject(ctx context.Co
         FROM page
         JOIN assets ON page.asset_id = assets.id
         JOIN projects ON assets.project_id = projects.id
-        JOIN asset_versions ON asset_versions.asset_id = page.asset_id AND asset_versions.name = page.asset_version_name
+        JOIN asset_versions ON asset_versions.id = page.asset_version_id
         ORDER BY dependency_id ASC, asset_version_name ASC, artifact_name ASC, asset_id ASC`,
 		append(args, limit, offset)...,
 	).Scan(&rows).Error; err != nil {

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http/httptest"
@@ -48,16 +49,16 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 
 		// Create multiple artifacts
 		artifact1 := models.Artifact{
-			ArtifactName:     "artifact-1",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "artifact-1",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		assert.NoError(t, f.DB.Create(&artifact1).Error)
 
 		artifact2 := models.Artifact{
-			ArtifactName:     "artifact-2",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "artifact-2",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		assert.NoError(t, f.DB.Create(&artifact2).Error)
 
@@ -83,11 +84,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			// Create a vulnerability that only belongs to artifact1
 			vuln1 := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: assetVersion.Name,
-					State:            dtos.VulnStateOpen,
-					TicketID:         new("gitlab:123/456"),
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
+					TicketID:       new("gitlab:123/456"),
 				},
+				AssetVersionName:  assetVersion.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/vulnerable-package@1.0.0",
 				VulnerabilityPath: []string{"root", "artifact:artifact-1", "pkg:npm/vulnerable-package@1.0.0"},
@@ -142,11 +144,12 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			// Create a vulnerability that belongs to both artifacts
 			vuln2 := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: assetVersion.Name,
-					State:            dtos.VulnStateOpen,
-					TicketID:         new("gitlab:123/789"),
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
+					TicketID:       new("gitlab:123/789"),
 				},
+				AssetVersionName:  assetVersion.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/multi-artifact-package@1.0.0",
 				VulnerabilityPath: []string{"root", "artifact:artifact-1", "pkg:npm/multi-artifact-package@1.0.0"},
@@ -187,9 +190,9 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 		t.Run("should handle deletion when no vulnerabilities are affected", func(t *testing.T) {
 			// Create an artifact with no vulnerabilities
 			artifact3 := models.Artifact{
-				ArtifactName:     "artifact-3-no-vulns",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-3-no-vulns",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifact3).Error)
 
@@ -221,9 +224,9 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 		t.Run("should delete dependency vuln when it only belongs to the deleted artifact", func(t *testing.T) {
 			// Create a new artifact for this test
 			artifactSingle := models.Artifact{
-				ArtifactName:     "artifact-single-vuln",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-single-vuln",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifactSingle).Error)
 
@@ -236,10 +239,11 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			// Create a vulnerability that only belongs to this artifact
 			vulnSingle := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: assetVersion.Name,
-					State:            dtos.VulnStateOpen,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
 				},
+				AssetVersionName:  assetVersion.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     componentSingle.ID,
 				VulnerabilityPath: []string{"root", "artifact:artifact-single-vuln", componentSingle.ID},
@@ -286,16 +290,16 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 		t.Run("should keep dependency vuln but remove artifact relation when vuln belongs to multiple artifacts", func(t *testing.T) {
 			// Create two artifacts for this test
 			artifactMulti1 := models.Artifact{
-				ArtifactName:     "artifact-multi-1",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-multi-1",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifactMulti1).Error)
 
 			artifactMulti2 := models.Artifact{
-				ArtifactName:     "artifact-multi-2",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-multi-2",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifactMulti2).Error)
 
@@ -308,10 +312,11 @@ func TestArtifactControllerDeleteArtifact(t *testing.T) {
 			// Create a vulnerability that belongs to both artifacts
 			vulnMulti := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: assetVersion.Name,
-					State:            dtos.VulnStateOpen,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
 				},
+				AssetVersionName:  assetVersion.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     componentMulti.ID,
 				VulnerabilityPath: []string{"root", "artifact:artifact-multi-1", componentMulti.ID},
@@ -382,7 +387,12 @@ func TestBuildVEX(t *testing.T) {
 			shared.SetProject(*ctx, project)
 			shared.SetOrg(*ctx, org)
 			shared.SetAssetVersion(*ctx, assetVersion)
-			shared.SetArtifact(*ctx, models.Artifact{ArtifactName: artifactName, AssetVersionName: assetVersion.Name, AssetID: asset.ID})
+			// the artifact middleware loads the stored artifact, the first subtest runs before it exists
+			artifact, err := f.App.ArtifactRepository.ReadArtifact(context.Background(), nil, artifactName, assetVersion.ID)
+			if err != nil {
+				artifact = models.Artifact{ArtifactName: artifactName, AssetVersionID: assetVersion.ID, AssetID: asset.ID}
+			}
+			shared.SetArtifact(*ctx, artifact)
 		}
 		t.Run("test with empty db should return err, since artifact does not exist", func(t *testing.T) {
 			//setup function call
@@ -394,7 +404,7 @@ func TestBuildVEX(t *testing.T) {
 			assert.Nil(t, err)
 		})
 		creationTime := time.Now()
-		vuln1, vuln2 := createDependencyVulnsForAssetControllerTest(f.DB, asset.ID, assetVersion.Name, artifactName)
+		vuln1, vuln2 := createDependencyVulnsForAssetControllerTest(f.DB, asset.ID, assetVersion, artifactName)
 		t.Run("build Vex with everything set as intended", func(t *testing.T) {
 			//setup function call
 			recorder := httptest.NewRecorder()
@@ -533,7 +543,7 @@ func TestBuildVEX(t *testing.T) {
 		})
 	})
 }
-func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) (models.DependencyVuln, models.DependencyVuln) {
+func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID, assetVersion models.AssetVersion, artifactName string) (models.DependencyVuln, models.DependencyVuln) {
 
 	var err error
 
@@ -558,9 +568,9 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersionName,
-		AssetID:          assetID,
+		ArtifactName:   artifactName,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        assetID,
 	}
 	if err := db.Create(&artifact).Error; err != nil {
 		panic(err)
@@ -582,7 +592,8 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 
 	//create our 2 dependency vuln referencing the cve
 	vuln1 := models.DependencyVuln{
-		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability:     models.Vulnerability{AssetVersionID: assetVersion.ID, AssetID: assetID, State: "open"},
+		AssetVersionName:  assetVersion.Name,
 		ComponentPurl:     "pkg:npm/next@14.2.13",
 		CVE:               &cve,
 		CVEID:             cve.CVE,
@@ -594,8 +605,8 @@ func createDependencyVulnsForAssetControllerTest(db shared.DB, assetID uuid.UUID
 		panic(err)
 	}
 	vuln2 := models.DependencyVuln{
-		Vulnerability: models.Vulnerability{
-			AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability:     models.Vulnerability{AssetVersionID: assetVersion.ID, AssetID: assetID, State: "open"},
+		AssetVersionName:  assetVersion.Name,
 		ComponentPurl:     "pkg:npm/axios@1.7.7",
 		CVE:               &cve,
 		CVEID:             cve.CVE,

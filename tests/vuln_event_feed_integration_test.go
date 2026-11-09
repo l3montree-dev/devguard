@@ -50,11 +50,12 @@ func TestVulnEventFeedPagesDoNotOverlap(t *testing.T) {
 
 			vuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: assetVersion.Name,
-					State:            dtos.VulnStateOpen,
-					LastStateChange:  sharedTimestamp,
+					AssetVersionID:  assetVersion.ID,
+					AssetID:         asset.ID,
+					State:           dtos.VulnStateOpen,
+					LastStateChange: sharedTimestamp,
 				},
+				AssetVersionName:  assetVersion.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     fmt.Sprintf("pkg:npm/feed-package-%d@1.0.0", i),
 				VulnerabilityPath: []string{fmt.Sprintf("pkg:npm/feed-package-%d@1.0.0", i)},
@@ -81,8 +82,8 @@ func TestVulnEventFeedPagesDoNotOverlap(t *testing.T) {
 		// order matches the byte order postgres sorts by
 		var order []string
 		for page := 1; page <= vulnCount/pageSize; page++ {
-			result, err := repo.ReadEventsByAssetIDAndAssetVersionName(context.Background(), nil,
-				asset.ID, assetVersion.Name, shared.PageInfo{Page: page, PageSize: pageSize}, nil)
+			result, err := repo.ReadEventsByAssetVersionID(context.Background(), nil,
+				assetVersion.ID, shared.PageInfo{Page: page, PageSize: pageSize}, nil)
 			require.NoError(t, err)
 
 			assert.Equal(t, int64(vulnCount), result.Total, "total must count the whole feed, not the page")
@@ -121,14 +122,15 @@ func TestVulnEventFeedScopesToItsAssetVersion(t *testing.T) {
 		cve := models.CVE{CVE: "CVE-2026-FEED-SCOPE", CVSS: 5.0}
 		require.NoError(t, f.DB.Create(&cve).Error)
 
-		createEventOn := func(versionName string) uuid.UUID {
+		createEventOn := func(version models.AssetVersion) uuid.UUID {
 			vuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: versionName,
-					State:            dtos.VulnStateOpen,
-					LastStateChange:  time.Now(),
+					AssetVersionID:  version.ID,
+					AssetID:         asset.ID,
+					State:           dtos.VulnStateOpen,
+					LastStateChange: time.Now(),
 				},
+				AssetVersionName:  version.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/scope-package@1.0.0",
 				VulnerabilityPath: []string{"pkg:npm/scope-package@1.0.0"},
@@ -144,12 +146,12 @@ func TestVulnEventFeedScopesToItsAssetVersion(t *testing.T) {
 			return event.ID
 		}
 
-		mainEvent := createEventOn(mainVersion.Name)
-		otherEvent := createEventOn(otherVersion.Name)
+		mainEvent := createEventOn(mainVersion)
+		otherEvent := createEventOn(otherVersion)
 
 		repo := repositories.NewVulnEventRepository(f.DB)
-		result, err := repo.ReadEventsByAssetIDAndAssetVersionName(context.Background(), nil,
-			asset.ID, mainVersion.Name, shared.PageInfo{Page: 1, PageSize: 10}, nil)
+		result, err := repo.ReadEventsByAssetVersionID(context.Background(), nil,
+			mainVersion.ID, shared.PageInfo{Page: 1, PageSize: 10}, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, int64(1), result.Total)
@@ -171,9 +173,10 @@ func TestVulnEventFeedIncludesEveryKindOfVuln(t *testing.T) {
 
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				AssetID: asset.ID, AssetVersionName: assetVersion.Name,
+				AssetID: asset.ID, AssetVersionID: assetVersion.ID,
 				State: dtos.VulnStateOpen, LastStateChange: time.Now(),
 			},
+			AssetVersionName:  assetVersion.Name,
 			CVEID:             cve.CVE,
 			ComponentPurl:     "pkg:npm/kinds-dependency@1.0.0",
 			VulnerabilityPath: []string{"pkg:npm/kinds-dependency@1.0.0"},
@@ -188,19 +191,21 @@ func TestVulnEventFeedIncludesEveryKindOfVuln(t *testing.T) {
 
 		licenseRisk := models.LicenseRisk{
 			Vulnerability: models.Vulnerability{
-				AssetID: asset.ID, AssetVersionName: assetVersion.Name,
+				AssetID: asset.ID, AssetVersionID: assetVersion.ID,
 				State: dtos.VulnStateOpen, LastStateChange: time.Now(),
 			},
-			ComponentPurl: "pkg:npm/kinds-license@1.0.0",
+			AssetVersionName: assetVersion.Name,
+			ComponentPurl:    "pkg:npm/kinds-license@1.0.0",
 		}
 		require.NoError(t, f.DB.Create(&licenseRisk).Error)
 
 		firstPartyVuln := models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				AssetID: asset.ID, AssetVersionName: assetVersion.Name,
+				AssetID: asset.ID, AssetVersionID: assetVersion.ID,
 				State: dtos.VulnStateOpen, LastStateChange: time.Now(),
 			},
-			URI: "src/kinds.go",
+			AssetVersionName: assetVersion.Name,
+			URI:              "src/kinds.go",
 		}
 		require.NoError(t, f.DB.Create(&firstPartyVuln).Error)
 
@@ -215,8 +220,8 @@ func TestVulnEventFeedIncludesEveryKindOfVuln(t *testing.T) {
 		}).Error)
 
 		repo := repositories.NewVulnEventRepository(f.DB)
-		result, err := repo.ReadEventsByAssetIDAndAssetVersionName(context.Background(), nil,
-			asset.ID, assetVersion.Name, shared.PageInfo{Page: 1, PageSize: 10}, nil)
+		result, err := repo.ReadEventsByAssetVersionID(context.Background(), nil,
+			assetVersion.ID, shared.PageInfo{Page: 1, PageSize: 10}, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, int64(3), result.Total, "every kind of vuln event belongs in the feed")

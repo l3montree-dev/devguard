@@ -59,13 +59,14 @@ func evalRule(t *testing.T, rule models.UpstreamVEXRule, vuln models.DependencyV
 // downloaded CSAF report re-uploaded to devguard would never match any of its own vulns.
 func TestAggregatedCSAFRoundTrip(t *testing.T) {
 	assetID := uuid.New()
-	artifact := models.Artifact{ArtifactName: "pkg:oci/app", AssetVersionName: "main", AssetID: assetID}
+	artifact := models.Artifact{ArtifactName: "pkg:oci/app", AssetID: assetID}
 	eventTime := time.Now()
 
 	mk := func(cveID, comp string, path []string, state dtos.VulnState, falsePositive bool) models.DependencyVuln {
 		cve := models.CVE{CVE: cveID, Description: "desc"}
 		v := models.DependencyVuln{
-			Vulnerability:     models.Vulnerability{AssetVersionName: "main", AssetID: assetID, State: state},
+			Vulnerability:     models.Vulnerability{AssetID: assetID, State: state},
+			AssetVersionName:  "main",
 			CVEID:             cveID,
 			CVE:               &cve,
 			ComponentPurl:     comp,
@@ -146,7 +147,7 @@ func TestAggregatedCSAFRoundTrip(t *testing.T) {
 //	ARTIFACT -> cosign -> opa -> vuln
 func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 	assetID := uuid.New()
-	artifact := models.Artifact{ArtifactName: "pkg:golang/github.com/l3montree-dev/devguard@main", AssetVersionName: "main", AssetID: assetID}
+	artifact := models.Artifact{ArtifactName: "pkg:golang/github.com/l3montree-dev/devguard@main", AssetID: assetID}
 	eventTime := time.Now()
 
 	cveID := "GHSA-fxhp-mv3v-67qp"
@@ -159,7 +160,8 @@ func TestCSAFRoundTripMultiplePathsToSharedComponent(t *testing.T) {
 		cve := models.CVE{CVE: cveID, Description: "desc"}
 		j := "not reachable"
 		return models.DependencyVuln{
-			Vulnerability:     models.Vulnerability{AssetVersionName: "main", AssetID: assetID, State: dtos.VulnStateFalsePositive},
+			Vulnerability:     models.Vulnerability{AssetID: assetID, State: dtos.VulnStateFalsePositive},
+			AssetVersionName:  "main",
 			CVEID:             cveID,
 			CVE:               &cve,
 			ComponentPurl:     vulnPurl,

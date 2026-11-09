@@ -46,7 +46,7 @@ func (r *eventRepository) readFirstPartyVulnAssetEvents(ctx context.Context, tx 
 	err = r.GetDB(ctx, tx).Table("vuln_events").
 		Select("vuln_events.*, first_party_vulnerabilities.asset_version_name, first_party_vulnerabilities.asset_id, asset_versions.slug").
 		Joins("LEFT JOIN first_party_vulnerabilities ON vuln_events.first_party_vuln_id = first_party_vulnerabilities.id").
-		Joins("LEFT JOIN asset_versions ON first_party_vulnerabilities.asset_id = asset_versions.asset_id AND first_party_vulnerabilities.asset_version_name = asset_versions.name").
+		Joins("LEFT JOIN asset_versions ON first_party_vulnerabilities.asset_version_id = asset_versions.id").
 		Where("vuln_events.first_party_vuln_id = ANY (?)",
 			r.GetDB(ctx, tx).Table("first_party_vulnerabilities").
 				Select("id").
@@ -76,7 +76,7 @@ func (r *eventRepository) readDependencyVulnAssetEvents(ctx context.Context, tx 
 	err = r.GetDB(ctx, tx).Table("vuln_events").
 		Select("vuln_events.*, dependency_vulns.asset_version_name, dependency_vulns.asset_id, asset_versions.slug").
 		Joins("LEFT JOIN dependency_vulns ON vuln_events.dependency_vuln_id = dependency_vulns.id").
-		Joins("LEFT JOIN asset_versions ON dependency_vulns.asset_id = asset_versions.asset_id AND dependency_vulns.asset_version_name = asset_versions.name").
+		Joins("LEFT JOIN asset_versions ON dependency_vulns.asset_version_id = asset_versions.id").
 		Where("vuln_events.dependency_vuln_id = ANY (?)",
 			r.GetDB(ctx, tx).Table("dependency_vulns").
 				Select("id").
@@ -92,36 +92,35 @@ func (r *eventRepository) readDependencyVulnAssetEvents(ctx context.Context, tx 
 	return events, nil
 }
 
-func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error) {
+func (r *eventRepository) ReadEventsByAssetVersionID(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error) {
 
 	var events []models.VulnEventDetail
 
-	// Driven from the vuln tables, which have an (asset_id, asset_version_name) index:
+	// Driven from the vuln tables, which are indexed by their asset_version_id:
 	// filtering vuln_events by "dependency_vuln_id = ANY (...) OR first_party_vuln_id =
 	// ANY (...)" cannot use an index and seq scans the whole table. Group events carry an
 	// asset_signature instead of a parent and so belong to no asset version.
 	eventsOfAssetVersion := r.GetDB(ctx, tx).Raw(`
 		SELECT ev.* FROM dependency_vulns dvi
 			JOIN vuln_events ev ON ev.dependency_vuln_id = dvi.id
-			WHERE dvi.asset_id = ? AND dvi.asset_version_name = ?
+			WHERE dvi.asset_version_id = ?
 		UNION ALL
 		SELECT ev.* FROM first_party_vulnerabilities fvi
 			JOIN vuln_events ev ON ev.first_party_vuln_id = fvi.id
-			WHERE fvi.asset_id = ? AND fvi.asset_version_name = ?
+			WHERE fvi.asset_version_id = ?
 		UNION ALL
 		SELECT ev.* FROM license_risks lri
 			JOIN vuln_events ev ON ev.license_risk_id = lri.id
-			WHERE lri.asset_id = ? AND lri.asset_version_name = ?
+			WHERE lri.asset_version_id = ?
 		UNION ALL
 		SELECT ev.* FROM compliance_postures cpi
 			JOIN vuln_events ev ON ev.compliance_posture_id = cpi.id
-			WHERE cpi.asset_id = ? AND cpi.asset_version_name = ?
+			WHERE cpi.asset_version_id = ?
 		UNION ALL
 		SELECT ev.* FROM advisories advi
 			JOIN vuln_events ev ON ev.security_advisory_id = advi.id
-			WHERE advi.asset_id = ? AND advi.asset_version_name = ?`,
-		assetID, assetVersionName, assetID, assetVersionName, assetID,
-		assetVersionName, assetID, assetVersionName, assetID, assetVersionName)
+			WHERE advi.asset_version_id = ?`,
+		assetVersionID, assetVersionID, assetVersionID, assetVersionID, assetVersionID)
 
 	// joined on the outside so filters can still address e, dv, fv and lr
 	withDetails := func(from any) *gorm.DB {

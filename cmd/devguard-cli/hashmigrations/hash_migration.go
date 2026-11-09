@@ -933,9 +933,10 @@ func resolveCVERelationsForPurl(oldVulns []models.DependencyVuln, foundVulns []m
 		// Create vuln directly - v3 migration will add proper paths later
 		newVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				AssetVersionName: firstOld.AssetVersionName,
-				AssetID:          firstOld.AssetID,
+				AssetVersionID: firstOld.AssetVersionID,
+				AssetID:        firstOld.AssetID,
 			},
+			AssetVersionName:  firstOld.AssetVersionName,
 			CVEID:             foundVuln.CVEID,
 			ComponentPurl:     firstOld.ComponentPurl,
 			CVE:               &foundVuln.CVE,

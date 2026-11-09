@@ -67,9 +67,9 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 
 			// Create artifact
 			artifact := models.Artifact{
-				ArtifactName:     "test-artifact",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "test-artifact",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)
@@ -144,9 +144,9 @@ func TestDaemonPipelineEmptyArtifact(t *testing.T) {
 		assetVersion := f.CreateAssetVersion(asset.ID, "main", true)
 		// Create artifact but no components
 		artifact := models.Artifact{
-			ArtifactName:     "empty-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "empty-artifact",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err := f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
@@ -195,18 +195,18 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 
 		// Give the stale branch an artifact so CollectStats has something to iterate
 		staleArtifact := models.Artifact{
-			ArtifactName:     "stale-artifact",
-			AssetVersionName: staleVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "stale-artifact",
+			AssetVersionID: staleVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&staleArtifact).Error
 		assert.NoError(t, err)
 
 		// Give the main branch an artifact too (to confirm it still works after the fix)
 		mainArtifact := models.Artifact{
-			ArtifactName:     "main-artifact",
-			AssetVersionName: mainVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "main-artifact",
+			AssetVersionID: mainVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&mainArtifact).Error
 		assert.NoError(t, err)
@@ -223,14 +223,13 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 
 		// The stale version and its artifact must have been removed
 		var remainingArtifacts []models.Artifact
-		err = f.DB.Find(&remainingArtifacts, "asset_version_name = ? AND asset_id = ?", staleVersion.Name, asset.ID).Error
+		err = f.DB.Find(&remainingArtifacts, "asset_version_id = ?", staleVersion.ID).Error
 		assert.NoError(t, err)
 		assert.Empty(t, remainingArtifacts, "stale branch artifacts must be deleted")
 
 		// No orphaned risk history rows must exist for the deleted artifact
 		var orphanedHistory []models.ArtifactRiskHistory
-		err = f.DB.Find(&orphanedHistory, "artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
-			staleArtifact.ArtifactName, staleVersion.Name, asset.ID).Error
+		err = f.DB.Find(&orphanedHistory, "artifact_id = ?", staleArtifact.ID).Error
 		assert.NoError(t, err)
 		assert.Empty(t, orphanedHistory, "must not have risk history for deleted artifact")
 	})
@@ -272,9 +271,9 @@ func TestDaemonPipelineRiskCalculation(t *testing.T) {
 
 			// Create artifact
 			artifact := models.Artifact{
-				ArtifactName:     "risk-test-artifact",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "risk-test-artifact",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			err = f.DB.Create(&artifact).Error
 			assert.NoError(t, err)

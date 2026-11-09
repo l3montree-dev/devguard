@@ -42,6 +42,9 @@ func stringSliceToAny(s []string) []any {
 type DependencyVuln struct {
 	Vulnerability
 
+	// part of the content hash, the asset version relation itself is kept by AssetVersionID
+	AssetVersionName string `json:"assetVersionName" gorm:"type:text;not null;"`
+
 	Events []VulnEvent `gorm:"foreignKey:DependencyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
 	CVE                   *CVE    `json:"cve" gorm:"foreignKey:CVEID;references:CVE;"`

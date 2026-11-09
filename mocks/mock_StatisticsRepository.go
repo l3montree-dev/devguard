@@ -52,8 +52,8 @@ func (_m *StatisticsRepository) EXPECT() *StatisticsRepository_Expecter {
 }
 
 // AverageFixingTimes provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
-	ret := _mock.Called(ctx, tx, artifactNam, assetVersionName, assetID)
+func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, tx shared.DB, artifactID *uuid.UUID, assetVersionID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+	ret := _mock.Called(ctx, tx, artifactID, assetVersionID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AverageFixingTimes")
@@ -61,16 +61,16 @@ func (_mock *StatisticsRepository) AverageFixingTimes(ctx context.Context, tx sh
 
 	var r0 dtos.RemediationTimeAverages
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID) (dtos.RemediationTimeAverages, error)); ok {
-		return returnFunc(ctx, tx, artifactNam, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, uuid.UUID) (dtos.RemediationTimeAverages, error)); ok {
+		return returnFunc(ctx, tx, artifactID, assetVersionID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, string, uuid.UUID) dtos.RemediationTimeAverages); ok {
-		r0 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, uuid.UUID) dtos.RemediationTimeAverages); ok {
+		r0 = returnFunc(ctx, tx, artifactID, assetVersionID)
 	} else {
 		r0 = ret.Get(0).(dtos.RemediationTimeAverages)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, artifactNam, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, artifactID, assetVersionID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -85,14 +85,13 @@ type StatisticsRepository_AverageFixingTimes_Call struct {
 // AverageFixingTimes is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - artifactNam *string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx any, tx any, artifactNam any, assetVersionName any, assetID any) *StatisticsRepository_AverageFixingTimes_Call {
-	return &StatisticsRepository_AverageFixingTimes_Call{Call: _e.mock.On("AverageFixingTimes", ctx, tx, artifactNam, assetVersionName, assetID)}
+//   - artifactID *uuid.UUID
+//   - assetVersionID uuid.UUID
+func (_e *StatisticsRepository_Expecter) AverageFixingTimes(ctx any, tx any, artifactID any, assetVersionID any) *StatisticsRepository_AverageFixingTimes_Call {
+	return &StatisticsRepository_AverageFixingTimes_Call{Call: _e.mock.On("AverageFixingTimes", ctx, tx, artifactID, assetVersionID)}
 }
 
-func (_c *StatisticsRepository_AverageFixingTimes_Call) Run(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID)) *StatisticsRepository_AverageFixingTimes_Call {
+func (_c *StatisticsRepository_AverageFixingTimes_Call) Run(run func(ctx context.Context, tx shared.DB, artifactID *uuid.UUID, assetVersionID uuid.UUID)) *StatisticsRepository_AverageFixingTimes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -102,24 +101,19 @@ func (_c *StatisticsRepository_AverageFixingTimes_Call) Run(run func(ctx context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *string
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(*uuid.UUID)
 		}
-		var arg3 string
+		var arg3 uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 uuid.UUID
-		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
+			arg3 = args[3].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -130,7 +124,7 @@ func (_c *StatisticsRepository_AverageFixingTimes_Call) Return(remediationTimeAv
 	return _c
 }
 
-func (_c *StatisticsRepository_AverageFixingTimes_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)) *StatisticsRepository_AverageFixingTimes_Call {
+func (_c *StatisticsRepository_AverageFixingTimes_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactID *uuid.UUID, assetVersionID uuid.UUID) (dtos.RemediationTimeAverages, error)) *StatisticsRepository_AverageFixingTimes_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1754,8 +1748,8 @@ func (_c *StatisticsRepository_GetWeeklyAveragePerVulnEventType_Call) RunAndRetu
 }
 
 // TimeTravelDependencyVulnState provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, artifactName, assetVersionName, assetID, time1)
+func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx shared.DB, artifactID *uuid.UUID, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, artifactID, assetID, time1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for TimeTravelDependencyVulnState")
@@ -1763,18 +1757,18 @@ func (_mock *StatisticsRepository) TimeTravelDependencyVulnState(ctx context.Con
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *string, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, artifactName, assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, artifactID, assetID, time1)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *string, uuid.UUID, time.Time) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, uuid.UUID, time.Time) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, artifactID, assetID, time1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, *string, uuid.UUID, time.Time) error); ok {
-		r1 = returnFunc(ctx, tx, artifactName, assetVersionName, assetID, time1)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *uuid.UUID, uuid.UUID, time.Time) error); ok {
+		r1 = returnFunc(ctx, tx, artifactID, assetID, time1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1789,15 +1783,14 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 // TimeTravelDependencyVulnState is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - artifactName *string
-//   - assetVersionName *string
+//   - artifactID *uuid.UUID
 //   - assetID uuid.UUID
 //   - time1 time.Time
-func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(ctx any, tx any, artifactName any, assetVersionName any, assetID any, time1 any) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
-	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", ctx, tx, artifactName, assetVersionName, assetID, time1)}
+func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(ctx any, tx any, artifactID any, assetID any, time1 any) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", ctx, tx, artifactID, assetID, time1)}
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(ctx context.Context, tx shared.DB, artifactID *uuid.UUID, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1807,21 +1800,17 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *string
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(*uuid.UUID)
 		}
-		var arg3 *string
+		var arg3 uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(*string)
+			arg3 = args[3].(uuid.UUID)
 		}
-		var arg4 uuid.UUID
+		var arg4 time.Time
 		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
-		}
-		var arg5 time.Time
-		if args[5] != nil {
-			arg5 = args[5].(time.Time)
+			arg4 = args[4].(time.Time)
 		}
 		run(
 			arg0,
@@ -1829,7 +1818,6 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -1840,7 +1828,7 @@ func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Return(depend
 	return _c
 }
 
-func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
+func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifactID *uuid.UUID, assetID uuid.UUID, time1 time.Time) ([]models.DependencyVuln, error)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }

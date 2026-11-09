@@ -54,9 +54,9 @@ func (g *projectRepository) GetByOrgID(ctx context.Context, tx *gorm.DB, organiz
 	return projects, err
 }
 
-func (g *projectRepository) GetProjectByAssetVersionID(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.Project, error) {
+func (g *projectRepository) GetProjectByAssetVersionID(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID) (models.Project, error) {
 	var project models.Project
-	err := g.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("assets.*").Joins("JOIN assets ON assets.id = asset_versions.asset_id").Joins("JOIN projects ON projects.id = assets.project_id").Where("asset_versions.name = ? AND asset_versions.asset_id = ?", assetVersionName, assetID).First(&project).Error
+	err := g.GetDB(ctx, tx).Model(&models.AssetVersion{}).Select("projects.*").Joins("JOIN assets ON assets.id = asset_versions.asset_id").Joins("JOIN projects ON projects.id = assets.project_id").Where("asset_versions.id = ?", assetVersionID).First(&project).Error
 	return project, err
 }
 
@@ -664,11 +664,11 @@ WITH
     SELECT
       p.id   AS project_id,
       a.id   AS asset_id,
-      av.name AS asset_version_name
+      av.id  AS asset_version_id
     FROM projects p
     JOIN assets         a  ON a.project_id = p.id AND a.external_entity_id = ?
     JOIN asset_versions av ON av.asset_id  = a.id AND av.name = ?
-	JOIN artifacts      ar ON ar.asset_version_name = av.name AND ar.asset_id = a.id
+	JOIN artifacts      ar ON ar.asset_version_id = av.id
     WHERE p.organization_id              = ?
 	  AND p.external_entity_provider_id  = ?
       AND p.external_entity_id           = ?
@@ -677,18 +677,15 @@ WITH
   ),
   del_artifact AS (
 	DELETE FROM artifacts
-	WHERE asset_id = (SELECT asset_id FROM target)
-	  AND asset_version_name = (SELECT asset_version_name FROM target)
+	WHERE asset_version_id = (SELECT asset_version_id FROM target)
 	  AND artifact_name = ?
   ),
   del_asset_version AS (
     DELETE FROM asset_versions
-    WHERE asset_id = (SELECT asset_id FROM target)
-      AND name     = (SELECT asset_version_name FROM target)
+    WHERE id = (SELECT asset_version_id FROM target)
 	  AND NOT EXISTS (
 		SELECT 1 FROM artifacts
-		WHERE asset_id           = (SELECT asset_id FROM target)
-		  AND asset_version_name = (SELECT asset_version_name FROM target)
+		WHERE asset_version_id = (SELECT asset_version_id FROM target)
 	  )
   ),
   del_asset AS (

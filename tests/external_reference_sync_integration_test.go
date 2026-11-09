@@ -58,7 +58,7 @@ func TestSyncExternalReferences(t *testing.T) {
 		t.Run("should sync all artifacts in asset version", func(t *testing.T) {
 			// Verify artifacts exist
 			var artifacts []models.Artifact
-			err := f.DB.Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Find(&artifacts).Error
+			err := f.DB.Where("asset_version_id = ?", assetVersion.ID).Find(&artifacts).Error
 			assert.NoError(t, err)
 			assert.GreaterOrEqual(t, len(artifacts), 2)
 
@@ -116,9 +116,9 @@ func TestSyncExternalReferences(t *testing.T) {
 		defer upstreamServer.Close()
 
 		localArtifact := models.Artifact{
-			ArtifactName:     "local-artifact",
-			AssetVersionName: upstreamVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "local-artifact",
+			AssetVersionID: upstreamVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err := f.DB.Create(&localArtifact).Error
 		assert.NoError(t, err)
@@ -126,9 +126,9 @@ func TestSyncExternalReferences(t *testing.T) {
 		assert.NoError(t, err)
 
 		upstreamArtifact := models.Artifact{
-			ArtifactName:     "upstream-artifact",
-			AssetVersionName: upstreamVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "upstream-artifact",
+			AssetVersionID: upstreamVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&upstreamArtifact).Error
 		assert.NoError(t, err)
@@ -144,7 +144,7 @@ func TestSyncExternalReferences(t *testing.T) {
 
 		loadUpstreamSBOM := func(t *testing.T) models.SBOM {
 			var sbom models.SBOM
-			err := f.DB.First(&sbom, "asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?", asset.ID, upstreamVersion.Name, upstreamArtifact.ArtifactName, upstreamServer.URL).Error
+			err := f.DB.First(&sbom, "artifact_id = ? AND source = ?", upstreamArtifact.ID, upstreamServer.URL).Error
 			assert.NoError(t, err)
 			return sbom
 		}

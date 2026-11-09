@@ -630,7 +630,7 @@ func generateProductTree(ctx context.Context, vulnsForCVE []models.DependencyVul
 		}
 
 		for _, artifact := range vuln.Artifacts {
-			artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+			artifactPurl := normalize.Purlify(artifact.ArtifactName, vuln.AssetVersionName)
 			addBaseProduct(artifactPurl)
 
 			// build the nested default_component_of chain for this path
@@ -728,7 +728,7 @@ func calculateVulnStateInformation(ctx context.Context, allVulnsOfCVE []models.D
 	for _, vuln := range allVulnsOfCVE {
 		path := vulnPath(vuln)
 		for _, artifact := range vuln.Artifacts {
-			artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+			artifactPurl := normalize.Purlify(artifact.ArtifactName, vuln.AssetVersionName)
 			key := leafProductID(artifactPurl, path)
 			vulnsByProductName[key] = append(vulnsByProductName[key], vuln)
 		}
@@ -1060,7 +1060,7 @@ func buildRevisionHistory(vulnEvents []vulnEventWithVuln) ([]*gocsaf.Revision, e
 					}
 
 					for _, artifact := range event.Vuln.Artifacts {
-						artifactNames = append(artifactNames, normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName))
+						artifactNames = append(artifactNames, normalize.Purlify(artifact.ArtifactName, event.Vuln.AssetVersionName))
 					}
 				}
 

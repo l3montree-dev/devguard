@@ -287,12 +287,12 @@ func TestGithubIntegrationUpdateIssueUnlinksDeletedGithubIssue(t *testing.T) {
 	ticketURL := "https://github.com/owner/repo/issues/42"
 	vuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			ID:               uuid.New(),
-			AssetID:          assetID,
-			AssetVersionName: "main",
-			TicketID:         &ticketID,
-			TicketURL:        &ticketURL,
+			ID:        uuid.New(),
+			AssetID:   assetID,
+			TicketID:  &ticketID,
+			TicketURL: &ticketURL,
 		},
+		AssetVersionName: "main",
 		CVE: &models.CVE{
 			CVSS:   9.8,
 			Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",

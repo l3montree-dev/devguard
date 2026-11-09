@@ -682,8 +682,8 @@ func (_c *FirstPartyVulnRepository_GetByAssetID_Call) RunAndReturn(run func(ctx 
 }
 
 // GetByAssetVersion provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) GetByAssetVersion(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID)
+func (_mock *FirstPartyVulnRepository) GetByAssetVersion(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetVersion")
@@ -691,18 +691,18 @@ func (_mock *FirstPartyVulnRepository) GetByAssetVersion(ctx context.Context, tx
 
 	var r0 []models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) []models.FirstPartyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -717,13 +717,12 @@ type FirstPartyVulnRepository_GetByAssetVersion_Call struct {
 // GetByAssetVersion is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersion(ctx any, tx any, assetVersionName any, assetID any) *FirstPartyVulnRepository_GetByAssetVersion_Call {
-	return &FirstPartyVulnRepository_GetByAssetVersion_Call{Call: _e.mock.On("GetByAssetVersion", ctx, tx, assetVersionName, assetID)}
+//   - assetVersionID uuid.UUID
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersion(ctx any, tx any, assetVersionID any) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+	return &FirstPartyVulnRepository_GetByAssetVersion_Call{Call: _e.mock.On("GetByAssetVersion", ctx, tx, assetVersionID)}
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -733,19 +732,14 @@ func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Run(run func(ctx cont
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -756,14 +750,14 @@ func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Return(firstPartyVuln
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByAssetVersionPaged provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) GetByAssetVersionPaged(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)
+func (_mock *FirstPartyVulnRepository) GetByAssetVersionPaged(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetVersionPaged")
@@ -772,23 +766,23 @@ func (_mock *FirstPartyVulnRepository) GetByAssetVersionPaged(ctx context.Contex
 	var r0 shared.Paged[models.FirstPartyVuln]
 	var r1 map[string]int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.FirstPartyVuln]); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.FirstPartyVuln]); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[models.FirstPartyVuln])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) map[string]int); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) map[string]int); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, pageInfo, search, filter, sort)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(map[string]int)
 		}
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r2 = returnFunc(ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r2 = returnFunc(ctx, tx, assetVersionID, pageInfo, search, filter, sort)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -803,17 +797,16 @@ type FirstPartyVulnRepository_GetByAssetVersionPaged_Call struct {
 // GetByAssetVersionPaged is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersionID uuid.UUID
 //   - pageInfo shared.PageInfo
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersionPaged(ctx any, tx any, assetVersionName any, assetID any, pageInfo any, search any, filter any, sort any) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
-	return &FirstPartyVulnRepository_GetByAssetVersionPaged_Call{Call: _e.mock.On("GetByAssetVersionPaged", ctx, tx, assetVersionName, assetID, pageInfo, search, filter, sort)}
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersionPaged(ctx any, tx any, assetVersionID any, pageInfo any, search any, filter any, sort any) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
+	return &FirstPartyVulnRepository_GetByAssetVersionPaged_Call{Call: _e.mock.On("GetByAssetVersionPaged", ctx, tx, assetVersionID, pageInfo, search, filter, sort)}
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -823,29 +816,25 @@ func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Run(run func(ctx
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 uuid.UUID
+		var arg3 shared.PageInfo
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg3 = args[3].(shared.PageInfo)
 		}
-		var arg4 shared.PageInfo
+		var arg4 string
 		if args[4] != nil {
-			arg4 = args[4].(shared.PageInfo)
+			arg4 = args[4].(string)
 		}
-		var arg5 string
+		var arg5 []shared.FilterQuery
 		if args[5] != nil {
-			arg5 = args[5].(string)
+			arg5 = args[5].([]shared.FilterQuery)
 		}
-		var arg6 []shared.FilterQuery
+		var arg6 []shared.SortQuery
 		if args[6] != nil {
-			arg6 = args[6].([]shared.FilterQuery)
-		}
-		var arg7 []shared.SortQuery
-		if args[7] != nil {
-			arg7 = args[7].([]shared.SortQuery)
+			arg6 = args[6].([]shared.SortQuery)
 		}
 		run(
 			arg0,
@@ -855,7 +844,6 @@ func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Run(run func(ctx
 			arg4,
 			arg5,
 			arg6,
-			arg7,
 		)
 	})
 	return _c
@@ -866,7 +854,7 @@ func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Return(paged sha
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.FirstPartyVuln], map[string]int, error)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1123,8 +1111,8 @@ func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Cal
 }
 
 // GetFirstPartyVulnsByOtherAssetVersions provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) GetFirstPartyVulnsByOtherAssetVersions(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, scannerID)
+func (_mock *FirstPartyVulnRepository) GetFirstPartyVulnsByOtherAssetVersions(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, assetID, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetFirstPartyVulnsByOtherAssetVersions")
@@ -1132,18 +1120,18 @@ func (_mock *FirstPartyVulnRepository) GetFirstPartyVulnsByOtherAssetVersions(ct
 
 	var r0 []models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, assetID, scannerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) []models.FirstPartyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, assetID, scannerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, assetID, scannerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1158,14 +1146,14 @@ type FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call struct
 // GetFirstPartyVulnsByOtherAssetVersions is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
+//   - assetVersionID uuid.UUID
 //   - assetID uuid.UUID
 //   - scannerID string
-func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByOtherAssetVersions(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
-	return &FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetFirstPartyVulnsByOtherAssetVersions", ctx, tx, assetVersionName, assetID, scannerID)}
+func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByOtherAssetVersions(ctx any, tx any, assetVersionID any, assetID any, scannerID any) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+	return &FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetFirstPartyVulnsByOtherAssetVersions", ctx, tx, assetVersionID, assetID, scannerID)}
 }
 
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1175,9 +1163,9 @@ func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
 		var arg3 uuid.UUID
 		if args[3] != nil {
@@ -1203,14 +1191,14 @@ func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) 
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetOpenByAssetVersion provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) GetOpenByAssetVersion(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID)
+func (_mock *FirstPartyVulnRepository) GetOpenByAssetVersion(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetOpenByAssetVersion")
@@ -1218,18 +1206,18 @@ func (_mock *FirstPartyVulnRepository) GetOpenByAssetVersion(ctx context.Context
 
 	var r0 []models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) []models.FirstPartyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1244,13 +1232,12 @@ type FirstPartyVulnRepository_GetOpenByAssetVersion_Call struct {
 // GetOpenByAssetVersion is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *FirstPartyVulnRepository_Expecter) GetOpenByAssetVersion(ctx any, tx any, assetVersionName any, assetID any) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
-	return &FirstPartyVulnRepository_GetOpenByAssetVersion_Call{Call: _e.mock.On("GetOpenByAssetVersion", ctx, tx, assetVersionName, assetID)}
+//   - assetVersionID uuid.UUID
+func (_e *FirstPartyVulnRepository_Expecter) GetOpenByAssetVersion(ctx any, tx any, assetVersionID any) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+	return &FirstPartyVulnRepository_GetOpenByAssetVersion_Call{Call: _e.mock.On("GetOpenByAssetVersion", ctx, tx, assetVersionID)}
 }
 
-func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID)) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID)) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1260,19 +1247,14 @@ func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) Run(run func(ctx 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -1283,7 +1265,7 @@ func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) Return(firstParty
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
+func (_c *FirstPartyVulnRepository_GetOpenByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetOpenByAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1428,8 +1410,8 @@ func (_c *FirstPartyVulnRepository_List_Call) RunAndReturn(run func(ctx context.
 }
 
 // ListByScanner provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) ListByScanner(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, scannerID)
+func (_mock *FirstPartyVulnRepository) ListByScanner(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByScanner")
@@ -1437,18 +1419,18 @@ func (_mock *FirstPartyVulnRepository) ListByScanner(ctx context.Context, tx sha
 
 	var r0 []models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, scannerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) []models.FirstPartyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, scannerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, scannerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1463,14 +1445,13 @@ type FirstPartyVulnRepository_ListByScanner_Call struct {
 // ListByScanner is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersionID uuid.UUID
 //   - scannerID string
-func (_e *FirstPartyVulnRepository_Expecter) ListByScanner(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *FirstPartyVulnRepository_ListByScanner_Call {
-	return &FirstPartyVulnRepository_ListByScanner_Call{Call: _e.mock.On("ListByScanner", ctx, tx, assetVersionName, assetID, scannerID)}
+func (_e *FirstPartyVulnRepository_Expecter) ListByScanner(ctx any, tx any, assetVersionID any, scannerID any) *FirstPartyVulnRepository_ListByScanner_Call {
+	return &FirstPartyVulnRepository_ListByScanner_Call{Call: _e.mock.On("ListByScanner", ctx, tx, assetVersionID, scannerID)}
 }
 
-func (_c *FirstPartyVulnRepository_ListByScanner_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_ListByScanner_Call {
+func (_c *FirstPartyVulnRepository_ListByScanner_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_ListByScanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1480,24 +1461,19 @@ func (_c *FirstPartyVulnRepository_ListByScanner_Call) Run(run func(ctx context.
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 uuid.UUID
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -1508,14 +1484,14 @@ func (_c *FirstPartyVulnRepository_ListByScanner_Call) Return(firstPartyVulns []
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_ListByScanner_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_ListByScanner_Call {
+func (_c *FirstPartyVulnRepository_ListByScanner_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_ListByScanner_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListUnfixedByAssetAndAssetVersionAndScanner provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScanner(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, scannerID)
+func (_mock *FirstPartyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScanner(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListUnfixedByAssetAndAssetVersionAndScanner")
@@ -1523,18 +1499,18 @@ func (_mock *FirstPartyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScann
 
 	var r0 []models.FirstPartyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, scannerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID, string) []models.FirstPartyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, scannerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, scannerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1549,14 +1525,13 @@ type FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call s
 // ListUnfixedByAssetAndAssetVersionAndScanner is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersionID uuid.UUID
 //   - scannerID string
-func (_e *FirstPartyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScanner(ctx any, tx any, assetVersionName any, assetID any, scannerID any) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
-	return &FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndScanner", ctx, tx, assetVersionName, assetID, scannerID)}
+func (_e *FirstPartyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScanner(ctx any, tx any, assetVersionID any, scannerID any) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+	return &FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndScanner", ctx, tx, assetVersionID, scannerID)}
 }
 
-func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1566,24 +1541,19 @@ func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_C
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 uuid.UUID
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg3 = args[3].(string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -1594,7 +1564,7 @@ func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_C
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
+func (_c *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScanner_Call {
 	_c.Call.Return(run)
 	return _c
 }

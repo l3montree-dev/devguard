@@ -51,14 +51,14 @@
         AND a.asset_version_name = child.asset_version_name
         AND a.asset_id = child.asset_id;
        
-    -- 3. Drop old foreign key columns
+    -- 3. Drop old foreign key columns, asset_id is kept as denormalized column to avoid joins
         ALTER TABLE public.artifact_dependency_vulns DROP COLUMN artifact_artifact_name, DROP COLUMN artifact_asset_version_name,DROP COLUMN artifact_asset_id;
         ALTER TABLE public.artifact_license_risks DROP COLUMN artifact_artifact_name, DROP COLUMN artifact_asset_version_name,DROP COLUMN artifact_asset_id;
-        
-        ALTER TABLE public.attestations DROP COLUMN artifact_name, DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.artifact_risk_history DROP COLUMN artifact_name, DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.release_items DROP COLUMN artifact_name, DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.sboms DROP COLUMN artifact_name, DROP COLUMN asset_version_name,DROP COLUMN asset_id;
+
+        ALTER TABLE public.attestations DROP COLUMN artifact_name, DROP COLUMN asset_version_name;
+        ALTER TABLE public.artifact_risk_history DROP COLUMN artifact_name, DROP COLUMN asset_version_name;
+        ALTER TABLE public.release_items DROP COLUMN artifact_name, DROP COLUMN asset_version_name;
+        ALTER TABLE public.sboms DROP COLUMN artifact_name, DROP COLUMN asset_version_name;
 
     -- 4. Drop the primary key, add the new primary key 
         ALTER TABLE public.artifacts 
@@ -130,20 +130,18 @@
         FROM public.asset_versions av
         WHERE av.name = child.asset_version_name AND av.asset_id = child.asset_id;
         
-    -- 3. Drop the old foreign key columns
-        ALTER TABLE public.advisories DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.dependency_vulns DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.supply_chain DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.first_party_vulnerabilities DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.asset_risk_history DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.in_toto_links DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.license_risks DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.artifacts DROP COLUMN asset_version_name,DROP COLUMN asset_id;
-        ALTER TABLE public.compliance_postures DROP COLUMN asset_version_name,DROP COLUMN asset_id;
+    -- 3. Drop the old foreign key columns, asset_id is kept as denormalized column to avoid joins
+        -- asset_version_name is kept on dependency_vulns, first_party_vulnerabilities, license_risks and compliance_postures since it is part of their content hash
+        ALTER TABLE public.advisories DROP COLUMN asset_version_name;
+        ALTER TABLE public.supply_chain DROP COLUMN asset_version_name;
+        ALTER TABLE public.asset_risk_history DROP COLUMN asset_version_name;
+        ALTER TABLE public.in_toto_links DROP COLUMN asset_version_name;
+        ALTER TABLE public.artifacts DROP COLUMN asset_version_name;
 
     -- 4. Drop the primary key, add the new primary key, add unique constraint on name+asset_id (keep semantics)
-        ALTER TABLE public.asset_versions 
-        DROP CONSTRAINT asset_versions_pkey,
+        -- CASCADE drops the remaining (name, asset_id) foreign keys of the hash tables and legacy tables
+        ALTER TABLE public.asset_versions
+        DROP CONSTRAINT asset_versions_pkey CASCADE,
         ADD PRIMARY KEY (id),
         ADD CONSTRAINT asset_versions_name_asset_id_unique UNIQUE (name, asset_id);
 
@@ -166,11 +164,18 @@
         ALTER TABLE public.in_toto_links ADD PRIMARY KEY (supply_chain_id, step, asset_version_id);
         ALTER TABLE public.asset_risk_history ADD PRIMARY KEY (asset_version_id, day);
 
+    -- 7. These always belong to an asset version, compliance postures, advisories and supply chains stay nullable
+        ALTER TABLE public.artifacts ALTER COLUMN asset_version_id SET NOT NULL;
+        ALTER TABLE public.dependency_vulns ALTER COLUMN asset_version_id SET NOT NULL;
+        ALTER TABLE public.first_party_vulnerabilities ALTER COLUMN asset_version_id SET NOT NULL;
+        ALTER TABLE public.license_risks ALTER COLUMN asset_version_id SET NOT NULL;
+
     --6. Add asset_id column on important tables to avoid join
         -- Table with a few entries can be kept less optimized but more user friendly
 
 
 
 -- HASH CALCULATION
+-- VACUUM ANALYZE of the rewritten tables cannot run inside the migration transaction, it runs as post migration statement in database/migrations.go
 
 

@@ -135,7 +135,7 @@ func (s *scanService) ScanNormalizedSBOM(ctx context.Context, tx shared.DB, org 
 
 	// handle the scan result
 	resultCtx, resultSpan := servicesTracer.Start(ctx, "scanService.HandleScanResult")
-	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, forest, vulns, artifact.ArtifactName, userID, userAgent)
+	opened, closed, newState, err := s.HandleScanResult(resultCtx, tx, org, project, asset, &assetVersion, forest, vulns, artifact, userID, userAgent)
 	resultSpan.End()
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
@@ -234,17 +234,18 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
 				},
-				Message:         &result.Message.Text,
-				ScannerIDs:      scannerID,
-				RuleID:          utils.OrDefault(result.RuleID, ""),
-				RuleHelp:        preferMarkdown(utils.OrDefault(rule.Help, sarif.MultiformatMessageString{})),
-				RuleName:        utils.OrDefault(rule.Name, ""),
-				RuleHelpURI:     utils.OrDefault(rule.HelpURI, ""),
-				RuleDescription: getBestDescription(rule),
-				RuleProperties:  databasetypes.JSONB(ruleProperties),
+				AssetVersionName: assetVersion.Name,
+				Message:          &result.Message.Text,
+				ScannerIDs:       scannerID,
+				RuleID:           utils.OrDefault(result.RuleID, ""),
+				RuleHelp:         preferMarkdown(utils.OrDefault(rule.Help, sarif.MultiformatMessageString{})),
+				RuleName:         utils.OrDefault(rule.Name, ""),
+				RuleHelpURI:      utils.OrDefault(rule.HelpURI, ""),
+				RuleDescription:  getBestDescription(rule),
+				RuleProperties:   databasetypes.JSONB(ruleProperties),
 			}
 			if result.PartialFingerprints != nil {
 				firstPartyVulnerability.Commit = result.PartialFingerprints["commitSha"]
@@ -347,13 +348,13 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 
 func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.DB, userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database, which are not fixed yet - this is the old state
-	existingVulns, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(ctx, tx, assetVersion.Name, assetVersion.AssetID, scannerID)
+	existingVulns, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(ctx, tx, assetVersion.ID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing first party vulns", "err", err)
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
-	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID, scannerID)
+	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(ctx, tx, assetVersion.ID, assetVersion.AssetID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing vulns on other branches", "err", err)
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
@@ -425,7 +426,7 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 		UserAgent:        utils.OrDefault(userAgent, ""),
 	}, utils.Map(branchDiff.NewToAllBranches, func(v *models.FirstPartyVuln) uuid.UUID { return v.ID }))
 
-	v, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(ctx, nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	v, err := s.firstPartyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScanner(ctx, nil, assetVersion.ID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing first party vulns", "err", err)
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
@@ -434,11 +435,11 @@ func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.D
 	return utils.DereferenceSlice(branchDiff.NewToAllBranches), fixedVulns, v, nil
 }
 
-func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifactName string, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, forest normalize.MerkleForest, vulns []models.VulnInPackage, artifact models.Artifact, userID string, userAgent *string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 	ctx, span := servicesTracer.Start(ctx, "scanService.HandleScanResult")
 	defer span.End()
 	span.SetAttributes(
-		attribute.String("artifact.name", artifactName),
+		attribute.String("artifact.name", artifact.ArtifactName),
 		attribute.String("asset.slug", asset.Slug),
 		attribute.String("assetVersion.name", assetVersion.Name),
 		attribute.Int("scan.input_vuln_count", len(vulns)),
@@ -451,7 +452,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 	dependencyVulns := make([]models.DependencyVuln, 0, len(vulns)*2)
 
 	for _, vuln := range vulns {
-		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, forest, asset.ID, assetVersion.Name, artifactName)...)
+		dependencyVulns = append(dependencyVulns, transformer.VulnInPackageToDependencyVulns(vuln, forest, *assetVersion, artifact)...)
 		if len(dependencyVulns) > 10000 {
 			// unique those
 			dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVuln) uuid.UUID {
@@ -464,7 +465,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		return f.CalculateHash()
 	})
 
-	opened, closed, newState, err = s.HandleScanResultForVulns(ctx, tx, userID, userAgent, artifactName, assetVersion, forest, dependencyVulns, asset)
+	opened, closed, newState, err = s.HandleScanResultForVulns(ctx, tx, userID, userAgent, artifact, assetVersion, forest, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -473,7 +474,7 @@ func (s *scanService) HandleScanResult(ctx context.Context, tx shared.DB, org mo
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: new(time.Now())}
+	assetVersion.Metadata[artifact.ArtifactName] = models.ScannerInformation{LastScan: new(time.Now())}
 
 	newState, err = s.dependencyVulnService.RecalculateRawRiskAssessment(ctx, tx, "system", newState, "", asset)
 	if err != nil {
@@ -521,8 +522,9 @@ func (s *scanService) attachEventsTo(ctx context.Context, tx shared.DB, vulns []
 	return nil
 }
 
-func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.Name, assetVersion.AssetID)
+func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifact models.Artifact, assetVersion *models.AssetVersion, forest normalize.MerkleForest, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	artifactName := artifact.ArtifactName
+	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersionWithoutEvents(ctx, nil, assetVersion.ID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -540,7 +542,7 @@ func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB
 		newlyDiscoveredSignatures[i] = utils.HashToInt64(diff.NewlyDiscovered[i].CalculateAssetVersionIndependentHash())
 	}
 
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.Name, assetVersion.AssetID, newlyDiscoveredSignatures)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, tx, assetVersion.ID, assetVersion.AssetID, newlyDiscoveredSignatures)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -572,13 +574,13 @@ func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	err = s.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(ctx, tx, diff.NewInArtifact, artifactName)
+	err = s.dependencyVulnService.UserDetectedDependencyVulnInAnotherArtifact(ctx, tx, diff.NewInArtifact, artifact)
 	if err != nil {
 		slog.Error("error when trying to add events for adding scanner to vulnerability")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	err = s.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(ctx, tx, fixedOnThisArtifactName, artifactName)
+	err = s.dependencyVulnService.UserDidNotDetectDependencyVulnInArtifactAnymore(ctx, tx, fixedOnThisArtifactName, artifact)
 	if err != nil {
 		slog.Error("error when trying to add events for removing scanner from vulnerability")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -609,7 +611,7 @@ func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, tx, assetVersion.Name, assetVersion.AssetID, &artifactName)
+	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, tx, assetVersion.ID, &artifact.ID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -900,7 +902,7 @@ func (s *scanService) storeChangedUpstreamSBOMs(ctx context.Context, tx shared.D
 		if root, ok := storedRoots[upstream.Source]; ok && root == upstream.SBOM.Tree.Root {
 			continue
 		}
-		if err := s.assetVersionService.StoreSBOM(ctx, tx, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
+		if err := s.assetVersionService.StoreSBOM(ctx, tx, artifact, upstream.Source, upstream.SBOM); err != nil {
 			slog.Error("failed to update sbom in security lifecycle", "error", err, "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "source", upstream.Source)
 			return false, fmt.Errorf("failed to update sbom: %w", err)
 		}
@@ -1003,7 +1005,7 @@ func (s *scanService) ScanSBOMWithoutSaving(ctx context.Context, bom *cyclonedx.
 
 	vulnDTOs := make([]dtos.DependencyVuln, 0, len(vulns))
 	for _, v := range vulns {
-		dependencyVulns := transformer.VulnInPackageToDependencyVulnsWithoutArtifact(v, normalized, uuid.Nil, "")
+		dependencyVulns := transformer.VulnInPackageToDependencyVulnsWithoutArtifact(v, normalized, models.AssetVersion{})
 		for _, dv := range dependencyVulns {
 			vulnDTOs = append(vulnDTOs, dtos.DependencyVuln{
 				CVEID:                 dv.CVEID,

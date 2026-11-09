@@ -34,20 +34,21 @@ func TestDaemonPipelineApplyVEXRulesAppliesExistingRuleToExistingVuln(t *testing
 		assert.NoError(t, err)
 
 		artifact := models.Artifact{
-			ArtifactName:     "test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "test-artifact",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
 
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				State:            dtos.VulnStateOpen,
-				LastStateChange:  time.Now().Add(-1 * time.Hour),
+				AssetVersionID:  assetVersion.ID,
+				AssetID:         asset.ID,
+				State:           dtos.VulnStateOpen,
+				LastStateChange: time.Now().Add(-1 * time.Hour),
 			},
+			AssetVersionName:  assetVersion.Name,
 			CVEID:             cve.CVE,
 			ComponentPurl:     "pkg:npm/test-package@1.0.0",
 			VulnerabilityPath: []string{"pkg:npm/test-package@1.0.0"},
@@ -112,20 +113,21 @@ func TestDaemonPipelineApplyVEXRulesReopensAcceptedVuln(t *testing.T) {
 		assert.NoError(t, err)
 
 		artifact := models.Artifact{
-			ArtifactName:     "test-artifact-reopen",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "test-artifact-reopen",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
 
 		vulnerability := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				AssetID:          asset.ID,
-				AssetVersionName: assetVersion.Name,
-				State:            dtos.VulnStateAccepted,
-				LastStateChange:  time.Now().Add(-1 * time.Hour),
+				AssetVersionID:  assetVersion.ID,
+				AssetID:         asset.ID,
+				State:           dtos.VulnStateAccepted,
+				LastStateChange: time.Now().Add(-1 * time.Hour),
 			},
+			AssetVersionName:  assetVersion.Name,
 			CVEID:             cve.CVE,
 			ComponentPurl:     "pkg:npm/test-package-reopen@1.0.0",
 			VulnerabilityPath: []string{"pkg:npm/test-package-reopen@1.0.0"},

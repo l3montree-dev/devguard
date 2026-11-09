@@ -16,6 +16,7 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http/httptest"
@@ -118,7 +119,10 @@ func TestVEXFixedOnDefaultBranchButFalsePositiveOnBranchX(t *testing.T) {
 		ctx := app.NewContext(req, recorder)
 		setupCtx(ctx)
 		shared.SetAssetVersion(ctx, assetVersion)
-		shared.SetArtifact(ctx, models.Artifact{ArtifactName: "backend", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
+		// the artifact middleware loads the stored artifact, the export filters by its id
+		artifact, err := f.App.ArtifactRepository.ReadArtifact(context.Background(), nil, "backend", assetVersion.ID)
+		assert.NoError(t, err)
+		shared.SetArtifact(ctx, artifact)
 
 		assert.NoError(t, f.App.ArtifactController.CycloneDXVexJSON(ctx))
 		assert.Equal(t, 200, recorder.Code, recorder.Body.String())

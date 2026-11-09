@@ -25,18 +25,26 @@ func NewAttestationRepository(db *gorm.DB) *attestationRepository {
 	}
 }
 
+// joins the artifact and its asset version since their names are not stored on the attestation
+func withAttestationArtifactNames(db *gorm.DB) *gorm.DB {
+	return db.Model(&models.Attestation{}).
+		Select("attestations.*, artifacts.artifact_name, av.name AS asset_version_name").
+		Joins("JOIN artifacts ON artifacts.id = attestations.artifact_id").
+		Joins("JOIN asset_versions av ON av.id = artifacts.asset_version_id")
+}
+
 func (a *attestationRepository) GetByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.Attestation, error) {
 	var attestationList []models.Attestation
-	err := a.GetDB(ctx, tx).Where("asset_id = ?", assetID).Find(&attestationList).Error
+	err := withAttestationArtifactNames(a.GetDB(ctx, tx)).Where("attestations.asset_id = ?", assetID).Find(&attestationList).Error
 	if err != nil {
 		return attestationList, err
 	}
 	return attestationList, nil
 }
 
-func (a *attestationRepository) GetByAssetVersionAndAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
+func (a *attestationRepository) GetByAssetVersionID(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID) ([]models.Attestation, error) {
 	var attestationList []models.Attestation
-	err := a.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersion).Find(&attestationList).Error
+	err := withAttestationArtifactNames(a.GetDB(ctx, tx)).Where("artifacts.asset_version_id = ?", assetVersionID).Find(&attestationList).Error
 	if err != nil {
 		return attestationList, err
 	}
@@ -47,9 +55,7 @@ func (a *attestationRepository) Create(ctx context.Context, tx *gorm.DB, attesta
 	return a.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "predicate_type"},
-			{Name: "asset_version_name"},
-			{Name: "asset_id"},
-			{Name: "artifact_name"},
+			{Name: "artifact_id"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{"content"}),
 	}).Create(attestation).Error

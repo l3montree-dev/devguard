@@ -113,14 +113,13 @@ type SBOMMerkleNode struct {
 // SBOM URL), so re-ingesting the same source replaces its row rather than
 // accumulating one per content revision.
 type SBOM struct {
-	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;primaryKey;type:uuid;"`
-	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;primaryKey"`
-	ArtifactName     string    `json:"artifactName" gorm:"column:artifact_name;primaryKey"`
-	Source           string    `json:"source" gorm:"column:source;primaryKey"`
-	RootSubtreeHash  uuid.UUID `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;type:uuid;primaryKey;"`
-	UpdatedAt        time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	ArtifactID      uuid.UUID `json:"artifactId" gorm:"column:artifact_id;primaryKey;type:uuid;"`
+	AssetID         uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;not null;"`
+	Source          string    `json:"source" gorm:"column:source;primaryKey"`
+	RootSubtreeHash uuid.UUID `json:"rootSubtreeHash" gorm:"column:root_subtree_hash;type:uuid;primaryKey;"`
+	UpdatedAt       time.Time `json:"updatedAt" gorm:"column:updated_at"`
 
-	AssetVersion AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactID;references:ID;constraint:OnDelete:CASCADE;"`
 }
 
 func (m SBOMMerkleEdge) TableName() string {

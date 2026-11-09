@@ -214,9 +214,9 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   artifactName,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
 
 	// When noWrite, save the artifact within the early transaction so FK constraints are
@@ -225,7 +225,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	if noWrite {
 		artifactTx = earlyTx
 	}
-	if err = s.artifactService.SaveArtifact(scanCtx, artifactTx, &artifact); err != nil {
+	if err = s.artifactService.FindOrCreateArtifact(scanCtx, artifactTx, &artifact); err != nil {
 		slog.Error("could not save artifact", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -242,7 +242,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		defer tx.Rollback()
 	}
 
-	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifactName, sbomOrigin, normalized)
+	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, sbomOrigin, normalized)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		span.RecordError(err)

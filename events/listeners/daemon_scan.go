@@ -53,16 +53,8 @@ type vulnPath struct {
 	Path []uuid.UUID
 }
 
-type sbomSnapshot map[assetVersionKey]string
-type assetVersionKey struct {
-	assetID          uuid.UUID
-	assetVersionName string
-}
-
-type artifactKey struct {
-	assetID                        uuid.UUID
-	assetVersionName, artifactName string
-}
+// keyed by asset version id
+type sbomSnapshot map[uuid.UUID]string
 
 type purlPathResult struct {
 	Purl  string
@@ -74,27 +66,26 @@ type purlPathResult struct {
 type jobFilter struct {
 	sbomSnapshot    sbomSnapshot
 	assetMap        map[uuid.UUID]struct{}
-	assetVersionMap map[assetVersionKey]struct{}
-	artifactMap     map[artifactKey]struct{}
+	assetVersionMap map[uuid.UUID]struct{}
+	artifactMap     map[uuid.UUID]struct{}
 }
 
 // build lookup maps on asset, asset version and artifact level
 func (filter *jobFilter) setUpLookUpMaps(rows pgx.Rows) error {
 	defer rows.Close()
 	assetMap := make(map[uuid.UUID]struct{}, 777)
-	assetVersionMap := make(map[assetVersionKey]struct{}, 2000)
-	artifactMap := make(map[artifactKey]struct{}, 3000)
+	assetVersionMap := make(map[uuid.UUID]struct{}, 2000)
+	artifactMap := make(map[uuid.UUID]struct{}, 3000)
 
-	var assetID uuid.UUID
-	var assetVersionName, artifactName string
+	var assetID, assetVersionID, artifactID uuid.UUID
 	for rows.Next() {
-		err := rows.Scan(&assetID, &assetVersionName, &artifactName)
+		err := rows.Scan(&assetID, &assetVersionID, &artifactID)
 		if err != nil {
 			return err
 		}
 		assetMap[assetID] = struct{}{}
-		assetVersionMap[assetVersionKey{assetVersionName: assetVersionName, assetID: assetID}] = struct{}{}
-		artifactMap[artifactKey{assetID: assetID, assetVersionName: assetVersionName, artifactName: artifactName}] = struct{}{}
+		assetVersionMap[assetVersionID] = struct{}{}
+		artifactMap[artifactID] = struct{}{}
 	}
 
 	rows.Close()
@@ -112,10 +103,10 @@ func (filter *jobFilter) setUpLookUpMaps(rows pgx.Rows) error {
 func (filter *jobFilter) shouldProcess(identity any) bool {
 	switch v := identity.(type) {
 	case models.AssetVersion:
-		_, ok := filter.assetVersionMap[assetVersionKey{assetID: v.AssetID, assetVersionName: v.Name}]
+		_, ok := filter.assetVersionMap[v.ID]
 		return ok
 	case models.Artifact:
-		_, ok := filter.artifactMap[artifactKey{assetID: v.AssetID, assetVersionName: v.AssetVersionName, artifactName: v.ArtifactName}]
+		_, ok := filter.artifactMap[v.ID]
 		return ok
 	}
 	return false
@@ -123,16 +114,16 @@ func (filter *jobFilter) shouldProcess(identity any) bool {
 
 // isAssetVersionUnchanged must run while sboms is locked, otherwise an upload could still commit after the check
 func (filter *jobFilter) isAssetVersionUnchanged(ctx context.Context, tx pgx.Tx, assetVersion models.AssetVersion) (bool, error) {
-	snapshotFingerprint, ok := filter.sbomSnapshot[assetVersionKey{assetID: assetVersion.AssetID, assetVersionName: assetVersion.Name}]
+	snapshotFingerprint, ok := filter.sbomSnapshot[assetVersion.ID]
 	if !ok {
 		return false, nil
 	}
 
-	var key assetVersionKey
+	var key uuid.UUID
 	var fingerprint string
 	err := tx.QueryRow(ctx, sbomFingerprintQuery+`
-		WHERE asset_id = $1 AND asset_version_name = $2
-		GROUP BY asset_id, asset_version_name;`, assetVersion.AssetID, assetVersion.Name).Scan(&key.assetID, &key.assetVersionName, &fingerprint)
+		WHERE a.asset_version_id = $1
+		GROUP BY a.asset_version_id;`, assetVersion.ID).Scan(&key, &fingerprint)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// all sboms of the asset version were deleted
 		return false, nil
@@ -237,17 +228,17 @@ func ensureIsolation(ctx context.Context, conn *pgxpool.Conn) (snapshot sbomSnap
 
 	slog.Info("snapshotting sboms table")
 
-	sbomRows, err := conn.Query(ctx, sbomFingerprintQuery+` GROUP BY asset_id, asset_version_name;`)
+	sbomRows, err := conn.Query(ctx, sbomFingerprintQuery+` GROUP BY a.asset_version_id;`)
 	if err != nil {
 		return nil, fmt.Errorf("could not snapshot sboms table: %w", err)
 	}
 	defer sbomRows.Close()
 
 	snapshot = make(sbomSnapshot, 2000)
-	var key assetVersionKey
+	var key uuid.UUID
 	var fingerprint string
 	for sbomRows.Next() {
-		err = sbomRows.Scan(&key.assetID, &key.assetVersionName, &fingerprint)
+		err = sbomRows.Scan(&key, &fingerprint)
 		if err != nil {
 			return nil, fmt.Errorf("could not scan sbom row: %w", err)
 		}
@@ -478,25 +469,23 @@ func materializeNewDependencyVulns(ctx context.Context, scanTx pgx.Tx) error {
 	materialized, err := scanTx.Exec(ctx, `
 		CREATE TEMP TABLE new_dependency_vulns AS
 		WITH found AS (`+scanResultsQuery+`)
-		SELECT DISTINCT ON (f.id, f.artifact_name)
+		SELECT DISTINCT ON (f.id, f.artifact_id)
 			f.id, f.component_purl, f.path_purls, f.fixed_version, f.cve_id,
-			f.asset_id, f.asset_version_name, f.artifact_name,
+			f.asset_id, f.asset_version_id, f.artifact_id,
 			dv.id IS NOT NULL AS already_exists
 		FROM found f
 		LEFT JOIN dependency_vulns dv ON dv.id = f.id
 		WHERE NOT EXISTS (
 			SELECT FROM artifact_dependency_vulns adv
 			WHERE adv.dependency_vuln_id = f.id
-			AND adv.artifact_artifact_name = f.artifact_name
-			AND adv.artifact_asset_version_name = f.asset_version_name
-			AND adv.artifact_asset_id = f.asset_id)
-		ORDER BY f.id, f.artifact_name, f.fixed_version NULLS LAST;`)
+			AND adv.artifact_id = f.artifact_id)
+		ORDER BY f.id, f.artifact_id, f.fixed_version NULLS LAST;`)
 	if err != nil {
 		return fmt.Errorf("could not materialize new dependency vulns: %w", err)
 	}
 
 	// speed up artifact lookup queries on new dependency vuln state
-	_, err = scanTx.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON new_dependency_vulns (asset_id, asset_version_name, artifact_name);`)
+	_, err = scanTx.Exec(ctx, `CREATE INDEX artifact_lookup_idx ON new_dependency_vulns (artifact_id);`)
 	if err != nil {
 		return fmt.Errorf("could not create index on new_dependency_vulns artifact lookup: %w", err)
 	}
@@ -514,7 +503,7 @@ func materializeNewDependencyVulns(ctx context.Context, scanTx pgx.Tx) error {
 func (runner *DaemonRunner) saveDependencyVulns(ctx context.Context, conn *pgxpool.Conn, jobFilter *jobFilter) error {
 	// only the artifacts present in the new vulns need processing
 	rows, err := conn.Query(ctx, `
-		SELECT DISTINCT asset_id, asset_version_name, artifact_name 
+		SELECT DISTINCT asset_id, asset_version_id, artifact_id
 		FROM new_dependency_vulns;`)
 	if err != nil {
 		return err
@@ -591,10 +580,10 @@ func cleanUpOrphanVulns(ctx context.Context, conn *pgxpool.Conn) error {
 // scanResultsQuery resolves the scanned vuln paths into dependency vulns, one row per fixed version
 const scanResultsQuery = `
 	SELECT p.component_purl, p.path_purls, pm.fixed_version, cves.cve AS cve_id,
-		s.asset_id, s.asset_version_name, s.artifact_name,
+		s.asset_id, a.asset_version_id, s.artifact_id,
 		-- the id must match DependencyVuln.CalculateHash byte for byte
 		substring(encode(sha256(convert_to(
-			cves.cve || '/' || s.asset_version_name || '/' || s.asset_id::text || '/' || array_to_string(p.path_purls, ','),
+			cves.cve || '/' || av.name || '/' || s.asset_id::text || '/' || array_to_string(p.path_purls, ','),
 		'UTF8')), 'hex'), 1, 32)::uuid AS id
 	FROM (
 		SELECT vp.component_purl, vp.root,
@@ -606,6 +595,8 @@ const scanResultsQuery = `
 		FROM vuln_paths vp
 	) p
 	JOIN sboms s ON s.root_subtree_hash = p.root
+	JOIN artifacts a ON a.id = s.artifact_id
+	JOIN asset_versions av ON av.id = a.asset_version_id
 	JOIN purl_mapping pm ON pm.purl = p.component_purl
 	JOIN cves ON cves.id = pm.cve_id`
 
@@ -678,7 +669,7 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 		if err != nil {
 			return false, fmt.Errorf("could not create savepoint for artifact %s: %w", artifact.ArtifactName, err)
 		}
-		artifactOpened, associated, err := runner.handleArtifact(ctx, savepoint, artifact, createdInAssetVersion, asset, cache)
+		artifactOpened, associated, err := runner.handleArtifact(ctx, savepoint, assetVersion, artifact, createdInAssetVersion, asset, cache)
 		if err != nil {
 			slog.Error("could not handle scan results", "err", err, "artifact", artifact.ArtifactName, "assetVersion", assetVersion.Name)
 			if err := savepoint.Rollback(ctx); err != nil {
@@ -719,14 +710,15 @@ func (runner *DaemonRunner) handleScanResultForAssetVersion(ctx context.Context,
 // sbomFingerprintQuery hashes the sboms of each asset version
 // this helps detecting race conditions
 const sbomFingerprintQuery = `
-	SELECT asset_id, asset_version_name,
-		md5(string_agg(concat_ws('/', artifact_name, source, root_subtree_hash, updated_at), ',' ORDER BY artifact_name, source))
-	FROM sboms`
+	SELECT a.asset_version_id,
+		md5(string_agg(concat_ws('/', a.artifact_name, s.source, s.root_subtree_hash, s.updated_at), ',' ORDER BY a.artifact_name, s.source))
+	FROM sboms s
+	JOIN artifacts a ON a.id = s.artifact_id`
 
 // handleArtifact must run inside its own savepoint, a failure leaves the transaction aborted until it is rolled back.
 // associated is the number of existing vulns which were associated with the artifact.
-func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *cveCache) (opened []models.DependencyVuln, associated int64, err error) {
-	newVulns, existingVulns, err := runner.fetchNewVulnsForArtifact(ctx, tx, artifact)
+func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, assetVersion models.AssetVersion, artifact models.Artifact, createdInAssetVersion map[uuid.UUID]struct{}, asset models.Asset, cache *cveCache) (opened []models.DependencyVuln, associated int64, err error) {
+	newVulns, existingVulns, err := runner.fetchNewVulnsForArtifact(ctx, tx, assetVersion, artifact)
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not query found vulns for artifact: %w", err)
 	}
@@ -751,7 +743,7 @@ func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artif
 		newSignatures[i] = utils.HashToInt64(newVulns[i].CalculateAssetVersionIndependentHash())
 	}
 
-	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, artifact.AssetVersionName, asset.ID, newSignatures)
+	existingVulnsOnOtherBranch, err := runner.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(ctx, nil, artifact.AssetVersionID, asset.ID, newSignatures)
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not get existing dependency vulns on other branches: %w", err)
 	}
@@ -771,7 +763,7 @@ func (runner *DaemonRunner) handleArtifact(ctx context.Context, tx pgx.Tx, artif
 		return nil, 0, err
 	}
 
-	associated, err = associateVulnsWithArtifact(ctx, tx, existingVulns, artifact.ArtifactName)
+	associated, err = associateVulnsWithArtifact(ctx, tx, existingVulns, artifact)
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not associate vulns with artifact: %w", err)
 	}
@@ -848,19 +840,19 @@ func copyDependencyVulns(ctx context.Context, tx pgx.Tx, vulns []models.Dependen
 		vuln.UpdatedAt = now
 
 		for _, artifact := range vuln.Artifacts {
-			artifactRows = append(artifactRows, []any{artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, vuln.ID})
+			artifactRows = append(artifactRows, []any{artifact.ID, vuln.ID})
 		}
 	}
 
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"dependency_vulns"}, []string{"id", "asset_version_name", "asset_id", "state", "last_state_change", "created_at", "updated_at", "cve_id", "component_purl", "component_fixed_version", "direct_dependency_fixed_version", "vulnerability_path", "risk_assessment", "risk_recalculated_at", "signature", "asset_signature"}, pgx.CopyFromSlice(len(vulns), func(i int) ([]any, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"dependency_vulns"}, []string{"id", "asset_version_id", "asset_version_name", "asset_id", "state", "last_state_change", "created_at", "updated_at", "cve_id", "component_purl", "component_fixed_version", "direct_dependency_fixed_version", "vulnerability_path", "risk_assessment", "risk_recalculated_at", "signature", "asset_signature"}, pgx.CopyFromSlice(len(vulns), func(i int) ([]any, error) {
 		v := vulns[i]
-		return []any{v.ID, v.AssetVersionName, v.AssetID, string(v.State), v.LastStateChange, v.CreatedAt, v.UpdatedAt, v.CVEID, v.ComponentPurl, v.ComponentFixedVersion, v.DirectDependencyFixedVersion, v.VulnerabilityPath, v.RiskAssessment, v.RiskRecalculatedAt, v.Signature, v.AssetSignature}, nil
+		return []any{v.ID, v.AssetVersionID, v.AssetVersionName, v.AssetID, string(v.State), v.LastStateChange, v.CreatedAt, v.UpdatedAt, v.CVEID, v.ComponentPurl, v.ComponentFixedVersion, v.DirectDependencyFixedVersion, v.VulnerabilityPath, v.RiskAssessment, v.RiskRecalculatedAt, v.Signature, v.AssetSignature}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy dependency vulns: %w", err)
 	}
 
-	_, err = tx.CopyFrom(ctx, pgx.Identifier{"artifact_dependency_vulns"}, []string{"artifact_artifact_name", "artifact_asset_version_name", "artifact_asset_id", "dependency_vuln_id"}, pgx.CopyFromRows(artifactRows))
+	_, err = tx.CopyFrom(ctx, pgx.Identifier{"artifact_dependency_vulns"}, []string{"artifact_id", "dependency_vuln_id"}, pgx.CopyFromRows(artifactRows))
 	if err != nil {
 		return fmt.Errorf("could not copy artifact associations: %w", err)
 	}
@@ -884,26 +876,22 @@ func copyVulnEvents(ctx context.Context, tx pgx.Tx, events []models.VulnEvent) e
 	return nil
 }
 
-func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifactName string) (int64, error) {
+func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities []models.DependencyVuln, artifact models.Artifact) (int64, error) {
 	if len(vulnerabilities) == 0 {
 		return 0, nil
 	}
 
-	assetVersionNames := make([]string, 0, len(vulnerabilities))
-	assetIDs := make([]uuid.UUID, 0, len(vulnerabilities))
 	dependencyVulnIDs := make([]uuid.UUID, 0, len(vulnerabilities))
 
 	for i := range vulnerabilities {
 		alreadyAssociated := false
 		for _, a := range vulnerabilities[i].Artifacts {
-			if a.ArtifactName == artifactName {
+			if a.ID == artifact.ID {
 				alreadyAssociated = true
 				break
 			}
 		}
 		if !alreadyAssociated {
-			assetVersionNames = append(assetVersionNames, vulnerabilities[i].AssetVersionName)
-			assetIDs = append(assetIDs, vulnerabilities[i].AssetID)
 			dependencyVulnIDs = append(dependencyVulnIDs, vulnerabilities[i].CalculateHash())
 		}
 	}
@@ -911,13 +899,11 @@ func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities 
 		return 0, nil
 	}
 	tag, err := tx.Exec(ctx, `INSERT INTO artifact_dependency_vulns 
-				(artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id)
+				(artifact_id, dependency_vuln_id)
 				SELECT 
 					$1,
-					UNNEST($2::text[]),
-					UNNEST($3::uuid[]),
-					UNNEST($4::uuid[])
-				ON CONFLICT DO NOTHING;`, artifactName, assetVersionNames, assetIDs, dependencyVulnIDs)
+					UNNEST($2::uuid[])
+				ON CONFLICT DO NOTHING;`, artifact.ID, dependencyVulnIDs)
 	if err != nil {
 		return 0, err
 	}
@@ -925,13 +911,11 @@ func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities 
 }
 
 // newVulns do not exist on the asset version yet, existingVulns only lack the association with the artifact
-func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, tx pgx.Tx, artifact models.Artifact) ([]models.DependencyVuln, []models.DependencyVuln, error) {
+func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, tx pgx.Tx, assetVersion models.AssetVersion, artifact models.Artifact) ([]models.DependencyVuln, []models.DependencyVuln, error) {
 	rows, err := tx.Query(ctx, `
 	SELECT component_purl, path_purls, cve_id, fixed_version, already_exists
 	FROM new_dependency_vulns
-	WHERE asset_id = $1
-	AND asset_version_name = $2
-	AND artifact_name = $3;`, artifact.AssetID, artifact.AssetVersionName, artifact.ArtifactName)
+	WHERE artifact_id = $1;`, artifact.ID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -948,7 +932,8 @@ func (runner *DaemonRunner) fetchNewVulnsForArtifact(ctx context.Context, tx pgx
 		}
 		vuln.CVE = &models.CVE{CVE: vuln.CVEID}
 		vuln.AssetID = artifact.AssetID
-		vuln.AssetVersionName = artifact.AssetVersionName
+		vuln.AssetVersionID = artifact.AssetVersionID
+		vuln.AssetVersionName = assetVersion.Name
 		if alreadyExists {
 			existingVulns = append(existingVulns, vuln)
 			continue

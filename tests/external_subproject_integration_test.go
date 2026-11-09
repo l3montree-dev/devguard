@@ -76,7 +76,7 @@ func TestHandleExternalSubprojectRequestUpdate(t *testing.T) {
 
 			// artifact was created
 			var createdArtifact models.Artifact
-			assert.NoError(t, f.DB.Where("asset_id = ? AND artifact_name = ? AND asset_version_name = ?", createdAsset.ID, "nginx:latest", "main").First(&createdArtifact).Error)
+			assert.NoError(t, f.DB.Where("asset_version_id = ? AND artifact_name = ?", createdVersion.ID, "nginx:latest").First(&createdArtifact).Error)
 		})
 
 		t.Run("should create sub-project when SubProjectExternalEntityID is set", func(t *testing.T) {

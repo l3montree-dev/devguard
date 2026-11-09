@@ -58,6 +58,15 @@ func sessionAssetIDsExcluding(ctx shared.Context, excludeAssetID uuid.UUID) ([]u
 	return assetIDs, nil
 }
 
+// maybeArtifactID returns the id of the artifact the request is scoped to, nil if it is not scoped to one
+func maybeArtifactID(ctx shared.Context) *uuid.UUID {
+	artifact, err := shared.MaybeGetArtifact(ctx)
+	if err != nil {
+		return nil
+	}
+	return &artifact.ID
+}
+
 func ctxToBOMMetadata(ctx shared.Context) normalize.BOMMetadata {
 	frontendURL := os.Getenv("FRONTEND_URL")
 

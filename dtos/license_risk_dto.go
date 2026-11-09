@@ -8,6 +8,7 @@ import (
 )
 
 type LicenseRiskArtifact struct {
+	ID               string `json:"id"`
 	ArtifactName     string `json:"artifactName"`
 	AssetVersionName string `json:"assetVersionName"`
 	AssetID          string `json:"assetId"`
@@ -15,6 +16,7 @@ type LicenseRiskArtifact struct {
 
 type LicenseRisk struct {
 	ID                   uuid.UUID `json:"id"`
+	AssetVersionID       string    `json:"assetVersionId"`
 	AssetVersionName     string    `json:"assetVersionName"`
 	AssetID              string    `json:"assetId"`
 	State                VulnState `json:"state"`

@@ -53,36 +53,36 @@ func TestLicenseRiskArtifactAssociation(t *testing.T) {
 
 			// Create two artifact records
 			artifact1 := models.Artifact{
-				ArtifactName:     "artifact-1",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
+				ArtifactName:   "artifact-1",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        assetVersion.AssetID,
 			}
 			artifact2 := models.Artifact{
-				ArtifactName:     "artifact-2",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
+				ArtifactName:   "artifact-2",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        assetVersion.AssetID,
 			}
 			assert.NoError(t, f.DB.Create(&artifact1).Error)
 			assert.NoError(t, f.DB.Create(&artifact2).Error)
 
 			// First run: detect risk for artifact-1 using FX-injected service
-			err := f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{componentWithInvalidLicense}, artifact1.ArtifactName)
+			err := f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{componentWithInvalidLicense}, artifact1)
 			assert.NoError(t, err)
 
 			// Verify license risk exists and is associated with artifact-1
 			var risksAfterFirst []models.LicenseRisk
-			err = f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risksAfterFirst).Error
+			err = f.DB.Preload("Artifacts").Where("asset_version_id = ?", assetVersion.ID).Find(&risksAfterFirst).Error
 			assert.NoError(t, err)
 			assert.Len(t, risksAfterFirst, 1)
 			assert.Equal(t, "artifact-1", risksAfterFirst[0].Artifacts[0].ArtifactName)
 
 			// Second run: process same component for artifact-2
-			err = f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{componentWithInvalidLicense}, artifact2.ArtifactName)
+			err = f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{componentWithInvalidLicense}, artifact2)
 			assert.NoError(t, err)
 
 			// Verify the license risk is now associated with both artifacts
 			var risksFinal []models.LicenseRisk
-			err = f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risksFinal).Error
+			err = f.DB.Preload("Artifacts").Where("asset_version_id = ?", assetVersion.ID).Find(&risksFinal).Error
 			assert.NoError(t, err)
 			assert.Len(t, risksFinal, 1)
 
@@ -115,9 +115,9 @@ func TestLicenseRiskClosedOnceTheLicenseIsValid(t *testing.T) {
 		assert.NoError(t, f.DB.Create(&comp).Error)
 
 		artifact := models.Artifact{
-			ArtifactName:     "test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          assetVersion.AssetID,
+			ArtifactName:   "test-artifact",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        assetVersion.AssetID,
 		}
 		assert.NoError(t, f.DB.Create(&artifact).Error)
 
@@ -193,9 +193,9 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 		}
 
 		artifact := models.Artifact{
-			ArtifactName:     artifactName,
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
+			ArtifactName:   artifactName,
+			AssetID:        asset.ID,
+			AssetVersionID: assetVersion.ID,
 		}
 		assert.NoError(t, f.DB.Create(&artifact).Error)
 
@@ -252,7 +252,7 @@ func TestLicenseRiskLifecycleManagement(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Len(t, risks, 2)
 
-			risks, err = f.App.LicenseRiskRepository.GetLicenseRisksByOtherAssetVersions(context.Background(), nil, newAssetVersion.Name, asset.ID)
+			risks, err = f.App.LicenseRiskRepository.GetLicenseRisksByOtherAssetVersions(context.Background(), nil, newAssetVersion.ID, asset.ID)
 			assert.Nil(t, err)
 			assert.Len(t, risks, 1)
 			newRisk := risks[0]
@@ -270,20 +270,20 @@ func TestLicenseRiskConcurrentArtifacts(t *testing.T) {
 		assert.NoError(t, f.DB.Create(&component).Error)
 
 		const artifacts = 4
-		names := make([]string, 0, artifacts)
+		created := make([]models.Artifact, 0, artifacts)
 		for i := range artifacts {
-			a := models.Artifact{ArtifactName: fmt.Sprintf("artifact-%d", i), AssetVersionName: assetVersion.Name, AssetID: assetVersion.AssetID}
+			a := models.Artifact{ArtifactName: fmt.Sprintf("artifact-%d", i), AssetVersionID: assetVersion.ID, AssetID: assetVersion.AssetID}
 			assert.NoError(t, f.DB.Create(&a).Error)
-			names = append(names, a.ArtifactName)
+			created = append(created, a)
 		}
 
 		var wg sync.WaitGroup
 		errs := make([]error, artifacts)
-		for i, name := range names {
+		for i, artifact := range created {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				errs[i] = f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{component}, name)
+				errs[i] = f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{component}, artifact)
 			}()
 		}
 		wg.Wait()
@@ -293,7 +293,7 @@ func TestLicenseRiskConcurrentArtifacts(t *testing.T) {
 		}
 
 		var risks []models.LicenseRisk
-		assert.NoError(t, f.DB.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&risks).Error)
+		assert.NoError(t, f.DB.Preload("Artifacts").Where("asset_version_id = ?", assetVersion.ID).Find(&risks).Error)
 		assert.Len(t, risks, 1)
 		if len(risks) == 1 {
 			assert.Len(t, risks[0].Artifacts, artifacts)

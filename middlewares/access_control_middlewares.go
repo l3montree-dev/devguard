@@ -380,7 +380,7 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				slog.Error("could not get artifactName from url", "err", err)
 				return echo.NewHTTPError(400, "invalid artifactName")
 			}
-			artifact, err := artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.Name, asset.ID)
+			artifact, err := artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.ID)
 			if err != nil {
 				slog.Error("could not find artifact in ShareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
 				return echo.NewHTTPError(404, "could not find artifact")

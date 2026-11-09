@@ -52,7 +52,13 @@ func (repository *assetVersionRepository) All(ctx context.Context, tx *gorm.DB) 
 	return result, err
 }
 
-func (repository *assetVersionRepository) Read(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) Read(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.AssetVersion, error) {
+	var asset models.AssetVersion
+	err := repository.GetDB(ctx, tx).First(&asset, "id = ?", id).Error
+	return asset, err
+}
+
+func (repository *assetVersionRepository) ReadByName(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
 	err := repository.GetDB(ctx, tx).First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
@@ -70,7 +76,7 @@ func (repository *assetVersionRepository) Delete(ctx context.Context, tx *gorm.D
 	// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
 	err := repository.GetDB(ctx, tx).Transaction(func(dbTx *gorm.DB) error {
 		// First, explicitly delete all related artifacts to ensure proper cleanup
-		if err := dbTx.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Delete(&models.Artifact{}).Error; err != nil {
+		if err := dbTx.Where("asset_version_id = ?", assetVersion.ID).Delete(&models.Artifact{}).Error; err != nil {
 			slog.Error("error deleting artifacts for asset version", "err", err, "assetVersion", assetVersion.Name)
 			return err
 		}
@@ -132,9 +138,12 @@ func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *
 		}
 
 		err := repository.GetDB(ctx, tx).Create(&assetVersion).Error
-		//Check if the given assetVersion already exists if thats the case don't want to add repository new entry to the db but instead update the existing one
+		// a concurrent request might have created the asset version in the meantime, read it to get its id
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			repository.GetDB(ctx, tx).Unscoped().Model(&assetVersion).Where("name", assetVersionName)
+			assetVersion, err = repository.findByAssetVersionNameAndAssetID(ctx, tx, assetVersionName, assetID)
+			if err != nil {
+				return models.AssetVersion{}, err
+			}
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
@@ -268,8 +277,8 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(ctx context.Con
 			// Delete all artifacts for the asset versions being deleted in a single query
 			artifactDeleteQuery := `
 				DELETE FROM artifacts 
-				WHERE (asset_version_name, asset_id) IN (
-					SELECT name, asset_id 
+				WHERE asset_version_id IN (
+					SELECT id 
 					FROM asset_versions 
 					WHERE last_accessed_at < NOW() - INTERVAL '` + fmt.Sprintf("%d", day) + ` days' 
 					AND default_branch = false 
@@ -320,8 +329,8 @@ func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(ctx cont
 			// Delete all artifacts for the asset versions being deleted in a single query
 			artifactDeleteQuery := `
 				DELETE FROM artifacts 
-				WHERE (asset_version_name, asset_id) IN (
-					SELECT name, asset_id 
+				WHERE asset_version_id IN (
+					SELECT id 
 					FROM asset_versions 
 					WHERE last_accessed_at < NOW() - INTERVAL '` + fmt.Sprintf("%d", day) + ` days' 
 					AND default_branch = false 

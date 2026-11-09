@@ -116,7 +116,7 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := i.assetVersionRepository.Read(context.Background(), nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
+		assetVersion, err := i.assetVersionRepository.Read(context.Background(), nil, vuln.GetAssetVersionID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err

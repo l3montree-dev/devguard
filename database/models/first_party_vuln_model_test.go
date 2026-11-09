@@ -63,9 +63,10 @@ func TestGetType(t *testing.T) {
 func TestCalculateHash(t *testing.T) {
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
 		firstPartyVuln := FirstPartyVuln{
-			RuleID:        "no smoking on airplanes",
-			URI:           "",
-			Vulnerability: Vulnerability{AssetID: uuid.New(), AssetVersionName: "bombardini krokodili"},
+			RuleID:           "no smoking on airplanes",
+			URI:              "",
+			Vulnerability:    Vulnerability{AssetID: uuid.New()},
+			AssetVersionName: "bombardini krokodili",
 		}
 		expectedHash := uuid.MustParse(utils.HashString(firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName)[:32])
 		assert.Equal(t, expectedHash, firstPartyVuln.CalculateHash())
