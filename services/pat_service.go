@@ -342,41 +342,40 @@ func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 		return false, fmt.Errorf("cannot verify admin request: no public key was loaded on startup")
 	}
 
-	verifier, err := httpsign.NewP256Verifier(p.adminPubKey, verifyConfig(), signedFields())
-	if err != nil {
-		return false, fmt.Errorf("could not build P256Verifier: %w", err)
-	}
-
-	if err := verifySignedRequest(verifier, req); err != nil {
+	if err := verifySignedRequest(p.adminPubKey, req); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
 func validateRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
-	verifier, err := httpsign.NewP256Verifier(pubKey, verifyConfig(), signedFields())
+	return verifySignedRequest(pubKey, req)
+}
+
+// legacySignedFields is what scanners before v1.19 sign. They cannot bind a signature
+// to a path, so a captured one can be replayed against any endpoint within the created window.
+// TODO: drop the legacy fallback with v1.20
+func legacySignedFields() httpsign.Fields {
+	return httpsign.Headers("@method", "content-digest")
+}
+
+func verifySignature(pubKey ecdsa.PublicKey, fields httpsign.Fields, req *http.Request) error {
+	verifier, err := httpsign.NewP256Verifier(pubKey, verifyConfig(), fields)
 	if err != nil {
 		return fmt.Errorf("could not create verifier: %v", err)
 	}
-
-	return verifySignedRequest(verifier, req)
+	return httpsign.VerifyRequest("sig77", *verifier, req)
 }
 
 // verifySignedRequest verifies the HTTP message signature and then validates that the
 // Content-Digest header actually matches the request body
-func verifySignedRequest(verifier *httpsign.Verifier, req *http.Request) error {
-	if err := httpsign.VerifyRequest("sig77", *verifier, req); err != nil {
-		// the addTrailingSlash pre-middleware appends "/" to the path before we get here,
-		// so a client that signed the path without it would never verify otherwise.
-		// Both paths are routed identically, so accepting either does not widen what a signature authorizes.
-		if !strings.HasSuffix(req.URL.Path, "/") || req.URL.Path == "/" {
-			return fmt.Errorf("could not verify request: %v", err)
-		}
-		unslashed := req.Clone(req.Context())
-		unslashed.URL.Path = strings.TrimSuffix(unslashed.URL.Path, "/")
-		unslashed.URL.RawPath = strings.TrimSuffix(unslashed.URL.RawPath, "/")
-		if err := httpsign.VerifyRequest("sig77", *verifier, unslashed); err != nil {
-			return fmt.Errorf("could not verify request: %v", err)
+func verifySignedRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
+	if err := verifySignature(pubKey, signedFields(), req); err != nil {
+		if verifyUnslashed(pubKey, req) != nil {
+			if verifySignature(pubKey, legacySignedFields(), req) != nil {
+				return fmt.Errorf("could not verify request: %v", err)
+			}
+			slog.Warn("accepted legacy request signature without @path and @query, client needs to be updated", "path", req.URL.Path, "userAgent", req.UserAgent())
 		}
 	}
 
@@ -389,6 +388,19 @@ func verifySignedRequest(verifier *httpsign.Verifier, req *http.Request) error {
 		return fmt.Errorf("content digest does not match request body: %v", err)
 	}
 	return nil
+}
+
+// the addTrailingSlash pre-middleware appends "/" to the path before we get here,
+// so a client that signed the path without it would never verify otherwise.
+// Both paths are routed identically, so accepting either does not widen what a signature authorizes.
+func verifyUnslashed(pubKey ecdsa.PublicKey, req *http.Request) error {
+	if !strings.HasSuffix(req.URL.Path, "/") || req.URL.Path == "/" {
+		return fmt.Errorf("path has no trailing slash to strip")
+	}
+	unslashed := req.Clone(req.Context())
+	unslashed.URL.Path = strings.TrimSuffix(unslashed.URL.Path, "/")
+	unslashed.URL.RawPath = strings.TrimSuffix(unslashed.URL.RawPath, "/")
+	return verifySignature(pubKey, signedFields(), unslashed)
 }
 
 func (p *PatService) VerifyRequestSignature(ctx context.Context, req *http.Request) (shared.AuthSession, error) {

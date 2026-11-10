@@ -425,6 +425,52 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 		}
 	})
 
+	t.Run("accepts a signature from a scanner that does not sign @path and @query yet", func(t *testing.T) {
+		var pat = models.PAT{
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
+			UserID:     new(uuid.New()),
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		patService := NewPatService(patMock)
+
+		privKey, pubKey, err := HexTokenToECDSA("1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167")
+		if err != nil {
+			t.Fatal(err)
+		}
+		pubKeyBytes, err := GetPubKeyBytes(pubKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fingerprint, err := pubKeyToFingerprint(hex.EncodeToString(pubKeyBytes))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest("POST", "/api/v1/scan/", strings.NewReader(`{"user": "test"}`))
+		req.Header.Set("X-Fingerprint", fingerprint)
+		digest, err := httpsign.GenerateContentDigestHeader(&req.Body, []string{httpsign.DigestSha256})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Digest", digest)
+		// signer exactly as configured in scanners before v1.19
+		signer, _ := httpsign.NewP256Signer(privKey, nil, legacySignedFields())
+		signatureInput, signature, err := httpsign.SignRequest("sig77", *signer, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Signature-Input", signatureInput)
+		req.Header.Set("Signature", signature)
+
+		if _, err := patService.VerifyRequestSignature(context.Background(), req); err != nil {
+			t.Fatalf("expected legacy signature to verify, got %v", err)
+		}
+	})
+
 	t.Run("rejects a valid signature from an expired PAT", func(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		var pat = models.PAT{
