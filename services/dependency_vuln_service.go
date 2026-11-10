@@ -276,51 +276,55 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 	// create a new VulnEvent for each updated dependencyVuln
 
 	events := make([]models.VulnEvent, 0)
+	changed := make([]models.DependencyVuln, 0)
+	unchangedIDs := make([]string, 0)
+	now := time.Now()
 
 	for i, dependencyVuln := range dependencyVulns {
 		oldRiskAssessment := dependencyVuln.RiskAssessment
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
 		newRiskAssessment := vulndb.RawRisk(dependencyVuln.CVE, env, depth)
+		dependencyVulns[i].RiskRecalculatedAt = now
 
 		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification)
 			dependencyVulns[i].SetRawRiskAssessment(newRiskAssessment.Risk)
-			dependencyVulns[i].RiskRecalculatedAt = time.Now()
 			// apply the event on the dependencyVuln
 			statemachine.Apply(&dependencyVulns[i], ev)
 			events = append(events, ev)
+			changed = append(changed, dependencyVulns[i])
 		} else {
-			// only update the last calculated time
-			dependencyVulns[i].RiskRecalculatedAt = time.Now()
+			unchangedIDs = append(unchangedIDs, dependencyVulns[i].ID.String())
 		}
+	}
+
+	// rewriting every row of an unchanged vuln just to bump the timestamp produces huge upserts - one array parameter is enough
+	save := func(tx shared.DB) error {
+		if len(unchangedIDs) > 0 {
+			if err := tx.Exec("UPDATE dependency_vulns SET risk_recalculated_at = ? WHERE id = ANY(?::uuid[])", now, pq.Array(unchangedIDs)).Error; err != nil {
+				return fmt.Errorf("could not update risk recalculation time: %v", err)
+			}
+		}
+		if err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), changed); err != nil {
+			return fmt.Errorf("could not save dependencyVulns: %v", err)
+		}
+		if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
+			return fmt.Errorf("could not save events: %v", err)
+		}
+		return nil
 	}
 
 	// saving the dependencyVulns and the events HAS to be done in the same transaction
 	// it is crucial to maintain a consistent audit log of events
 	if tx == nil {
-		err := s.dependencyVulnRepository.Transaction(ctx, func(tx shared.DB) error {
-			if err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns); err != nil {
-				return fmt.Errorf("could not save dependencyVulns: %v", err)
-			}
-			if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
-				return fmt.Errorf("could not save events: %v", err)
-			}
-			return nil
-		})
-		if err != nil {
+		if err := s.dependencyVulnRepository.Transaction(ctx, save); err != nil {
 			return nil, fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
 		return dependencyVulns, nil
 	}
 
-	err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns)
-	if err != nil {
-		return nil, fmt.Errorf("could not save dependencyVulns: %v", err)
-	}
-
-	err = s.vulnEventRepository.SaveBatch(ctx, tx, events)
-	if err != nil {
-		return nil, fmt.Errorf("could not save events: %v", err)
+	if err := save(tx); err != nil {
+		return nil, err
 	}
 	return dependencyVulns, nil
 }
