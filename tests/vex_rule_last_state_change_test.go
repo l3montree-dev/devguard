@@ -59,18 +59,18 @@ func createVulnWithStaleStateChange(t *testing.T, f *TestFixture, name string) (
 	require.NoError(t, f.DB.Create(&cve).Error)
 
 	artifact := models.Artifact{
-		ArtifactName:     "artifact-" + name,
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   "artifact-" + name,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
 	require.NoError(t, f.DB.Create(&artifact).Error)
 
 	vuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			AssetID:          asset.ID,
-			AssetVersionName: assetVersion.Name,
-			State:            dtos.VulnStateOpen,
-			LastStateChange:  time.Now().Add(-24 * time.Hour),
+			AssetID:         asset.ID,
+			AssetVersionID:  assetVersion.ID,
+			State:           dtos.VulnStateOpen,
+			LastStateChange: time.Now().Add(-24 * time.Hour),
 		},
 		CVEID:             cve.CVE,
 		ComponentPurl:     "pkg:npm/" + name + "@1.0.0",
