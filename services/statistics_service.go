@@ -100,82 +100,73 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 	return distributionPerComponent, nil
 }
 
-func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, snapshot models.ArtifactRiskHistory, remainingHistory []models.ArtifactRiskHistory) ([]models.ArtifactRiskHistory, error) {
-	openVulnIDs := slices.Concat(snapshot.Low, snapshot.High, snapshot.Medium, snapshot.Critical,
-		snapshot.FixableLow, snapshot.FixableMedium, snapshot.FixableHigh,
-		snapshot.FixableCritical, snapshot.LowCVSS, snapshot.MediumCVSS, snapshot.HighCVSS,
-		snapshot.CriticalCVSS, snapshot.FixableLowCVSS, snapshot.FixableMediumCVSS, snapshot.FixableHighCVSS, snapshot.FixableCriticalCVSS)
+func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	startDay := time.Date(start.UTC().Year(), start.UTC().Month(), start.UTC().Day(), 0, 0, 0, 0, time.UTC)
+
+	openVulnIDs, err := s.openVulnIDsAt(ctx, artifactName, assetVersionName, assetID, startDay.AddDate(0, 0, -1))
+	if err != nil {
+		return nil, err
+	}
+	remainingHistory, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, startDay, end)
+	if err != nil {
+		return nil, err
+	}
 
 	resultingHistory := []models.ArtifactRiskHistory{}
 
 	for _, riskHistoryItem := range remainingHistory {
 
-		openVulnIDs = append(openVulnIDs, riskHistoryItem.DiffAddedDependencyVulns...)
-		for _, diffVuln := range riskHistoryItem.DiffRemovedDependencyVulns {
-			if index := slices.Index(openVulnIDs, diffVuln); index != -1 {
-				openVulnIDs = slices.Delete(openVulnIDs, index, index+1)
-			}
+		for _, id := range riskHistoryItem.DiffAddedDependencyVulns {
+			openVulnIDs[id] = struct{}{}
+		}
+		for _, id := range riskHistoryItem.DiffRemovedDependencyVulns {
+			delete(openVulnIDs, id)
 		}
 
-		var openVulnsUUIDs []uuid.UUID
-
-		for _, idString := range openVulnIDs {
-			parsedID, err := uuid.Parse(idString)
+		openVulnsUUIDs := make([]uuid.UUID, 0, len(openVulnIDs))
+		for id := range openVulnIDs {
+			parsed, err := uuid.Parse(id)
 			if err != nil {
-				return []models.ArtifactRiskHistory{}, fmt.Errorf("DependdencyVuln IDs could not be parsed. There must've been an invalid ID")
+				return nil, fmt.Errorf("depedencyVuln ID was not parsesable")
 			}
-			openVulnsUUIDs = append(openVulnsUUIDs, parsedID)
+			openVulnsUUIDs = append(openVulnsUUIDs, parsed)
 		}
 
 		openVulns, err := s.dependencyVulnRepository.ListWithCVE(ctx, nil, openVulnsUUIDs)
 		if err != nil {
 			return []models.ArtifactRiskHistory{}, err
-
 		}
 
-		var lowRisk, mediumRisk, highRisk, criticalRisk,
-			fixableLowRisk, fixableMediumRisk, fixableHighRisk, fixableCriticalRisk,
-			lowCvss, mediumCvss, highCvss, criticalCvss,
-			fixableLowCvss, fixableMediumCvss, fixableHighCvss, fixableCriticalCvss,
-			lowUniqueRisk, mediumUniqueRisk, highUniqueRisk, criticalUniqueRisk,
-			fixableLowUniqueRisk, fixableMediumUniqueRisk, fixableHighUniqueRisk, fixableCriticalUniqueRisk,
-			lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss,
-			fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss []string
+		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
+		fixableLowRisk, fixableMediumRisk, fixableHighRisk, fixableCriticalRisk := calculateFixableSeverityCountsByRisk(openVulns)
 
-		if snapshot.Day.Before(riskHistoryItem.Day) || snapshot.Day.Equal(riskHistoryItem.Day) {
-			lowRisk, mediumRisk, highRisk, criticalRisk = calculateSeverityCountsByRisk(openVulns)
-			fixableLowRisk, fixableMediumRisk, fixableHighRisk, fixableCriticalRisk = calculateFixableSeverityCountsByRisk(openVulns)
+		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
+		fixableLowCvss, fixableMediumCvss, fixableHighCvss, fixableCriticalCvss := calculateFixableSeverityCountsByCvss(openVulns)
 
-			lowCvss, mediumCvss, highCvss, criticalCvss = calculateSeverityCountsByCvss(openVulns)
-			fixableLowCvss, fixableMediumCvss, fixableHighCvss, fixableCriticalCvss = calculateFixableSeverityCountsByCvss(openVulns)
+		lowUniqueRisk, mediumUniqueRisk, highUniqueRisk, criticalUniqueRisk := calculateUniqueCVEPurlCountsByRisk(openVulns)
+		fixableLowUniqueRisk, fixableMediumUniqueRisk, fixableHighUniqueRisk, fixableCriticalUniqueRisk := calculateUniqueFixableCVEPurlCountsByRisk(openVulns)
 
-			lowUniqueRisk, mediumUniqueRisk, highUniqueRisk, criticalUniqueRisk = calculateUniqueCVEPurlCountsByRisk(openVulns)
-			fixableLowUniqueRisk, fixableMediumUniqueRisk, fixableHighUniqueRisk, fixableCriticalUniqueRisk = calculateUniqueFixableCVEPurlCountsByRisk(openVulns)
-
-			lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss = calculateUniqueCVEPurlCountsByCvss(openVulns)
-			fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss = calculateUniqueFixableCVEPurlCountsByCvss(openVulns)
-		}
-
-		latest := riskHistoryItem
+		lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss := calculateUniqueCVEPurlCountsByCvss(openVulns)
+		fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss := calculateUniqueFixableCVEPurlCountsByCvss(openVulns)
 
 		result := models.ArtifactRiskHistory{
-			ArtifactName:     latest.ArtifactName,
-			AssetVersionName: latest.AssetVersionName,
-			AssetID:          latest.AssetID,
+			ArtifactName:     riskHistoryItem.ArtifactName,
+			AssetVersionName: riskHistoryItem.AssetVersionName,
+			AssetID:          riskHistoryItem.AssetID,
 			History: models.History{
-				Day: latest.Day,
+				Day: riskHistoryItem.Day,
 
-				SumOpenRisk: latest.SumOpenRisk,
-				AvgOpenRisk: latest.AvgOpenRisk,
-				MaxOpenRisk: latest.MaxOpenRisk,
-				MinOpenRisk: latest.MinOpenRisk,
+				SumOpenRisk: riskHistoryItem.SumOpenRisk,
+				AvgOpenRisk: riskHistoryItem.AvgOpenRisk,
+				MaxOpenRisk: riskHistoryItem.MaxOpenRisk,
+				MinOpenRisk: riskHistoryItem.MinOpenRisk,
 
-				SumClosedRisk:        latest.SumClosedRisk,
-				AvgClosedRisk:        latest.AvgClosedRisk,
-				MaxClosedRisk:        latest.MaxClosedRisk,
-				MinClosedRisk:        latest.MinClosedRisk,
-				OpenDependencyVulns:  latest.OpenDependencyVulns,
-				FixedDependencyVulns: latest.FixedDependencyVulns,
+				SumClosedRisk:        riskHistoryItem.SumClosedRisk,
+				AvgClosedRisk:        riskHistoryItem.AvgClosedRisk,
+				MaxClosedRisk:        riskHistoryItem.MaxClosedRisk,
+				MinClosedRisk:        riskHistoryItem.MinClosedRisk,
+				OpenDependencyVulns:  riskHistoryItem.OpenDependencyVulns,
+				FixedDependencyVulns: riskHistoryItem.FixedDependencyVulns,
 				Distribution: models.Distribution{
 					Low:      lowRisk,
 					Medium:   mediumRisk,
@@ -217,8 +208,8 @@ func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, snap
 					CVEPurlFixableHighCVSS:     fixableHighUniqueCvss,
 					CVEPurlFixableCriticalCVSS: fixableCriticalUniqueCvss,
 
-					DiffAddedDependencyVulns:   latest.DiffAddedDependencyVulns,
-					DiffRemovedDependencyVulns: latest.DiffRemovedDependencyVulns,
+					DiffAddedDependencyVulns:   riskHistoryItem.DiffAddedDependencyVulns,
+					DiffRemovedDependencyVulns: riskHistoryItem.DiffRemovedDependencyVulns,
 				},
 			},
 		}
@@ -231,19 +222,8 @@ func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, snap
 }
 
 func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	riskHistory, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, start, end)
-	if err != nil {
-		return nil, err
-	}
-
-	snapshot, err := s.artifactRiskHistoryRepository.GetLatestSnapshot(ctx, nil, artifactName, assetVersionName, assetID)
-
-	if snapshot == nil {
-		//Fetch root snapshot
-		return nil, fmt.Errorf("Snapshot is corrupted or no snapshot was found. Riskhistory could not be established")
-	}
 	var replayedRiskHistory []models.ArtifactRiskHistory
-	replayedRiskHistory, err = s.replayRiskHistoryFromDiffs(ctx, *snapshot, riskHistory[1:])
+	replayedRiskHistory, err := s.replayRiskHistoryFromDiffs(ctx, artifactName, assetVersionName, assetID, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +246,6 @@ func (s *statisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Contex
 
 	result := []models.ArtifactRiskHistoryWithVersion{}
 	for k, version := range versions {
-		// replay each artifact on each asset version the same way as for a single asset version
 		riskHistory, err := s.GetArtifactRiskHistory(ctx, &k.artifactName, k.assetVersionName, assetID, start, end)
 		if err != nil {
 			return nil, err
@@ -289,28 +268,65 @@ func (s *statisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Contex
 	return result, nil
 }
 
+// openVulnIDsAt rebuilds the set of open vuln IDs at the end of the given day
+// from the latest snapshot at or before it (or the empty root) plus the stored diffs
+// without calculating the whole history (just IDs)
+func (s *statisticsService) openVulnIDsAt(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, at time.Time) (map[string]struct{}, error) {
+	openVulnIDs := map[string]struct{}{}
+	from := time.Time{} // no snapshot will replay every stored diff
+
+	snapshot, err := s.artifactRiskHistoryRepository.GetLatestSnapshotBefore(ctx, nil, artifactName, assetVersionName, assetID, at)
+	if err != nil {
+		return nil, err
+	}
+	if snapshot != nil {
+		for _, id := range slices.Concat(snapshot.Low, snapshot.Medium, snapshot.High, snapshot.Critical) {
+			openVulnIDs[id] = struct{}{}
+		}
+		from = snapshot.Day
+	}
+
+	history, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, from, at)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range history {
+		for _, id := range row.DiffAddedDependencyVulns {
+			openVulnIDs[id] = struct{}{}
+		}
+		for _, id := range row.DiffRemovedDependencyVulns {
+			delete(openVulnIDs, id)
+		}
+	}
+	return openVulnIDs, nil
+}
+
+func (s *statisticsService) isSnapShotDay(snapshotDay time.Time) bool {
+	year, month, day := snapshotDay.UTC().Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC).Unix()/86400%int64(snapshotFrequence) == 0
+}
+
 // project-level aggregation via project_risk_history has been removed.
 // Previously this method aggregated per-project risk history from asset histories.
 // That behavior was intentionally removed to focus statistics on artifact histories only.
 // If project-level aggregation is required in future, reintroduce with a new storage model.
 
 func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
-	latestSnapshot, err := s.artifactRiskHistoryRepository.GetLatestSnapshot(ctx, nil, &artifact.ArtifactName, artifact.AssetVersionName, assetID)
-	if err != nil {
-		return err
-	}
 
-	// set begin to last second of date
-	begin = time.Date(begin.UTC().Year(), begin.UTC().Month(), begin.UTC().Day(), 23, 59, 59, 0, time.UTC)
 	// as max, do 1 year from the past
 	if begin.Before(time.Now().AddDate(-1, 0, 0)) {
 		begin = time.Now().AddDate(-1, 0, 0)
 	}
+	// set begin to last second of date
+	begin = time.Date(begin.UTC().Year(), begin.UTC().Month(), begin.UTC().Day(), 23, 59, 59, 0, time.UTC)
 
 	// set end to last second of date
 	end = time.Date(end.UTC().Year(), end.UTC().Month(), end.UTC().Day(), 23, 59, 59, 0, time.UTC)
 
-	previousDependencyVuln := []string{}
+	previousOpenVulnIDs, err := s.openVulnIDsAt(ctx, &artifact.ArtifactName, artifact.AssetVersionName, assetID, begin.AddDate(0, 0, -1))
+	if err != nil {
+		return err
+	}
 
 	for depDate := begin; depDate.Before(end) || depDate.Equal(end); depDate = depDate.AddDate(0, 0, 1) {
 		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ArtifactName, &artifact.AssetVersionName, assetID, depDate)
@@ -330,18 +346,8 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 
 		openDependencyVulns, fixedDependencyVulns := 0, 0
 		var openVulns []models.DependencyVuln
-		diffAddedDependencyVulns := []string{}
-		diffRemovedDependencyVulns := previousDependencyVuln
 
 		for _, dependencyVuln := range dependencyVulns {
-
-			if !(slices.Contains(previousDependencyVuln, dependencyVuln.ID.String())) {
-				diffAddedDependencyVulns = append(diffAddedDependencyVulns, dependencyVuln.ID.String())
-			}
-			diffRemovedDependencyVulns = utils.Filter(diffRemovedDependencyVulns, func(diffRemVuln string) bool {
-				return diffRemVuln != dependencyVuln.ID.String()
-			})
-
 			var key string
 			if dependencyVuln.State == dtos.VulnStateOpen {
 				openDependencyVulns++
@@ -372,6 +378,9 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 			risks[key] = riskAggregation
 		}
 
+		openVulnIDs := openVulnIDSet(openVulns)
+		diffAddedDependencyVulns, diffRemovedDependencyVulns := diffOpenVulnIDs(previousOpenVulnIDs, openVulnIDs)
+
 		openRisk := risks["open"]
 		fixedRisk := risks["fixed"]
 
@@ -399,7 +408,8 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 			lowUniqueCvss, mediumUniqueCvss, highUniqueCvss, criticalUniqueCvss,
 			fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss []string
 
-		if latestSnapshot == nil && depDate.Equal(end) {
+		if s.isSnapShotDay(depDate) {
+
 			// Calculate severity counts
 			lowRisk, mediumRisk, highRisk, criticalRisk = calculateSeverityCountsByRisk(openVulns)
 			fixableLowRisk, fixableMediumRisk, fixableHighRisk, fixableCriticalRisk = calculateFixableSeverityCountsByRisk(openVulns)
@@ -479,62 +489,8 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 			},
 		}
 
-		previousDependencyVuln = utils.Map(dependencyVulns, func(vuln models.DependencyVuln) string {
-			return vuln.ID.String()
-		})
+		previousOpenVulnIDs = openVulnIDs
 		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(ctx, tx, &result)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Create a new snapshot if the oldest is older that the <snapshotFrequence> duration
-	// Assuming this Updatefunction only runs in the daemon every (maybe 30 days)
-	if latestSnapshot != nil && end.Sub(latestSnapshot.Day) >= (time.Duration(snapshotFrequence)*24*time.Hour) {
-		riskHistory, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, &artifact.ArtifactName, artifact.AssetVersionName, assetID, latestSnapshot.Day, end)
-		if err != nil {
-			return err
-		}
-		newSnapshotDate := begin.AddDate(0, 0, -1*snapshotFrequence)
-		remaingingHistory := utils.Filter(riskHistory, func(history models.ArtifactRiskHistory) bool {
-			return history.Day.Before(newSnapshotDate) && history.Day.After(latestSnapshot.Day)
-		})
-		replayedHistory, err := s.replayRiskHistoryFromDiffs(ctx, *latestSnapshot, remaingingHistory)
-		if err != nil {
-			return err
-		}
-		newSnapshot := replayedHistory[len(replayedHistory)-1]
-		oldSnapshot := models.ArtifactRiskHistory{
-			ArtifactName:     latestSnapshot.ArtifactName,
-			AssetVersionName: latestSnapshot.AssetVersionName,
-			AssetID:          latestSnapshot.AssetID,
-			History: models.History{
-				Day: latestSnapshot.Day,
-
-				SumOpenRisk: latestSnapshot.SumOpenRisk,
-				AvgOpenRisk: latestSnapshot.AvgOpenRisk,
-				MaxOpenRisk: latestSnapshot.MaxOpenRisk,
-				MinOpenRisk: latestSnapshot.MinOpenRisk,
-
-				SumClosedRisk:        latestSnapshot.SumClosedRisk,
-				AvgClosedRisk:        latestSnapshot.AvgClosedRisk,
-				MaxClosedRisk:        latestSnapshot.MaxClosedRisk,
-				MinClosedRisk:        latestSnapshot.MinClosedRisk,
-				OpenDependencyVulns:  latestSnapshot.OpenDependencyVulns,
-				FixedDependencyVulns: latestSnapshot.FixedDependencyVulns,
-				Distribution: models.Distribution{
-					DiffAddedDependencyVulns:   latestSnapshot.DiffAddedDependencyVulns,
-					DiffRemovedDependencyVulns: latestSnapshot.DiffRemovedDependencyVulns,
-				},
-			},
-		}
-		//Update the snapshots
-		//Assuming everything in between already got cleared by the update loop before
-		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(ctx, tx, &newSnapshot)
-		if err != nil {
-			return err
-		}
-		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(ctx, tx, &oldSnapshot)
 		if err != nil {
 			return err
 		}
@@ -564,7 +520,35 @@ func (s *statisticsService) GetRemediationTimeAveragesForRelease(ctx context.Con
 	return s.statisticsRepository.AverageRemediationTimesForRelease(ctx, nil, releaseID)
 }
 
+func openVulnIDSet(dependencyVulns []models.DependencyVuln) map[string]struct{} {
+	ids := make(map[string]struct{}, len(dependencyVulns))
+	for _, vuln := range dependencyVulns {
+		if vuln.State == dtos.VulnStateOpen {
+			ids[vuln.ID.String()] = struct{}{}
+		}
+	}
+	return ids
+}
+
+func diffOpenVulnIDs(previous, current map[string]struct{}) (added, removed []string) {
+	added, removed = []string{}, []string{}
+	for id := range current {
+		if _, ok := previous[id]; !ok {
+			added = append(added, id)
+		}
+	}
+	for id := range previous {
+		if _, ok := current[id]; !ok {
+			removed = append(removed, id)
+		}
+	}
+	slices.Sort(added)
+	slices.Sort(removed)
+	return added, removed
+}
+
 func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	for _, vuln := range dependencyVulns {
 		risk := utils.OrDefault(vuln.RiskAssessment, 0)
 		switch {
@@ -583,6 +567,7 @@ func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low
 
 // very redundant, this has to be refactored later
 func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	for _, vuln := range dependencyVulns {
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
 			continue
@@ -604,6 +589,7 @@ func calculateFixableSeverityCountsByRisk(dependencyVulns []models.DependencyVul
 }
 
 func calculateFixableSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	for _, vuln := range dependencyVulns {
 		if vuln.DirectDependencyFixedVersion == nil || *vuln.DirectDependencyFixedVersion == "" {
 			continue
@@ -625,6 +611,7 @@ func calculateFixableSeverityCountsByCvss(dependencyVulns []models.DependencyVul
 }
 
 func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	uniqueCombinations := make(map[string]struct {
 		risk           float64
 		combinationKey string
@@ -663,6 +650,7 @@ func calculateUniqueCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln)
 }
 
 func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	uniqueCombinations := make(map[string]dtos.UniqueRiskCVSSTrack)
 
 	// get the highest risk for each unique CVE+PURL combination to avoid double counting vulnerabilities that affect multiple components
@@ -698,6 +686,7 @@ func calculateUniqueFixableCVEPurlCountsByRisk(dependencyVulns []models.Dependen
 }
 
 func calculateUniqueFixableCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	uniqueCombinations := make(map[string]dtos.UniqueRiskCVSSTrack)
 
 	for _, vuln := range dependencyVulns {
@@ -732,6 +721,7 @@ func calculateUniqueFixableCVEPurlCountsByCvss(dependencyVulns []models.Dependen
 }
 
 func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	uniqueCombinations := make(map[string]struct{})
 
 	for _, vuln := range dependencyVulns {
@@ -759,6 +749,7 @@ func calculateUniqueCVEPurlCountsByCvss(dependencyVulns []models.DependencyVuln)
 }
 
 func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical []string) {
+	low, medium, high, critical = []string{}, []string{}, []string{}, []string{}
 	for _, vuln := range dependencyVulns {
 		cvss := float64(vuln.GetCVE().CVSS)
 		switch {

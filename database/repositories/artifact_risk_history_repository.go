@@ -103,10 +103,10 @@ func (r *artifactRiskHistoryRepository) GetLatestRiskHistory(ctx context.Context
 	return &row, nil
 }
 
-func (r *artifactRiskHistoryRepository) GetLatestSnapshot(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (*models.ArtifactRiskHistory, error) {
+func (r *artifactRiskHistoryRepository) GetLatestSnapshotBefore(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID, beforeDate time.Time) (*models.ArtifactRiskHistory, error) {
 	var row models.ArtifactRiskHistory
 	db := r.GetDB(ctx, tx).
-		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).
+		Where("asset_version_name = ? AND asset_id = ? AND day <= ?", assetVersionName, assetID, beforeDate).
 		Where(snapshotRowCondition)
 	if artifactName != nil {
 		db = db.Where("artifact_name = ?", *artifactName)
