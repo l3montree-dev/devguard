@@ -10,15 +10,17 @@ import (
 type AttestationType string
 
 type Attestation struct {
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updatedAt"`
-	PredicateType    string    `json:"predicateType" gorm:"type:text;primaryKey"`
-	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
-	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
-	ArtifactName     string    `json:"artifactName" gorm:"primaryKey"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+	PredicateType string    `json:"predicateType" gorm:"type:text;primaryKey"`
+	ArtifactID    uuid.UUID `json:"artifactId" gorm:"primaryKey;type:uuid"`
+	AssetID       uuid.UUID `json:"assetId" gorm:"type:uuid;not null;"`
 
-	// Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID
-	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactName,AssetVersionName,AssetID;constraint:OnDelete:CASCADE;"`
+	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactID;references:ID;constraint:OnDelete:CASCADE;"`
+
+	// not stored in this table, filled by joining artifacts and asset_versions
+	ArtifactName     string `json:"artifactName" gorm:"->;-:migration"`
+	AssetVersionName string `json:"assetVersionName" gorm:"->;-:migration"`
 
 	Content databasetypes.JSONB `json:"content" gorm:"type:jsonb"`
 }

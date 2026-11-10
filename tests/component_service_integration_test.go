@@ -82,9 +82,9 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 			// Create component dependencies
 			artifact := models.Artifact{
-				ArtifactName:     "artifact1",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
+				ArtifactName:   "artifact1",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        assetVersion.AssetID,
 			}
 
 			// First create the artifact
@@ -169,9 +169,9 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			assert.NoError(t, err)
 
 			artifact := models.Artifact{
-				ArtifactName:     "artifact1",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          assetVersion.AssetID,
+				ArtifactName:   "artifact1",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        assetVersion.AssetID,
 			}
 
 			// First create the artifact
@@ -184,11 +184,12 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			// Create existing license risk
 			existingLicenseRisk := models.LicenseRisk{
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          assetVersion.AssetID,
-					State:            dtos.VulnStateOpen,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        assetVersion.AssetID,
+					State:          dtos.VulnStateOpen,
 				},
-				ComponentPurl: componentWithInvalidLicense.ID,
+				AssetVersionName: assetVersion.Name,
+				ComponentPurl:    componentWithInvalidLicense.ID,
 			}
 			// Manually set the ID using the same calculation as the model
 			existingLicenseRisk.ID = existingLicenseRisk.CalculateHash()

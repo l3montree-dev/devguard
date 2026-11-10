@@ -43,9 +43,9 @@ func TestScanAllAssetsDetectsVulns(t *testing.T) {
 
 		// Create artifact
 		artifact := models.Artifact{
-			ArtifactName:     "scan-test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "scan-test-artifact",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&artifact).Error
 		assert.NoError(t, err)
@@ -97,9 +97,9 @@ func TestScanAllAssetsFixesWithdrawnVulns(t *testing.T) {
 		assert.NoError(t, err)
 
 		artifact := models.Artifact{
-			ArtifactName:     "reconcile-test-artifact",
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			ArtifactName:   "reconcile-test-artifact",
+			AssetVersionID: assetVersion.ID,
+			AssetID:        asset.ID,
 		}
 		err = f.DB.Create(&artifact).Error
 		assert.NoError(t, err)

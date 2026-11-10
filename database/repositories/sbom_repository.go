@@ -94,8 +94,8 @@ func (r *sbomRepository) SaveTree(ctx context.Context, tx *gorm.DB, sbom models.
 
 	// drop any previous revision of this source before pointing at the new root
 	if err := db.Where(
-		"asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?",
-		sbom.AssetID, sbom.AssetVersionName, sbom.ArtifactName, sbom.Source,
+		"artifact_id = ? AND source = ?",
+		sbom.ArtifactID, sbom.Source,
 	).Delete(&models.SBOM{}).Error; err != nil {
 		return errors.Wrap(err, "could not clear previous sbom revision")
 	}
@@ -111,31 +111,37 @@ func (r *sbomRepository) SaveTree(ctx context.Context, tx *gorm.DB, sbom models.
 // FindByAssetVersion returns every SBOM of an asset version - one row per
 // artifact and source. This is the entry point for scanning: fetch the SBOMs,
 // then load whichever trees you need.
-func (r *sbomRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.SBOM, error) {
+func (r *sbomRepository) FindByAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID) ([]models.SBOM, error) {
 	var sboms []models.SBOM
 	err := r.GetDB(ctx, tx).
-		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).
-		Order("artifact_name ASC, source ASC").
+		Select("sboms.*").
+		Joins("JOIN artifacts ON artifacts.id = sboms.artifact_id").
+		Where("artifacts.asset_version_id = ?", assetVersionID).
+		Order("artifacts.artifact_name ASC, sboms.source ASC").
 		Find(&sboms).Error
 	return sboms, err
 }
 
+// artifactIDSubquery resolves an artifact by its name, which is unique within an asset version
+func (r *sbomRepository) artifactIDSubquery(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, artifactName string) *gorm.DB {
+	return r.GetDB(ctx, tx).Model(&models.Artifact{}).Select("id").Where("asset_version_id = ? AND artifact_name = ?", assetVersionID, artifactName)
+}
+
 // FindByArtifact returns every SBOM of a single artifact.
-func (r *sbomRepository) FindByArtifact(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName string) ([]models.SBOM, error) {
+func (r *sbomRepository) FindByArtifact(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, artifactName string) ([]models.SBOM, error) {
 	var sboms []models.SBOM
 	err := r.GetDB(ctx, tx).
-		Where("asset_id = ? AND asset_version_name = ? AND artifact_name = ?", assetID, assetVersionName, artifactName).
+		Where("artifact_id = (?)", r.artifactIDSubquery(ctx, tx, assetVersionID, artifactName)).
 		Order("source ASC").
 		Find(&sboms).Error
 	return sboms, err
 }
 
 // FindBySource returns the SBOM an artifact got from one specific source.
-func (r *sbomRepository) FindBySource(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName, source string) ([]models.SBOM, error) {
+func (r *sbomRepository) FindBySource(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, artifactName, source string) ([]models.SBOM, error) {
 	var sboms []models.SBOM
 	err := r.GetDB(ctx, tx).
-		Where("asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?",
-			assetID, assetVersionName, artifactName, source).
+		Where("artifact_id = (?) AND source = ?", r.artifactIDSubquery(ctx, tx, assetVersionID, artifactName), source).
 		Find(&sboms).Error
 	return sboms, err
 }
@@ -243,18 +249,18 @@ func (r *sbomRepository) FindSBOMsContainingComponent(ctx context.Context, tx *g
 // DeleteByArtifact removes an artifact's SBOMs. Only the pivot rows go: the
 // subtrees stay for the garbage collector, since other artifacts are likely to
 // share them.
-func (r *sbomRepository) DeleteByArtifact(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName string) error {
+func (r *sbomRepository) DeleteByArtifact(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, artifactName string) error {
 	return r.GetDB(ctx, tx).Where(
-		"asset_id = ? AND asset_version_name = ? AND artifact_name = ?",
-		assetID, assetVersionName, artifactName,
+		"artifact_id = (?)",
+		r.artifactIDSubquery(ctx, tx, assetVersionID, artifactName),
 	).Delete(&models.SBOM{}).Error
 }
 
 // DeleteBySource removes a single SBOM source from an artifact.
-func (r *sbomRepository) DeleteBySource(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName, artifactName, source string) error {
+func (r *sbomRepository) DeleteBySource(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, artifactName, source string) error {
 	return r.GetDB(ctx, tx).Where(
-		"asset_id = ? AND asset_version_name = ? AND artifact_name = ? AND source = ?",
-		assetID, assetVersionName, artifactName, source,
+		"artifact_id = (?) AND source = ?",
+		r.artifactIDSubquery(ctx, tx, assetVersionID, artifactName), source,
 	).Delete(&models.SBOM{}).Error
 }
 

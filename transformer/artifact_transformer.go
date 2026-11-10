@@ -20,10 +20,25 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
+// the asset version name is not stored on the artifact, so AssetVersion needs to be preloaded
 func ArtifactModelToDTO(artifact models.Artifact) dtos.Artifact {
+	return ArtifactInAssetVersionToDTO(artifact, artifact.AssetVersion.Name)
+}
+
+func ArtifactInAssetVersionToDTO(artifact models.Artifact, assetVersionName string) dtos.Artifact {
 	return dtos.Artifact{
+		ID:               artifact.ID,
 		ArtifactName:     artifact.ArtifactName,
-		AssetVersionName: artifact.AssetVersionName,
+		AssetVersionID:   artifact.AssetVersionID,
+		AssetVersionName: assetVersionName,
 		AssetID:          artifact.AssetID,
 	}
+}
+
+func ArtifactsInAssetVersionToDTO(artifacts []models.Artifact, assetVersionName string) []dtos.Artifact {
+	result := make([]dtos.Artifact, len(artifacts))
+	for i, artifact := range artifacts {
+		result[i] = ArtifactInAssetVersionToDTO(artifact, assetVersionName)
+	}
+	return result
 }

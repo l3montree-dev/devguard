@@ -90,21 +90,21 @@ func TestNowFunctionComparesLastStateChangeAge(t *testing.T) {
 
 	newVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			AssetVersionName: "main",
-			AssetID:          assetID,
-			LastStateChange:  time.Now().Add(-time.Hour),
+			AssetID:         assetID,
+			LastStateChange: time.Now().Add(-time.Hour),
 		},
-		CVEID: "CVE-2024-0001",
+		AssetVersionName: "main",
+		CVEID:            "CVE-2024-0001",
 	}
 	assert.False(t, evalRule(t, rule, newVuln), "a vuln whose state changed an hour ago should not be considered stale")
 
 	staleVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			AssetVersionName: "main",
-			AssetID:          assetID,
-			LastStateChange:  time.Now().Add(-31 * 24 * time.Hour),
+			AssetID:         assetID,
+			LastStateChange: time.Now().Add(-31 * 24 * time.Hour),
 		},
-		CVEID: "CVE-2024-0001",
+		AssetVersionName: "main",
+		CVEID:            "CVE-2024-0001",
 	}
 	assert.True(t, evalRule(t, rule, staleVuln), "a vuln whose state changed 31 days ago should be considered stale")
 }

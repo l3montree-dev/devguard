@@ -83,14 +83,14 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 
 			// Create two artifacts
 			artifact1 := models.Artifact{
-				ArtifactName:     "artifact-1",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-1",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			artifact2 := models.Artifact{
-				ArtifactName:     "artifact-2",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-2",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifact1).Error)
 			assert.NoError(t, f.DB.Create(&artifact2).Error)
@@ -98,13 +98,14 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 			// Create a dependency vuln associated with both artifacts
 			depVuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					State:            dtos.VulnStateOpen,
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
+					AssetVersionID: assetVersion.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
 				},
-				CVEID:         cve.CVE,
-				ComponentPurl: "pkg:npm/vulnerable-package@1.0.0",
-				Artifacts:     []models.Artifact{artifact1, artifact2},
+				AssetVersionName: assetVersion.Name,
+				CVEID:            cve.CVE,
+				ComponentPurl:    "pkg:npm/vulnerable-package@1.0.0",
+				Artifacts:        []models.Artifact{artifact1, artifact2},
 			}
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 
@@ -160,32 +161,34 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 
 			// Create one artifact
 			artifact3 := models.Artifact{
-				ArtifactName:     "artifact-3",
-				AssetVersionName: assetVersion2.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-3",
+				AssetVersionID: assetVersion2.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifact3).Error)
 
 			// Create two different dependency vulns
 			depVuln1 := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					State:            dtos.VulnStateOpen,
-					AssetVersionName: assetVersion2.Name,
-					AssetID:          asset.ID,
+					AssetVersionID: assetVersion2.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
 				},
-				CVEID:         cve1.CVE,
-				ComponentPurl: "pkg:npm/package-a@1.0.0",
-				Artifacts:     []models.Artifact{artifact3},
+				AssetVersionName: assetVersion2.Name,
+				CVEID:            cve1.CVE,
+				ComponentPurl:    "pkg:npm/package-a@1.0.0",
+				Artifacts:        []models.Artifact{artifact3},
 			}
 			depVuln2 := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					State:            dtos.VulnStateOpen,
-					AssetVersionName: assetVersion2.Name,
-					AssetID:          asset.ID,
+					AssetVersionID: assetVersion2.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
 				},
-				CVEID:         cve2.CVE,
-				ComponentPurl: "pkg:npm/package-b@2.0.0",
-				Artifacts:     []models.Artifact{artifact3},
+				AssetVersionName: assetVersion2.Name,
+				CVEID:            cve2.CVE,
+				ComponentPurl:    "pkg:npm/package-b@2.0.0",
+				Artifacts:        []models.Artifact{artifact3},
 			}
 			assert.NoError(t, f.DB.Create(&depVuln1).Error)
 			assert.NoError(t, f.DB.Create(&depVuln2).Error)
@@ -264,9 +267,9 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 
 			// Create artifact
 			artifact := models.Artifact{
-				ArtifactName:     "artifact-with-ticket",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-with-ticket",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.NoError(t, f.DB.Create(&artifact).Error)
 
@@ -274,14 +277,15 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 			existingTicketID := "ISSUE-123"
 			depVuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					State:            dtos.VulnStateOpen,
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
-					TicketID:         &existingTicketID,
+					AssetVersionID: assetVersion.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
+					TicketID:       &existingTicketID,
 				},
-				CVEID:         cve.CVE,
-				ComponentPurl: "pkg:npm/existing-ticket-package@1.0.0",
-				Artifacts:     []models.Artifact{artifact},
+				AssetVersionName: assetVersion.Name,
+				CVEID:            cve.CVE,
+				ComponentPurl:    "pkg:npm/existing-ticket-package@1.0.0",
+				Artifacts:        []models.Artifact{artifact},
 			}
 			assert.NoError(t, f.DB.Create(&depVuln).Error)
 

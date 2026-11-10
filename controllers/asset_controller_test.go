@@ -389,7 +389,7 @@ func TestAssetControllerGetBadges(t *testing.T) {
 		assetID := uuid.New()
 		shared.SetAsset(ctx, models.Asset{Model: models.Model{ID: assetID}})
 
-		defaultVersion := models.AssetVersion{Name: "main"}
+		defaultVersion := models.AssetVersion{ID: uuid.New(), Name: "main"}
 		latestRow := &models.ArtifactRiskHistory{ArtifactName: "artifact-a", AssetVersionName: "main", AssetID: assetID}
 
 		mockAssetVersionRepository := mocks.NewAssetVersionRepository(t)
@@ -397,7 +397,7 @@ func TestAssetControllerGetBadges(t *testing.T) {
 		mockAssetService := mocks.NewAssetService(t)
 
 		mockAssetVersionRepository.On("GetDefaultAssetVersion", mock.Anything, mock.Anything, assetID).Return(defaultVersion, nil).Once()
-		mockArtifactRiskHistoryRepository.On("GetLatestRiskHistory", mock.Anything, mock.Anything, (*string)(nil), defaultVersion.Name, assetID).Return(latestRow, nil).Once()
+		mockArtifactRiskHistoryRepository.On("GetLatestRiskHistory", mock.Anything, mock.Anything, (*uuid.UUID)(nil), defaultVersion.ID).Return(latestRow, nil).Once()
 		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRow).Return("<svg>ok</svg>").Once()
 
 		controller := &AssetController{
@@ -423,12 +423,14 @@ func TestAssetControllerGetBadges(t *testing.T) {
 		ctx.SetParamValues("cvss")
 
 		assetID := uuid.New()
+		assetVersionID := uuid.New()
 		assetVersionName := "release-2026-04"
+		artifactID := uuid.New()
 		artifactName := "pkg:npm/lodash@4.17.21"
 
 		shared.SetAsset(ctx, models.Asset{Model: models.Model{ID: assetID}})
-		shared.SetAssetVersion(ctx, models.AssetVersion{Name: assetVersionName})
-		shared.SetArtifact(ctx, models.Artifact{ArtifactName: artifactName})
+		shared.SetAssetVersion(ctx, models.AssetVersion{ID: assetVersionID, Name: assetVersionName})
+		shared.SetArtifact(ctx, models.Artifact{ID: artifactID, ArtifactName: artifactName})
 
 		latestRow := &models.ArtifactRiskHistory{ArtifactName: artifactName, AssetVersionName: assetVersionName, AssetID: assetID}
 
@@ -440,9 +442,8 @@ func TestAssetControllerGetBadges(t *testing.T) {
 			"GetLatestRiskHistory",
 			mock.Anything,
 			mock.Anything,
-			mock.MatchedBy(func(v *string) bool { return v != nil && *v == artifactName }),
-			assetVersionName,
-			assetID,
+			mock.MatchedBy(func(v *uuid.UUID) bool { return v != nil && *v == artifactID }),
+			assetVersionID,
 		).Return(latestRow, nil).Once()
 		mockAssetService.On("GetCVSSBadgeSVG", mock.Anything, latestRow).Return("<svg>artifact</svg>").Once()
 

@@ -38,7 +38,7 @@ func (r *releaseRepository) GetByProjectID(ctx context.Context, tx *gorm.DB, pro
 func (r *releaseRepository) ReadWithItems(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Release, error) {
 	var rel models.Release
 	db := withOwnershipScope(ctx, r.GetDB(ctx, tx).Where("id = ?", id), rel)
-	err := db.Preload("Items").Preload("Items.Artifact").Preload("Items.ChildRelease").First(&rel).Error
+	err := db.Preload("Items").Preload("Items.Artifact.AssetVersion").Preload("Items.ChildRelease").First(&rel).Error
 	return rel, err
 }
 
@@ -88,9 +88,9 @@ func (r *releaseRepository) ReadRecursive(ctx context.Context, tx *gorm.DB, id u
 		return models.Release{}, err
 	}
 
-	// fetch all items belonging to these releases
+	// fetch all items belonging to these releases, the artifact carries the asset version the item points to
 	var items []models.ReleaseItem
-	if err := r.GetDB(ctx, tx).Where("release_id = ANY (?)", pq.Array(releaseIDs)).Find(&items).Error; err != nil {
+	if err := r.GetDB(ctx, tx).Preload("Artifact.AssetVersion").Where("release_id = ANY (?)", pq.Array(releaseIDs)).Find(&items).Error; err != nil {
 		return models.Release{}, err
 	}
 
@@ -166,7 +166,7 @@ func (r *releaseRepository) GetByProjectIDPaged(ctx context.Context, tx *gorm.DB
 	}
 
 	// preload Project so DTO mapping can read Project.Avatar
-	q := db.Model(&models.Release{}).Preload("Items").Preload("Items.ChildRelease").Where("project_id = ?", projectID)
+	q := db.Model(&models.Release{}).Preload("Items").Preload("Items.Artifact.AssetVersion").Preload("Items.ChildRelease").Where("project_id = ?", projectID)
 
 	// apply search
 	if search != "" {
@@ -242,11 +242,12 @@ func (r *releaseRepository) GetCandidateItemsForRelease(ctx context.Context, tx 
 		projectIDs = []uuid.UUID{projectID}
 	}
 
-	// preload AssetVersion.Asset so callers can access the asset name without additional queries
+	// preload AssetVersion so callers can access the asset version name without additional queries
 	var artifacts []models.Artifact
 	if err := r.GetDB(ctx, tx).
 		Model(&models.Artifact{}).
-		Joins("JOIN asset_versions av ON av.asset_id = artifacts.asset_id AND av.name = artifacts.asset_version_name").
+		Preload("AssetVersion").
+		Joins("JOIN asset_versions av ON av.id = artifacts.asset_version_id").
 		Joins("JOIN assets ON assets.id = artifacts.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("projects.id = ANY (?)", pq.Array(projectIDs)).

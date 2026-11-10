@@ -40,9 +40,9 @@ func TestReadEventsByAssetIDAndAssetVersionName(t *testing.T) {
 		asset := models.Asset{}
 		asset.ID = assetID
 
-		assetVersion := models.AssetVersion{Name: "main"}
+		assetVersion := models.AssetVersion{ID: uuid.New(), Name: "main"}
 
-		mockRepo.On("ReadEventsByAssetIDAndAssetVersionName", mock.Anything, mock.Anything, assetID, "main", mock.Anything, mock.Anything).
+		mockRepo.On("ReadEventsByAssetVersionID", mock.Anything, mock.Anything, assetVersion.ID, mock.Anything, mock.Anything).
 			Return(shared.Paged[models.VulnEventDetail]{}, assert.AnError)
 
 		e := echo.New()
@@ -66,7 +66,7 @@ func TestReadEventsByAssetIDAndAssetVersionName(t *testing.T) {
 		asset := models.Asset{}
 		asset.ID = assetID
 
-		assetVersion := models.AssetVersion{Name: "main"}
+		assetVersion := models.AssetVersion{ID: uuid.New(), Name: "main"}
 
 		detail := models.VulnEventDetail{}
 		detail.VulnEvent = models.VulnEvent{
@@ -77,7 +77,7 @@ func TestReadEventsByAssetIDAndAssetVersionName(t *testing.T) {
 		detail.ResourceIdentifier = "CVE-2024-1234"
 
 		paged := shared.NewPaged(shared.PageInfo{Page: 1, PageSize: 10}, 1, []models.VulnEventDetail{detail})
-		mockRepo.On("ReadEventsByAssetIDAndAssetVersionName", mock.Anything, mock.Anything, assetID, "main", mock.Anything, mock.Anything).
+		mockRepo.On("ReadEventsByAssetVersionID", mock.Anything, mock.Anything, assetVersion.ID, mock.Anything, mock.Anything).
 			Return(paged, nil)
 
 		e := echo.New()

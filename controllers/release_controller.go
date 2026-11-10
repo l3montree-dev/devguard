@@ -26,11 +26,12 @@ type ReleaseController struct {
 	assetVersionRepository shared.AssetVersionRepository
 	dependencyVulnRepo     shared.DependencyVulnRepository
 	assetRepository        shared.AssetRepository
+	artifactRepository     shared.ArtifactRepository
 	csafService            shared.CSAFService
 }
 
-func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository, csafService shared.CSAFService) *ReleaseController {
-	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository, csafService: csafService}
+func NewReleaseController(service shared.ReleaseService, avService shared.AssetVersionService, avRepo shared.AssetVersionRepository, dvRepo shared.DependencyVulnRepository, assetRepository shared.AssetRepository, artifactRepository shared.ArtifactRepository, csafService shared.CSAFService) *ReleaseController {
+	return &ReleaseController{service: service, assetVersionService: avService, assetVersionRepository: avRepo, dependencyVulnRepo: dvRepo, assetRepository: assetRepository, artifactRepository: artifactRepository, csafService: csafService}
 }
 
 // @Summary List releases
@@ -334,13 +335,14 @@ func (h *ReleaseController) mergeReleaseSBOM(ctx context.Context, release models
 			continue
 		}
 
-		if item.AssetID == nil || item.AssetVersionName == nil || item.ArtifactName == nil {
+		// ReadRecursive preloads the artifact together with its asset version
+		if item.Artifact == nil {
 			return nil, nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
 		}
 
-		assetVersion := models.AssetVersion{AssetID: *item.AssetID, Name: *item.AssetVersionName}
+		assetVersion := item.Artifact.AssetVersion
 
-		bom, err := h.assetVersionService.LoadArtifactSBOMs(ctx, nil, assetVersion, *item.ArtifactName)
+		bom, err := h.assetVersionService.LoadArtifactSBOMs(ctx, nil, assetVersion, item.Artifact.ArtifactName)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -390,19 +392,17 @@ func (h *ReleaseController) gatherReleaseVulns(ctx context.Context, release mode
 			continue
 		}
 
-		if item.AssetID == nil || item.AssetVersionName == nil || item.ArtifactName == nil {
+		// ReadRecursive preloads the artifact together with its asset version
+		if item.Artifact == nil {
 			return nil, fmt.Errorf("release item %s is missing asset reference", item.ID)
 		}
 
-		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(ctx, nil, *item.AssetVersionName, *item.AssetID, item.ArtifactName)
+		av := item.Artifact.AssetVersion
+		depVulns, err := h.dependencyVulnRepo.GetDependencyVulnsByAssetVersion(ctx, nil, av.ID, &item.Artifact.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		av, err := h.assetVersionRepository.Read(ctx, nil, *item.AssetVersionName, *item.AssetID)
-		if err != nil {
-			return nil, err
-		}
 		asset, err := h.assetRepository.Read(ctx, nil, av.AssetID) // nosemgrep: bola-controller-read-without-tenant-check -- av.AssetID comes from a previously-loaded AssetVersion, not from a user-controlled path param
 		if err != nil {
 			return nil, err
@@ -460,6 +460,9 @@ func (h *ReleaseController) Create(c shared.Context) error {
 
 	project := shared.GetProject(c)
 
+	if err := h.resolveReleaseItemArtifacts(c.Request().Context(), req.Items); err != nil {
+		return err
+	}
 	if err := h.validateReleaseItemRefs(c.Request().Context(), project.GetID(), req.Items); err != nil {
 		return err
 	}
@@ -470,7 +473,7 @@ func (h *ReleaseController) Create(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not create release").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusCreated, transformer.ReleaseToDTO(model))
+	return c.JSON(http.StatusCreated, withRequestedArtifactNames(transformer.ReleaseToDTO(model), req.Items))
 }
 
 // @Summary Update release
@@ -504,6 +507,9 @@ func (h *ReleaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
+	if err := h.resolveReleaseItemArtifacts(c.Request().Context(), req.Items); err != nil {
+		return err
+	}
 	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), req.Items); err != nil {
 		return err
 	}
@@ -514,7 +520,7 @@ func (h *ReleaseController) Update(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not update release").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusOK, transformer.ReleaseToDTO(rel))
+	return c.JSON(http.StatusOK, withRequestedArtifactNames(transformer.ReleaseToDTO(rel), req.Items))
 }
 
 // @Summary Delete release
@@ -575,24 +581,65 @@ func (h *ReleaseController) AddItem(c shared.Context) error {
 		return echo.NewHTTPError(404, "release not found").WithInternal(err)
 	}
 
-	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), []dtos.ReleaseItem{dto}); err != nil {
+	items := []dtos.ReleaseItem{dto}
+	if err := h.resolveReleaseItemArtifacts(c.Request().Context(), items); err != nil {
 		return err
 	}
+	if err := h.validateReleaseItemRefs(c.Request().Context(), shared.GetProject(c).GetID(), items); err != nil {
+		return err
+	}
+	dto = items[0]
 
 	item := models.ReleaseItem{
-		ID:               dto.ID,
-		ReleaseID:        relID,
-		ChildReleaseID:   dto.ChildReleaseID,
-		ArtifactName:     dto.ArtifactName,
-		AssetVersionName: dto.AssetVersionName,
-		AssetID:          dto.AssetID,
+		ID:             dto.ID,
+		ReleaseID:      relID,
+		ChildReleaseID: dto.ChildReleaseID,
+		ArtifactID:     dto.ArtifactID,
+		AssetID:        dto.AssetID,
 	}
 
 	if err := h.service.AddItem(c.Request().Context(), &item); err != nil {
 		return echo.NewHTTPError(500, "could not add release item").WithInternal(err)
 	}
 
-	return c.JSON(http.StatusCreated, transformer.ReleaseItemToDTO(item))
+	resp := transformer.ReleaseItemToDTO(item)
+	resp.ArtifactName = dto.ArtifactName
+	resp.AssetVersionName = dto.AssetVersionName
+	return c.JSON(http.StatusCreated, resp)
+}
+
+// resolveReleaseItemArtifacts resolves the artifact an item references by asset id, asset version name and artifact name.
+// A client provided artifact id is never trusted - the resolved artifact also overwrites the asset id, so
+// validateReleaseItemRefs checks the asset the artifact really belongs to.
+func (h *ReleaseController) resolveReleaseItemArtifacts(ctx context.Context, items []dtos.ReleaseItem) error {
+	for i := range items {
+		items[i].ArtifactID = nil
+		if items[i].AssetID == nil || items[i].AssetVersionName == nil || items[i].ArtifactName == nil {
+			continue
+		}
+		assetVersion, err := h.assetVersionRepository.ReadByName(ctx, nil, *items[i].AssetVersionName, *items[i].AssetID)
+		if err != nil {
+			return echo.NewHTTPError(400, "invalid asset version name").WithInternal(err)
+		}
+		artifact, err := h.artifactRepository.ReadArtifact(ctx, nil, *items[i].ArtifactName, assetVersion.ID)
+		if err != nil {
+			return echo.NewHTTPError(400, "invalid artifact name").WithInternal(err)
+		}
+		items[i].ArtifactID = &artifact.ID
+		items[i].AssetID = &artifact.AssetID
+	}
+	return nil
+}
+
+// the stored items only reference their artifact by id, so the names are taken from the request
+func withRequestedArtifactNames(release dtos.Release, requested []dtos.ReleaseItem) dtos.Release {
+	for i := range release.Items {
+		if i < len(requested) && release.Items[i].ArtifactID != nil {
+			release.Items[i].ArtifactName = requested[i].ArtifactName
+			release.Items[i].AssetVersionName = requested[i].AssetVersionName
+		}
+	}
+	return release
 }
 
 // validateReleaseItemRefs verifies that every foreign reference embedded in the given release
@@ -677,15 +724,8 @@ func (h *ReleaseController) ListCandidates(c shared.Context) error {
 		return echo.NewHTTPError(500, "could not list candidates").WithInternal(err)
 	}
 
-	// map artifacts to DTOs and include asset name
-	artDTOs := []dtos.Artifact{}
-	for _, a := range artifacts {
-		artDTOs = append(artDTOs, dtos.Artifact{
-			ArtifactName:     a.ArtifactName,
-			AssetVersionName: a.AssetVersionName,
-			AssetID:          a.AssetID,
-		})
-	}
+	// the candidates come with their asset version preloaded
+	artDTOs := utils.Map(artifacts, transformer.ArtifactModelToDTO)
 
 	dto := dtos.CandidatesResponse{
 		Artifacts: artDTOs,

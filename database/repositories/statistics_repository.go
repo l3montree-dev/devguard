@@ -38,39 +38,18 @@ func (r *statisticsRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB 
 }
 
 // returns all dependencyVulns for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
+// artifactID if non-nil restricts the result to the vulns of a single artifact
+func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx *gorm.DB, artifactID *uuid.UUID, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
 	dependencyVulns := []models.DependencyVuln{}
-	var err error
-	if artifactName == nil && assetVersionName == nil {
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).
-			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
-			Where("dependency_vulns.asset_id = ?", assetID).Where("created_at <= ?", time).
-			Find(&dependencyVulns).Error
-	} else if artifactName != nil && assetVersionName == nil {
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).
-			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_artifact_name = ?", *artifactName).Where("created_at <= ?", time).
-			Find(&dependencyVulns).Error
-	} else if artifactName == nil && assetVersionName != nil {
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).
-			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").Where("adv.artifact_asset_id = ?", assetID).Where("adv.artifact_asset_version_name = ?", *assetVersionName).Where("created_at <= ?", time).
-			Find(&dependencyVulns).Error
-	} else {
-		// both defined
-		err = r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
-			return db.Where("created_at <= ?", time).Order("created_at ASC")
-		}).
-			Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
-			Where("adv.artifact_asset_id = ?", assetID).
-			Where("adv.artifact_asset_version_name = ?", *assetVersionName).Where("adv.artifact_artifact_name = ?", *artifactName).Where("created_at <= ?", time).
-			Find(&dependencyVulns).Error
+	q := r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		return db.Where("created_at <= ?", time).Order("created_at ASC")
+	}).
+		Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
+		Where("dependency_vulns.asset_id = ?", assetID).Where("dependency_vulns.created_at <= ?", time)
+	if artifactID != nil {
+		q = q.Where("adv.artifact_id = ?", *artifactID)
 	}
-	if err != nil {
+	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 
@@ -108,12 +87,12 @@ var openEvents = []dtos.VulnEventType{
 	dtos.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTimes(ctx context.Context, tx *gorm.DB, artifactName *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error) {
+func (r *statisticsRepository) AverageFixingTimes(ctx context.Context, tx *gorm.DB, artifactID *uuid.UUID, assetVersionID uuid.UUID) (dtos.RemediationTimeAverages, error) {
 	results := dtos.RemediationTimeAverages{}
 
 	var err error
 
-	if artifactName == nil {
+	if artifactID == nil {
 		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
 	SELECT
@@ -127,8 +106,7 @@ WITH events AS (
 	JOIN vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
 	LEFT JOIN cves c ON dependency_vulns.cve_id = c.cve
 	WHERE fe.type = ANY (?)
-	AND dependency_vulns.asset_version_name = ?
-	AND dependency_vulns.asset_id = ?
+	AND dependency_vulns.asset_version_id = ?
 )
 SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 0  AND risk_assessment <  4)),0)  AS risk_avg_low,
@@ -141,7 +119,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type = ANY (?) AND prev_type = ANY (?);`, pq.Array(append(remediationEvents, openEvents...)), assetVersionName, assetID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
+WHERE type = ANY (?) AND prev_type = ANY (?);`, pq.Array(append(remediationEvents, openEvents...)), assetVersionID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	} else {
 		err = r.GetDB(ctx, tx).Raw(`
 WITH events AS (
@@ -158,11 +136,10 @@ WITH events AS (
 	JOIN (
 		SELECT DISTINCT artifact_dependency_vulns.dependency_vuln_id
 		FROM artifact_dependency_vulns
-		WHERE artifact_artifact_name = ?
+		WHERE artifact_dependency_vulns.artifact_id = ?
 	) AS adv ON dependency_vulns.id = adv.dependency_vuln_id
 	WHERE fe.type = ANY (?)
-	AND dependency_vulns.asset_version_name = ?
-	AND dependency_vulns.asset_id = ?
+	AND dependency_vulns.asset_version_id = ?
 )
 SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 0  AND risk_assessment <  4)),0)  AS risk_avg_low,
@@ -175,7 +152,7 @@ SELECT
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
 	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
 FROM events
-WHERE type = ANY (?) AND prev_type = ANY (?);`, artifactName, pq.Array(append(remediationEvents, openEvents...)), assetVersionName, assetID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
+WHERE type = ANY (?) AND prev_type = ANY (?);`, *artifactID, pq.Array(append(remediationEvents, openEvents...)), assetVersionID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	}
 
 	return results, err
@@ -199,7 +176,8 @@ events AS (
 		LAG(fe.created_at) OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_created_at
 	FROM dependency_vulns dv
 	JOIN vuln_events fe ON dv.id = fe.dependency_vuln_id
-	JOIN release_items ri ON dv.asset_version_name = ri.asset_version_name AND dv.asset_id = ri.asset_id
+	JOIN artifacts ra ON ra.asset_version_id = dv.asset_version_id
+	JOIN release_items ri ON ri.artifact_id = ra.id
 	LEFT JOIN cves c ON dv.cve_id = c.cve
 	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type = ANY (?)
 )
@@ -222,7 +200,7 @@ func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(ctx context.C
 	var cves []models.CVE
 
 	//Query to find all CVE in the vulnerabilities for which an exploit exists
-	err := r.GetDB(ctx, tx).Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_name = ?  AND d.state = 'open'  AND d.asset_id = ?;", assetVersion.Name, assetVersion.AssetID).Find(&cves).Error
+	err := r.GetDB(ctx, tx).Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_id = ?  AND d.state = 'open';", assetVersion.ID).Find(&cves).Error
 	if err != nil {
 		return cves, err
 	}
@@ -266,7 +244,7 @@ func (r *statisticsRepository) GetOrgStructureDistribution(ctx context.Context, 
 			SELECT 
 				COUNT(DISTINCT(p.id)) as num_projects, 
 				COUNT(DISTINCT(a.id)) as num_assets, 
-				COUNT(DISTINCT(art.artifact_name, art.asset_version_name,art.asset_id)) as num_artifacts 
+				COUNT(DISTINCT(art.id)) as num_artifacts 
 			FROM 
 				projects p 
 			LEFT JOIN 
@@ -364,10 +342,10 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 		COUNT(*) FILTER (WHERE sub.cvss >= 7 AND sub.cvss < 9) AS high_cvss,
 		COUNT(*) FILTER (WHERE sub.cvss >= 9 AND sub.cvss <= 10) AS critical_cvss
 	FROM (
-		SELECT DISTINCT ON (adv.artifact_asset_id, adv.artifact_asset_version_name, adv.artifact_artifact_name, dv.component_purl, dv.cve_id)
+		SELECT DISTINCT ON (ar.id, dv.component_purl, dv.cve_id)
 			dv.risk_assessment, cves.cvss,
-			adv.artifact_artifact_name AS artifact_name,
-			adv.artifact_asset_version_name AS version_name,
+			ar.artifact_name AS artifact_name,
+			dv.asset_version_name AS version_name,
 			p.slug AS project_slug,
 			a.slug AS asset_slug
 		FROM dependency_vulns dv
@@ -375,9 +353,10 @@ func (r *statisticsRepository) GetMostVulnerableArtifactsInOrg(ctx context.Conte
 		JOIN assets a ON dv.asset_id = a.id
 		JOIN projects p ON a.project_id = p.id
 		JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dv.id
+		JOIN artifacts ar ON ar.id = adv.artifact_id
 		WHERE p.organization_id = ?
 		AND dv.state = 'open'
-		ORDER BY adv.artifact_asset_id, adv.artifact_asset_version_name, adv.artifact_artifact_name, dv.component_purl, dv.cve_id, dv.risk_assessment DESC
+		ORDER BY ar.id, dv.component_purl, dv.cve_id, dv.risk_assessment DESC
 	) sub
 	GROUP BY sub.artifact_name, sub.version_name, sub.project_slug, sub.asset_slug
 	ORDER BY total DESC
@@ -507,14 +486,15 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, t
 	packages := []dtos.MaliciousPackageInOrg{}
 	err := r.GetDB(ctx, tx).Raw(`
 	WITH RECURSIVE walk AS (
-		SELECT s.asset_id, s.asset_version_name, e.direct_dependency_subtree_hash AS node_hash
+		SELECT s.asset_id, ar.asset_version_id, e.direct_dependency_subtree_hash AS node_hash
 		FROM sboms s
+		JOIN artifacts ar ON ar.id = s.artifact_id
 		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
 		JOIN assets c ON c.id = s.asset_id
 		JOIN projects d ON c.project_id = d.id
 		WHERE d.organization_id = ?
 		UNION
-		SELECT w.asset_id, w.asset_version_name, e.direct_dependency_subtree_hash
+		SELECT w.asset_id, w.asset_version_id, e.direct_dependency_subtree_hash
 		FROM walk w
 		JOIN sbom_merkle_edges e ON e.subtree_hash = w.node_hash
 	)
@@ -523,13 +503,15 @@ func (r *statisticsRepository) FindMaliciousPackagesInOrg(ctx context.Context, t
 		n.component_id as component,
 		d.name as project_name,
 		c.name as asset_name,
-		w.asset_version_name
+		av.name AS asset_version_name
 	FROM
 		malicious_affected_components a
 	JOIN
 		sbom_merkle_nodes n ON n.component_id = a.purl
 	JOIN
 		walk w ON w.node_hash = n.node_hash
+	JOIN
+		asset_versions av ON av.id = w.asset_version_id
 	JOIN
 		assets c ON w.asset_id = c.id
 	JOIN
@@ -699,11 +681,12 @@ func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.C
 	packages := []dtos.MaliciousPackage{}
 	err := r.GetDB(ctx, tx).Raw(`
 	WITH RECURSIVE walk AS (
-		SELECT s.asset_id, s.asset_version_name, e.direct_dependency_subtree_hash AS node_hash
+		SELECT s.asset_id, ar.asset_version_id, e.direct_dependency_subtree_hash AS node_hash
 		FROM sboms s
+		JOIN artifacts ar ON ar.id = s.artifact_id
 		JOIN sbom_merkle_edges e ON e.subtree_hash = s.root_subtree_hash
 		UNION
-		SELECT w.asset_id, w.asset_version_name, e.direct_dependency_subtree_hash
+		SELECT w.asset_id, w.asset_version_id, e.direct_dependency_subtree_hash
 		FROM walk w
 		JOIN sbom_merkle_edges e ON e.subtree_hash = w.node_hash
 	)
@@ -714,13 +697,15 @@ func (r *statisticsRepository) FindMaliciousPackagesAcrossInstance(ctx context.C
 		p.slug as project_slug,
 		a.slug as asset_slug,
 		a.name as asset_name,
-		w.asset_version_name as asset_version_name
+		av.name as asset_version_name
 	FROM
 		malicious_affected_components mac
 	JOIN
 		sbom_merkle_nodes n ON n.component_id = mac.purl
 	JOIN
 		walk w ON w.node_hash = n.node_hash
+	JOIN
+		asset_versions av ON av.id = w.asset_version_id
 	JOIN
 		assets a ON w.asset_id = a.id
 	JOIN

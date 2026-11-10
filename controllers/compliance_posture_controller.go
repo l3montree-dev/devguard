@@ -92,9 +92,9 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 	}
 
 	orgID := shared.GetOrg(ctx).ID
-	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	projectID, assetID, assetVersionID, _ := getOwnershipFromCtx(ctx)
 
-	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, frameworkControlID, assetVersionName, assetID, projectID, orgID)
+	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, frameworkControlID, assetVersionID, assetID, projectID, orgID)
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "compliance posture not found")
@@ -147,14 +147,14 @@ func (c *CompliancePostureController) AssetVersionListPaged(ctx shared.Context) 
 
 func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
-	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	projectID, assetID, assetVersionID, _ := getOwnershipFromCtx(ctx)
 
 	pageInfo := shared.GetPageInfo(ctx)
 	search := ctx.QueryParam("search")
 	filter := shared.GetFilterQuery(ctx)
 	sort := shared.GetSortQuery(ctx)
 
-	postures, err := c.compliancePostureService.GetForAllControlsPaged(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	postures, err := c.compliancePostureService.GetForAllControlsPaged(ctx.Request().Context(), nil, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	if err != nil {
 		return err
 	}
@@ -216,8 +216,8 @@ func (c *CompliancePostureController) AssetVersionStats(ctx shared.Context) erro
 func (c *CompliancePostureController) Stats(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 	filter := shared.GetFilterQuery(ctx)
-	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
-	stats, err := c.compliancePostureService.GetStatsForAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, filter)
+	projectID, assetID, assetVersionID, _ := getOwnershipFromCtx(ctx)
+	stats, err := c.compliancePostureService.GetStatsForAllControls(ctx.Request().Context(), nil, assetVersionID, assetID, projectID, orgID, filter)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func (c *CompliancePostureController) Stats(ctx shared.Context) error {
 	return ctx.JSON(200, stats)
 }
 
-func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName *string) {
+func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uuid.UUID, assetVersionID *uuid.UUID, assetVersionName *string) {
 	project, err := shared.MaybeGetProject(ctx)
 	if err == nil {
 		projectID = &project.ID
@@ -234,11 +234,12 @@ func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uui
 			assetID = &asset.ID
 			assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 			if err == nil {
+				assetVersionID = &assetVersion.ID
 				assetVersionName = &assetVersion.Name
 			}
 		}
 	}
-	return projectID, assetID, assetVersionName
+	return projectID, assetID, assetVersionID, assetVersionName
 }
 
 func getFrameworkControlIDFromCtx(ctx shared.Context) (string, error) {
@@ -307,7 +308,7 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 
 	orgID := shared.GetOrg(ctx).ID
 
-	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	projectID, assetID, assetVersionID, assetVersionName := getOwnershipFromCtx(ctx)
 
 	var state struct {
 		Status        string  `json:"status"`
@@ -327,6 +328,7 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 		OrgID:              orgID,
 		ProjectID:          projectID,
 		AssetID:            assetID,
+		AssetVersionID:     assetVersionID,
 		AssetVersionName:   assetVersionName,
 		Vulnerability: models.Vulnerability{
 			State: dtos.VulnStateOpen,
@@ -393,7 +395,7 @@ func (c *CompliancePostureController) AssetVersionGetOSCAL(ctx shared.Context) e
 }
 
 func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
-	var assetVersionName *string
+	var assetVersionID *uuid.UUID
 	var assetID *uuid.UUID
 	var projectID *uuid.UUID
 	orgID := shared.GetOrg(ctx).ID
@@ -405,7 +407,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 			assetID = &asset.ID
 			assetVersion, err := shared.MaybeGetAssetVersion(ctx)
 			if err == nil {
-				assetVersionName = &assetVersion.Name
+				assetVersionID = &assetVersion.ID
 			}
 		}
 	}
@@ -423,7 +425,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 
 	}
 
-	compliancePostures, err := c.compliancePostureService.GetAllControls(ctx.Request().Context(), nil, assetVersionName, assetID, projectID, orgID, "", filter, nil)
+	compliancePostures, err := c.compliancePostureService.GetAllControls(ctx.Request().Context(), nil, assetVersionID, assetID, projectID, orgID, "", filter, nil)
 	if err != nil {
 		return err
 	}

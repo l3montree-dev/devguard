@@ -155,7 +155,7 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 	// unescape artifact name
 	artifactName, _ = url.PathUnescape(artifactName)
 
-	overwrittenLicense, err := componentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
+	overwrittenLicense, err := componentController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(ctx.Request().Context(), nil, assetVersion.ID)
 	if err != nil {
 		return err
 	}
@@ -201,8 +201,7 @@ func (componentController *ComponentController) ListPaged(ctx shared.Context) er
 
 	components, err := componentController.componentRepository.LoadComponentsWithProject(ctx.Request().Context(), nil,
 		overwrittenLicense,
-		assetVersion.Name,
-		assetVersion.AssetID,
+		assetVersion,
 		pageInfo,
 		search,
 		filter,

@@ -60,6 +60,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) dtos.FirstPartyVuln {
 		ID:                   f.ID,
 		ScannerIDs:           f.ScannerIDs,
 		Message:              f.Message,
+		AssetVersionID:       f.AssetVersionID.String(),
 		AssetVersionName:     f.AssetVersionName,
 		AssetID:              f.AssetID.String(),
 		State:                f.State,

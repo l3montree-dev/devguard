@@ -885,8 +885,8 @@ func (_c *SupplyChainRepository_List_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // PercentageOfVerifiedSupplyChains provides a mock function for the type SupplyChainRepository
-func (_mock *SupplyChainRepository) PercentageOfVerifiedSupplyChains(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) (float64, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID)
+func (_mock *SupplyChainRepository) PercentageOfVerifiedSupplyChains(ctx context.Context, tx shared.DB, assetID uuid.UUID) (float64, error) {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PercentageOfVerifiedSupplyChains")
@@ -894,16 +894,16 @@ func (_mock *SupplyChainRepository) PercentageOfVerifiedSupplyChains(ctx context
 
 	var r0 float64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) (float64, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (float64, error)); ok {
+		return returnFunc(ctx, tx, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) float64); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) float64); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		r0 = ret.Get(0).(float64)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -918,13 +918,12 @@ type SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call struct {
 // PercentageOfVerifiedSupplyChains is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *SupplyChainRepository_Expecter) PercentageOfVerifiedSupplyChains(ctx any, tx any, assetVersionName any, assetID any) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
-	return &SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call{Call: _e.mock.On("PercentageOfVerifiedSupplyChains", ctx, tx, assetVersionName, assetID)}
+func (_e *SupplyChainRepository_Expecter) PercentageOfVerifiedSupplyChains(ctx any, tx any, assetID any) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+	return &SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call{Call: _e.mock.On("PercentageOfVerifiedSupplyChains", ctx, tx, assetID)}
 }
 
-func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID)) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -934,19 +933,14 @@ func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Run(run f
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -957,7 +951,7 @@ func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Return(f 
 	return _c
 }
 
-func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName string, assetID uuid.UUID) (float64, error)) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) (float64, error)) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
 	_c.Call.Return(run)
 	return _c
 }

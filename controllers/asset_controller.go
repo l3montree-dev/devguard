@@ -533,18 +533,14 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 			slog.Error("Error getting default asset version", "error", err)
 		}
 	}
-	var artifactName *string
-	artifact, err := shared.MaybeGetArtifact(ctx)
-	if err == nil {
-		artifactName = &artifact.ArtifactName
-	}
+	artifactID := maybeArtifactID(ctx)
 
 	svg := ""
 
 	if badge == "cvss" {
 		// Use the latest snapshot regardless of when the daily aggregation last ran —
 		// a public badge should not go gray on days the daemon hasn't ticked yet.
-		latest, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
+		latest, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactID, assetVersion.ID)
 		if err != nil {
 			return err
 		}

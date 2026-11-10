@@ -811,8 +811,8 @@ func (_c *ComponentRepository_List_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // LoadComponentsWithProject provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponentsWithProject(ctx context.Context, tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
-	ret := _mock.Called(ctx, tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
+func (_mock *ComponentRepository) LoadComponentsWithProject(ctx context.Context, tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersion models.AssetVersion, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error) {
+	ret := _mock.Called(ctx, tx, overwrittenLicenses, assetVersion, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadComponentsWithProject")
@@ -820,16 +820,16 @@ func (_mock *ComponentRepository) LoadComponentsWithProject(ctx context.Context,
 
 	var r0 shared.Paged[models.ComponentDependency]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.ComponentDependency], error)); ok {
-		return returnFunc(ctx, tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk, models.AssetVersion, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[models.ComponentDependency], error)); ok {
+		return returnFunc(ctx, tx, overwrittenLicenses, assetVersion, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.ComponentDependency]); ok {
-		r0 = returnFunc(ctx, tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.LicenseRisk, models.AssetVersion, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[models.ComponentDependency]); ok {
+		r0 = returnFunc(ctx, tx, overwrittenLicenses, assetVersion, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[models.ComponentDependency])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []models.LicenseRisk, string, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(ctx, tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []models.LicenseRisk, models.AssetVersion, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, overwrittenLicenses, assetVersion, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -845,17 +845,16 @@ type ComponentRepository_LoadComponentsWithProject_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - overwrittenLicenses []models.LicenseRisk
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersion models.AssetVersion
 //   - pageInfo shared.PageInfo
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(ctx any, tx any, overwrittenLicenses any, assetVersionName any, assetID any, pageInfo any, search any, filter any, sort any) *ComponentRepository_LoadComponentsWithProject_Call {
-	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", ctx, tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)}
+func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(ctx any, tx any, overwrittenLicenses any, assetVersion any, pageInfo any, search any, filter any, sort any) *ComponentRepository_LoadComponentsWithProject_Call {
+	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", ctx, tx, overwrittenLicenses, assetVersion, pageInfo, search, filter, sort)}
 }
 
-func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(ctx context.Context, tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(ctx context.Context, tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersion models.AssetVersion, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -869,29 +868,25 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(ctx c
 		if args[2] != nil {
 			arg2 = args[2].([]models.LicenseRisk)
 		}
-		var arg3 string
+		var arg3 models.AssetVersion
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(models.AssetVersion)
 		}
-		var arg4 uuid.UUID
+		var arg4 shared.PageInfo
 		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
+			arg4 = args[4].(shared.PageInfo)
 		}
-		var arg5 shared.PageInfo
+		var arg5 string
 		if args[5] != nil {
-			arg5 = args[5].(shared.PageInfo)
+			arg5 = args[5].(string)
 		}
-		var arg6 string
+		var arg6 []shared.FilterQuery
 		if args[6] != nil {
-			arg6 = args[6].(string)
+			arg6 = args[6].([]shared.FilterQuery)
 		}
-		var arg7 []shared.FilterQuery
+		var arg7 []shared.SortQuery
 		if args[7] != nil {
-			arg7 = args[7].([]shared.FilterQuery)
-		}
-		var arg8 []shared.SortQuery
-		if args[8] != nil {
-			arg8 = args[8].([]shared.SortQuery)
+			arg7 = args[7].([]shared.SortQuery)
 		}
 		run(
 			arg0,
@@ -902,7 +897,6 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(ctx c
 			arg5,
 			arg6,
 			arg7,
-			arg8,
 		)
 	})
 	return _c
@@ -913,7 +907,7 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Return(paged share
 	return _c
 }
 
-func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, overwrittenLicenses []models.LicenseRisk, assetVersion models.AssetVersion, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,10 +19,11 @@ func TestAttachGroupEvents(t *testing.T) {
 
 			vuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: assetVersion.Name,
-					State:            dtos.VulnStateOpen,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
 				},
+				AssetVersionName:  assetVersion.Name,
 				CVEID:             "CVE-1990-0001",
 				VulnerabilityPath: []string{"root"},
 			}
@@ -66,6 +68,57 @@ func TestAttachGroupEvents(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, 3, len(vulns[0].Events))
 			assert.Equal(t, dtos.VulnStateOpen, vulns[0].State)
+		})
+	})
+}
+
+func TestLegacyArtifactNameFilter(t *testing.T) {
+	t.Run("filtering by the artifact name of the join table should still only return the vulns of that artifact", func(t *testing.T) {
+		WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+			_, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+			artifact1 := models.Artifact{ArtifactName: "artifact-1", AssetVersionID: assetVersion.ID, AssetID: asset.ID}
+			artifact2 := models.Artifact{ArtifactName: "artifact-2", AssetVersionID: assetVersion.ID, AssetID: asset.ID}
+			assert.NoError(t, f.DB.Create(&artifact1).Error)
+			assert.NoError(t, f.DB.Create(&artifact2).Error)
+
+			cve1 := models.CVE{CVE: "CVE-1990-0002"}
+			cve2 := models.CVE{CVE: "CVE-1990-0003"}
+			assert.NoError(t, f.DB.Create(&cve1).Error)
+			assert.NoError(t, f.DB.Create(&cve2).Error)
+
+			vuln1 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
+				},
+				AssetVersionName:  assetVersion.Name,
+				CVEID:             cve1.CVE,
+				VulnerabilityPath: []string{"root"},
+				Artifacts:         []models.Artifact{artifact1},
+			}
+			vuln2 := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
+				},
+				AssetVersionName:  assetVersion.Name,
+				CVEID:             cve2.CVE,
+				VulnerabilityPath: []string{"root"},
+				Artifacts:         []models.Artifact{artifact2},
+			}
+			assert.NoError(t, f.DB.Create(&vuln1).Error)
+			assert.NoError(t, f.DB.Create(&vuln2).Error)
+
+			repo := repositories.NewDependencyVulnRepository(f.DB)
+			filter := []shared.FilterQuery{{Field: "artifact_dependency_vulns.artifact_artifact_name", Operator: "is", FieldValue: "artifact-1"}}
+
+			paged, err := repo.GetDependencyVulnsByAssetVersionPagedAndFlat(context.Background(), nil, assetVersion.ID, shared.PageInfo{Page: 1, PageSize: 10}, "", filter, nil)
+			assert.NoError(t, err)
+			assert.Equal(t, int64(1), paged.Total)
+			assert.Equal(t, vuln1.ID, paged.Data[0].ID)
 		})
 	})
 }

@@ -159,7 +159,7 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 	}
 
 	orgID := shared.GetOrg(ctx).ID
-	projectID, assetID, assetVersionName := getOwnershipFromCtx(ctx)
+	projectID, assetID, assetVersionID, assetVersionName := getOwnershipFromCtx(ctx)
 	userAgent := ctx.Request().UserAgent()
 
 	posture := models.CompliancePosture{
@@ -167,6 +167,7 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 		OrgID:              orgID,
 		ProjectID:          projectID,
 		AssetID:            assetID,
+		AssetVersionID:     assetVersionID,
 		AssetVersionName:   assetVersionName,
 	}
 	posture.ID = posture.CalculateHash()

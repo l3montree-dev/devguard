@@ -715,11 +715,11 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     normalize.ArtifactName(probe.Artifact),
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   normalize.ArtifactName(probe.Artifact),
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
-	if err := projectController.artifactRepository.Save(ctx.Request().Context(), nil, &artifact); err != nil {
+	if err := projectController.artifactRepository.FindOrCreate(ctx.Request().Context(), nil, &artifact); err != nil {
 		slog.Error("trivy operator: could not save artifact", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not save artifact"})
 	}
@@ -731,10 +731,9 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 
 	//add or update release item
 	releaseItem := models.ReleaseItem{
-		ReleaseID:        release.ID,
-		ArtifactName:     &artifact.ArtifactName,
-		AssetID:          &asset.ID,
-		AssetVersionName: &assetVersion.Name,
+		ReleaseID:  release.ID,
+		ArtifactID: &artifact.ID,
+		AssetID:    &asset.ID,
 	}
 
 	err = projectController.releaseService.AddItem(ctx.Request().Context(), &releaseItem)
@@ -755,7 +754,7 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 	tx := projectController.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
 	defer tx.Rollback()
 
-	wholeSBOM, err := projectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, probe.Artifact, "operator", normalized)
+	wholeSBOM, err := projectController.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, organization, *project, *asset, assetVersion, artifact, "operator", normalized)
 	if err != nil {
 		slog.Error("trivy operator: could not update SBOM", "err", err)
 		return ctx.JSON(500, map[string]string{"error": "could not update SBOM"})

@@ -26,6 +26,7 @@ type ReleaseItem struct {
 	ReleaseID        uuid.UUID  `json:"releaseId,omitempty"`
 	ChildReleaseName *string    `json:"childReleaseName,omitempty"`
 	ChildReleaseID   *uuid.UUID `json:"childReleaseId,omitempty" validate:"required_without=AssetID"`
+	ArtifactID       *uuid.UUID `json:"artifactId,omitempty"`
 	ArtifactName     *string    `json:"artifactName,omitempty"`
 	AssetVersionName *string    `json:"assetVersionName,omitempty"`
 	AssetID          *uuid.UUID `json:"assetId,omitempty" validate:"required_without=ChildReleaseID"`
@@ -42,7 +43,9 @@ type Release struct {
 
 // Artifact is a trimmed artifact view returned to clients. It includes the asset's name.
 type Artifact struct {
+	ID               uuid.UUID `json:"id"`
 	ArtifactName     string    `json:"artifactName"`
+	AssetVersionID   uuid.UUID `json:"assetVersionId"`
 	AssetVersionName string    `json:"assetVersionName"`
 	AssetID          uuid.UUID `json:"assetId"`
 }

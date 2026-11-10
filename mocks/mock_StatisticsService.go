@@ -52,8 +52,8 @@ func (_m *StatisticsService) EXPECT() *StatisticsService_Expecter {
 }
 
 // GetArtifactRiskHistory provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	ret := _mock.Called(ctx, artifactName, assetVersionName, assetID, start, end)
+func (_mock *StatisticsService) GetArtifactRiskHistory(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	ret := _mock.Called(ctx, artifactID, assetVersionID, start, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetArtifactRiskHistory")
@@ -61,18 +61,18 @@ func (_mock *StatisticsService) GetArtifactRiskHistory(ctx context.Context, arti
 
 	var r0 []models.ArtifactRiskHistory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
-		return returnFunc(ctx, artifactName, assetVersionName, assetID, start, end)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *uuid.UUID, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
+		return returnFunc(ctx, artifactID, assetVersionID, start, end)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
-		r0 = returnFunc(ctx, artifactName, assetVersionName, assetID, start, end)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *uuid.UUID, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
+		r0 = returnFunc(ctx, artifactID, assetVersionID, start, end)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *string, string, uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, artifactName, assetVersionName, assetID, start, end)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *uuid.UUID, uuid.UUID, time.Time, time.Time) error); ok {
+		r1 = returnFunc(ctx, artifactID, assetVersionID, start, end)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -86,40 +86,35 @@ type StatisticsService_GetArtifactRiskHistory_Call struct {
 
 // GetArtifactRiskHistory is a helper method to define mock.On call
 //   - ctx context.Context
-//   - artifactName *string
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - artifactID *uuid.UUID
+//   - assetVersionID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(ctx any, artifactName any, assetVersionName any, assetID any, start any, end any) *StatisticsService_GetArtifactRiskHistory_Call {
-	return &StatisticsService_GetArtifactRiskHistory_Call{Call: _e.mock.On("GetArtifactRiskHistory", ctx, artifactName, assetVersionName, assetID, start, end)}
+func (_e *StatisticsService_Expecter) GetArtifactRiskHistory(ctx any, artifactID any, assetVersionID any, start any, end any) *StatisticsService_GetArtifactRiskHistory_Call {
+	return &StatisticsService_GetArtifactRiskHistory_Call{Call: _e.mock.On("GetArtifactRiskHistory", ctx, artifactID, assetVersionID, start, end)}
 }
 
-func (_c *StatisticsService_GetArtifactRiskHistory_Call) Run(run func(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetArtifactRiskHistory_Call {
+func (_c *StatisticsService_GetArtifactRiskHistory_Call) Run(run func(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetArtifactRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *string
+		var arg1 *uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(*string)
+			arg1 = args[1].(*uuid.UUID)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 uuid.UUID
+		var arg3 time.Time
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg3 = args[3].(time.Time)
 		}
 		var arg4 time.Time
 		if args[4] != nil {
 			arg4 = args[4].(time.Time)
-		}
-		var arg5 time.Time
-		if args[5] != nil {
-			arg5 = args[5].(time.Time)
 		}
 		run(
 			arg0,
@@ -127,7 +122,6 @@ func (_c *StatisticsService_GetArtifactRiskHistory_Call) Run(run func(ctx contex
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -138,7 +132,7 @@ func (_c *StatisticsService_GetArtifactRiskHistory_Call) Return(artifactRiskHist
 	return _c
 }
 
-func (_c *StatisticsService_GetArtifactRiskHistory_Call) RunAndReturn(run func(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetArtifactRiskHistory_Call {
+func (_c *StatisticsService_GetArtifactRiskHistory_Call) RunAndReturn(run func(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetArtifactRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -230,8 +224,8 @@ func (_c *StatisticsService_GetArtifactRiskHistoryWithVersion_Call) RunAndReturn
 }
 
 // GetComponentRisk provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-	ret := _mock.Called(ctx, artifactName, assetVersionName, assetID)
+func (_mock *StatisticsService) GetComponentRisk(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID) (map[string]models.Distribution, error) {
+	ret := _mock.Called(ctx, artifactID, assetVersionID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetComponentRisk")
@@ -239,18 +233,18 @@ func (_mock *StatisticsService) GetComponentRisk(ctx context.Context, artifactNa
 
 	var r0 map[string]models.Distribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID) (map[string]models.Distribution, error)); ok {
-		return returnFunc(ctx, artifactName, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *uuid.UUID, uuid.UUID) (map[string]models.Distribution, error)); ok {
+		return returnFunc(ctx, artifactID, assetVersionID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *string, string, uuid.UUID) map[string]models.Distribution); ok {
-		r0 = returnFunc(ctx, artifactName, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *uuid.UUID, uuid.UUID) map[string]models.Distribution); ok {
+		r0 = returnFunc(ctx, artifactID, assetVersionID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]models.Distribution)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *string, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, artifactName, assetVersionName, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, artifactID, assetVersionID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -264,36 +258,30 @@ type StatisticsService_GetComponentRisk_Call struct {
 
 // GetComponentRisk is a helper method to define mock.On call
 //   - ctx context.Context
-//   - artifactName *string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *StatisticsService_Expecter) GetComponentRisk(ctx any, artifactName any, assetVersionName any, assetID any) *StatisticsService_GetComponentRisk_Call {
-	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", ctx, artifactName, assetVersionName, assetID)}
+//   - artifactID *uuid.UUID
+//   - assetVersionID uuid.UUID
+func (_e *StatisticsService_Expecter) GetComponentRisk(ctx any, artifactID any, assetVersionID any) *StatisticsService_GetComponentRisk_Call {
+	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", ctx, artifactID, assetVersionID)}
 }
 
-func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID)) *StatisticsService_GetComponentRisk_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 *string
+		var arg1 *uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(*string)
+			arg1 = args[1].(*uuid.UUID)
 		}
-		var arg2 string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -304,7 +292,7 @@ func (_c *StatisticsService_GetComponentRisk_Call) Return(stringToDistribution m
 	return _c
 }
 
-func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)) *StatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID) (map[string]models.Distribution, error)) *StatisticsService_GetComponentRisk_Call {
 	_c.Call.Return(run)
 	return _c
 }

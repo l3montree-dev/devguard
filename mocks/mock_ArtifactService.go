@@ -50,16 +50,16 @@ func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 }
 
 // DeleteArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	ret := _mock.Called(ctx, assetID, assetVersionName, artifactName)
+func (_mock *ArtifactService) DeleteArtifact(ctx context.Context, assetVersion models.AssetVersion, artifactName string) error {
+	ret := _mock.Called(ctx, assetVersion, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteArtifact")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(ctx, assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, string) error); ok {
+		r0 = returnFunc(ctx, assetVersion, artifactName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -73,36 +73,30 @@ type ArtifactService_DeleteArtifact_Call struct {
 
 // DeleteArtifact is a helper method to define mock.On call
 //   - ctx context.Context
-//   - assetID uuid.UUID
-//   - assetVersionName string
+//   - assetVersion models.AssetVersion
 //   - artifactName string
-func (_e *ArtifactService_Expecter) DeleteArtifact(ctx any, assetID any, assetVersionName any, artifactName any) *ArtifactService_DeleteArtifact_Call {
-	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", ctx, assetID, assetVersionName, artifactName)}
+func (_e *ArtifactService_Expecter) DeleteArtifact(ctx any, assetVersion any, artifactName any) *ArtifactService_DeleteArtifact_Call {
+	return &ArtifactService_DeleteArtifact_Call{Call: _e.mock.On("DeleteArtifact", ctx, assetVersion, artifactName)}
 }
 
-func (_c *ArtifactService_DeleteArtifact_Call) Run(run func(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string)) *ArtifactService_DeleteArtifact_Call {
+func (_c *ArtifactService_DeleteArtifact_Call) Run(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName string)) *ArtifactService_DeleteArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uuid.UUID
+		var arg1 models.AssetVersion
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
+			arg1 = args[1].(models.AssetVersion)
 		}
 		var arg2 string
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -113,255 +107,17 @@ func (_c *ArtifactService_DeleteArtifact_Call) Return(err error) *ArtifactServic
 	return _c
 }
 
-func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error) *ArtifactService_DeleteArtifact_Call {
+func (_c *ArtifactService_DeleteArtifact_Call) RunAndReturn(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName string) error) *ArtifactService_DeleteArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GatherVexInformation provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, assetVersion, artifactName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GatherVexInformation")
-	}
-
-	var r0 []models.DependencyVuln
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, *string) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, assetVersion, artifactName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, *string) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, assetVersion, artifactName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.DependencyVuln)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, models.AssetVersion, *string) error); ok {
-		r1 = returnFunc(ctx, assetVersion, artifactName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactService_GatherVexInformation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GatherVexInformation'
-type ArtifactService_GatherVexInformation_Call struct {
-	*mock.Call
-}
-
-// GatherVexInformation is a helper method to define mock.On call
-//   - ctx context.Context
-//   - assetVersion models.AssetVersion
-//   - artifactName *string
-func (_e *ArtifactService_Expecter) GatherVexInformation(ctx any, assetVersion any, artifactName any) *ArtifactService_GatherVexInformation_Call {
-	return &ArtifactService_GatherVexInformation_Call{Call: _e.mock.On("GatherVexInformation", ctx, assetVersion, artifactName)}
-}
-
-func (_c *ArtifactService_GatherVexInformation_Call) Run(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string)) *ArtifactService_GatherVexInformation_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 models.AssetVersion
-		if args[1] != nil {
-			arg1 = args[1].(models.AssetVersion)
-		}
-		var arg2 *string
-		if args[2] != nil {
-			arg2 = args[2].(*string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactService_GatherVexInformation_Call) Return(dependencyVulns []models.DependencyVuln, err error) *ArtifactService_GatherVexInformation_Call {
-	_c.Call.Return(dependencyVulns, err)
-	return _c
-}
-
-func (_c *ArtifactService_GatherVexInformation_Call) RunAndReturn(run func(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error)) *ArtifactService_GatherVexInformation_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetArtifactsByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetArtifactsByAssetIDAndAssetVersionName")
-	}
-
-	var r0 []models.Artifact
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.Artifact, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.Artifact); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Artifact)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArtifactsByAssetIDAndAssetVersionName'
-type ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call struct {
-	*mock.Call
-}
-
-// GetArtifactsByAssetIDAndAssetVersionName is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *ArtifactService_Expecter) GetArtifactsByAssetIDAndAssetVersionName(ctx any, tx any, assetID any, assetVersionName any) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
-	return &ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("GetArtifactsByAssetIDAndAssetVersionName", ctx, tx, assetID, assetVersionName)}
-}
-
-func (_c *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call) Return(artifacts []models.Artifact, err error) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
-	_c.Call.Return(artifacts, err)
-	return _c
-}
-
-func (_c *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactService_GetArtifactsByAssetIDAndAssetVersionName_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ReadArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
-	ret := _mock.Called(ctx, tx, name, assetVersionName, assetID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ReadArtifact")
-	}
-
-	var r0 models.Artifact
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, uuid.UUID) (models.Artifact, error)); ok {
-		return returnFunc(ctx, tx, name, assetVersionName, assetID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, string, uuid.UUID) models.Artifact); ok {
-		r0 = returnFunc(ctx, tx, name, assetVersionName, assetID)
-	} else {
-		r0 = ret.Get(0).(models.Artifact)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, string, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, name, assetVersionName, assetID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactService_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
-type ArtifactService_ReadArtifact_Call struct {
-	*mock.Call
-}
-
-// ReadArtifact is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - name string
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *ArtifactService_Expecter) ReadArtifact(ctx any, tx any, name any, assetVersionName any, assetID any) *ArtifactService_ReadArtifact_Call {
-	return &ArtifactService_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", ctx, tx, name, assetVersionName, assetID)}
-}
-
-func (_c *ArtifactService_ReadArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID)) *ArtifactService_ReadArtifact_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 uuid.UUID
-		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactService_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactService_ReadArtifact_Call {
-	_c.Call.Return(artifact, err)
-	return _c
-}
-
-func (_c *ArtifactService_ReadArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error)) *ArtifactService_ReadArtifact_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveArtifact provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) SaveArtifact(ctx context.Context, tx shared.DB, artifact *models.Artifact) error {
+// FindOrCreateArtifact provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) FindOrCreateArtifact(ctx context.Context, tx shared.DB, artifact *models.Artifact) error {
 	ret := _mock.Called(ctx, tx, artifact)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SaveArtifact")
+		panic("no return value specified for FindOrCreateArtifact")
 	}
 
 	var r0 error
@@ -373,20 +129,20 @@ func (_mock *ArtifactService) SaveArtifact(ctx context.Context, tx shared.DB, ar
 	return r0
 }
 
-// ArtifactService_SaveArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveArtifact'
-type ArtifactService_SaveArtifact_Call struct {
+// ArtifactService_FindOrCreateArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindOrCreateArtifact'
+type ArtifactService_FindOrCreateArtifact_Call struct {
 	*mock.Call
 }
 
-// SaveArtifact is a helper method to define mock.On call
+// FindOrCreateArtifact is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
 //   - artifact *models.Artifact
-func (_e *ArtifactService_Expecter) SaveArtifact(ctx any, tx any, artifact any) *ArtifactService_SaveArtifact_Call {
-	return &ArtifactService_SaveArtifact_Call{Call: _e.mock.On("SaveArtifact", ctx, tx, artifact)}
+func (_e *ArtifactService_Expecter) FindOrCreateArtifact(ctx any, tx any, artifact any) *ArtifactService_FindOrCreateArtifact_Call {
+	return &ArtifactService_FindOrCreateArtifact_Call{Call: _e.mock.On("FindOrCreateArtifact", ctx, tx, artifact)}
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact)) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_FindOrCreateArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact)) *ArtifactService_FindOrCreateArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -409,12 +165,238 @@ func (_c *ArtifactService_SaveArtifact_Call) Run(run func(ctx context.Context, t
 	return _c
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) Return(err error) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_FindOrCreateArtifact_Call) Return(err error) *ArtifactService_FindOrCreateArtifact_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ArtifactService_SaveArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact) error) *ArtifactService_SaveArtifact_Call {
+func (_c *ArtifactService_FindOrCreateArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact) error) *ArtifactService_FindOrCreateArtifact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GatherVexInformation provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifact *models.Artifact) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, assetVersion, artifact)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GatherVexInformation")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, *models.Artifact) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, assetVersion, artifact)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.AssetVersion, *models.Artifact) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, assetVersion, artifact)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.AssetVersion, *models.Artifact) error); ok {
+		r1 = returnFunc(ctx, assetVersion, artifact)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_GatherVexInformation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GatherVexInformation'
+type ArtifactService_GatherVexInformation_Call struct {
+	*mock.Call
+}
+
+// GatherVexInformation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - assetVersion models.AssetVersion
+//   - artifact *models.Artifact
+func (_e *ArtifactService_Expecter) GatherVexInformation(ctx any, assetVersion any, artifact any) *ArtifactService_GatherVexInformation_Call {
+	return &ArtifactService_GatherVexInformation_Call{Call: _e.mock.On("GatherVexInformation", ctx, assetVersion, artifact)}
+}
+
+func (_c *ArtifactService_GatherVexInformation_Call) Run(run func(ctx context.Context, assetVersion models.AssetVersion, artifact *models.Artifact)) *ArtifactService_GatherVexInformation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.AssetVersion
+		if args[1] != nil {
+			arg1 = args[1].(models.AssetVersion)
+		}
+		var arg2 *models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*models.Artifact)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_GatherVexInformation_Call) Return(dependencyVulns []models.DependencyVuln, err error) *ArtifactService_GatherVexInformation_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *ArtifactService_GatherVexInformation_Call) RunAndReturn(run func(ctx context.Context, assetVersion models.AssetVersion, artifact *models.Artifact) ([]models.DependencyVuln, error)) *ArtifactService_GatherVexInformation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetArtifactsByAssetVersionID provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) GetArtifactsByAssetVersionID(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetArtifactsByAssetVersionID")
+	}
+
+	var r0 []models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Artifact)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_GetArtifactsByAssetVersionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArtifactsByAssetVersionID'
+type ArtifactService_GetArtifactsByAssetVersionID_Call struct {
+	*mock.Call
+}
+
+// GetArtifactsByAssetVersionID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersionID uuid.UUID
+func (_e *ArtifactService_Expecter) GetArtifactsByAssetVersionID(ctx any, tx any, assetVersionID any) *ArtifactService_GetArtifactsByAssetVersionID_Call {
+	return &ArtifactService_GetArtifactsByAssetVersionID_Call{Call: _e.mock.On("GetArtifactsByAssetVersionID", ctx, tx, assetVersionID)}
+}
+
+func (_c *ArtifactService_GetArtifactsByAssetVersionID_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID)) *ArtifactService_GetArtifactsByAssetVersionID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_GetArtifactsByAssetVersionID_Call) Return(artifacts []models.Artifact, err error) *ArtifactService_GetArtifactsByAssetVersionID_Call {
+	_c.Call.Return(artifacts, err)
+	return _c
+}
+
+func (_c *ArtifactService_GetArtifactsByAssetVersionID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.Artifact, error)) *ArtifactService_GetArtifactsByAssetVersionID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReadArtifact provides a mock function for the type ArtifactService
+func (_mock *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionID uuid.UUID) (models.Artifact, error) {
+	ret := _mock.Called(ctx, tx, name, assetVersionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadArtifact")
+	}
+
+	var r0 models.Artifact
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) (models.Artifact, error)); ok {
+		return returnFunc(ctx, tx, name, assetVersionID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, uuid.UUID) models.Artifact); ok {
+		r0 = returnFunc(ctx, tx, name, assetVersionID)
+	} else {
+		r0 = ret.Get(0).(models.Artifact)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, name, assetVersionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ArtifactService_ReadArtifact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadArtifact'
+type ArtifactService_ReadArtifact_Call struct {
+	*mock.Call
+}
+
+// ReadArtifact is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - name string
+//   - assetVersionID uuid.UUID
+func (_e *ArtifactService_Expecter) ReadArtifact(ctx any, tx any, name any, assetVersionID any) *ArtifactService_ReadArtifact_Call {
+	return &ArtifactService_ReadArtifact_Call{Call: _e.mock.On("ReadArtifact", ctx, tx, name, assetVersionID)}
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, name string, assetVersionID uuid.UUID)) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) Return(artifact models.Artifact, err error) *ArtifactService_ReadArtifact_Call {
+	_c.Call.Return(artifact, err)
+	return _c
+}
+
+func (_c *ArtifactService_ReadArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, name string, assetVersionID uuid.UUID) (models.Artifact, error)) *ArtifactService_ReadArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }
