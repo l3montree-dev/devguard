@@ -2749,3 +2749,84 @@ func TestScanScopedToArtifact(t *testing.T) {
 		})
 	})
 }
+
+func TestFirstPartyVulnScanKeepsAllResultLocations(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		controller := f.App.ScanController
+		firstPartyVulnRepository := f.App.FirstPartyVulnRepository
+
+		app := echo.New()
+		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+
+		// Three results: one location, no location, two locations in different files.
+		sarifContent := `{
+			"version": "2.1.0",
+			"runs": [
+				{
+					"tool": {
+						"driver": {
+							"name": "repro",
+							"rules": [
+								{"id": "rule-with-location", "name": "rule-with-location"},
+								{"id": "rule-without-location", "name": "rule-without-location"},
+								{"id": "rule-two-locations", "name": "rule-two-locations"}
+							]
+						}
+					},
+					"results": [
+						{
+							"ruleId": "rule-with-location",
+							"message": {"text": "result with one location"},
+							"locations": [
+								{"physicalLocation": {"artifactLocation": {"uri": "src/a.js"}, "region": {"startLine": 1}}}
+							]
+						},
+						{
+							"ruleId": "rule-without-location",
+							"message": {"text": "result without any location"}
+						},
+						{
+							"ruleId": "rule-two-locations",
+							"message": {"text": "result with two locations"},
+							"locations": [
+								{"physicalLocation": {"artifactLocation": {"uri": "src/b.js"}, "region": {"startLine": 10}}},
+								{"physicalLocation": {"artifactLocation": {"uri": "src/c.js"}, "region": {"startLine": 20}}}
+							]
+						}
+					]
+				}
+			]
+		}`
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/vulndb/scan/sarif", strings.NewReader(sarifContent))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "repro-scanner")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "main")
+		ctx := app.NewContext(req, recorder)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, NewUserSession(t, "test-user"))
+
+		err := controller.FirstPartyVulnScan(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		vulns, err := firstPartyVulnRepository.GetByAssetID(context.Background(), nil, asset.ID)
+		assert.Nil(t, err)
+
+		found := map[string]string{}
+		for _, vuln := range vulns {
+			found[vuln.URI] = vuln.RuleID
+		}
+		assert.Equal(t, map[string]string{
+			"src/a.js": "rule-with-location",
+			"":         "rule-without-location",
+			"src/b.js": "rule-two-locations",
+			"src/c.js": "rule-two-locations",
+		}, found)
+	})
+}

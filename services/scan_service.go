@@ -260,8 +260,24 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				}
 			}
 
-			if len(result.Locations) > 0 {
-				loc := result.Locations[0]
+			// A result without a location is still a finding (e.g. a secret
+			// scanner reporting a repository-level issue), so keep it with an
+			// empty URI. Every location of a result is kept as well: locations
+			// with the same hash share one vulnerability (one snippet each),
+			// locations in other files get their own.
+			if len(result.Locations) == 0 {
+				hash = firstPartyVulnerability.CalculateHash()
+				if _, ok := firstPartyVulnerabilitiesMap[hash]; !ok {
+					var err error
+					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(dtos.SnippetContents{Snippets: []dtos.SnippetContent{{}}})
+					if err != nil {
+						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+					}
+					firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
+				}
+			}
+
+			for _, loc := range result.Locations {
 				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 
 				var snippetContent dtos.SnippetContent
@@ -296,6 +312,8 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
 					}
 					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
+					// keep the URI of the first location that created this vulnerability
+					firstPartyVulnerability.URI = existingVuln.URI
 					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
 					if err != nil {
 						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
@@ -314,7 +332,6 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 
 				}
 				firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
-
 			}
 
 		}
