@@ -312,11 +312,17 @@ func (s *statisticsService) isSnapShotDay(snapshotDay time.Time) bool {
 // If project-level aggregation is required in future, reintroduce with a new storage model.
 
 func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
-
 	// as max, do 1 year from the past
 	if begin.Before(time.Now().AddDate(-1, 0, 0)) {
 		begin = time.Now().AddDate(-1, 0, 0)
 	}
+
+	return s.RebuildArtifactRiskHistory(ctx, tx, artifact, assetID, begin, end)
+}
+
+// RebuildArtifactRiskHistory recalculates the history for every day from begin to end.
+// Unlike UpdateArtifactRiskAggregation it does not limit how far back begin can be.
+func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
 	// set begin to last second of date
 	begin = time.Date(begin.UTC().Year(), begin.UTC().Month(), begin.UTC().Day(), 23, 59, 59, 0, time.UTC)
 

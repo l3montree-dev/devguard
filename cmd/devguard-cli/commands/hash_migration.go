@@ -52,6 +52,63 @@ the database is fully migrated before the main application starts.`,
 	}
 }
 
+// backfillRiskHistory rebuilds the risk history of every artifact whose rows were written before diffs were stored.
+// The rebuild starts at the first stored day, so every vuln is added on the day it appeared and not on the day of the migration.
+// An artifact is only rebuilt while none of its rows has a diff, so an interrupted run continues where it stopped.
+func backfillRiskHistory(
+	ctx context.Context,
+	artifactRepository shared.ArtifactRepository,
+	riskHistoryRepository shared.ArtifactRiskHistoryRepository,
+	statisticsService shared.StatisticsService,
+) error {
+	artifacts, err := artifactRepository.All(ctx, nil)
+	if err != nil {
+		slog.Error("could not load artifacts for risk history backfill", "err", err)
+		return err
+	}
+
+	now := time.Now()
+	rebuilt, skipped, failed := 0, 0, 0
+	for i, artifact := range artifacts {
+		history, err := riskHistoryRepository.GetRiskHistory(ctx, nil, &artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, time.Time{}, now)
+		if err != nil {
+			slog.Error("could not load risk history for backfill", "artifact", artifact.ArtifactName, "assetID", artifact.AssetID, "err", err)
+			failed++
+			continue
+		}
+
+		// no history to repair, or the rows already have diffs
+		legacy := len(history) > 0
+		for _, row := range history {
+			if row.DiffAddedDependencyVulns != nil || row.DiffRemovedDependencyVulns != nil {
+				legacy = false
+				break
+			}
+		}
+		if !legacy {
+			skipped++
+			continue
+		}
+
+		// the history is ordered by day ascending
+		firstDay := history[0].Day
+		err = artifactRepository.Transaction(ctx, func(tx shared.DB) error {
+			return statisticsService.RebuildArtifactRiskHistory(ctx, tx, &artifact, artifact.AssetID, firstDay, now)
+		})
+		if err != nil {
+			slog.Error("could not rebuild risk history", "artifact", artifact.ArtifactName, "assetID", artifact.AssetID, "err", err)
+			failed++
+			continue
+		}
+		rebuilt++
+		slog.Info("rebuilt risk history", "artifact", artifact.ArtifactName, "assetID", artifact.AssetID, "from", firstDay.Format(time.DateOnly), "progress", i+1, "of", len(artifacts))
+	}
+
+	// artifacts that failed keep their old rows and are picked up again by the next run
+	slog.Info("risk history backfill finished", "artifacts", len(artifacts), "rebuilt", rebuilt, "skipped", skipped, "failed", failed)
+	return nil
+}
+
 func runMigrations() error {
 	// Step 1: Run schema migrations
 	slog.Info("running database schema migrations...")
@@ -91,6 +148,9 @@ func runMigrations() error {
 			daemonRunner shared.DaemonRunner,
 			vulndbService shared.VulnDBService,
 			configService shared.ConfigService,
+			artifactRepository shared.ArtifactRepository,
+			riskHistoryRepository shared.ArtifactRiskHistoryRepository,
+			statisticsService shared.StatisticsService,
 		) {
 			slog.Info("checking if hash migrations are needed...")
 			start := time.Now()
@@ -102,6 +162,13 @@ func runMigrations() error {
 			}
 
 			slog.Info("hash migration check completed", "duration", time.Since(start))
+
+			slog.Info("backfilling risk history...")
+			if err := backfillRiskHistory(context.Background(), artifactRepository, riskHistoryRepository, statisticsService); err != nil {
+				slog.Error("risk history backfill failed", "err", err)
+				migrationErr = err
+				return
+			}
 
 			db := database.NewGormDB(pool)
 			slog.Info("loading compliance controls into database...")

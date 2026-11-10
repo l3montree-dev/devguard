@@ -613,6 +613,87 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ct
 	return _c
 }
 
+// RebuildArtifactRiskHistory provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
+	ret := _mock.Called(ctx, tx, artifact, assetID, begin, end)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RebuildArtifactRiskHistory")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
+		r0 = returnFunc(ctx, tx, artifact, assetID, begin, end)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// StatisticsService_RebuildArtifactRiskHistory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RebuildArtifactRiskHistory'
+type StatisticsService_RebuildArtifactRiskHistory_Call struct {
+	*mock.Call
+}
+
+// RebuildArtifactRiskHistory is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - artifact *models.Artifact
+//   - assetID uuid.UUID
+//   - begin time.Time
+//   - end time.Time
+func (_e *StatisticsService_Expecter) RebuildArtifactRiskHistory(ctx any, tx any, artifact any, assetID any, begin any, end any) *StatisticsService_RebuildArtifactRiskHistory_Call {
+	return &StatisticsService_RebuildArtifactRiskHistory_Call{Call: _e.mock.On("RebuildArtifactRiskHistory", ctx, tx, artifact, assetID, begin, end)}
+}
+
+func (_c *StatisticsService_RebuildArtifactRiskHistory_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_RebuildArtifactRiskHistory_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.Artifact
+		if args[2] != nil {
+			arg2 = args[2].(*models.Artifact)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 time.Time
+		if args[4] != nil {
+			arg4 = args[4].(time.Time)
+		}
+		var arg5 time.Time
+		if args[5] != nil {
+			arg5 = args[5].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *StatisticsService_RebuildArtifactRiskHistory_Call) Return(err error) *StatisticsService_RebuildArtifactRiskHistory_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *StatisticsService_RebuildArtifactRiskHistory_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_RebuildArtifactRiskHistory_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateArtifactRiskAggregation provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
 	ret := _mock.Called(ctx, tx, artifact, assetID, begin, end)

@@ -714,6 +714,8 @@ type ArtifactRiskHistoryRepository interface {
 
 type StatisticsService interface {
 	UpdateArtifactRiskAggregation(ctx context.Context, tx DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
+	// RebuildArtifactRiskHistory recalculates the history from begin to end without the one year limit of UpdateArtifactRiskAggregation
+	RebuildArtifactRiskHistory(ctx context.Context, tx DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
 	GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetArtifactRiskHistoryWithVersion(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)
 	// Release scoped statistics
