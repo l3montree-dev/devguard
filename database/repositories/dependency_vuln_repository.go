@@ -301,8 +301,12 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(ctx context.C
 		return shared.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
+	// dependency_vuln_count must match what the handler reports per package:
+	// distinct CVEs. A CVE reached through several paths (or listed by several
+	// artifacts via the join below) is more than one row, so COUNT(id) sorted
+	// packages by a number the UI never shows.
 	packageNameQuery := repository.GetDB(ctx, tx).Table("components").
-		Select("SUM(dependency_vulns.risk_assessment) as total_risk, AVG(dependency_vulns.risk_assessment) as avg_risk, MAX(dependency_vulns.risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(dependency_vulns.id) as dependency_vuln_count, components.id as package_name").
+		Select("SUM(dependency_vulns.risk_assessment) as total_risk, AVG(dependency_vulns.risk_assessment) as avg_risk, MAX(dependency_vulns.risk_assessment) as max_risk, MAX(\"CVE\".cvss) as max_cvss, COUNT(DISTINCT dependency_vulns.cve_id) as dependency_vuln_count, components.id as package_name").
 		Joins("INNER JOIN dependency_vulns ON components.id = dependency_vulns.component_purl AND dependency_vulns.asset_id = ? AND dependency_vulns.asset_version_name = ?", assetID, assetVersionName).
 		Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").
 		Joins("INNER JOIN cves \"CVE\" ON dependency_vulns.cve_id = \"CVE\".cve").
