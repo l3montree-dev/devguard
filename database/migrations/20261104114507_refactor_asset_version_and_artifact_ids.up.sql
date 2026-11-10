@@ -125,6 +125,8 @@
         UPDATE public.asset_risk_history child SET asset_version_id = av.id
         FROM public.asset_versions av
         WHERE av.name = child.asset_version_name AND av.asset_id = child.asset_id;
+        -- the old table had no foreign key, so history of deleted asset versions is still around and can not be mapped
+        DELETE FROM public.asset_risk_history WHERE asset_version_id IS NULL;
 
         ALTER TABLE public.compliance_postures ADD COLUMN asset_version_id uuid;
         UPDATE public.compliance_postures child SET asset_version_id = av.id
