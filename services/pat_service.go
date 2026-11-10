@@ -203,9 +203,27 @@ func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error)
 	return *privKey, privKey.PublicKey, nil
 }
 
-// use a helper function for consistency across the code
 func signedFields() httpsign.Fields {
-	return httpsign.Headers("@method", "content-digest")
+	return httpsign.Headers("@method", "@path", "@query", "content-digest")
+}
+
+const (
+	signatureMaxAge    = 10 * time.Second
+	signatureClockSkew = 2 * time.Second
+)
+
+func signConfig() *httpsign.SignConfig {
+	return httpsign.NewSignConfig().
+		SignCreated(true).
+		SetExpiresAfter(int64(signatureMaxAge.Seconds()))
+}
+
+func verifyConfig() *httpsign.VerifyConfig {
+	return httpsign.NewVerifyConfig().
+		SetVerifyCreated(true).
+		SetNotOlderThan(signatureMaxAge).
+		SetNotNewerThan(signatureClockSkew).
+		SetRejectExpired(true)
 }
 
 func AuthenticateRequestWithToken(token string, req *http.Request) error {
@@ -239,7 +257,7 @@ func signRequest(hexPrivKey string, req *http.Request) error {
 		return err
 	}
 
-	signer, _ := httpsign.NewP256Signer(privKey, nil, signedFields())
+	signer, _ := httpsign.NewP256Signer(privKey, signConfig(), signedFields())
 
 	req.Header.Set("X-Fingerprint", fingerprint)
 
@@ -324,7 +342,7 @@ func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 		return false, fmt.Errorf("cannot verify admin request: no public key was loaded on startup")
 	}
 
-	verifier, err := httpsign.NewP256Verifier(p.adminPubKey, nil, signedFields())
+	verifier, err := httpsign.NewP256Verifier(p.adminPubKey, verifyConfig(), signedFields())
 	if err != nil {
 		return false, fmt.Errorf("could not build P256Verifier: %w", err)
 	}
@@ -336,7 +354,7 @@ func (p *PatService) VerifyAdminRequest(req *http.Request) (bool, error) {
 }
 
 func validateRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
-	verifier, err := httpsign.NewP256Verifier(pubKey, nil, signedFields())
+	verifier, err := httpsign.NewP256Verifier(pubKey, verifyConfig(), signedFields())
 	if err != nil {
 		return fmt.Errorf("could not create verifier: %v", err)
 	}
