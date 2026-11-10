@@ -210,6 +210,36 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 		attribute.String("assetVersion.name", assetVersion.Name),
 	)
 
+	firstPartyVulnerabilities, err := sarifToFirstPartyVulns(sarifScan, assetVersion.Name, asset.ID, scannerID)
+	if err != nil {
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+	}
+
+	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, nil, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project, userAgent)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+	}
+
+	if assetVersion.Metadata == nil {
+		assetVersion.Metadata = make(map[string]any)
+	}
+
+	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: new(time.Now())}
+
+	span.SetAttributes(
+		attribute.Int("scan.opened", len(opened)),
+		attribute.Int("scan.closed", len(closed)),
+		attribute.Int("scan.total", len(newState)),
+	)
+	return opened, closed, newState, nil
+}
+
+// sarifToFirstPartyVulns turns the results of a SARIF scan into first-party
+// vulnerabilities. Locations with the same hash share one vulnerability (one
+// snippet each).
+func sarifToFirstPartyVulns(sarifScan sarif.SarifSchema210Json, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	firstPartyVulnerabilitiesMap := make(map[uuid.UUID]models.FirstPartyVuln)
 
 	ruleMap := make(map[string]sarif.ReportingDescriptor)
@@ -234,8 +264,8 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
+					AssetVersionName: assetVersionName,
+					AssetID:          assetID,
 				},
 				Message:         &result.Message.Text,
 				ScannerIDs:      scannerID,
@@ -260,24 +290,14 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				}
 			}
 
-			// A result without a location is still a finding (e.g. a secret
-			// scanner reporting a repository-level issue), so keep it with an
-			// empty URI. Every location of a result is kept as well: locations
-			// with the same hash share one vulnerability (one snippet each),
-			// locations in other files get their own.
-			if len(result.Locations) == 0 {
-				hash = firstPartyVulnerability.CalculateHash()
-				if _, ok := firstPartyVulnerabilitiesMap[hash]; !ok {
-					var err error
-					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(dtos.SnippetContents{Snippets: []dtos.SnippetContent{{}}})
-					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
-					}
-					firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
-				}
+			// A result without a location is still a finding, so treat it as a
+			// single empty location.
+			locations := result.Locations
+			if len(locations) == 0 {
+				locations = []sarif.Location{{}}
 			}
 
-			for _, loc := range result.Locations {
+			for _, loc := range locations {
 				firstPartyVulnerability.URI = utils.OrDefault(loc.PhysicalLocation.ArtifactLocation.URI, "")
 
 				var snippetContent dtos.SnippetContent
@@ -309,14 +329,14 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
 					snippetContents, err := transformer.FromJSONSnippetContents(existingVuln)
 					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
+						return nil, errors.Wrap(err, "could not parse existing snippet contents")
 					}
 					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
 					// keep the URI of the first location that created this vulnerability
 					firstPartyVulnerability.URI = existingVuln.URI
 					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
 					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+						return nil, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
 
 				} else {
@@ -327,7 +347,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 					var err error
 					firstPartyVulnerability.SnippetContents, err = transformer.SnippetContentsToJSON(snippetContents)
 					if err != nil {
-						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+						return nil, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
 
 				}
@@ -340,26 +360,7 @@ func (s *scanService) HandleFirstPartyVulnResult(ctx context.Context, org models
 	for _, vuln := range firstPartyVulnerabilitiesMap {
 		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
 	}
-
-	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, nil, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project, userAgent)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	if assetVersion.Metadata == nil {
-		assetVersion.Metadata = make(map[string]any)
-	}
-
-	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: new(time.Now())}
-
-	span.SetAttributes(
-		attribute.Int("scan.opened", len(opened)),
-		attribute.Int("scan.closed", len(closed)),
-		attribute.Int("scan.total", len(newState)),
-	)
-	return opened, closed, newState, nil
+	return firstPartyVulnerabilities, nil
 }
 
 func (s *scanService) handleFirstPartyVulnResult(ctx context.Context, tx *gorm.DB, userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project, userAgent *string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
