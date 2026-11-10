@@ -48,9 +48,7 @@ type ReleaseItem struct {
 	ChildReleaseID *uuid.UUID `gorm:"index;type:uuid"`
 	ChildRelease   *Release   `gorm:"foreignKey:ChildReleaseID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	// composite foreign key to artifacts (ArtifactName, AssetVersionName, AssetID)
-	ArtifactName     *string    `gorm:"index;type:text"`
-	AssetVersionName *string    `gorm:"index;type:text"`
-	AssetID          *uuid.UUID `gorm:"index;type:uuid"`
-	Artifact         *Artifact  `gorm:"foreignKey:ArtifactName,AssetVersionName,AssetID;references:ArtifactName,AssetVersionName,AssetID;constraint:OnDelete:CASCADE;"`
+	ArtifactID *uuid.UUID `gorm:"index;type:uuid"`
+	AssetID    *uuid.UUID `gorm:"index;type:uuid"`
+	Artifact   *Artifact  `gorm:"foreignKey:ArtifactID;references:ID;constraint:OnDelete:CASCADE;"`
 }

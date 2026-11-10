@@ -40,8 +40,8 @@ func NewStatisticsService(statisticsRepository shared.StatisticsRepository, asse
 	}
 }
 
-func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, nil, artifactName, assetVersionName, assetID)
+func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID) (map[string]models.Distribution, error) {
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionID(ctx, nil, artifactID, assetVersionID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +96,8 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 	return distributionPerComponent, nil
 }
 
-func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	return s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, start, end)
+func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	return s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactID, assetVersionID, start, end)
 }
 
 func (s *statisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error) {
@@ -121,7 +121,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 	end = time.Date(end.UTC().Year(), end.UTC().Month(), end.UTC().Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ArtifactName, &artifact.AssetVersionName, assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ID, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -202,9 +202,8 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 		fixableLowUniqueCvss, fixableMediumUniqueCvss, fixableHighUniqueCvss, fixableCriticalUniqueCvss := calculateUniqueFixableCVEPurlCountsByCvss(openVulns)
 
 		result := models.ArtifactRiskHistory{
-			ArtifactName:     artifact.ArtifactName,
-			AssetVersionName: artifact.AssetVersionName,
-			AssetID:          assetID,
+			ArtifactID: artifact.ID,
+			AssetID:    assetID,
 			History: models.History{
 				Day: time,
 
@@ -272,7 +271,7 @@ func (s *statisticsService) UpdateArtifactRiskAggregation(ctx context.Context, t
 	// save the last history update timestamp
 	artifact.LastHistoryUpdate = &end
 	err := s.assetVersionRepository.GetDB(ctx, nil).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "artifact_name"}, {Name: "asset_version_name"}, {Name: "asset_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"last_history_update"}),
 	}).Create(artifact).Error
 	if err != nil {

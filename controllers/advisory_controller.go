@@ -63,7 +63,7 @@ func (controller *AdvisoryController) Create(ctx shared.Context) error {
 
 	newAdvisory := transformer.AdvisoryCreateRequestToModel(req)
 	newAdvisory.AssetID = shared.GetAsset(ctx).ID
-	newAdvisory.AssetVersionName = shared.GetAssetVersion(ctx).Name
+	newAdvisory.AssetVersionID = shared.GetAssetVersion(ctx).ID
 
 	err := controller.advisoryService.Create(ctx.Request().Context(), nil, &newAdvisory)
 

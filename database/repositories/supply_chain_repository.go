@@ -47,7 +47,7 @@ func (g *supplyChainRepository) Save(ctx context.Context, tx *gorm.DB, model *mo
 	}).Save(model).Error
 }
 
-func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) (float64, error) {
+func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) (float64, error) {
 	var count int64
 
 	err := g.GetDB(ctx, tx).Model(&models.SupplyChain{}).

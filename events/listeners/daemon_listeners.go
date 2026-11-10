@@ -72,7 +72,7 @@ func (runner *DaemonRunner) fetchArtifactDetails(ctx context.Context, payload ev
 	if err != nil {
 		return artifactWithDetails{}, fmt.Errorf("could not fetch asset: %w", err)
 	}
-	assetVersion, err := runner.assetVersionRepository.Read(ctx, nil, payload.AssetVersionName, payload.AssetID)
+	assetVersion, err := runner.assetVersionRepository.ReadByName(ctx, nil, payload.AssetVersionName, payload.AssetID)
 	if err != nil {
 		return artifactWithDetails{}, fmt.Errorf("could not fetch asset version: %w", err)
 	}

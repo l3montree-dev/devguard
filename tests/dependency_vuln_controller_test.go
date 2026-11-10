@@ -172,10 +172,11 @@ func TestDependencyVulnRecommendationRoute(t *testing.T) {
 		recommendedVersion := "pkg:npm/lodash@4.17.21"
 		depVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				AssetVersionID: assetVersion.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        asset.ID,
 			},
+			AssetVersionName:             assetVersion.Name,
 			CVEID:                        cve.CVE,
 			ComponentPurl:                "pkg:npm/left-pad@1.0.0",
 			DirectDependencyFixedVersion: &recommendedVersion,
@@ -273,14 +274,15 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 			// Create a dependency vuln with a ticket ID
 			depVuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
+					AssetVersionID:       assetVersion.ID,
 					State:                dtos.VulnStateAccepted,
-					AssetVersionName:     assetVersion.Name,
 					AssetID:              asset.ID,
 					TicketID:             new("gitlab:0/123"),
 					ManualTicketCreation: true,
 				},
-				ComponentPurl: "pkg:npm/test-package@1.0.0",
-				CVEID:         cve.CVE,
+				AssetVersionName: assetVersion.Name,
+				ComponentPurl:    "pkg:npm/test-package@1.0.0",
+				CVEID:            cve.CVE,
 			}
 			assert.Nil(t, f.DB.Create(&depVuln).Error)
 

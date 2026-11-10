@@ -253,8 +253,7 @@ func (c *FirstPartyVulnController) ListPaged(ctx shared.Context) error {
 
 	pagedResp, _, err := c.firstPartyVulnRepository.GetByAssetVersionPaged(
 		ctx.Request().Context(), nil,
-		assetVersion.Name,
-		assetVersion.AssetID,
+		assetVersion.ID,
 		shared.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		shared.GetFilterQuery(ctx),
@@ -287,8 +286,7 @@ func (c *FirstPartyVulnController) Sarif(ctx shared.Context) error {
 
 	vulns, err := c.firstPartyVulnRepository.GetOpenByAssetVersion(
 		ctx.Request().Context(), nil,
-		assetVersion.Name,
-		assetVersion.AssetID,
+		assetVersion.ID,
 	)
 
 	if err != nil {

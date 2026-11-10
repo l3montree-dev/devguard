@@ -14,14 +14,16 @@ import (
 )
 
 type AttestationController struct {
-	attestationRepository shared.AttestationRepository
-	artifactRepository    shared.ArtifactRepository
+	attestationRepository  shared.AttestationRepository
+	artifactRepository     shared.ArtifactRepository
+	assetVersionRepository shared.AssetVersionRepository
 }
 
-func NewAttestationController(repository shared.AttestationRepository, artifactRepository shared.ArtifactRepository) *AttestationController {
+func NewAttestationController(repository shared.AttestationRepository, artifactRepository shared.ArtifactRepository, assetVersionRepository shared.AssetVersionRepository) *AttestationController {
 	return &AttestationController{
-		attestationRepository: repository,
-		artifactRepository:    artifactRepository,
+		attestationRepository:  repository,
+		artifactRepository:     artifactRepository,
+		assetVersionRepository: assetVersionRepository,
 	}
 }
 
@@ -38,10 +40,9 @@ func NewAttestationController(repository shared.AttestationRepository, artifactR
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/attestations [get]
 func (a *AttestationController) List(ctx shared.Context) error {
 
-	asset := shared.GetAsset(ctx)
 	assetVersion := shared.GetAssetVersion(ctx)
 
-	attestationList, err := a.attestationRepository.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, asset.GetID(), assetVersion.Name)
+	attestationList, err := a.attestationRepository.GetByAssetVersionID(ctx.Request().Context(), nil, assetVersion.ID)
 	if err != nil {
 		return err
 	}
@@ -78,16 +79,19 @@ func (a *AttestationController) Create(ctx shared.Context) error {
 		artifactName = "default"
 	}
 	// check if the artifact exists
-	_, err := a.artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersionName, asset.ID)
+	assetVersion, err := a.assetVersionRepository.ReadByName(ctx.Request().Context(), nil, assetVersionName, asset.ID)
+	if err != nil {
+		return echo.NewHTTPError(400, "artifact does not exist").WithInternal(err)
+	}
+	artifact, err := a.artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.ID)
 	if err != nil {
 		return echo.NewHTTPError(400, "artifact does not exist").WithInternal(err)
 	}
 
 	attestation := models.Attestation{
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersionName,
-		ArtifactName:     artifactName,
-		PredicateType:    ctx.Request().Header.Get("X-Predicate-Type"),
+		AssetID:       asset.ID,
+		ArtifactID:    artifact.ID,
+		PredicateType: ctx.Request().Header.Get("X-Predicate-Type"),
 	}
 
 	content, err := io.ReadAll(ctx.Request().Body)

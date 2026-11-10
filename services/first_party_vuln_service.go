@@ -156,7 +156,7 @@ func (s *firstPartyVulnService) applyAndSave(ctx context.Context, tx shared.DB, 
 
 func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error {
 	// get all first-party for the assetVersion
-	vulnList, err := s.firstPartyVulnRepository.ListByScanner(ctx, nil, assetVersion.Name, asset.ID, "")
+	vulnList, err := s.firstPartyVulnRepository.ListByScanner(ctx, nil, assetVersion.ID, "")
 	if err != nil {
 		return fmt.Errorf("could not get first-party vulnerability by asset version: %w", err)
 	}

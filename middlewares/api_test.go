@@ -579,3 +579,85 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		mockAssetVersionRepository.AssertExpectations(t)
 	})
 }
+
+func TestArtifactQueryMiddleware(t *testing.T) {
+	t.Run("it should resolve the artifact of the artifactName query parameter", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/?artifactName=pkg:oci/app", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockArtifactRepository := mocks.NewArtifactRepository(t)
+
+		assetVersion := models.AssetVersion{ID: uuid.New(), Name: "main", AssetID: uuid.New()}
+		artifact := models.Artifact{ID: uuid.New(), ArtifactName: "pkg:oci/app", AssetVersionID: assetVersion.ID, AssetID: assetVersion.AssetID}
+		shared.SetAssetVersion(ctx, assetVersion)
+
+		mockArtifactRepository.On("ReadArtifact", mock.Anything, mock.Anything, "pkg:oci/app", assetVersion.ID).Return(artifact, nil)
+
+		middleware := middlewares.ArtifactQueryMiddleware(mockArtifactRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, artifact, shared.GetArtifact(ctx))
+	})
+
+	t.Run("it should set an artifact without id if the artifact does not exist", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/?artifactName=unknown", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockArtifactRepository := mocks.NewArtifactRepository(t)
+
+		assetVersion := models.AssetVersion{ID: uuid.New(), Name: "main", AssetID: uuid.New()}
+		shared.SetAssetVersion(ctx, assetVersion)
+
+		mockArtifactRepository.On("ReadArtifact", mock.Anything, mock.Anything, "unknown", assetVersion.ID).Return(models.Artifact{}, gorm.ErrRecordNotFound)
+
+		middleware := middlewares.ArtifactQueryMiddleware(mockArtifactRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		artifact := shared.GetArtifact(ctx)
+		assert.Equal(t, uuid.Nil, artifact.ID)
+		assert.Equal(t, "unknown", artifact.ArtifactName)
+	})
+
+	t.Run("it should not scope the request to an artifact without the artifactName query parameter", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockArtifactRepository := mocks.NewArtifactRepository(t)
+
+		middleware := middlewares.ArtifactQueryMiddleware(mockArtifactRepository)
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		_, err = shared.MaybeGetArtifact(ctx)
+		assert.Error(t, err)
+	})
+}

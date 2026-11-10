@@ -66,13 +66,19 @@ func (q *QueryCounter) Initialize(db *gorm.DB) error {
 	// GORM's processor type is unexported, so each processor is registered
 	// through its own closure instead of a shared helper.
 	register := []func() error{
-		func() error { return db.Callback().Create().Before("*").Register("bench:count_before_create", q.before) },
+		func() error {
+			return db.Callback().Create().Before("*").Register("bench:count_before_create", q.before)
+		},
 		func() error { return db.Callback().Create().After("*").Register("bench:count_after_create", q.after) },
 		func() error { return db.Callback().Query().Before("*").Register("bench:count_before_query", q.before) },
 		func() error { return db.Callback().Query().After("*").Register("bench:count_after_query", q.after) },
-		func() error { return db.Callback().Update().Before("*").Register("bench:count_before_update", q.before) },
+		func() error {
+			return db.Callback().Update().Before("*").Register("bench:count_before_update", q.before)
+		},
 		func() error { return db.Callback().Update().After("*").Register("bench:count_after_update", q.after) },
-		func() error { return db.Callback().Delete().Before("*").Register("bench:count_before_delete", q.before) },
+		func() error {
+			return db.Callback().Delete().Before("*").Register("bench:count_before_delete", q.before)
+		},
 		func() error { return db.Callback().Delete().After("*").Register("bench:count_after_delete", q.after) },
 		func() error { return db.Callback().Row().Before("*").Register("bench:count_before_row", q.before) },
 		func() error { return db.Callback().Row().After("*").Register("bench:count_after_row", q.after) },

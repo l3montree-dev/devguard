@@ -218,11 +218,18 @@ func runMerkleBackfill(pool *pgxpool.Pool) error {
 			}
 
 			for _, sbom := range reconstructSBOMs(edges) {
+				var artifactID uuid.UUID
+				if err := tx.Raw(`
+					SELECT a.id FROM artifacts a
+					JOIN asset_versions av ON av.id = a.asset_version_id
+					WHERE av.asset_id = ? AND av.name = ? AND a.artifact_name = ?
+				`, key.AssetID, key.AssetVersionName, sbom.ArtifactName).Scan(&artifactID).Error; err != nil {
+					return err
+				}
 				if err := sbomRepository.SaveTree(ctx, tx, models.SBOM{
-					AssetID:          key.AssetID,
-					AssetVersionName: key.AssetVersionName,
-					ArtifactName:     sbom.ArtifactName,
-					Source:           sbom.Source,
+					ArtifactID: artifactID,
+					AssetID:    key.AssetID,
+					Source:     sbom.Source,
 				}, sbom.Tree); err != nil {
 					return err
 				}

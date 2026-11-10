@@ -14,6 +14,9 @@ import (
 type FirstPartyVuln struct {
 	Vulnerability
 
+	// part of the content hash, the asset version relation itself is kept by AssetVersionID
+	AssetVersionName string `json:"assetVersionName" gorm:"type:text;not null;"`
+
 	Events []VulnEvent `gorm:"foreignKey:FirstPartyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
 	Message *string `json:"message" gorm:"default:null;"`

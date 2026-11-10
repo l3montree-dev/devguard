@@ -473,7 +473,7 @@ func (runner *DaemonRunner) findLicenseRisks(ctx context.Context, a *assetWithPr
 	errs := make([]error, 0)
 	for _, assetVersion := range a.assetVersions {
 		for _, artifact := range assetVersion.Artifacts {
-			if err := runner.findLicenseRisksOfArtifact(ctx, assetVersion, artifact.ArtifactName); err != nil {
+			if err := runner.findLicenseRisksOfArtifact(ctx, assetVersion, artifact); err != nil {
 				slog.Error("could not find license risks", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", a.asset.ID, "err", err)
 				errs = append(errs, err)
 			}
@@ -485,8 +485,8 @@ func (runner *DaemonRunner) findLicenseRisks(ctx context.Context, a *assetWithPr
 	return nil
 }
 
-func (runner *DaemonRunner) findLicenseRisksOfArtifact(ctx context.Context, assetVersion models.AssetVersion, artifactName string) error {
-	forest, err := runner.assetVersionService.LoadArtifactSBOMs(ctx, nil, assetVersion, artifactName)
+func (runner *DaemonRunner) findLicenseRisksOfArtifact(ctx context.Context, assetVersion models.AssetVersion, artifact models.Artifact) error {
+	forest, err := runner.assetVersionService.LoadArtifactSBOMs(ctx, nil, assetVersion, artifact.ArtifactName)
 	if err != nil {
 		return err
 	}
@@ -501,7 +501,7 @@ func (runner *DaemonRunner) findLicenseRisksOfArtifact(ctx context.Context, asse
 	})
 
 	tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-	if err := runner.licenseRiskService.FindLicenseRisksInComponents(ctx, tx, "system", nil, assetVersion, components, artifactName); err != nil {
+	if err := runner.licenseRiskService.FindLicenseRisksInComponents(ctx, tx, "system", nil, assetVersion, components, artifact); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -569,7 +569,7 @@ func (runner *DaemonRunner) applyVEXRules(ctx context.Context, asset models.Asse
 func (runner *DaemonRunner) recalculateRiskForVulnerabilities(ctx context.Context, a *assetWithProjectAndOrg) error {
 	errs := make([]error, 0)
 	for _, assetVersion := range a.assetVersions {
-		dependencyVulns, err := runner.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, nil)
+		dependencyVulns, err := runner.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, nil, assetVersion.ID, nil)
 		if err != nil {
 			slog.Error("failed to get dependency vulns for asset version", "assetVersionName", assetVersion.Name, "assetID", assetVersion.AssetID, "error", err)
 			errs = append(errs, err)
@@ -712,7 +712,7 @@ func (runner *DaemonRunner) collectStats(ctx context.Context, a *assetWithProjec
 				continue
 			}
 			runner.finishTx(tx)
-			slog.Info("updated statistics for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", artifact.AssetVersionName, "assetID", artifact.AssetID)
+			slog.Info("updated statistics for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", artifact.AssetID)
 		}
 	}
 	if len(errs) > 0 {

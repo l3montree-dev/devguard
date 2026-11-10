@@ -61,12 +61,13 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		// add a vulnerability to the asset version
 		vuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
-				TicketID:         new("gitlab:0/123"),
+				AssetVersionID: assetVersion.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        asset.ID,
+				TicketID:       new("gitlab:0/123"),
 			},
-			CVEID: "CVE-2222",
+			AssetVersionName: assetVersion.Name,
+			CVEID:            "CVE-2222",
 		}
 		assert.Nil(t, f.DB.Create(&vuln).Error)
 
@@ -271,9 +272,9 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 			// Create an artifact associated with the vulnerability
 			artifact := models.Artifact{
-				ArtifactName:     "test-artifact-comment",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "test-artifact-comment",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			assert.Nil(t, f.DB.Create(&artifact).Error)
 
@@ -282,9 +283,8 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 			// Pre-create an artifact risk history record for today to see if it gets updated
 			artifactRiskHistory := models.ArtifactRiskHistory{
-				ArtifactName:     artifact.ArtifactName,
-				AssetVersionName: artifact.AssetVersionName,
-				AssetID:          artifact.AssetID,
+				ArtifactID: artifact.ID,
+				AssetID:    artifact.AssetID,
 				History: models.History{
 					Day: time.Now().UTC(),
 					Distribution: models.Distribution{
@@ -330,8 +330,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 			// Check if there are any artifact risk history records before the webhook call
 			var artifactRiskHistoryBefore models.ArtifactRiskHistory
-			err = f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND day = CURRENT_DATE",
-				artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).
+			err = f.DB.Where("artifact_id = ? AND day = CURRENT_DATE", artifact.ID).
 				Find(&artifactRiskHistoryBefore).Error
 			assert.Nil(t, err, "Should find artifact risk history record for today before webhook processing")
 
@@ -350,8 +349,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 			// Verify that risk history was updated for today's date
 			var artifactRiskHistoryAfter models.ArtifactRiskHistory
-			err = f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ? AND day = CURRENT_DATE",
-				artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID).
+			err = f.DB.Where("artifact_id = ? AND day = CURRENT_DATE", artifact.ID).
 				Find(&artifactRiskHistoryAfter).Error
 			assert.Nil(t, err, "Should find artifact risk history record for today after webhook processing")
 

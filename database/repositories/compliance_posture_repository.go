@@ -125,6 +125,7 @@ func (r *CompliancePostureRepository) FindOrCreate(ctx context.Context, tx *gorm
 			OrgID:              posture.OrgID,
 			ProjectID:          posture.ProjectID,
 			AssetID:            posture.AssetID,
+			AssetVersionID:     posture.AssetVersionID,
 			AssetVersionName:   posture.AssetVersionName,
 		}
 		if err := r.GetDB(ctx, tx).Create(&newPosture).Error; err != nil {
@@ -159,7 +160,7 @@ func (r *CompliancePostureRepository) applyAndSave(ctx context.Context, tx *gorm
 	return nil
 }
 
-func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
+func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
 	var postures []dtos.CompliancePostureWithControl
 	var count int64
 
@@ -185,19 +186,19 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 			AND cp_asset.org_id = ?
 			AND cp_asset.project_id IS NOT DISTINCT FROM ?
 			AND cp_asset.asset_id IS NOT DISTINCT FROM ?
-			AND cp_asset.asset_version_name IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionName).
+			AND cp_asset.asset_version_id IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionID).
 		Joins(`LEFT JOIN compliance_postures cp_project
 			ON frameworks_controls.framework_control_id = cp_project.framework_control_id
 			AND cp_project.org_id = ?
 			AND cp_project.project_id IS NOT DISTINCT FROM ?
 			AND cp_project.asset_id IS NULL
-			AND cp_project.asset_version_name IS NULL`, orgID, projectID).
+			AND cp_project.asset_version_id IS NULL`, orgID, projectID).
 		Joins(`LEFT JOIN compliance_postures cp_org
 			ON frameworks_controls.framework_control_id = cp_org.framework_control_id
 			AND cp_org.org_id = ?
 			AND cp_org.project_id IS NULL
 			AND cp_org.asset_id IS NULL
-			AND cp_org.asset_version_name IS NULL`, orgID)
+			AND cp_org.asset_version_id IS NULL`, orgID)
 
 	if search != "" {
 		query = query.Where("(frameworks_controls.title ILIKE ? OR frameworks_controls.control_id ILIKE ? OR frameworks_controls.framework ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
@@ -255,7 +256,7 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 	return shared.NewPaged(pageInfo, count, postures), nil
 }
 
-func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
+func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
 	var postures []dtos.CompliancePostureWithDetails
 
 	query := r.GetDB(ctx, tx).Model(&models.FrameworkControl{}).
@@ -280,19 +281,19 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 			AND cp_asset.org_id = ?
 			AND cp_asset.project_id IS NOT DISTINCT FROM ?
 			AND cp_asset.asset_id IS NOT DISTINCT FROM ?
-			AND cp_asset.asset_version_name IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionName).
+			AND cp_asset.asset_version_id IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionID).
 		Joins(`LEFT JOIN compliance_postures cp_project
 			ON frameworks_controls.framework_control_id = cp_project.framework_control_id
 			AND cp_project.org_id = ?
 			AND cp_project.project_id IS NOT DISTINCT FROM ?
 			AND cp_project.asset_id IS NULL
-			AND cp_project.asset_version_name IS NULL`, orgID, projectID).
+			AND cp_project.asset_version_id IS NULL`, orgID, projectID).
 		Joins(`LEFT JOIN compliance_postures cp_org
 			ON frameworks_controls.framework_control_id = cp_org.framework_control_id
 			AND cp_org.org_id = ?
 			AND cp_org.project_id IS NULL
 			AND cp_org.asset_id IS NULL
-			AND cp_org.asset_version_name IS NULL`, orgID)
+			AND cp_org.asset_version_id IS NULL`, orgID)
 
 	if search != "" {
 		query = query.Where("(frameworks_controls.title ILIKE ? OR frameworks_controls.control_id ILIKE ? OR frameworks_controls.framework ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
@@ -345,7 +346,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 	return postures, nil
 }
 
-func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context, tx *gorm.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
+func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context, tx *gorm.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
 	type row struct {
 		State *string `gorm:"column:state"`
 		Count int64   `gorm:"column:count"`
@@ -361,19 +362,19 @@ func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context
 			AND cp_asset.org_id = ?
 			AND cp_asset.project_id IS NOT DISTINCT FROM ?
 			AND cp_asset.asset_id IS NOT DISTINCT FROM ?
-			AND cp_asset.asset_version_name IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionName).
+			AND cp_asset.asset_version_id IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionID).
 		Joins(`LEFT JOIN compliance_postures cp_project
 			ON frameworks_controls.framework_control_id = cp_project.framework_control_id
 			AND cp_project.org_id = ?
 			AND cp_project.project_id IS NOT DISTINCT FROM ?
 			AND cp_project.asset_id IS NULL
-			AND cp_project.asset_version_name IS NULL`, orgID, projectID).
+			AND cp_project.asset_version_id IS NULL`, orgID, projectID).
 		Joins(`LEFT JOIN compliance_postures cp_org
 			ON frameworks_controls.framework_control_id = cp_org.framework_control_id
 			AND cp_org.org_id = ?
 			AND cp_org.project_id IS NULL
 			AND cp_org.asset_id IS NULL
-			AND cp_org.asset_version_name IS NULL`, orgID)
+			AND cp_org.asset_version_id IS NULL`, orgID)
 
 	subquery := r.GetDB(ctx, tx).Table("(?) AS sub", query)
 	// Only the "framework" filter applies here (if present)
@@ -409,7 +410,7 @@ func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context
 	return stats, nil
 }
 
-func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gorm.DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
+func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gorm.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
 
 	type row struct {
 		ID *uuid.UUID `gorm:"column:id"`
@@ -423,19 +424,19 @@ func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gor
 			AND cp_asset.org_id = ?
 			AND cp_asset.project_id IS NOT DISTINCT FROM ?
 			AND cp_asset.asset_id IS NOT DISTINCT FROM ?
-			AND cp_asset.asset_version_name IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionName).
+			AND cp_asset.asset_version_id IS NOT DISTINCT FROM ?`, orgID, projectID, assetID, assetVersionID).
 		Joins(`LEFT JOIN compliance_postures cp_project
 			ON frameworks_controls.framework_control_id = cp_project.framework_control_id
 			AND cp_project.org_id = ?
 			AND cp_project.project_id IS NOT DISTINCT FROM ?
 			AND cp_project.asset_id IS NULL
-			AND cp_project.asset_version_name IS NULL`, orgID, projectID).
+			AND cp_project.asset_version_id IS NULL`, orgID, projectID).
 		Joins(`LEFT JOIN compliance_postures cp_org
 			ON frameworks_controls.framework_control_id = cp_org.framework_control_id
 			AND cp_org.org_id = ?
 			AND cp_org.project_id IS NULL
 			AND cp_org.asset_id IS NULL
-			AND cp_org.asset_version_name IS NULL`, orgID).
+			AND cp_org.asset_version_id IS NULL`, orgID).
 		Where("frameworks_controls.framework_control_id = ?", controlID).
 		Scan(&result).Error
 

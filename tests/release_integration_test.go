@@ -50,11 +50,11 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		)
 
 		// create two artifacts
-		a1 = models.Artifact{ArtifactName: "artifact-a", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		a1 = models.Artifact{ArtifactName: "artifact-a", AssetVersionID: assetVersion.ID, AssetID: asset.ID}
 		if err := f.DB.Create(&a1).Error; err != nil {
 			t.Fatal(err)
 		}
-		a2 = models.Artifact{ArtifactName: "artifact-b", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		a2 = models.Artifact{ArtifactName: "artifact-b", AssetVersionID: assetVersion.ID, AssetID: asset.ID}
 		if err := f.DB.Create(&a2).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -82,8 +82,8 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 		if err := f.DB.Create(&rel).Error; err != nil {
 			t.Fatal(err)
 		}
-		item1 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a1.ArtifactName, AssetVersionName: &a1.AssetVersionName, AssetID: &a1.AssetID}
-		item2 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a2.ArtifactName, AssetVersionName: &a2.AssetVersionName, AssetID: &a2.AssetID}
+		item1 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactID: &a1.ID, AssetID: &a1.AssetID}
+		item2 := models.ReleaseItem{ReleaseID: rel.ID, ArtifactID: &a2.ID, AssetID: &a2.AssetID}
 		if err := f.DB.Create(&item1).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +93,7 @@ func TestReleaseSBOMMergeIntegration(t *testing.T) {
 
 		t.Run("sbom returns merged components", func(t *testing.T) {
 			// build controller using repo/service patterns
-			releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository, f.App.CSAFService)
+			releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository, f.App.ArtifactRepository, f.App.CSAFService)
 
 			// prepare context with echo request/recorder
 			req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/sbom.json", nil)

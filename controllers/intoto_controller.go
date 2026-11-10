@@ -178,13 +178,13 @@ func (a *InToToController) Create(ctx shared.Context) error {
 	}
 
 	link := models.InTotoLink{
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
-		SupplyChainID:    strings.TrimSpace(req.SupplyChainID),
-		Step:             strings.TrimSpace(req.Step),
-		Payload:          req.Payload,
-		PatID:            pat.ID,
-		Filename:         filename,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
+		SupplyChainID:  strings.TrimSpace(req.SupplyChainID),
+		Step:           strings.TrimSpace(req.Step),
+		Payload:        req.Payload,
+		PatID:          pat.ID,
+		Filename:       filename,
 	}
 
 	valid = a.linkRepository.Save(ctx.Request().Context(), nil, &link)
@@ -201,7 +201,7 @@ func (a *InToToController) Create(ctx shared.Context) error {
 				SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
 				SupplyChainOutputDigest: req.SupplyChainOutputDigest,
 				Verified:                verified,
-				AssetVersionName:        assetVersionName,
+				AssetVersionID:          assetVersion.ID,
 				AssetID:                 asset.ID,
 			}
 

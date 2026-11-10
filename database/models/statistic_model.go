@@ -8,9 +8,12 @@ import (
 
 type ArtifactRiskHistory struct {
 	History
-	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
-	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
-	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
+	ArtifactID uuid.UUID `json:"artifactId" gorm:"primaryKey;type:uuid"`
+	AssetID    uuid.UUID `json:"assetId" gorm:"type:uuid;not null;"`
+
+	// not stored in this table, filled by joining artifacts and asset_versions
+	ArtifactName     string `json:"artifactName" gorm:"->;-:migration"`
+	AssetVersionName string `json:"assetVersionName" gorm:"->;-:migration"`
 }
 
 func (m ArtifactRiskHistory) TableName() string {

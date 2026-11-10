@@ -34,15 +34,15 @@ func TestDiffScanResults(t *testing.T) {
 		assetVersionName := "asset-version-1"
 
 		foundVulnerabilities := []models.DependencyVuln{
-			{CVEID: "CVE-1234", Vulnerability: models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID}},
+			{CVEID: "CVE-1234", Vulnerability: models.Vulnerability{AssetID: assetID}, AssetVersionName: assetVersionName},
 		}
 
-		artifact := models.Artifact{ArtifactName: "artifact1", AssetVersionName: assetVersionName, AssetID: assetID}
+		artifact := models.Artifact{ArtifactName: "artifact1", AssetID: assetID}
 
 		existingDependencyVulns := []models.DependencyVuln{
 			{CVEID: "CVE-1234", Vulnerability: models.Vulnerability{
-				AssetVersionName: assetVersionName, AssetID: assetID,
-			}, Artifacts: []models.Artifact{artifact}},
+				AssetID: assetID,
+			}, AssetVersionName: assetVersionName, Artifacts: []models.Artifact{artifact}},
 		}
 
 		diff := DiffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
@@ -58,7 +58,7 @@ func TestDiffScanResults(t *testing.T) {
 
 		assetID := uuid.New()
 
-		artifact := models.Artifact{ArtifactName: "artifact1", AssetVersionName: "asset-version-1", AssetID: assetID}
+		artifact := models.Artifact{ArtifactName: "artifact1", AssetID: assetID}
 
 		foundVulnerabilities := []models.DependencyVuln{}
 
@@ -147,11 +147,11 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
-					AssetVersionName: "feature-branch",
-					AssetID:          assetID,
+					ID:      uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+					AssetID: assetID,
 				},
-				Events: []models.VulnEvent{},
+				AssetVersionName: "feature-branch",
+				Events:           []models.VulnEvent{},
 			},
 		}
 
@@ -159,14 +159,14 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					ID:               uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe"),
-					AssetVersionName: "main",
-					AssetID:          assetID,
+					ID:      uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe"),
+					AssetID: assetID,
 				},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{{Type: dtos.EventTypeDetected},
 					{Type: dtos.EventTypeComment}},
-				Artifacts: []models.Artifact{{ArtifactName: "artifact1", AssetVersionName: "feature-branch", AssetID: assetID},
-					{ArtifactName: "artifact2", AssetVersionName: "feature-branch", AssetID: assetID}},
+				Artifacts: []models.Artifact{{ArtifactName: "artifact1", AssetID: assetID},
+					{ArtifactName: "artifact2", AssetID: assetID}},
 			},
 		}
 
@@ -184,9 +184,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
@@ -195,10 +195,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				CVEID:          "CVE-2023-0001",
 				RiskAssessment: new(7.13),
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
-				Events: []models.VulnEvent{{Type: dtos.EventTypeDetected}},
+				AssetVersionName: "main",
+				Events:           []models.VulnEvent{{Type: dtos.EventTypeDetected}},
 			},
 		}
 
@@ -212,25 +212,22 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	t.Run("should identify new vulnerabilities not on other branch", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 			{
-				CVEID: "CVE-2023-0002",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0002",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
 		existingDependencyVulns := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0003",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-				},
+				CVEID:            "CVE-2023-0003",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "main",
 			},
 		}
 
@@ -248,19 +245,17 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	t.Run("should identify vulnerabilities that exist on other branch", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
 		existingDependencyVulns := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{
 						Type: dtos.EventTypeAccepted,
@@ -281,19 +276,17 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	t.Run("should handle multiple vulnerabilities with same CVE on other branch", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
 		existingDependencyVulns := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{
 						Type: dtos.EventTypeComment,
@@ -301,10 +294,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 				},
 			},
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "develop",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "develop",
 				Events: []models.VulnEvent{
 					{
 						Type: dtos.EventTypeComment,
@@ -326,19 +318,17 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	t.Run("should filter out events that were already copied", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
 		existingDependencyVulns := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-				},
+				CVEID:            "CVE-2023-0001",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{
 						Type:                     dtos.EventTypeDetected,
@@ -369,10 +359,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-					AssetID:          assetID,
-					State:            dtos.VulnStateOpen,
+					AssetID: assetID,
+					State:   dtos.VulnStateOpen,
 				},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
@@ -380,9 +370,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{Type: dtos.EventTypeDetected},
 					{Type: dtos.EventTypeFixed}, // should be skipped during Apply
@@ -406,10 +396,10 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-					AssetID:          assetID,
-					State:            dtos.VulnStateOpen,
+					AssetID: assetID,
+					State:   dtos.VulnStateOpen,
 				},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
@@ -417,9 +407,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{Type: dtos.EventTypeAccepted},
 				},
@@ -440,9 +430,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
@@ -450,8 +440,8 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					AssetID:          assetID},
+					AssetID: assetID},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{ID: existingEventID, Type: dtos.EventTypeAccepted},
 				},
@@ -475,9 +465,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
@@ -485,9 +475,9 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			{
 				CVEID: "CVE-2023-0001",
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					AssetID:          assetID,
+					AssetID: assetID,
 				},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{CreatedAt: sameTime.Add(time.Second), Type: dtos.EventTypeAccepted},
 					{CreatedAt: sameTime, Type: dtos.EventTypeDetected},
@@ -508,31 +498,27 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	t.Run("should handle mixed scenario with new and existing vulnerabilities", func(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0001", // new vuln
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0001", // new vuln
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 			{
-				CVEID: "CVE-2023-0002", // exists on other branch
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0002", // exists on other branch
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 			{
-				CVEID: "CVE-2023-0003", // new vuln
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "feature-branch",
-				},
+				CVEID:            "CVE-2023-0003", // new vuln
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "feature-branch",
 			},
 		}
 
 		existingDependencyVulns := []models.DependencyVuln{
 			{
-				CVEID: "CVE-2023-0002",
-				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-				},
+				CVEID:            "CVE-2023-0002",
+				Vulnerability:    models.Vulnerability{},
+				AssetVersionName: "main",
 				Events: []models.VulnEvent{
 					{
 						Type: dtos.EventTypeDetected,

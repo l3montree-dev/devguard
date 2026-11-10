@@ -68,10 +68,36 @@ func ArtifactMiddleware(repository shared.ArtifactRepository) func(next echo.Han
 				return echo.NewHTTPError(400, "invalid artifact name")
 			}
 
-			artifact, err := repository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.Name, assetVersion.AssetID)
+			artifact, err := repository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.ID)
 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find artifact").WithInternal(err)
+			}
+
+			shared.SetArtifact(ctx, artifact)
+
+			return next(ctx)
+		}
+	}
+}
+
+// ArtifactQueryMiddleware resolves the optional artifactName query parameter to the artifact of the asset version
+func ArtifactQueryMiddleware(repository shared.ArtifactRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			artifactName := ctx.QueryParam("artifactName")
+			if artifactName == "" {
+				return next(ctx)
+			}
+
+			assetVersion := shared.GetAssetVersion(ctx)
+			artifact, err := repository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.ID)
+			if err != nil {
+				if !shared.IsNotFound(err) {
+					return echo.NewHTTPError(500, "could not read artifact").WithInternal(err)
+				}
+				// an unknown artifact still answers with empty results, its nil id matches nothing
+				artifact = models.Artifact{ArtifactName: artifactName, AssetVersionID: assetVersion.ID, AssetID: assetVersion.AssetID}
 			}
 
 			shared.SetArtifact(ctx, artifact)
@@ -131,7 +157,7 @@ func ScanMiddleware(assetVersionRepository shared.AssetVersionRepository) func(n
 			if assetVersionName == "" {
 				return echo.NewHTTPError(400, "no X-Asset-Ref header provided")
 			}
-			assetVersion, err := assetVersionRepository.Read(ctx.Request().Context(), nil, assetVersionName, asset.ID)
+			assetVersion, err := assetVersionRepository.ReadByName(ctx.Request().Context(), nil, assetVersionName, asset.ID)
 			if err != nil {
 				// if the asset version is not found, we do not return an error here, because the asset version might not exist yet
 				return next(ctx)

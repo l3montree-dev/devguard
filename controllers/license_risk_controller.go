@@ -79,9 +79,10 @@ func (controller *LicenseRiskController) Create(ctx shared.Context) error {
 	licenseRisk := models.LicenseRisk{
 		ComponentPurl: newLicenseRisk.ComponentPurl,
 		Vulnerability: models.Vulnerability{
-			AssetID:          assetID,
-			AssetVersionName: assetVersion.Name,
+			AssetID:        assetID,
+			AssetVersionID: assetVersion.ID,
 		},
+		AssetVersionName: assetVersion.Name,
 	}
 
 	riskHash := licenseRisk.CalculateHash()
@@ -119,8 +120,7 @@ func (controller *LicenseRiskController) ListPaged(ctx shared.Context) error {
 
 	pagedResp, err := controller.licenseRiskRepository.GetAllLicenseRisksForAssetVersionPaged(
 		ctx.Request().Context(), nil,
-		assetVersion.AssetID,
-		assetVersion.Name,
+		assetVersion.ID,
 		shared.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		shared.GetFilterQuery(ctx),
@@ -137,13 +137,13 @@ func (controller *LicenseRiskController) ListPaged(ctx shared.Context) error {
 
 }
 
-func (controller *LicenseRiskController) GetComponentOverwriteForAssetVersion(ctx context.Context, assetID uuid.UUID, assetVersionName string, pURL string) (models.LicenseRisk, error) {
+func (controller *LicenseRiskController) GetComponentOverwriteForAssetVersion(ctx context.Context, assetVersionID uuid.UUID, pURL string) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
 	validPURL, err := packageurl.FromString(pURL)
 	if err != nil {
 		return result, err
 	}
-	result, err = controller.licenseRiskRepository.MaybeGetLicenseOverwriteForComponent(ctx, nil, assetID, assetVersionName, validPURL)
+	result, err = controller.licenseRiskRepository.MaybeGetLicenseOverwriteForComponent(ctx, nil, assetVersionID, validPURL)
 	if err != nil {
 		return result, err
 	}

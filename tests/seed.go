@@ -26,11 +26,14 @@ func SeedSBOM(db shared.DB, assetVersion models.AssetVersion, artifactName, sour
 		normalize.Adjacency{Children: children},
 		sbomSeedRoot,
 	)
+	artifact := models.Artifact{ArtifactName: artifactName, AssetVersionID: assetVersion.ID, AssetID: assetVersion.AssetID}
+	if err := repositories.NewArtifactRepository(db).FindOrCreate(context.Background(), nil, &artifact); err != nil {
+		return err
+	}
 	return repositories.NewSBOMRepository(db).SaveTree(context.Background(), nil, models.SBOM{
-		AssetID:          assetVersion.AssetID,
-		AssetVersionName: assetVersion.Name,
-		ArtifactName:     artifactName,
-		Source:           source,
+		ArtifactID: artifact.ID,
+		AssetID:    assetVersion.AssetID,
+		Source:     source,
 	}, tree)
 }
 

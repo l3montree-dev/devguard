@@ -34,10 +34,11 @@ func createTestDependencyVuln(f *TestFixture, asset models.Asset, assetVersion m
 
 	dependencyVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			State:            dtos.VulnStateOpen,
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			AssetVersionID: assetVersion.ID,
+			State:          dtos.VulnStateOpen,
+			AssetID:        asset.ID,
 		},
+		AssetVersionName:      assetVersion.Name,
 		CVEID:                 cveID,
 		ComponentPurl:         purl,
 		ComponentFixedVersion: fixedVersion,

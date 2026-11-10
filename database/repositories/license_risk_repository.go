@@ -25,12 +25,12 @@ func NewLicenseRiskRepository(db *gorm.DB) *LicenseRiskRepository {
 	}
 }
 
-func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
+func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[models.LicenseRisk], error) {
 	var count int64
 	var licenseRisks = []models.LicenseRisk{}
 
 	q := repository.Repository.GetDB(ctx, tx).Model(&models.LicenseRisk{}).Preload("Component").Preload("Artifacts").Joins(
-		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID).Distinct()
+		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_id = ?", assetVersionID).Distinct()
 
 	// apply filters
 	for _, f := range filter {
@@ -65,21 +65,21 @@ func (repository *LicenseRiskRepository) GetByAssetID(ctx context.Context, tx *g
 	return licenseRisks, nil
 }
 
-func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&result).Error
+	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_version_id = ?", assetVersionID).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, assetID uuid.UUID) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
 	q := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
-	}).Preload("Artifacts").Where("license_risks.asset_version_name != ? AND license_risks.asset_id = ?", assetVersionName, assetID)
+	}).Preload("Artifacts").Where("license_risks.asset_version_id != ? AND license_risks.asset_id = ?", assetVersionID, assetID)
 
 	if err := q.Find(&licenseRisks).Error; err != nil {
 		return nil, err
@@ -87,33 +87,33 @@ func (repository *LicenseRiskRepository) GetLicenseRisksByOtherAssetVersions(ctx
 	return licenseRisks, nil
 }
 
-func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, dtos.VulnStateFixed).Find(&result).Error
+	err := repository.GetDB(ctx, tx).Where("asset_version_id = ? AND state = ?", assetVersionID, dtos.VulnStateFixed).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
-	err := repository.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = ?", assetID, assetVersionName, pURL.String(), dtos.VulnStateFixed).First(&result).Error
+	err := repository.GetDB(ctx, tx).Where("asset_version_id = ? AND component_purl = ? AND state = ?", assetVersionID, pURL.String(), dtos.VulnStateFixed).First(&result).Error
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (repository *LicenseRiskRepository) DeleteByComponentPurl(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) error {
-	return repository.GetDB(ctx, tx).Where("asset_id = ? AND asset_version_name = ? AND component_purl = ?", assetID, assetVersionName, pURL.String()).Delete(&models.LicenseRisk{}).Error
+func (repository *LicenseRiskRepository) DeleteByComponentPurl(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, pURL packageurl.PackageURL) error {
+	return repository.GetDB(ctx, tx).Where("asset_version_id = ? AND component_purl = ?", assetVersionID, pURL.String()).Delete(&models.LicenseRisk{}).Error
 }
 
-func (repository *LicenseRiskRepository) ListByArtifactName(ctx context.Context, tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) ListByArtifactName(ctx context.Context, tx *gorm.DB, assetVersionID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
 	q := repository.GetDB(ctx, tx).Model(&models.LicenseRisk{}).
-		Joins("JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Joins("JOIN artifacts ON artifact_license_risks.artifact_artifact_name = artifacts.artifact_name AND artifact_license_risks.artifact_asset_version_name = artifacts.asset_version_name AND artifact_license_risks.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
+		Joins("JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Joins("JOIN artifacts ON artifact_license_risks.artifact_id = artifacts.id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_id = ?", artifactName, assetVersionID)
 
 	err := q.Find(&licenseRisks).Error
 	if err != nil {

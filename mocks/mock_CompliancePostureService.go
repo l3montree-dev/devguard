@@ -51,8 +51,8 @@ func (_m *CompliancePostureService) EXPECT() *CompliancePostureService_Expecter 
 }
 
 // GetAllControls provides a mock function for the type CompliancePostureService
-func (_mock *CompliancePostureService) GetAllControls(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)
+func (_mock *CompliancePostureService) GetAllControls(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, assetID, projectID, orgID, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllControls")
@@ -60,18 +60,18 @@ func (_mock *CompliancePostureService) GetAllControls(ctx context.Context, tx sh
 
 	var r0 []dtos.CompliancePostureWithDetails
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) []dtos.CompliancePostureWithDetails); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) []dtos.CompliancePostureWithDetails); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, search, filter, sort)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]dtos.CompliancePostureWithDetails)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -86,18 +86,18 @@ type CompliancePostureService_GetAllControls_Call struct {
 // GetAllControls is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName *string
+//   - assetVersionID *uuid.UUID
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CompliancePostureService_Expecter) GetAllControls(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, search any, filter any, sort any) *CompliancePostureService_GetAllControls_Call {
-	return &CompliancePostureService_GetAllControls_Call{Call: _e.mock.On("GetAllControls", ctx, tx, assetVersionName, assetID, projectID, orgID, search, filter, sort)}
+func (_e *CompliancePostureService_Expecter) GetAllControls(ctx any, tx any, assetVersionID any, assetID any, projectID any, orgID any, search any, filter any, sort any) *CompliancePostureService_GetAllControls_Call {
+	return &CompliancePostureService_GetAllControls_Call{Call: _e.mock.On("GetAllControls", ctx, tx, assetVersionID, assetID, projectID, orgID, search, filter, sort)}
 }
 
-func (_c *CompliancePostureService_GetAllControls_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *CompliancePostureService_GetAllControls_Call {
+func (_c *CompliancePostureService_GetAllControls_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *CompliancePostureService_GetAllControls_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -107,9 +107,9 @@ func (_c *CompliancePostureService_GetAllControls_Call) Run(run func(ctx context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *string
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(*uuid.UUID)
 		}
 		var arg3 *uuid.UUID
 		if args[3] != nil {
@@ -155,14 +155,14 @@ func (_c *CompliancePostureService_GetAllControls_Call) Return(compliancePosture
 	return _c
 }
 
-func (_c *CompliancePostureService_GetAllControls_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error)) *CompliancePostureService_GetAllControls_Call {
+func (_c *CompliancePostureService_GetAllControls_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error)) *CompliancePostureService_GetAllControls_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetForAllControlsPaged provides a mock function for the type CompliancePostureService
-func (_mock *CompliancePostureService) GetForAllControlsPaged(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+func (_mock *CompliancePostureService) GetForAllControlsPaged(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetForAllControlsPaged")
@@ -170,16 +170,16 @@ func (_mock *CompliancePostureService) GetForAllControlsPaged(ctx context.Contex
 
 	var r0 shared.Paged[dtos.CompliancePostureWithControl]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.CompliancePostureWithControl]); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) shared.Paged[dtos.CompliancePostureWithControl]); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[dtos.CompliancePostureWithControl])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, shared.PageInfo, string, []shared.FilterQuery, []shared.SortQuery) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -194,7 +194,7 @@ type CompliancePostureService_GetForAllControlsPaged_Call struct {
 // GetForAllControlsPaged is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName *string
+//   - assetVersionID *uuid.UUID
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
@@ -202,11 +202,11 @@ type CompliancePostureService_GetForAllControlsPaged_Call struct {
 //   - search string
 //   - filter []shared.FilterQuery
 //   - sort []shared.SortQuery
-func (_e *CompliancePostureService_Expecter) GetForAllControlsPaged(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, pageInfo any, search any, filter any, sort any) *CompliancePostureService_GetForAllControlsPaged_Call {
-	return &CompliancePostureService_GetForAllControlsPaged_Call{Call: _e.mock.On("GetForAllControlsPaged", ctx, tx, assetVersionName, assetID, projectID, orgID, pageInfo, search, filter, sort)}
+func (_e *CompliancePostureService_Expecter) GetForAllControlsPaged(ctx any, tx any, assetVersionID any, assetID any, projectID any, orgID any, pageInfo any, search any, filter any, sort any) *CompliancePostureService_GetForAllControlsPaged_Call {
+	return &CompliancePostureService_GetForAllControlsPaged_Call{Call: _e.mock.On("GetForAllControlsPaged", ctx, tx, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)}
 }
 
-func (_c *CompliancePostureService_GetForAllControlsPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *CompliancePostureService_GetForAllControlsPaged_Call {
+func (_c *CompliancePostureService_GetForAllControlsPaged_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery)) *CompliancePostureService_GetForAllControlsPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -216,9 +216,9 @@ func (_c *CompliancePostureService_GetForAllControlsPaged_Call) Run(run func(ctx
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *string
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(*uuid.UUID)
 		}
 		var arg3 *uuid.UUID
 		if args[3] != nil {
@@ -269,14 +269,14 @@ func (_c *CompliancePostureService_GetForAllControlsPaged_Call) Return(paged sha
 	return _c
 }
 
-func (_c *CompliancePostureService_GetForAllControlsPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error)) *CompliancePostureService_GetForAllControlsPaged_Call {
+func (_c *CompliancePostureService_GetForAllControlsPaged_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error)) *CompliancePostureService_GetForAllControlsPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetForControl provides a mock function for the type CompliancePostureService
-func (_mock *CompliancePostureService) GetForControl(ctx context.Context, tx shared.DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
-	ret := _mock.Called(ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)
+func (_mock *CompliancePostureService) GetForControl(ctx context.Context, tx shared.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
+	ret := _mock.Called(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetForControl")
@@ -284,18 +284,18 @@ func (_mock *CompliancePostureService) GetForControl(ctx context.Context, tx sha
 
 	var r0 *models.CompliancePosture
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, *uuid.UUID, *uuid.UUID, uuid.UUID) (*models.CompliancePosture, error)); ok {
-		return returnFunc(ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) (*models.CompliancePosture, error)); ok {
+		return returnFunc(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, *uuid.UUID, *uuid.UUID, uuid.UUID) *models.CompliancePosture); ok {
-		r0 = returnFunc(ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) *models.CompliancePosture); ok {
+		r0 = returnFunc(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.CompliancePosture)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *string, *uuid.UUID, *uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -311,15 +311,15 @@ type CompliancePostureService_GetForControl_Call struct {
 //   - ctx context.Context
 //   - tx shared.DB
 //   - controlID string
-//   - assetVersionName *string
+//   - assetVersionID *uuid.UUID
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
-func (_e *CompliancePostureService_Expecter) GetForControl(ctx any, tx any, controlID any, assetVersionName any, assetID any, projectID any, orgID any) *CompliancePostureService_GetForControl_Call {
-	return &CompliancePostureService_GetForControl_Call{Call: _e.mock.On("GetForControl", ctx, tx, controlID, assetVersionName, assetID, projectID, orgID)}
+func (_e *CompliancePostureService_Expecter) GetForControl(ctx any, tx any, controlID any, assetVersionID any, assetID any, projectID any, orgID any) *CompliancePostureService_GetForControl_Call {
+	return &CompliancePostureService_GetForControl_Call{Call: _e.mock.On("GetForControl", ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)}
 }
 
-func (_c *CompliancePostureService_GetForControl_Call) Run(run func(ctx context.Context, tx shared.DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID)) *CompliancePostureService_GetForControl_Call {
+func (_c *CompliancePostureService_GetForControl_Call) Run(run func(ctx context.Context, tx shared.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID)) *CompliancePostureService_GetForControl_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -333,9 +333,9 @@ func (_c *CompliancePostureService_GetForControl_Call) Run(run func(ctx context.
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 *string
+		var arg3 *uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(*string)
+			arg3 = args[3].(*uuid.UUID)
 		}
 		var arg4 *uuid.UUID
 		if args[4] != nil {
@@ -367,14 +367,14 @@ func (_c *CompliancePostureService_GetForControl_Call) Return(compliancePosture 
 	return _c
 }
 
-func (_c *CompliancePostureService_GetForControl_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, controlID string, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)) *CompliancePostureService_GetForControl_Call {
+func (_c *CompliancePostureService_GetForControl_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)) *CompliancePostureService_GetForControl_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetStatsForAllControls provides a mock function for the type CompliancePostureService
-func (_mock *CompliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
-	ret := _mock.Called(ctx, tx, assetVersionName, assetID, projectID, orgID, filter)
+func (_mock *CompliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, assetID, projectID, orgID, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetStatsForAllControls")
@@ -382,16 +382,16 @@ func (_mock *CompliancePostureService) GetStatsForAllControls(ctx context.Contex
 
 	var r0 dtos.CompliancePostureStats
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, []shared.FilterQuery) (dtos.CompliancePostureStats, error)); ok {
-		return returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, filter)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, []shared.FilterQuery) (dtos.CompliancePostureStats, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, []shared.FilterQuery) dtos.CompliancePostureStats); ok {
-		r0 = returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, filter)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, []shared.FilterQuery) dtos.CompliancePostureStats); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, filter)
 	} else {
 		r0 = ret.Get(0).(dtos.CompliancePostureStats)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string, *uuid.UUID, *uuid.UUID, uuid.UUID, []shared.FilterQuery) error); ok {
-		r1 = returnFunc(ctx, tx, assetVersionName, assetID, projectID, orgID, filter)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID, []shared.FilterQuery) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, assetID, projectID, orgID, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -406,16 +406,16 @@ type CompliancePostureService_GetStatsForAllControls_Call struct {
 // GetStatsForAllControls is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersionName *string
+//   - assetVersionID *uuid.UUID
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
 //   - filter []shared.FilterQuery
-func (_e *CompliancePostureService_Expecter) GetStatsForAllControls(ctx any, tx any, assetVersionName any, assetID any, projectID any, orgID any, filter any) *CompliancePostureService_GetStatsForAllControls_Call {
-	return &CompliancePostureService_GetStatsForAllControls_Call{Call: _e.mock.On("GetStatsForAllControls", ctx, tx, assetVersionName, assetID, projectID, orgID, filter)}
+func (_e *CompliancePostureService_Expecter) GetStatsForAllControls(ctx any, tx any, assetVersionID any, assetID any, projectID any, orgID any, filter any) *CompliancePostureService_GetStatsForAllControls_Call {
+	return &CompliancePostureService_GetStatsForAllControls_Call{Call: _e.mock.On("GetStatsForAllControls", ctx, tx, assetVersionID, assetID, projectID, orgID, filter)}
 }
 
-func (_c *CompliancePostureService_GetStatsForAllControls_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery)) *CompliancePostureService_GetStatsForAllControls_Call {
+func (_c *CompliancePostureService_GetStatsForAllControls_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery)) *CompliancePostureService_GetStatsForAllControls_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -425,9 +425,9 @@ func (_c *CompliancePostureService_GetStatsForAllControls_Call) Run(run func(ctx
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *string
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(*uuid.UUID)
 		}
 		var arg3 *uuid.UUID
 		if args[3] != nil {
@@ -463,7 +463,7 @@ func (_c *CompliancePostureService_GetStatsForAllControls_Call) Return(complianc
 	return _c
 }
 
-func (_c *CompliancePostureService_GetStatsForAllControls_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionName *string, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error)) *CompliancePostureService_GetStatsForAllControls_Call {
+func (_c *CompliancePostureService_GetStatsForAllControls_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error)) *CompliancePostureService_GetStatsForAllControls_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -29,6 +29,12 @@ var (
 // statements that cannot run inside the migration transaction (e.g. VACUUM), run once after the migration with that version got committed
 var postMigrationStatements = map[uint][]string{
 	20260917123342: {"VACUUM FULL public.vuln_events"},
+	// every row of these tables got rewritten, the new id columns also need fresh planner statistics
+	// the large tables which lost their text key columns only give that space back with a full rewrite
+	20261104114507: {
+		"VACUUM FULL ANALYZE public.artifact_dependency_vulns, public.artifact_license_risks, public.artifact_risk_history",
+		"VACUUM ANALYZE public.asset_versions, public.artifacts, public.attestations, public.release_items, public.sboms, public.advisories, public.dependency_vulns, public.supply_chain, public.first_party_vulnerabilities, public.in_toto_links, public.license_risks, public.asset_risk_history, public.compliance_postures",
+	},
 }
 
 func getMigrator(gormDB shared.DB) (*migrate.Migrate, error) {

@@ -1100,7 +1100,7 @@ func TestBranchInheritanceIgnoresGitAncestry(t *testing.T) {
 		}
 
 		createEvent := func(branch string, dependencyVulnID string, statusType dtos.VulnEventType, justification string) {
-			assetVersion, err := f.App.AssetVersionRepository.Read(context.Background(), nil, branch, asset.ID)
+			assetVersion, err := f.App.AssetVersionRepository.ReadByName(context.Background(), nil, branch, asset.ID)
 			assert.Nil(t, err)
 
 			msg := dtos.CreateEventRequest{
@@ -1698,7 +1698,13 @@ func TestTicketHandling(t *testing.T) {
 		// scan the vulnerable sbom
 		app := echo.New()
 		createCVE2025_46569(f.DB)
-		org, project, asset, _ := f.CreateOrgProjectAssetAndVersion()
+		org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+		// the scans below create their artifacts in the main asset version, the vulns reference them by id
+		artifactInMain := func(name string) models.Artifact {
+			artifact := models.Artifact{ArtifactName: name, AssetVersionID: assetVersion.ID, AssetID: asset.ID}
+			assert.Nil(t, f.App.ArtifactRepository.FindOrCreate(context.Background(), nil, &artifact))
+			return artifact
+		}
 		setupContext := func(ctx shared.Context) {
 			authSession := NewUserSession(t, "abc")
 			shared.SetAsset(ctx, asset)
@@ -1752,14 +1758,15 @@ func TestTicketHandling(t *testing.T) {
 				ComponentPurl:     "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					State:            dtos.VulnStateOpen,
-					AssetID:          asset.ID,
+					AssetVersionID: assetVersion.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
 					// use numeric project id to mimic real stored value format gitlab:<projectID>/<issueIID>
 					TicketID: new("gitlab:123/789"),
 				},
+				AssetVersionName: "main",
 				Artifacts: []models.Artifact{
-					{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
+					artifactInMain("artifact-4"),
 				},
 			}).Error
 			assert.Nil(t, err)
@@ -1787,14 +1794,15 @@ func TestTicketHandling(t *testing.T) {
 				ComponentPurl:     "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: "main",
-					State:            dtos.VulnStateOpen,
-					AssetID:          asset.ID,
-					TicketID:         new("gitlab:123/789"),
+					AssetVersionID: assetVersion.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
+					TicketID:       new("gitlab:123/789"),
 				},
+				AssetVersionName: "main",
 				Artifacts: []models.Artifact{
-					{ArtifactName: "some-other-artifact", AssetVersionName: "main", AssetID: asset.ID},
-					{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
+					artifactInMain("some-other-artifact"),
+					artifactInMain("artifact-4"),
 				},
 			}).Error
 			assert.Nil(t, err)
@@ -1832,12 +1840,13 @@ func TestTicketHandling(t *testing.T) {
 				ComponentPurl:     "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Vulnerability: models.Vulnerability{
-					State:            dtos.VulnStateAccepted,
-					AssetVersionName: "main",
-					AssetID:          asset.ID,
+					AssetVersionID: assetVersion.ID,
+					State:          dtos.VulnStateAccepted,
+					AssetID:        asset.ID,
 				},
+				AssetVersionName: "main",
 				Artifacts: []models.Artifact{
-					{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
+					artifactInMain("artifact-4"),
 				},
 			}
 			err = f.DB.Clauses(clause.OnConflict{
@@ -1878,14 +1887,15 @@ func TestTicketHandling(t *testing.T) {
 				CVEID:         "CVE-2025-46569",
 				ComponentPurl: "pkg:golang/github.com/open-policy-agent/opa@v0.68.0",
 				Vulnerability: models.Vulnerability{
-					State:            dtos.VulnStateOpen,
-					AssetVersionName: "main",
-					AssetID:          asset.ID,
-					TicketID:         nil,
+					AssetVersionID: assetVersion.ID,
+					State:          dtos.VulnStateOpen,
+					AssetID:        asset.ID,
+					TicketID:       nil,
 				},
+				AssetVersionName:  "main",
 				VulnerabilityPath: []string{"pkg:golang/github.com/open-policy-agent/opa@v0.68.0"},
 				Artifacts: []models.Artifact{
-					{ArtifactName: "artifact-4", AssetVersionName: "main", AssetID: asset.ID},
+					artifactInMain("artifact-4"),
 				},
 			}
 			err = f.DB.Clauses(clause.OnConflict{
@@ -2117,7 +2127,7 @@ func TestIdempotency(t *testing.T) {
 			req = httptest.NewRequest("GET", fmt.Sprintf("/assets/%s/asset-versions/%s/sbom/normalized", asset.ID, "idempotency-artifact"), nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "idempotency-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "idempotency-artifact", AssetVersionID: assetVersion.ID, AssetID: asset.ID})
 
 			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
@@ -2142,7 +2152,7 @@ func TestIdempotency(t *testing.T) {
 			req = httptest.NewRequest("GET", fmt.Sprintf("/assets/%s/asset-versions/%s/sbom/normalized", asset.ID, "idempotency-artifact"), nil)
 			ctx = app.NewContext(req, recorder)
 			setupContext(ctx)
-			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "idempotency-artifact", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
+			shared.SetArtifact(ctx, models.Artifact{ArtifactName: "idempotency-artifact", AssetVersionID: assetVersion.ID, AssetID: asset.ID})
 			err = artifactController.SBOMJSON(ctx)
 			assert.Nil(t, err)
 			assert.Equal(t, 200, recorder.Code)

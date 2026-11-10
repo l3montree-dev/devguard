@@ -52,8 +52,8 @@ func collectProductAndRelationshipIDs(tree csaf.ProductTree) (products map[strin
 }
 
 func TestGenerateProductTree(t *testing.T) {
-	_, _, artifact1, vulns := setUpVulns()
-	artifact1Purl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
+	_, assetVersion, artifact1, vulns := setUpVulns()
+	artifact1Purl := normalize.Purlify(artifact1.ArtifactName, assetVersion.Name)
 
 	// expectedBaseAndLeaves derives, from a set of vulns, the base products (every path
 	// component + each artifact) and the leaf product id of each vuln's path chain.
@@ -66,7 +66,7 @@ func TestGenerateProductTree(t *testing.T) {
 				base[c] = struct{}{}
 			}
 			for _, artifact := range v.Artifacts {
-				artifactPurl := normalize.Purlify(artifact.ArtifactName, artifact.AssetVersionName)
+				artifactPurl := normalize.Purlify(artifact.ArtifactName, v.AssetVersionName)
 				base[artifactPurl] = struct{}{}
 				leaves[leafProductID(artifactPurl, path)] = struct{}{}
 			}
@@ -118,13 +118,13 @@ func TestGenerateProductTree(t *testing.T) {
 		}
 		// both artifacts present as base products
 		assert.Contains(t, products, artifact1Purl)
-		assert.Contains(t, products, normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName))
+		assert.Contains(t, products, normalize.Purlify(artifact2.ArtifactName, assetVersion.Name))
 	})
 }
 
 func TestCalculateVulnStateInformation(t *testing.T) {
-	_, _, artifact1, vulns := setUpVulns()
-	artifactPurl := normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)
+	_, assetVersion, artifact1, vulns := setUpVulns()
+	artifactPurl := normalize.Purlify(artifact1.ArtifactName, assetVersion.Name)
 	eventTime, err := time.Parse(time.RFC3339, "2028-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
@@ -250,7 +250,7 @@ func TestGetMostRecentJustifications(t *testing.T) {
 }
 
 func TestGenerateTrackingObject(t *testing.T) {
-	asset, _, artifact1, vulns := setUpVulns()
+	asset, assetVersion, artifact1, vulns := setUpVulns()
 	eventTimeFalsePositives, err := time.Parse(time.RFC3339, "2026-02-11T11:11:11+00:00")
 	if err != nil {
 		panic(err)
@@ -353,10 +353,10 @@ func TestGenerateTrackingObject(t *testing.T) {
 			if strings.Contains(*entry.Summary, "pkg:rpm/redhat/openssh-debugsource@v1.0.1") {
 				amountPurlDebug++
 			}
-			if strings.Contains(*entry.Summary, normalize.Purlify(artifact1.ArtifactName, artifact1.AssetVersionName)) {
+			if strings.Contains(*entry.Summary, normalize.Purlify(artifact1.ArtifactName, assetVersion.Name)) {
 				amountArtifact1++
 			}
-			if strings.Contains(*entry.Summary, normalize.Purlify(artifact2.ArtifactName, artifact2.AssetVersionName)) {
+			if strings.Contains(*entry.Summary, normalize.Purlify(artifact2.ArtifactName, assetVersion.Name)) {
 				amountArtifact2++
 			}
 		}
@@ -421,8 +421,8 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 		panic(err)
 	}
 	asset := models.Asset{Model: models.Model{ID: id, CreatedAt: time1}, Name: "CSAF Test Asset", Slug: "csaf-test"}
-	assetVersion := models.AssetVersion{Name: "main", AssetID: asset.ID, Type: "branch", CreatedAt: time1, DefaultBranch: true, Slug: "main"}
-	artifact := models.Artifact{ArtifactName: "pkg:devguard/testorg/testgroup/csaf-test", AssetVersionName: assetVersion.Name, AssetID: asset.ID, CreatedAt: time1}
+	assetVersion := models.AssetVersion{ID: uuid.New(), Name: "main", AssetID: asset.ID, Type: "branch", CreatedAt: time1, DefaultBranch: true, Slug: "main"}
+	artifact := models.Artifact{ID: uuid.New(), ArtifactName: "pkg:devguard/testorg/testgroup/csaf-test", AssetVersionID: assetVersion.ID, AssetID: asset.ID, CreatedAt: time1}
 
 	cve1 := models.CVE{CVE: "GO-2026-4309", Description: "Test Description", CVSS: 7.50, EPSS: new(0.00753)}
 
@@ -432,9 +432,9 @@ func setUpVulns() (models.Asset, models.AssetVersion, models.Artifact, []models.
 
 	cve1.AffectedComponents = append(cve1.AffectedComponents, affectedComponent1, affectedComponent2, affectedComponent3)
 
-	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: &cve1}
-	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVEID: cve1.CVE, CVE: &cve1}
-	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open", CreatedAt: time2}, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: &cve1}
+	vuln1Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionID: assetVersion.ID, AssetID: asset.ID, State: "open", CreatedAt: time2}, AssetVersionName: assetVersion.Name, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: &cve1}
+	vuln1Depth1 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionID: assetVersion.ID, AssetID: asset.ID, State: "open", CreatedAt: time2}, AssetVersionName: assetVersion.Name, ComponentPurl: "pkg:github.com/jetbrains/kotlin@v872", VulnerabilityPath: []string{"dep1"}, CVEID: cve1.CVE, CVE: &cve1}
+	vuln2Depth0 := models.DependencyVuln{Vulnerability: models.Vulnerability{AssetVersionID: assetVersion.ID, AssetID: asset.ID, State: "open", CreatedAt: time2}, AssetVersionName: assetVersion.Name, ComponentPurl: "pkg:rpm/redhat/openssh-debugsource@v1.0.1", VulnerabilityPath: []string{}, CVEID: cve1.CVE, CVE: &cve1}
 
 	vuln1Depth0.Artifacts = append(vuln1Depth0.Artifacts, artifact)
 	vuln1Depth1.Artifacts = append(vuln1Depth1.Artifacts, artifact)

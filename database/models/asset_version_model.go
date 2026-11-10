@@ -19,19 +19,20 @@ type ScannerInformation struct {
 }
 
 type AssetVersion struct {
+	ID        uuid.UUID `json:"id" gorm:"primarykey;type:uuid;default:gen_random_uuid()"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 
-	Name    string    `json:"name" gorm:"primarykey;type:text;not null;"`
-	AssetID uuid.UUID `json:"assetId" gorm:"primarykey;not null;type:uuid;"`
+	Name    string    `json:"name" gorm:"type:text;not null;"`
+	AssetID uuid.UUID `json:"assetId" gorm:"not null;type:uuid;"`
 	Asset   Asset     `json:"asset" gorm:"foreignKey:AssetID;references:ID; constraint:OnDelete:CASCADE;"`
 
-	DefaultBranch   bool                  `json:"defaultBranch" gorm:"default:false;"`
-	Slug            string                `json:"slug" gorm:"type:text;not null;type:text;"`
-	DependencyVulns []DependencyVuln      `json:"dependencyVulns" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
-	Artifacts       []Artifact            `json:"artifacts" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Type            AssetVersionType      `json:"type" gorm:"type:text;not null;"`
-	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	DefaultBranch   bool             `json:"defaultBranch" gorm:"default:false;"`
+	Slug            string           `json:"slug" gorm:"type:text;not null;type:text;"`
+	DependencyVulns []DependencyVuln `json:"dependencyVulns" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnDelete:CASCADE;"`
+	Artifacts       []Artifact       `json:"artifacts" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Type            AssetVersionType `json:"type" gorm:"type:text;not null;"`
+	SupplyChains    []SupplyChain    `json:"supplyChains" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	SigningPubKey  *string             `json:"signingPubKey" gorm:"type:text;"`
 	Metadata       databasetypes.JSONB `json:"metadata" gorm:"type:jsonb"`
