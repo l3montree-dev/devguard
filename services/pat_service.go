@@ -366,7 +366,18 @@ func validateRequest(pubKey ecdsa.PublicKey, req *http.Request) error {
 // Content-Digest header actually matches the request body
 func verifySignedRequest(verifier *httpsign.Verifier, req *http.Request) error {
 	if err := httpsign.VerifyRequest("sig77", *verifier, req); err != nil {
-		return fmt.Errorf("could not verify request: %v", err)
+		// the addTrailingSlash pre-middleware appends "/" to the path before we get here,
+		// so a client that signed the path without it would never verify otherwise.
+		// Both paths are routed identically, so accepting either does not widen what a signature authorizes.
+		if !strings.HasSuffix(req.URL.Path, "/") || req.URL.Path == "/" {
+			return fmt.Errorf("could not verify request: %v", err)
+		}
+		unslashed := req.Clone(req.Context())
+		unslashed.URL.Path = strings.TrimSuffix(unslashed.URL.Path, "/")
+		unslashed.URL.RawPath = strings.TrimSuffix(unslashed.URL.RawPath, "/")
+		if err := httpsign.VerifyRequest("sig77", *verifier, unslashed); err != nil {
+			return fmt.Errorf("could not verify request: %v", err)
+		}
 	}
 
 	digest := req.Header.Values("Content-Digest")

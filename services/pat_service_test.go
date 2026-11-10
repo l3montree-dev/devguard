@@ -400,6 +400,31 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 		}
 	})
 
+	t.Run("accepts a path signed without the trailing slash the server appends", func(t *testing.T) {
+		var pat = models.PAT{
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
+			UserID:     new(uuid.New()),
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		patService := NewPatService(patMock)
+
+		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+		signed := httptest.NewRequest("GET", "/api/v1/config-files/trivy.yaml?a=1", nil)
+		if err := AuthenticateRequestWithToken(privKey, signed); err != nil {
+			t.Fatal("error signing request", err)
+		}
+
+		received := httptest.NewRequest("GET", "/api/v1/config-files/trivy.yaml/?a=1", nil)
+		received.Header = signed.Header.Clone()
+		if _, err := patService.VerifyRequestSignature(context.Background(), received); err != nil {
+			t.Fatalf("expected signature to verify, got %v", err)
+		}
+	})
+
 	t.Run("rejects a valid signature from an expired PAT", func(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		var pat = models.PAT{

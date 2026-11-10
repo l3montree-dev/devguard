@@ -39,7 +39,7 @@ func verify(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	url := fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/verify?supplyChainId=%s&supplyChainOutputDigest=%s",
+	url := fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/verify/?supplyChainId=%s&supplyChainOutputDigest=%s",
 		config.RuntimeBaseConfig.APIURL,
 		config.RuntimeBaseConfig.AssetName,
 		config.RuntimeInTotoConfig.SupplyChainID,
@@ -89,7 +89,7 @@ the --supplyChainOutputDigest you provide.
 The underlying endpoint is a plain HTTP GET that returns 200 on success and a non-200 status on
 failure — easy to call directly from policy engines or shell scripts:
 
-  GET /api/v1/organizations/<assetName>/in-toto/verify?supplyChainId=<id>&supplyChainOutputDigest=<digest>`,
+  GET /api/v1/organizations/<assetName>/in-toto/verify/?supplyChainId=<id>&supplyChainOutputDigest=<digest>`,
 		Example: `  # Called by an automated deployment gate (e.g. OPA external data, admission webhook, CI gate)
   devguard-scanner intoto verify \
     --supplyChainOutputDigest sha256:abc123… --token $TOKEN \

@@ -39,7 +39,7 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex", config.RuntimeBaseConfig.APIURL), vex)
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/vex/", config.RuntimeBaseConfig.APIURL), vex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")
 	}
@@ -187,7 +187,7 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 	if err != nil {
 		slog.Error("could not create request", "err", err)
 		return err
