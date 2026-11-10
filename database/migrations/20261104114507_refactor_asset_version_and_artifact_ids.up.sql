@@ -51,6 +51,13 @@
         AND a.asset_version_name = child.asset_version_name
         AND a.asset_id = child.asset_id;
 
+    -- the old tables had no foreign keys to artifacts, rows of deleted artifacts can not be mapped and would violate the new primary keys
+        DELETE FROM public.artifact_dependency_vulns WHERE artifact_id IS NULL;
+        DELETE FROM public.artifact_license_risks WHERE artifact_id IS NULL;
+        DELETE FROM public.artifact_risk_history WHERE artifact_id IS NULL;
+        DELETE FROM public.attestations WHERE artifact_id IS NULL;
+        DELETE FROM public.sboms WHERE artifact_id IS NULL;
+
     -- 3. Drop old foreign key columns, asset_id is kept as denormalized column to avoid joins
         ALTER TABLE public.artifact_dependency_vulns DROP COLUMN artifact_artifact_name, DROP COLUMN artifact_asset_version_name,DROP COLUMN artifact_asset_id;
         ALTER TABLE public.artifact_license_risks DROP COLUMN artifact_artifact_name, DROP COLUMN artifact_asset_version_name,DROP COLUMN artifact_asset_id;
@@ -132,6 +139,13 @@
         UPDATE public.compliance_postures child SET asset_version_id = av.id
         FROM public.asset_versions av
         WHERE av.name = child.asset_version_name AND av.asset_id = child.asset_id;
+
+    -- rows of deleted asset versions can not be mapped and would violate the new primary keys / not null constraints
+        DELETE FROM public.dependency_vulns WHERE asset_version_id IS NULL;
+        DELETE FROM public.first_party_vulnerabilities WHERE asset_version_id IS NULL;
+        DELETE FROM public.license_risks WHERE asset_version_id IS NULL;
+        DELETE FROM public.in_toto_links WHERE asset_version_id IS NULL;
+        DELETE FROM public.artifacts WHERE asset_version_id IS NULL;
 
     -- 3. Drop the old foreign key columns, asset_id is kept as denormalized column to avoid joins
         -- asset_version_name is kept on dependency_vulns, first_party_vulnerabilities, license_risks and compliance_postures since it is part of their content hash
