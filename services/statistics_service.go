@@ -372,7 +372,7 @@ func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx s
 
 			risk := utils.OrDefault(dependencyVuln.RiskAssessment, 0)
 
-			if riskAggregation.Min <= risk {
+			if riskAggregation.Min >= risk {
 				riskAggregation.Min = risk
 			}
 
