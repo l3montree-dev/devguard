@@ -153,36 +153,59 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 		orgID,
 	}
 
-	// When parentID is set, stop the upward recursion once we reach that project.
+	// When parentID is set the user is looking at a subgroup, so the search must
+	// stay inside that subtree. We restrict the matched assets and projects to the
+	// descendants of parentID and stop the upward recursion once we reach it.
+	var descendantCTE, assetScopeCond, projectScopeCond string
 	var assetChainStopCond, projectChainStopCond string
-	var parentStopParam []any
+	var descendantParam, projectScopeParam, parentStopParam []any
 	if parentID != nil {
+		descendantCTE = `
+descendantProjects AS (
+    SELECT id FROM projects WHERE id = ?
+    UNION
+    SELECT p.id FROM projects p INNER JOIN descendantProjects dp ON p.parent_id = dp.id
+),`
+		descendantParam = []any{*parentID}
+
+		assetScopeCond = " AND a.project_id IN (SELECT id FROM descendantProjects)"
+		projectScopeCond = " AND p.id IN (SELECT id FROM descendantProjects) AND p.id != ?"
+		projectScopeParam = []any{*parentID}
+
 		assetChainStopCond = " WHERE apc.id != ?"
 		projectChainStopCond = " WHERE pc.id != ?"
 		parentStopParam = []any{*parentID}
 	}
 
 	searchResultsCTE := `
-WITH RECURSIVE
+WITH RECURSIVE` + descendantCTE + `
 searchResults AS (
     SELECT 'asset'::text AS resource_type, a.avatar, a.id, a.name, a.slug, a.description,
            a.project_id, NULL::uuid AS parent_id, NULL::uuid AS organization_id,
            a.is_public, a.state, a.created_at, a.updated_at
     FROM assets a
     INNER JOIN projects p ON p.id = a.project_id
-    WHERE a.name ILIKE ? AND (a.id = ANY(?) OR (a.is_public = true AND p.organization_id = ?))
+    WHERE a.name ILIKE ? AND (a.id = ANY(?) OR (a.is_public = true AND p.organization_id = ?))` + assetScopeCond + `
     UNION
     SELECT 'project'::text AS resource_type, p.avatar, p.id, p.name, p.slug, p.description,
            NULL::uuid AS project_id, p.parent_id, p.organization_id,
            p.is_public, p.state, p.created_at, p.updated_at
     FROM projects p
-    WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))
+    WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))` + projectScopeCond + `
 )`
 
+	// searchParams holds the placeholders that appear inside searchResultsCTE, in
+	// order. Both the count and the data query reuse this CTE, so both start with
+	// these parameters.
+	searchParams := make([]any, 0, len(descendantParam)+len(assetParams)+len(projectParams)+len(projectScopeParam))
+	searchParams = append(searchParams, descendantParam...)
+	searchParams = append(searchParams, assetParams...)
+	searchParams = append(searchParams, projectParams...)
+	searchParams = append(searchParams, projectScopeParam...)
+
 	// Count only the matched assets and projects, not the parent chain.
-	countParams := make([]any, 0, len(assetParams)+len(projectParams))
-	countParams = append(countParams, assetParams...)
-	countParams = append(countParams, projectParams...)
+	countParams := make([]any, 0, len(searchParams))
+	countParams = append(countParams, searchParams...)
 
 	var count int64
 	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", countParams...).Scan(&count).Error; err != nil {
@@ -227,9 +250,8 @@ SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NU
 UNION
 SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NULL::uuid AS project_id, parent_id, organization_id, is_public, state, created_at, updated_at FROM project_chain`
 
-	dataParams := make([]any, 0, len(assetParams)+len(projectParams)+2+len(parentStopParam)*2)
-	dataParams = append(dataParams, assetParams...)
-	dataParams = append(dataParams, projectParams...)
+	dataParams := make([]any, 0, len(searchParams)+2+len(parentStopParam)*2)
+	dataParams = append(dataParams, searchParams...)
 	dataParams = append(dataParams, pageInfo.PageSize, (pageInfo.Page-1)*pageInfo.PageSize)
 	dataParams = append(dataParams, parentStopParam...)
 	dataParams = append(dataParams, parentStopParam...)
@@ -238,10 +260,10 @@ SELECT 'project'::text AS resource_type, avatar, id, name, slug, description, NU
 		return shared.Paged[dtos.Project]{}, err
 	}
 
-	return shared.NewPaged(pageInfo, count, transformToProjectDTOs(results)), nil
+	return shared.NewPaged(pageInfo, count, transformToProjectDTOs(results, parentID)), nil
 }
 
-func transformToProjectDTOs(results []dtos.ProjectAsset) []dtos.Project {
+func transformToProjectDTOs(results []dtos.ProjectAsset, parentID *uuid.UUID) []dtos.Project {
 	assetsByProjectID := map[uuid.UUID][]dtos.ProjectAsset{}
 	subprojectsByParentID := map[uuid.UUID][]dtos.ProjectAsset{}
 	var rootProjects []dtos.ProjectAsset
@@ -249,12 +271,19 @@ func transformToProjectDTOs(results []dtos.ProjectAsset) []dtos.Project {
 	for _, r := range results {
 		if r.ResourceType == "asset" {
 			assetsByProjectID[r.ProjectID] = append(assetsByProjectID[r.ProjectID], r)
-		} else {
-			if r.ParentID != nil {
-				subprojectsByParentID[*r.ParentID] = append(subprojectsByParentID[*r.ParentID], r)
-			} else {
-				rootProjects = append(rootProjects, r)
-			}
+			continue
+		}
+
+		// When a parentID is given the tree is rooted at that subgroup, so it is
+		// the single root and everything else hangs below it. Without a parentID
+		// the roots are the top level projects (those without a parent).
+		switch {
+		case parentID != nil && r.ID == *parentID:
+			rootProjects = append(rootProjects, r)
+		case r.ParentID != nil:
+			subprojectsByParentID[*r.ParentID] = append(subprojectsByParentID[*r.ParentID], r)
+		default:
+			rootProjects = append(rootProjects, r)
 		}
 	}
 
