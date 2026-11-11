@@ -34,7 +34,7 @@ the --supplyChainOutputDigest you provide.
 The underlying endpoint is a plain HTTP GET that returns 200 on success and a non-200 status on
 failure — easy to call directly from policy engines or shell scripts:
 
-  GET /api/v1/organizations/<assetName>/in-toto/verify?supplyChainId=<id>&supplyChainOutputDigest=<digest>
+  GET /api/v1/organizations/<assetName>/in-toto/verify/?supplyChainId=<id>&supplyChainOutputDigest=<digest>
 
 ```shell
 devguard-scanner intoto verify [flags]
