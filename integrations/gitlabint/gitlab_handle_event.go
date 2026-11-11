@@ -68,15 +68,12 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 		session := shared.GetSession(event.Ctx)
 
 		//check if we have already created the labels in gitlab, if not create them
-		if asset.Metadata == nil {
-			asset.Metadata = map[string]any{}
-		}
-		if asset.Metadata["gitlabLabels"] == nil {
+		if commonint.GitlabLabelsOutdated(asset) {
 			err = g.CreateLabels(ctx, asset)
 			if err != nil {
 				return err
 			}
-			asset.Metadata["gitlabLabels"] = true
+			commonint.MarkGitlabLabelsCreated(&asset)
 			err = g.assetRepository.Update(ctx, nil, &asset)
 			if err != nil {
 				return err

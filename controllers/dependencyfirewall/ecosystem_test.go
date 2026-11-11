@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,25 +72,25 @@ func TestSemverMatchesVersion(t *testing.T) {
 		},
 		{
 			name:     "version within introduced/fixed range",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "1.5.0",
 			expected: true,
 		},
 		{
 			name:     "version before introduced",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "0.9.0",
 			expected: false,
 		},
 		{
 			name:     "version at or after fixed",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "2.0.0",
 			expected: false,
 		},
 		{
 			name:     "unparsable requested version is treated as affected",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "not-a-version-!!!",
 			expected: true,
 		},
@@ -108,7 +109,7 @@ func TestSemverMatchesVersion(t *testing.T) {
 		},
 		{
 			name:     "empty requested version against a range rule is treated as affected to be safe",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "",
 			expected: true,
 		},
@@ -154,25 +155,25 @@ func TestPypiMatchesVersion(t *testing.T) {
 		},
 		{
 			name:     "version within introduced/fixed range",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "1.5.0",
 			expected: true,
 		},
 		{
 			name:     "pep440 pre-release before introduced",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "0.9.0",
 			expected: false,
 		},
 		{
 			name:     "version at fixed boundary is not affected",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "2.0.0",
 			expected: false,
 		},
 		{
 			name:     "unparsable requested version is treated as affected",
-			comp:     models.MaliciousAffectedComponent{SemverIntroduced: strPtr("1.0.0"), SemverFixed: strPtr("2.0.0")},
+			comp:     models.MaliciousAffectedComponent{SemverIntroduced: new(normalize.Semver("1.0.0")), SemverFixed: new(normalize.Semver("2.0.0"))},
 			version:  "not-a-version-!!!",
 			expected: true,
 		},
@@ -224,8 +225,8 @@ func TestPypiMatchesVersionPEP440EquivalentSpellings(t *testing.T) {
 
 func TestPypiMatchesVersionRangeIsHalfOpen(t *testing.T) {
 	comp := models.MaliciousAffectedComponent{
-		SemverIntroduced: strPtr("1.0.0"),
-		SemverFixed:      strPtr("2.0.0"),
+		SemverIntroduced: new(normalize.Semver("1.0.0")),
+		SemverFixed:      new(normalize.Semver("2.0.0")),
 	}
 
 	cases := []struct {
@@ -251,8 +252,8 @@ func TestPypiMatchesVersionRangeIsHalfOpen(t *testing.T) {
 
 func TestPypiMatchesVersionPreAndPostReleases(t *testing.T) {
 	comp := models.MaliciousAffectedComponent{
-		SemverIntroduced: strPtr("1.0.0"),
-		SemverFixed:      strPtr("2.0.0"),
+		SemverIntroduced: new(normalize.Semver("1.0.0")),
+		SemverFixed:      new(normalize.Semver("2.0.0")),
 	}
 
 	cases := []struct {

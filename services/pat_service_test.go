@@ -19,6 +19,7 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/mock"
+	"github.com/yaronf/httpsign"
 )
 
 func TestGetPubKeyUsingFingerprint(t *testing.T) {
@@ -374,6 +375,102 @@ func TestAuthenticateRequestWithToken(t *testing.T) {
 
 	})
 
+	t.Run("rejects a signature replayed against a different path or query", func(t *testing.T) {
+		var pat = models.PAT{
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patService := NewPatService(patMock)
+
+		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+		signed := httptest.NewRequest("GET", "/api/v1/whoami/?a=1", nil)
+		if err := AuthenticateRequestWithToken(privKey, signed); err != nil {
+			t.Fatal("error signing request", err)
+		}
+
+		for _, target := range []string{"/api/v1/organizations/?a=1", "/api/v1/whoami/?a=2"} {
+			replayed := httptest.NewRequest("GET", target, nil)
+			replayed.Header = signed.Header.Clone()
+			if _, err := patService.VerifyRequestSignature(context.Background(), replayed); err == nil {
+				t.Fatalf("expected replay to %s to fail", target)
+			}
+		}
+	})
+
+	t.Run("accepts a path signed without the trailing slash the server appends", func(t *testing.T) {
+		var pat = models.PAT{
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
+			UserID:     new(uuid.New()),
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		patService := NewPatService(patMock)
+
+		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
+		signed := httptest.NewRequest("GET", "/api/v1/config-files/trivy.yaml?a=1", nil)
+		if err := AuthenticateRequestWithToken(privKey, signed); err != nil {
+			t.Fatal("error signing request", err)
+		}
+
+		received := httptest.NewRequest("GET", "/api/v1/config-files/trivy.yaml/?a=1", nil)
+		received.Header = signed.Header.Clone()
+		if _, err := patService.VerifyRequestSignature(context.Background(), received); err != nil {
+			t.Fatalf("expected signature to verify, got %v", err)
+		}
+	})
+
+	t.Run("accepts a signature from a scanner that does not sign @path and @query yet", func(t *testing.T) {
+		var pat = models.PAT{
+			PubKey:     new("b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"),
+			ExpiryDate: new(time.Now().Add(time.Hour)),
+			UserID:     new(uuid.New()),
+		}
+
+		patMock := new(mocks.PersonalAccessTokenRepository)
+		patMock.On("GetByFingerprint", mock.Anything, mock.Anything, mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNowByID", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		patService := NewPatService(patMock)
+
+		privKey, pubKey, err := HexTokenToECDSA("1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167")
+		if err != nil {
+			t.Fatal(err)
+		}
+		pubKeyBytes, err := GetPubKeyBytes(pubKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fingerprint, err := pubKeyToFingerprint(hex.EncodeToString(pubKeyBytes))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest("POST", "/api/v1/scan/", strings.NewReader(`{"user": "test"}`))
+		req.Header.Set("X-Fingerprint", fingerprint)
+		digest, err := httpsign.GenerateContentDigestHeader(&req.Body, []string{httpsign.DigestSha256})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Digest", digest)
+		// signer exactly as configured in scanners before v1.19
+		signer, _ := httpsign.NewP256Signer(privKey, nil, legacySignedFields())
+		signatureInput, signature, err := httpsign.SignRequest("sig77", *signer, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Signature-Input", signatureInput)
+		req.Header.Set("Signature", signature)
+
+		if _, err := patService.VerifyRequestSignature(context.Background(), req); err != nil {
+			t.Fatalf("expected legacy signature to verify, got %v", err)
+		}
+	})
+
 	t.Run("rejects a valid signature from an expired PAT", func(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		var pat = models.PAT{
@@ -485,6 +582,57 @@ func TestVerifyAdminRequest(t *testing.T) {
 		}
 		if isAdmin {
 			t.Fatal("a tampered request must never be granted admin")
+		}
+	})
+
+	t.Run("rejects an admin signature replayed against a different path", func(t *testing.T) {
+		patService := newAdminPatService(t)
+
+		signed := httptest.NewRequest("GET", "/api/v1/health/", nil)
+		if err := signRequest(adminPrivKey, signed); err != nil {
+			t.Fatal("could not sign request", err)
+		}
+
+		replayed := httptest.NewRequest("GET", "/api/v1/admin/organizations/", nil)
+		replayed.Header = signed.Header.Clone()
+
+		isAdmin, err := patService.VerifyAdminRequest(replayed)
+		if err == nil {
+			t.Fatal("expected verification to fail for a replayed admin signature")
+		}
+		if isAdmin {
+			t.Fatal("a replayed signature must never be granted admin")
+		}
+	})
+
+	t.Run("rejects an admin signature without freshness parameters", func(t *testing.T) {
+		patService := newAdminPatService(t)
+
+		privKey, _, err := HexTokenToECDSA(adminPrivKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		signer, err := httpsign.NewP256Signer(privKey, httpsign.NewSignConfig().SignCreated(false), signedFields())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req := httptest.NewRequest("GET", "/api/v1/health/", nil)
+		digest, err := httpsign.GenerateContentDigestHeader(&req.Body, []string{httpsign.DigestSha256})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Digest", digest)
+		signatureInput, signature, err := httpsign.SignRequest("sig77", *signer, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Signature-Input", signatureInput)
+		req.Header.Set("Signature", signature)
+
+		isAdmin, err := patService.VerifyAdminRequest(req)
+		if err == nil || isAdmin {
+			t.Fatal("expected a signature without a created timestamp to be rejected")
 		}
 	})
 }

@@ -35,6 +35,11 @@ func (advisoryRepository *AdvisoryRepository) Create(ctx context.Context, tx *go
 	return nil
 }
 
+// withAssetVersionName selects the asset version name with a scalar subquery, a join would make the unqualified columns of the filters ambiguous
+func withAssetVersionName(db *gorm.DB) *gorm.DB {
+	return db.Select("advisories.*, (SELECT name FROM asset_versions WHERE asset_versions.id = advisories.asset_version_id) AS asset_version_name")
+}
+
 func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, filter []shared.FilterQuery, pagination shared.PageInfo) (shared.Paged[models.Advisory], error) {
 	advisories := []models.Advisory{}
 	db := advisoryRepository.GetDB(ctx, tx)
@@ -49,7 +54,7 @@ func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *g
 		return shared.Paged[models.Advisory]{}, err
 	}
 
-	if err := pagination.ApplyOnDB(query).Find(&advisories).Error; err != nil {
+	if err := withAssetVersionName(pagination.ApplyOnDB(query)).Find(&advisories).Error; err != nil {
 		return shared.Paged[models.Advisory]{}, err
 	}
 
@@ -59,7 +64,7 @@ func (advisoryRepository *AdvisoryRepository) ReadAll(ctx context.Context, tx *g
 func (advisoryRepository *AdvisoryRepository) ReadAdvisory(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Advisory, error) {
 	advisory := models.Advisory{}
 	db := withOwnershipScope(ctx, advisoryRepository.GetDB(ctx, tx).Where("id = ?", id), advisory)
-	err := db.Preload("AffectedPackages").Preload("Events").First(&advisory).Error
+	err := withAssetVersionName(db).Preload("AffectedPackages").Preload("Events").First(&advisory).Error
 	return advisory, err
 }
 

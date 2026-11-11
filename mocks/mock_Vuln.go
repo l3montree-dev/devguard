@@ -337,6 +337,52 @@ func (_c *Vuln_GetAssetID_Call) RunAndReturn(run func() uuid.UUID) *Vuln_GetAsse
 	return _c
 }
 
+// GetAssetVersionID provides a mock function for the type Vuln
+func (_mock *Vuln) GetAssetVersionID() uuid.UUID {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAssetVersionID")
+	}
+
+	var r0 uuid.UUID
+	if returnFunc, ok := ret.Get(0).(func() uuid.UUID); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
+	}
+	return r0
+}
+
+// Vuln_GetAssetVersionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetVersionID'
+type Vuln_GetAssetVersionID_Call struct {
+	*mock.Call
+}
+
+// GetAssetVersionID is a helper method to define mock.On call
+func (_e *Vuln_Expecter) GetAssetVersionID() *Vuln_GetAssetVersionID_Call {
+	return &Vuln_GetAssetVersionID_Call{Call: _e.mock.On("GetAssetVersionID")}
+}
+
+func (_c *Vuln_GetAssetVersionID_Call) Run(run func()) *Vuln_GetAssetVersionID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Vuln_GetAssetVersionID_Call) Return(uUID uuid.UUID) *Vuln_GetAssetVersionID_Call {
+	_c.Call.Return(uUID)
+	return _c
+}
+
+func (_c *Vuln_GetAssetVersionID_Call) RunAndReturn(run func() uuid.UUID) *Vuln_GetAssetVersionID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAssetVersionName provides a mock function for the type Vuln
 func (_mock *Vuln) GetAssetVersionName() string {
 	ret := _mock.Called()

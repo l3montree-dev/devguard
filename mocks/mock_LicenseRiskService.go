@@ -51,16 +51,16 @@ func (_m *LicenseRiskService) EXPECT() *LicenseRiskService_Expecter {
 }
 
 // FindLicenseRisksInComponents provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
-	ret := _mock.Called(ctx, tx, userID, userAgent, assetVersion, components, artifactName)
+func (_mock *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifact models.Artifact) error {
+	ret := _mock.Called(ctx, tx, userID, userAgent, assetVersion, components, artifact)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindLicenseRisksInComponents")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, models.AssetVersion, []models.Component, string) error); ok {
-		r0 = returnFunc(ctx, tx, userID, userAgent, assetVersion, components, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *string, models.AssetVersion, []models.Component, models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, userID, userAgent, assetVersion, components, artifact)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -79,12 +79,12 @@ type LicenseRiskService_FindLicenseRisksInComponents_Call struct {
 //   - userAgent *string
 //   - assetVersion models.AssetVersion
 //   - components []models.Component
-//   - artifactName string
-func (_e *LicenseRiskService_Expecter) FindLicenseRisksInComponents(ctx any, tx any, userID any, userAgent any, assetVersion any, components any, artifactName any) *LicenseRiskService_FindLicenseRisksInComponents_Call {
-	return &LicenseRiskService_FindLicenseRisksInComponents_Call{Call: _e.mock.On("FindLicenseRisksInComponents", ctx, tx, userID, userAgent, assetVersion, components, artifactName)}
+//   - artifact models.Artifact
+func (_e *LicenseRiskService_Expecter) FindLicenseRisksInComponents(ctx any, tx any, userID any, userAgent any, assetVersion any, components any, artifact any) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+	return &LicenseRiskService_FindLicenseRisksInComponents_Call{Call: _e.mock.On("FindLicenseRisksInComponents", ctx, tx, userID, userAgent, assetVersion, components, artifact)}
 }
 
-func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string)) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifact models.Artifact)) *LicenseRiskService_FindLicenseRisksInComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -110,9 +110,9 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Run(run func(ctx
 		if args[5] != nil {
 			arg5 = args[5].([]models.Component)
 		}
-		var arg6 string
+		var arg6 models.Artifact
 		if args[6] != nil {
-			arg6 = args[6].(string)
+			arg6 = args[6].(models.Artifact)
 		}
 		run(
 			arg0,
@@ -132,7 +132,7 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) Return(err error
 	return _c
 }
 
-func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifactName string) error) *LicenseRiskService_FindLicenseRisksInComponents_Call {
+func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, userID string, userAgent *string, assetVersion models.AssetVersion, components []models.Component, artifact models.Artifact) error) *LicenseRiskService_FindLicenseRisksInComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }

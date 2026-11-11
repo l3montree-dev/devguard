@@ -500,16 +500,16 @@ func (_c *DependencyVulnService_SyncIssues_Call) RunAndReturn(run func(ctx conte
 }
 
 // UserDetectedDependencyVulnInAnotherArtifact provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifactName string) error {
-	ret := _mock.Called(ctx, tx, vulnerabilities, artifactName)
+func (_mock *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error {
+	ret := _mock.Called(ctx, tx, vulnerabilities, artifact)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedDependencyVulnInAnotherArtifact")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.DependencyVuln, string) error); ok {
-		r0 = returnFunc(ctx, tx, vulnerabilities, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.DependencyVuln, models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, vulnerabilities, artifact)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -525,12 +525,12 @@ type DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call stru
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vulnerabilities []models.DependencyVuln
-//   - artifactName string
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulnInAnotherArtifact(ctx any, tx any, vulnerabilities any, artifactName any) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
-	return &DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call{Call: _e.mock.On("UserDetectedDependencyVulnInAnotherArtifact", ctx, tx, vulnerabilities, artifactName)}
+//   - artifact models.Artifact
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulnInAnotherArtifact(ctx any, tx any, vulnerabilities any, artifact any) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
+	return &DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call{Call: _e.mock.On("UserDetectedDependencyVulnInAnotherArtifact", ctx, tx, vulnerabilities, artifact)}
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifactName string)) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact)) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -544,9 +544,9 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call
 		if args[2] != nil {
 			arg2 = args[2].([]models.DependencyVuln)
 		}
-		var arg3 string
+		var arg3 models.Artifact
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(models.Artifact)
 		}
 		run(
 			arg0,
@@ -563,7 +563,7 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifactName string) error) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error) *DependencyVulnService_UserDetectedDependencyVulnInAnotherArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -743,16 +743,16 @@ func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) 
 }
 
 // UserDidNotDetectDependencyVulnInArtifactAnymore provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifactName string) error {
-	ret := _mock.Called(ctx, tx, vulnerabilities, artifactName)
+func (_mock *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error {
+	ret := _mock.Called(ctx, tx, vulnerabilities, artifact)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDidNotDetectDependencyVulnInArtifactAnymore")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.DependencyVuln, string) error); ok {
-		r0 = returnFunc(ctx, tx, vulnerabilities, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.DependencyVuln, models.Artifact) error); ok {
+		r0 = returnFunc(ctx, tx, vulnerabilities, artifact)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -768,12 +768,12 @@ type DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call 
 //   - ctx context.Context
 //   - tx shared.DB
 //   - vulnerabilities []models.DependencyVuln
-//   - artifactName string
-func (_e *DependencyVulnService_Expecter) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx any, tx any, vulnerabilities any, artifactName any) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
-	return &DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call{Call: _e.mock.On("UserDidNotDetectDependencyVulnInArtifactAnymore", ctx, tx, vulnerabilities, artifactName)}
+//   - artifact models.Artifact
+func (_e *DependencyVulnService_Expecter) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx any, tx any, vulnerabilities any, artifact any) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
+	return &DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call{Call: _e.mock.On("UserDidNotDetectDependencyVulnInArtifactAnymore", ctx, tx, vulnerabilities, artifact)}
 }
 
-func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) Run(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifactName string)) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
+func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) Run(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact)) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -787,9 +787,9 @@ func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_
 		if args[2] != nil {
 			arg2 = args[2].([]models.DependencyVuln)
 		}
-		var arg3 string
+		var arg3 models.Artifact
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(models.Artifact)
 		}
 		run(
 			arg0,
@@ -806,7 +806,7 @@ func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifactName string) error) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
+func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error) *DependencyVulnService_UserDidNotDetectDependencyVulnInArtifactAnymore_Call {
 	_c.Call.Return(run)
 	return _c
 }

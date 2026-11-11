@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
@@ -32,7 +33,6 @@ import (
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 )
 
@@ -174,7 +174,7 @@ func (c *VEXRuleController) cachedVulns(ctx shared.Context, state dtos.VulnState
 		return nil, err
 	}
 
-	vulnMaps, err := vexrules.PrepareVulnsForEval(ctx.Request().Context(), vulns)
+	vulnMaps, err := celrules.PrepareVulnsForEval(ctx.Request().Context(), vulns)
 	if err != nil {
 		return nil, err
 	}
@@ -222,12 +222,12 @@ func (c *VEXRuleController) TestVexRules(ctx shared.Context) error {
 
 	requestCtx := ctx.Request().Context()
 
-	compiledRules, err := vexrules.CompileRules(requestCtx, vexRules)
+	compiledRules, err := celrules.CompileVEXRules(requestCtx, vexRules)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to compile CEL expression").WithInternal(err)
 	}
 
-	matches, err := vexrules.EvalCompiledRules(requestCtx, compiledRules, vulns)
+	matches, err := celrules.EvalCompiledVEXRules(requestCtx, compiledRules, vulns)
 	if err != nil {
 		return echo.NewHTTPError(500, "failed to evaluate CEL expression").WithInternal(err)
 	}

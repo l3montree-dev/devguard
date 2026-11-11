@@ -54,6 +54,40 @@ func TestHasVersionedDescendant(t *testing.T) {
 	})
 }
 
+func TestHasOnlyFlatGolangDescendants(t *testing.T) {
+	t.Run("true for a binary with all modules as leaves behind the unversioned main module", func(t *testing.T) {
+		deps := []cyclonedx.Dependency{
+			{Ref: "bin", Dependencies: &[]string{"pkg:golang/example.org/mod"}},
+			{Ref: "pkg:golang/example.org/mod", Dependencies: &[]string{"pkg:golang/example.org/a@v1.0.0", "pkg:golang/example.org/b@v1.0.0"}},
+		}
+		assert.True(t, hasOnlyFlatGolangDescendants("bin", dependencyChildrenByRef(&deps)))
+	})
+
+	t.Run("false when a module has its own dependencies", func(t *testing.T) {
+		deps := []cyclonedx.Dependency{
+			{Ref: "bin", Dependencies: &[]string{"pkg:golang/example.org/mod"}},
+			{Ref: "pkg:golang/example.org/mod", Dependencies: &[]string{"pkg:golang/example.org/a@v1.0.0"}},
+			{Ref: "pkg:golang/example.org/a@v1.0.0", Dependencies: &[]string{"pkg:golang/example.org/b@v1.0.0"}},
+		}
+		assert.False(t, hasOnlyFlatGolangDescendants("bin", dependencyChildrenByRef(&deps)))
+	})
+
+	t.Run("false for non-golang dependencies", func(t *testing.T) {
+		deps := []cyclonedx.Dependency{
+			{Ref: "bin", Dependencies: &[]string{"pkg:cargo/a@1.0.0"}},
+		}
+		assert.False(t, hasOnlyFlatGolangDescendants("bin", dependencyChildrenByRef(&deps)))
+	})
+
+	t.Run("false without any versioned descendant and on cycles", func(t *testing.T) {
+		deps := []cyclonedx.Dependency{
+			{Ref: "a", Dependencies: &[]string{"b"}},
+			{Ref: "b", Dependencies: &[]string{"a"}},
+		}
+		assert.False(t, hasOnlyFlatGolangDescendants("a", dependencyChildrenByRef(&deps)))
+	})
+}
+
 func newUpstreamTestBOM() *cyclonedx.BOM {
 	return &cyclonedx.BOM{
 		Metadata:   &cyclonedx.Metadata{Component: &cyclonedx.Component{BOMRef: "root"}},

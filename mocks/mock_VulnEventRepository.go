@@ -572,49 +572,48 @@ func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run fun
 	return _c
 }
 
-// ReadEventsByAssetIDAndAssetVersionName provides a mock function for the type VulnEventRepository
-func (_mock *VulnEventRepository) ReadEventsByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, pageInfo, filter)
+// ReadEventsByAssetVersionID provides a mock function for the type VulnEventRepository
+func (_mock *VulnEventRepository) ReadEventsByAssetVersionID(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, pageInfo, filter)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ReadEventsByAssetIDAndAssetVersionName")
+		panic("no return value specified for ReadEventsByAssetVersionID")
 	}
 
 	var r0 shared.Paged[models.VulnEventDetail]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, filter)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, pageInfo, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, []shared.FilterQuery) shared.Paged[models.VulnEventDetail]); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, filter)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, []shared.FilterQuery) shared.Paged[models.VulnEventDetail]); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, pageInfo, filter)
 	} else {
 		r0 = ret.Get(0).(shared.Paged[models.VulnEventDetail])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, shared.PageInfo, []shared.FilterQuery) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName, pageInfo, filter)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, shared.PageInfo, []shared.FilterQuery) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, pageInfo, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadEventsByAssetIDAndAssetVersionName'
-type VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call struct {
+// VulnEventRepository_ReadEventsByAssetVersionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadEventsByAssetVersionID'
+type VulnEventRepository_ReadEventsByAssetVersionID_Call struct {
 	*mock.Call
 }
 
-// ReadEventsByAssetIDAndAssetVersionName is a helper method to define mock.On call
+// ReadEventsByAssetVersionID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
+//   - assetVersionID uuid.UUID
 //   - pageInfo shared.PageInfo
 //   - filter []shared.FilterQuery
-func (_e *VulnEventRepository_Expecter) ReadEventsByAssetIDAndAssetVersionName(ctx any, tx any, assetID any, assetVersionName any, pageInfo any, filter any) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
-	return &VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("ReadEventsByAssetIDAndAssetVersionName", ctx, tx, assetID, assetVersionName, pageInfo, filter)}
+func (_e *VulnEventRepository_Expecter) ReadEventsByAssetVersionID(ctx any, tx any, assetVersionID any, pageInfo any, filter any) *VulnEventRepository_ReadEventsByAssetVersionID_Call {
+	return &VulnEventRepository_ReadEventsByAssetVersionID_Call{Call: _e.mock.On("ReadEventsByAssetVersionID", ctx, tx, assetVersionID, pageInfo, filter)}
 }
 
-func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_c *VulnEventRepository_ReadEventsByAssetVersionID_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, filter []shared.FilterQuery)) *VulnEventRepository_ReadEventsByAssetVersionID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -628,17 +627,13 @@ func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(r
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
+		var arg3 shared.PageInfo
 		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg3 = args[3].(shared.PageInfo)
 		}
-		var arg4 shared.PageInfo
+		var arg4 []shared.FilterQuery
 		if args[4] != nil {
-			arg4 = args[4].(shared.PageInfo)
-		}
-		var arg5 []shared.FilterQuery
-		if args[5] != nil {
-			arg5 = args[5].([]shared.FilterQuery)
+			arg4 = args[4].([]shared.FilterQuery)
 		}
 		run(
 			arg0,
@@ -646,18 +641,17 @@ func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(r
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Return(paged shared.Paged[models.VulnEventDetail], err error) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_c *VulnEventRepository_ReadEventsByAssetVersionID_Call) Return(paged shared.Paged[models.VulnEventDetail], err error) *VulnEventRepository_ReadEventsByAssetVersionID_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
+func (_c *VulnEventRepository_ReadEventsByAssetVersionID_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, pageInfo shared.PageInfo, filter []shared.FilterQuery) (shared.Paged[models.VulnEventDetail], error)) *VulnEventRepository_ReadEventsByAssetVersionID_Call {
 	_c.Call.Return(run)
 	return _c
 }

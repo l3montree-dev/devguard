@@ -30,7 +30,7 @@ const HandlerTimeout = 2 * time.Hour
 
 const jobTimeout = HandlerTimeout + 30*time.Minute
 
-const rescueStuckJobsAfter = jobTimeout + 30*time.Hour
+const rescueStuckJobsAfter = jobTimeout + 30*time.Minute
 
 // completedJobRetention bounds how far FinishedSince can look back - callers rely on it, do not lower it carelessly
 const completedJobRetention = 24 * time.Hour

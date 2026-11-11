@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 )
 
 // QuickDiff is a pre-computed incremental patch from one vulndb version to the next.
@@ -92,8 +93,8 @@ type quickDiffAC struct {
 	Purl              string
 	Ecosystem         string
 	Version           *string
-	SemverIntroduced  *string
-	SemverFixed       *string
+	SemverIntroduced  *normalize.Semver
+	SemverFixed       *normalize.Semver
 	VersionIntroduced *string
 	VersionFixed      *string
 }
@@ -231,7 +232,7 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 
 	rows, err = tx.Query(ctx, `
 		SELECT a.id, a.purl, a.ecosystem, a.version::text,
-		       a.semver_introduced::text, a.semver_fixed::text,
+		       a.semver_introduced, a.semver_fixed,
 		       a.version_introduced, a.version_fixed
 		FROM affected_components a
 		WHERE NOT EXISTS (SELECT 1 FROM _snap_ac s WHERE s.id = a.id)
@@ -357,7 +358,7 @@ func ComputeQuickDiff(ctx context.Context, tx pgx.Tx, fromVersion time.Time) (*Q
 
 	rows, err = tx.Query(ctx, `
 		SELECT mc.id, mc.malicious_package_id, mc.purl, mc.ecosystem, mc.version::text,
-		       mc.semver_introduced::text, mc.semver_fixed::text,
+		       mc.semver_introduced, mc.semver_fixed,
 		       mc.version_introduced, mc.version_fixed
 		FROM malicious_affected_components mc
 		WHERE NOT EXISTS (SELECT 1 FROM _snap_mal_comps s WHERE s.id = mc.id)
@@ -496,7 +497,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_affected_components: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE _diff_ins_affected_components ON COMMIT DROP AS
-		SELECT id, purl, ecosystem, version::text, semver_introduced::text, semver_fixed::text, version_introduced, version_fixed
+		SELECT id, purl, ecosystem, version::text, semver_introduced, semver_fixed, version_introduced, version_fixed
 		FROM affected_components WHERE false`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_affected_components: %w", err)
 	}
@@ -605,7 +606,7 @@ func computeDiffFromQuickDiff(ctx context.Context, tx pgx.Tx, diff *QuickDiff) e
 		return fmt.Errorf("computeDiffFromQuickDiff: copy _diff_del_malicious_affected_components: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE _diff_ins_malicious_affected_components ON COMMIT DROP AS
-		SELECT id, malicious_package_id, purl, ecosystem, version::text, semver_introduced::text, semver_fixed::text, version_introduced, version_fixed
+		SELECT id, malicious_package_id, purl, ecosystem, version::text, semver_introduced, semver_fixed, version_introduced, version_fixed
 		FROM malicious_affected_components WHERE false`); err != nil {
 		return fmt.Errorf("computeDiffFromQuickDiff: create _diff_ins_malicious_affected_components: %w", err)
 	}

@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/services"
@@ -152,9 +151,6 @@ func prepareTrivyCommand(workdir string) {
 }
 
 func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte, error) {
-	// generate random name
-	filename := uuid.New().String() + ".json"
-
 	// check if we are scanning a dir or a single file
 	maybeFilename, isDir := maybeGetFileName(pathOrImage)
 
@@ -167,7 +163,12 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	} else {
 		workDir = utils.GetDirFromPath(pathOrImage)
 	}
-	sbomFile := filepath.Join(os.TempDir(), filename)
+	dir, cleanup, err := utils.CreatePrivateTempDir("sca")
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+	sbomFile := filepath.Join(dir, "sbom.json")
 
 	var trivyCmd *exec.Cmd
 
@@ -214,22 +215,14 @@ func generateSBOM(ctx context.Context, pathOrImage string, isImage bool) ([]byte
 	// get the output
 	trivyCmd.Stderr = stderr
 
-	err := trivyCmd.Run()
+	err = trivyCmd.Run()
 	if err != nil {
 		return nil, errors.Wrap(err, stderr.String())
 	}
-	file, err := os.Open(sbomFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not open file")
-	}
-	// open the file and return the path
-	content, err := io.ReadAll(file)
+	content, err := os.ReadFile(sbomFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read file")
 	}
-
-	// delete the file after reading it
-	defer os.Remove(sbomFile)
 	return content, nil
 }
 
@@ -286,8 +279,17 @@ func warnAboutUnidentifiableComponents(bom *cyclonedx.BOM, extras []*cyclonedx.B
 		if c.Type != cyclonedx.ComponentTypeApplication {
 			continue
 		}
-		if c.PackageURL != "" || hasVersionedDescendant(c.BOMRef, childrenByRef, realDescendantCache) {
-			continue // trivy already resolved this one, no action needed
+		if c.PackageURL != "" {
+			continue
+		}
+		if hasVersionedDescendant(c.BOMRef, childrenByRef, realDescendantCache) {
+			// trivy resolved this one, but a compiled golang binary only yields the
+			// flat module list from its build info, without who-requires-whom
+			if !suppliedPaths[c.Name] && filepath.Base(c.Name) != "go.mod" && hasOnlyFlatGolangDescendants(c.BOMRef, childrenByRef) {
+				slog.Warn("identified a golang binary with a shallow dependency tree - every module is attached directly to it, without the dependencies between them; provide a supplementary SBOM describing it (rooted at this exact path) under --sbomPath to enrich it", "path", c.Name)
+				printSupplementarySBOMExample(c.Name)
+			}
+			continue
 		}
 		if suppliedPaths[c.Name] {
 			enriched++
@@ -315,6 +317,35 @@ func dependencyChildrenByRef(deps *[]cyclonedx.Dependency) map[string][]string {
 		}
 	}
 	return childrenByRef
+}
+
+// hasOnlyFlatGolangDescendants reports whether the versioned golang purls
+// reachable from ref (looking through unversioned intermediate nodes such as
+// the main module) are all leaves - i.e. there is a module list but no tree
+// between the modules, which is what trivy reports for a compiled binary.
+func hasOnlyFlatGolangDescendants(ref string, childrenByRef map[string][]string) bool {
+	visited := map[string]bool{ref: true}
+	queue := []string{ref}
+	found := false
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, child := range childrenByRef[cur] {
+			if visited[child] {
+				continue
+			}
+			visited[child] = true
+			if strings.HasPrefix(child, "pkg:") && strings.Contains(child, "@") {
+				if !strings.HasPrefix(child, "pkg:golang/") || len(childrenByRef[child]) > 0 {
+					return false
+				}
+				found = true
+				continue
+			}
+			queue = append(queue, child)
+		}
+	}
+	return found
 }
 
 // hasVersionedDescendant reports whether ref has a versioned purl (pkg:...@version)
@@ -889,7 +920,7 @@ func handleScanResponse(body io.Reader) error {
 	if err := cyclonedx.NewBOMDecoder(bytes.NewReader(bodyBytes), cyclonedx.BOMFileFormatJSON).Decode(&bom); err != nil {
 		return errors.Wrap(err, "could not parse CycloneDX VEX response")
 	}
-	return scanner.PrintCycloneDXVexResults(bom, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref)
+	return scanner.PrintCycloneDXVexResults(bom, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, config.RuntimeBaseConfig.ArtifactName)
 }
 
 func scaCommand(cmd *cobra.Command, args []string) error {
@@ -913,10 +944,11 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 	if config.RuntimeBaseConfig.AssetName != "" && config.RuntimeBaseConfig.Token != "" {
 		// download any config file if exists
-		configFilePath, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
+		configFilePath, cleanup, err := config.GetAndWriteConfigFile(ctx, "trivy.yaml", config.RuntimeBaseConfig.AssetName)
 		if err != nil {
 			slog.Debug("could not get config file, using default trivy config", "file", "trivy.yaml", "err", err)
 		} else {
+			defer cleanup()
 			// set the config file path in the runtime config so that it can be used by the scanner commands
 			config.RuntimeBaseConfig.ConfigFilePath = configFilePath
 		}

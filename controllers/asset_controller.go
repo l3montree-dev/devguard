@@ -9,6 +9,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/integrations/commonint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -377,16 +378,19 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		//check if we have already created the labels in gitlab, if not create them
 		// do NOT update the asset in the database yet, we do this after the ticket sync
 		//we can't do this in the background task, because we need this before we save the asset
-		if asset.Metadata == nil {
-			asset.Metadata = map[string]any{}
-		}
-		if asset.Metadata["gitlabLabels"] == nil {
+		if commonint.GitlabLabelsOutdated(asset) {
 			err = a.thirdPartyIntegration.CreateLabels(reqCtx, asset)
 			if err != nil {
 				slog.Error("could not create labels in gitlab", "err", err)
 			} else {
-				asset.Metadata["gitlabLabels"] = true
+				commonint.MarkGitlabLabelsCreated(&asset)
 			}
+		}
+	}
+
+	if patchRequest.IsPublic != nil && *patchRequest.IsPublic {
+		if !shared.GetProject(ctx).IsPublic {
+			return echo.NewHTTPError(409, "project is not set to public")
 		}
 	}
 
@@ -477,8 +481,8 @@ func (a *AssetController) UpdateConfigFile(ctx shared.Context) error {
 	configContent := string(body)
 
 	if configID == dtos.DependencyProxyConfigFileID {
-		if err := dtos.ValidateConfigFile(body); err != nil {
-			return err
+		if err := dtos.ValidateDependencyProxyConfigFile(body); err != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid dependency proxy config: %s", err.Error()))
 		}
 	}
 
@@ -529,18 +533,14 @@ func (a *AssetController) GetBadges(ctx shared.Context) error {
 			slog.Error("Error getting default asset version", "error", err)
 		}
 	}
-	var artifactName *string
-	artifact, err := shared.MaybeGetArtifact(ctx)
-	if err == nil {
-		artifactName = &artifact.ArtifactName
-	}
+	artifactID := maybeArtifactID(ctx)
 
 	svg := ""
 
 	if badge == "cvss" {
 		// Use the latest snapshot regardless of when the daily aggregation last ran —
 		// a public badge should not go gray on days the daemon hasn't ticked yet.
-		latest, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
+		latest, err := a.artifactRiskHistoryRepository.GetLatestRiskHistory(reqCtx, nil, artifactID, assetVersion.ID)
 		if err != nil {
 			return err
 		}

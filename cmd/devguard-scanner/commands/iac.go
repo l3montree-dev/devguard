@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -23,14 +24,11 @@ func iacScan(p, outputPath string) (*sarif.SarifSchema210Json, error) {
 		outputDir = path.Dir(outputPath)
 		sarifFilePath = path.Join(outputDir, "results_sarif.sarif")
 	} else {
-		dir := os.TempDir()
-		dir = path.Join(dir, "iac")
-		// create new directory
-		err := os.MkdirAll(dir, 0755)
+		dir, cleanup, err := utils.CreatePrivateTempDir("iac")
 		if err != nil {
-			return nil, errors.Wrap(err, "could not create directory")
+			return nil, err
 		}
-		defer os.RemoveAll(dir)
+		defer cleanup()
 		outputDir = dir
 		sarifFilePath = path.Join(dir, "results_sarif.sarif")
 	}

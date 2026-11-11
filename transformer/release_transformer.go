@@ -21,13 +21,22 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
+// artifact and asset version names are only set if Artifact.AssetVersion is preloaded
 func ReleaseItemToDTO(i models.ReleaseItem) dtos.ReleaseItem {
+	var artifactName, assetVersionName *string
+	if i.Artifact != nil {
+		artifactName = &i.Artifact.ArtifactName
+		if i.Artifact.AssetVersion.Name != "" {
+			assetVersionName = &i.Artifact.AssetVersion.Name
+		}
+	}
 	return dtos.ReleaseItem{
 		ID:               i.ID,
 		ReleaseID:        i.ReleaseID,
 		ChildReleaseID:   i.ChildReleaseID,
-		ArtifactName:     i.ArtifactName,
-		AssetVersionName: i.AssetVersionName,
+		ArtifactID:       i.ArtifactID,
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersionName,
 		AssetID:          i.AssetID,
 		ChildReleaseName: func() *string {
 			if i.ChildRelease != nil {
@@ -62,11 +71,10 @@ func ReleaseCreateRequestToModel(r dtos.ReleaseCreateRequest, projectID uuid.UUI
 
 	for _, it := range r.Items {
 		rel.Items = append(rel.Items, models.ReleaseItem{
-			ID:               it.ID,
-			ChildReleaseID:   it.ChildReleaseID,
-			ArtifactName:     it.ArtifactName,
-			AssetVersionName: it.AssetVersionName,
-			AssetID:          it.AssetID,
+			ID:             it.ID,
+			ChildReleaseID: it.ChildReleaseID,
+			ArtifactID:     it.ArtifactID,
+			AssetID:        it.AssetID,
 		})
 	}
 
@@ -78,12 +86,11 @@ func ApplyReleasePatchRequestToModel(r dtos.ReleasePatchRequest, rel *models.Rel
 	var items []models.ReleaseItem
 	for _, it := range r.Items {
 		items = append(items, models.ReleaseItem{
-			ID:               it.ID,
-			ReleaseID:        rel.ID,
-			ChildReleaseID:   it.ChildReleaseID,
-			ArtifactName:     it.ArtifactName,
-			AssetVersionName: it.AssetVersionName,
-			AssetID:          it.AssetID,
+			ID:             it.ID,
+			ReleaseID:      rel.ID,
+			ChildReleaseID: it.ChildReleaseID,
+			ArtifactID:     it.ArtifactID,
+			AssetID:        it.AssetID,
 		})
 	}
 	rel.Items = items

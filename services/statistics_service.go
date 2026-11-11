@@ -44,8 +44,8 @@ func NewStatisticsService(statisticsRepository shared.StatisticsRepository, asse
 	}
 }
 
-func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(ctx, nil, artifactName, assetVersionName, assetID)
+func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID) (map[string]models.Distribution, error) {
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionID(ctx, nil, artifactID, assetVersionID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,14 +100,14 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactName *
 	return distributionPerComponent, nil
 }
 
-func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	startDay := time.Date(start.UTC().Year(), start.UTC().Month(), start.UTC().Day(), 0, 0, 0, 0, time.UTC)
 
-	openVulnIDs, err := s.openVulnIDsAt(ctx, artifactName, assetVersionName, assetID, startDay.AddDate(0, 0, -1))
+	openVulnIDs, err := s.openVulnIDsAt(ctx, artifactID, assetVersionID, startDay.AddDate(0, 0, -1))
 	if err != nil {
 		return nil, err
 	}
-	remainingHistory, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, startDay, end)
+	remainingHistory, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactID, assetVersionID, startDay, end)
 	if err != nil {
 		return nil, err
 	}
@@ -221,9 +221,9 @@ func (s *statisticsService) replayRiskHistoryFromDiffs(ctx context.Context, arti
 	return resultingHistory, nil
 }
 
-func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
+func (s *statisticsService) GetArtifactRiskHistory(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	var replayedRiskHistory []models.ArtifactRiskHistory
-	replayedRiskHistory, err := s.replayRiskHistoryFromDiffs(ctx, artifactName, assetVersionName, assetID, start, end)
+	replayedRiskHistory, err := s.replayRiskHistoryFromDiffs(ctx, artifactID, assetVersionID, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -238,15 +238,15 @@ func (s *statisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Contex
 	}
 
 	// the extra fields are the same for every row of an artifact on an asset version
-	type key struct{ artifactName, assetVersionName string }
-	versions := make(map[key]models.ArtifactRiskHistoryWithVersion)
+	versions := make(map[uuid.UUID]models.ArtifactRiskHistoryWithVersion)
 	for _, row := range riskHistoryWithVersion {
-		versions[key{row.ArtifactName, row.AssetVersionName}] = row
+		versions[row.ArtifactID] = row
 	}
 
 	result := []models.ArtifactRiskHistoryWithVersion{}
-	for k, version := range versions {
-		riskHistory, err := s.GetArtifactRiskHistory(ctx, &k.artifactName, k.assetVersionName, assetID, start, end)
+	for artifactID, version := range versions {
+		// the asset version is ignored once an artifact id is given
+		riskHistory, err := s.GetArtifactRiskHistory(ctx, &artifactID, uuid.Nil, start, end)
 		if err != nil {
 			return nil, err
 		}
@@ -271,11 +271,11 @@ func (s *statisticsService) GetArtifactRiskHistoryWithVersion(ctx context.Contex
 // openVulnIDsAt rebuilds the set of open vuln IDs at the end of the given day
 // from the latest snapshot at or before it (or the empty root) plus the stored diffs
 // without calculating the whole history (just IDs)
-func (s *statisticsService) openVulnIDsAt(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, at time.Time) (map[string]struct{}, error) {
+func (s *statisticsService) openVulnIDsAt(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, at time.Time) (map[string]struct{}, error) {
 	openVulnIDs := map[string]struct{}{}
 	from := time.Time{} // no snapshot will replay every stored diff
 
-	snapshot, err := s.artifactRiskHistoryRepository.GetLatestSnapshotBefore(ctx, nil, artifactName, assetVersionName, assetID, at)
+	snapshot, err := s.artifactRiskHistoryRepository.GetLatestSnapshotBefore(ctx, nil, artifactID, assetVersionID, at)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +286,7 @@ func (s *statisticsService) openVulnIDsAt(ctx context.Context, artifactName *str
 		from = snapshot.Day
 	}
 
-	history, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactName, assetVersionName, assetID, from, at)
+	history, err := s.artifactRiskHistoryRepository.GetRiskHistory(ctx, nil, artifactID, assetVersionID, from, at)
 	if err != nil {
 		return nil, err
 	}
@@ -329,12 +329,12 @@ func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx s
 	// set end to last second of date
 	end = time.Date(end.UTC().Year(), end.UTC().Month(), end.UTC().Day(), 23, 59, 59, 0, time.UTC)
 
-	previousOpenVulnIDs, err := s.openVulnIDsAt(ctx, &artifact.ArtifactName, artifact.AssetVersionName, assetID, begin.AddDate(0, 0, -1))
+	previousOpenVulnIDs, err := s.openVulnIDsAt(ctx, &artifact.ID, artifact.AssetVersionID, begin.AddDate(0, 0, -1))
 	if err != nil {
 		return err
 	}
 
-	allDependencyVulns, err := s.statisticsRepository.GetDependencyVulnsWithEvents(ctx, nil, artifact.ArtifactName, artifact.AssetVersionName, assetID)
+	allDependencyVulns, err := s.statisticsRepository.GetDependencyVulnsWithEvents(ctx, nil, artifact.ID, artifact.AssetVersionID, assetID)
 	if err != nil {
 		return err
 	}
@@ -436,9 +436,8 @@ func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx s
 		}
 
 		result := models.ArtifactRiskHistory{
-			ArtifactName:     artifact.ArtifactName,
-			AssetVersionName: artifact.AssetVersionName,
-			AssetID:          assetID,
+			ArtifactID: artifact.ID,
+			AssetID:    assetID,
 			History: models.History{
 				Day: depDate,
 
@@ -511,7 +510,7 @@ func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx s
 	// save the last history update timestamp
 	artifact.LastHistoryUpdate = &end
 	err = s.assetVersionRepository.GetDB(ctx, nil).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "artifact_name"}, {Name: "asset_version_name"}, {Name: "asset_id"}},
+		Columns:   []clause.Column{{Name: "id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"last_history_update"}),
 	}).Create(artifact).Error
 	if err != nil {

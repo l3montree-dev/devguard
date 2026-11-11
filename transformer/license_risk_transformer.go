@@ -23,9 +23,11 @@ import (
 func LicenseRiskToDTO(f models.LicenseRisk) dtos.LicenseRisk {
 	artifacts := make([]dtos.LicenseRiskArtifact, len(f.Artifacts))
 	for i, artifact := range f.Artifacts {
+		// artifacts of a license risk always belong to its asset version
 		artifacts[i] = dtos.LicenseRiskArtifact{
+			ID:               artifact.ID.String(),
 			ArtifactName:     artifact.ArtifactName,
-			AssetVersionName: artifact.AssetVersionName,
+			AssetVersionName: f.AssetVersionName,
 			AssetID:          artifact.AssetID.String(),
 		}
 	}
@@ -33,6 +35,7 @@ func LicenseRiskToDTO(f models.LicenseRisk) dtos.LicenseRisk {
 	return dtos.LicenseRisk{
 		ID:                   f.ID,
 		Artifacts:            artifacts,
+		AssetVersionID:       f.AssetVersionID.String(),
 		AssetVersionName:     f.AssetVersionName,
 		AssetID:              f.AssetID.String(),
 		State:                f.State,

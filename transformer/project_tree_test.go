@@ -12,17 +12,19 @@ import (
 
 func TestBuildArtifactIndex(t *testing.T) {
 	assetID := uuid.New()
+	v1ID := uuid.New()
+	v2ID := uuid.New()
 
 	artifacts := []models.Artifact{
-		{AssetID: assetID, AssetVersionName: "v1.0", ArtifactName: "app"},
-		{AssetID: assetID, AssetVersionName: "v1.0", ArtifactName: "sidecar"},
-		{AssetID: assetID, AssetVersionName: "v2.0", ArtifactName: "app"},
+		{AssetID: assetID, AssetVersionID: v1ID, ArtifactName: "app"},
+		{AssetID: assetID, AssetVersionID: v1ID, ArtifactName: "sidecar"},
+		{AssetID: assetID, AssetVersionID: v2ID, ArtifactName: "app"},
 	}
 
 	index := transformer.BuildArtifactIndex(artifacts)
 
-	assert.ElementsMatch(t, []string{"app", "sidecar"}, index[assetID]["v1.0"])
-	assert.Equal(t, []string{"app"}, index[assetID]["v2.0"])
+	assert.ElementsMatch(t, []string{"app", "sidecar"}, index[v1ID])
+	assert.Equal(t, []string{"app"}, index[v2ID])
 }
 
 func TestBuildArtifactIndexEmpty(t *testing.T) {
@@ -35,11 +37,12 @@ func TestBuildAssetEntries(t *testing.T) {
 	assets := []models.Asset{
 		{Model: models.Model{ID: assetID}, Name: "my-app", ExternalEntityID: new("ext-123")},
 	}
+	v1ID := uuid.New()
 	versions := map[uuid.UUID][]models.AssetVersion{
-		assetID: {{Name: "v1.0", AssetID: assetID}},
+		assetID: {{ID: v1ID, Name: "v1.0", AssetID: assetID}},
 	}
-	artifactIndex := map[uuid.UUID]map[string][]string{
-		assetID: {"v1.0": {"app", "sidecar"}},
+	artifactIndex := map[uuid.UUID][]string{
+		v1ID: {"app", "sidecar"},
 	}
 
 	entries := transformer.BuildAssetEntries(assets, versions, artifactIndex)
@@ -57,7 +60,7 @@ func TestBuildAssetEntriesSkipsNilExternalEntityID(t *testing.T) {
 	assets := []models.Asset{
 		{Model: models.Model{ID: assetID}, Name: "internal", ExternalEntityID: nil},
 	}
-	entries := transformer.BuildAssetEntries(assets, map[uuid.UUID][]models.AssetVersion{}, map[uuid.UUID]map[string][]string{})
+	entries := transformer.BuildAssetEntries(assets, map[uuid.UUID][]models.AssetVersion{}, map[uuid.UUID][]string{})
 	assert.Empty(t, entries)
 }
 
@@ -66,7 +69,7 @@ func TestBuildAssetEntriesSkipsAssetsWithNoVersions(t *testing.T) {
 	assets := []models.Asset{
 		{Model: models.Model{ID: assetID}, Name: "app", ExternalEntityID: new("ext-1")},
 	}
-	entries := transformer.BuildAssetEntries(assets, map[uuid.UUID][]models.AssetVersion{}, map[uuid.UUID]map[string][]string{})
+	entries := transformer.BuildAssetEntries(assets, map[uuid.UUID][]models.AssetVersion{}, map[uuid.UUID][]string{})
 	assert.Empty(t, entries)
 }
 
@@ -87,13 +90,15 @@ func TestBuildExternalProjectTree(t *testing.T) {
 		{Model: models.Model{ID: assetID}, Name: "asset", ProjectID: projectID, ExternalEntityID: new("asset-ext")},
 		{Model: models.Model{ID: subAssetID}, Name: "sub-asset", ProjectID: subProjectID, ExternalEntityID: new("sub-asset-ext")},
 	}
+	versionID := uuid.New()
+	subVersionID := uuid.New()
 	versions := []models.AssetVersion{
-		{Name: "v1", AssetID: assetID},
-		{Name: "v1", AssetID: subAssetID},
+		{ID: versionID, Name: "v1", AssetID: assetID},
+		{ID: subVersionID, Name: "v1", AssetID: subAssetID},
 	}
 	artifacts := []models.Artifact{
-		{AssetID: assetID, AssetVersionName: "v1", ArtifactName: "app"},
-		{AssetID: subAssetID, AssetVersionName: "v1", ArtifactName: "sub-app"},
+		{AssetID: assetID, AssetVersionID: versionID, ArtifactName: "app"},
+		{AssetID: subAssetID, AssetVersionID: subVersionID, ArtifactName: "sub-app"},
 	}
 
 	result := transformer.BuildExternalProjectTree(projects, subProjects, assets, versions, artifacts)

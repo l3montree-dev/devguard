@@ -14,6 +14,9 @@ type Advisory struct {
 	Severity         string            `json:"severity" gorm:"type:text;column:severity"`
 	VectorString     string            `json:"vectorString" gorm:"type:text;column:vector_string"`
 	Events           []VulnEvent       `json:"events" gorm:"foreignKey:SecurityAdvisoryID;constraint:OnDelete:CASCADE;"`
+
+	// not stored on advisories, filled by selecting withAssetVersionName
+	AssetVersionName string `json:"assetVersionName" gorm:"->;-:migration"`
 }
 type AffectedPackage struct {
 	Model
@@ -45,6 +48,10 @@ func (m *Advisory) BeforeSave(tx *gorm.DB) error {
 
 func (m Advisory) GetEvents() []VulnEvent {
 	return m.Events
+}
+
+func (m Advisory) GetAssetVersionName() string {
+	return m.AssetVersionName
 }
 
 func (m Advisory) GetArtifacts() []Artifact {

@@ -25,8 +25,8 @@ import (
 
 func TestReplayHistory(t *testing.T) {
 	t.Run("accumulates the open vulns from the stored diffs day by day", func(t *testing.T) {
-		artifactName := "TestArtifact"
-		assetVersionName := "Test"
+		artifactID := uuid.New()
+		assetVersionID := uuid.New()
 		assetID := uuid.New()
 
 		today := time.Now().UTC()
@@ -51,9 +51,8 @@ func TestReplayHistory(t *testing.T) {
 			}
 
 			riskHistory[i] = models.ArtifactRiskHistory{
-				ArtifactName:     artifactName,
-				AssetVersionName: assetVersionName,
-				AssetID:          assetID,
+				ArtifactID: artifactID,
+				AssetID:    assetID,
 				History: models.History{
 					Day: startDay.AddDate(0, 0, i),
 					Distribution: models.Distribution{
@@ -70,13 +69,13 @@ func TestReplayHistory(t *testing.T) {
 
 		statisticsService := NewStatisticsService(statisticsRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository)
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, dayBeforeStart).Return(nil, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, time.Time{}, dayBeforeStart).Return([]models.ArtifactRiskHistory{}, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, startDay, today).Return(riskHistory, nil)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, dayBeforeStart).Return(nil, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, time.Time{}, dayBeforeStart).Return([]models.ArtifactRiskHistory{}, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, startDay, today).Return(riskHistory, nil)
 
 		mockListWithCVE(dependencyVulnRepository, vulnsByID)
 
-		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactName, assetVersionName, assetID, startDay, today)
+		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactID, assetVersionID, startDay, today)
 		assert.NoError(t, err)
 		assert.Len(t, replayedHistory, 90)
 		for index, historyItem := range replayedHistory {
@@ -85,9 +84,8 @@ func TestReplayHistory(t *testing.T) {
 	})
 
 	t.Run("starts from the empty root when there is no snapshot", func(t *testing.T) {
-		artifactName := "TestArtifact"
-		assetVersionName := "Test"
-		assetID := uuid.New()
+		artifactID := uuid.New()
+		assetVersionID := uuid.New()
 
 		startDay := testDay
 		end := startDay.AddDate(0, 0, 2)
@@ -102,20 +100,20 @@ func TestReplayHistory(t *testing.T) {
 
 		statisticsService, assetRiskHistoryRepository, dependencyVulnRepository := newTestStatisticsService(t)
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, dayBeforeStart).Return(nil, nil)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, dayBeforeStart).Return(nil, nil)
 
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, time.Time{}, dayBeforeStart).Return([]models.ArtifactRiskHistory{
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, time.Time{}, dayBeforeStart).Return([]models.ArtifactRiskHistory{
 			newDiffRow(startDay.AddDate(0, 0, -3), []string{a.String(), b.String()}, nil),
 			newDiffRow(startDay.AddDate(0, 0, -2), nil, []string{a.String()}),
 		}, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, startDay, end).Return([]models.ArtifactRiskHistory{
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, startDay, end).Return([]models.ArtifactRiskHistory{
 			newDiffRow(startDay, []string{c.String()}, nil),
 			newDiffRow(startDay.AddDate(0, 0, 1), nil, []string{b.String()}),
 			newDiffRow(startDay.AddDate(0, 0, 2), nil, nil),
 		}, nil)
 		mockListWithCVE(dependencyVulnRepository, vulnsByID)
 
-		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactName, assetVersionName, assetID, startDay, end)
+		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactID, assetVersionID, startDay, end)
 		assert.NoError(t, err)
 		if assert.Len(t, replayedHistory, 3) {
 			assert.ElementsMatch(t, []string{b.String(), c.String()}, replayedHistory[0].Low)
@@ -125,8 +123,8 @@ func TestReplayHistory(t *testing.T) {
 	})
 
 	t.Run("starts from the snapshot when one exists", func(t *testing.T) {
-		artifactName := "TestArtifact"
-		assetVersionName := "Test"
+		artifactID := uuid.New()
+		assetVersionID := uuid.New()
 		assetID := uuid.New()
 
 		startDay := testDay
@@ -142,9 +140,8 @@ func TestReplayHistory(t *testing.T) {
 		}
 
 		snapshot := models.ArtifactRiskHistory{
-			ArtifactName:     artifactName,
-			AssetVersionName: assetVersionName,
-			AssetID:          assetID,
+			ArtifactID: artifactID,
+			AssetID:    assetID,
 			History: models.History{
 				Day: startDay.AddDate(0, 0, -5),
 				Distribution: models.Distribution{
@@ -156,18 +153,18 @@ func TestReplayHistory(t *testing.T) {
 
 		statisticsService, assetRiskHistoryRepository, dependencyVulnRepository := newTestStatisticsService(t)
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, dayBeforeStart).Return(&snapshot, nil)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, dayBeforeStart).Return(&snapshot, nil)
 
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, snapshot.Day, dayBeforeStart).Return([]models.ArtifactRiskHistory{
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, snapshot.Day, dayBeforeStart).Return([]models.ArtifactRiskHistory{
 			newDiffRow(startDay.AddDate(0, 0, -3), []string{c.String()}, []string{a.String()}),
 		}, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, startDay, end).Return([]models.ArtifactRiskHistory{
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, startDay, end).Return([]models.ArtifactRiskHistory{
 			newDiffRow(startDay, []string{d.String()}, nil),
 			newDiffRow(startDay.AddDate(0, 0, 1), nil, nil),
 		}, nil)
 		mockListWithCVE(dependencyVulnRepository, vulnsByID)
 
-		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactName, assetVersionName, assetID, startDay, end)
+		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactID, assetVersionID, startDay, end)
 		assert.NoError(t, err)
 		if assert.Len(t, replayedHistory, 2) {
 			for _, historyItem := range replayedHistory {
@@ -178,9 +175,8 @@ func TestReplayHistory(t *testing.T) {
 	})
 
 	t.Run("normalizes the start to the beginning of its UTC day", func(t *testing.T) {
-		artifactName := "TestArtifact"
-		assetVersionName := "Test"
-		assetID := uuid.New()
+		artifactID := uuid.New()
+		assetVersionID := uuid.New()
 
 		// 01:30 at UTC+3 is still the day before in UTC
 		start := time.Date(2025, time.March, 1, 1, 30, 0, 0, time.FixedZone("UTC+3", 3*60*60))
@@ -189,29 +185,29 @@ func TestReplayHistory(t *testing.T) {
 
 		statisticsService, assetRiskHistoryRepository, _ := newTestStatisticsService(t)
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, startDay.AddDate(0, 0, -1)).Return(nil, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, time.Time{}, startDay.AddDate(0, 0, -1)).Return([]models.ArtifactRiskHistory{}, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, startDay, end).Return([]models.ArtifactRiskHistory{}, nil)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, startDay.AddDate(0, 0, -1)).Return(nil, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, time.Time{}, startDay.AddDate(0, 0, -1)).Return([]models.ArtifactRiskHistory{}, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, startDay, end).Return([]models.ArtifactRiskHistory{}, nil)
 
-		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactName, assetVersionName, assetID, start, end)
+		replayedHistory, err := statisticsService.replayRiskHistoryFromDiffs(context.Background(), &artifactID, assetVersionID, start, end)
 		assert.NoError(t, err)
 		assert.Empty(t, replayedHistory)
 	})
 }
 
 func TestOpenVulnIDsAt(t *testing.T) {
-	artifactName := "TestArtifact"
-	assetVersionName := "Test"
+	artifactID := uuid.New()
+	assetVersionID := uuid.New()
 	assetID := uuid.New()
 	at := testDay
 
 	t.Run("is empty without a snapshot and without diffs", func(t *testing.T) {
 		statisticsService, assetRiskHistoryRepository, _ := newTestStatisticsService(t)
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, at).Return(nil, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, time.Time{}, at).Return([]models.ArtifactRiskHistory{}, nil)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, at).Return(nil, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, time.Time{}, at).Return([]models.ArtifactRiskHistory{}, nil)
 
-		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactName, assetVersionName, assetID, at)
+		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactID, assetVersionID, at)
 		assert.NoError(t, err)
 		assert.Empty(t, openVulnIDs)
 	})
@@ -220,13 +216,13 @@ func TestOpenVulnIDsAt(t *testing.T) {
 		statisticsService, assetRiskHistoryRepository, _ := newTestStatisticsService(t)
 		a, b, c := uuid.NewString(), uuid.NewString(), uuid.NewString()
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, at).Return(nil, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, time.Time{}, at).Return([]models.ArtifactRiskHistory{
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, at).Return(nil, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, time.Time{}, at).Return([]models.ArtifactRiskHistory{
 			newDiffRow(at.AddDate(0, 0, -2), []string{a, b}, nil),
 			newDiffRow(at.AddDate(0, 0, -1), []string{c}, []string{a}),
 		}, nil)
 
-		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactName, assetVersionName, assetID, at)
+		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactID, assetVersionID, at)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []string{b, c}, slices.Collect(maps.Keys(openVulnIDs)))
 	})
@@ -236,9 +232,8 @@ func TestOpenVulnIDsAt(t *testing.T) {
 		low, medium, high, critical, openedLater, notInRiskBuckets := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
 
 		snapshot := models.ArtifactRiskHistory{
-			ArtifactName:     artifactName,
-			AssetVersionName: assetVersionName,
-			AssetID:          assetID,
+			ArtifactID: artifactID,
+			AssetID:    assetID,
 			History: models.History{
 				Day: at.AddDate(0, 0, -10),
 				Distribution: models.Distribution{
@@ -253,12 +248,12 @@ func TestOpenVulnIDsAt(t *testing.T) {
 			},
 		}
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, at).Return(&snapshot, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, snapshot.Day, at).Return([]models.ArtifactRiskHistory{
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, at).Return(&snapshot, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, snapshot.Day, at).Return([]models.ArtifactRiskHistory{
 			newDiffRow(at.AddDate(0, 0, -5), []string{openedLater}, []string{medium}),
 		}, nil)
 
-		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactName, assetVersionName, assetID, at)
+		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactID, assetVersionID, at)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []string{low, high, critical, openedLater}, slices.Collect(maps.Keys(openVulnIDs)))
 	})
@@ -267,9 +262,9 @@ func TestOpenVulnIDsAt(t *testing.T) {
 		statisticsService, assetRiskHistoryRepository, _ := newTestStatisticsService(t)
 		snapshotErr := errors.New("snapshot lookup failed")
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, at).Return(nil, snapshotErr)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, at).Return(nil, snapshotErr)
 
-		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactName, assetVersionName, assetID, at)
+		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactID, assetVersionID, at)
 		assert.ErrorIs(t, err, snapshotErr)
 		assert.Nil(t, openVulnIDs)
 	})
@@ -278,10 +273,10 @@ func TestOpenVulnIDsAt(t *testing.T) {
 		statisticsService, assetRiskHistoryRepository, _ := newTestStatisticsService(t)
 		historyErr := errors.New("history lookup failed")
 
-		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, at).Return(nil, nil)
-		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactName, assetVersionName, assetID, time.Time{}, at).Return(nil, historyErr)
+		assetRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &artifactID, assetVersionID, at).Return(nil, nil)
+		assetRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &artifactID, assetVersionID, time.Time{}, at).Return(nil, historyErr)
 
-		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactName, assetVersionName, assetID, at)
+		openVulnIDs, err := statisticsService.openVulnIDsAt(context.Background(), &artifactID, assetVersionID, at)
 		assert.ErrorIs(t, err, historyErr)
 		assert.Nil(t, openVulnIDs)
 	})
@@ -403,8 +398,7 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 			row := env.saved[i]
 
 			assert.Equal(t, endOfDay(begin.AddDate(0, 0, i)), row.Day)
-			assert.Equal(t, env.artifact.ArtifactName, row.ArtifactName)
-			assert.Equal(t, env.artifact.AssetVersionName, row.AssetVersionName)
+			assert.Equal(t, env.artifact.ID, row.ArtifactID)
 			assert.Equal(t, env.artifact.AssetID, row.AssetID)
 
 			assert.Equal(t, want.open, row.OpenDependencyVulns, "day %d", i)
@@ -572,7 +566,7 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		lookupErr := errors.New("vuln lookup failed")
 
 		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
-		env.statisticsRepository.EXPECT().GetDependencyVulnsWithEvents(mock.Anything, mock.Anything, env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID).
+		env.statisticsRepository.EXPECT().GetDependencyVulnsWithEvents(mock.Anything, mock.Anything, env.artifact.ID, env.artifact.AssetVersionID, env.artifact.AssetID).
 			Return(nil, lookupErr)
 
 		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, begin.AddDate(0, 0, 2))
@@ -615,7 +609,7 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		env := newRebuildTestEnv(t)
 		snapshotErr := errors.New("snapshot lookup failed")
 
-		env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, snapshotErr)
+		env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, snapshotErr)
 
 		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, testDay, testDay.AddDate(0, 0, 2))
 		assert.ErrorIs(t, err, snapshotErr)
@@ -659,8 +653,8 @@ func TestUpdateArtifactRiskAggregation(t *testing.T) {
 		// the window ends the day after the one year limit, so only two days are left once the start is limited
 		end := endOfDay(oneYearAgo).AddDate(0, 0, 1)
 
-		env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-		env.artifactRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, time.Time{}, mock.Anything).Return([]models.ArtifactRiskHistory{}, nil)
+		env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+		env.artifactRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, time.Time{}, mock.Anything).Return([]models.ArtifactRiskHistory{}, nil)
 		env.expectVulns()
 		env.expectLastHistoryUpdateSaved()
 
@@ -714,7 +708,7 @@ func newRebuildTestEnv(t *testing.T) *rebuildTestEnv {
 
 	env := &rebuildTestEnv{
 		t:                             t,
-		artifact:                      &models.Artifact{ArtifactName: "TestArtifact", AssetVersionName: "Test", AssetID: uuid.New()},
+		artifact:                      &models.Artifact{ID: uuid.New(), ArtifactName: "TestArtifact", AssetVersionID: uuid.New(), AssetID: uuid.New()},
 		statisticsRepository:          mocks.NewStatisticsRepository(t),
 		artifactRiskHistoryRepository: mocks.NewArtifactRiskHistoryRepository(t),
 		assetVersionRepository:        mocks.NewAssetVersionRepository(t),
@@ -741,13 +735,13 @@ func (env *rebuildTestEnv) expectStartState(at time.Time, snapshot *models.Artif
 		from = snapshot.Day
 	}
 
-	env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID, at).Return(snapshot, nil)
-	env.artifactRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID, from, at).Return(diffsSinceSnapshot, nil)
+	env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, &env.artifact.ID, env.artifact.AssetVersionID, at).Return(snapshot, nil)
+	env.artifactRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &env.artifact.ID, env.artifact.AssetVersionID, from, at).Return(diffsSinceSnapshot, nil)
 }
 
 // expectVulns answers the lookup of the artifact's vulns with their complete event history, the rebuild derives the state of every day from it
 func (env *rebuildTestEnv) expectVulns(vulns ...models.DependencyVuln) {
-	env.statisticsRepository.EXPECT().GetDependencyVulnsWithEvents(mock.Anything, mock.Anything, env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID).
+	env.statisticsRepository.EXPECT().GetDependencyVulnsWithEvents(mock.Anything, mock.Anything, env.artifact.ID, env.artifact.AssetVersionID, env.artifact.AssetID).
 		Return(vulns, nil)
 }
 

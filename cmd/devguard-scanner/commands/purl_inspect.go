@@ -83,7 +83,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
-	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s", config.RuntimeBaseConfig.APIURL, netURL.PathEscape(purlString))
+	url := fmt.Sprintf("%s/api/v1/vulndb/purl-inspect/%s/", config.RuntimeBaseConfig.APIURL, netURL.PathEscape(purlString))
 	fmt.Println("Inspecting PURL via API:", url)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)

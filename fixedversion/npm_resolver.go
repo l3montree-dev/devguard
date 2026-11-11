@@ -26,12 +26,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/package-url/packageurl-go"
 	"golang.org/x/mod/semver"
-	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -42,13 +40,12 @@ const (
 
 type NPMResolver struct {
 	// the same packages show up in the paths of many vulns - caching them keeps us below the egress rate limit
-	packuments *expirable.LRU[string, *NPMResponse]
-	inflight   singleflight.Group
+	packuments *utils.LoadingCache[*NPMResponse]
 }
 
 func NewNPMResolver() *NPMResolver {
 	return &NPMResolver{
-		packuments: expirable.NewLRU[string, *NPMResponse](npmPackumentCacheSize, nil, npmPackumentCacheTTL),
+		packuments: utils.NewLoadingCache[*NPMResponse](npmPackumentCacheTTL, npmPackumentCacheSize, nil),
 	}
 }
 
@@ -150,30 +147,21 @@ func (resolver *NPMResolver) FetchPackageMetadata(purl packageurl.PackageURL) (*
 
 // fetchPackument returns the cached packument or fetches it - concurrent fetches of the same package share one request
 func (resolver *NPMResolver) fetchPackument(fullName string) (*NPMResponse, error) {
-	if packument, ok := resolver.packuments.Get(fullName); ok {
-		if packument == nil {
-			return nil, npmPackageNotFound(fullName)
-		}
-		return packument, nil
-	}
-
-	res, err, _ := resolver.inflight.Do(fullName, func() (any, error) {
+	packument, err := resolver.packuments.GetOrLoad(fullName, func() (*NPMResponse, error) {
 		packument, err := getNPMPackument(fullName)
 		if errors.Is(err, errNPMPackageNotFound) {
 			// unpublished packages (e.g. the project itself or private packages) are cached as nil
-			resolver.packuments.Add(fullName, nil)
-			return nil, npmPackageNotFound(fullName)
+			return nil, nil
 		}
-		if err != nil {
-			return nil, err
-		}
-		resolver.packuments.Add(fullName, packument)
-		return packument, nil
+		return packument, err
 	})
 	if err != nil {
 		return nil, err
 	}
-	return res.(*NPMResponse), nil
+	if packument == nil {
+		return nil, npmPackageNotFound(fullName)
+	}
+	return packument, nil
 }
 
 // this currently implements the versioning algorithm for "always take latest"

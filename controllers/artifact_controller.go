@@ -127,9 +127,9 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     normalize.ArtifactName(body.ArtifactName),
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   normalize.ArtifactName(body.ArtifactName),
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
 
 	tx := c.artifactRepository.GetDB(ctx.Request().Context(), nil).Begin()
@@ -145,7 +145,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	}
 
 	//check if the upstream urls are valid urls
-	boms, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), tx, asset, artifact.ArtifactName, artifact.AssetVersionName, utils.Map(body.InformationSources, informationSourceToString))
+	boms, invalid := c.FetchSbomsFromUpstream(ctx.Request().Context(), tx, asset, artifact.ArtifactName, assetVersion.Name, utils.Map(body.InformationSources, informationSourceToString))
 	if len(invalid) > 0 {
 		return ctx.JSON(400, invalid)
 	}
@@ -155,7 +155,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	var bom normalize.MerkleForest
 	for _, upstream := range boms {
 		var err error
-		bom, err = c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM)
+		bom, err = c.assetVersionService.UpdateSBOM(ctx.Request().Context(), tx, org, project, asset, assetVersion, artifact, upstream.Source, upstream.SBOM)
 		if err != nil {
 			tx.Rollback()
 			slog.Error("could not update sbom", "err", err, "origin", upstream.Source)
@@ -176,7 +176,7 @@ func (c *ArtifactController) Create(ctx shared.Context) error {
 	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
 	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 
-	return ctx.JSON(201, transformer.ArtifactModelToDTO(artifact))
+	return ctx.JSON(201, transformer.ArtifactInAssetVersionToDTO(artifact, assetVersion.Name))
 }
 
 // @Summary Delete artifact
@@ -233,7 +233,7 @@ func (c *ArtifactController) DeleteArtifact(ctx shared.Context) error {
 	}
 
 	// DeleteArtifact now handles depth recalculation internally
-	err = c.artifactService.DeleteArtifact(reqCtx, asset.ID, assetVersion.Name, artifact.ArtifactName)
+	err = c.artifactService.DeleteArtifact(reqCtx, assetVersion, artifact.ArtifactName)
 
 	if err != nil {
 		return err
@@ -269,7 +269,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	reqCtx := ctx.Request().Context()
 	userAgent := ctx.Request().UserAgent()
 
-	artifact, err := c.artifactService.ReadArtifact(reqCtx, nil, artifactName, assetVersion.Name, asset.ID)
+	artifact, err := c.artifactService.ReadArtifact(reqCtx, nil, artifactName, assetVersion.ID)
 	if err != nil {
 		return err
 	}
@@ -307,10 +307,10 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	defer tx.Rollback()
 
 	//check if the upstream urls are valid urls
-	boms, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, tx, asset, artifactName, artifact.AssetVersionName, toAddUrls)
+	boms, invalidURLs := c.FetchSbomsFromUpstream(reqCtx, tx, asset, artifactName, assetVersion.Name, toAddUrls)
 	// each newly configured source is stored as its own SBOM
 	for _, upstream := range boms {
-		if err := c.assetVersionService.StoreSBOM(reqCtx, tx, assetVersion, artifact.ArtifactName, upstream.Source, upstream.SBOM); err != nil {
+		if err := c.assetVersionService.StoreSBOM(reqCtx, tx, artifact, upstream.Source, upstream.SBOM); err != nil {
 			slog.Error("could not update sbom", "err", err, "origin", upstream.Source)
 			return echo.NewHTTPError(500, "could not update sbom").WithInternal(err)
 		}
@@ -335,7 +335,7 @@ func (c *ArtifactController) UpdateArtifact(ctx shared.Context) error {
 	events.NotifySBOMCreatedWithVulns(reqCtx, c.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))
 
 	response := ArtifactUpdateResponse{
-		Artifact:    transformer.ArtifactModelToDTO(artifact),
+		Artifact:    transformer.ArtifactInAssetVersionToDTO(artifact, assetVersion.Name),
 		InvalidURLs: invalidURLs,
 	}
 	return ctx.JSON(200, response)
@@ -486,7 +486,7 @@ func (c *ArtifactController) buildOpenVex(ctx shared.Context) (vex.VEX, error) {
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact)
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -505,7 +505,7 @@ func (c *ArtifactController) CSAFJSON(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	artifact := shared.GetArtifact(ctx)
 
-	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact)
 	if err != nil {
 		return err
 	}
@@ -527,7 +527,7 @@ func (c *ArtifactController) buildCycloneDXVex(ctx shared.Context) (*cdx.BOM, er
 		return nil, fmt.Errorf("FRONTEND_URL environment variable is not set")
 	}
 
-	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact.ArtifactName)
+	dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +551,7 @@ func (c *ArtifactController) buildCycloneDXVex(ctx shared.Context) (*cdx.BOM, er
 func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
 	asset := shared.GetAsset(ctx)
-	artifact := shared.GetArtifact(ctx).ArtifactName
+	artifact := shared.GetArtifact(ctx)
 
 	// check if external entity provider
 	templateName := "default"
@@ -578,7 +578,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 	result := utils.Concurrently(
 		func() (any, error) {
 			// get the vex from the asset version
-			dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifact))
+			dependencyVulns, err := c.artifactService.GatherVexInformation(ctx.Request().Context(), assetVersion, &artifact)
 			if err != nil {
 				return nil, err
 			}
@@ -635,7 +635,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return result, nil
 		},
 		func() (any, error) {
-			distribution, err := c.statisticsService.GetArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID, time.Now(), time.Now()) // only the last entry
+			distribution, err := c.statisticsService.GetArtifactRiskHistory(ctx.Request().Context(), &artifact.ID, assetVersion.ID, time.Now(), time.Now()) // only the last entry
 			if len(distribution) == 0 {
 				return models.Distribution{}, nil
 			}
@@ -643,7 +643,7 @@ func (c *ArtifactController) BuildVulnerabilityReportPDF(ctx shared.Context) err
 			return distribution[0].Distribution, err
 		},
 		func() (any, error) {
-			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+			return c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, &artifact.ID, assetVersion.ID)
 		},
 	)
 

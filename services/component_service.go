@@ -177,9 +177,9 @@ func (s *ComponentService) GetAndSaveLicenseInformation(ctx context.Context, tx 
 	var sboms []models.SBOM
 	var err error
 	if artifactName != nil {
-		sboms, err = s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.AssetID, assetVersion.Name, *artifactName)
+		sboms, err = s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.ID, *artifactName)
 	} else {
-		sboms, err = s.sbomRepository.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
+		sboms, err = s.sbomRepository.FindByAssetVersion(ctx, tx, assetVersion.ID)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load sboms")

@@ -19,7 +19,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -74,7 +73,7 @@ func DependencyVulnToDTO(f models.DependencyVuln) dtos.DependencyVuln {
 		TicketURL:                    f.TicketURL,
 		ManualTicketCreation:         f.ManualTicketCreation,
 		RiskRecalculatedAt:           f.RiskRecalculatedAt,
-		Artifacts:                    utils.Map(f.Artifacts, ArtifactModelToDTO),
+		Artifacts:                    ArtifactsInAssetVersionToDTO(f.Artifacts, f.AssetVersionName),
 		Signature:                    f.Signature,
 		AssetSignature:               f.AssetSignature,
 	}
@@ -100,7 +99,7 @@ func DependencyVulnToDetailedDTO(dependencyVuln models.DependencyVuln) dtos.Deta
 			TicketURL:                    dependencyVuln.TicketURL,
 			ManualTicketCreation:         dependencyVuln.ManualTicketCreation,
 			RiskRecalculatedAt:           dependencyVuln.RiskRecalculatedAt,
-			Artifacts:                    utils.Map(dependencyVuln.Artifacts, ArtifactModelToDTO),
+			Artifacts:                    ArtifactsInAssetVersionToDTO(dependencyVuln.Artifacts, dependencyVuln.AssetVersionName),
 			Signature:                    dependencyVuln.Signature,
 			AssetSignature:               dependencyVuln.AssetSignature,
 		},
@@ -127,8 +126,8 @@ func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.Affecte
 		PurlWithoutVersion: ac.PurlWithoutVersion,
 		Ecosystem:          ac.Ecosystem,
 		Version:            ac.Version,
-		SemverIntroduced:   ac.SemverIntroduced,
-		SemverFixed:        ac.SemverFixed,
+		SemverIntroduced:   ac.SemverIntroduced.StringPtr(),
+		SemverFixed:        ac.SemverFixed.StringPtr(),
 		VersionIntroduced:  ac.VersionIntroduced,
 		VersionFixed:       ac.VersionFixed,
 	}
@@ -138,18 +137,12 @@ func affectedComponentToDTOWithoutCVEs(ac models.AffectedComponent) dtos.Affecte
 // one for each unique path through the dependency graph. This ensures that the same CVE
 // appearing through different dependency paths (e.g., A -> trivy -> stdlib vs A -> cosign -> stdlib)
 // creates separate vulnerability records.
-func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, forest normalize.MerkleForest, assetID uuid.UUID, assetVersionName string, artifactName string) []models.DependencyVuln {
-	vulns := VulnInPackageToDependencyVulnsWithoutArtifact(vuln, forest, assetID, assetVersionName)
+func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, forest normalize.MerkleForest, assetVersion models.AssetVersion, artifact models.Artifact) []models.DependencyVuln {
+	vulns := VulnInPackageToDependencyVulnsWithoutArtifact(vuln, forest, assetVersion)
 
 	// set the artifact for each vuln
 	for i := range vulns {
-		vulns[i].Artifacts = []models.Artifact{
-			{
-				ArtifactName:     artifactName,
-				AssetVersionName: assetVersionName,
-				AssetID:          assetID,
-			},
-		}
+		vulns[i].Artifacts = []models.Artifact{artifact}
 	}
 
 	return vulns
@@ -157,7 +150,7 @@ func VulnInPackageToDependencyVulns(vuln models.VulnInPackage, forest normalize.
 
 // VulnInPackageToDependencyVulnsWithoutArtifact converts a vulnerability to multiple DependencyVuln objects
 // based on all paths through the dependency graph.
-func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, forest normalize.MerkleForest, assetID uuid.UUID, assetVersionName string) []models.DependencyVuln {
+func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, forest normalize.MerkleForest, assetVersion models.AssetVersion) []models.DependencyVuln {
 	v := vuln
 	// Unescape URL-encoded characters (e.g., %2B -> +) to match the format stored in the database
 	stringPurl, err := normalize.PURLToString(v.Purl)
@@ -182,9 +175,10 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, fo
 		return []models.DependencyVuln{
 			{
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: assetVersionName,
-					AssetID:          assetID,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        assetVersion.AssetID,
 				},
+				AssetVersionName:      assetVersion.Name,
 				CVEID:                 v.CVEID,
 				ComponentPurl:         stringPurl,
 				ComponentFixedVersion: fixedVersion,
@@ -210,9 +204,10 @@ func VulnInPackageToDependencyVulnsWithoutArtifact(vuln models.VulnInPackage, fo
 
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				AssetVersionName: assetVersionName,
-				AssetID:          assetID,
+				AssetVersionID: assetVersion.ID,
+				AssetID:        assetVersion.AssetID,
 			},
+			AssetVersionName:      assetVersion.Name,
 			CVEID:                 v.CVEID,
 			ComponentPurl:         stringPurl,
 			ComponentFixedVersion: fixedVersion,

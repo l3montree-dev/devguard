@@ -85,6 +85,7 @@ func newExportCommand() *cobra.Command {
 				fx.NopLogger,
 				database.Module,
 				fx.Supply(database.GetPoolConfigFromEnv()),
+				events.Module,
 				repositories.Module,
 				services.ServiceModule,
 				vulndb.Module,

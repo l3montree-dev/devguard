@@ -53,22 +53,23 @@ func TestVEXRuleGroupEventLeavesVulnsWithoutOwnEvent(t *testing.T) {
 
 		// the same vulnerability on two asset versions - same CVE, same component,
 		// same path, so both rows share one asset_signature
-		createVuln := func(versionName string) models.DependencyVuln {
+		createVuln := func(version models.AssetVersion) models.DependencyVuln {
 			t.Helper()
 			artifact := models.Artifact{
-				ArtifactName:     "artifact-" + versionName,
-				AssetVersionName: versionName,
-				AssetID:          asset.ID,
+				ArtifactName:   "artifact-" + version.Name,
+				AssetVersionID: version.ID,
+				AssetID:        asset.ID,
 			}
 			require.NoError(t, f.DB.Create(&artifact).Error)
 
 			vuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetID:          asset.ID,
-					AssetVersionName: versionName,
-					State:            dtos.VulnStateOpen,
-					LastStateChange:  time.Now().Add(-1 * time.Hour),
+					AssetVersionID:  version.ID,
+					AssetID:         asset.ID,
+					State:           dtos.VulnStateOpen,
+					LastStateChange: time.Now().Add(-1 * time.Hour),
 				},
+				AssetVersionName:  version.Name,
 				CVEID:             cve.CVE,
 				ComponentPurl:     "pkg:npm/group-event-package@1.0.0",
 				VulnerabilityPath: []string{"pkg:npm/group-event-package@1.0.0"},
@@ -78,8 +79,8 @@ func TestVEXRuleGroupEventLeavesVulnsWithoutOwnEvent(t *testing.T) {
 			return vuln
 		}
 
-		mainVuln := createVuln(mainVersion.Name)
-		tagVuln := createVuln(tagVersion.Name)
+		mainVuln := createVuln(mainVersion)
+		tagVuln := createVuln(tagVersion)
 
 		reload := func(id string) models.DependencyVuln {
 			t.Helper()
@@ -135,9 +136,7 @@ func TestVEXRuleGroupEventLeavesVulnsWithoutOwnEvent(t *testing.T) {
 				v.ID, v.AssetVersionName)
 		}
 
-		// and the raw UPDATE never touches last_state_change, so the timestamp still
-		// points at a moment before the state actually changed
-		assert.Equal(t, stateChangeBefore.UTC(), updatedTag.LastStateChange.UTC(),
-			"last_state_change is left stale by the group UPDATE")
+		assert.True(t, updatedTag.LastStateChange.After(stateChangeBefore),
+			"last_state_change must move with the group UPDATE")
 	})
 }

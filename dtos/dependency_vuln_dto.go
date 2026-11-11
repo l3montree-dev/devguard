@@ -23,6 +23,8 @@ import (
 	"gorm.io/datatypes"
 )
 
+const ScoringMethodDevGuard = "DevGuard"
+
 type Severity string
 
 const (

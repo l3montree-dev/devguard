@@ -18,6 +18,7 @@ package scanner
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/dtos/sarif"
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
@@ -98,7 +100,7 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 		if err != nil {
 			slog.Debug("could not build asset slug path for link", "err", err)
 		} else {
-			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetSlugPath, slug.Make(assetVersionName)))
+			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", strings.TrimRight(webUI, "/"), assetSlugPath, slug.Make(assetVersionName)))
 			fmt.Printf("See all code risks at:\n%s\n", link)
 		}
 	}
@@ -113,7 +115,7 @@ func PrintSarifResults(report sarif.SarifSchema210Json, scannerID, assetName, we
 
 // PrintCycloneDXVexResults prints a table from a CycloneDX BOM VEX response.
 // Columns match PrintScaResults but without the Path column.
-func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI, ref string) error {
+func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, webUI, ref, artifactName string) error {
 	vulns := bom.Vulnerabilities
 	if vulns == nil || len(*vulns) == 0 {
 		slog.Info("No vulnerabilities found")
@@ -136,7 +138,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		cvss := 0.0
 		if v.Ratings != nil {
 			for _, r := range *v.Ratings {
-				if r.Score != nil && (r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31) {
+				if r.Score != nil && (r.Method != dtos.ScoringMethodDevGuard) {
 					cvss = *r.Score
 				}
 			}
@@ -169,15 +171,17 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 
 		risk := 0.0
+		hasRisk := false
 		cvss := 0.0
 		if v.Ratings != nil {
 			for _, r := range *v.Ratings {
 				if r.Score != nil {
-					if r.Method == cdx.ScoringMethodCVSSv3 || r.Method == cdx.ScoringMethodCVSSv31 {
+					if r.Method != dtos.ScoringMethodDevGuard {
 						cvss = *r.Score
-					}
-					if *r.Score > risk {
+					} else {
+						// its the risk value
 						risk = *r.Score
+						hasRisk = true
 					}
 				}
 			}
@@ -238,6 +242,11 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		}
 		prevLibrary = libraryName
 
+		riskStr := "-"
+		if hasRisk {
+			riskStr = fmt.Sprintf("%.2f", risk)
+		}
+
 		colorRow := func(s string) string { return s }
 		if exceedsThreshold {
 			colorRow = func(s string) string { return text.FgRed.Sprint(s) }
@@ -246,7 +255,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		tw.AppendRow(table.Row{
 			libraryName,
 			colorRow(v.ID),
-			colorRow(fmt.Sprintf("%.2f", risk)),
+			colorRow(riskStr),
 			colorRow(fmt.Sprintf("%.1f", cvss)),
 			colorRow(installedVersion),
 			colorRow(fixedVersion),
@@ -261,7 +270,7 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		if err != nil {
 			slog.Debug("could not build asset slug path for link", "err", err)
 		} else {
-			link := text.FgBlue.Sprint(fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetSlugPath, slug.Make(ref)))
+			link := text.FgBlue.Sprint(dependencyRisksLink(webUI, assetSlugPath, ref, artifactName))
 			fmt.Printf("See all dependency risks at:\n%s\n", link)
 		}
 	}
@@ -270,4 +279,14 @@ func PrintCycloneDXVexResults(bom cdx.BOM, failOnRisk, failOnCVSS, assetName, we
 		return fmt.Errorf("%d open vulnerabilities exceed the configured risk threshold", thresholdViolations)
 	}
 	return nil
+}
+
+func dependencyRisksLink(webUI, assetSlugPath, ref, artifactName string) string {
+	link := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", strings.TrimRight(webUI, "/"), assetSlugPath, slug.Make(ref))
+	if artifactName != "" {
+		q := url.Values{}
+		q.Set("artifact", artifactName)
+		link += "?" + q.Encode()
+	}
+	return link
 }

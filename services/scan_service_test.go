@@ -283,3 +283,38 @@ func mustMarshalJSON(t *testing.T, value any) string {
 	}
 	return string(data)
 }
+
+func TestSarifToFirstPartyVulnsKeepsAllResultLocations(t *testing.T) {
+	var sarifScan sarif.SarifSchema210Json
+	err := json.Unmarshal([]byte(`{
+		"version": "2.1.0",
+		"runs": [{
+			"tool": {"driver": {"name": "repro"}},
+			"results": [
+				{"ruleId": "rule-with-location", "message": {"text": "one location"},
+					"locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/a.js"}, "region": {"startLine": 1}}}]},
+				{"ruleId": "rule-without-location", "message": {"text": "no location"}},
+				{"ruleId": "rule-two-locations", "message": {"text": "two locations"},
+					"locations": [
+						{"physicalLocation": {"artifactLocation": {"uri": "src/b.js"}, "region": {"startLine": 10}}},
+						{"physicalLocation": {"artifactLocation": {"uri": "src/c.js"}, "region": {"startLine": 20}}}
+					]}
+			]
+		}]
+	}`), &sarifScan)
+	assert.NoError(t, err)
+
+	vulns, err := sarifToFirstPartyVulns(sarifScan, &models.AssetVersion{}, "repro-scanner")
+	assert.NoError(t, err)
+
+	found := map[string]string{}
+	for _, vuln := range vulns {
+		found[vuln.URI] = vuln.RuleID
+	}
+	assert.Equal(t, map[string]string{
+		"src/a.js": "rule-with-location",
+		"":         "rule-without-location",
+		"src/b.js": "rule-two-locations",
+		"src/c.js": "rule-two-locations",
+	}, found)
+}

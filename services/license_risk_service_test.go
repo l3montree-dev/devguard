@@ -32,11 +32,11 @@ import (
 func newLicenseRisk(componentPurl, assetVersionName string, assetID uuid.UUID) models.LicenseRisk {
 	return models.LicenseRisk{
 		Vulnerability: models.Vulnerability{
-			AssetVersionName: assetVersionName,
-			AssetID:          assetID,
-			State:            dtos.VulnStateOpen,
+			AssetID: assetID,
+			State:   dtos.VulnStateOpen,
 		},
-		ComponentPurl: componentPurl,
+		AssetVersionName: assetVersionName,
+		ComponentPurl:    componentPurl,
 	}
 }
 

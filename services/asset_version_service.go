@@ -99,15 +99,15 @@ func preferMarkdown(text sarif.MultiformatMessageString) string {
 // There is no diff to compute. The tree is addressed by its content, so an
 // unchanged rescan re-inserts rows that collide on the primary key and change
 // nothing, while a changed one inserts only the subtrees that actually differ.
-func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
-	if err := s.StoreSBOM(ctx, tx, assetVersion, artifactName, source, parsed); err != nil {
+func (s *assetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
+	if err := s.StoreSBOM(ctx, tx, artifact, source, parsed); err != nil {
 		return nil, err
 	}
-	return s.LoadArtifactSBOMs(ctx, tx, assetVersion, artifactName)
+	return s.LoadArtifactSBOMs(ctx, tx, assetVersion, artifact.ArtifactName)
 }
 
 // StoreSBOM is UpdateSBOM without reloading the artifact's SBOMs, for callers storing several sources before a single load
-func (s *assetVersionService) StoreSBOM(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName, source string, parsed *normalize.ParsedSBOM) error {
+func (s *assetVersionService) StoreSBOM(ctx context.Context, tx shared.DB, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM) error {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		return fmt.Errorf("FRONTEND_URL environment variable is not set")
@@ -123,10 +123,9 @@ func (s *assetVersionService) StoreSBOM(ctx context.Context, tx shared.DB, asset
 	}
 
 	if err := s.sbomRepository.SaveTree(ctx, tx, models.SBOM{
-		AssetID:          assetVersion.AssetID,
-		AssetVersionName: assetVersion.Name,
-		ArtifactName:     artifactName,
-		Source:           source,
+		ArtifactID: artifact.ID,
+		AssetID:    artifact.AssetID,
+		Source:     source,
 	}, parsed.Tree); err != nil {
 		return errors.Wrap(err, "could not store sbom")
 	}
@@ -143,7 +142,7 @@ func (s *assetVersionService) LoadComponentMetadata(ctx context.Context, tx shar
 		return nil, errors.Wrap(err, "could not load component metadata")
 	}
 
-	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
+	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(ctx, tx, assetVersion.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load license overwrites")
 	}
@@ -160,19 +159,19 @@ func (s *assetVersionService) LoadComponentMetadata(ctx context.Context, tx shar
 // ListSBOMs returns an artifact's SBOM rows - one per source, carrying the
 // source itself and the root hash of its tree.
 func (s *assetVersionService) ListSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) ([]models.SBOM, error) {
-	return s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName)
+	return s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.ID, artifactName)
 }
 
 // DeleteSBOMSource drops one SBOM source from an artifact. Only the pointer
 // goes; its subtrees stay for the garbage collector, since other SBOMs are
 // likely to share them.
 func (s *assetVersionService) DeleteSBOMSource(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName, source string) error {
-	return s.sbomRepository.DeleteBySource(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName, source)
+	return s.sbomRepository.DeleteBySource(ctx, tx, assetVersion.ID, artifactName, source)
 }
 
 // LoadSBOM loads the SBOM an artifact got from one source.
 func (s *assetVersionService) LoadSBOM(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName, source string) (normalize.MerkleForest, error) {
-	sboms, err := s.sbomRepository.FindBySource(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName, source)
+	sboms, err := s.sbomRepository.FindBySource(ctx, tx, assetVersion.ID, artifactName, source)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load sbom")
 	}
@@ -181,7 +180,7 @@ func (s *assetVersionService) LoadSBOM(ctx context.Context, tx shared.DB, assetV
 
 // LoadArtifactSBOMs loads every SBOM of one artifact - one tree per origin.
 func (s *assetVersionService) LoadArtifactSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string) (normalize.MerkleForest, error) {
-	sboms, err := s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.AssetID, assetVersion.Name, artifactName)
+	sboms, err := s.sbomRepository.FindByArtifact(ctx, tx, assetVersion.ID, artifactName)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load sboms of artifact")
 	}
@@ -190,7 +189,7 @@ func (s *assetVersionService) LoadArtifactSBOMs(ctx context.Context, tx shared.D
 
 // LoadAssetVersionSBOMs loads every SBOM of an asset version, across artifacts.
 func (s *assetVersionService) LoadAssetVersionSBOMs(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion) (normalize.MerkleForest, error) {
-	sboms, err := s.sbomRepository.FindByAssetVersion(ctx, tx, assetVersion.AssetID, assetVersion.Name)
+	sboms, err := s.sbomRepository.FindByAssetVersion(ctx, tx, assetVersion.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load sboms of asset version")
 	}
@@ -355,15 +354,15 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 		vuln.Ratings = &[]cdx.VulnerabilityRating{
 			{
 				Vector:   cve.Vector,
-				Method:   vectorToCVSSScoringMethod(cve.Vector),
+				Method:   utils.VectorToCVSSScoringMethod(cve.Vector),
 				Score:    &cvss,
-				Severity: scoreToSeverity(cvss),
+				Severity: utils.ScoreToSeverity(cvss),
 			},
 			{
 				Vector:        risk.Vector,
 				Method:        "DevGuard",
 				Score:         &risk.Risk,
-				Severity:      scoreToSeverity(risk.Risk),
+				Severity:      utils.ScoreToSeverity(risk.Risk),
 				Justification: risk.String(),
 			},
 		}
@@ -372,28 +371,6 @@ func (s *assetVersionService) BuildVeX(ctx context.Context, tx *gorm.DB, metadat
 	}
 
 	return transformer.CycloneDXVEXFromVulnerabilities(vulnerabilities, metadata)
-}
-
-func scoreToSeverity(score float64) cdx.Severity {
-	if score >= 9.0 {
-		return cdx.SeverityCritical
-	} else if score >= 7.0 {
-		return cdx.SeverityHigh
-	} else if score >= 4.0 {
-		return cdx.SeverityMedium
-	}
-	return cdx.SeverityLow
-}
-
-func vectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
-	if strings.Contains(vector, "CVSS:3.0") {
-		return cdx.ScoringMethodCVSSv3
-	} else if strings.Contains(vector, "CVSS:2.0") {
-		return cdx.ScoringMethodCVSSv2
-	} else if strings.Contains(vector, "CVSS:3.1") {
-		return cdx.ScoringMethodCVSSv31
-	}
-	return cdx.ScoringMethodCVSSv4
 }
 
 func dependencyVulnStateToImpactAnalysisState(state dtos.VulnState) cdx.ImpactAnalysisState {

@@ -7,9 +7,12 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/monitoring"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/telemetry"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -71,6 +74,15 @@ func (runner *DaemonRunner) CollectExternalEntityGarbage(ctx context.Context) er
 	return runner.externalEntityProviderService.CollectGarbage(ctx)
 }
 
+func (runner *DaemonRunner) CollectDebReleaseTimes(ctx context.Context) error {
+	return runner.debReleaseTimeService.Collect(ctx)
+}
+
+func (runner *DaemonRunner) SendTelemetry(ctx context.Context) error {
+	telemetry.SendAPIStartup(ctx, telemetry.ConfigFromEnv(), &utils.EgressClient, telemetry.NewGormAPIStatsCollector(runner.db), telemetry.RuntimeVersion(config.Version))
+	return nil
+}
+
 // job wraps fn into a queue handler: it bounds the run time, unmarshals the payload and alerts if fn fails.
 // A record deleted in the meantime is no failure - there is nothing left to do, so the job is not retried.
 func job[P events.Payload](errMsg string, fn func(ctx context.Context, payload P) error) events.NotifyHandler {
@@ -116,6 +128,7 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		{events.TopicSBOMGarbageCollection, "10 * * * *", "could not collect sbom garbage", runner.CollectSBOMGarbage, nil},
 		{events.TopicOpenSourceInsights, "15 * * * *", "could not update open source insight information", runner.UpdateOpenSourceInsightInformation, nil},
 		{events.TopicExternalEntityGarbage, "20 * * * *", "could not collect external entity garbage", runner.CollectExternalEntityGarbage, nil},
+		{events.TopicCollectDebReleaseTimes, "40 */12 * * *", "could not collect debian release times", runner.CollectDebReleaseTimes, nil},
 		// the sweep only enqueues the due steps of every asset, see assetPipelineSteps
 		{events.TopicAssetPipeline, "*/5 * * * *", "could not sweep asset pipeline", runner.sweepAssetPipeline, nil},
 
@@ -123,6 +136,7 @@ func (runner *DaemonRunner) RegisterJobs(schedule bool) error {
 		{events.TopicScan, "", "could not scan sboms", runner.ScanAllAssets, new(events.TopicFixedVersions)},
 		{events.TopicFixedVersions, "", "could not update fixed versions", runner.UpdateFixedVersions, new(events.TopicDirectDependencyFixedVersion)},
 		{events.TopicDirectDependencyFixedVersion, "", "could not resolve direct dependency fixed versions", runner.runDirectDependencyFixedVersions, nil},
+		{events.TopicTelemetry, "0 6 * * *", "could not send telemetry", runner.SendTelemetry, nil},
 	}
 
 	for _, daemon := range jobs {

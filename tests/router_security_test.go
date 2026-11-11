@@ -30,8 +30,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/router"
+	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -103,8 +105,10 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/compliance-components/:complianceComponentID/":                                                                                                shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/go":                                                                                                                  shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/go/*":                                                                                                                shared.RoleGuest,
+	"GET /api/v1/dependency-proxy/:secret/apk/*":                                                                                                               shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/deb/*":                                                                                                               shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/maven/*":                                                                                                             shared.RoleGuest,
+	"HEAD /api/v1/dependency-proxy/:secret/maven/*":                                                                                                            shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/composer/*":                                                                                                          shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/npm/:package":                                                                                                        shared.RoleGuest,
 	"GET /api/v1/dependency-proxy/:secret/npm/:package/":                                                                                                       shared.RoleGuest,
@@ -425,6 +429,16 @@ func setupIntotoTestKey(t *testing.T) {
 	t.Setenv("INTOTO_PRIVATE_KEY_PATH", keyPath)
 }
 
+// The dependency-proxy URL endpoints decrypt the per-secret signing key and 500 without one.
+func setupAppSideEncryptionKey(t *testing.T) {
+	t.Helper()
+	keyPath := t.TempDir() + "/app-side-encryption.key"
+	if err := os.WriteFile(keyPath, []byte(strings.Repeat("ab", 32)), 0600); err != nil {
+		t.Fatalf("failed to write encryption test key: %v", err)
+	}
+	t.Setenv(services.KeyFilePathENVName, keyPath)
+}
+
 type seededResources struct {
 	orgID                 uuid.UUID
 	orgSlug               string
@@ -472,6 +486,7 @@ func buildFullRouterServer(t *testing.T, public bool) (*echo.Echo, *TestApp) {
 	t.Cleanup(terminate)
 
 	setupIntotoTestKey(t)
+	setupAppSideEncryptionKey(t)
 
 	connCfg := pool.Config().ConnConfig
 	t.Setenv("POSTGRES_HOST", connCfg.Host)
@@ -607,8 +622,10 @@ func seedRBACFixture(t *testing.T, e *echo.Echo, app *TestApp, public bool, slug
 		t.Fatalf("failed to grant admin role: %v", err)
 	}
 
-	proxySecret := models.DependencyProxySecret{OrgID: &org.ID}
-	if err := app.DB.Create(&proxySecret).Error; err != nil {
+	// via the repository so the secret gets a signing key, like in production
+	proxySecret, err := repositories.NewDependencyProxyRepository(app.DB, services.NewDBEncryptionService()).
+		GetOrCreateByOrgID(ctx.Request().Context(), nil, org.ID)
+	if err != nil {
 		t.Fatalf("failed to seed dependency proxy secret: %v", err)
 	}
 

@@ -418,7 +418,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		}
 
 		// get the asset
-		assetVersion, err := githubIntegration.assetVersionRepository.Read(reqCtx, nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(reqCtx, nil, vuln.GetAssetVersionID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err

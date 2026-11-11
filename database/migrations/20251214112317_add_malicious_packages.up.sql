@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS public.malicious_affected_components (
     qualifiers TEXT,
     subpath TEXT,
     version TEXT,
-    semver_introduced public.semver,
-    semver_fixed public.semver,
+    semver_introduced bytea,
+    semver_fixed bytea,
     version_introduced TEXT,
     version_fixed TEXT
 );

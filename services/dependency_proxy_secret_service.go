@@ -77,3 +77,11 @@ func (s *dependencyProxySecretService) GetModelBySecret(ctx context.Context, sec
 
 	return scope, modelID, nil
 }
+
+func (s *dependencyProxySecretService) GetSigningKey(ctx context.Context, secret uuid.UUID) (string, string, error) {
+	return s.dependencyProxySecretRepository.GetSigningKey(ctx, nil, secret)
+}
+
+func (s *dependencyProxySecretService) BackfillSigningKeys(ctx context.Context) (int, error) {
+	return s.dependencyProxySecretRepository.BackfillSigningKeys(ctx, nil)
+}

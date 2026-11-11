@@ -58,30 +58,28 @@ func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepo
 // artifacts must call this explicitly.
 func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error {
 	type row struct {
-		ArtifactName        string
-		ArtifactVersionName string
-		ArtifactAssetID     uuid.UUID
-		DependencyVulnID    uuid.UUID
+		ArtifactID       uuid.UUID
+		DependencyVulnID uuid.UUID
 	}
 
 	rows := make([]row, 0, len(vulns))
 	for _, v := range vulns {
 		hash := v.CalculateHash()
 		for _, a := range v.Artifacts {
-			rows = append(rows, row{a.ArtifactName, a.AssetVersionName, a.AssetID, hash})
+			rows = append(rows, row{a.ID, hash})
 		}
 	}
 	if len(rows) == 0 {
 		return nil
 	}
 
-	placeholders := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?),", len(rows)), ",")
+	placeholders := strings.TrimSuffix(strings.Repeat("(?, ?),", len(rows)), ",")
 	return tx.Exec(
-		"INSERT INTO artifact_dependency_vulns (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id) VALUES "+
+		"INSERT INTO artifact_dependency_vulns (artifact_id, dependency_vuln_id) VALUES "+
 			placeholders+
 			" ON CONFLICT DO NOTHING",
 		utils.Flat(utils.Map(rows, func(r row) []any {
-			return []any{r.ArtifactName, r.ArtifactVersionName, r.ArtifactAssetID, r.DependencyVulnID}
+			return []any{r.ArtifactID, r.DependencyVulnID}
 		}))...,
 	).Error
 }
@@ -190,7 +188,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	return nil
 }
 
-func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
+func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
@@ -198,19 +196,15 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx 
 	for i := range vulnerabilities {
 		alreadyAssociated := false
 		for _, a := range vulnerabilities[i].Artifacts {
-			if a.ArtifactName == scannerID {
+			if a.ID == artifact.ID {
 				alreadyAssociated = true
 				break
 			}
 		}
 		if !alreadyAssociated {
-			vulnerabilities[i].Artifacts = append(vulnerabilities[i].Artifacts, models.Artifact{
-				ArtifactName:     scannerID,
-				AssetVersionName: vulnerabilities[i].AssetVersionName,
-				AssetID:          vulnerabilities[i].AssetID,
-			})
-			if err := tx.Exec("INSERT INTO artifact_dependency_vulns (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-				scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID, vulnerabilities[i].CalculateHash()).Error; err != nil {
+			vulnerabilities[i].Artifacts = append(vulnerabilities[i].Artifacts, artifact)
+			if err := tx.Exec("INSERT INTO artifact_dependency_vulns (artifact_id, dependency_vuln_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+				artifact.ID, vulnerabilities[i].CalculateHash()).Error; err != nil {
 				return err
 			}
 		}
@@ -223,36 +217,29 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx 
 	return nil
 }
 
-func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
+func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
 
 	vulnIDs := make([]string, len(vulnerabilities))
-	assetVersionNames := make([]string, len(vulnerabilities))
-	assetIDs := make([]string, len(vulnerabilities))
 
 	for i := range vulnerabilities {
 		filtered := make([]models.Artifact, 0, len(vulnerabilities[i].Artifacts))
 		for _, a := range vulnerabilities[i].Artifacts {
-			if a.ArtifactName != scannerID {
+			if a.ID != artifact.ID {
 				filtered = append(filtered, a)
 			}
 		}
 		vulnerabilities[i].Artifacts = filtered
 
 		vulnIDs[i] = vulnerabilities[i].CalculateHash().String()
-		assetVersionNames[i] = vulnerabilities[i].AssetVersionName
-		assetIDs[i] = vulnerabilities[i].AssetID.String()
 	}
 
-	if err := tx.Exec(`DELETE FROM artifact_dependency_vulns adv
-		USING unnest(?::uuid[], ?::text[], ?::uuid[]) AS t(dependency_vuln_id, asset_version_name, asset_id)
-		WHERE adv.dependency_vuln_id = t.dependency_vuln_id
-			AND adv.artifact_asset_version_name = t.asset_version_name
-			AND adv.artifact_asset_id = t.asset_id
-			AND adv.artifact_artifact_name = ?`,
-		pq.Array(vulnIDs), pq.Array(assetVersionNames), pq.Array(assetIDs), scannerID).Error; err != nil {
+	if err := tx.Exec(`DELETE FROM artifact_dependency_vulns
+		WHERE dependency_vuln_id = ANY (?::uuid[])
+			AND artifact_id = ?`,
+		pq.Array(vulnIDs), artifact.ID).Error; err != nil {
 		return err
 	}
 	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, vulnerabilities)
@@ -276,51 +263,55 @@ func (s *DependencyVulnService) RecalculateRawRiskAssessment(ctx context.Context
 	// create a new VulnEvent for each updated dependencyVuln
 
 	events := make([]models.VulnEvent, 0)
+	changed := make([]models.DependencyVuln, 0)
+	unchangedIDs := make([]string, 0)
+	now := time.Now()
 
 	for i, dependencyVuln := range dependencyVulns {
 		oldRiskAssessment := dependencyVuln.RiskAssessment
 		depth := max(len(dependencyVuln.VulnerabilityPath), 1)
 		newRiskAssessment := vulndb.RawRisk(dependencyVuln.CVE, env, depth)
+		dependencyVulns[i].RiskRecalculatedAt = now
 
 		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), dtos.VulnTypeDependencyVuln, userID, justification)
 			dependencyVulns[i].SetRawRiskAssessment(newRiskAssessment.Risk)
-			dependencyVulns[i].RiskRecalculatedAt = time.Now()
 			// apply the event on the dependencyVuln
 			statemachine.Apply(&dependencyVulns[i], ev)
 			events = append(events, ev)
+			changed = append(changed, dependencyVulns[i])
 		} else {
-			// only update the last calculated time
-			dependencyVulns[i].RiskRecalculatedAt = time.Now()
+			unchangedIDs = append(unchangedIDs, dependencyVulns[i].ID.String())
 		}
+	}
+
+	// rewriting every row of an unchanged vuln just to bump the timestamp produces huge upserts - one array parameter is enough
+	save := func(tx shared.DB) error {
+		if len(unchangedIDs) > 0 {
+			if err := tx.Exec("UPDATE dependency_vulns SET risk_recalculated_at = ? WHERE id = ANY(?::uuid[])", now, pq.Array(unchangedIDs)).Error; err != nil {
+				return fmt.Errorf("could not update risk recalculation time: %v", err)
+			}
+		}
+		if err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), changed); err != nil {
+			return fmt.Errorf("could not save dependencyVulns: %v", err)
+		}
+		if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
+			return fmt.Errorf("could not save events: %v", err)
+		}
+		return nil
 	}
 
 	// saving the dependencyVulns and the events HAS to be done in the same transaction
 	// it is crucial to maintain a consistent audit log of events
 	if tx == nil {
-		err := s.dependencyVulnRepository.Transaction(ctx, func(tx shared.DB) error {
-			if err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns); err != nil {
-				return fmt.Errorf("could not save dependencyVulns: %v", err)
-			}
-			if err := s.vulnEventRepository.SaveBatch(ctx, tx, events); err != nil {
-				return fmt.Errorf("could not save events: %v", err)
-			}
-			return nil
-		})
-		if err != nil {
+		if err := s.dependencyVulnRepository.Transaction(ctx, save); err != nil {
 			return nil, fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
 		return dependencyVulns, nil
 	}
 
-	err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns)
-	if err != nil {
-		return nil, fmt.Errorf("could not save dependencyVulns: %v", err)
-	}
-
-	err = s.vulnEventRepository.SaveBatch(ctx, tx, events)
-	if err != nil {
-		return nil, fmt.Errorf("could not save events: %v", err)
+	if err := save(tx); err != nil {
+		return nil, err
 	}
 	return dependencyVulns, nil
 }
@@ -367,7 +358,7 @@ func (s *DependencyVulnService) createVulnEventAndApply(ctx context.Context, tx 
 
 func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, userAgent *string) error {
 	// get all dependencyVulns for the assetVersion
-	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, nil, assetVersion.Name, asset.ID, nil)
+	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(ctx, nil, assetVersion.ID, nil)
 	if err != nil {
 		return fmt.Errorf("could not get dependencyVulns by asset version: %w", err)
 	}

@@ -43,7 +43,7 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		avService := f.App.AssetVersionService
 
 		// create an artifact
-		a := models.Artifact{ArtifactName: "artifact-x", AssetVersionName: assetVersion.Name, AssetID: asset.ID}
+		a := models.Artifact{ArtifactName: "artifact-x", AssetVersionID: assetVersion.ID, AssetID: asset.ID}
 		if err := f.DB.Create(&a).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -56,10 +56,11 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 
 		// create a dependency vuln referencing the CVE and the artifact
 		dv := models.DependencyVuln{
-			Vulnerability: models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID},
-			CVEID:         cve.CVE,
-			ComponentPurl: "pkg:maven/org.example/component-x@1.2.3",
-			Artifacts:     []models.Artifact{a},
+			Vulnerability:    models.Vulnerability{AssetVersionID: assetVersion.ID, AssetID: asset.ID},
+			AssetVersionName: assetVersion.Name,
+			CVEID:            cve.CVE,
+			ComponentPurl:    "pkg:maven/org.example/component-x@1.2.3",
+			Artifacts:        []models.Artifact{a},
 		}
 		if err := f.DB.Create(&dv).Error; err != nil {
 			t.Fatal(err)
@@ -74,13 +75,13 @@ func TestReleaseVEXMergeIntegration(t *testing.T) {
 		if err := f.DB.Create(&rel).Error; err != nil {
 			t.Fatal(err)
 		}
-		item := models.ReleaseItem{ReleaseID: rel.ID, ArtifactName: &a.ArtifactName, AssetVersionName: &a.AssetVersionName, AssetID: &a.AssetID}
+		item := models.ReleaseItem{ReleaseID: rel.ID, ArtifactID: &a.ID, AssetID: &a.AssetID}
 		if err := f.DB.Create(&item).Error; err != nil {
 			t.Fatal(err)
 		}
 
 		// controller
-		releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository, f.App.CSAFService)
+		releaseController := controllers.NewReleaseController(relService, avService, avRepo, dependencyVulnRepo, assetRepository, f.App.ArtifactRepository, f.App.CSAFService)
 
 		r := echo.New()
 		req := httptest.NewRequest("GET", "/projects/test-project/releases/"+rel.ID.String()+"/vex.json", nil)

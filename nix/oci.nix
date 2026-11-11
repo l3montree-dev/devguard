@@ -22,6 +22,13 @@ rec {
     trivy = trivyFromSource.package;
   };
 
+  # tzdata's `now.ck` self-test is time-dependent: since Nov 2026 it fails on
+  # 2026e ("zones America/Phoenix and America/Vancouver identical from now on").
+  # jq only needs tzdata for its own test suite, so skip tzdata's checks.
+  staticJq = pkgs.pkgsStatic.jq.override {
+    tzdata = pkgs.pkgsStatic.tzdata.overrideAttrs { doCheck = false; };
+  };
+
   # trivy is self-contained (scans its own source with its own freshly-built
   # binary); gitleaks and crane need it passed in to scan their own sources.
   trivyFromSource = import ./trivy.nix { inherit pkgs buildGo127Module; };
@@ -137,7 +144,7 @@ rec {
       devguardBinaries.devguardScannerSBOM
       semgrepSBOM
       pythonTools.sbom
-      pkgs.pkgsStatic.jq
+      staticJq
       pkgs.gettext
       pkgs.busybox
       pkgs.git
@@ -151,7 +158,7 @@ rec {
       # Static binaries as regular files at stable paths, so other images can copy them without knowing the store paths
       # e.g. COPY --from=ghcr.io/l3montree-dev/devguard/scanner:<version> /usr/local/bin/jq /jq
       mkdir -p usr/local/bin
-      cp ${pkgs.pkgsStatic.jq.bin}/bin/jq usr/local/bin/jq
+      cp ${staticJq.bin}/bin/jq usr/local/bin/jq
       cp ${craneFromSource.package}/bin/crane usr/local/bin/crane
       cp ${devguardBinaries.devguardScanner}/bin/devguard-scanner usr/local/bin/devguard-scanner
     '';

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
@@ -245,10 +246,8 @@ func (a *AssetVersionController) CycloneDXVexJSON(ctx shared.Context) error {
 // @Success 200 {array} dtos.DependencyVuln
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/affected-components/ [get]
 func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
-	artifactName := ctx.QueryParam("artifactName")
-
 	assetVersion := shared.GetAssetVersion(ctx)
-	dependencyVulns, err := a.getDependencyVulns(ctx.Request().Context(), assetVersion, utils.EmptyThenNil(artifactName))
+	dependencyVulns, err := a.getDependencyVulns(ctx.Request().Context(), assetVersion, maybeArtifactID(ctx))
 	if err != nil {
 		return err
 	}
@@ -258,8 +257,8 @@ func (a *AssetVersionController) AffectedComponents(ctx shared.Context) error {
 	}))
 }
 
-func (a *AssetVersionController) getDependencyVulns(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+func (a *AssetVersionController) getDependencyVulns(ctx context.Context, assetVersion models.AssetVersion, artifactID *uuid.UUID) ([]models.DependencyVuln, error) {
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.ID, artifactID)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +393,7 @@ func (a *AssetVersionController) Metrics(ctx shared.Context) error {
 	   	}
 	*/
 	// check if in-toto is enabled
-	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(ctx.Request().Context(), nil, assetVersion.Name, assetVersion.AssetID)
+	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(ctx.Request().Context(), nil, assetVersion.AssetID)
 	if err != nil {
 		return err
 	}
@@ -438,16 +437,15 @@ func escapeLatex(input string) string {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/ [get]
 func (a *AssetVersionController) ListArtifacts(ctx shared.Context) error {
 
-	assetID := shared.GetAsset(ctx).ID
 	assetVersion := shared.GetAssetVersion(ctx)
 
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, assetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetVersionID(ctx.Request().Context(), nil, assetVersion.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
 	}
 
-	return ctx.JSON(200, utils.Map(artifacts, transformer.ArtifactModelToDTO))
+	return ctx.JSON(200, transformer.ArtifactsInAssetVersionToDTO(artifacts, assetVersion.Name))
 }
 
 // @Summary Mark asset version as the default branch
@@ -511,7 +509,7 @@ func (a *AssetVersionController) ReadRootNodes(ctx shared.Context) error {
 	// get all artifacts from the asset version
 	assetVersion := shared.GetAssetVersion(ctx)
 	// get the artifacts for this asset version
-	artifacts, err := a.artifactService.GetArtifactsByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
+	artifacts, err := a.artifactService.GetArtifactsByAssetVersionID(ctx.Request().Context(), nil, assetVersion.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read artifacts").WithInternal(err)
 	}

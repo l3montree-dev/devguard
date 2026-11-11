@@ -47,8 +47,8 @@ func NewArtifactService(artifactRepository shared.ArtifactRepository,
 	}
 }
 
-func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
-	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(ctx, tx, assetID, assetVersionName)
+func (s *ArtifactService) GetArtifactsByAssetVersionID(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.Artifact, error) {
+	artifacts, err := s.artifactRepository.GetByAssetVersionID(ctx, tx, assetVersionID)
 	if err != nil {
 		return nil, err
 	}
@@ -56,57 +56,61 @@ func (s *ArtifactService) GetArtifactsByAssetIDAndAssetVersionName(ctx context.C
 	return artifacts, nil
 }
 
-func (s *ArtifactService) SaveArtifact(ctx context.Context, tx shared.DB, artifact *models.Artifact) error {
-	return s.artifactRepository.Save(ctx, tx, artifact)
+func (s *ArtifactService) FindOrCreateArtifact(ctx context.Context, tx shared.DB, artifact *models.Artifact) error {
+	return s.artifactRepository.FindOrCreate(ctx, tx, artifact)
 }
 
-func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetID uuid.UUID, assetVersionName string, artifactName string) error {
+func (s *ArtifactService) DeleteArtifact(ctx context.Context, assetVersion models.AssetVersion, artifactName string) error {
 	// Execute deletion in a transaction
 	if err := s.componentRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
 		// Drop this artifact's SBOMs. Only the pointers go: the subtrees stay
 		// for the garbage collector, since other artifacts may share them.
-		if err := s.sbomRepository.DeleteByArtifact(ctx, tx, assetID, assetVersionName, artifactName); err != nil {
-			slog.Error("failed to delete sboms for artifact", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+		if err := s.sbomRepository.DeleteByArtifact(ctx, tx, assetVersion.ID, artifactName); err != nil {
+			slog.Error("failed to delete sboms for artifact", "assetID", assetVersion.AssetID, "assetVersionName", assetVersion.Name, "artifactName", artifactName, "error", err)
 			return err
 		}
 
 		// Delete the artifact record itself
-		err := s.artifactRepository.DeleteArtifact(ctx, tx, assetID, assetVersionName, artifactName)
+		err := s.artifactRepository.DeleteArtifact(ctx, tx, assetVersion.ID, artifactName)
 		if err != nil {
-			slog.Error("failed to delete artifact record", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName, "error", err)
+			slog.Error("failed to delete artifact record", "assetID", assetVersion.AssetID, "assetVersionName", assetVersion.Name, "artifactName", artifactName, "error", err)
 			return err
 		}
 
-		slog.Info("artifact deleted successfully", "assetID", assetID, "assetVersionName", assetVersionName, "artifactName", artifactName)
+		slog.Info("artifact deleted successfully", "assetID", assetVersion.AssetID, "assetVersionName", assetVersion.Name, "artifactName", artifactName)
 		return nil
 	}); err != nil {
 		return err
 	}
 
 	// after the commit - the cleanup has to see the committed state
-	events.NotifyArtifactDeleted(ctx, s.broker, assetID)
+	events.NotifyArtifactDeleted(ctx, s.broker, assetVersion.AssetID)
 
 	return nil
 }
 
-func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionName string, assetID uuid.UUID) (models.Artifact, error) {
-	return s.artifactRepository.ReadArtifact(ctx, tx, name, assetVersionName, assetID)
+func (s *ArtifactService) ReadArtifact(ctx context.Context, tx shared.DB, name string, assetVersionID uuid.UUID) (models.Artifact, error) {
+	return s.artifactRepository.ReadArtifact(ctx, tx, name, assetVersionID)
 }
 
 // GatherVexInformation returns the unfixed dependency vulns for an asset
 // version, trimming each vuln's Artifacts down to the requested artifact (if
 // any). Each asset version's own state is authoritative for VEX export - it
 // is never overridden based on another branch's state.
-func (s *ArtifactService) GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifactName *string) ([]models.DependencyVuln, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+func (s *ArtifactService) GatherVexInformation(ctx context.Context, assetVersion models.AssetVersion, artifact *models.Artifact) ([]models.DependencyVuln, error) {
+	var artifactID *uuid.UUID
+	if artifact != nil {
+		artifactID = &artifact.ID
+	}
+	dependencyVulns, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersion(ctx, nil, assetVersion.ID, artifactID)
 	if err != nil {
 		return nil, err
 	}
 
-	if artifactName != nil {
+	if artifact != nil {
 		for i := range dependencyVulns {
 			dependencyVulns[i].Artifacts = utils.Filter(dependencyVulns[i].Artifacts, func(a models.Artifact) bool {
-				return a.ArtifactName == *artifactName
+				return a.ID == artifact.ID
 			})
 		}
 	}

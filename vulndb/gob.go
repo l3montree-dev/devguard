@@ -12,6 +12,7 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/datatypes"
 )
@@ -54,8 +55,8 @@ type GobMaliciousComponent struct {
 	PurlWithoutVersion string
 	Ecosystem          string
 	Version            *string
-	SemverIntroduced   *string
-	SemverFixed        *string
+	SemverIntroduced   *normalize.Semver
+	SemverFixed        *normalize.Semver
 	VersionIntroduced  *string
 	VersionFixed       *string
 }

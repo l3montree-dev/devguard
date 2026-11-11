@@ -2,6 +2,145 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.18.2] - 2026-11-06
+
+### Changed
+
+- **Telemetry ping is sent daily** — instead of once on API startup, the instance now sends its anonymous usage ping every day at 06:00 as a daemon job.
+
+### Fixed
+
+- **`replace_pg_semver_with_bytea` migration no longer loads the `pg_semver` library** — the shared library is no longer shipped, so `ALTER COLUMN ... TYPE` and `TRUNCATE` (which rebuilds indexes) failed on it. The migration now drops the `semver_introduced` and `semver_fixed` columns of `affected_components` and `malicious_affected_components`, re-adds them as `bytea` and recreates their indexes
+- **GitLab risk labels are refreshed every 7 days** — the labels were created only once per asset and never updated afterwards
+- **Default branch not set for scans without `X-Asset-Ref`** — if the header is missing, the ref falls back to `main`, and `main` is now also used as the default branch
+- **Nix setup no longer overrides PostgreSQL Python packages**, which caused a reproducibility issue
+
+---
+
+## [v1.18.1] - 2026-11-06
+
+### Fixed
+
+- **API ran out of memory during the hourly vulnerability scan** — the scan determines the paths from a vulnerable component to every SBOM containing it. It enumerated every single path, even though at most 11 paths per SBOM are stored. Dependency graphs in which many packages share the same dependencies (e.g. the Rust proc-macro crates around `proc-macro2`) have millions of such paths, so the scan used up all memory and the pod was OOM killed.
+---
+
+## [v1.18.0] - 2026-11-05
+
+Thanks to external contributors [@Xenira](https://github.com/Xenira) for caching the lint target, which cuts the lint time from about 4 minutes to 6 seconds, and [@lsmith77](https://github.com/lsmith77) for fixing the `publiccode.yml` source repository URL! 🎉
+
+### Added
+
+- **CEL rules for the dependency proxy** — proxy configs are now written as CEL expressions instead of fixed options. This applies to all ecosystems (npm, Go, PyPI, Maven, Composer, Aline and Debian). The package struct available in expressions has optional types, and undefined fields are guarded. Configs are validated with struct tags, and the hash of the proxy configs is part of the cache key
+- **Alpine dependency proxy** — the proxy now serves Alpine packages. The package index only lists allowed packages and is signed with a per-secret signing key. Existing secrets get a key through a backfill migration, and new secrets get one on creation
+- **Debian proxy builds its own `Packages.xz` and `Packages.gz`**, so tools like Renovate can read the filtered index. Release times are fetched twice a day
+- **Dependency proxy hides malicious versions** from the package metadata it serves
+- **Maven proxy supports `HEAD` requests** and sets the `Last-Modified` header
+- **Dependency table search by alias** — the dependency table can now be searched for CVE aliases
+- **`devguard-scanner sca` warns about shallow Go binaries** — for a compiled Go binary only the flat module list is known, without the dependencies between the modules. The scanner warns and shows how to provide a supplementary SBOM via `--sbomPath`
+- **VulnDB v5** — new workflow for exporting the vulnerability database. The `vulndb` workflow has a `diffToPrevious` input to disable the quick-diff when exporting to a new vulndb path. Scheduled runs always diff
+
+### Changed
+
+- **CSAF VEX import maps more information to VEX rules** — CSAF flags and description notes are mapped to VEX rule justifications, and products are also read from `product_tree` branches
+- **Risk assessment can be "N/A"** — CVEs without a CVSS score (`-1`) now yield `-1` for the risk and all risk metrics instead of a calculated value
+- The proxy limits the size of upstream responses, strips upstream response headers and sets content type headers on its own responses
+- `pg_semver` is no longer required. The extension is removed from the migrations, the init SQL and the Nix setup
+- The `make lint` target caches its results, which cuts the lint time considerably
+- `publiccode.yml` points `url` to the source repository
+- **`devguard-scanner` uses private temp directories** — SBOMs, scan results (SAST, IaC, secret scanning), the semgrep home and downloaded scanner configs are written to a fresh directory per run (config files with `0600`) and removed afterwards, instead of to fixed or guessable paths in the shared temp directory
+- **`devguard-scanner` fails on configs it cannot sanitize** — if a downloaded scanner config cannot be parsed or re-marshaled for sanitization, the scan now fails instead of using the unsanitized config
+
+### Fixed
+
+- **`last_state_change` not updated** when a group VEX rule event was applied
+- **Overview statistics showed risk and CVSS as equal**
+- **Mermaid diagrams** — all non-alphanumeric characters in node ids are sanitized, which fixes broken diagrams
+- **Danger zone validation** — an asset can no longer be made public while its project is private (the update is rejected with a `409`), and the organization and project controllers received similar checks
+- Sanitization of request paths in the dependency proxy
+- **Organization access errors** — a missing organization and denied access to one both return `404` with "could not find organization", and the middleware no longer writes the status code twice
+- **VulnDB v2, v3, v4 and v4.1 workflows failed** since GitHub's `ubuntu-latest` moved to Ubuntu 26, which has no `apt-key`. The PostgreSQL apt key is now set via `signed-by`, so the vulnerability database is exported for older versions again
+
+### Dependencies
+
+- Flake update. The dependency proxy model uses new column names, which are migrated automatically
+- **PostgreSQL image** — barman's Python dependencies are patched to pyasn1 0.6.5 ([GHSA-2qm8-x737-gmw5](https://github.com/advisories/GHSA-2qm8-x737-gmw5)) and PyJWT 2.15.0 (PYSEC-2026-4183) until nixpkgs ships the fixed versions
+
+---
+
+## [v1.17.2]
+
+### Added
+
+- **`devguard-scanner provenance generate`** — generates the unsigned in-toto statement with a SLSA v1 provenance predicate for the artifacts a CI run built, to be passed on to `provenance sign`. `--image` takes built images (reference with digest), `--path` takes built files to hash, `--input key=value` (repeatable) records the workflow inputs under `externalParameters.inputs`, `--startedOn` / `--finishedOn` set the build times (RFC3339) and `--output` writes to a file instead of stdout
+- Path flags of the scanner accept comma separated lists of paths
+
+### Changed
+
+- **SLSA build provenance references the workflow** — the signed provenance records the CI configuration that started the run (repository, path and ref, derived from `workflow_ref` on GitHub and `ci_config_ref_uri` on GitLab) instead of recording all token claims in `internalParameters`. For GitLab the `ci_config_ref_uri` has to belong to the instance that issued the token, otherwise the request is rejected
+- The error returned for untrusted issuers now tells verifiers to pin the full `builder.id` including the host
+
+### Fixed
+
+- **SLSA signing key id mismatch** — the signature key id is now the sha256 of the DER encoded public key, which verifiers can compute from the published public key, instead of the TUF key id derived by securesystemslib
+
+### Dependencies
+
+- Updated all Go and Python dependencies
+
+---
+
+## [v1.17.1] - 2026-10-27
+
+### Fixed
+
+- **SLSA build provenance builder id** — `devguard-scanner` v1.17.0 set `runDetails.builder.id` in generated SLSA provenance to `https://devguard.org` instead of `devguard.org`. Admission policies that pin the builder id to `devguard.org`, like the Kyverno `verify-image-signatures` policy of the Helm chart, rejected the v1.17.0 images. The id is `devguard.org` again. Provenance already attested on v1.17.0 images keeps `https://devguard.org`, so policies that verify it need to accept both values (the Helm chart does since its next release)
+- **`devguard-cli vulndb export` failed to start** — the events module was missing from the command's setup. It is registered again
+
+---
+
+## [v1.17.0] - 2026-10-26
+
+### Security
+
+- This release fixes some security issues. We will release further information later.
+
+### Added
+
+- **SLSA build provenance signing** — `POST /slsa/build-provenance/` takes an in-toto v1 statement with a SLSA v1 provenance predicate and the CI job's OIDC workload identity token (`X-Workload-Identity-Token` header). DevGuard verifies the token with its issuer, writes the verified identity into the provenance and signs it.
+- **Custom upstream registries for the dependency proxy** — dependency proxy configs take a new `registries` map (`npm`, `go`, `pypi`, `maven`, `composer`, `deb` → URL), so a proxy can sit in front of a private or mirrored registry instead of the public default
+- **Dependency proxy cache statistics** — `GET /admin/statistics/dependency-proxy-cache/` returns stats for the whole instance, and `GET …/dependency-proxy/cache-stats/` returns them per organization, project and asset (requires `manage` scope and update permission)
+- **Supplementary components in `devguard-scanner sca`** — `--upstreamPURL` adds components that no package manifest lists (for example vendored dependencies in a container image) to the SBOM. `--upstreamVCS` (`vcsType:vcsURL@vcsRevision`) adds VCS information and is matched to `--upstreamPURL` by index. Both flags can be repeated, and the scanner validates the given purls and warns about suspicious ones
+- `NumberForAssetsWithSBOM` on the instance dashboard
+- The scanner now links to the scanned artifact's dependency risks, using an `?artifact=` query parameter ([#2601](https://github.com/l3montree-dev/devguard/issues/2601))
+- `FindLicenseRisks` asset pipeline stage
+- `make vulndb` imports the vulnerability database, for faster local setup
+- `jq` is now part of the scanner image. Static binaries are copied out of the Nix store so their paths are predictable
+- River UI added to `docker-compose.yaml`, available on port `4040`
+
+### Changed
+
+- **Background jobs run on River Queue** — the daemons and the asset pipeline are now [River](https://riverqueue.com) jobs. River's tables live in the regular DevGuard database and its migrations run automatically, so no extra infrastructure is needed. Leader election and the old worker package have been removed
+- **Overhauled vulnerability scan in the asset pipeline** — vulnerable paths are now resolved in memory with a breadth-first search over the SBOM merkle tree, which stops early when the number of paths explodes.
+- **Auto reopen is now a VEX rule** — the per-asset `vulnAutoReopenAfterDays` setting is replaced by a "reopened" VEX rule that is evaluated against accepted vulnerabilities.
+- **Unauthenticated dependency proxy routes removed** — the dependency proxy (npm, Go, PyPI, Maven, Composer, Debian and OCI) is now only served under the secret-scoped `/dependency-proxy/{secret}/…` and `/v2/{secret}/…` routes. `DEPENDENCY_PROXY_OCI_PUBLIC_ENABLED` no longer has any effect. **Breaking** for clients that used the routes without a secret
+- **Dependency proxy cache split per organization** — every organization (secret) gets its own cache. `DEPENDENCY_PROXY_CACHE_MAX_SIZE_MB` (default 1024) is now the total size for the whole instance and is spread across all caches.
+- **Breaking:** `vulnerabilityName` in vuln events was renamed to `resourceIdentifier`
+- Request DTOs now have upper length limits on free-text fields (for example title 256, description 4000), and a new semgrep rule flags unbounded string fields. DTO types lost their `DTO` suffix
+- Project tokens need `manage` scope and project create permission to create releases, and the same scope and permission model applies to creating projects
+- `LOG_LEVEL` is now respected (`debug`, `info`, `warn`, `error`). The default is still `debug`
+- GitHub App installation callbacks return proper HTTP errors, and failures to save the installation now return 500 instead of 400
+- Removed `POST …/components/licenses/refresh/` and `POST …/dependency-vulns/sync/`. Licenses and dependency vulnerabilities are refreshed by the asset pipeline
+
+### Fixed
+
+- **Scanner showed CVSS as risk** — `devguard-scanner` treated any CVSS rating as the risk value and only recognised CVSS 3.x ratings. Risk is now read only from the `DevGuard` rating and shows `-` when there is none, and the scan endpoint reports the correct CVSS version for each vector ([#3077](https://github.com/l3montree-dev/devguard/issues/3077))
+- PAT public keys with leading zero bytes were encoded incorrectly, which could break PAT authentication for those keys
+- Project tokens can create assets, and organization tokens can create projects
+- Event links for compliance posture events now include `framework_control_id`, so the frontend can build them
+- Project avatars are kept in search results
+- Kratos database password mismatch in `initdb.sql`
+- Trailing slashes in the web UI URL no longer produce double slashes in scanner links
+
 ## [v1.16.1] - 2026-10-08
 
 ### Added

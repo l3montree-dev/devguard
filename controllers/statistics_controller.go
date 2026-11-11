@@ -47,9 +47,8 @@ func NewStatisticsController(statisticsService shared.StatisticsService, statist
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/average-fixing-time/ [get]
 func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	artifact := ctx.QueryParam("artifactName")
 
-	averages, err := c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	averages, err := c.statisticsRepository.AverageFixingTimes(ctx.Request().Context(), nil, maybeArtifactID(ctx), assetVersion.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get average fixing time").WithInternal(err)
 	}
@@ -71,15 +70,13 @@ func (c *StatisticsController) GetAverageFixingTimes(ctx shared.Context) error {
 // @Success 200 {array} dtos.RiskHistory
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/risk-history/ [get]
 func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error {
-	artifact := ctx.QueryParam("artifactName")
 	// get the start and end query params
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
 
 	assetVersion := shared.GetAssetVersion(ctx)
-	asset := shared.GetAsset(ctx)
 
-	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, asset.ID, start, end)
+	results, err := c.getArtifactRiskHistory(ctx.Request().Context(), maybeArtifactID(ctx), assetVersion.ID, start, end)
 	if err != nil {
 		slog.Error("Error getting assetversion risk history", "error", err)
 		return ctx.JSON(500, nil)
@@ -94,7 +91,7 @@ func (c *StatisticsController) GetArtifactRiskHistory(ctx shared.Context) error 
 	return ctx.JSON(200, dtoResults)
 }
 
-func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artifactName *string, assetVersionName string, assetID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
+func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start, end string) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")
@@ -111,7 +108,7 @@ func (c *StatisticsController) getArtifactRiskHistory(ctx context.Context, artif
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactName, assetVersionName, assetID, beginTime, endTime)
+	return c.statisticsService.GetArtifactRiskHistory(ctx, artifactID, assetVersionID, beginTime, endTime)
 }
 
 // @Summary Get risk history for an asset across all asset versions
@@ -258,8 +255,7 @@ func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/stats/component-risk/ [get]
 func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	assetVersion := shared.GetAssetVersion(ctx)
-	artifact := ctx.QueryParam("artifactName")
-	results, err := c.statisticsService.GetComponentRisk(ctx.Request().Context(), utils.EmptyThenNil(artifact), assetVersion.Name, assetVersion.AssetID)
+	results, err := c.statisticsService.GetComponentRisk(ctx.Request().Context(), maybeArtifactID(ctx), assetVersion.ID)
 
 	if err != nil {
 		return err

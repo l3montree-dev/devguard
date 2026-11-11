@@ -170,7 +170,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx shared.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(reqCtx, nil, vuln.GetAssetVersionName(), vuln.GetAssetID())
+		assetVersion, err := g.assetVersionRepository.Read(reqCtx, nil, vuln.GetAssetVersionID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err

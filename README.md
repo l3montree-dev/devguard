@@ -10,7 +10,7 @@
 <h3 align="center">Open-source vulnerability management for the full software supply chain</h3>
 
 <p align="center">
-  An <a href="https://owasp.org/www-project-devguard/">OWASP Incubating Project</a> · Made in Germany 🇩🇪 for the world 🌍
+  An <a href="https://owasp.org/www-project-devguard/">OWASP Incubating Project</a> & <a href="https://openssf.landscape2.io/?item=openssf-members--general--devguard">OpenSSF General Member</a> · Made in Germany 🇩🇪 for the world 🌍
 </p>
 
 <p align="center">
@@ -25,6 +25,7 @@
 
 <p align="center">
   <a href="https://www.bestpractices.dev/projects/8928"><img src="https://www.bestpractices.dev/projects/8928/badge" alt="OpenSSF Best Practices"></a>
+  <a href="https://openssf.landscape2.io/?item=openssf-members--general--devguard"><img src="https://img.shields.io/badge/OpenSSF%20Landscape-5699C6" alt="OpenSSF Landscape"></a>
   <a href="https://goreportcard.com/report/github.com/l3montree-dev/devguard"><img src="https://goreportcard.com/badge/github.com/l3montree-dev/devguard" alt="Go Report Card"></a>
   <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License: AGPL-3.0"></a>
   <a href="https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue" alt="Help Wanted"></a>

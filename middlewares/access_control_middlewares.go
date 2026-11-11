@@ -74,14 +74,12 @@ func OrganizationAccessControlMiddleware(obj shared.Object, act shared.Action) e
 
 			allowed, err := rbac.IsAllowed(ctx.Request().Context(), session, &org, obj, act, actorScope)
 			if err != nil {
-				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
 			}
 
 			// check if the user has the required role
 			if !allowed {
 				slog.Error("access denied in accessControlMiddleware", "actorID", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act)
-				ctx.Response().WriteHeader(404)
 				return echo.NewHTTPError(404, "could not find organization")
 			}
 
@@ -231,7 +229,7 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 
 			org, err := organizationService.ReadBySlug(ctx.Request().Context(), organization)
 			if err != nil {
-				return echo.NewHTTPError(404, "organization not found").WithInternal(err)
+				return echo.NewHTTPError(404, "could not find organization").WithInternal(err)
 			}
 
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
@@ -380,7 +378,7 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 				slog.Error("could not get artifactName from url", "err", err)
 				return echo.NewHTTPError(400, "invalid artifactName")
 			}
-			artifact, err := artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.Name, asset.ID)
+			artifact, err := artifactRepository.ReadArtifact(ctx.Request().Context(), nil, artifactName, assetVersion.ID)
 			if err != nil {
 				slog.Error("could not find artifact in ShareMiddleware", "assetID", assetID, "artifactName", artifactName, "err", err)
 				return echo.NewHTTPError(404, "could not find artifact")

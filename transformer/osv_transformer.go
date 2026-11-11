@@ -285,7 +285,8 @@ func processRange(r dtos.Range, ecosystem string, purl packageurl.PackageURL) []
 // ok=false when fixed is set but cannot be parsed, in which case the range should be
 // dropped entirely by the caller.
 func buildRangeComponent(ecosystem string, purl packageurl.PackageURL, introduced, fixed string) (models.AffectedComponent, bool) {
-	var semverIntroduced, semverFixed, versionIntroduced, versionFixed *string
+	var semverIntroduced, semverFixed *normalize.Semver
+	var versionIntroduced, versionFixed *string
 	if purl.Type == "deb" || purl.Type == "rpm" || purl.Type == "apk" {
 		if introduced != "0" && introduced != "" {
 			versionIntroduced = &introduced
@@ -299,14 +300,14 @@ func buildRangeComponent(ecosystem string, purl packageurl.PackageURL, introduce
 			if err != nil {
 				return models.AffectedComponent{}, false
 			}
-			semverIntroduced = &semverInt
+			semverIntroduced = normalize.SemverPtr(&semverInt)
 		}
 		if fixed != "" {
 			converted, err := normalize.ConvertToSemver(fixed)
 			if err != nil {
 				return models.AffectedComponent{}, false
 			}
-			semverFixed = &converted
+			semverFixed = normalize.SemverPtr(&converted)
 		}
 	}
 
@@ -321,7 +322,7 @@ func processVersions(versions []string, ecosystem string, purl packageurl.Packag
 	return components
 }
 
-func newAffectedComponent(ecosystem string, purl packageurl.PackageURL, semverIntroduced, semverFixed, version, versionIntroduced, versionFixed *string) models.AffectedComponent {
+func newAffectedComponent(ecosystem string, purl packageurl.PackageURL, semverIntroduced, semverFixed *normalize.Semver, version, versionIntroduced, versionFixed *string) models.AffectedComponent {
 	return models.AffectedComponent{
 		PurlWithoutVersion: normalize.ToPurlWithoutVersion(purl),
 		Ecosystem:          ecosystem,

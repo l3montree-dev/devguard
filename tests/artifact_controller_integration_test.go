@@ -37,17 +37,17 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		t.Run("should successfully delete an existing artifact", func(t *testing.T) {
 			// Create a test artifact
 			testArtifact := models.Artifact{
-				ArtifactName:     "test-artifact-delete",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "test-artifact-delete",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			err := f.DB.Create(&testArtifact).Error
 			assert.NoError(t, err)
 
 			// Verify artifact exists before deletion
 			var existingArtifact models.Artifact
-			err = f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
-				testArtifact.ArtifactName, testArtifact.AssetVersionName, testArtifact.AssetID).
+			err = f.DB.Where("artifact_name = ? AND asset_version_id = ?",
+				testArtifact.ArtifactName, testArtifact.AssetVersionID).
 				First(&existingArtifact).Error
 			assert.NoError(t, err)
 			assert.Equal(t, testArtifact.ArtifactName, existingArtifact.ArtifactName)
@@ -67,8 +67,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 
 			// Verify artifact was actually deleted from database
 			var deletedArtifact models.Artifact
-			err = f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
-				testArtifact.ArtifactName, testArtifact.AssetVersionName, testArtifact.AssetID).
+			err = f.DB.Where("artifact_name = ? AND asset_version_id = ?",
+				testArtifact.ArtifactName, testArtifact.AssetVersionID).
 				First(&deletedArtifact).Error
 			assert.Error(t, err) // Should not find the artifact
 			assert.Contains(t, err.Error(), "record not found")
@@ -77,9 +77,9 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		t.Run("should handle deletion of artifact with dependencies", func(t *testing.T) {
 			// Create a test artifact with some related data
 			testArtifact := models.Artifact{
-				ArtifactName:     "test-artifact-with-deps",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "test-artifact-with-deps",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			err := f.DB.Create(&testArtifact).Error
 			assert.NoError(t, err)
@@ -104,13 +104,14 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			// This prevents race condition with cleanup goroutines from other tests
 			testDepVuln := models.DependencyVuln{
 				Vulnerability: models.Vulnerability{
-					AssetVersionName: assetVersion.Name,
-					AssetID:          asset.ID,
-					State:            dtos.VulnStateOpen,
+					AssetVersionID: assetVersion.ID,
+					AssetID:        asset.ID,
+					State:          dtos.VulnStateOpen,
 				},
-				CVEID:         testCVE.CVE,
-				ComponentPurl: testComponent.ID,
-				Artifacts:     []models.Artifact{testArtifact}, // Associate artifact immediately
+				AssetVersionName: assetVersion.Name,
+				CVEID:            testCVE.CVE,
+				ComponentPurl:    testComponent.ID,
+				Artifacts:        []models.Artifact{testArtifact}, // Associate artifact immediately
 			}
 			err = f.DB.Create(&testDepVuln).Error
 			assert.NoError(t, err)
@@ -132,8 +133,8 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 
 			// Verify artifact was deleted
 			var deletedArtifact models.Artifact
-			err = f.DB.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?",
-				testArtifact.ArtifactName, testArtifact.AssetVersionName, testArtifact.AssetID).
+			err = f.DB.Where("artifact_name = ? AND asset_version_id = ?",
+				testArtifact.ArtifactName, testArtifact.AssetVersionID).
 				First(&deletedArtifact).Error
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "record not found")
@@ -146,9 +147,9 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 		t.Run("should handle deletion of non-existent artifact gracefully", func(t *testing.T) {
 			// Create artifact object that doesn't exist in database
 			nonExistentArtifact := models.Artifact{
-				ArtifactName:     "non-existent-artifact",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "non-existent-artifact",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 
 			// Setup HTTP request and response
@@ -179,14 +180,14 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 
 			// Create artifacts with same name in different asset versions
 			artifact1 := models.Artifact{
-				ArtifactName:     "same-name-artifact",
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "same-name-artifact",
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			artifact2 := models.Artifact{
-				ArtifactName:     "same-name-artifact",
-				AssetVersionName: anotherAssetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   "same-name-artifact",
+				AssetVersionID: anotherAssetVersion.ID,
+				AssetID:        asset.ID,
 			}
 
 			err = f.DB.Create(&artifact1).Error
@@ -217,7 +218,7 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 				Find(&artifacts).Error
 			assert.NoError(t, err)
 			assert.Len(t, artifacts, 1)
-			assert.Equal(t, anotherAssetVersion.Name, artifacts[0].AssetVersionName)
+			assert.Equal(t, anotherAssetVersion.ID, artifacts[0].AssetVersionID)
 		})
 
 		t.Run("should clear sboms and license_risks after deleting all artifacts (bug #1810)", func(t *testing.T) {
@@ -248,15 +249,16 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			// Verify the scan stored an SBOM.
 			var depCount int64
 			f.DB.Table("sboms").
-				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
+				Joins("JOIN artifacts ON artifacts.id = sboms.artifact_id").
+				Where("artifacts.asset_version_id = ?", assetVersion.ID).
 				Count(&depCount)
 			assert.Greater(t, depCount, int64(0), "an sbom should be stored after the scan")
 
 			// Delete the artifact.
 			artifact := models.Artifact{
-				ArtifactName:     artifactName,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				ArtifactName:   artifactName,
+				AssetVersionID: assetVersion.ID,
+				AssetID:        asset.ID,
 			}
 			recorder2 := httptest.NewRecorder()
 			req2 := httptest.NewRequest("DELETE", "/artifacts/"+artifactName, nil)
@@ -272,14 +274,15 @@ func TestDeleteArtifactIntegration(t *testing.T) {
 			// other artifacts may share them.
 			var depCountAfter int64
 			f.DB.Table("sboms").
-				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
+				Joins("JOIN artifacts ON artifacts.id = sboms.artifact_id").
+				Where("artifacts.asset_version_id = ?", assetVersion.ID).
 				Count(&depCountAfter)
 			assert.Equal(t, int64(0), depCountAfter, "no sboms should remain after deleting all artifacts")
 
 			// license_risks must also be empty.
 			var licenseCountAfter int64
 			f.DB.Table("license_risks").
-				Where("asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).
+				Where("asset_version_id = ?", assetVersion.ID).
 				Count(&licenseCountAfter)
 			assert.Equal(t, int64(0), licenseCountAfter, "license_risks should be empty after deleting all artifacts")
 		})

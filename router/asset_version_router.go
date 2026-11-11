@@ -39,6 +39,7 @@ func NewAssetVersionRouter(
 	artifactController *controllers.ArtifactController,
 	externalReferenceController *controllers.ExternalReferenceController,
 	assetVersionRepository shared.AssetVersionRepository,
+	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
 	vulnEventRepository shared.VulnEventRepository,
 ) AssetVersionRouter {
@@ -53,12 +54,15 @@ func NewAssetVersionRouter(
 	assetVersionRouter.GET("/compliance/:policy/", complianceController.AssetVersionDetails)
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/components/licenses/", componentController.AssetVersionLicenseDistribution)
-	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
+	// these routes can be scoped to an artifact by the artifactName query parameter
+	artifactQuery := middlewares.ArtifactQueryMiddleware(artifactRepository)
+
+	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents, artifactQuery)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
 	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
-	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTimes)
-	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory)
-	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
+	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageFixingTimes, artifactQuery)
+	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetArtifactRiskHistory, artifactQuery)
+	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk, artifactQuery)
 	assetVersionRouter.GET("/attestations/", attestationController.List)
 	assetVersionRouter.GET("/in-toto/:supplyChainID/", intotoController.Read)
 	assetVersionRouter.GET("/components/", componentController.ListPaged)

@@ -50,13 +50,14 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 	risk := 8.0
 	depVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			State:            dtos.VulnStateOpen,
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			AssetVersionID: assetVersion.ID,
+			State:          dtos.VulnStateOpen,
+			AssetID:        asset.ID,
 		},
-		CVEID:          cve.CVE,
-		ComponentPurl:  "pkg:npm/reopen-test@1.0.0",
-		RiskAssessment: &risk,
+		AssetVersionName: assetVersion.Name,
+		CVEID:            cve.CVE,
+		ComponentPurl:    "pkg:npm/reopen-test@1.0.0",
+		RiskAssessment:   &risk,
 	}
 	require.NoError(t, db.Create(&depVuln).Error)
 	vulnID := depVuln.ID // set by BeforeSave hook after Create
@@ -89,9 +90,9 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 
 	artifactName := "reopen-artifact"
 	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   artifactName,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
 	require.NoError(t, db.Create(&artifact).Error)
 
@@ -102,10 +103,9 @@ func TestAverageRemediationTimesForRelease_ReopenCycle(t *testing.T) {
 	require.NoError(t, db.Create(&release).Error)
 
 	releaseItem := models.ReleaseItem{
-		ReleaseID:        release.ID,
-		ArtifactName:     &artifactName,
-		AssetVersionName: &assetVersion.Name,
-		AssetID:          &asset.ID,
+		ReleaseID:  release.ID,
+		ArtifactID: &artifact.ID,
+		AssetID:    &asset.ID,
 	}
 	require.NoError(t, db.Create(&releaseItem).Error)
 
@@ -147,13 +147,14 @@ func TestAverageRemediationTimesForRelease(t *testing.T) {
 	risk := 8.0
 	depVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			State:            dtos.VulnStateFixed,
-			AssetVersionName: assetVersion.Name,
-			AssetID:          asset.ID,
+			AssetVersionID: assetVersion.ID,
+			State:          dtos.VulnStateFixed,
+			AssetID:        asset.ID,
 		},
-		CVEID:          cve.CVE,
-		ComponentPurl:  "pkg:npm/test-pkg@1.0.0",
-		RiskAssessment: &risk,
+		AssetVersionName: assetVersion.Name,
+		CVEID:            cve.CVE,
+		ComponentPurl:    "pkg:npm/test-pkg@1.0.0",
+		RiskAssessment:   &risk,
 	}
 	require.NoError(t, db.Create(&depVuln).Error)
 	// ID is set by BeforeSave hook (hash of CVEID+AssetVersionName+AssetID+path)
@@ -177,9 +178,9 @@ func TestAverageRemediationTimesForRelease(t *testing.T) {
 	// Create an artifact so the release item satisfies the chk_one_not_null constraint
 	artifactName := "test-artifact"
 	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   artifactName,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
 	require.NoError(t, db.Create(&artifact).Error)
 
@@ -191,10 +192,9 @@ func TestAverageRemediationTimesForRelease(t *testing.T) {
 	require.NoError(t, db.Create(&release).Error)
 
 	releaseItem := models.ReleaseItem{
-		ReleaseID:        release.ID,
-		ArtifactName:     &artifactName,
-		AssetVersionName: &assetVersion.Name,
-		AssetID:          &asset.ID,
+		ReleaseID:  release.ID,
+		ArtifactID: &artifact.ID,
+		AssetID:    &asset.ID,
 	}
 	require.NoError(t, db.Create(&releaseItem).Error)
 

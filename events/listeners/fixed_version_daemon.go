@@ -210,7 +210,7 @@ func determineFixedVersionsForPurls(ctx context.Context, comparer *scan.PurlComp
 
 			var fixedVersion *string
 			if ac.SemverFixed != nil {
-				fixedVersion = normalize.FixFixedVersion(job.Purl, ac.SemverFixed)
+				fixedVersion = normalize.FixFixedVersion(job.Purl, ac.SemverFixed.StringPtr())
 			} else if ac.VersionFixed != nil {
 				fixedVersion = normalize.FixFixedVersion(job.Purl, ac.VersionFixed)
 			}

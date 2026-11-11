@@ -1,0 +1,775 @@
+{
+  "document": {
+    "category": "csaf_vex",
+    "csaf_version": "2.0",
+    "lang": "en",
+    "publisher": {
+      "category": "vendor",
+      "name": "Rancher Security team",
+      "namespace": "https://github.com/rancher"
+    },
+    "title": "Rancher VEX report for pkg:golang/datadog-lambda-extension/recorder-extension",
+    "tracking": {
+      "current_release_date": "2026-10-20T21:41:46Z",
+      "generator": {
+        "engine": {
+          "name": "rancher/image-scanning"
+        }
+      },
+      "id": "pkg:golang/datadog-lambda-extension/recorder-extension",
+      "initial_release_date": "2026-10-20T21:41:46Z",
+      "revision_history": [
+        {
+          "date": "2026-10-20T21:41:46Z",
+          "number": "1",
+          "summary": "CSAF-VEX report made by SUSE Rancher for pkg:golang/datadog-lambda-extension/recorder-extension"
+        }
+      ],
+      "status": "final",
+      "version": "1"
+    }
+  },
+  "product_tree": {
+    "branches": [
+      {
+        "category": "product_name",
+        "name": "pkg:golang/datadog-lambda-extension/recorder-extension",
+        "product": {
+          "name": "pkg:golang/datadog-lambda-extension/recorder-extension",
+          "product_id": "pkg-golang-datadog-lambda-extension-recorder-extension",
+          "product_identification_helper": {
+            "purl": "pkg:golang/datadog-lambda-extension/recorder-extension"
+          }
+        }
+      },
+      {
+        "category": "product_name",
+        "name": "pkg:golang/stdlib@v1.22.7",
+        "product": {
+          "name": "pkg:golang/stdlib@v1.22.7",
+          "product_id": "pkg-golang-stdlib-v1-22-7",
+          "product_identification_helper": {
+            "purl": "pkg:golang/stdlib@v1.22.7"
+          }
+        }
+      },
+      {
+        "category": "product_name",
+        "name": "pkg:golang/stdlib@v1.24.13",
+        "product": {
+          "name": "pkg:golang/stdlib@v1.24.13",
+          "product_id": "pkg-golang-stdlib-v1-24-13",
+          "product_identification_helper": {
+            "purl": "pkg:golang/stdlib@v1.24.13"
+          }
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "pkg:golang/stdlib@v1.22.7 as a component of pkg:golang/datadog-lambda-extension/recorder-extension",
+          "product_id": "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        },
+        "product_reference": "pkg-golang-stdlib-v1-22-7",
+        "relates_to_product_reference": "pkg-golang-datadog-lambda-extension-recorder-extension"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "pkg:golang/stdlib@v1.24.13 as a component of pkg:golang/datadog-lambda-extension/recorder-extension",
+          "product_id": "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        },
+        "product_reference": "pkg-golang-stdlib-v1-24-13",
+        "relates_to_product_reference": "pkg-golang-datadog-lambda-extension-recorder-extension"
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2025-22873",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4403"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-22873 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-47906",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2025-3956"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-47906 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-47907",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2025-3849"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-47907 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-58183",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2025-4014"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-58183 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-61724",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2025-4015"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-61724 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-61725",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2025-4006"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-61725 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-61726",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4341"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-61726 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2025-61728",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4342"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2025-61728 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-27142",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        },
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4603"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-27142 in pkg:golang/stdlib@v1.22.7 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.22.7 when used independently or in other products."
+        },
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-27142 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension",
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-22-7-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        },
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-32282",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4864"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-32282 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-32288",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4869"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-32288 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-32289",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4865"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-32289 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-33811",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4981"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-33811 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_in_execute_path",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-39820",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4986"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-39820 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-39823",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4982"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-39823 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-39825",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4976"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-39825 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-39826",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4980"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-39826 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-42499",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "GO",
+          "text": "GO-2026-4977"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "Govulncheck determined that the vulnerable code isn't called. This statement concerns CVE-2026-42499 in pkg:golang/stdlib@v1.24.13 as a subcomponent of pkg:golang/datadog-lambda-extension/recorder-extension. It does not assert the status of pkg:golang/stdlib@v1.24.13 when used independently or in other products."
+        }
+      ],
+      "product_status": {
+        "known_not_affected": [
+          "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+        ]
+      },
+      "threats": [
+        {
+          "category": "impact",
+          "details": "vulnerable_code_not_present",
+          "product_ids": [
+            "pkg-golang-stdlib-v1-24-13-in-pkg-golang-datadog-lambda-extension-recorder-extension"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -766,16 +766,16 @@ func (_c *AssetVersionService_LoadSBOM_Call) RunAndReturn(run func(ctx context.C
 }
 
 // StoreSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) StoreSBOM(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM) error {
-	ret := _mock.Called(ctx, tx, assetVersion, artifactName, source, parsed)
+func (_mock *AssetVersionService) StoreSBOM(ctx context.Context, tx shared.DB, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM) error {
+	ret := _mock.Called(ctx, tx, artifact, source, parsed)
 
 	if len(ret) == 0 {
 		panic("no return value specified for StoreSBOM")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.AssetVersion, string, string, *normalize.ParsedSBOM) error); ok {
-		r0 = returnFunc(ctx, tx, assetVersion, artifactName, source, parsed)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Artifact, string, *normalize.ParsedSBOM) error); ok {
+		r0 = returnFunc(ctx, tx, artifact, source, parsed)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -790,15 +790,14 @@ type AssetVersionService_StoreSBOM_Call struct {
 // StoreSBOM is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetVersion models.AssetVersion
-//   - artifactName string
+//   - artifact models.Artifact
 //   - source string
 //   - parsed *normalize.ParsedSBOM
-func (_e *AssetVersionService_Expecter) StoreSBOM(ctx any, tx any, assetVersion any, artifactName any, source any, parsed any) *AssetVersionService_StoreSBOM_Call {
-	return &AssetVersionService_StoreSBOM_Call{Call: _e.mock.On("StoreSBOM", ctx, tx, assetVersion, artifactName, source, parsed)}
+func (_e *AssetVersionService_Expecter) StoreSBOM(ctx any, tx any, artifact any, source any, parsed any) *AssetVersionService_StoreSBOM_Call {
+	return &AssetVersionService_StoreSBOM_Call{Call: _e.mock.On("StoreSBOM", ctx, tx, artifact, source, parsed)}
 }
 
-func (_c *AssetVersionService_StoreSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM)) *AssetVersionService_StoreSBOM_Call {
+func (_c *AssetVersionService_StoreSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM)) *AssetVersionService_StoreSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -808,21 +807,17 @@ func (_c *AssetVersionService_StoreSBOM_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 models.AssetVersion
+		var arg2 models.Artifact
 		if args[2] != nil {
-			arg2 = args[2].(models.AssetVersion)
+			arg2 = args[2].(models.Artifact)
 		}
 		var arg3 string
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
+		var arg4 *normalize.ParsedSBOM
 		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		var arg5 *normalize.ParsedSBOM
-		if args[5] != nil {
-			arg5 = args[5].(*normalize.ParsedSBOM)
+			arg4 = args[4].(*normalize.ParsedSBOM)
 		}
 		run(
 			arg0,
@@ -830,7 +825,6 @@ func (_c *AssetVersionService_StoreSBOM_Call) Run(run func(ctx context.Context, 
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -841,14 +835,14 @@ func (_c *AssetVersionService_StoreSBOM_Call) Return(err error) *AssetVersionSer
 	return _c
 }
 
-func (_c *AssetVersionService_StoreSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM) error) *AssetVersionService_StoreSBOM_Call {
+func (_c *AssetVersionService_StoreSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM) error) *AssetVersionService_StoreSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
-	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
+func (_mock *AssetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error) {
+	ret := _mock.Called(ctx, tx, org, project, asset, assetVersion, artifact, source, parsed)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
@@ -856,18 +850,18 @@ func (_mock *AssetVersionService) UpdateSBOM(ctx context.Context, tx shared.DB, 
 
 	var r0 normalize.MerkleForest
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, string, *normalize.ParsedSBOM) (normalize.MerkleForest, error)); ok {
-		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *normalize.ParsedSBOM) (normalize.MerkleForest, error)); ok {
+		return returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, source, parsed)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, string, *normalize.ParsedSBOM) normalize.MerkleForest); ok {
-		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *normalize.ParsedSBOM) normalize.MerkleForest); ok {
+		r0 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, source, parsed)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(normalize.MerkleForest)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, string, string, *normalize.ParsedSBOM) error); ok {
-		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, models.Org, models.Project, models.Asset, models.AssetVersion, models.Artifact, string, *normalize.ParsedSBOM) error); ok {
+		r1 = returnFunc(ctx, tx, org, project, asset, assetVersion, artifact, source, parsed)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -886,14 +880,14 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - project models.Project
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
-//   - artifactName string
+//   - artifact models.Artifact
 //   - source string
 //   - parsed *normalize.ParsedSBOM
-func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifactName any, source any, parsed any) *AssetVersionService_UpdateSBOM_Call {
-	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", ctx, tx, org, project, asset, assetVersion, artifactName, source, parsed)}
+func (_e *AssetVersionService_Expecter) UpdateSBOM(ctx any, tx any, org any, project any, asset any, assetVersion any, artifact any, source any, parsed any) *AssetVersionService_UpdateSBOM_Call {
+	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", ctx, tx, org, project, asset, assetVersion, artifact, source, parsed)}
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -919,9 +913,9 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(ctx context.Context,
 		if args[5] != nil {
 			arg5 = args[5].(models.AssetVersion)
 		}
-		var arg6 string
+		var arg6 models.Artifact
 		if args[6] != nil {
-			arg6 = args[6].(string)
+			arg6 = args[6].(models.Artifact)
 		}
 		var arg7 string
 		if args[7] != nil {
@@ -951,7 +945,7 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Return(merkleForest normalize.Mer
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifact models.Artifact, source string, parsed *normalize.ParsedSBOM) (normalize.MerkleForest, error)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

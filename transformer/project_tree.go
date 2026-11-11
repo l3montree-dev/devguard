@@ -6,18 +6,16 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 )
 
-func BuildArtifactIndex(artifacts []models.Artifact) map[uuid.UUID]map[string][]string {
-	index := make(map[uuid.UUID]map[string][]string)
+// BuildArtifactIndex maps an asset version id to the names of its artifacts
+func BuildArtifactIndex(artifacts []models.Artifact) map[uuid.UUID][]string {
+	index := make(map[uuid.UUID][]string)
 	for _, art := range artifacts {
-		if index[art.AssetID] == nil {
-			index[art.AssetID] = make(map[string][]string)
-		}
-		index[art.AssetID][art.AssetVersionName] = append(index[art.AssetID][art.AssetVersionName], art.ArtifactName)
+		index[art.AssetVersionID] = append(index[art.AssetVersionID], art.ArtifactName)
 	}
 	return index
 }
 
-func BuildAssetEntries(assets []models.Asset, versionsByAssetID map[uuid.UUID][]models.AssetVersion, artifactIndex map[uuid.UUID]map[string][]string) []dtos.AssetEntry {
+func BuildAssetEntries(assets []models.Asset, versionsByAssetID map[uuid.UUID][]models.AssetVersion, artifactIndex map[uuid.UUID][]string) []dtos.AssetEntry {
 	var entries []dtos.AssetEntry
 	for _, asset := range assets {
 		if asset.ExternalEntityID == nil {
@@ -31,7 +29,7 @@ func BuildAssetEntries(assets []models.Asset, versionsByAssetID map[uuid.UUID][]
 		for _, av := range versions {
 			entry.AssetVersions = append(entry.AssetVersions, dtos.AssetVersionEntry{
 				AssetVersionName: av.Name,
-				Artifacts:        artifactIndex[asset.ID][av.Name],
+				Artifacts:        artifactIndex[av.ID],
 			})
 		}
 		entries = append(entries, entry)

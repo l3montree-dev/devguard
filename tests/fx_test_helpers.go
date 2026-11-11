@@ -191,6 +191,7 @@ func (f *TestFixture) CreateDaemonRunner() *listeners.DaemonRunner {
 		f.App.ExternalReferenceRepository,
 		f.App.SBOMRepository,
 		f.App.FixedVersionResolver,
+		f.App.DebReleaseTimeService,
 		f.App.UpstreamVEXRuleRepository,
 		f.App.ExternalEntityProviderService,
 		f.App.FirstPartyVulnService,

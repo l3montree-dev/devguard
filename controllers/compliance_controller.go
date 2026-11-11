@@ -26,7 +26,7 @@ func NewComplianceController(assetVersionRepository shared.AssetVersionRepositor
 
 func (c *ComplianceController) getAssetVersionCompliance(ctx context.Context, projectID uuid.UUID, assetVersion models.AssetVersion) ([]compliance.PolicyEvaluation, error) {
 	// get the attestation
-	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(ctx, nil, assetVersion.AssetID, assetVersion.Name)
+	attestations, err := c.attestationRepository.GetByAssetVersionID(ctx, nil, assetVersion.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (c *ComplianceController) Details(ctx shared.Context) error {
 		return ctx.JSON(404, nil)
 	}
 
-	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(ctx.Request().Context(), nil, assetVersion.AssetID, assetVersion.Name)
+	attestations, err := c.attestationRepository.GetByAssetVersionID(ctx.Request().Context(), nil, assetVersion.ID)
 
 	if err != nil {
 		return ctx.JSON(500, nil)

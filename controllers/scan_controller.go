@@ -169,6 +169,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
+		defaultBranch = "main"
 	}
 	artifactName := normalize.ArtifactName(c.Request().Header.Get("X-Artifact-Name"))
 	origin := c.Request().Header.Get("X-Origin")
@@ -214,9 +215,9 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	}
 
 	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
+		ArtifactName:   artifactName,
+		AssetVersionID: assetVersion.ID,
+		AssetID:        asset.ID,
 	}
 
 	// When noWrite, save the artifact within the early transaction so FK constraints are
@@ -225,7 +226,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 	if noWrite {
 		artifactTx = earlyTx
 	}
-	if err = s.artifactService.SaveArtifact(scanCtx, artifactTx, &artifact); err != nil {
+	if err = s.artifactService.FindOrCreateArtifact(scanCtx, artifactTx, &artifact); err != nil {
 		slog.Error("could not save artifact", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -242,7 +243,7 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 		defer tx.Rollback()
 	}
 
-	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifactName, sbomOrigin, normalized)
+	wholeSBOM, err := s.assetVersionService.UpdateSBOM(scanCtx, tx, org, project, asset, assetVersion, artifact, sbomOrigin, normalized)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		span.RecordError(err)
@@ -532,7 +533,7 @@ func (s *ScanController) ScanDependencyVulnUnauthenticatedVex(c echo.Context) er
 		vuln := cdx.Vulnerability{ID: v.CVEID}
 		if v.CVE != nil && v.CVE.CVSS > 0 {
 			score := float64(v.CVE.CVSS)
-			vuln.Ratings = &[]cdx.VulnerabilityRating{{Score: &score, Method: cdx.ScoringMethodCVSSv31}}
+			vuln.Ratings = &[]cdx.VulnerabilityRating{{Score: &score, Method: utils.VectorToCVSSScoringMethod(v.CVE.Vector)}}
 		}
 		if v.ComponentFixedVersion != nil {
 			vuln.Recommendation = *v.ComponentFixedVersion

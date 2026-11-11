@@ -55,6 +55,8 @@ const (
 	TopicScan                         NotifyTopic = "daemon.scan"
 	TopicFixedVersions                NotifyTopic = "daemon.fixedVersions"
 	TopicDirectDependencyFixedVersion NotifyTopic = "daemon.directDependencyFixedVersion"
+	TopicCollectDebReleaseTimes       NotifyTopic = "daemon.collectDebReleaseTimes"
+	TopicTelemetry                    NotifyTopic = "daemon.telemetry"
 
 	// asset pipeline steps - one job per asset and step, the payload is an AssetPipelinePayload.
 	// they run on QueueAssetPipeline, see assetPipelineTopicPrefix

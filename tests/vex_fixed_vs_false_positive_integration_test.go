@@ -16,6 +16,7 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http/httptest"
@@ -23,10 +24,10 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/vexrules"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -88,8 +89,8 @@ func TestVEXFixedOnDefaultBranchButFalsePositiveOnBranchX(t *testing.T) {
 
 		// mark it false positive on branch X, via a VEX rule (same mechanism a user would use)
 		path := fetchVuln(branchX).VulnerabilityPath
-		celExpression := vexrules.ToCELExpression("CVE-2025-46569",
-			vexrules.PathPattern(append([]string{"ROOT"}, path...)))
+		celExpression := celrules.ToCELExpression("CVE-2025-46569",
+			celrules.PathPattern(append([]string{"ROOT"}, path...)))
 
 		body, err := json.Marshal(dtos.CreateVEXRuleRequest{
 			Title:                   "not applicable to branch-x",
@@ -118,7 +119,10 @@ func TestVEXFixedOnDefaultBranchButFalsePositiveOnBranchX(t *testing.T) {
 		ctx := app.NewContext(req, recorder)
 		setupCtx(ctx)
 		shared.SetAssetVersion(ctx, assetVersion)
-		shared.SetArtifact(ctx, models.Artifact{ArtifactName: "backend", AssetVersionName: assetVersion.Name, AssetID: asset.ID})
+		// the artifact middleware loads the stored artifact, the export filters by its id
+		artifact, err := f.App.ArtifactRepository.ReadArtifact(context.Background(), nil, "backend", assetVersion.ID)
+		assert.NoError(t, err)
+		shared.SetArtifact(ctx, artifact)
 
 		assert.NoError(t, f.App.ArtifactController.CycloneDXVexJSON(ctx))
 		assert.Equal(t, 200, recorder.Code, recorder.Body.String())

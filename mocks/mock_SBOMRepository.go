@@ -606,16 +606,16 @@ func (_c *SBOMRepository_DeleteBatch_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // DeleteByArtifact provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) DeleteByArtifact(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, artifactName)
+func (_mock *SBOMRepository) DeleteByArtifact(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string) error {
+	ret := _mock.Called(ctx, tx, assetVersionID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteByArtifact")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, artifactName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -630,14 +630,13 @@ type SBOMRepository_DeleteByArtifact_Call struct {
 // DeleteByArtifact is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
+//   - assetVersionID uuid.UUID
 //   - artifactName string
-func (_e *SBOMRepository_Expecter) DeleteByArtifact(ctx any, tx any, assetID any, assetVersionName any, artifactName any) *SBOMRepository_DeleteByArtifact_Call {
-	return &SBOMRepository_DeleteByArtifact_Call{Call: _e.mock.On("DeleteByArtifact", ctx, tx, assetID, assetVersionName, artifactName)}
+func (_e *SBOMRepository_Expecter) DeleteByArtifact(ctx any, tx any, assetVersionID any, artifactName any) *SBOMRepository_DeleteByArtifact_Call {
+	return &SBOMRepository_DeleteByArtifact_Call{Call: _e.mock.On("DeleteByArtifact", ctx, tx, assetVersionID, artifactName)}
 }
 
-func (_c *SBOMRepository_DeleteByArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string)) *SBOMRepository_DeleteByArtifact_Call {
+func (_c *SBOMRepository_DeleteByArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string)) *SBOMRepository_DeleteByArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -655,16 +654,11 @@ func (_c *SBOMRepository_DeleteByArtifact_Call) Run(run func(ctx context.Context
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -675,22 +669,22 @@ func (_c *SBOMRepository_DeleteByArtifact_Call) Return(err error) *SBOMRepositor
 	return _c
 }
 
-func (_c *SBOMRepository_DeleteByArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) error) *SBOMRepository_DeleteByArtifact_Call {
+func (_c *SBOMRepository_DeleteByArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string) error) *SBOMRepository_DeleteByArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // DeleteBySource provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) DeleteBySource(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string, source string) error {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, artifactName, source)
+func (_mock *SBOMRepository) DeleteBySource(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string, source string) error {
+	ret := _mock.Called(ctx, tx, assetVersionID, artifactName, source)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteBySource")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string) error); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName, source)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, artifactName, source)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -705,15 +699,14 @@ type SBOMRepository_DeleteBySource_Call struct {
 // DeleteBySource is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
+//   - assetVersionID uuid.UUID
 //   - artifactName string
 //   - source string
-func (_e *SBOMRepository_Expecter) DeleteBySource(ctx any, tx any, assetID any, assetVersionName any, artifactName any, source any) *SBOMRepository_DeleteBySource_Call {
-	return &SBOMRepository_DeleteBySource_Call{Call: _e.mock.On("DeleteBySource", ctx, tx, assetID, assetVersionName, artifactName, source)}
+func (_e *SBOMRepository_Expecter) DeleteBySource(ctx any, tx any, assetVersionID any, artifactName any, source any) *SBOMRepository_DeleteBySource_Call {
+	return &SBOMRepository_DeleteBySource_Call{Call: _e.mock.On("DeleteBySource", ctx, tx, assetVersionID, artifactName, source)}
 }
 
-func (_c *SBOMRepository_DeleteBySource_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string, source string)) *SBOMRepository_DeleteBySource_Call {
+func (_c *SBOMRepository_DeleteBySource_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string, source string)) *SBOMRepository_DeleteBySource_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -735,17 +728,12 @@ func (_c *SBOMRepository_DeleteBySource_Call) Run(run func(ctx context.Context, 
 		if args[4] != nil {
 			arg4 = args[4].(string)
 		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -756,14 +744,14 @@ func (_c *SBOMRepository_DeleteBySource_Call) Return(err error) *SBOMRepository_
 	return _c
 }
 
-func (_c *SBOMRepository_DeleteBySource_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string, source string) error) *SBOMRepository_DeleteBySource_Call {
+func (_c *SBOMRepository_DeleteBySource_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string, source string) error) *SBOMRepository_DeleteBySource_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByArtifact provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) FindByArtifact(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) ([]models.SBOM, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, artifactName)
+func (_mock *SBOMRepository) FindByArtifact(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string) ([]models.SBOM, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByArtifact")
@@ -771,18 +759,18 @@ func (_mock *SBOMRepository) FindByArtifact(ctx context.Context, tx shared.DB, a
 
 	var r0 []models.SBOM
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) ([]models.SBOM, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.SBOM, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, artifactName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) []models.SBOM); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.SBOM); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.SBOM)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -797,14 +785,13 @@ type SBOMRepository_FindByArtifact_Call struct {
 // FindByArtifact is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
+//   - assetVersionID uuid.UUID
 //   - artifactName string
-func (_e *SBOMRepository_Expecter) FindByArtifact(ctx any, tx any, assetID any, assetVersionName any, artifactName any) *SBOMRepository_FindByArtifact_Call {
-	return &SBOMRepository_FindByArtifact_Call{Call: _e.mock.On("FindByArtifact", ctx, tx, assetID, assetVersionName, artifactName)}
+func (_e *SBOMRepository_Expecter) FindByArtifact(ctx any, tx any, assetVersionID any, artifactName any) *SBOMRepository_FindByArtifact_Call {
+	return &SBOMRepository_FindByArtifact_Call{Call: _e.mock.On("FindByArtifact", ctx, tx, assetVersionID, artifactName)}
 }
 
-func (_c *SBOMRepository_FindByArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string)) *SBOMRepository_FindByArtifact_Call {
+func (_c *SBOMRepository_FindByArtifact_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string)) *SBOMRepository_FindByArtifact_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -822,16 +809,11 @@ func (_c *SBOMRepository_FindByArtifact_Call) Run(run func(ctx context.Context, 
 		if args[3] != nil {
 			arg3 = args[3].(string)
 		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -842,14 +824,14 @@ func (_c *SBOMRepository_FindByArtifact_Call) Return(sBOMs []models.SBOM, err er
 	return _c
 }
 
-func (_c *SBOMRepository_FindByArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string) ([]models.SBOM, error)) *SBOMRepository_FindByArtifact_Call {
+func (_c *SBOMRepository_FindByArtifact_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string) ([]models.SBOM, error)) *SBOMRepository_FindByArtifact_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByAssetVersion provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) FindByAssetVersion(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.SBOM, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName)
+func (_mock *SBOMRepository) FindByAssetVersion(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.SBOM, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByAssetVersion")
@@ -857,18 +839,18 @@ func (_mock *SBOMRepository) FindByAssetVersion(ctx context.Context, tx shared.D
 
 	var r0 []models.SBOM
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) ([]models.SBOM, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.SBOM, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string) []models.SBOM); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.SBOM); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.SBOM)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -883,13 +865,12 @@ type SBOMRepository_FindByAssetVersion_Call struct {
 // FindByAssetVersion is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
-func (_e *SBOMRepository_Expecter) FindByAssetVersion(ctx any, tx any, assetID any, assetVersionName any) *SBOMRepository_FindByAssetVersion_Call {
-	return &SBOMRepository_FindByAssetVersion_Call{Call: _e.mock.On("FindByAssetVersion", ctx, tx, assetID, assetVersionName)}
+//   - assetVersionID uuid.UUID
+func (_e *SBOMRepository_Expecter) FindByAssetVersion(ctx any, tx any, assetVersionID any) *SBOMRepository_FindByAssetVersion_Call {
+	return &SBOMRepository_FindByAssetVersion_Call{Call: _e.mock.On("FindByAssetVersion", ctx, tx, assetVersionID)}
 }
 
-func (_c *SBOMRepository_FindByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string)) *SBOMRepository_FindByAssetVersion_Call {
+func (_c *SBOMRepository_FindByAssetVersion_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID)) *SBOMRepository_FindByAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -903,15 +884,10 @@ func (_c *SBOMRepository_FindByAssetVersion_Call) Run(run func(ctx context.Conte
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -922,14 +898,14 @@ func (_c *SBOMRepository_FindByAssetVersion_Call) Return(sBOMs []models.SBOM, er
 	return _c
 }
 
-func (_c *SBOMRepository_FindByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string) ([]models.SBOM, error)) *SBOMRepository_FindByAssetVersion_Call {
+func (_c *SBOMRepository_FindByAssetVersion_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID) ([]models.SBOM, error)) *SBOMRepository_FindByAssetVersion_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindBySource provides a mock function for the type SBOMRepository
-func (_mock *SBOMRepository) FindBySource(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string, source string) ([]models.SBOM, error) {
-	ret := _mock.Called(ctx, tx, assetID, assetVersionName, artifactName, source)
+func (_mock *SBOMRepository) FindBySource(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string, source string) ([]models.SBOM, error) {
+	ret := _mock.Called(ctx, tx, assetVersionID, artifactName, source)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindBySource")
@@ -937,18 +913,18 @@ func (_mock *SBOMRepository) FindBySource(ctx context.Context, tx shared.DB, ass
 
 	var r0 []models.SBOM
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string) ([]models.SBOM, error)); ok {
-		return returnFunc(ctx, tx, assetID, assetVersionName, artifactName, source)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) ([]models.SBOM, error)); ok {
+		return returnFunc(ctx, tx, assetVersionID, artifactName, source)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string, string) []models.SBOM); ok {
-		r0 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName, source)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, string, string) []models.SBOM); ok {
+		r0 = returnFunc(ctx, tx, assetVersionID, artifactName, source)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.SBOM)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, string, string) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, assetVersionName, artifactName, source)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(ctx, tx, assetVersionID, artifactName, source)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -963,15 +939,14 @@ type SBOMRepository_FindBySource_Call struct {
 // FindBySource is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetID uuid.UUID
-//   - assetVersionName string
+//   - assetVersionID uuid.UUID
 //   - artifactName string
 //   - source string
-func (_e *SBOMRepository_Expecter) FindBySource(ctx any, tx any, assetID any, assetVersionName any, artifactName any, source any) *SBOMRepository_FindBySource_Call {
-	return &SBOMRepository_FindBySource_Call{Call: _e.mock.On("FindBySource", ctx, tx, assetID, assetVersionName, artifactName, source)}
+func (_e *SBOMRepository_Expecter) FindBySource(ctx any, tx any, assetVersionID any, artifactName any, source any) *SBOMRepository_FindBySource_Call {
+	return &SBOMRepository_FindBySource_Call{Call: _e.mock.On("FindBySource", ctx, tx, assetVersionID, artifactName, source)}
 }
 
-func (_c *SBOMRepository_FindBySource_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string, source string)) *SBOMRepository_FindBySource_Call {
+func (_c *SBOMRepository_FindBySource_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string, source string)) *SBOMRepository_FindBySource_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -993,17 +968,12 @@ func (_c *SBOMRepository_FindBySource_Call) Run(run func(ctx context.Context, tx
 		if args[4] != nil {
 			arg4 = args[4].(string)
 		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
 			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -1014,7 +984,7 @@ func (_c *SBOMRepository_FindBySource_Call) Return(sBOMs []models.SBOM, err erro
 	return _c
 }
 
-func (_c *SBOMRepository_FindBySource_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID, assetVersionName string, artifactName string, source string) ([]models.SBOM, error)) *SBOMRepository_FindBySource_Call {
+func (_c *SBOMRepository_FindBySource_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersionID uuid.UUID, artifactName string, source string) ([]models.SBOM, error)) *SBOMRepository_FindBySource_Call {
 	_c.Call.Return(run)
 	return _c
 }

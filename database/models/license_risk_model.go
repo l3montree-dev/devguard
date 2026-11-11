@@ -13,6 +13,9 @@ import (
 type LicenseRisk struct {
 	Vulnerability
 
+	// part of the content hash, the asset version relation itself is kept by AssetVersionID
+	AssetVersionName string `json:"assetVersionName" gorm:"type:text;not null;"`
+
 	Events []VulnEvent `gorm:"foreignKey:LicenseRiskID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 
 	FinalLicenseDecision *string    `json:"finalLicenseDecision" gorm:"type:text"`

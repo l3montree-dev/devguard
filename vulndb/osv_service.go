@@ -56,7 +56,7 @@ type syncSpec struct {
 	// insertCols lists the columns written on INSERT (must match insertSelectExprs length).
 	insertCols []string
 	// insertSelectExprs are the corresponding SELECT expressions from the stage table.
-	// Use this to apply type casts (e.g. "semver_introduced::semver").
+	// Use this to apply type casts (e.g. "version::text").
 	insertSelectExprs []string
 }
 
@@ -67,12 +67,12 @@ var liveTableSpecs = func() []syncSpec {
 	cveAllCols := []string{"id", "content_hash", "cve", "date_published", "date_last_modified", "description", "cvss", `"references"`, "cisa_exploit_add", "cisa_action_due", "cisa_required_action", "cisa_vulnerability_name", "epss", "percentile", "vector", "euvd_exploit_add", "withdrawn", "cwes"}
 	relAllCols := []string{"target_cve", "source_cve", "relationship_type"}
 	acInsertCols := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	acInsertExprs := []string{"id", "purl", "ecosystem", "version", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
+	acInsertExprs := []string{"id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	pivotAllCols := []string{"affected_component_id", "cve_id"}
 	exploitAllCols := []string{"id", "content_hash", "published", "updated", "author", "type", "verified", "source_url", "description", "cve_id", "tags", "forks", "watchers", "subscribers", "stars"}
 	malPkgAllCols := []string{"id", "content_hash", "summary", "details", "published", "modified"}
 	malCompInsertCols := []string{"id", "malicious_package_id", "purl", "ecosystem", "version", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
-	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced::semver", "semver_fixed::semver", "version_introduced", "version_fixed"}
+	malCompInsertExprs := []string{"id", "malicious_package_id", "purl", "ecosystem", "version::text", "semver_introduced", "semver_fixed", "version_introduced", "version_fixed"}
 	upstreamVEXRuleAllCols := []string{"id", "vex_source", "title", "justification", "mechanical_justification", "event_type", "cel_expression", "cve_scope"}
 	return []syncSpec{
 		{
@@ -665,7 +665,7 @@ func InsertCVERelationshipsBulk(ctx context.Context, tx pgx.Tx, cveRelationships
 }
 
 // insertAffectedComponentsBulk streams affected components into the staging table. Call flushStagingTables once after all batches.
-// The semver cast (text → semver type) happens in flushStagingTables, not here.
+// The semver columns are encoded by normalize.Semver, the staging table already stores bytea.
 func insertAffectedComponentsBulk(ctx context.Context, tx pgx.Tx, components []models.AffectedComponent, table string) error {
 	if len(components) == 0 {
 		return nil
@@ -733,7 +733,7 @@ func FlushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO affected_components (id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
 		SELECT id, purl, ecosystem, version,
-			semver_introduced::semver, semver_fixed::semver,
+			semver_introduced, semver_fixed,
 			version_introduced, version_fixed
 		FROM affected_components_stage`); err != nil {
 		return fmt.Errorf("could not flush affected_components: %w", err)
@@ -768,7 +768,7 @@ func FlushOSVStagingTables(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO malicious_affected_components (id, malicious_package_id, purl, ecosystem, version, semver_introduced, semver_fixed, version_introduced, version_fixed)
 		SELECT id, malicious_package_id, purl, ecosystem, version::text,
-			semver_introduced::semver, semver_fixed::semver,
+			semver_introduced, semver_fixed,
 			version_introduced, version_fixed
 		FROM mal_comps_stage
 		ON CONFLICT (id) DO NOTHING`); err != nil {
@@ -849,8 +849,8 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			purl               text,
 			ecosystem          text,
 			version            text,
-			semver_introduced  text,
-			semver_fixed       text,
+			semver_introduced  bytea,
+			semver_fixed       bytea,
 			version_introduced text,
 			version_fixed      text
 		) ON COMMIT DROP;
@@ -893,8 +893,8 @@ func CreateStagingTables(ctx context.Context, tx pgx.Tx) error {
 			purl                 text,
 			ecosystem            text,
 			version              text,
-			semver_introduced    text,
-			semver_fixed         text,
+			semver_introduced    bytea,
+			semver_fixed         bytea,
 			version_introduced   text,
 			version_fixed        text
 		) ON COMMIT DROP;

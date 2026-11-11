@@ -140,6 +140,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(dependencyfirewall.NewMavenDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewComposerDependencyProxyController),
 	fx.Provide(dependencyfirewall.NewDebDependencyProxyController),
+	fx.Provide(dependencyfirewall.NewAlpineDependencyProxyController),
 
 	//Crowdsourced Vexing
 	fx.Provide(NewVexRuleRecommendationController),

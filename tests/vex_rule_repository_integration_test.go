@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestVexRuleRepositoryFindOpenVexRulesByAssetIDs(t *testing.T) {
 	db, _, terminate := InitDatabaseContainer("../initdb.sql")
 	defer terminate()

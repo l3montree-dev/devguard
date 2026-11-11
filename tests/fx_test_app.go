@@ -124,6 +124,7 @@ type TestApp struct {
 	// Daemons
 	DaemonRunner                  shared.DaemonRunner
 	FixedVersionResolver          shared.FixedVersionResolver
+	DebReleaseTimeService         shared.DebReleaseTimeService
 	ExternalEntityProviderService shared.ExternalEntityProviderService
 }
 

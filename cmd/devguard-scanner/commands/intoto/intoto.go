@@ -151,7 +151,7 @@ func generateSlsaProvenance(link toto.Link) ([]byte, error) {
 		},
 		RunDetails: &provenancev1.RunDetails{
 			Builder: &provenancev1.Builder{
-				Id: "https://devguard.org",
+				Id: "devguard.org",
 			},
 		},
 	}

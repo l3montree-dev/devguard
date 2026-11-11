@@ -18,7 +18,7 @@ developmentStatus: "stable"
 softwareVersion: "1.13.2"
 releaseDate: "2026-08-24"
 softwareType: "standalone/web"
-url: "https://devguard.org/"
+url: "https://github.com/l3montree-dev/devguard"
 landingURL: "https://devguard.org"
 logo: "logo.svg"
 maintenance:

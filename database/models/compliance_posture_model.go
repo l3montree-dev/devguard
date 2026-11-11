@@ -29,8 +29,9 @@ type CompliancePosture struct {
 
 	FrameworkControlID string           `json:"frameworkControlId" gorm:"type:text;not null;"`
 	FrameworkControl   FrameworkControl `json:"frameworkControl" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+	AssetVersionID     *uuid.UUID       `json:"assetVersionId" gorm:"type:uuid;column:asset_version_id"`
 	AssetVersionName   *string          `json:"assetVersionName" gorm:"type:text;"`
-	AssetVersion       AssetVersion     `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	AssetVersion       AssetVersion     `json:"assetVersion" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	AssetID   *uuid.UUID `json:"assetId" gorm:"type:uuid;column:asset_id"`
 	Asset     Asset      `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
@@ -95,6 +96,12 @@ func (m CompliancePosture) GetAssetVersionName() string {
 		return *m.AssetVersionName
 	}
 	return ""
+}
+func (m CompliancePosture) GetAssetVersionID() uuid.UUID {
+	if m.AssetVersionID != nil {
+		return *m.AssetVersionID
+	}
+	return uuid.Nil
 }
 func (m CompliancePosture) GetAssetID() uuid.UUID {
 	if m.AssetID != nil {

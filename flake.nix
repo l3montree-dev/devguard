@@ -49,9 +49,7 @@
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system} // {
           go = nixpkgs-unstable.legacyPackages.${system}.go_1_27;
         };
-        go-mockery = nixpkgs-unstable.legacyPackages.${system}.go-mockery.override {
-          buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;
-        };
+        go-mockery = nixpkgs-unstable.legacyPackages.${system}.go-mockery;
         go-swag =
           (nixpkgs-unstable.legacyPackages.${system}.go-swag.override {
             buildGoModule = nixpkgs-unstable.legacyPackages.${system}.buildGo127Module;

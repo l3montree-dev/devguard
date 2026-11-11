@@ -82,6 +82,8 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 	headers.Add("X-Test", "a")
 	headers.Add("X-Test", "b")
 	headers.Set("Content-Type", "application/json")
+	headers.Set("Set-Cookie", "session=attacker")
+	headers.Set("Access-Control-Allow-Origin", "https://evil.example")
 	body := []byte(`{"ok":true}`)
 
 	if err := d.passthroughUpstreamResponse(c, headers, http.StatusAccepted, body); err != nil {
@@ -99,6 +101,12 @@ func TestPassthroughUpstreamResponse(t *testing.T) {
 	}
 	if got := rec.Header().Get("Content-Type"); got != "application/json" {
 		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+	if got := rec.Header().Get("Set-Cookie"); got != "" {
+		t.Fatalf("expected Set-Cookie to be dropped, got %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected Access-Control-Allow-Origin to be dropped, got %q", got)
 	}
 }
 
@@ -144,44 +152,6 @@ func TestCacheValidateKeyPreventsTraversal(t *testing.T) {
 					t.Fatalf("path traversal escaped cache root for %q: %q", tc, path)
 				}
 			})
-		}
-	})
-}
-
-func TestMatchPattern(t *testing.T) {
-	t.Run("matches exact pattern", func(t *testing.T) {
-		if !matchPattern("lodash", "lodash") {
-			t.Fatal("expected exact match to succeed")
-		}
-	})
-
-	t.Run("matches wildcard pattern", func(t *testing.T) {
-		if !matchPattern("lodash/*", "lodash/core") {
-			t.Fatal("expected wildcard match to succeed")
-		}
-	})
-
-	t.Run("does not match non-matching pattern", func(t *testing.T) {
-		if matchPattern("lodash/*", "react/core") {
-			t.Fatal("expected non-matching pattern to fail")
-		}
-	})
-
-	t.Run("matches wildcard inside string", func(t *testing.T) {
-		if !matchPattern("github.com/*/bar", "github.com/foo/bar") {
-			t.Fatal("expected wildcard match to succeed")
-		}
-	})
-
-	t.Run("does not match if wildcard does not align", func(t *testing.T) {
-		if matchPattern("github.com/*/bar", "github.com/foo/baz") {
-			t.Fatal("expected non-matching pattern to fail")
-		}
-	})
-
-	t.Run("matches multiple wildcards", func(t *testing.T) {
-		if !matchPattern("github.com/*/bar/*", "github.com/foo/bar/baz") {
-			t.Fatal("expected multiple wildcard match to succeed")
 		}
 	})
 }

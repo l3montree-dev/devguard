@@ -444,8 +444,13 @@ func escapeNodeID(s string) string {
 	if s == "" || s == normalize.GraphRootNodeID {
 		return "root"
 	}
-	// Creates a safe Mermaid node ID by removing special characters
-	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
+	// Creates a safe Mermaid node ID by replacing everything except [A-Za-z0-9_]
+	return strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			return r
+		}
+		return '_'
+	}, s)
 }
 
 // beautifyNodeLabel creates a more readable label for graph nodes
@@ -486,8 +491,7 @@ func beautifyNodeLabel(nodeID string) string {
 		return artifactName
 	}
 
-	// Regular component - just escape @ sign
-	return strings.ReplaceAll(nodeID, "@", "\\@")
+	return nodeID
 }
 
 func PathsToMermaid(paths [][]string) string {
@@ -683,4 +687,26 @@ func GetAllRiskLabelsWithColors() []Label {
 func GenerateFourDigitNumber() int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // we don't need a secure random number here
 	return 1000 + r.Intn(9000)
+}
+
+const gitlabLabelsMetadataKey = "gitlabLabels"
+const gitlabLabelsRefreshInterval = 7 * 24 * time.Hour
+
+func GitlabLabelsOutdated(asset models.Asset) bool {
+	s, ok := asset.Metadata[gitlabLabelsMetadataKey].(string)
+	if !ok {
+		return true
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return true
+	}
+	return t.Before(time.Now().Add(-gitlabLabelsRefreshInterval))
+}
+
+func MarkGitlabLabelsCreated(asset *models.Asset) {
+	if asset.Metadata == nil {
+		asset.Metadata = map[string]any{}
+	}
+	asset.Metadata[gitlabLabelsMetadataKey] = time.Now().UTC().Format(time.RFC3339)
 }

@@ -108,12 +108,13 @@ func TestBOLADependencyVulnCrossAssetReadBlocked(t *testing.T) {
 
 		vulnA := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersionA.Name,
-				AssetID:          assetA.ID,
+				AssetVersionID: assetVersionA.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        assetA.ID,
 			},
-			CVEID:         cve.CVE,
-			ComponentPurl: "pkg:npm/left-pad@1.0.0",
+			AssetVersionName: assetVersionA.Name,
+			CVEID:            cve.CVE,
+			ComponentPurl:    "pkg:npm/left-pad@1.0.0",
 		}
 		require.NoError(t, f.DB.Create(&vulnA).Error)
 
@@ -143,11 +144,12 @@ func TestBOLAFirstPartyVulnCrossAssetReadBlocked(t *testing.T) {
 
 		vulnA := models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersionA.Name,
-				AssetID:          assetA.ID,
+				AssetVersionID: assetVersionA.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        assetA.ID,
 			},
-			RuleID: "test-rule-bola",
+			AssetVersionName: assetVersionA.Name,
+			RuleID:           "test-rule-bola",
 		}
 		require.NoError(t, f.DB.Create(&vulnA).Error)
 
@@ -179,11 +181,12 @@ func TestBOLALicenseRiskCrossAssetReadBlocked(t *testing.T) {
 
 		riskA := models.LicenseRisk{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersionA.Name,
-				AssetID:          assetA.ID,
+				AssetVersionID: assetVersionA.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        assetA.ID,
 			},
-			ComponentPurl: component.ID,
+			AssetVersionName: assetVersionA.Name,
+			ComponentPurl:    component.ID,
 		}
 		require.NoError(t, f.DB.Create(&riskA).Error)
 
@@ -217,12 +220,13 @@ func TestBOLADependencyVulnCreateEventCrossAssetBlocked(t *testing.T) {
 
 		vulnA := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersionA.Name,
-				AssetID:          assetA.ID,
+				AssetVersionID: assetVersionA.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        assetA.ID,
 			},
-			CVEID:         cve.CVE,
-			ComponentPurl: "pkg:npm/left-pad@1.0.0",
+			AssetVersionName: assetVersionA.Name,
+			CVEID:            cve.CVE,
+			ComponentPurl:    "pkg:npm/left-pad@1.0.0",
 		}
 		require.NoError(t, f.DB.Create(&vulnA).Error)
 
@@ -285,6 +289,7 @@ func TestBOLAReleaseReadCrossProjectBlocked(t *testing.T) {
 			f.App.AssetVersionRepository,
 			f.App.DependencyVulnRepository,
 			f.App.AssetRepository,
+			f.App.ArtifactRepository,
 			f.App.CSAFService,
 		)
 
@@ -355,12 +360,13 @@ func TestBOLASameAssetReadStillWorks(t *testing.T) {
 
 		vuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				State:            dtos.VulnStateOpen,
-				AssetVersionName: assetVersion.Name,
-				AssetID:          asset.ID,
+				AssetVersionID: assetVersion.ID,
+				State:          dtos.VulnStateOpen,
+				AssetID:        asset.ID,
 			},
-			CVEID:         cve.CVE,
-			ComponentPurl: "pkg:npm/lodash@4.0.0",
+			AssetVersionName: assetVersion.Name,
+			CVEID:            cve.CVE,
+			ComponentPurl:    "pkg:npm/lodash@4.0.0",
 		}
 		require.NoError(t, f.DB.Create(&vuln).Error)
 

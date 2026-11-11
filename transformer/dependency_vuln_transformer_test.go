@@ -23,6 +23,8 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 	assetID := uuid.New()
 	assetVersionName := "main"
 	artifactName := "my-artifact"
+	assetVersion := models.AssetVersion{ID: uuid.New(), Name: assetVersionName, AssetID: assetID}
+	artifact := models.Artifact{ID: uuid.New(), ArtifactName: artifactName, AssetVersionID: assetVersion.ID, AssetID: assetID}
 
 	t.Run("same CVE in different dependency paths creates separate vulnerabilities", func(t *testing.T) {
 		// the same vulnerable component reachable via two dependency paths:
@@ -52,7 +54,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetVersion, artifact)
 
 		// Should create 2 separate vulnerabilities, one for each dependency path
 		assert.Len(t, vulns, 2)
@@ -63,7 +65,9 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			assert.Equal(t, "CVE-2024-1234", v.CVEID)
 			assert.Equal(t, stdlibPurl, v.ComponentPurl)
 			assert.Equal(t, assetID, v.AssetID)
+			assert.Equal(t, assetVersion.ID, v.AssetVersionID)
 			assert.Equal(t, assetVersionName, v.AssetVersionName)
+			assert.Equal(t, []models.Artifact{artifact}, v.Artifacts)
 			assert.NotEmpty(t, v.VulnerabilityPath)
 
 			pathStrs[strings.Join(v.VulnerabilityPath, ",")] = true
@@ -100,7 +104,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetVersion, artifact)
 
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2021-23337", vulns[0].CVEID)
@@ -125,7 +129,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetVersion, artifact)
 
 		assert.Len(t, vulns, 1)
 		assert.Empty(t, vulns[0].VulnerabilityPath)
@@ -156,7 +160,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			CVE:   models.CVE{CVE: "CVE-2024-5678"},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetVersion, artifact)
 
 		assert.Len(t, vulns, 1)
 		assert.Equal(t, "CVE-2024-5678", vulns[0].CVEID)
@@ -187,7 +191,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			Purl:  purl,
 			CVEID: "CVE-2024-DISAGREE",
 			CVE:   models.CVE{CVE: "CVE-2024-DISAGREE"},
-		}, forest, assetID, assetVersionName, artifactName)
+		}, forest, assetVersion, artifact)
 
 		require.Len(t, vulns, 2)
 		paths := []string{
@@ -222,7 +226,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			Purl:  purl,
 			CVEID: "CVE-2024-EXPLODE",
 			CVE:   models.CVE{CVE: "CVE-2024-EXPLODE"},
-		}, forest, assetID, assetVersionName, artifactName)
+		}, forest, assetVersion, artifact)
 
 		require.Len(t, vulns, 2)
 		paths := []string{
@@ -253,7 +257,7 @@ func TestVulnInPackageToDependencyVulns(t *testing.T) {
 			CVE:   models.CVE{CVE: "CVE-2024-DEEP"},
 		}
 
-		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetID, assetVersionName, artifactName)
+		vulns := transformer.VulnInPackageToDependencyVulns(vuln, forest, assetVersion, artifact)
 
 		assert.Len(t, vulns, 1)
 		// Path: dep1 > dep2 > vulnerable = 3 elements, depth = 3

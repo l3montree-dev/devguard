@@ -70,7 +70,7 @@ func backfillRiskHistory(
 	now := time.Now()
 	rebuilt, skipped, failed := 0, 0, 0
 	for i, artifact := range artifacts {
-		history, err := riskHistoryRepository.GetRiskHistory(ctx, nil, &artifact.ArtifactName, artifact.AssetVersionName, artifact.AssetID, time.Time{}, now)
+		history, err := riskHistoryRepository.GetRiskHistory(ctx, nil, &artifact.ID, artifact.AssetVersionID, time.Time{}, now)
 		if err != nil {
 			slog.Error("could not load risk history for backfill", "artifact", artifact.ArtifactName, "assetID", artifact.AssetID, "err", err)
 			failed++
@@ -151,11 +151,12 @@ func runMigrations() error {
 			artifactRepository shared.ArtifactRepository,
 			riskHistoryRepository shared.ArtifactRiskHistoryRepository,
 			statisticsService shared.StatisticsService,
+			dependencyProxySecretService shared.DependencyProxySecretService,
 		) {
 			slog.Info("checking if hash migrations are needed...")
 			start := time.Now()
 
-			if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner, vulndbService, configService); err != nil {
+			if err := hashmigrations.RunHashMigrationsIfNeeded(pool, daemonRunner, vulndbService, configService, dependencyProxySecretService); err != nil {
 				slog.Error("hash migration failed", "err", err)
 				migrationErr = err
 				return

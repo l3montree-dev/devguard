@@ -22,6 +22,7 @@ type FirstPartyVuln struct {
 	ID                   uuid.UUID        `json:"id"`
 	ScannerIDs           string           `json:"scannerIds"`
 	Message              *string          `json:"message"`
+	AssetVersionID       string           `json:"assetVersionId"`
 	AssetVersionName     string           `json:"assetVersionName"`
 	AssetID              string           `json:"assetId"`
 	State                VulnState        `json:"state"`

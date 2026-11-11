@@ -79,7 +79,7 @@ func (c *VulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx shared.
 		}
 	}
 
-	events, err := c.vulnEventRepository.ReadEventsByAssetIDAndAssetVersionName(ctx.Request().Context(), nil, asset.ID, assetVersion.Name, shared.GetPageInfo(ctx),
+	events, err := c.vulnEventRepository.ReadEventsByAssetVersionID(ctx.Request().Context(), nil, assetVersion.ID, shared.GetPageInfo(ctx),
 		shared.GetFilterQuery(ctx),
 	)
 	if err != nil {

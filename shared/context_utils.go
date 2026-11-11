@@ -762,9 +762,23 @@ func sanitizeField(field string) string {
 	return quoteFields(field)
 }
 
-func (f FilterQuery) sql() string {
-	field := sanitizeField(f.Field)
+// the artifact name moved from the join tables to the artifacts table, filters on the old columns are resolved through it
+var legacyArtifactNameFields = map[string]string{
+	"artifact_dependency_vulns.artifact_artifact_name": `"artifact_dependency_vulns"."artifact_id"`,
+	"artifact_license_risks.artifact_artifact_name":    `"artifact_license_risks"."artifact_id"`,
+}
 
+func (f FilterQuery) sql() string {
+	if artifactIDField, ok := legacyArtifactNameFields[f.Field]; ok {
+		if f.Operator == "is null" || f.Operator == "is not null" {
+			return f.condition(artifactIDField)
+		}
+		return artifactIDField + " IN (SELECT id FROM artifacts WHERE " + f.condition(`"artifacts"."artifact_name"`) + ")"
+	}
+	return f.condition(sanitizeField(f.Field))
+}
+
+func (f FilterQuery) condition(field string) string {
 	switch f.Operator {
 	case "in":
 		return field + " = ANY (?)"
