@@ -334,11 +334,15 @@ func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx s
 		return err
 	}
 
+	allDependencyVulns, err := s.statisticsRepository.GetDependencyVulnsWithEvents(ctx, nil, artifact.ArtifactName, artifact.AssetVersionName, assetID)
+	if err != nil {
+		return err
+	}
+	timeline := newVulnTimeline(allDependencyVulns)
+
+	var rows []models.ArtifactRiskHistory
 	for depDate := begin; depDate.Before(end) || depDate.Equal(end); depDate = depDate.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(ctx, nil, &artifact.ArtifactName, &artifact.AssetVersionName, assetID, depDate)
-		if err != nil {
-			return err
-		}
+		dependencyVulns := timeline.advanceTo(depDate)
 
 		risks := map[string]struct {
 			Min float64
@@ -496,10 +500,12 @@ func (s *statisticsService) RebuildArtifactRiskHistory(ctx context.Context, tx s
 		}
 
 		previousOpenVulnIDs = openVulnIDs
-		err = s.artifactRiskHistoryRepository.UpdateRiskAggregation(ctx, tx, &result)
-		if err != nil {
-			return err
-		}
+		rows = append(rows, result)
+	}
+
+	err = s.artifactRiskHistoryRepository.UpdateRiskAggregations(ctx, tx, rows)
+	if err != nil {
+		return err
 	}
 
 	// save the last history update timestamp

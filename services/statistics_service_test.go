@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"maps"
 	"reflect"
 	"slices"
@@ -372,15 +371,17 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		end := testDay.AddDate(0, 0, 2)
 
 		pre, a, b, f := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+		at := func(day int) time.Time { return begin.AddDate(0, 0, day).Add(12 * time.Hour) }
 
 		// pre was already open before the window, so it is the starting point for the diff of the first day
 		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, []models.ArtifactRiskHistory{
 			newDiffRow(begin.AddDate(0, 0, -4), []string{pre.String()}, nil),
 		})
-		env.expectVulnStates(begin,
-			[]models.DependencyVuln{newTestOpenVuln(pre, 5.0), newTestOpenVuln(a, 8.0), newTestFixedVuln(f, 2.0)},
-			[]models.DependencyVuln{newTestFixedVuln(pre, 5.0), newTestOpenVuln(a, 8.0), newTestOpenVuln(b, 1.0)},
-			[]models.DependencyVuln{newTestOpenVuln(a, 8.0), newTestOpenVuln(b, 1.0)},
+		env.expectVulns(
+			newTestTimelineVuln(pre, 5.0, longBeforeTestDay, newTestEvent(dtos.EventTypeDetected, longBeforeTestDay), newTestEvent(dtos.EventTypeFixed, at(1))),
+			newTestTimelineVuln(a, 8.0, at(0), newTestEvent(dtos.EventTypeDetected, at(0))),
+			newTestTimelineVuln(b, 1.0, at(1), newTestEvent(dtos.EventTypeDetected, at(1))),
+			newTestTimelineVuln(f, 2.0, at(0), newTestEvent(dtos.EventTypeDetected, at(0)), newTestEvent(dtos.EventTypeFixed, at(0).Add(time.Hour))),
 		)
 		env.expectLastHistoryUpdateSaved()
 
@@ -394,8 +395,8 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 			diffAdded, diffRemoved    []string
 		}{
 			{open: 2, fixed: 1, sumOpen: 13, avgOpen: 6.5, maxOpen: 8, sumClosed: 2, diffAdded: []string{a.String()}, diffRemoved: []string{}},
-			{open: 2, fixed: 1, sumOpen: 9, avgOpen: 4.5, maxOpen: 8, sumClosed: 5, diffAdded: []string{b.String()}, diffRemoved: []string{pre.String()}},
-			{open: 2, fixed: 0, sumOpen: 9, avgOpen: 4.5, maxOpen: 8, sumClosed: 0, diffAdded: []string{}, diffRemoved: []string{}},
+			{open: 2, fixed: 2, sumOpen: 9, avgOpen: 4.5, maxOpen: 8, sumClosed: 7, diffAdded: []string{b.String()}, diffRemoved: []string{pre.String()}},
+			{open: 2, fixed: 2, sumOpen: 9, avgOpen: 4.5, maxOpen: 8, sumClosed: 7, diffAdded: []string{}, diffRemoved: []string{}},
 		}
 		require.Len(t, env.saved, len(expected))
 		for i, want := range expected {
@@ -443,7 +444,7 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		openVulns[2].CVE.CVSS = 9.8
 
 		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
-		env.expectVulnStates(begin, openVulns, openVulns, openVulns)
+		env.expectVulns(openVulns...)
 		env.expectLastHistoryUpdateSaved()
 
 		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, end)
@@ -481,7 +482,7 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		snapshotDay := firstSnapshotDayFrom(env.service, testDay)
 
 		env.expectStartState(endOfDay(snapshotDay).AddDate(0, 0, -1), nil, nil)
-		env.expectVulnStates(snapshotDay, nil)
+		env.expectVulns()
 		env.expectLastHistoryUpdateSaved()
 
 		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, snapshotDay, snapshotDay)
@@ -513,7 +514,7 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		}
 
 		env.expectStartState(endOfDay(snapshotDay).AddDate(0, 0, -1), &previousSnapshot, nil)
-		env.expectVulnStates(snapshotDay, []models.DependencyVuln{newTestOpenVuln(carriedOver, 1.0), newTestOpenVuln(opened, 1.0)})
+		env.expectVulns(newTestOpenVuln(carriedOver, 1.0), newTestOpenVuln(opened, 1.0))
 		env.expectLastHistoryUpdateSaved()
 
 		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, snapshotDay, snapshotDay)
@@ -531,9 +532,17 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		// first rebuild: writes the snapshot day
 		first := newRebuildTestEnv(t)
 		snapshotDay := firstSnapshotDayFrom(first.service, testDay)
+		nextDay := snapshotDay.AddDate(0, 0, 1)
+		onNextDay := nextDay.Add(12 * time.Hour)
+
+		vulns := []models.DependencyVuln{
+			newTestOpenVuln(low, 1.0),
+			newTestTimelineVuln(critical, 9.5, longBeforeTestDay, newTestEvent(dtos.EventTypeDetected, longBeforeTestDay), newTestEvent(dtos.EventTypeFixed, onNextDay)),
+			newTestTimelineVuln(fresh, 1.0, onNextDay, newTestEvent(dtos.EventTypeDetected, onNextDay)),
+		}
 
 		first.expectStartState(endOfDay(snapshotDay).AddDate(0, 0, -1), nil, nil)
-		first.expectVulnStates(snapshotDay, []models.DependencyVuln{newTestOpenVuln(low, 1.0), newTestOpenVuln(critical, 9.5)})
+		first.expectVulns(vulns...)
 		first.expectLastHistoryUpdateSaved()
 
 		err := first.service.RebuildArtifactRiskHistory(context.Background(), nil, first.artifact, first.artifact.AssetID, snapshotDay, snapshotDay)
@@ -543,10 +552,9 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 
 		// second rebuild: starts the day after and has to find what the first one wrote
 		second := newRebuildTestEnv(t)
-		nextDay := snapshotDay.AddDate(0, 0, 1)
 
 		second.expectStartState(endOfDay(nextDay).AddDate(0, 0, -1), &snapshotRow, []models.ArtifactRiskHistory{snapshotRow})
-		second.expectVulnStates(nextDay, []models.DependencyVuln{newTestOpenVuln(low, 1.0), newTestFixedVuln(critical, 9.5), newTestOpenVuln(fresh, 1.0)})
+		second.expectVulns(vulns...)
 		second.expectLastHistoryUpdateSaved()
 
 		err = second.service.RebuildArtifactRiskHistory(context.Background(), nil, second.artifact, second.artifact.AssetID, nextDay, nextDay)
@@ -558,18 +566,49 @@ func TestRebuildArtifactRiskHistory(t *testing.T) {
 		assert.ElementsMatch(t, []string{critical.String()}, second.saved[0].DiffRemovedDependencyVulns)
 	})
 
-	t.Run("stops at the first failing day and does not remember an update", func(t *testing.T) {
+	t.Run("returns the error of the vuln lookup without saving anything", func(t *testing.T) {
 		env := newRebuildTestEnv(t)
 		begin := testDay
+		lookupErr := errors.New("vuln lookup failed")
 
 		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
-		// there is no state for the second day, so loading it fails
-		env.expectVulnStates(begin, []models.DependencyVuln{newTestOpenVuln(uuid.New(), 1.0)})
+		env.statisticsRepository.EXPECT().GetDependencyVulnsWithEvents(mock.Anything, mock.Anything, env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID).
+			Return(nil, lookupErr)
 
 		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, begin.AddDate(0, 0, 2))
-		assert.Error(t, err)
-		assert.Len(t, env.saved, 1)
+		assert.ErrorIs(t, err, lookupErr)
+		assert.Empty(t, env.saved)
 		assert.Nil(t, env.artifact.LastHistoryUpdate)
+	})
+
+	t.Run("returns the error of saving the rows and does not remember an update", func(t *testing.T) {
+		env := newRebuildTestEnv(t)
+		begin := testDay
+		saveErr := errors.New("saving failed")
+
+		env.saveErr = saveErr
+		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
+		env.expectVulns(newTestOpenVuln(uuid.New(), 1.0))
+
+		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, begin.AddDate(0, 0, 2))
+		assert.ErrorIs(t, err, saveErr)
+		assert.Nil(t, env.artifact.LastHistoryUpdate)
+	})
+
+	t.Run("saves every day in one call", func(t *testing.T) {
+		env := newRebuildTestEnv(t)
+		begin := testDay
+		end := begin.AddDate(0, 0, 4)
+
+		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
+		env.expectVulns(newTestOpenVuln(uuid.New(), 1.0))
+		env.expectLastHistoryUpdateSaved()
+
+		err := env.service.RebuildArtifactRiskHistory(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, end)
+		require.NoError(t, err)
+
+		env.artifactRiskHistoryRepository.AssertNumberOfCalls(t, "UpdateRiskAggregations", 1)
+		require.Len(t, env.saved, 5)
 	})
 
 	t.Run("returns the error of the starting state lookup without rebuilding anything", func(t *testing.T) {
@@ -593,7 +632,7 @@ func TestUpdateArtifactRiskAggregation(t *testing.T) {
 
 		vuln := newTestOpenVuln(uuid.New(), 1.0)
 		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
-		env.expectVulnsEveryDay(vuln)
+		env.expectVulns(vuln)
 		env.expectLastHistoryUpdateSaved()
 
 		err := env.service.UpdateArtifactRiskAggregation(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, end)
@@ -622,7 +661,7 @@ func TestUpdateArtifactRiskAggregation(t *testing.T) {
 
 		env.artifactRiskHistoryRepository.On("GetLatestSnapshotBefore", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 		env.artifactRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, time.Time{}, mock.Anything).Return([]models.ArtifactRiskHistory{}, nil)
-		env.expectVulnsEveryDay()
+		env.expectVulns()
 		env.expectLastHistoryUpdateSaved()
 
 		err := env.service.UpdateArtifactRiskAggregation(context.Background(), nil, env.artifact, env.artifact.AssetID, time.Now().AddDate(-3, 0, 0), end)
@@ -640,7 +679,7 @@ func TestUpdateArtifactRiskAggregation(t *testing.T) {
 
 		low, critical := uuid.New(), uuid.New()
 		env.expectStartState(endOfDay(begin).AddDate(0, 0, -1), nil, nil)
-		env.expectVulnsEveryDay(newTestOpenVuln(low, 1.0), newTestOpenVuln(critical, 9.5))
+		env.expectVulns(newTestOpenVuln(low, 1.0), newTestOpenVuln(critical, 9.5))
 		env.expectLastHistoryUpdateSaved()
 
 		err := env.service.UpdateArtifactRiskAggregation(context.Background(), nil, env.artifact, env.artifact.AssetID, begin, snapshotDay)
@@ -666,7 +705,8 @@ type rebuildTestEnv struct {
 	artifactRiskHistoryRepository *mocks.ArtifactRiskHistoryRepository
 	assetVersionRepository        *mocks.AssetVersionRepository
 
-	saved []models.ArtifactRiskHistory
+	saved   []models.ArtifactRiskHistory
+	saveErr error
 }
 
 func newRebuildTestEnv(t *testing.T) *rebuildTestEnv {
@@ -681,9 +721,12 @@ func newRebuildTestEnv(t *testing.T) *rebuildTestEnv {
 	}
 	env.service = NewStatisticsService(env.statisticsRepository, env.artifactRiskHistoryRepository, mocks.NewDependencyVulnRepository(t), env.assetVersionRepository)
 
-	env.artifactRiskHistoryRepository.EXPECT().UpdateRiskAggregation(mock.Anything, mock.Anything, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ shared.DB, row *models.ArtifactRiskHistory) error {
-			env.saved = append(env.saved, *row)
+	env.artifactRiskHistoryRepository.EXPECT().UpdateRiskAggregations(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ shared.DB, rows []models.ArtifactRiskHistory) error {
+			if env.saveErr != nil {
+				return env.saveErr
+			}
+			env.saved = append(env.saved, rows...)
 			return nil
 		}).Maybe()
 
@@ -702,26 +745,9 @@ func (env *rebuildTestEnv) expectStartState(at time.Time, snapshot *models.Artif
 	env.artifactRiskHistoryRepository.On("GetRiskHistory", mock.Anything, mock.Anything, &env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID, from, at).Return(diffsSinceSnapshot, nil)
 }
 
-// expectVulnStates answers the time travel of consecutive days starting at firstDay, any other day fails
-func (env *rebuildTestEnv) expectVulnStates(firstDay time.Time, vulnsPerDay ...[]models.DependencyVuln) {
-	byDay := map[string][]models.DependencyVuln{}
-	for i, vulns := range vulnsPerDay {
-		byDay[firstDay.AddDate(0, 0, i).UTC().Format(time.DateOnly)] = vulns
-	}
-
-	env.statisticsRepository.EXPECT().TimeTravelDependencyVulnState(mock.Anything, mock.Anything, &env.artifact.ArtifactName, &env.artifact.AssetVersionName, env.artifact.AssetID, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ shared.DB, _ *string, _ *string, _ uuid.UUID, day time.Time) ([]models.DependencyVuln, error) {
-			vulns, ok := byDay[day.UTC().Format(time.DateOnly)]
-			if !ok {
-				return nil, fmt.Errorf("no vuln state prepared for %s", day.UTC().Format(time.DateOnly))
-			}
-			return vulns, nil
-		})
-}
-
-// expectVulnsEveryDay answers the time travel of every day with the same vulns
-func (env *rebuildTestEnv) expectVulnsEveryDay(vulns ...models.DependencyVuln) {
-	env.statisticsRepository.EXPECT().TimeTravelDependencyVulnState(mock.Anything, mock.Anything, &env.artifact.ArtifactName, &env.artifact.AssetVersionName, env.artifact.AssetID, mock.Anything).
+// expectVulns answers the lookup of the artifact's vulns with their complete event history, the rebuild derives the state of every day from it
+func (env *rebuildTestEnv) expectVulns(vulns ...models.DependencyVuln) {
+	env.statisticsRepository.EXPECT().GetDependencyVulnsWithEvents(mock.Anything, mock.Anything, env.artifact.ArtifactName, env.artifact.AssetVersionName, env.artifact.AssetID).
 		Return(vulns, nil)
 }
 
@@ -733,16 +759,28 @@ func (env *rebuildTestEnv) expectLastHistoryUpdateSaved() {
 	env.assetVersionRepository.EXPECT().GetDB(mock.Anything, mock.Anything).Return(db)
 }
 
-func newTestOpenVuln(id uuid.UUID, risk float64) models.DependencyVuln {
+var longBeforeTestDay = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+func newTestEvent(eventType dtos.VulnEventType, at time.Time) models.VulnEvent {
+	return models.VulnEvent{Type: eventType, CreatedAt: at}
+}
+
+func newTestTimelineVuln(id uuid.UUID, risk float64, createdAt time.Time, events ...models.VulnEvent) models.DependencyVuln {
 	vuln := newTestDependencyVuln(id, risk)
-	vuln.State = dtos.VulnStateOpen
+	vuln.CreatedAt = createdAt
+	vuln.Events = events
 	return vuln
 }
 
+func newTestOpenVuln(id uuid.UUID, risk float64) models.DependencyVuln {
+	return newTestTimelineVuln(id, risk, longBeforeTestDay, newTestEvent(dtos.EventTypeDetected, longBeforeTestDay))
+}
+
 func newTestFixedVuln(id uuid.UUID, risk float64) models.DependencyVuln {
-	vuln := newTestDependencyVuln(id, risk)
-	vuln.State = dtos.VulnStateFixed
-	return vuln
+	return newTestTimelineVuln(id, risk, longBeforeTestDay,
+		newTestEvent(dtos.EventTypeDetected, longBeforeTestDay),
+		newTestEvent(dtos.EventTypeFixed, longBeforeTestDay.Add(time.Hour)),
+	)
 }
 
 // the rebuild works on the last second of each day

@@ -74,14 +74,14 @@ func (r *artifactRiskHistoryRepository) GetRiskHistoryWithVersion(ctx context.Co
 	return assetRisk, nil
 }
 
-func (r *artifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx *gorm.DB, assetRisk *models.ArtifactRiskHistory) error {
-	// Save() always inserts here (the composite PK isn't a single auto-increment
-	// field gorm can dirty-check), so re-running the daemon for the same day
-	// hits the "artifact_risk_history_pkey" unique constraint instead of updating.
+func (r *artifactRiskHistoryRepository) UpdateRiskAggregations(ctx context.Context, tx *gorm.DB, rows []models.ArtifactRiskHistory) error {
+	if len(rows) == 0 {
+		return nil
+	}
 	return r.Repository.GetDB(ctx, tx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "artifact_name"}, {Name: "asset_version_name"}, {Name: "asset_id"}, {Name: "day"}},
 		UpdateAll: true,
-	}).Create(assetRisk).Error
+	}).Create(&rows).Error
 }
 
 // GetLatestRiskHistory returns the row from the most recent day for the given

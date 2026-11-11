@@ -81,6 +81,34 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context
 	return replayHistoricalEvents(dependencyVulns), nil
 }
 
+const dependencyVulnsBatchSize = 1000
+
+func (r *statisticsRepository) GetDependencyVulnsWithEvents(ctx context.Context, tx *gorm.DB, artifactName string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	dependencyVulns := []models.DependencyVuln{}
+
+	var batch []models.DependencyVuln
+	err := r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).
+		Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
+		Where("adv.artifact_asset_id = ?", assetID).
+		Where("adv.artifact_asset_version_name = ?", assetVersionName).
+		Where("adv.artifact_artifact_name = ?", artifactName).
+		FindInBatches(&batch, dependencyVulnsBatchSize, func(*gorm.DB, int) error {
+			dependencyVulns = append(dependencyVulns, batch...)
+			return nil
+		}).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.dependencyVulnRepository.AttachGroupEvents(ctx, tx, dependencyVulns, nil); err != nil {
+		return nil, err
+	}
+
+	return dependencyVulns, nil
+}
+
 // replayHistoricalEvents reconstructs the historical state of each
 // DependencyVuln by replaying its (already time-filtered) Events in order.
 // The State field is reset to the zero value before replay so that

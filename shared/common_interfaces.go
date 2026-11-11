@@ -667,6 +667,7 @@ type ConfigService interface {
 
 type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(ctx context.Context, tx DB, artifactName *string, assetVersionName *string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
+	GetDependencyVulnsWithEvents(ctx context.Context, tx DB, artifactName string, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	AverageFixingTimes(ctx context.Context, tx DB, artifactNam *string, assetVersionName string, assetID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// AverageRemediationTimesForRelease computes all risk/CVSS average fixing times for a release tree in one query
 	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
@@ -709,7 +710,7 @@ type ArtifactRiskHistoryRepository interface {
 	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
 	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
-	UpdateRiskAggregation(ctx context.Context, tx DB, assetRisk *models.ArtifactRiskHistory) error
+	UpdateRiskAggregations(ctx context.Context, tx DB, rows []models.ArtifactRiskHistory) error
 }
 
 type StatisticsService interface {

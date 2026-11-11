@@ -592,37 +592,37 @@ func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryWithVersion_Call) RunAndRe
 	return _c
 }
 
-// UpdateRiskAggregation provides a mock function for the type ArtifactRiskHistoryRepository
-func (_mock *ArtifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx shared.DB, assetRisk *models.ArtifactRiskHistory) error {
-	ret := _mock.Called(ctx, tx, assetRisk)
+// UpdateRiskAggregations provides a mock function for the type ArtifactRiskHistoryRepository
+func (_mock *ArtifactRiskHistoryRepository) UpdateRiskAggregations(ctx context.Context, tx shared.DB, rows []models.ArtifactRiskHistory) error {
+	ret := _mock.Called(ctx, tx, rows)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateRiskAggregation")
+		panic("no return value specified for UpdateRiskAggregations")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.ArtifactRiskHistory) error); ok {
-		r0 = returnFunc(ctx, tx, assetRisk)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []models.ArtifactRiskHistory) error); ok {
+		r0 = returnFunc(ctx, tx, rows)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateRiskAggregation'
-type ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call struct {
+// ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateRiskAggregations'
+type ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call struct {
 	*mock.Call
 }
 
-// UpdateRiskAggregation is a helper method to define mock.On call
+// UpdateRiskAggregations is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetRisk *models.ArtifactRiskHistory
-func (_e *ArtifactRiskHistoryRepository_Expecter) UpdateRiskAggregation(ctx any, tx any, assetRisk any) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
-	return &ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", ctx, tx, assetRisk)}
+//   - rows []models.ArtifactRiskHistory
+func (_e *ArtifactRiskHistoryRepository_Expecter) UpdateRiskAggregations(ctx any, tx any, rows any) *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call {
+	return &ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call{Call: _e.mock.On("UpdateRiskAggregations", ctx, tx, rows)}
 }
 
-func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(ctx context.Context, tx shared.DB, assetRisk *models.ArtifactRiskHistory)) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call) Run(run func(ctx context.Context, tx shared.DB, rows []models.ArtifactRiskHistory)) *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -632,9 +632,9 @@ func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *models.ArtifactRiskHistory
+		var arg2 []models.ArtifactRiskHistory
 		if args[2] != nil {
-			arg2 = args[2].(*models.ArtifactRiskHistory)
+			arg2 = args[2].([]models.ArtifactRiskHistory)
 		}
 		run(
 			arg0,
@@ -645,12 +645,12 @@ func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func
 	return _c
 }
 
-func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Return(err error) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call) Return(err error) *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetRisk *models.ArtifactRiskHistory) error) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, rows []models.ArtifactRiskHistory) error) *ArtifactRiskHistoryRepository_UpdateRiskAggregations_Call {
 	_c.Call.Return(run)
 	return _c
 }
