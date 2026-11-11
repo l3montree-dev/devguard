@@ -101,7 +101,7 @@ func newCandidate(purl packageurl.PackageURL) *candidate {
 		matchCtx: matchCtx,
 		shape: queryShape{
 			interpretation:   matchCtx.HowToInterpretVersionString,
-			ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace),
+			ecosystemPattern: repositories.QualifierEcosystemPattern(matchCtx.Qualifiers, matchCtx.Namespace, matchCtx.OriginalVersion),
 		},
 	}
 }

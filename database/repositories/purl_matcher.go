@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/normalize"
@@ -27,8 +28,8 @@ import (
 )
 
 // BuildQualifierQuery creates the database query for qualifier matching
-func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespace string) *gorm.DB {
-	if patterns := QualifierEcosystemPattern(qualifiers, namespace); len(patterns) > 0 {
+func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespace, version string) *gorm.DB {
+	if patterns := QualifierEcosystemPattern(qualifiers, namespace, version); len(patterns) > 0 {
 		return db.Where("ecosystem LIKE ANY (?)", pq.Array(patterns))
 	}
 	return db
@@ -37,12 +38,13 @@ func BuildQualifierQuery(db *gorm.DB, qualifiers packageurl.Qualifiers, namespac
 // QualifierEcosystemPattern derives the `ecosystem LIKE ...` patterns implied by a
 // purl's distro qualifier (any one of which matching is sufficient), or nil if the
 // purl carries no usable distro. Purl qualifier keys are unique, so there is at
-// most one distro to look at.
+// most one distro to look at. The version is only consulted for Red Hat, whose
+// release tells a RHEL build apart from a build of a layered product.
 //
 // BuildQualifierQuery turns the patterns into a where clause; the batched lookup
 // in vulndb/scan instead groups purls by them, so that purls sharing a distro can
 // be matched in one query.
-func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace string) []string {
+func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace, version string) []string {
 	for _, qualifier := range qualifiers {
 		if qualifier.Key != "distro" {
 			continue
@@ -83,30 +85,11 @@ func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace strin
 
 			return []string{ecosystemPattern + "%"}
 		case "redhat", "rhel", "centos":
-			// Only the major version is usable: Red Hat advisories are split across many
-			// product lines (enterprise_linux, rhel_eus, rhel_aus, openshift, jboss, ...)
-			// for the same major version, and the purl carries no qualifier that
-			// identifies the product line (confirmed against the rpm purl-spec
-			// definition, which only defines "arch" and "epoch" besides the de facto
-			// "distro"). So we can't reproduce the exact product line here - just
-			// exclude other majors and downstream distros (EulerOS, Red Hat Hardened
-			// Images/hummingbird, ...).
-			//
-			// The major version shows up in the ecosystem string in two shapes:
-			//   - directly after a colon, e.g. "Red Hat:enterprise_linux:9::baseos"
-			//     or "Red Hat:rhel_eus:9.4::baseos"
-			//   - as an "elN" suffix on add-on products, e.g.
-			//     "Red Hat:jboss_core_services:1::el8" or "Red Hat:openstack:18.0::el9"
-			// Example: "pkg:rpm/redhat/glibc@2.34-275.el9_8?distro=redhat-9.8" ->
-			//   ["Red Hat:%:9%", "Red Hat:%el9%"]
 			parts := strings.SplitN(distro, "-", 2)
 			if len(parts) == 2 {
 				majorVersion, _, _ := strings.Cut(parts[1], ".")
 				if majorVersion != "" {
-					return []string{
-						"Red Hat:%:" + majorVersion + "%",
-						"Red Hat:%el" + majorVersion + "%",
-					}
+					return redHatEcosystemPatterns(majorVersion, version)
 				}
 			}
 			return nil
@@ -118,6 +101,52 @@ func QualifierEcosystemPattern(qualifiers packageurl.Qualifiers, namespace strin
 	return nil
 }
 
+// layeredProductRelease matches the release of an rpm built for a layered Red Hat
+// product rather than for RHEL itself: the product appends its tag to the dist tag
+// ("1.el9ap" for Ansible Automation Platform, "1.el9pc" and "1.el9sat" for
+// Satellite, "1.el9ost" for OpenStack), or OpenShift prefixes its own
+// ("6.rhaos4.14.el9"). RHEL builds end in a bare "elN", "elN_M" or a module tag
+// ("275.el9_8", "1.module+el9.6.0+22647+1741ae35").
+var layeredProductRelease = regexp.MustCompile(`el[0-9]+[a-z]|rhaos`)
+
+// redHatEcosystemPatterns keeps an rpm purl to the advisories of its own product.
+//
+// Red Hat files the errata of its RHEL product lines under the RHEL major
+// ("Red Hat:enterprise_linux:9::baseos", "Red Hat:rhel_eus:9.4::appstream",
+// "Red Hat:enterprise_linux:10.2"), and those of layered products such as
+// Satellite, Ansible Automation Platform or OpenShift under the product's own
+// version with the major as an "elN" suffix ("Red Hat:satellite:6.16::el9",
+// "Red Hat:enterprise_mrg:2:server:el6"). Layered products ship their own builds
+// of RHEL packages, libcomps or python3-urllib3 for instance, with newer versions
+// than RHEL does, so matching their errata against a RHEL build reports fixes
+// that the RHEL repositories never carry.
+//
+// The purl names no product line, but the release does: a RHEL build is matched
+// against the RHEL product lines only, a layered build against its own product
+// as well. A product version that equals a RHEL major ("Red Hat:openstack:9::el7")
+// no longer reaches into that major either.
+//
+// Example: "pkg:rpm/redhat/libcomps@0.1.18-1.el9?distro=redhat-9.8" ->
+//
+//	["Red Hat:enterprise_linux:9", "Red Hat:enterprise_linux:9::%",
+//	 "Red Hat:enterprise_linux:9.%", "Red Hat:rhel_%:9", "Red Hat:rhel_%:9::%",
+//	 "Red Hat:rhel_%:9.%"]
+func redHatEcosystemPatterns(majorVersion, version string) []string {
+	var patterns []string
+	for _, productLine := range []string{"Red Hat:enterprise_linux:", "Red Hat:rhel_%:"} {
+		patterns = append(patterns,
+			productLine+majorVersion,
+			productLine+majorVersion+"::%",
+			productLine+majorVersion+".%",
+		)
+	}
+
+	release := version[strings.LastIndex(version, "-")+1:]
+	if layeredProductRelease.MatchString(release) {
+		patterns = append(patterns, "Red Hat:%:el"+majorVersion)
+	}
+	return patterns
+}
 
 func BatchedVersionPredicates(interpretation normalize.VersionInterpretationType) []string {
 	const exactVersion = `ac.version = ANY(ARRAY[q.version, q.original_version])`
