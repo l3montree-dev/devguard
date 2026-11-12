@@ -3,7 +3,6 @@ package compliance
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -13,15 +12,11 @@ import (
 	"time"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
 	"golang.org/x/sync/singleflight"
 )
 
 const csvFetchTimeout = 5 * time.Second
-
-//go:embed oscal/catalogs/Grundschutz++-catalog.json
-var grundschutzCatalogJSON []byte
 
 func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
 	additional := make(map[string]any)
@@ -62,14 +57,6 @@ func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.
 
 	}
 	return additional
-}
-
-func loadGrundschutzControls() ([]models.FrameworkControl, error) {
-	catalog, err := parseOSCALCatalog(bytes.NewReader(grundschutzCatalogJSON))
-	if err != nil {
-		return nil, err
-	}
-	return extractControlsFromCatalog(catalog, grundschutzPlusPlus, grundschutzAdditionalMapper), nil
 }
 
 type newProperty struct {

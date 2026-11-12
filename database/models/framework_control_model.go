@@ -1,7 +1,10 @@
 package models
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/datatypes"
 )
 
@@ -35,6 +38,10 @@ type MappedControl struct {
 
 func (m FrameworkControl) TableName() string {
 	return "compliance_controls"
+}
+
+func (m FrameworkControl) CalculateHash() string {
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", m.ControlID, m.Title, m.Class, m.Description, m.Importance, m.SecurityLevel, utils.SafeDereference(m.ParentControlID)))
 }
 
 // ScopeFramework is a framework (catalog) activated or uploaded in an org, project or asset.

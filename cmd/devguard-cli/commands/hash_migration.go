@@ -23,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/hashmigrations"
-	"github.com/l3montree-dev/devguard/compliance"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/repositories"
@@ -103,16 +102,6 @@ func runMigrations() error {
 			}
 
 			slog.Info("hash migration check completed", "duration", time.Since(start))
-
-			db := database.NewGormDB(pool)
-			slog.Info("loading compliance controls into database...")
-			migrationErr = db.Transaction(func(tx shared.DB) error {
-				if err := compliance.LoadControlsIntoDB(tx); err != nil {
-					slog.Error("failed to load compliance controls", "err", err)
-					return err
-				}
-				return nil
-			})
 		}),
 	)
 
