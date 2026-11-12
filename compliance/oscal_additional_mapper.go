@@ -18,7 +18,7 @@ import (
 
 const csvFetchTimeout = 5 * time.Second
 
-func grundschutzAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
+func defaultAdditionalMapper(groupTitle *string, controlProps *[]oscalTypes.Property, parts []oscalTypes.Part) map[string]any {
 	additional := make(map[string]any)
 	if groupTitle != nil {
 		additional["group_title"] = *groupTitle

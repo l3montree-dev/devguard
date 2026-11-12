@@ -57,7 +57,7 @@ func ParseCatalog(data []byte) (string, []models.FrameworkControl, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	return catalog.Metadata.Title, extractControlsFromCatalog(catalog, grundschutzAdditionalMapper), nil
+	return catalog.Metadata.Title, extractControlsFromCatalog(catalog, defaultAdditionalMapper), nil
 }
 
 func extractControlsFromCatalog(catalog *oscalTypes.Catalog, mapper additionalMapper) []models.FrameworkControl {
