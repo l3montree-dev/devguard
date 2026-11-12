@@ -34,6 +34,10 @@ import (
 // the database - the root is hashed under the artifact's own identity.
 const merkleParseRoot = "\x00sbom-root"
 
+// metadataRootRef is the ref the root component is parsed under when the
+// document gives it no bom-ref and no listed component matches its purl.
+const metadataRootRef = "\x00sbom-metadata-component"
+
 // MerkleTreeFromCycloneDX parses a CycloneDX document into a content-addressed
 // tree rooted at artifactName.
 //
@@ -46,7 +50,7 @@ func MerkleTreeFromCycloneDX(bom *cdx.BOM, artifactName string) (*normalize.Pars
 	}
 
 	rootComponent := bom.Metadata.Component
-	rootRef := rootComponent.BOMRef
+	rootRef := resolveRootRef(bom)
 
 	components := map[string]cdx.Component{}
 	// componentIDs maps bom-ref -> purl, and doubles as the set of known refs
@@ -60,7 +64,9 @@ func MerkleTreeFromCycloneDX(bom *cdx.BOM, artifactName string) (*normalize.Pars
 	}
 	// the root is sanitized like any other component, so an escaped purl or an
 	// invalid type on it cannot leak into the stored ids or the exported document
-	addComponent(sanitizeCycloneDXComponent(*rootComponent))
+	root := *rootComponent
+	root.BOMRef = rootRef
+	addComponent(sanitizeCycloneDXComponent(root))
 
 	seen := map[string]bool{}
 	if bom.Components != nil {
@@ -107,6 +113,26 @@ func MerkleTreeFromCycloneDX(bom *cdx.BOM, artifactName string) (*normalize.Pars
 		merkleParseRoot,
 	)
 	return &normalize.ParsedSBOM{Tree: tree, Components: components}, nil
+}
+
+// resolveRootRef returns the bom-ref the root component is parsed under.
+// bom-ref is optional in CycloneDX. Some tools, e.g. JFrog Xray, leave it off
+// the root component and list the root again under components with a bom-ref.
+// In that case the listed component's ref is used, so dependency entries
+// pointing at it still reach the root.
+func resolveRootRef(bom *cdx.BOM) string {
+	root := bom.Metadata.Component
+	if root.BOMRef != "" {
+		return root.BOMRef
+	}
+	if root.PackageURL != "" && bom.Components != nil {
+		for _, comp := range *bom.Components {
+			if comp.BOMRef != "" && comp.PackageURL == root.PackageURL {
+				return comp.BOMRef
+			}
+		}
+	}
+	return metadataRootRef
 }
 
 // rootName is the identity of the emitted root component: the caller's override
@@ -258,9 +284,6 @@ func validateCycloneDX(bom *cdx.BOM) error {
 	if bom.Metadata.Component == nil {
 		return fmt.Errorf("metadata component is required")
 	}
-	if bom.Metadata.Component.BOMRef == "" {
-		return fmt.Errorf("root component BOMRef is required")
-	}
 	if bom.Metadata.Component.Name == "" {
 		return fmt.Errorf("root component name is required")
 	}
@@ -349,7 +372,7 @@ func buildMerkleDependencyMap(bom *cdx.BOM, rootRef string, componentIDs map[str
 			}
 		}
 		for _, comp := range *bom.Components {
-			if !isChild[comp.BOMRef] {
+			if comp.BOMRef != rootRef && !isChild[comp.BOMRef] {
 				children[rootRef] = append(children[rootRef], comp.BOMRef)
 			}
 		}
