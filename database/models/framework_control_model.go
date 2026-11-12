@@ -1,51 +1,53 @@
 package models
 
 import (
-	"fmt"
-
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
+// FrameworkControl is identified by the hash of its resolved content.
+// The same control can belong to several frameworks via ScopeFramework.
 type FrameworkControl struct {
-	FrameworkControlID string `json:"frameworkControlId" gorm:"type:text;primaryKey;"`
-	Title              string `json:"title"`
-	Class              string `json:"class"`
-	Description        string `json:"description"`
+	ControlHash string `json:"controlHash" gorm:"type:text;primaryKey;"`
+	Title       string `json:"title"`
+	Class       string `json:"class"`
+	Description string `json:"description"`
 
 	Importance    string `json:"importance"`
 	SecurityLevel string `json:"securityLevel"`
 
-	Framework string `yaml:"framework" json:"framework"`
 	ControlID string `yaml:"controls"  json:"controls" gorm:"column:control_id;type:text;index"`
 
 	Additional datatypes.JSON `yaml:"additional" json:"additional" gorm:"type:jsonb"`
 
-	ParentFrameworkControlID *string `json:"parentFrameworkControlId" gorm:"type:text;index"`
-
-	MappedControls []MappedControl `json:"mappedControls" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
+	ParentControlID *string `json:"parentControlId" gorm:"type:text;index;column:parent_control_id"`
 }
 
+// MappedControl references a control by "<framework>:<control_id>".
 type MappedControl struct {
 	FrameworkControlID string `json:"frameworkControlId" gorm:"type:text;primaryKey;"`
 
 	RelatedFramework string `json:"relatedFramework" gorm:"type:text;primaryKey;"`
 	RelatedControlID string `json:"relatedControlId" gorm:"type:text;primaryKey;"`
 
-	FrameworkControl FrameworkControl `gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
-
 	Relationship string `json:"relationship" gorm:"type:text;primaryKey;default:''"`
 }
 
 func (m FrameworkControl) TableName() string {
-	return "frameworks_controls"
+	return "compliance_controls"
 }
 
-func (m *FrameworkControl) SetID() {
-	m.FrameworkControlID = fmt.Sprintf("%s:%s", m.Framework, m.ControlID)
+// ScopeFramework is a framework (catalog) activated or uploaded in an org, project or asset.
+type ScopeFramework struct {
+	ID        uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Framework string     `json:"framework" gorm:"type:text;not null"`
+	OrgID     uuid.UUID  `json:"orgId" gorm:"type:uuid;not null;column:org_id"`
+	ProjectID *uuid.UUID `json:"projectId" gorm:"type:uuid;column:project_id"`
+	AssetID   *uuid.UUID `json:"assetId" gorm:"type:uuid;column:asset_id"`
+
+	Controls []FrameworkControl `json:"controls" gorm:"many2many:scope_framework_controls;foreignKey:ID;joinForeignKey:ScopeFrameworkID;references:ControlHash;joinReferences:ControlHash"`
 }
 
-func (m *FrameworkControl) BeforeSave(tx *gorm.DB) (err error) {
-	m.SetID()
-	return nil
+func (m ScopeFramework) TableName() string {
+	return "scope_frameworks"
 }
