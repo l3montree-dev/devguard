@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -44,6 +45,8 @@ type DependencyVulnService struct {
 }
 
 var _ shared.DependencyVulnService = (*DependencyVulnService)(nil)
+
+const ticketSyncWindow = 48 * time.Hour
 
 func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate) *DependencyVulnService {
 	return &DependencyVulnService{
@@ -362,9 +365,12 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 	if err != nil {
 		return fmt.Errorf("could not get dependencyVulns by asset version: %w", err)
 	}
+	vulnList = slices.DeleteFunc(vulnList, func(v models.DependencyVuln) bool {
+		return v.State != dtos.VulnStateOpen || time.Since(v.UpdatedAt) >= ticketSyncWindow
+	})
 
 	if len(vulnList) == 0 {
-		slog.Info("no dependency vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
+		slog.Info("no recently changed open dependency vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
 		return nil
 	}
 
@@ -408,7 +414,7 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 			})
 		} else {
 			errgroup.Go(func() (any, error) {
-				err := s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability, userAgent)
+				err := s.updateIssue(ctx, org, project, asset, assetVersion.Slug, vulnerability, userAgent)
 				return nil, err
 			})
 		}
@@ -426,11 +432,11 @@ func (s *DependencyVulnService) createIssue(ctx context.Context, vulnerability m
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionSlug, &vulnerability, projectSlug, orgSlug, justification, userID, userAgent)
 }
 
-func (s *DependencyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln, userAgent *string) error {
+func (s *DependencyVulnService) updateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vulnerability models.DependencyVuln, userAgent *string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability, userAgent)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, org, project, asset, assetVersionSlug, &vulnerability, userAgent)
 	if err != nil {
 		return err
 	}

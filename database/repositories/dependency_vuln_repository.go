@@ -805,7 +805,7 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(ctx context.Con
 
 func (repository *dependencyVulnRepository) GetAllVulnsByAssetIDWithTicketIDs(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
-	err := repository.Repository.GetDB(ctx, tx).Raw("SELECT * FROM dependency_vulns WHERE asset_id = ? AND ticket_id IS NOT NULL", assetID.String()).Find(&vulns).Error
+	err := repository.Repository.GetDB(ctx, tx).Raw("SELECT * FROM dependency_vulns WHERE asset_id = ? AND ticket_id IS NOT NULL AND state = ?", assetID.String(), dtos.VulnStateOpen).Find(&vulns).Error
 	if err != nil {
 		return nil, err
 	}

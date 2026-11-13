@@ -306,14 +306,6 @@ func TestGithubIntegrationUpdateIssueUnlinksDeletedGithubIssue(t *testing.T) {
 	githubClient.On("EditIssue", mock.Anything, "owner", "repo", 42, mock.Anything).
 		Return(nil, nil, fmt.Errorf("404 Not Found")).Once()
 
-	projectRepository := mocks.NewProjectRepository(t)
-	projectRepository.On("GetProjectByAssetID", mock.Anything, mock.Anything, assetID).
-		Return(models.Project{OrganizationID: orgID, Slug: "project"}, nil).Once()
-
-	orgRepository := mocks.NewOrganizationRepository(t)
-	orgRepository.On("Read", mock.Anything, mock.Anything, orgID).
-		Return(models.Org{Slug: "org"}, nil).Once()
-
 	vulnRepository := mocks.NewVulnRepository(t)
 	vulnRepository.On(
 		"ApplyAndSave",
@@ -331,13 +323,11 @@ func TestGithubIntegrationUpdateIssueUnlinksDeletedGithubIssue(t *testing.T) {
 		githubClientFactory: func(repoID string) (shared.GithubClientFacade, error) {
 			return githubClient, nil
 		},
-		projectRepository:        projectRepository,
-		orgRepository:            orgRepository,
 		aggregatedVulnRepository: vulnRepository,
 		frontendURL:              "http://localhost:3000",
 	}
 
-	err := integration.UpdateIssue(context.Background(), models.Asset{
+	err := integration.UpdateIssue(context.Background(), models.Org{Slug: "org"}, models.Project{OrganizationID: orgID, Slug: "project"}, models.Asset{
 		Model: models.Model{
 			ID: assetID,
 		},
