@@ -38,6 +38,7 @@ func ConvertVulnEventDetailToDto(e models.VulnEventDetail) dtos.VulnEvent {
 		UserAgent:                e.GetUserAgent(),
 		VexRuleID:                e.VexRuleID,
 		VexRule:                  convertVexRuleToDto(e.VexRule),
+		ArtifactID:               e.ArtifactID,
 	}
 }
 
@@ -64,6 +65,7 @@ func ConvertVulnEventToDto(event models.VulnEvent) dtos.VulnEvent {
 		UserAgent:                event.GetUserAgent(),
 		VexRuleID:                event.VexRuleID,
 		VexRule:                  convertVexRuleToDto(event.VexRule),
+		ArtifactID:               event.ArtifactID,
 	}
 }
 

@@ -53,35 +53,44 @@ func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepo
 	}
 }
 
+type artifactLink struct {
+	ArtifactID       uuid.UUID
+	DependencyVulnID uuid.UUID
+}
+
 // saveArtifactAssociations bulk-inserts rows into artifact_dependency_vulns.
 // SaveBatchBestEffort omits associations, so callers that create new vulns with
 // artifacts must call this explicitly.
-func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) error {
-	type row struct {
-		ArtifactID       uuid.UUID
-		DependencyVulnID uuid.UUID
-	}
-
-	rows := make([]row, 0, len(vulns))
+// Only the links which did not exist before are returned.
+func saveArtifactAssociations(tx shared.DB, vulns []models.DependencyVuln) ([]artifactLink, error) {
+	rows := make([]artifactLink, 0, len(vulns))
 	for _, v := range vulns {
 		hash := v.CalculateHash()
 		for _, a := range v.Artifacts {
-			rows = append(rows, row{a.ID, hash})
+			rows = append(rows, artifactLink{a.ID, hash})
 		}
 	}
 	if len(rows) == 0 {
-		return nil
+		return nil, nil
 	}
 
+	created := make([]artifactLink, 0, len(rows))
 	placeholders := strings.TrimSuffix(strings.Repeat("(?, ?),", len(rows)), ",")
-	return tx.Exec(
+	err := tx.Raw(
 		"INSERT INTO artifact_dependency_vulns (artifact_id, dependency_vuln_id) VALUES "+
 			placeholders+
-			" ON CONFLICT DO NOTHING",
-		utils.Flat(utils.Map(rows, func(r row) []any {
+			" ON CONFLICT DO NOTHING RETURNING artifact_id, dependency_vuln_id",
+		utils.Flat(utils.Map(rows, func(r artifactLink) []any {
 			return []any{r.ArtifactID, r.DependencyVulnID}
 		}))...,
-	).Error
+	).Scan(&created).Error
+	return created, err
+}
+
+func detectedInArtifactEvents(links []artifactLink, userID string, userAgent *string) []models.VulnEvent {
+	return utils.Map(links, func(l artifactLink) models.VulnEvent {
+		return models.NewDetectedInArtifactEvent(l.DependencyVulnID, dtos.VulnTypeDependencyVuln, userID, l.ArtifactID, userAgent)
+	})
 }
 
 func (s *DependencyVulnService) UserFixedDependencyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
@@ -127,7 +136,7 @@ func (s *DependencyVulnService) UserReopenedToOpen(ctx context.Context, tx share
 	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 }
 
-func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx shared.DB, scannerID string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx shared.DB, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -140,19 +149,21 @@ func (s *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(ctx co
 		return el.EventsToCopy
 	})
 
-	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, vulns)
+	// gorm would otherwise insert the artifact links itself and saveArtifactAssociations could not tell which ones are new
+	err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), vulns)
 	if err != nil {
 		return err
 	}
 
-	if err := saveArtifactAssociations(tx, vulns); err != nil {
+	links, err := saveArtifactAssociations(tx, vulns)
+	if err != nil {
 		return err
 	}
 
-	return s.vulnEventRepository.SaveBatch(ctx, tx, utils.Flat(events))
+	return s.vulnEventRepository.SaveBatch(ctx, tx, append(utils.Flat(events), detectedInArtifactEvents(links, "system", nil)...))
 }
 
-func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context, tx shared.DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -173,14 +184,15 @@ func (s *DependencyVulnService) UserDetectedDependencyVulns(ctx context.Context,
 	}
 
 	// run the updates in the transaction to keep a valid state
-	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatch(ctx, withoutAssociations(tx), dependencyVulns)
 	if err != nil {
 		return err
 	}
-	if err := saveArtifactAssociations(tx, dependencyVulns); err != nil {
+	links, err := saveArtifactAssociations(tx, dependencyVulns)
+	if err != nil {
 		return err
 	}
-	err = s.vulnEventRepository.SaveBatch(ctx, tx, events)
+	err = s.vulnEventRepository.SaveBatch(ctx, tx, append(events, detectedInArtifactEvents(links, userID, userAgent)...))
 	if err != nil {
 		return err
 	}
@@ -193,6 +205,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx 
 		return nil
 	}
 
+	events := make([]models.VulnEvent, 0, len(vulnerabilities))
 	for i := range vulnerabilities {
 		alreadyAssociated := false
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -203,9 +216,14 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx 
 		}
 		if !alreadyAssociated {
 			vulnerabilities[i].Artifacts = append(vulnerabilities[i].Artifacts, artifact)
-			if err := tx.Exec("INSERT INTO artifact_dependency_vulns (artifact_id, dependency_vuln_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
-				artifact.ID, vulnerabilities[i].CalculateHash()).Error; err != nil {
-				return err
+			res := tx.Exec("INSERT INTO artifact_dependency_vulns (artifact_id, dependency_vuln_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+				artifact.ID, vulnerabilities[i].CalculateHash())
+			if res.Error != nil {
+				return res.Error
+			}
+			// the preloaded artifacts might be stale - only a really inserted row is a new link
+			if res.RowsAffected > 0 {
+				events = append(events, models.NewDetectedInArtifactEvent(vulnerabilities[i].CalculateHash(), dtos.VulnTypeDependencyVuln, "system", artifact.ID, nil))
 			}
 		}
 	}
@@ -214,7 +232,7 @@ func (s *DependencyVulnService) UserDetectedDependencyVulnInAnotherArtifact(ctx 
 	if err != nil {
 		return err
 	}
-	return nil
+	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 }
 
 func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx shared.DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error {
@@ -236,17 +254,22 @@ func (s *DependencyVulnService) UserDidNotDetectDependencyVulnInArtifactAnymore(
 		vulnIDs[i] = vulnerabilities[i].CalculateHash().String()
 	}
 
-	if err := tx.Exec(`DELETE FROM artifact_dependency_vulns
+	var removedVulnIDs []uuid.UUID
+	if err := tx.Raw(`DELETE FROM artifact_dependency_vulns
 		WHERE dependency_vuln_id = ANY (?::uuid[])
-			AND artifact_id = ?`,
-		pq.Array(vulnIDs), artifact.ID).Error; err != nil {
+			AND artifact_id = ?
+		RETURNING dependency_vuln_id`,
+		pq.Array(vulnIDs), artifact.ID).Scan(&removedVulnIDs).Error; err != nil {
 		return err
 	}
 	err := s.dependencyVulnRepository.SaveBatch(ctx, tx, vulnerabilities)
 	if err != nil {
 		return err
 	}
-	return nil
+	events := utils.Map(removedVulnIDs, func(vulnID uuid.UUID) models.VulnEvent {
+		return models.NewFixedInArtifactEvent(vulnID, dtos.VulnTypeDependencyVuln, "system", artifact.ID, nil)
+	})
+	return s.vulnEventRepository.SaveBatch(ctx, tx, events)
 }
 
 func withoutAssociations(tx shared.DB) shared.DB {

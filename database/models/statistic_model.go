@@ -6,18 +6,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// ArtifactRiskHistory is a computed result type, it is not backed by a table
 type ArtifactRiskHistory struct {
 	History
-	ArtifactID uuid.UUID `json:"artifactId" gorm:"primaryKey;type:uuid"`
-	AssetID    uuid.UUID `json:"assetId" gorm:"type:uuid;not null;"`
+	ArtifactID uuid.UUID `json:"artifactId"`
+	AssetID    uuid.UUID `json:"assetId"`
 
-	// not stored in this table, filled by joining artifacts and asset_versions
-	ArtifactName     string `json:"artifactName" gorm:"->;-:migration"`
-	AssetVersionName string `json:"assetVersionName" gorm:"->;-:migration"`
-}
-
-func (m ArtifactRiskHistory) TableName() string {
-	return "artifact_risk_history"
+	ArtifactName     string `json:"artifactName"`
+	AssetVersionName string `json:"assetVersionName"`
 }
 
 type ArtifactRiskHistoryWithVersion struct {
@@ -72,7 +68,7 @@ type Distribution struct {
 type History struct {
 	Distribution
 	// on the day 2024-08-12 the asset had a sumRisk of 25.
-	Day         time.Time `json:"day" gorm:"primaryKey;type:date"`
+	Day         time.Time `json:"day"`
 	SumOpenRisk float64   `json:"sumOpenRisk"`
 	AvgOpenRisk float64   `json:"averageOpenRisk"`
 	MaxOpenRisk float64   `json:"maxOpenRisk"`

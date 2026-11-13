@@ -387,152 +387,6 @@ func (_c *StatisticsService_GetOrgStatistics_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
-// GetReleaseRiskHistory provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	ret := _mock.Called(ctx, releaseID, start, end)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetReleaseRiskHistory")
-	}
-
-	var r0 []models.ArtifactRiskHistory
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
-		return returnFunc(ctx, releaseID, start, end)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
-		r0 = returnFunc(ctx, releaseID, start, end)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, releaseID, start, end)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsService_GetReleaseRiskHistory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetReleaseRiskHistory'
-type StatisticsService_GetReleaseRiskHistory_Call struct {
-	*mock.Call
-}
-
-// GetReleaseRiskHistory is a helper method to define mock.On call
-//   - ctx context.Context
-//   - releaseID uuid.UUID
-//   - start time.Time
-//   - end time.Time
-func (_e *StatisticsService_Expecter) GetReleaseRiskHistory(ctx any, releaseID any, start any, end any) *StatisticsService_GetReleaseRiskHistory_Call {
-	return &StatisticsService_GetReleaseRiskHistory_Call{Call: _e.mock.On("GetReleaseRiskHistory", ctx, releaseID, start, end)}
-}
-
-func (_c *StatisticsService_GetReleaseRiskHistory_Call) Run(run func(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetReleaseRiskHistory_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsService_GetReleaseRiskHistory_Call) Return(artifactRiskHistorys []models.ArtifactRiskHistory, err error) *StatisticsService_GetReleaseRiskHistory_Call {
-	_c.Call.Return(artifactRiskHistorys, err)
-	return _c
-}
-
-func (_c *StatisticsService_GetReleaseRiskHistory_Call) RunAndReturn(run func(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetReleaseRiskHistory_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetRemediationTimeAveragesForRelease provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error) {
-	ret := _mock.Called(ctx, releaseID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetRemediationTimeAveragesForRelease")
-	}
-
-	var r0 dtos.RemediationTimeAverages
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (dtos.RemediationTimeAverages, error)); ok {
-		return returnFunc(ctx, releaseID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) dtos.RemediationTimeAverages); ok {
-		r0 = returnFunc(ctx, releaseID)
-	} else {
-		r0 = ret.Get(0).(dtos.RemediationTimeAverages)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, releaseID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// StatisticsService_GetRemediationTimeAveragesForRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRemediationTimeAveragesForRelease'
-type StatisticsService_GetRemediationTimeAveragesForRelease_Call struct {
-	*mock.Call
-}
-
-// GetRemediationTimeAveragesForRelease is a helper method to define mock.On call
-//   - ctx context.Context
-//   - releaseID uuid.UUID
-func (_e *StatisticsService_Expecter) GetRemediationTimeAveragesForRelease(ctx any, releaseID any) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
-	return &StatisticsService_GetRemediationTimeAveragesForRelease_Call{Call: _e.mock.On("GetRemediationTimeAveragesForRelease", ctx, releaseID)}
-}
-
-func (_c *StatisticsService_GetRemediationTimeAveragesForRelease_Call) Run(run func(ctx context.Context, releaseID uuid.UUID)) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *StatisticsService_GetRemediationTimeAveragesForRelease_Call) Return(remediationTimeAverages dtos.RemediationTimeAverages, err error) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
-	_c.Call.Return(remediationTimeAverages, err)
-	return _c
-}
-
-func (_c *StatisticsService_GetRemediationTimeAveragesForRelease_Call) RunAndReturn(run func(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)) *StatisticsService_GetRemediationTimeAveragesForRelease_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetTopEcosystemsInOrg provides a mock function for the type StatisticsService
 func (_mock *StatisticsService) GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error) {
 	ret := _mock.Called(ctx, orgID)
@@ -601,40 +455,37 @@ func (_c *StatisticsService_GetTopEcosystemsInOrg_Call) RunAndReturn(run func(ct
 	return _c
 }
 
-// UpdateArtifactRiskAggregation provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) UpdateArtifactRiskAggregation(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error {
-	ret := _mock.Called(ctx, tx, artifact, assetID, begin, end)
+// RecalculateRiskHistory provides a mock function for the type StatisticsService
+func (_mock *StatisticsService) RecalculateRiskHistory(ctx context.Context, tx shared.DB, assetID uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateArtifactRiskAggregation")
+		panic("no return value specified for RecalculateRiskHistory")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.Artifact, uuid.UUID, time.Time, time.Time) error); ok {
-		r0 = returnFunc(ctx, tx, artifact, assetID, begin, end)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// StatisticsService_UpdateArtifactRiskAggregation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateArtifactRiskAggregation'
-type StatisticsService_UpdateArtifactRiskAggregation_Call struct {
+// StatisticsService_RecalculateRiskHistory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecalculateRiskHistory'
+type StatisticsService_RecalculateRiskHistory_Call struct {
 	*mock.Call
 }
 
-// UpdateArtifactRiskAggregation is a helper method to define mock.On call
+// RecalculateRiskHistory is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - artifact *models.Artifact
 //   - assetID uuid.UUID
-//   - begin time.Time
-//   - end time.Time
-func (_e *StatisticsService_Expecter) UpdateArtifactRiskAggregation(ctx any, tx any, artifact any, assetID any, begin any, end any) *StatisticsService_UpdateArtifactRiskAggregation_Call {
-	return &StatisticsService_UpdateArtifactRiskAggregation_Call{Call: _e.mock.On("UpdateArtifactRiskAggregation", ctx, tx, artifact, assetID, begin, end)}
+func (_e *StatisticsService_Expecter) RecalculateRiskHistory(ctx any, tx any, assetID any) *StatisticsService_RecalculateRiskHistory_Call {
+	return &StatisticsService_RecalculateRiskHistory_Call{Call: _e.mock.On("RecalculateRiskHistory", ctx, tx, assetID)}
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time)) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_RecalculateRiskHistory_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *StatisticsService_RecalculateRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -644,40 +495,25 @@ func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Run(run func(ctx
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *models.Artifact
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*models.Artifact)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
-		}
-		var arg4 time.Time
-		if args[4] != nil {
-			arg4 = args[4].(time.Time)
-		}
-		var arg5 time.Time
-		if args[5] != nil {
-			arg5 = args[5].(time.Time)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
-			arg4,
-			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) Return(err error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_RecalculateRiskHistory_Call) Return(err error) *StatisticsService_RecalculateRiskHistory_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *StatisticsService_UpdateArtifactRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error) *StatisticsService_UpdateArtifactRiskAggregation_Call {
+func (_c *StatisticsService_RecalculateRiskHistory_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) error) *StatisticsService_RecalculateRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }

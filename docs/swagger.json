@@ -763,7 +763,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "issuerName": {
                         "type": "string"
@@ -2490,7 +2491,6 @@
                 "type": "object"
             },
             "cyclonedx.Hash": {
-                "description": "New in 1.7",
                 "properties": {
                     "alg": {
                         "$ref": "#/components/schemas/cyclonedx.HashAlgorithm"
@@ -3667,7 +3667,8 @@
                         "uniqueItems": false
                     },
                     "manufacture": {
-                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
+                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity",
+                        "description": "Deprecated: Use Component Manufacturer instead."
                     },
                     "manufacturer": {
                         "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
@@ -3743,7 +3744,6 @@
                 "type": "object"
             },
             "cyclonedx.OrganizationalEntity": {
-                "description": "Deprecated: Use Component Manufacturer instead.",
                 "properties": {
                     "address": {
                         "$ref": "#/components/schemas/cyclonedx.PostalAddress"
@@ -4047,7 +4047,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "format": {
                         "type": "string"
@@ -5839,14 +5840,22 @@
                     "assetId": {
                         "type": "string"
                     },
+                    "assetVersionId": {
+                        "type": "string"
+                    },
                     "assetVersionName": {
+                        "type": "string"
+                    },
+                    "id": {
                         "type": "string"
                     }
                 },
                 "required": [
                     "artifactName",
                     "assetId",
-                    "assetVersionName"
+                    "assetVersionId",
+                    "assetVersionName",
+                    "id"
                 ],
                 "type": "object"
             },
@@ -7667,7 +7676,12 @@
                         "type": "string"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType",
+                        "enum": [
+                            "cyclonedx",
+                            "csaf",
+                            "openvex"
+                        ]
                     },
                     "url": {
                         "maxLength": 2048,
@@ -7720,7 +7734,12 @@
                         "type": "string"
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     },
                     "justification": {
                         "maxLength": 4000,
@@ -7819,7 +7838,6 @@
                 "type": "object"
             },
             "dtos.DatabaseSpecifics": {
-                "description": "specific additional information, not standardized",
                 "properties": {
                     "cwe_ids": {
                         "description": "array of cwe ids associated with this vulnerability",
@@ -8181,6 +8199,9 @@
                     "assetId": {
                         "type": "string"
                     },
+                    "assetVersionId": {
+                        "type": "string"
+                    },
                     "assetVersionName": {
                         "type": "string"
                     },
@@ -8259,6 +8280,7 @@
                 },
                 "required": [
                     "assetId",
+                    "assetVersionId",
                     "assetVersionName",
                     "author",
                     "commit",
@@ -8294,6 +8316,9 @@
                         "uniqueItems": false
                     },
                     "assetId": {
+                        "type": "string"
+                    },
+                    "assetVersionId": {
                         "type": "string"
                     },
                     "assetVersionName": {
@@ -8337,6 +8362,7 @@
                 "required": [
                     "artifacts",
                     "assetId",
+                    "assetVersionId",
                     "assetVersionName",
                     "component",
                     "componentPurl",
@@ -8492,10 +8518,7 @@
                     "cyclonedx",
                     "csaf",
                     "openvex",
-                    "unknown",
-                    "cyclonedx",
-                    "csaf",
-                    "openvex"
+                    "unknown"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -8611,6 +8634,9 @@
                     "assetId": {
                         "type": "string"
                     },
+                    "assetVersionId": {
+                        "type": "string"
+                    },
                     "assetVersionName": {
                         "type": "string"
                     },
@@ -8682,6 +8708,7 @@
                 },
                 "required": [
                     "assetId",
+                    "assetVersionId",
                     "assetVersionName",
                     "author",
                     "commit",
@@ -9017,12 +9044,16 @@
                     },
                     "assetVersionName": {
                         "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
                     }
                 },
                 "required": [
                     "artifactName",
                     "assetId",
-                    "assetVersionName"
+                    "assetVersionName",
+                    "id"
                 ],
                 "type": "object"
             },
@@ -9242,13 +9273,7 @@
                 "enum": [
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "low",
-                    "high",
-                    "X",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9263,17 +9288,7 @@
                     "adjacent",
                     "local",
                     "physical",
-                    "X",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9289,15 +9304,7 @@
                     "none",
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9309,30 +9316,6 @@
             },
             "dtos.ModifiedRequirementLevel": {
                 "enum": [
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
                     "X",
                     "none",
                     "low",
@@ -9350,13 +9333,7 @@
                 "enum": [
                     "unchanged",
                     "changed",
-                    "X",
-                    "X",
-                    "unchanged",
-                    "changed",
-                    "X",
-                    "unchanged",
-                    "changed"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9367,12 +9344,6 @@
             },
             "dtos.ModifiedUserInteraction": {
                 "enum": [
-                    "X",
-                    "none",
-                    "required",
-                    "X",
-                    "none",
-                    "required",
                     "X",
                     "none",
                     "required"
@@ -9401,7 +9372,8 @@
                         "uniqueItems": false
                     },
                     "database_specific": {
-                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics"
+                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics",
+                        "description": "specific additional information, not standardized"
                     },
                     "details": {
                         "type": "string"
@@ -10568,7 +10540,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.Project"
+                        "$ref": "#/components/schemas/dtos.Project",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -10765,7 +10738,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.Project"
+                        "$ref": "#/components/schemas/dtos.Project",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -11081,6 +11055,9 @@
             },
             "dtos.ReleaseItem": {
                 "properties": {
+                    "artifactId": {
+                        "type": "string"
+                    },
                     "artifactName": {
                         "type": "string"
                     },
@@ -11104,6 +11081,7 @@
                     }
                 },
                 "required": [
+                    "artifactId",
                     "artifactName",
                     "assetId",
                     "assetVersionName",
@@ -11189,24 +11167,6 @@
             },
             "dtos.RequirementLevel": {
                 "enum": [
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
                     "low",
                     "medium",
                     "high"
@@ -11775,7 +11735,12 @@
                         "uniqueItems": false
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     }
                 },
                 "required": [
@@ -11979,6 +11944,9 @@
             },
             "dtos.VulnEvent": {
                 "properties": {
+                    "artifactId": {
+                        "type": "string"
+                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -12029,6 +11997,7 @@
                     }
                 },
                 "required": [
+                    "artifactId",
                     "createdAt",
                     "createdByVexRule",
                     "id",
@@ -12066,13 +12035,9 @@
                     "attachedComplianceComponent",
                     "removedComplianceComponent",
                     "detected",
-                    "rawRiskAssessmentUpdated",
-                    "accepted",
-                    "falsePositive",
-                    "reopened",
-                    "accepted",
-                    "falsePositive",
-                    "reopened"
+                    "detectedInArtifact",
+                    "fixedInArtifact",
+                    "rawRiskAssessmentUpdated"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -12092,6 +12057,8 @@
                     "EventTypeAttachedComplianceComponent",
                     "EventTypeRemovedComplianceComponent",
                     "EventTypeDetected",
+                    "EventTypeDetectedInArtifact",
+                    "EventTypeFixedInArtifact",
                     "EventTypeRawRiskAssessmentUpdated"
                 ]
             },
@@ -12352,7 +12319,11 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
+                    "assetVersionId": {
+                        "type": "string"
+                    },
                     "assetVersionName": {
+                        "description": "not stored on advisories, filled by selecting withAssetVersionName",
                         "type": "string"
                     },
                     "createdAt": {
@@ -12406,6 +12377,7 @@
                 "required": [
                     "affectedPackages",
                     "assetVersion",
+                    "assetVersionId",
                     "assetVersionName",
                     "createdAt",
                     "description",
@@ -12510,7 +12482,6 @@
                 "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.Artifact": {
-                "description": "Ensure foreign key field order matches Artifact primary key: ArtifactName, AssetVersionName, AssetID",
                 "properties": {
                     "artifactName": {
                         "type": "string"
@@ -12518,7 +12489,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionName": {
+                    "assetVersionId": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -12531,19 +12502,12 @@
                         "type": "array",
                         "uniqueItems": false
                     },
-                    "lastHistoryUpdate": {
+                    "id": {
                         "type": "string"
                     },
                     "licenseRisks": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
-                    "riskHistories": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -12555,205 +12519,12 @@
                 "required": [
                     "artifactName",
                     "assetVersion",
-                    "assetVersionName",
+                    "assetVersionId",
                     "createdAt",
                     "dependencyVulns",
-                    "lastHistoryUpdate",
+                    "id",
                     "licenseRisks",
-                    "riskHistories",
                     "vulnAssetId"
-                ],
-                "type": "object"
-            },
-            "github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory": {
-                "properties": {
-                    "artifactName": {
-                        "type": "string"
-                    },
-                    "assetId": {
-                        "type": "string"
-                    },
-                    "assetVersionName": {
-                        "type": "string"
-                    },
-                    "averageClosedRisk": {
-                        "type": "number"
-                    },
-                    "averageOpenRisk": {
-                        "type": "number"
-                    },
-                    "critical": {
-                        "type": "integer"
-                    },
-                    "criticalCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlCritical": {
-                        "type": "integer"
-                    },
-                    "cvePurlCriticalCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableCritical": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableCriticalCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableHigh": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableHighCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableLow": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableLowCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableMedium": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableMediumCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlHigh": {
-                        "type": "integer"
-                    },
-                    "cvePurlHighCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlLow": {
-                        "type": "integer"
-                    },
-                    "cvePurlLowCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlMedium": {
-                        "type": "integer"
-                    },
-                    "cvePurlMediumCvss": {
-                        "type": "integer"
-                    },
-                    "day": {
-                        "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
-                        "type": "string"
-                    },
-                    "fixableCritical": {
-                        "type": "integer"
-                    },
-                    "fixableCriticalCvss": {
-                        "type": "integer"
-                    },
-                    "fixableHigh": {
-                        "type": "integer"
-                    },
-                    "fixableHighCvss": {
-                        "type": "integer"
-                    },
-                    "fixableLow": {
-                        "type": "integer"
-                    },
-                    "fixableLowCvss": {
-                        "type": "integer"
-                    },
-                    "fixableMedium": {
-                        "type": "integer"
-                    },
-                    "fixableMediumCvss": {
-                        "type": "integer"
-                    },
-                    "fixedDependencyVulns": {
-                        "type": "integer"
-                    },
-                    "high": {
-                        "type": "integer"
-                    },
-                    "highCvss": {
-                        "type": "integer"
-                    },
-                    "low": {
-                        "type": "integer"
-                    },
-                    "lowCvss": {
-                        "type": "integer"
-                    },
-                    "maxClosedRisk": {
-                        "type": "number"
-                    },
-                    "maxOpenRisk": {
-                        "type": "number"
-                    },
-                    "medium": {
-                        "type": "integer"
-                    },
-                    "mediumCvss": {
-                        "type": "integer"
-                    },
-                    "minClosedRisk": {
-                        "type": "number"
-                    },
-                    "minOpenRisk": {
-                        "type": "number"
-                    },
-                    "openDependencyVulns": {
-                        "type": "integer"
-                    },
-                    "sumClosedRisk": {
-                        "type": "number"
-                    },
-                    "sumOpenRisk": {
-                        "type": "number"
-                    }
-                },
-                "required": [
-                    "artifactName",
-                    "assetId",
-                    "assetVersionName",
-                    "averageClosedRisk",
-                    "averageOpenRisk",
-                    "critical",
-                    "criticalCvss",
-                    "cvePurlCritical",
-                    "cvePurlCriticalCvss",
-                    "cvePurlFixableCritical",
-                    "cvePurlFixableCriticalCvss",
-                    "cvePurlFixableHigh",
-                    "cvePurlFixableHighCvss",
-                    "cvePurlFixableLow",
-                    "cvePurlFixableLowCvss",
-                    "cvePurlFixableMedium",
-                    "cvePurlFixableMediumCvss",
-                    "cvePurlHigh",
-                    "cvePurlHighCvss",
-                    "cvePurlLow",
-                    "cvePurlLowCvss",
-                    "cvePurlMedium",
-                    "cvePurlMediumCvss",
-                    "day",
-                    "fixableCritical",
-                    "fixableCriticalCvss",
-                    "fixableHigh",
-                    "fixableHighCvss",
-                    "fixableLow",
-                    "fixableLowCvss",
-                    "fixableMedium",
-                    "fixableMediumCvss",
-                    "fixedDependencyVulns",
-                    "high",
-                    "highCvss",
-                    "low",
-                    "lowCvss",
-                    "maxClosedRisk",
-                    "maxOpenRisk",
-                    "medium",
-                    "mediumCvss",
-                    "minClosedRisk",
-                    "minOpenRisk",
-                    "openDependencyVulns",
-                    "sumClosedRisk",
-                    "sumOpenRisk"
                 ],
                 "type": "object"
             },
@@ -12973,6 +12744,9 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "id": {
+                        "type": "string"
+                    },
                     "lastAccessedAt": {
                         "type": "string"
                     },
@@ -13009,6 +12783,7 @@
                     "createdAt",
                     "defaultBranch",
                     "dependencyVulns",
+                    "id",
                     "lastAccessedAt",
                     "metadata",
                     "name",
@@ -13036,7 +12811,11 @@
                     "artifact": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
                     },
+                    "artifactId": {
+                        "type": "string"
+                    },
                     "artifactName": {
+                        "description": "not stored in this table, filled by joining artifacts and asset_versions",
                         "type": "string"
                     },
                     "assetId": {
@@ -13060,6 +12839,7 @@
                 },
                 "required": [
                     "artifact",
+                    "artifactId",
                     "artifactName",
                     "assetId",
                     "assetVersionName",
@@ -13202,7 +12982,8 @@
                         "type": "string"
                     },
                     "target_cve_data": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE",
+                        "description": "TargetCVEData is populated by GORM nested preload. It is nil when the target\nCVE does not exist in this database — no DB-level FK constraint is added."
                     }
                 },
                 "required": [
@@ -13313,7 +13094,11 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
+                    "assetVersionId": {
+                        "type": "string"
+                    },
                     "assetVersionName": {
+                        "description": "part of the content hash, the asset version relation itself is kept by AssetVersionID",
                         "type": "string"
                     },
                     "componentFixedVersion": {
@@ -13388,6 +13173,7 @@
                     "artifacts",
                     "assetSignature",
                     "assetVersion",
+                    "assetVersionId",
                     "assetVersionName",
                     "componentFixedVersion",
                     "componentPurl",
@@ -13557,7 +13343,7 @@
                     "assetId": {
                         "type": "string"
                     },
-                    "assetVersionName": {
+                    "assetVersionId": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -13586,7 +13372,7 @@
                 },
                 "required": [
                     "assetId",
-                    "assetVersionName",
+                    "assetVersionId",
                     "createdAt",
                     "filename",
                     "pat",
@@ -13688,7 +13474,11 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
+                    "assetVersionId": {
+                        "type": "string"
+                    },
                     "assetVersionName": {
+                        "description": "part of the content hash, the asset version relation itself is kept by AssetVersionID",
                         "type": "string"
                     },
                     "component": {
@@ -13740,6 +13530,7 @@
                 "required": [
                     "artifacts",
                     "assetVersion",
+                    "assetVersionId",
                     "assetVersionName",
                     "component",
                     "componentPurl",
@@ -14126,7 +13917,7 @@
                     "assetVersion": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetVersion"
                     },
-                    "assetVersionName": {
+                    "assetVersionId": {
                         "type": "string"
                     },
                     "createdAt": {
@@ -14148,7 +13939,7 @@
                 "required": [
                     "assetId",
                     "assetVersion",
-                    "assetVersionName",
+                    "assetVersionId",
                     "createdAt",
                     "supplyChainId",
                     "supplyChainOutputDigest",
@@ -14160,7 +13951,8 @@
             "github_com_l3montree-dev_devguard_database_models.VEXRule": {
                 "properties": {
                     "asset": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset",
+                        "description": "Relationships"
                     },
                     "assetId": {
                         "description": "Composite key components (for indexing and queries)",
@@ -14228,6 +14020,9 @@
             },
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
+                    "artifactId": {
+                        "type": "string"
+                    },
                     "assetSignature": {
                         "description": "set instead of DependencyVulnID for a group event applying to every\nDependencyVuln sharing this AssetSignature.",
                         "type": "integer"
@@ -14282,6 +14077,7 @@
                     }
                 },
                 "required": [
+                    "artifactId",
                     "assetSignature",
                     "compliancePostureId",
                     "createdAt",
@@ -14811,36 +14607,6 @@
                     1000000,
                     1000000000,
                     60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
@@ -14871,36 +14637,6 @@
                     "Hour",
                     "minDuration",
                     "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -27641,10 +27377,19 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/x-www-form-urlencoded": {
+                        "multipart/form-data": {
                             "schema": {
-                                "title": "file",
-                                "type": "file"
+                                "properties": {
+                                    "file": {
+                                        "description": "SBOM file",
+                                        "format": "binary",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ],
+                                "type": "object"
                             }
                         }
                     },
@@ -31088,147 +30833,6 @@
                 "summary": "Get release SBOM as XML",
                 "tags": [
                     "Releases"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Release ID",
-                        "in": "path",
-                        "name": "releaseID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.RemediationTimeAverages"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get average remediation times for a release",
-                "tags": [
-                    "Statistics"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Release ID",
-                        "in": "path",
-                        "name": "releaseID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Start date (YYYY-MM-DD)",
-                        "in": "query",
-                        "name": "start",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "End date (YYYY-MM-DD)",
-                        "in": "query",
-                        "name": "end",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/dtos.RiskHistory"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get risk history for a release",
-                "tags": [
-                    "Statistics"
                 ]
             }
         },

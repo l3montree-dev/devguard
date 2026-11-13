@@ -1220,7 +1220,7 @@ func TestVulnerabilityStateOnMultipleArtifacts(t *testing.T) {
 			branchAVuln = vulns[0]
 			assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
-			assert.Len(t, branchAVuln.Events, 2)
+			assert.Len(t, branchAVuln.Events, 4) // detected, detectedInArtifact, accepted, detectedInArtifact of the second artifact
 
 		})
 	})
@@ -1294,7 +1294,7 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 			branchAVuln = vulns[0]
 			assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateOpen, branchAVuln.State)
-			assert.Len(t, branchAVuln.Events, 1)
+			assert.Len(t, branchAVuln.Events, 3) // detected + one detectedInArtifact per artifact
 
 			recorder = httptest.NewRecorder()
 			sbomFile = sbomWithVulnerability()
@@ -1325,10 +1325,10 @@ func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
 
 			assert.Equal(t, "branch-a", branchAFinalVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateOpen, branchAFinalVuln.State)
-			assert.Len(t, branchAFinalVuln.Events, 1)
+			assert.Len(t, branchAFinalVuln.Events, 3)
 			assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateOpen, branchBVuln.State)
-			assert.Len(t, branchBVuln.Events, 1) // only one event should be copied
+			assert.Len(t, branchBVuln.Events, 2) // the copied detected event + detectedInArtifact of the branch b artifact, link events are not copied
 		})
 	})
 }
@@ -1394,7 +1394,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			assert.Len(t, vulns, 1)
 			branchAVuln = vulns[0]
 			assert.Equal(t, dtos.VulnStateAccepted, branchAVuln.State)
-			assert.Len(t, branchAVuln.Events, 3)
+			assert.Len(t, branchAVuln.Events, 4) // detected, detectedInArtifact, accepted, comment
 
 			recorder = httptest.NewRecorder()
 			sbomFile = sbomWithVulnerability()
@@ -1426,11 +1426,11 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 			assert.Equal(t, "branch-a", branchAFinalVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateAccepted, branchAFinalVuln.State)
-			assert.Len(t, branchAFinalVuln.Events, 3)
+			assert.Len(t, branchAFinalVuln.Events, 4)
 
 			assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateAccepted, branchBVuln.State)
-			assert.Len(t, branchBVuln.Events, 3)
+			assert.Len(t, branchBVuln.Events, 4) // the 3 copied events + detectedInArtifact of the branch b artifact
 
 			branchBEvents := branchBVuln.Events
 
@@ -1492,7 +1492,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 
 			assert.Equal(t, "branch-c", branchCVuln.AssetVersionName)
 			assert.Equal(t, dtos.VulnStateAccepted, branchCVuln.State)
-			assert.Len(t, branchCVuln.Events, 3)
+			assert.Len(t, branchCVuln.Events, 4)
 		})
 
 		t.Run("should handle false positive events in lifecycle management", func(t *testing.T) {
@@ -1551,7 +1551,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 			}
 
 			assert.Equal(t, dtos.VulnStateFalsePositive, branchEVuln.State)
-			assert.Len(t, branchEVuln.Events, 2)
+			assert.Len(t, branchEVuln.Events, 3) // the 2 copied events + detectedInArtifact of the branch e artifact
 
 			var copiedFPEvent models.VulnEvent
 			for _, event := range branchEVuln.Events {

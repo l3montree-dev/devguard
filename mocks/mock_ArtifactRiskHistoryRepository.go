@@ -223,92 +223,6 @@ func (_c *ArtifactRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run fu
 	return _c
 }
 
-// GetRiskHistoryByRelease provides a mock function for the type ArtifactRiskHistoryRepository
-func (_mock *ArtifactRiskHistoryRepository) GetRiskHistoryByRelease(ctx context.Context, tx shared.DB, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
-	ret := _mock.Called(ctx, tx, releaseID, start, end)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetRiskHistoryByRelease")
-	}
-
-	var r0 []models.ArtifactRiskHistory
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
-		return returnFunc(ctx, tx, releaseID, start, end)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
-		r0 = returnFunc(ctx, tx, releaseID, start, end)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, tx, releaseID, start, end)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRiskHistoryByRelease'
-type ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call struct {
-	*mock.Call
-}
-
-// GetRiskHistoryByRelease is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-//   - releaseID uuid.UUID
-//   - start time.Time
-//   - end time.Time
-func (_e *ArtifactRiskHistoryRepository_Expecter) GetRiskHistoryByRelease(ctx any, tx any, releaseID any, start any, end any) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
-	return &ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call{Call: _e.mock.On("GetRiskHistoryByRelease", ctx, tx, releaseID, start, end)}
-}
-
-func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call) Run(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, start time.Time, end time.Time)) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		var arg4 time.Time
-		if args[4] != nil {
-			arg4 = args[4].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call) Return(artifactRiskHistorys []models.ArtifactRiskHistory, err error) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
-	_c.Call.Return(artifactRiskHistorys, err)
-	return _c
-}
-
-func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *ArtifactRiskHistoryRepository_GetRiskHistoryByRelease_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetRiskHistoryForOrg provides a mock function for the type ArtifactRiskHistoryRepository
 func (_mock *ArtifactRiskHistoryRepository) GetRiskHistoryForOrg(ctx context.Context, tx shared.DB, orgID uuid.UUID, start time.Time, end time.Time) ([]dtos.OrgRiskHistory, error) {
 	ret := _mock.Called(ctx, tx, orgID, start, end)
@@ -487,37 +401,37 @@ func (_c *ArtifactRiskHistoryRepository_GetRiskHistoryWithVersion_Call) RunAndRe
 	return _c
 }
 
-// UpdateRiskAggregation provides a mock function for the type ArtifactRiskHistoryRepository
-func (_mock *ArtifactRiskHistoryRepository) UpdateRiskAggregation(ctx context.Context, tx shared.DB, assetRisk *models.ArtifactRiskHistory) error {
-	ret := _mock.Called(ctx, tx, assetRisk)
+// RecalculateForAsset provides a mock function for the type ArtifactRiskHistoryRepository
+func (_mock *ArtifactRiskHistoryRepository) RecalculateForAsset(ctx context.Context, tx shared.DB, assetID uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateRiskAggregation")
+		panic("no return value specified for RecalculateForAsset")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.ArtifactRiskHistory) error); ok {
-		r0 = returnFunc(ctx, tx, assetRisk)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, assetID)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateRiskAggregation'
-type ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call struct {
+// ArtifactRiskHistoryRepository_RecalculateForAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecalculateForAsset'
+type ArtifactRiskHistoryRepository_RecalculateForAsset_Call struct {
 	*mock.Call
 }
 
-// UpdateRiskAggregation is a helper method to define mock.On call
+// RecalculateForAsset is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - assetRisk *models.ArtifactRiskHistory
-func (_e *ArtifactRiskHistoryRepository_Expecter) UpdateRiskAggregation(ctx any, tx any, assetRisk any) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
-	return &ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", ctx, tx, assetRisk)}
+//   - assetID uuid.UUID
+func (_e *ArtifactRiskHistoryRepository_Expecter) RecalculateForAsset(ctx any, tx any, assetID any) *ArtifactRiskHistoryRepository_RecalculateForAsset_Call {
+	return &ArtifactRiskHistoryRepository_RecalculateForAsset_Call{Call: _e.mock.On("RecalculateForAsset", ctx, tx, assetID)}
 }
 
-func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(ctx context.Context, tx shared.DB, assetRisk *models.ArtifactRiskHistory)) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *ArtifactRiskHistoryRepository_RecalculateForAsset_Call) Run(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID)) *ArtifactRiskHistoryRepository_RecalculateForAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -527,9 +441,9 @@ func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *models.ArtifactRiskHistory
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*models.ArtifactRiskHistory)
+			arg2 = args[2].(uuid.UUID)
 		}
 		run(
 			arg0,
@@ -540,12 +454,12 @@ func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func
 	return _c
 }
 
-func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) Return(err error) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *ArtifactRiskHistoryRepository_RecalculateForAsset_Call) Return(err error) *ArtifactRiskHistoryRepository_RecalculateForAsset_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetRisk *models.ArtifactRiskHistory) error) *ArtifactRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *ArtifactRiskHistoryRepository_RecalculateForAsset_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetID uuid.UUID) error) *ArtifactRiskHistoryRepository_RecalculateForAsset_Call {
 	_c.Call.Return(run)
 	return _c
 }

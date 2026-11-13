@@ -856,19 +856,26 @@ func copyDependencyVulns(ctx context.Context, tx pgx.Tx, vulns []models.Dependen
 	if err != nil {
 		return fmt.Errorf("could not copy artifact associations: %w", err)
 	}
-	return nil
+
+	linkEvents := make([]models.VulnEvent, 0, len(artifactRows))
+	for i := range vulns {
+		for _, artifact := range vulns[i].Artifacts {
+			linkEvents = append(linkEvents, models.NewDetectedInArtifactEvent(vulns[i].ID, dtos.VulnTypeDependencyVuln, "system", artifact.ID, nil))
+		}
+	}
+	return copyVulnEvents(ctx, tx, linkEvents)
 }
 
 func copyVulnEvents(ctx context.Context, tx pgx.Tx, events []models.VulnEvent) error {
 	now := time.Now()
-	_, err := tx.CopyFrom(ctx, pgx.Identifier{"vuln_events"}, []string{"created_at", "type", "user_id", "justification", "mechanical_justification", "original_asset_version_name", "created_by_vex_rule", "dependency_vuln_id", "user_agent", "vex_rule_id", "asset_signature"}, pgx.CopyFromSlice(len(events), func(i int) ([]any, error) {
+	_, err := tx.CopyFrom(ctx, pgx.Identifier{"vuln_events"}, []string{"created_at", "type", "user_id", "justification", "mechanical_justification", "original_asset_version_name", "created_by_vex_rule", "dependency_vuln_id", "user_agent", "vex_rule_id", "asset_signature", "artifact_id"}, pgx.CopyFromSlice(len(events), func(i int) ([]any, error) {
 		ev := events[i]
 		// events copied from other branches keep their original timestamp
 		createdAt := ev.CreatedAt
 		if createdAt.IsZero() {
 			createdAt = now
 		}
-		return []any{createdAt, string(ev.Type), ev.UserID, ev.Justification, string(ev.MechanicalJustification), ev.OriginalAssetVersionName, ev.CreatedByVexRule, ev.DependencyVulnID, ev.UserAgent, ev.VexRuleID, ev.AssetSignature}, nil
+		return []any{createdAt, string(ev.Type), ev.UserID, ev.Justification, string(ev.MechanicalJustification), ev.OriginalAssetVersionName, ev.CreatedByVexRule, ev.DependencyVulnID, ev.UserAgent, ev.VexRuleID, ev.AssetSignature, ev.ArtifactID}, nil
 	}))
 	if err != nil {
 		return fmt.Errorf("could not copy vuln events: %w", err)
@@ -898,12 +905,19 @@ func associateVulnsWithArtifact(ctx context.Context, tx pgx.Tx, vulnerabilities 
 	if len(dependencyVulnIDs) == 0 {
 		return 0, nil
 	}
-	tag, err := tx.Exec(ctx, `INSERT INTO artifact_dependency_vulns 
-				(artifact_id, dependency_vuln_id)
-				SELECT 
+	// the event is only written for links which really got created
+	tag, err := tx.Exec(ctx, `WITH created AS (
+				INSERT INTO artifact_dependency_vulns
+					(artifact_id, dependency_vuln_id)
+				SELECT
 					$1,
 					UNNEST($2::uuid[])
-				ON CONFLICT DO NOTHING;`, artifact.ID, dependencyVulnIDs)
+				ON CONFLICT DO NOTHING
+				RETURNING artifact_id, dependency_vuln_id
+			)
+			INSERT INTO vuln_events (created_at, type, user_id, dependency_vuln_id, artifact_id)
+			SELECT now(), $3, 'system', dependency_vuln_id, artifact_id
+			FROM created;`, artifact.ID, dependencyVulnIDs, string(dtos.EventTypeDetectedInArtifact))
 	if err != nil {
 		return 0, err
 	}
