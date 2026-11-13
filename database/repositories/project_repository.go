@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -153,9 +154,7 @@ func (g *projectRepository) SearchProjectsWithSubProjectsAndAssetsPaged(ctx cont
 		orgID,
 	}
 
-	// When parentID is set the user is looking at a subgroup, so the search must
-	// stay inside that subtree. We restrict the matched assets and projects to the
-	// descendants of parentID and stop the upward recursion once we reach it.
+	// When parentID is set the user will stay inside that subtree.
 	var descendantCTE, assetScopeCond, projectScopeCond string
 	var assetChainStopCond, projectChainStopCond string
 	var descendantParam, projectScopeParam, parentStopParam []any
@@ -194,21 +193,10 @@ searchResults AS (
     WHERE p.name ILIKE ? AND (p.id = ANY(?) OR (p.organization_id = ? AND p.is_public = true))` + projectScopeCond + `
 )`
 
-	// searchParams holds the placeholders that appear inside searchResultsCTE, in
-	// order. Both the count and the data query reuse this CTE, so both start with
-	// these parameters.
-	searchParams := make([]any, 0, len(descendantParam)+len(assetParams)+len(projectParams)+len(projectScopeParam))
-	searchParams = append(searchParams, descendantParam...)
-	searchParams = append(searchParams, assetParams...)
-	searchParams = append(searchParams, projectParams...)
-	searchParams = append(searchParams, projectScopeParam...)
-
-	// Count only the matched assets and projects, not the parent chain.
-	countParams := make([]any, 0, len(searchParams))
-	countParams = append(countParams, searchParams...)
+	searchParams := slices.Concat(descendantParam, assetParams, projectParams, projectScopeParam)
 
 	var count int64
-	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", countParams...).Scan(&count).Error; err != nil {
+	if err := g.GetDB(ctx, tx).Raw(searchResultsCTE+" SELECT COUNT(*) FROM searchResults", searchParams...).Scan(&count).Error; err != nil {
 		return shared.Paged[dtos.Project]{}, err
 	}
 
@@ -274,9 +262,6 @@ func transformToProjectDTOs(results []dtos.ProjectAsset, parentID *uuid.UUID) []
 			continue
 		}
 
-		// When a parentID is given the tree is rooted at that subgroup, so it is
-		// the single root and everything else hangs below it. Without a parentID
-		// the roots are the top level projects (those without a parent).
 		switch {
 		case parentID != nil && r.ID == *parentID:
 			rootProjects = append(rootProjects, r)

@@ -81,8 +81,6 @@ func TestProjectSearchRespectsSubgroup(t *testing.T) {
 		org := f.CreateOrg("search-subgroup")
 
 		// Tree: root -> subgroup -> {matching asset, matching nested subgroup}.
-		// Alongside the subgroup there is a sibling project and a sibling asset
-		// that also match the search term but live outside the subgroup.
 		root := f.CreateProject(org.ID, "root")
 		subgroup := f.CreateProject(org.ID, "subgroup")
 		require.NoError(t, f.DB.Model(&subgroup).Update("parent_id", root.ID).Error)
