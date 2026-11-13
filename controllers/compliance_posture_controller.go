@@ -439,12 +439,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 		compliancePostures[i].CompliancePostureID = models.CalculateCompliancePostureHash(compliancePostures[i].FrameworkControlID, postureOrgID, compliancePostures[i].ProjectID, compliancePostures[i].AssetID, compliancePostures[i].AssetVersionName).String()
 	}
 
-	frameworkControls, err := c.frameworkControlRepository.GetAll(ctx.Request().Context(), nil, framework)
-	if err != nil {
-		return err
-	}
-
-	oscal, err := transformer.ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures, frameworkControls)
+	oscal, err := transformer.ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures, framework)
 	if err != nil {
 		return err
 	}

@@ -870,11 +870,11 @@ type CompliancePostureRepository interface {
 	ApplyAndSave(ctx context.Context, tx DB, posture *models.CompliancePosture, ev *models.VulnEvent) error
 	FindOrCreate(ctx context.Context, tx DB, posture models.CompliancePosture) (*models.CompliancePosture, error)
 
-	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
-	GetAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
-	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
+	GetForAllControlsPaged(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
+	GetAllControls(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
+	GetStatsForAllControls(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
 
-	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+	GetForControl(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
 type ComplianceComponentRepository interface {
@@ -911,7 +911,7 @@ type CompliancePostureService interface {
 	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
 	GetAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
 	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
-	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+	GetForControl(ctx context.Context, tx DB, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
 type RBACProvider interface {
