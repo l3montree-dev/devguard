@@ -397,7 +397,7 @@ func getJustificationAndMechanicalJustification(dependencyVuln models.Dependency
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
 		for _, v := range slices.Backward(dependencyVuln.Events) {
-			if v.Type != dtos.EventTypeRawRiskAssessmentUpdated && v.Type != dtos.EventTypeComment {
+			if v.Type != dtos.EventTypeRawRiskAssessmentUpdated && v.Type != dtos.EventTypeComment && !v.Type.IsArtifactLinkEvent() {
 				if v.Justification != nil {
 					justification = v.Justification
 				}

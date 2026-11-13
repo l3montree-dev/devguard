@@ -94,7 +94,7 @@ func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent
 	found := false
 
 	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].Type == dtos.EventTypeRawRiskAssessmentUpdated {
+		if events[i].Type == dtos.EventTypeRawRiskAssessmentUpdated || events[i].Type.IsArtifactLinkEvent() {
 			continue
 		}
 		ev = events[i]

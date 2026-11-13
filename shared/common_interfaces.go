@@ -505,8 +505,8 @@ type ArtifactService interface {
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(ctx context.Context, tx DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) ([]models.DependencyVuln, error)
 	UserFixedDependencyVulns(ctx context.Context, tx DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
-	UserDetectedDependencyVulns(ctx context.Context, tx DB, userID string, userAgent *string, artifactName string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
-	UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx DB, artifactName string, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
+	UserDetectedDependencyVulns(ctx context.Context, tx DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
+	UserDetectedExistingVulnOnDifferentBranch(ctx context.Context, tx DB, dependencyVulns []statemachine.BranchVulnMatch[*models.DependencyVuln], assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnInAnotherArtifact(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error
 	UserReopenedToOpen(ctx context.Context, tx DB, userID string, userAgent *string, dependencyVulns []models.DependencyVuln) error
 	UserDidNotDetectDependencyVulnInArtifactAnymore(ctx context.Context, tx DB, vulnerabilities []models.DependencyVuln, artifact models.Artifact) error
@@ -677,10 +677,7 @@ type DebReleaseTimeService interface {
 }
 
 type StatisticsRepository interface {
-	TimeTravelDependencyVulnState(ctx context.Context, tx DB, artifactID *uuid.UUID, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
 	AverageFixingTimes(ctx context.Context, tx DB, artifactID *uuid.UUID, assetVersionID uuid.UUID) (dtos.RemediationTimeAverages, error)
-	// AverageRemediationTimesForRelease computes all risk/CVSS average fixing times for a release tree in one query
-	AverageRemediationTimesForRelease(ctx context.Context, tx DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 
 	// CVSS-based average fixing time methods
 	VulnClassificationByOrg(ctx context.Context, tx DB, orgID uuid.UUID) (dtos.VulnSeverityDistribution, error)
@@ -710,25 +707,25 @@ type StatisticsRepository interface {
 	GetAverageOpenVulnsPerOrgAcrossInstance(ctx context.Context, tx DB) (dtos.OrgVulnAverage, error)
 }
 
+// The risk history is computed from the open periods in vuln_state_intervals - the state periods of every dependency vuln, derived from its vuln events.
+// A vuln counts once per row, no matter in how many artifacts it is found.
 type ArtifactRiskHistoryRepository interface {
-	// artifactID if non-nil restricts the history to a single artifact
+	// artifactID if non-nil restricts the history to the periods a vuln was found in that artifact,
+	// otherwise the history covers every vuln of the asset version as a single row per day
 	GetRiskHistory(ctx context.Context, tx DB, artifactID *uuid.UUID, assetVersionID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	// one row per asset version and day; artifactName if non-nil restricts each asset version to the artifact of that name
 	GetRiskHistoryWithVersion(ctx context.Context, tx DB, artifactName *string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)
-	// GetLatestRiskHistory returns the most recent snapshot row, or nil when none exists.
+	// GetLatestRiskHistory returns the row of today
 	GetLatestRiskHistory(ctx context.Context, tx DB, artifactID *uuid.UUID, assetVersionID uuid.UUID) (*models.ArtifactRiskHistory, error)
-	// GetRiskHistoryByRelease collects artifact risk histories for all artifacts included in a release tree
 	GetRiskHistoryForOrg(ctx context.Context, tx DB, orgID uuid.UUID, start, end time.Time) ([]dtos.OrgRiskHistory, error)
-	GetRiskHistoryByRelease(ctx context.Context, tx DB, releaseID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
-	UpdateRiskAggregation(ctx context.Context, tx DB, assetRisk *models.ArtifactRiskHistory) error
+	// RecalculateForAsset rebuilds the vuln_state_intervals of every dependency vuln of the asset from its vuln events
+	RecalculateForAsset(ctx context.Context, tx DB, assetID uuid.UUID) error
 }
 
 type StatisticsService interface {
-	UpdateArtifactRiskAggregation(ctx context.Context, tx DB, artifact *models.Artifact, assetID uuid.UUID, begin time.Time, end time.Time) error
+	RecalculateRiskHistory(ctx context.Context, tx DB, assetID uuid.UUID) error
 	GetArtifactRiskHistory(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetArtifactRiskHistoryWithVersion(ctx context.Context, artifactName *string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistoryWithVersion, error)
-	// Release scoped statistics
-	GetReleaseRiskHistory(ctx context.Context, releaseID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
-	GetRemediationTimeAveragesForRelease(ctx context.Context, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error)
 	// CVSS-based average fixing time methods
 	GetTopEcosystemsInOrg(ctx context.Context, orgID uuid.UUID) ([]dtos.EcosystemUsage, error)
 	GetComponentRisk(ctx context.Context, artifactID *uuid.UUID, assetVersionID uuid.UUID) (map[string]models.Distribution, error)

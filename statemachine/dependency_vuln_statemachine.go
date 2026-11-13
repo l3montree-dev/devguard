@@ -243,9 +243,11 @@ func extractRelevantEvents[T models.Vuln](vulns []T) []models.VulnEvent {
 
 	for _, vuln := range vulns {
 		// Filter events: exclude risk assessment updates and already-copied events
+		// artifact link events reference the artifacts of the other branch
 		relevantEvents := utils.Filter(vuln.GetEvents(), func(ev models.VulnEvent) bool {
 			return ev.OriginalAssetVersionName == nil &&
-				ev.Type != dtos.EventTypeRawRiskAssessmentUpdated && ev.VexRuleID == nil
+				ev.Type != dtos.EventTypeRawRiskAssessmentUpdated && ev.VexRuleID == nil &&
+				!ev.Type.IsArtifactLinkEvent()
 		})
 
 		// Tag events with their source branch
@@ -301,6 +303,9 @@ func Apply(vuln models.Vuln, event models.VulnEvent) {
 		return
 	case dtos.EventTypeComment:
 		// Comments do not change the state of the vulnerability
+		return
+	case dtos.EventTypeDetectedInArtifact, dtos.EventTypeFixedInArtifact:
+		// only the artifact association changed, the vuln itself is still detected / fixed elsewhere
 		return
 	}
 

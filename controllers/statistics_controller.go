@@ -191,56 +191,6 @@ func (c *StatisticsController) GetCVESWithKnownExploits(ctx shared.Context) erro
 	return ctx.JSON(200, cves)
 }
 
-// @Summary Get risk history for a release
-// @Tags Statistics
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param releaseID path string true "Release ID"
-// @Param start query string true "Start date (YYYY-MM-DD)"
-// @Param end query string true "End date (YYYY-MM-DD)"
-// @Success 200 {array} dtos.RiskHistory
-// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/ [get]
-func (c *StatisticsController) GetReleaseRiskHistory(ctx shared.Context) error {
-	// parse release id from param
-	releaseIDParam := shared.GetParam(ctx, "releaseID")
-	releaseID, err := uuid.Parse(releaseIDParam)
-	if err != nil {
-		return ctx.JSON(400, map[string]string{"error": "invalid release id"})
-	}
-
-	start := ctx.QueryParam("start")
-	end := ctx.QueryParam("end")
-	if start == "" || end == "" {
-		return ctx.JSON(400, map[string]string{"error": "start and end query parameters are required"})
-	}
-	beginTime, err := time.Parse(time.DateOnly, start)
-	if err != nil {
-		return ctx.JSON(400, map[string]string{"error": "invalid start date"})
-	}
-	endTime, err := time.Parse(time.DateOnly, end)
-	if err != nil {
-		return ctx.JSON(400, map[string]string{"error": "invalid end date"})
-	}
-
-	// delegate to service
-	res, err := c.statisticsService.GetReleaseRiskHistory(ctx.Request().Context(), releaseID, beginTime, endTime)
-	if err != nil {
-		slog.Error("could not get release risk history", "err", err)
-		return ctx.JSON(500, nil)
-	}
-
-	// convert to dto
-	dtoResults := make([]dtos.RiskHistory, 0, len(res))
-	for _, r := range res {
-		dtoResults = append(dtoResults, transformer.ArtifactRiskHistoryToDTO(r))
-	}
-
-	return ctx.JSON(200, dtoResults)
-}
-
 // @Summary Get component risk distribution for an asset version
 // @Tags Statistics
 // @Security CookieAuth
@@ -262,32 +212,6 @@ func (c *StatisticsController) GetComponentRisk(ctx shared.Context) error {
 	}
 
 	return ctx.JSON(200, results)
-}
-
-// @Summary Get average remediation times for a release
-// @Tags Statistics
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param releaseID path string true "Release ID"
-// @Success 200 {object} dtos.RemediationTimeAverages
-// @Router /organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/ [get]
-func (c *StatisticsController) GetAverageReleaseFixingTime(ctx shared.Context) error {
-	releaseIDParam := shared.GetParam(ctx, "releaseID")
-	releaseID, err := uuid.Parse(releaseIDParam)
-	if err != nil {
-		return ctx.JSON(400, map[string]string{"error": "invalid release id"})
-	}
-
-	averages, err := c.statisticsService.GetRemediationTimeAveragesForRelease(ctx.Request().Context(), releaseID)
-	if err != nil {
-		slog.Error("could not get remediation time averages for release", "error", err)
-		return ctx.JSON(500, nil)
-	}
-
-	return ctx.JSON(200, averages)
 }
 
 // @Summary Get organization statistics overview

@@ -508,10 +508,40 @@ func TestGenerateSummaryForEvent(t *testing.T) {
 		result := generateSummaryForEvent(dtos.EventTypeReopened, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
 		assert.Equal(t, "Reopened 1 path in package pkg:npm/debug@3.0.0 (artifact: pkg:oci/myapp@v1.0.0)", result)
 	})
+	t.Run("detected in artifact event type", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeDetectedInArtifact, 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
+		assert.Equal(t, "Found in new product", result)
+	})
+	t.Run("fixed in artifact event type", func(t *testing.T) {
+		result := generateSummaryForEvent(dtos.EventTypeFixedInArtifact, 2, "pkg:npm/debug@3.0.0", []string{"pkg:oci/app-a@v1.0.0"})
+		assert.Equal(t, "No longer found in product", result)
+	})
 	t.Run("unknown event type returns empty string", func(t *testing.T) {
 		result := generateSummaryForEvent(dtos.VulnEventType("unknown"), 1, "pkg:npm/debug@3.0.0", []string{"pkg:oci/myapp@v1.0.0"})
 		assert.Equal(t, "", result)
 	})
+}
+
+func TestGenerateTrackingObjectWithArtifactLinkEvents(t *testing.T) {
+	artifactID := uuid.New()
+	vuln := models.DependencyVuln{
+		AssetVersionName: "main",
+		ComponentPurl:    "pkg:npm/debug@3.0.0",
+		Artifacts:        []models.Artifact{{ID: artifactID, ArtifactName: "pkg:oci/app-a"}},
+	}
+	vuln.Events = []models.VulnEvent{
+		{CreatedAt: time.Date(2026, 2, 10, 11, 0, 0, 0, time.UTC), Type: dtos.EventTypeDetected},
+		{CreatedAt: time.Date(2026, 2, 11, 11, 0, 0, 0, time.UTC), Type: dtos.EventTypeDetectedInArtifact, ArtifactID: &artifactID},
+		{CreatedAt: time.Date(2026, 2, 12, 11, 0, 0, 0, time.UTC), Type: dtos.EventTypeFixedInArtifact, ArtifactID: &artifactID},
+	}
+
+	tracking, err := generateTrackingObject(context.Background(), []models.DependencyVuln{vuln}, new("title"))
+	assert.NoError(t, err)
+
+	assert.Len(t, tracking.RevisionHistory, 3)
+	assert.Equal(t, "Found in new product", *tracking.RevisionHistory[1].Summary)
+	assert.Equal(t, "No longer found in product", *tracking.RevisionHistory[2].Summary)
+	assert.Equal(t, "3", string(*tracking.Version))
 }
 
 func TestGetOldestVulnPerUniqueCVE(t *testing.T) {

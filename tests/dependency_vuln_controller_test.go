@@ -214,6 +214,8 @@ func TestDependencyVulnControllerCreateEvent(t *testing.T) {
 
 	projectService := mocks.NewProjectService(t)
 	statisticsService := mocks.NewStatisticsService(t)
+	// a reopened event recalculates the risk history of the asset through the inline broker
+	statisticsService.EXPECT().RecalculateRiskHistory(mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 	vulnEventRepository := mocks.NewVulnEventRepository(t)
 
 	WithTestAppOptions(t, "../initdb.sql", TestAppOptions{

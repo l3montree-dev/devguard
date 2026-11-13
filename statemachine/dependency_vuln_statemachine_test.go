@@ -15,6 +15,7 @@
 package statemachine
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -352,6 +353,34 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		assert.Equal(t, "main", *diffResult.ExistingOnOtherBranches[0].EventsToCopy[0].OriginalAssetVersionName)
 	})
 
+	t.Run("should not copy artifact link events since they reference the artifacts of the other branch", func(t *testing.T) {
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID:            "CVE-2023-0001",
+				AssetVersionName: "feature-branch",
+			},
+		}
+
+		otherBranchArtifactID := uuid.New()
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID:            "CVE-2023-0001",
+				AssetVersionName: "main",
+				Events: []models.VulnEvent{
+					{Type: dtos.EventTypeDetected},
+					{Type: dtos.EventTypeDetectedInArtifact, ArtifactID: &otherBranchArtifactID},
+					{Type: dtos.EventTypeFixedInArtifact, ArtifactID: &otherBranchArtifactID},
+				},
+			},
+		}
+
+		diffResult := DiffVulnsBetweenBranches(utils.Map(foundVulnerabilities, utils.Ptr), utils.Map(existingDependencyVulns, utils.Ptr))
+
+		assert.Len(t, diffResult.ExistingOnOtherBranches, 1)
+		assert.Len(t, diffResult.ExistingOnOtherBranches[0].EventsToCopy, 1)
+		assert.Equal(t, dtos.EventTypeDetected, diffResult.ExistingOnOtherBranches[0].EventsToCopy[0].Type)
+	})
+
 	t.Run("should NOT apply fixed event from other branch to current vuln state", func(t *testing.T) {
 		assetID := uuid.New()
 
@@ -542,6 +571,18 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 		assert.Len(t, diffResult.ExistingOnOtherBranches[0].EventsToCopy, 1)
 		assert.Equal(t, "main", *diffResult.ExistingOnOtherBranches[0].EventsToCopy[0].OriginalAssetVersionName)
 	})
+}
+
+func TestApplyArtifactLinkEvents(t *testing.T) {
+	for _, state := range []dtos.VulnState{dtos.VulnStateOpen, dtos.VulnStateFixed, dtos.VulnStateAccepted, dtos.VulnStateFalsePositive} {
+		for _, eventType := range []dtos.VulnEventType{dtos.EventTypeDetectedInArtifact, dtos.EventTypeFixedInArtifact} {
+			t.Run(fmt.Sprintf("%s should not change state %s", eventType, state), func(t *testing.T) {
+				vuln := models.DependencyVuln{Vulnerability: models.Vulnerability{State: state}}
+				Apply(&vuln, models.VulnEvent{Type: eventType})
+				assert.Equal(t, state, vuln.State)
+			})
+		}
+	}
 }
 
 // func TestResolveCVERelationsAndReturnFilteredFoundVulns(t *testing.T) {

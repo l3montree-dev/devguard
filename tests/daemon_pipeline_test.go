@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // createTestAffectedComponent creates a properly populated AffectedComponent for testing
@@ -92,10 +93,11 @@ func TestDaemonPipelineEndToEnd(t *testing.T) {
 			assert.Greater(t, len(vulnerabilities), 0, "Should detect at least one vulnerability")
 
 			// Verify statistics were collected
-			var stats []models.ArtifactRiskHistory
-			err = f.DB.Find(&stats, "asset_id = ?", asset.ID).Error
-			assert.NoError(t, err)
-			assert.Greater(t, len(stats), 0, "Should have risk statistics")
+			today := time.Now().UTC()
+			stats, err := f.App.StatisticsService.GetArtifactRiskHistory(context.Background(), nil, assetVersion.ID, today, today)
+			require.NoError(t, err)
+			require.Len(t, stats, 1)
+			assert.Greater(t, stats[0].OpenDependencyVulns, 0, "Should have risk statistics")
 		})
 	})
 }
@@ -169,8 +171,7 @@ func TestDaemonPipelineEmptyArtifact(t *testing.T) {
 
 // TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation verifies that
 // when DeleteOldAssetVersions removes a stale branch version (and its artifacts), the
-// downstream CollectStats stage does not attempt to insert artifact_risk_history rows
-// for those now-deleted artifacts, which would violate the fk_artifact constraint.
+// downstream stages do not fail on the now-deleted artifacts.
 func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *testing.T) {
 	t.Parallel()
 	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
@@ -193,7 +194,7 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 		err := f.DB.Create(&staleVersion).Error
 		assert.NoError(t, err)
 
-		// Give the stale branch an artifact so CollectStats has something to iterate
+		// Give the stale branch an artifact so the downstream stages have something to iterate
 		staleArtifact := models.Artifact{
 			ArtifactName:   "stale-artifact",
 			AssetVersionID: staleVersion.ID,
@@ -214,9 +215,6 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 		err = f.App.AssetRepository.Save(context.Background(), nil, &asset)
 		assert.NoError(t, err)
 
-		// Running the pipeline must not error with:
-		// "insert or update on table artifact_risk_history violates foreign key
-		// constraint fk_artifact (SQLSTATE 23503)"
 		runner := f.CreateDaemonRunner()
 		err = runner.RunDaemonPipelineForAsset(context.Background(), asset.ID)
 		assert.NoError(t, err)
@@ -226,12 +224,6 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 		err = f.DB.Find(&remainingArtifacts, "asset_version_id = ?", staleVersion.ID).Error
 		assert.NoError(t, err)
 		assert.Empty(t, remainingArtifacts, "stale branch artifacts must be deleted")
-
-		// No orphaned risk history rows must exist for the deleted artifact
-		var orphanedHistory []models.ArtifactRiskHistory
-		err = f.DB.Find(&orphanedHistory, "artifact_id = ?", staleArtifact.ID).Error
-		assert.NoError(t, err)
-		assert.Empty(t, orphanedHistory, "must not have risk history for deleted artifact")
 	})
 }
 
