@@ -777,6 +777,10 @@ type ImportOptions struct {
 	LocalArchive bool
 }
 
+type DataTransferService interface {
+	StartExport(ctx context.Context, options dtos.DataTransferExportOptions) error
+}
+
 type VulnDBService interface {
 	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
