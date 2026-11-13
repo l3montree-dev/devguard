@@ -79,6 +79,21 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	return ev, nil
 }
 
+func shouldApplyVexEvent(vuln models.DependencyVuln, event models.VulnEvent) bool {
+	// we never accept a false positive.
+	// we never reopen a false positive
+	switch vuln.State {
+	case dtos.VulnStateFalsePositive:
+		return event.Type == dtos.EventTypeFalsePositive // this does not make much sense - but we might have a better false positive description
+	case dtos.VulnStateAccepted:
+		return event.Type == dtos.EventTypeFalsePositive || event.Type == dtos.EventTypeReopened
+	case dtos.VulnStateOpen:
+		return true
+	}
+	// this can never happen
+	return false
+}
+
 func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
 	events := vuln.GetEvents()
 	if len(events) == 0 {
@@ -190,6 +205,10 @@ func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []m
 			if err != nil {
 				slog.Error("failed to create event from VEX rule", "error", err)
 				return nil, nil, err
+			}
+
+			if !shouldApplyVexEvent(vuln, ev) {
+				continue
 			}
 
 			if isVexEventAlreadyApplied(vuln, ev) {

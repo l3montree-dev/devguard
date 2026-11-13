@@ -129,6 +129,8 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 
 	defer func() { _ = tx.Rollback() }()
 
+	preferMigrationInDeadlocks(tx)
+
 	for _, v := range versions {
 		r, identifier, err := src.ReadUp(v)
 		if err != nil {
@@ -167,6 +169,23 @@ func RunMigrationsFromSource(db shared.DB, src migsource.Driver) error {
 
 	runPostMigrationStatements(sqlDB, versions)
 	return nil
+}
+
+// postgres aborts the transaction of a deadlock which checks for it first, after waiting deadlock_timeout.
+// The migrations run in one transaction holding many locks until the commit, so a running application easily
+// deadlocks with it - waiting longer than the application lets postgres abort the application's transaction instead.
+func preferMigrationInDeadlocks(tx *sql.Tx) {
+	if _, err := tx.Exec("SAVEPOINT deadlock_timeout"); err != nil {
+		slog.Warn("could not raise deadlock_timeout for the migration", "err", err)
+		return
+	}
+	if _, err := tx.Exec("SET LOCAL deadlock_timeout = '1min'"); err != nil {
+		slog.Warn("could not raise deadlock_timeout for the migration, a deadlock with the running application may abort it", "err", err)
+		// a failed statement aborts the transaction, rolling back to the savepoint makes it usable again
+		_, _ = tx.Exec("ROLLBACK TO SAVEPOINT deadlock_timeout")
+		return
+	}
+	_, _ = tx.Exec("RELEASE SAVEPOINT deadlock_timeout")
 }
 
 func runPostMigrationStatements(sqlDB *sql.DB, versions []uint) {
