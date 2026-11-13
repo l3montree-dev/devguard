@@ -1,9 +1,9 @@
 package dtos
 
-type affectedEntities struct {
+type AffectedEntities struct {
 	Orgs, Projects, Assets []string
 }
 
 type DataTransferExportOptions struct {
-	AffectedEntities affectedEntities
+	AffectedEntities AffectedEntities
 }

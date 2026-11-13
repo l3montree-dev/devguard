@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,12 +15,55 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type tableProperties struct {
-	tableID            string
-	referencedTableIDs []string
-	model              utils.Tabler
-	customSQL          *string
+type scopeLevel int
+
+const (
+	orgLevel scopeLevel = iota // fully exported, including everything below them
+	projectLevel
+	assetLevel
+	parentOrgLevel // only the row itself, referenced upwards by a scoped project or asset
+	parentProjectLevel
+)
+
+// resolved ids for every scope level
+type exportScope struct {
+	orgIDs           []string
+	projectIDs       []string
+	assetIDs         []string
+	parentOrgIDs     []string
+	parentProjectIDs []string
 }
+
+func (scope exportScope) idsFor(level scopeLevel) []string {
+	switch level {
+	case orgLevel:
+		return scope.orgIDs
+	case projectLevel:
+		return scope.projectIDs
+	case assetLevel:
+		return scope.assetIDs
+	case parentOrgLevel:
+		return scope.parentOrgIDs
+	case parentProjectLevel:
+		return scope.parentProjectIDs
+	default:
+		panic(fmt.Sprintf("unknown scope level %d", level))
+	}
+}
+
+type scopeFilter struct {
+	column string
+	level  scopeLevel // which resolved ID set the column is matched against
+}
+
+type tableProperties struct {
+	tableID   string
+	filters   []scopeFilter
+	model     utils.Tabler
+	customSQL *string
+}
+
+const transferFileLocation = "/transfer-files/"
 
 // SQL foreign key column constants
 const (
@@ -32,59 +76,51 @@ const (
 	assetFKColumn   = "asset_id"
 )
 
+const concurrentDBWorkers = 6
+
+var (
+	orgScope     = scopeFilter{column: orgFKColumn, level: orgLevel}
+	projectScope = scopeFilter{column: projectFKColumn, level: projectLevel}
+	assetScope   = scopeFilter{column: assetFKColumn, level: assetLevel}
+)
+
 // all tables with a simple syntax
 var tablesToSync []tableProperties = []tableProperties{
 	// org level
-	{tableID: orgTableID, referencedTableIDs: []string{}},
-	{tableID: projectsTableID, referencedTableIDs: []string{orgTableID, projectsTableID}},
-	{tableID: "compliance_postures", referencedTableIDs: []string{orgTableID, projectsTableID, assetsTableID}},
-	{tableID: "invitations", referencedTableIDs: []string{orgTableID}},
+	{tableID: orgTableID, filters: []scopeFilter{{column: "id", level: orgLevel}, {column: "id", level: parentOrgLevel}}},
+	{tableID: projectsTableID, filters: []scopeFilter{{column: "id", level: projectLevel}, {column: "id", level: parentProjectLevel}}},
+	{tableID: "compliance_postures", filters: []scopeFilter{orgScope, projectScope, assetScope}},
 	// external user org pivot table
-	{tableID: "access_tokens", referencedTableIDs: []string{orgTableID, projectsTableID, assetsTableID}},
-	{tableID: "trusted_entities", referencedTableIDs: []string{orgTableID, projectsTableID}},
-	{tableID: "gitlab_integrations", referencedTableIDs: []string{orgTableID}},
-	{tableID: "github_app_installations", referencedTableIDs: []string{orgTableID}},
-	{tableID: "jira_integrations", referencedTableIDs: []string{orgTableID}},
-	{tableID: "webhook_integrations", referencedTableIDs: []string{orgTableID, projectsTableID}},
-	{tableID: "webhook_integrations", referencedTableIDs: []string{orgTableID, projectsTableID}},
-	{tableID: "policies", referencedTableIDs: []string{orgTableID}},
 
 	// project level
 	//project enabled policies (pivot table)
-	{tableID: "releases", referencedTableIDs: []string{projectsTableID}},
-	{tableID: assetsTableID, referencedTableIDs: []string{projectsTableID}},
+	{tableID: assetsTableID, filters: []scopeFilter{{column: "id", level: assetLevel}}},
 
 	// asset level
-	{tableID: "external_references", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "vex_rules", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "asset_versions", referencedTableIDs: []string{assetsTableID}},
+	{tableID: "external_references", filters: []scopeFilter{assetScope}},
+	{tableID: "vex_rules", filters: []scopeFilter{assetScope}},
+	{tableID: "asset_versions", filters: []scopeFilter{assetScope}},
 
 	// asset version level
-	{tableID: "license_risks", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "first_party_vulnerabilities", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "dependency_vulnerabilities", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "in_toto_links", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "supply_chain", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "advisories", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "asset_risk_history", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "artifacts", referencedTableIDs: []string{assetsTableID}},
+	{tableID: "license_risks", filters: []scopeFilter{assetScope}},
+	{tableID: "first_party_vulnerabilities", filters: []scopeFilter{assetScope}},
+	{tableID: "dependency_vulns", filters: []scopeFilter{assetScope}},
+	{tableID: "advisories", filters: []scopeFilter{assetScope}},
+	{tableID: "artifacts", filters: []scopeFilter{assetScope}},
 
 	// artifact level
-	{tableID: "artifact_risk_history", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "release_items", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "attestations", referencedTableIDs: []string{assetsTableID}},
-	{tableID: "sboms", referencedTableIDs: []string{assetsTableID}},
+	{tableID: "release_items", filters: []scopeFilter{assetScope}},
+	{tableID: "attestations", filters: []scopeFilter{assetScope}},
+	{tableID: "sboms", filters: []scopeFilter{assetScope}},
 	// artifact dep vulns pivot table
 	// artifact license risks pivot table
 
-	// reminder load SBOM merkle data
+	// reminder load SBOM merkle data + vuln_events
 }
-
-const transferFileLocation = "/transfer-files/"
 
 type DataTransferService struct {
 	pool *pgxpool.Pool
-	// Broker?
+	// Event Broker?
 }
 
 func NewDataTransferService(pool *pgxpool.Pool) *DataTransferService {
@@ -96,6 +132,8 @@ func NewDataTransferService(pool *pgxpool.Pool) *DataTransferService {
 func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions) error {
 	slog.Info("starting data transfer export process...")
 	start := time.Now()
+
+	// GUARD AGAINST SQL INJECTION (validate user input as uuids)
 
 	// initiate read only and read uncommitted transaction to use as snapshot for the export
 	snapshotTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{
@@ -112,23 +150,62 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("could not retrieve snapshot id: %w", err)
 	}
 
-	group, errCtx := errgroup.WithContext(ctx)
-	group.SetLimit(6) // allow max 6 concurrent DB reads
+	scope, err := resolveScope(ctx, snapshotTx, options.AffectedEntities)
+	if err != nil {
+		return err
+	}
 
+	jobs := make(chan queryJob, 50) // small number of jobs can all be queued at once
+	output := make(chan output, 5)
+
+	group, errCtx := errgroup.WithContext(ctx)
+	outputDrainWG := &sync.WaitGroup{}
+	group.SetLimit(concurrentDBWorkers) // cap the number of concurrent db reads
+	for group.TryGo(func() error { return service.DatabaseQueryWorker(errCtx, snapshotID, jobs, output) }) {
+	}
+	go func() {
+		sql, args, err := sqlFromTableProperties(tablesToSync[0], scope)
+		if err != nil {
+			slog.Error("could not build export query", "err", err)
+			close(jobs)
+			return
+		}
+
+		jobs <- queryJob{tableID: tablesToSync[0].tableID, sql: sql, args: args}
+		close(jobs)
+	}()
+
+	outputDrainWG.Go(func() {
+		for result := range output {
+			slog.Info("received query data", "table", result.tableID, "count", len(result.rows))
+		}
+	})
+
+	err = group.Wait()
+	if err != nil {
+		return fmt.Errorf("encountered error during export, aborting: %w", err)
+	}
+	close(output)
+
+	// wait for output to drain
+	outputDrainWG.Wait()
+
+	slog.Info("finished export", "time", time.Since(start))
 	return nil
 }
 
 type output struct {
 	tableID string
-	data    [][]any
-	count   int
+	rows    [][]byte // one json object per row
 }
 
 type queryJob struct {
-	sql string
+	tableID string
+	sql     string
+	args    []any
 }
 
-func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, snapshotID string, jobs <-chan queryJob, output chan<- any) error {
+func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, snapshotID string, jobs chan queryJob, outputChan chan output) error {
 	workerTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return fmt.Errorf("could not start worker tx: %w", err)
@@ -140,76 +217,100 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, sna
 	}
 
 	for job := range jobs {
+		job.sql = job.sql + ";"
 		slog.Info("starting new job", "sql", job.sql)
-		rows, err := workerTx.Query(ctx, job.sql)
+		rows, err := workerTx.Query(ctx, job.sql, job.args...)
 		if err != nil {
 			return fmt.Errorf("could not query table: %w\n\nSQL: %s", err, job.sql)
 		}
 		defer rows.Close()
 
-		results := make([][]any, rows.CommandTag().RowsAffected())
-		i := 0
+		var tableRows [][]byte
 		for rows.Next() {
-			if err := rows.Scan(results[i]); err != nil {
-				return fmt.Errorf("could not scan values: %w", err)
+			var row []byte
+			if err := rows.Scan(&row); err != nil {
+				return fmt.Errorf("could not scan row of %s: %w", job.tableID, err)
 			}
+			tableRows = append(tableRows, row)
 		}
 
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("error when reading rows: %w", err)
 		}
 		rows.Close()
-		slog.Info("successfully queried table data", "rows count", rows.CommandTag().RowsAffected(), "sql", job.sql)
+		slog.Info("successfully queried table data", "table", job.tableID, "rows count", len(tableRows))
+		outputChan <- output{tableID: job.tableID, rows: tableRows}
 	}
 
 	slog.Info("worker finished")
 	return nil
 }
 
-// build the joined table for a exported table
-func sqlFromTableProperties(properties tableProperties) string {
-	sql := fmt.Sprintf("SELECT * FROM %s", properties.tableID)
-	if len(properties.referencedTableIDs) > 0 {
-		for _, tableID := range properties.referencedTableIDs {
-			sql += fmt.Sprintf(" JOIN %s ON %s = %s.id", tableID, tableIDToFKColumnName(tableID), tableID)
-		}
+// build the scoped row_to_json query for an exported table, args are ordered like the placeholders
+func sqlFromTableProperties(properties tableProperties, scope exportScope) (string, []any, error) {
+	// fail closed, an unfiltered query would export data of other tenants
+	if len(properties.filters) == 0 {
+		return "", nil, fmt.Errorf("table %s has no scope filter", properties.tableID)
 	}
-	return sql
+
+	conditions := make([]string, 0, len(properties.filters))
+	args := make([]any, 0, len(properties.filters))
+	for _, filter := range properties.filters {
+		args = append(args, scope.idsFor(filter.level))
+		conditions = append(conditions, fmt.Sprintf("t.%s = ANY($%d::uuid[])", pgx.Identifier{filter.column}.Sanitize(), len(args)))
+	}
+	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{properties.tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
 }
 
-// apply the necessary WHERE filters according to the scopes provided in the export options
-func scopeSQLQuery(baseQuery string, queryAppendix string, options dtos.DataTransferExportOptions) string {
-	scope := options.AffectedEntities
-	whereClauses := []string{}
+// resolve subprojects to recursively find all projects in scope
+const resolveProjectIDsSQL = `WITH RECURSIVE scoped_projects AS (
+	SELECT id FROM projects WHERE organization_id = ANY($1::uuid[]) OR id = ANY($2::uuid[])
+	UNION
+	SELECT p.id FROM projects p JOIN scoped_projects sp ON p.parent_id = sp.id
+) SELECT id FROM scoped_projects`
 
-	if len(scope.Orgs) > 0 {
-		whereClauses = append(whereClauses, fmt.Sprintf("%s = ANY(%s)", orgFKColumn, strings.Join(scope.Orgs, ", ")))
-	}
-	if len(scope.Projects) > 0 {
-		whereClauses = append(whereClauses, fmt.Sprintf("%s = ANY(%s)", projectFKColumn, strings.Join(scope.Projects, ", ")))
-	}
-	if len(scope.Assets) > 0 {
-		whereClauses = append(whereClauses, fmt.Sprintf("%s = ANY(%s)", assetFKColumn, strings.Join(scope.Assets, ", ")))
-	}
+// resolve all implicit asset ids (via projects) and the explicit ones set by the request
+const resolveAssetIDsSQL = `SELECT id FROM assets WHERE project_id = ANY($1::uuid[]) OR id = ANY($2::uuid[])`
 
-	if len(whereClauses) == 0 { // unscoped, this can be desired by the caller of this function
-		return ""
+// then we also need to get all the projects referenced by those assets to ensure FK-relations
+const resolveParentProjectIDsSQL = `SELECT project_id FROM assets WHERE id = ANY($1::uuid[])
+UNION
+SELECT parent_id FROM projects WHERE id = ANY($2::uuid[]) AND parent_id IS NOT NULL`
+
+// lastly we get all referenced orgs to ensure FK-relations
+const resolveParentOrgIDsSQL = `SELECT DISTINCT organization_id FROM projects WHERE id = ANY($1::uuid[]) OR id = ANY($2::uuid[])`
+
+// resolve the requested scopes into lists of ids for all levels
+func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntities) (exportScope, error) {
+	scope := exportScope{orgIDs: requested.Orgs}
+
+	rows, _ := tx.Query(ctx, resolveProjectIDsSQL, requested.Orgs, requested.Projects)
+	projectIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve project ids: %w", err)
 	}
+	scope.projectIDs = projectIDs
 
-	whereClause := strings.Join(whereClauses, " AND ")
-
-	return fmt.Sprintf("%s WHERE %s %s;", baseQuery, whereClause, queryAppendix)
-}
-
-func tableIDToFKColumnName(tableID string) string {
-	switch tableID {
-	case orgTableID:
-		return orgFKColumn
-	case projectsTableID:
-		return projectFKColumn
-	case assetsTableID:
-		return assetFKColumn
-	default:
-		return tableID
+	rows, _ = tx.Query(ctx, resolveAssetIDsSQL, scope.projectIDs, requested.Assets)
+	assetIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve asset ids: %w", err)
 	}
+	scope.assetIDs = assetIDs
+
+	rows, _ = tx.Query(ctx, resolveParentProjectIDsSQL, requested.Assets, requested.Projects)
+	parentProjectIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve parent project ids: %w", err)
+	}
+	scope.parentProjectIDs = parentProjectIDs
+
+	rows, _ = tx.Query(ctx, resolveParentOrgIDsSQL, scope.projectIDs, scope.parentProjectIDs)
+	parentOrgIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve parent org ids: %w", err)
+	}
+	scope.parentOrgIDs = parentOrgIDs
+
+	return scope, nil
 }
