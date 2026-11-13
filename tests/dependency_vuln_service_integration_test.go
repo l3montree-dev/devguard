@@ -226,6 +226,8 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 
 	mockThirdPartyIntegration.On("UpdateIssue",
 		mock.Anything, // context
+		mock.Anything, // org
+		mock.Anything, // project
 		mock.Anything, // asset
 		mock.Anything, // assetVersionSlug
 		mock.Anything, // vuln

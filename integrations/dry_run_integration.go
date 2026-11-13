@@ -32,7 +32,7 @@ func (d *dryRunIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (d *dryRunIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (d *dryRunIntegration) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	var expectedState string
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:

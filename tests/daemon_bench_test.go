@@ -375,7 +375,7 @@ func (offline *offlineIntegrationAggregate) CreateIssue(ctx context.Context, ass
 	return nil
 }
 
-func (offline *offlineIntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (offline *offlineIntegrationAggregate) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	offline.issuesUpdated.Add(1)
 	return nil
 }

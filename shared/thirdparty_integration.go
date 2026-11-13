@@ -29,7 +29,7 @@ type ThirdPartyIntegration interface {
 	ListRepositories(ctx Context) ([]dtos.GitRepository, error)
 	HandleEvent(ctx context.Context, event any, userAgent *string) error
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error
-	UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error
+	UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error
 	CreateLabels(ctx context.Context, asset models.Asset) error
 	CompareIssueStatesAndResolveDifferences(ctx context.Context, asset models.Asset, vulnsWithTickets []models.DependencyVuln) error
 	// GetExcessTicketIIDs returns external ticket IDs that are open in the external

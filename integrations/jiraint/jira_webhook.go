@@ -157,7 +157,19 @@ func (i *JiraIntegration) HandleWebhook(ctx shared.Context) error {
 
 		events.NotifyVulnEventCreated(context.Background(), i.broker, vuln.GetAssetID(), vulnEvent.Type)
 
-		err = i.UpdateIssue(ctx.Request().Context(), asset, assetVersion.Slug, vuln, &userAgent)
+		project, err := i.projectRepository.Read(ctx.Request().Context(), nil, asset.ProjectID)
+		if err != nil {
+			slog.Error("could not read project", "err", err)
+			return err
+		}
+
+		org, err := i.orgRepository.Read(ctx.Request().Context(), nil, project.OrganizationID)
+		if err != nil {
+			slog.Error("could not read org", "err", err)
+			return err
+		}
+
+		err = i.UpdateIssue(ctx.Request().Context(), org, project, asset, assetVersion.Slug, vuln, &userAgent)
 
 		if err != nil {
 			slog.Error("could not update issue", "err", err)
