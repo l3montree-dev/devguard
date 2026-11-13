@@ -24,6 +24,8 @@ type FrameworkControl struct {
 	Additional datatypes.JSON `yaml:"additional" json:"additional" gorm:"type:jsonb"`
 
 	ParentControlID *string `json:"parentControlId" gorm:"type:text;index;column:parent_control_id"`
+
+	ScopeFrameworks []ScopeFramework `json:"scopeFrameworks,omitempty" gorm:"many2many:scope_framework_controls;foreignKey:ControlHash;joinForeignKey:ControlHash;references:ID;joinReferences:ScopeFrameworkID"`
 }
 
 // MappedControl references a control by "<framework>:<control_id>".

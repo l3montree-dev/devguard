@@ -17,14 +17,15 @@ package repositories
 
 import (
 	"context"
-
 	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // scopeStatementToTenant restricts a statements query to the caller's org
@@ -67,13 +68,36 @@ func (r *ComplianceComponentRepository) GetDB(ctx context.Context, tx *gorm.DB) 
 	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
 }
 
-func (r *ComplianceComponentRepository) ListAll(ctx context.Context, tx *gorm.DB, filter []shared.FilterQuery) ([]models.ComplianceComponent, error) {
-	db := r.GetDB(ctx, tx)
+const effectiveComponentsQuery = `
+	WITH RECURSIVE project_chain AS (
+		SELECT id, parent_id, 0 AS depth FROM projects WHERE id = @projectID
+		UNION ALL
+		SELECT p.id, p.parent_id, pc.depth + 1 FROM projects p JOIN project_chain pc ON p.id = pc.parent_id
+	), effective_definitions AS (
+		SELECT DISTINCT ON (cc.component_definition) cc.component_definition, cc.org_id, cc.project_id, cc.asset_id
+		FROM compliance_components cc
+		LEFT JOIN project_chain pc ON cc.project_id = pc.id
+		WHERE cc.org_id = @orgID
+			AND (
+				(cc.project_id IS NULL AND cc.asset_id IS NULL)
+				OR (cc.asset_id IS NULL AND pc.id IS NOT NULL)
+				OR cc.asset_id = @assetID
+			)
+		ORDER BY cc.component_definition, cc.asset_id IS NULL, pc.depth ASC NULLS LAST
+	)
+	SELECT cc.id FROM compliance_components cc
+	JOIN effective_definitions ed ON cc.component_definition = ed.component_definition
+		AND cc.org_id = ed.org_id
+		AND cc.project_id IS NOT DISTINCT FROM ed.project_id
+		AND cc.asset_id IS NOT DISTINCT FROM ed.asset_id`
+
+func (r *ComplianceComponentRepository) ListAll(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, filter []shared.FilterQuery) ([]models.ComplianceComponent, error) {
+	db := r.GetDB(ctx, tx).Where("id IN ("+effectiveComponentsQuery+")", map[string]any{"orgID": orgID, "projectID": projectID, "assetID": assetID})
 
 	for _, f := range filter {
 		switch {
 		case f.Field == "frameworkControlId" && f.Operator == "is":
-			db = db.Where("uuid IN (SELECT compliance_component_id FROM compliance_component_implements_controls WHERE framework_control_id = ?)", f.FieldValue)
+			db = db.Where("id IN (SELECT compliance_component_id FROM compliance_component_implements_controls WHERE framework_control_id = ?)", f.FieldValue)
 		}
 	}
 
@@ -82,17 +106,89 @@ func (r *ComplianceComponentRepository) ListAll(ctx context.Context, tx *gorm.DB
 	return components, err
 }
 
-func (r *ComplianceComponentRepository) GetDetails(ctx context.Context, tx *gorm.DB, id uuid.UUID) (*models.ComplianceComponent, error) {
+func (r *ComplianceComponentRepository) GetDetails(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, id uuid.UUID) (*models.ComplianceComponent, error) {
 	var component models.ComplianceComponent
 	err := r.GetDB(ctx, tx).
 		Preload("ImplementedControls").
 		Preload("ImplementedControls.ComplianceComponent").
-		Where("uuid = ?", id).
+		Where("id IN ("+effectiveComponentsQuery+")", map[string]any{"orgID": orgID, "projectID": projectID, "assetID": assetID}).
+		Where("id = ?", id).
 		First(&component).Error
 	if err != nil {
 		return nil, err
 	}
 	return &component, nil
+}
+
+func (r *ComplianceComponentRepository) SaveComponentDefinition(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string, components []models.ComplianceComponent) error {
+	return r.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
+		var existing []models.ComplianceComponent
+		if err := tx.Where("org_id = ? AND project_id IS NOT DISTINCT FROM ? AND asset_id IS NOT DISTINCT FROM ? AND component_definition = ?", orgID, projectID, assetID, componentDefinition).
+			Find(&existing).Error; err != nil {
+			return err
+		}
+		existingByUUID := make(map[uuid.UUID]models.ComplianceComponent, len(existing))
+		for _, c := range existing {
+			existingByUUID[c.UUID] = c
+		}
+
+		keep := make([]uuid.UUID, 0, len(components))
+		for _, component := range components {
+			component.OrgID = &orgID
+			component.ProjectID = projectID
+			component.AssetID = assetID
+			component.ComponentDefinition = &componentDefinition
+
+			implementedControls := component.ImplementedControls
+			component.ImplementedControls = nil
+
+			if old, ok := existingByUUID[component.UUID]; ok {
+				component.ID = old.ID
+				if err := tx.Model(&component).Select("title", "description").Updates(&component).Error; err != nil {
+					return err
+				}
+			} else if err := tx.Create(&component).Error; err != nil {
+				return err
+			}
+			keep = append(keep, component.UUID)
+
+			frameworkControlIDs := make([]string, 0, len(implementedControls))
+			for i := range implementedControls {
+				implementedControls[i].ComplianceComponentID = component.ID
+				frameworkControlIDs = append(frameworkControlIDs, implementedControls[i].FrameworkControlID)
+			}
+
+			removedControls := tx.Where("compliance_component_id = ?", component.ID)
+			if len(frameworkControlIDs) > 0 {
+				removedControls = removedControls.Where("framework_control_id NOT IN ?", frameworkControlIDs)
+			}
+			if err := removedControls.Delete(&models.ComplianceComponentImplementsControl{}).Error; err != nil {
+				return err
+			}
+
+			if len(implementedControls) > 0 {
+				if err := tx.Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "framework_control_id"}, {Name: "compliance_component_id"}},
+					DoUpdates: clause.AssignmentColumns([]string{"description"}),
+				}).Create(&implementedControls).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		removedComponents := tx.Where("org_id = ? AND project_id IS NOT DISTINCT FROM ? AND asset_id IS NOT DISTINCT FROM ? AND component_definition = ?", orgID, projectID, assetID, componentDefinition)
+		if len(keep) > 0 {
+			removedComponents = removedComponents.Where("uuid NOT IN ?", keep)
+		}
+		return removedComponents.Delete(&models.ComplianceComponent{}).Error
+	})
+}
+
+func (r *ComplianceComponentRepository) DeleteComponentDefinition(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string) (bool, error) {
+	result := r.GetDB(ctx, tx).
+		Where("org_id = ? AND project_id IS NOT DISTINCT FROM ? AND asset_id IS NOT DISTINCT FROM ? AND component_definition = ?", orgID, projectID, assetID, componentDefinition).
+		Delete(&models.ComplianceComponent{})
+	return result.RowsAffected > 0, result.Error
 }
 
 func (r *ComplianceComponentRepository) CreateStatement(ctx context.Context, tx *gorm.DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error) {
