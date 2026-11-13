@@ -195,6 +195,7 @@ func reEncryptAllSecrets(ctx context.Context, decryptEnc, encryptEnc *services.D
 
 type secretsInDB struct {
 	JiraIntegrations    []models.JiraIntegration
+	RedmineIntegrations []models.RedmineIntegration
 	GitlabIntegrations  []models.GitLabIntegration
 	Oauth2Tokens        []models.GitLabOauth2Token
 	WebhookIntegrations []models.WebhookIntegration
@@ -208,6 +209,11 @@ func fetchExistingSecrets(db *gorm.DB) (secretsInDB, error) {
 	err := db.Raw(`SELECT * FROM jira_integrations;`).Find(&allSecrets.JiraIntegrations).Error
 	if err != nil {
 		return secretsInDB{}, fmt.Errorf("could not fetch jira integrations: %w", err)
+	}
+
+	err = db.Raw(`SELECT * FROM redmine_integrations;`).Find(&allSecrets.RedmineIntegrations).Error
+	if err != nil {
+		return secretsInDB{}, fmt.Errorf("could not fetch redmine integrations: %w", err)
 	}
 
 	err = db.Raw(`SELECT * FROM gitlab_integrations;`).Find(&allSecrets.GitlabIntegrations).Error
@@ -277,6 +283,14 @@ func decryptSecrets(secrets secretsInDB, decryptionService *services.DBEncryptio
 		secrets.JiraIntegrations[i].AccessToken = decryptedAccessToken
 	}
 
+	for i := range secrets.RedmineIntegrations {
+		decryptedAccessToken, err := decryptionService.MaybeDecryptData(secrets.RedmineIntegrations[i].AccessToken)
+		if err != nil {
+			return secretsInDB{}, fmt.Errorf("could not decrypt redmine integration access token: %w", err)
+		}
+		secrets.RedmineIntegrations[i].AccessToken = decryptedAccessToken
+	}
+
 	for i := range secrets.DependencyProxies {
 		if secrets.DependencyProxies[i].SigningPrivateKey == nil {
 			continue
@@ -287,6 +301,7 @@ func decryptSecrets(secrets secretsInDB, decryptionService *services.DBEncryptio
 		}
 		secrets.DependencyProxies[i].SigningPrivateKey = &decryptedKey
 	}
+
 	slog.Info("successfully decrypted existing secrets")
 	return secrets, nil
 }
@@ -335,6 +350,14 @@ func encryptSecrets(secrets secretsInDB, encryptionService *services.DBEncryptio
 		secrets.JiraIntegrations[i].AccessToken = encryptedAccessToken
 	}
 
+	for i := range secrets.RedmineIntegrations {
+		encryptedAccessToken, err := encryptionService.EncryptAndWrapData(secrets.RedmineIntegrations[i].AccessToken)
+		if err != nil {
+			return secretsInDB{}, fmt.Errorf("could not encrypt redmine integration access token: %w", err)
+		}
+		secrets.RedmineIntegrations[i].AccessToken = encryptedAccessToken
+	}
+
 	for i := range secrets.DependencyProxies {
 		if secrets.DependencyProxies[i].SigningPrivateKey == nil {
 			continue
@@ -345,6 +368,7 @@ func encryptSecrets(secrets secretsInDB, encryptionService *services.DBEncryptio
 		}
 		secrets.DependencyProxies[i].SigningPrivateKey = &encryptedKey
 	}
+
 	slog.Info("successfully re-encrypted existing secrets")
 	return secrets, nil
 }
@@ -357,6 +381,13 @@ func updateSecretsInDB(db *gorm.DB, secrets secretsInDB) error {
 		err := tx.Clauses(clause.OnConflict{UpdateAll: true}).Create(&secrets.JiraIntegrations).Error
 		if err != nil {
 			return fmt.Errorf("could not update jira integrations secrets: %w", err)
+		}
+	}
+
+	if len(secrets.RedmineIntegrations) > 0 {
+		err := tx.Clauses(clause.OnConflict{UpdateAll: true}).Create(&secrets.RedmineIntegrations).Error
+		if err != nil {
+			return fmt.Errorf("could not update redmine integrations secrets: %w", err)
 		}
 	}
 

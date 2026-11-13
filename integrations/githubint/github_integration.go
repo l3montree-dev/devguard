@@ -28,7 +28,6 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/labstack/echo/v4"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -36,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -893,7 +893,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState),
 		Title:  new(firstPartyVuln.Title()),
-		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels: &labels,
 	}
 
@@ -917,7 +917,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState.ToGithub()),
 		Title:  new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
+		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree, true)),
 		Labels: &labels,
 	}
 
@@ -1004,7 +1004,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	labels := commonint.GetLabels(firstPartyVuln, orgSlug, projectSlug, asset.Slug)
 	issue := &github.IssueRequest{
 		Title:  new(firstPartyVuln.Title()),
-		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels: &labels,
 	}
 
@@ -1081,7 +1081,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	issue := &github.IssueRequest{
 		Title: new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID,
 			utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
+		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree, true)),
 		Labels: &labels,
 	}
 

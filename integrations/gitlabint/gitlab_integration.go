@@ -1295,7 +1295,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  new(stateEvent),
 		Title:       new(dependencyVuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*dependencyVuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels:      new(gitlab.LabelOptions(labels)),
 	})
 	return err
@@ -1322,7 +1322,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.EditIssue(ctx, projectID, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  new(expectedState.ToGitlab()),
 		Title:       new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: new(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
+		Description: new(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree, true)),
 		Labels:      new(gitlab.LabelOptions(labels)),
 	})
 	return err
@@ -1427,7 +1427,7 @@ func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       new(vuln.Title()),
-		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Description: new(commonint.RenderMarkdownForFirstPartyVuln(*vuln, g.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels:      new(gitlab.LabelOptions(labels)),
 	}
 
@@ -1459,7 +1459,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Description: new(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
+		Description: new(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree, true)),
 		Labels:      new(gitlab.LabelOptions(labels)),
 	}
 

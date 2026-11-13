@@ -64,7 +64,7 @@ func (g *orgRepository) Save(ctx context.Context, tx *gorm.DB, org *models.Org) 
 
 func (g *orgRepository) ReadBySlug(ctx context.Context, tx *gorm.DB, slug string) (models.Org, error) {
 	var t models.Org
-	err := g.GetDB(ctx, tx).Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("Webhooks", "project_id IS NULL").Where("slug = ?", slug).First(&t).Error
+	err := g.GetDB(ctx, tx).Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("RedmineIntegrations").Preload("Webhooks", "project_id IS NULL").Where("slug = ?", slug).First(&t).Error
 	return t, err
 }
 
