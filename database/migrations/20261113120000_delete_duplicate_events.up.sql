@@ -30,3 +30,18 @@ WHERE e.id = s.id
       OR (s.type = 'licenseDecision' AND s.prev_type = 'licenseDecision'
           AND s.user_id = 'system' AND s.justification = 'Automatically fixed by license refresh')
   );
+
+-- Several VEX rules matching the same dependency vuln overrode each other, so every scan added an accepted or
+-- false positive event of each rule again. A rule event repeating the state the vuln already had carries no information.
+DELETE FROM public.vuln_events e
+USING (
+    SELECT id, type, vex_rule_id,
+           lag(type) OVER (PARTITION BY dependency_vuln_id ORDER BY created_at, id) AS prev_type
+    FROM public.vuln_events
+    WHERE dependency_vuln_id IS NOT NULL
+      AND type IN ('detected', 'reopened', 'fixed', 'accepted', 'falsePositive', 'markedForTransfer')
+) s
+WHERE e.id = s.id
+  AND s.vex_rule_id IS NOT NULL
+  AND s.type IN ('accepted', 'falsePositive')
+  AND s.type = s.prev_type;
