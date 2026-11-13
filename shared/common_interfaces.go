@@ -895,6 +895,16 @@ type FrameworkControlRepository interface {
 	GetEffectiveScopeFrameworks(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.ScopeFramework, error)
 }
 
+type ComplianceCatalogService interface {
+	SaveCatalog(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string, data []byte) error
+	DeleteCatalog(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string) error
+	ListCatalogs(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]dtos.ScopeFramework, error)
+
+	SaveComponentDefinition(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string, data []byte) error
+	DeleteComponentDefinition(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string) error
+	ListComponentDefinitions(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]dtos.ScopeComponentDefinition, error)
+}
+
 type CompliancePostureService interface {
 	UpdateCompliancePostureState(ctx context.Context, tx DB, userID string, posture *models.CompliancePosture, statusType string, justification string, mechanicalJustification dtos.MechanicalJustificationType, userAgent *string) (models.VulnEvent, error)
 

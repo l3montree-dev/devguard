@@ -42,6 +42,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewCVERelationshipService, fx.As(new(shared.CVERelationshipService)))),
 	fx.Provide(fx.Annotate(NewAdvisoryService, fx.As(new(shared.AdvisoryService)))),
 	fx.Provide(fx.Annotate(NewCompliancePostureService, fx.As(new(shared.CompliancePostureService)))),
+	fx.Provide(fx.Annotate(NewComplianceCatalogService, fx.As(new(shared.ComplianceCatalogService)))),
 	fx.Provide(fx.Annotate(NewGitHubVexFetcher, fx.As(new(shared.GitHubVexFetcher)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(shared.LogService)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(monitoring.AlertLogService)))),

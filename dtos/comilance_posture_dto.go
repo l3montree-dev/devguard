@@ -82,3 +82,15 @@ type CompliancePostureStats struct {
 	Implemented   int64 `json:"implemented"`
 	NotApplicable int64 `json:"notApplicable"`
 }
+
+type ScopeFramework struct {
+	Framework string     `json:"framework"`
+	ProjectID *uuid.UUID `json:"projectId"`
+	AssetID   *uuid.UUID `json:"assetId"`
+}
+
+type ScopeComponentDefinition struct {
+	ComponentDefinition string     `json:"componentDefinition"`
+	ProjectID           *uuid.UUID `json:"projectId"`
+	AssetID             *uuid.UUID `json:"assetId"`
+}
