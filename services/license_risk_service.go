@@ -143,6 +143,10 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, t
 	fixedByRemoval := make([]models.LicenseRisk, 0)
 	for _, fr := range fixedLicenseRisks {
 		if validLicense, ok := compToValidLicense[fr.ComponentPurl]; ok {
+			// existingLicenseRisks contains fixed risks too, fixing them again would add an event on every scan
+			if fr.State == dtos.VulnStateFixed {
+				continue
+			}
 			// component still exists but now has a valid license -> mark as fixed
 			validLicenseFixed = append(validLicenseFixed, licenseRiskWithNewLicense{
 				LicenseRisk:     fr,
@@ -173,7 +177,7 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, t
 		} else if len(fr.Artifacts) == 1 && fr.Artifacts[0].ID != artifact.ID {
 			// we are not the last artifact - just dissociate
 			existingNeedsDissoc = append(existingNeedsDissoc, fr)
-		} else {
+		} else if fr.State != dtos.VulnStateFixed {
 			finallyFixed = append(finallyFixed, fr)
 		}
 	}
