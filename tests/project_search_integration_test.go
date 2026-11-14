@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,6 +71,63 @@ func TestProjectSearchPreservesAvatars(t *testing.T) {
 			require.Len(t, result.Data, 1)
 			assert.Equal(t, withoutAvatar.ID, result.Data[0].ID)
 			assert.Nil(t, result.Data[0].Avatar)
+		})
+	})
+}
+
+func TestProjectSearchRespectsSubgroup(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		org := f.CreateOrg("search-subgroup")
+
+		// Tree: root -> subgroup -> {matching asset, matching nested subgroup}.
+		root := f.CreateProject(org.ID, "root")
+		subgroup := f.CreateProject(org.ID, "subgroup")
+		require.NoError(t, f.DB.Model(&subgroup).Update("parent_id", root.ID).Error)
+
+		insideAsset := f.CreateAsset(subgroup.ID, "needle-inside-asset")
+		nested := f.CreateProject(org.ID, "needle-nested-group")
+		require.NoError(t, f.DB.Model(&nested).Update("parent_id", subgroup.ID).Error)
+
+		outsideProject := f.CreateProject(org.ID, "needle-outside-group")
+		require.NoError(t, f.DB.Model(&outsideProject).Update("parent_id", root.ID).Error)
+		outsideAsset := f.CreateAsset(root.ID, "needle-outside-asset")
+
+		allowedAssets := []string{insideAsset.ID.String(), outsideAsset.ID.String()}
+		allowedProjects := []string{
+			root.ID.String(), subgroup.ID.String(), nested.ID.String(), outsideProject.ID.String(),
+		}
+
+		t.Run("without a parent the whole organization is searched", func(t *testing.T) {
+			result, err := f.App.ProjectRepository.SearchProjectsWithSubProjectsAndAssetsPaged(
+				context.Background(), nil, allowedAssets, allowedProjects, nil, org.ID,
+				shared.PageInfo{Page: 1, PageSize: 50}, "needle", nil, nil,
+			)
+			require.NoError(t, err)
+			// insideAsset, nested, outsideProject and outsideAsset all match.
+			assert.EqualValues(t, 4, result.Total)
+		})
+
+		t.Run("inside a subgroup only its elements are returned", func(t *testing.T) {
+			result, err := f.App.ProjectRepository.SearchProjectsWithSubProjectsAndAssetsPaged(
+				context.Background(), nil, allowedAssets, allowedProjects, &subgroup.ID, org.ID,
+				shared.PageInfo{Page: 1, PageSize: 50}, "needle", nil, nil,
+			)
+			require.NoError(t, err)
+			// Only insideAsset and nested live under the subgroup.
+			assert.EqualValues(t, 2, result.Total)
+
+			require.Len(t, result.Data, 1)
+			assert.Equal(t, subgroup.ID, result.Data[0].ID)
+
+			gotIDs := map[uuid.UUID]bool{}
+			for _, child := range result.Data[0].SubGroupsAndAssets {
+				gotIDs[child.ID] = true
+			}
+			assert.True(t, gotIDs[insideAsset.ID], "the subgroup asset should be returned")
+			assert.True(t, gotIDs[nested.ID], "the nested subgroup should be returned")
+			assert.False(t, gotIDs[outsideProject.ID], "a sibling project must not leak in")
+			assert.False(t, gotIDs[outsideAsset.ID], "a sibling asset must not leak in")
 		})
 	})
 }
