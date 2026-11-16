@@ -121,6 +121,10 @@ func NewDependencyProxyController(
 }
 
 func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
+	return d.fetchFromUpstreamWithToken(ctx, eco, upstreamURL, requestPath, "", headers, body)
+}
+
+func (d *DependencyProxyController) fetchFromUpstreamWithToken(ctx context.Context, eco ecosystem, upstreamURL, requestPath, token string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
 	url, err := url.JoinPath(upstreamURL, requestPath)
 	if err != nil {
@@ -136,6 +140,10 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco e
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	if method == "POST" {
