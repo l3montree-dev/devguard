@@ -150,7 +150,7 @@ func (i *RedmineIntegration) HandleEvent(ctx context.Context, event any, userAge
 			}
 		}
 
-		return i.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
+		return i.UpdateIssue(ctx, shared.GetOrg(event.Ctx), shared.GetProject(event.Ctx), asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 
