@@ -22,9 +22,13 @@ import (
 
 func ComplianceComponentToDTO(m models.ComplianceComponent) dtos.ComplianceComponent {
 	return dtos.ComplianceComponent{
-		UUID:        m.UUID.String(),
-		Title:       m.Title,
-		Description: m.Description,
+		ID:                  m.ID.String(),
+		UUID:                m.UUID.String(),
+		Title:               m.Title,
+		Description:         m.Description,
+		ComponentDefinition: m.ComponentDefinition,
+		ProjectID:           m.ProjectID,
+		AssetID:             m.AssetID,
 	}
 }
 

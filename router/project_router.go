@@ -36,6 +36,7 @@ func NewProjectRouter(
 	dependencyVulnController *controllers.DependencyVulnController,
 	compliancePostureController *controllers.CompliancePostureController,
 	complianceComponentController *controllers.ComplianceComponentController,
+	complianceCatalogController *controllers.ComplianceCatalogController,
 	complianceController *controllers.ComplianceController,
 	policyController *controllers.PolicyController,
 	releaseController *controllers.ReleaseController,
@@ -62,9 +63,16 @@ func NewProjectRouter(
 	projectRouter.GET("/compliance-postures/", compliancePostureController.ProjectListPaged)
 	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.ProjectGetOSCAL)
 	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.ProjectStats)
-	projectRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectRead)
-	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.ProjectCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.GET("/compliance-postures/catalogs/", complianceCatalogController.ProjectListCatalogs)
+	projectRouter.POST("/compliance-postures/catalogs/", complianceCatalogController.ProjectSaveCatalog, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	projectRouter.DELETE("/compliance-postures/catalogs/:name/", complianceCatalogController.ProjectDeleteCatalog, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	projectRouter.POST("/compliance-components/definitions/", complianceComponentController.ProjectSaveComponentDefinition, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	projectRouter.DELETE("/compliance-components/definitions/:name/", complianceComponentController.ProjectDeleteComponentDefinition, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	projectRouter.GET("/compliance-components/", complianceComponentController.ProjectList)
+	projectRouter.GET("/compliance-components/:complianceComponentID/", complianceComponentController.ProjectDetails)
+	projectRouter.GET("/compliance-postures/:controlHash/", compliancePostureController.ProjectRead)
+	projectRouter.POST("/compliance-postures/:controlHash/", compliancePostureController.ProjectCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.POST("/compliance-postures/:controlHash/components/:complianceComponentID/", complianceComponentController.ProjectCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.ProjectUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.ProjectDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.GET("/assets/", assetController.List)

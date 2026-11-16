@@ -42,34 +42,34 @@ func NewCompliancePostureController(compliancePostureRepository shared.Complianc
 	}
 }
 
-// @Summary Get compliance posture for a framework control
+// @Summary Get compliance posture for a control
 // @Tags Compliance Postures
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param frameworkControlID path string true "Framework Control ID"
+// @Param controlHash path string true "Control hash"
 // @Success 200 {object} dtos.CompliancePostureWithDetails
-// @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [get]
+// @Router /organizations/{organization}/compliance-postures/{controlHash} [get]
 func (c *CompliancePostureController) OrgRead(ctx shared.Context) error {
 	return c.Read(ctx)
 }
 
-// @Summary Get compliance posture for a framework control
+// @Summary Get compliance posture for a control
 // @Tags Compliance Postures
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Param frameworkControlID path string true "Framework Control ID"
+// @Param controlHash path string true "Control hash"
 // @Success 200 {object} dtos.CompliancePostureWithDetails
-// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{controlHash} [get]
 func (c *CompliancePostureController) ProjectRead(ctx shared.Context) error {
 	return c.Read(ctx)
 }
 
-// @Summary Get compliance posture for a framework control
+// @Summary Get compliance posture for a control
 // @Tags Compliance Postures
 // @Security CookieAuth
 // @Security PATAuth
@@ -78,15 +78,15 @@ func (c *CompliancePostureController) ProjectRead(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param frameworkControlID path string true "Framework Control ID"
+// @Param controlHash path string true "Control hash"
 // @Success 200 {object} dtos.CompliancePostureWithDetails
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{controlHash} [get]
 func (c *CompliancePostureController) AssetVersionRead(ctx shared.Context) error {
 	return c.Read(ctx)
 }
 
 func (c *CompliancePostureController) Read(ctx shared.Context) error {
-	frameworkControlID, err := getFrameworkControlIDFromCtx(ctx)
+	controlHash, err := getControlHashFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (c *CompliancePostureController) Read(ctx shared.Context) error {
 	orgID := shared.GetOrg(ctx).ID
 	projectID, assetID, assetVersionID, _ := getOwnershipFromCtx(ctx)
 
-	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, frameworkControlID, assetVersionID, assetID, projectID, orgID)
+	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, controlHash, assetVersionID, assetID, projectID, orgID)
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "compliance posture not found")
@@ -159,9 +159,13 @@ func (c *CompliancePostureController) ListPaged(ctx shared.Context) error {
 		return err
 	}
 
-	frameworks, err := c.frameworkControlRepository.ListFrameworkControls(ctx.Request().Context(), nil)
+	scopeFrameworks, err := c.frameworkControlRepository.GetEffectiveScopeFrameworks(ctx.Request().Context(), nil, orgID, projectID, assetID)
 	if err != nil {
 		return err
+	}
+	frameworks := make([]string, len(scopeFrameworks))
+	for i, sf := range scopeFrameworks {
+		frameworks[i] = sf.Framework
 	}
 
 	return ctx.JSON(200, struct {
@@ -242,12 +246,12 @@ func getOwnershipFromCtx(ctx shared.Context) (projectID *uuid.UUID, assetID *uui
 	return projectID, assetID, assetVersionID, assetVersionName
 }
 
-func getFrameworkControlIDFromCtx(ctx shared.Context) (string, error) {
-	frameworkControlID, err := url.PathUnescape(ctx.Param("frameworkControlID"))
-	if err != nil || frameworkControlID == "" {
-		return "", echo.NewHTTPError(400, "frameworkControlID is required")
+func getControlHashFromCtx(ctx shared.Context) (string, error) {
+	controlHash, err := url.PathUnescape(ctx.Param("controlHash"))
+	if err != nil || controlHash == "" {
+		return "", echo.NewHTTPError(400, "controlHash is required")
 	}
-	return frameworkControlID, nil
+	return controlHash, nil
 }
 
 // @Summary Create a compliance posture event
@@ -256,10 +260,10 @@ func getFrameworkControlIDFromCtx(ctx shared.Context) (string, error) {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param frameworkControlID path string true "Framework Control ID"
+// @Param controlHash path string true "Control hash"
 // @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Param body body object{status=string,justification=string} true "Event data"
-// @Router /organizations/{organization}/compliance-postures/{frameworkControlID} [post]
+// @Router /organizations/{organization}/compliance-postures/{controlHash} [post]
 func (c *CompliancePostureController) OrgCreateEvent(ctx shared.Context) error {
 	return c.CreateEvent(ctx)
 }
@@ -271,10 +275,10 @@ func (c *CompliancePostureController) OrgCreateEvent(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Param frameworkControlID path string true "Framework Control ID"
+// @Param controlHash path string true "Control hash"
 // @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Param body body object{status=string,justification=string} true "Event data"
-// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{controlHash} [post]
 func (c *CompliancePostureController) ProjectCreateEvent(ctx shared.Context) error {
 	return c.CreateEvent(ctx)
 }
@@ -288,17 +292,17 @@ func (c *CompliancePostureController) ProjectCreateEvent(ctx shared.Context) err
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param frameworkControlID path string true "Framework Control ID"
+// @Param controlHash path string true "Control hash"
 // @Success 200 {object} dtos.CompliancePostureWithDetails
 // @Param body body object{status=string,justification=string} true "Event data"
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{controlHash} [post]
 func (c *CompliancePostureController) AssetVersionCreateEvent(ctx shared.Context) error {
 	return c.CreateEvent(ctx)
 }
 
 func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 
-	frameworkControlID, err := getFrameworkControlIDFromCtx(ctx)
+	controlHash, err := getControlHashFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -323,13 +327,22 @@ func (c *CompliancePostureController) CreateEvent(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid state").WithInternal(err)
 	}
+
+	// the control has to belong to a framework which applies to the scope
+	if _, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, controlHash, assetVersionID, assetID, projectID, orgID); err != nil {
+		if shared.IsNotFound(err) {
+			return echo.NewHTTPError(404, "control not found")
+		}
+		return err
+	}
+
 	compliancePosture := models.CompliancePosture{
-		FrameworkControlID: frameworkControlID,
-		OrgID:              orgID,
-		ProjectID:          projectID,
-		AssetID:            assetID,
-		AssetVersionID:     assetVersionID,
-		AssetVersionName:   assetVersionName,
+		ControlHash:      controlHash,
+		OrgID:            orgID,
+		ProjectID:        projectID,
+		AssetID:          assetID,
+		AssetVersionID:   assetVersionID,
+		AssetVersionName: assetVersionName,
 		Vulnerability: models.Vulnerability{
 			State: dtos.VulnStateOpen,
 		},
@@ -436,7 +449,7 @@ func (c *CompliancePostureController) GetOSCAL(ctx shared.Context) error {
 		if compliancePostures[i].OrgID != nil {
 			postureOrgID = *compliancePostures[i].OrgID
 		}
-		compliancePostures[i].CompliancePostureID = models.CalculateCompliancePostureHash(compliancePostures[i].FrameworkControlID, postureOrgID, compliancePostures[i].ProjectID, compliancePostures[i].AssetID, compliancePostures[i].AssetVersionName).String()
+		compliancePostures[i].CompliancePostureID = models.CalculateCompliancePostureHash(compliancePostures[i].ControlHash, postureOrgID, compliancePostures[i].ProjectID, compliancePostures[i].AssetID, compliancePostures[i].AssetVersionName).String()
 	}
 
 	oscal, err := transformer.ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures, framework)

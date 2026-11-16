@@ -38,6 +38,7 @@ func NewOrgRouter(
 	firstPartyVulnController *controllers.FirstPartyVulnController,
 	compliancePostureController *controllers.CompliancePostureController,
 	complianceComponentController *controllers.ComplianceComponentController,
+	complianceCatalogController *controllers.ComplianceCatalogController,
 	policyController *controllers.PolicyController,
 	componentController *controllers.ComponentController,
 	integrationController *controllers.IntegrationController,
@@ -89,9 +90,22 @@ func NewOrgRouter(
 	organizationRouter.GET("/compliance-postures/", compliancePostureController.OrgListPaged)
 	organizationRouter.GET("/compliance-postures/oscal/", compliancePostureController.OrgGetOSCAL)
 	organizationRouter.GET("/compliance-postures/stats/", compliancePostureController.OrgStats)
-	organizationRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.OrgRead)
-	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.OrgCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
-	organizationRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.OrgCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+
+	organizationRouter.GET("/compliance-postures/catalogs/", complianceCatalogController.OrgListCatalogs)
+	organizationRouter.POST("/compliance-postures/catalogs/", complianceCatalogController.OrgSaveCatalog, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.DELETE("/compliance-postures/catalogs/:name/", complianceCatalogController.OrgDeleteCatalog, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+
+	organizationRouter.POST("/compliance-components/definitions/", complianceComponentController.OrgSaveComponentDefinition, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.DELETE("/compliance-components/definitions/:name/", complianceComponentController.OrgDeleteComponentDefinition, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+
+	organizationRouter.GET("/compliance-components/", complianceComponentController.OrgList)
+	organizationRouter.GET("/compliance-components/:complianceComponentID/", complianceComponentController.OrgDetails)
+
+	organizationRouter.GET("/compliance-postures/:controlHash/", compliancePostureController.OrgRead)
+	organizationRouter.POST("/compliance-postures/:controlHash/", compliancePostureController.OrgCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+
+	organizationRouter.POST("/compliance-postures/:controlHash/components/:complianceComponentID/", complianceComponentController.OrgCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+
 	organizationRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.OrgUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
 	organizationRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.OrgDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)

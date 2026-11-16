@@ -80,9 +80,3 @@ type ScopeFramework struct {
 	ProjectID *uuid.UUID `json:"projectId"`
 	AssetID   *uuid.UUID `json:"assetId"`
 }
-
-type ScopeComponentDefinition struct {
-	ComponentDefinition string     `json:"componentDefinition"`
-	ProjectID           *uuid.UUID `json:"projectId"`
-	AssetID             *uuid.UUID `json:"assetId"`
-}
