@@ -1,8 +1,6 @@
 # PostgreSQL 16 with the pg-semver extension.
 #
-# Upstream nixpkgs definitions:
-#   https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/servers/sql/postgresql/default.nix
-#   https://github.com/NixOS/nixpkgs/blob/nixos-25.11/pkgs/servers/sql/postgresql/ext/pg-semver.nix
+
 {
   pkgs,
 }:
@@ -94,7 +92,7 @@ rec {
     install -D -m 0644 ${./postgresql.conf} $out/etc/postgresql/postgresql.conf
   '';
 
-  version = "16.15-r0";
+  version = "${pkgs.postgresql_16.version}-r0";
   sbom = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkHandwrittenSBOM {
     name = "postgresql16";
     inherit version;
