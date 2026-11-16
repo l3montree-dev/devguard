@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -63,7 +66,7 @@ type tableProperties struct {
 	customSQL *string
 }
 
-const transferFileLocation = "/transfer-files/"
+const transferFileLocation = "transfer-files/"
 
 // SQL foreign key column constants
 const (
@@ -129,11 +132,29 @@ func NewDataTransferService(pool *pgxpool.Pool) *DataTransferService {
 	}
 }
 
+func checkExportOptions(options dtos.DataTransferExportOptions) error {
+	for _, id := range append(options.AffectedEntities.Orgs, append(options.AffectedEntities.Projects, options.AffectedEntities.Assets...)...) {
+		if _, err := uuid.Parse(id); err != nil {
+			return fmt.Errorf("export options contain invalid uuid (%s): %w", id, err)
+		}
+	}
+	return nil
+}
+
 func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions) error {
 	slog.Info("starting data transfer export process...")
 	start := time.Now()
 
-	// GUARD AGAINST SQL INJECTION (validate user input as uuids)
+	// validate export options
+	if err := checkExportOptions(options); err != nil {
+		return fmt.Errorf("invalid export options provided: %w", err)
+	}
+
+	jobID := uuid.New() // id of this data transfer job (used for referencing)
+	jobDirectoryPath := filepath.Join(transferFileLocation, jobID.String())
+	if err := os.MkdirAll(jobDirectoryPath, 0o750); err != nil {
+		return fmt.Errorf("could not create file transfer folder: %w", err)
+	}
 
 	// initiate read only and read uncommitted transaction to use as snapshot for the export
 	snapshotTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{
@@ -161,7 +182,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	group, errCtx := errgroup.WithContext(ctx)
 	outputDrainWG := &sync.WaitGroup{}
 	group.SetLimit(concurrentDBWorkers) // cap the number of concurrent db reads
-	for group.TryGo(func() error { return service.DatabaseQueryWorker(errCtx, snapshotID, jobs, output) }) {
+	for group.TryGo(func() error { return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs, output) }) {
 	}
 	go func() {
 		sql, args, err := sqlFromTableProperties(tablesToSync[0], scope)
@@ -205,7 +226,7 @@ type queryJob struct {
 	args    []any
 }
 
-func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, snapshotID string, jobs chan queryJob, outputChan chan output) error {
+func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, baseFolder string, snapshotID string, jobs chan queryJob, outputChan chan output) error {
 	workerTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return fmt.Errorf("could not start worker tx: %w", err)
@@ -225,11 +246,22 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, sna
 		}
 		defer rows.Close()
 
+		tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".json"))
+		if err != nil {
+			return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
+		}
+		defer tableFd.Close()
+
 		var tableRows [][]byte
 		for rows.Next() {
 			var row []byte
 			if err := rows.Scan(&row); err != nil {
 				return fmt.Errorf("could not scan row of %s: %w", job.tableID, err)
+			}
+
+			// row is already json from row_to_json, we can just write that with a newline
+			if _, err := tableFd.Write(append(row, '\n')); err != nil {
+				return fmt.Errorf("could not write row of %s: %w", job.tableID, err)
 			}
 			tableRows = append(tableRows, row)
 		}
