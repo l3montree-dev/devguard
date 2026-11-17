@@ -107,7 +107,7 @@ func (r *CompliancePostureRepository) controlPostureQuery(ctx context.Context, t
 	frameworksByControl := r.GetDB(ctx, tx).Table("scope_framework_controls sfc").
 		Select("sfc.control_hash, array_agg(DISTINCT sf.framework ORDER BY sf.framework) AS frameworks").
 		Joins("JOIN scope_frameworks sf ON sf.id = sfc.scope_framework_id").
-		Where("sfc.scope_framework_id IN ?", scopeFrameworkIDs).
+		Where("sfc.scope_framework_id = ANY(?)", pq.Array(scopeFrameworkIDs)).
 		Group("sfc.control_hash")
 
 	return r.GetDB(ctx, tx).Table("(?) AS fw", frameworksByControl).
@@ -406,7 +406,7 @@ func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gor
 	var posture models.CompliancePosture
 	if result.ID != nil {
 		if err := r.GetDB(ctx, tx).
-			Preload("FrameworkControl.ScopeFrameworks", "scope_frameworks.id IN ?", scopeFrameworkIDs).
+			Preload("FrameworkControl.ScopeFrameworks", "scope_frameworks.id = ANY(?)", pq.Array(scopeFrameworkIDs)).
 			Preload("Events").
 			Preload("ByComponents.ComplianceComponentImplementsControl.ComplianceComponent").
 			Where("compliance_postures.id = ?", result.ID).
@@ -417,7 +417,7 @@ func (r *CompliancePostureRepository) GetForControl(ctx context.Context, tx *gor
 		// No posture exists at any scope — return an empty posture with just the control loaded.
 		posture.ControlHash = controlHash
 		if err := r.GetDB(ctx, tx).
-			Preload("ScopeFrameworks", "scope_frameworks.id IN ?", scopeFrameworkIDs).
+			Preload("ScopeFrameworks", "scope_frameworks.id = ANY(?)", pq.Array(scopeFrameworkIDs)).
 			Where("control_hash = ?", controlHash).
 			First(&posture.FrameworkControl).Error; err != nil {
 			return nil, err

@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 
 	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -160,7 +161,7 @@ func (r *ComplianceComponentRepository) SaveComponentDefinition(ctx context.Cont
 
 			removedControls := tx.Where("compliance_component_id = ?", component.ID)
 			if len(frameworkControlIDs) > 0 {
-				removedControls = removedControls.Where("framework_control_id NOT IN ?", frameworkControlIDs)
+				removedControls = removedControls.Where("framework_control_id <> ALL(?)", pq.Array(frameworkControlIDs))
 			}
 			if err := removedControls.Delete(&models.ComplianceComponentImplementsControl{}).Error; err != nil {
 				return err
@@ -178,7 +179,7 @@ func (r *ComplianceComponentRepository) SaveComponentDefinition(ctx context.Cont
 
 		removedComponents := tx.Where("org_id = ? AND project_id IS NOT DISTINCT FROM ? AND asset_id IS NOT DISTINCT FROM ? AND component_definition = ?", orgID, projectID, assetID, componentDefinition)
 		if len(keep) > 0 {
-			removedComponents = removedComponents.Where("uuid NOT IN ?", keep)
+			removedComponents = removedComponents.Where("uuid <> ALL(?)", pq.Array(keep))
 		}
 		return removedComponents.Delete(&models.ComplianceComponent{}).Error
 	})

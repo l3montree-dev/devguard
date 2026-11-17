@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -104,9 +105,9 @@ func deleteOrphanedControls(tx *gorm.DB, hashes []string) error {
 	var orphanedHashes []string
 	if err := tx.Raw(`
 		SELECT control_hash FROM compliance_controls cc
-		WHERE cc.control_hash IN ?
+		WHERE cc.control_hash = ANY(?)
 			AND NOT EXISTS (SELECT 1 FROM scope_framework_controls sfc WHERE sfc.control_hash = cc.control_hash)`,
-		hashes,
+		pq.Array(hashes),
 	).Scan(&orphanedHashes).Error; err != nil {
 		return err
 	}
@@ -114,10 +115,10 @@ func deleteOrphanedControls(tx *gorm.DB, hashes []string) error {
 		return nil
 	}
 
-	if err := tx.Where("control_hash IN ?", orphanedHashes).Delete(&models.CompliancePosture{}).Error; err != nil {
+	if err := tx.Where("control_hash = ANY(?)", pq.Array(orphanedHashes)).Delete(&models.CompliancePosture{}).Error; err != nil {
 		return err
 	}
-	return tx.Where("control_hash IN ?", orphanedHashes).Delete(&models.FrameworkControl{}).Error
+	return tx.Where("control_hash = ANY(?)", pq.Array(orphanedHashes)).Delete(&models.FrameworkControl{}).Error
 }
 
 func (r *FrameworkControlRepository) GetEffectiveScopeFrameworks(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.ScopeFramework, error) {

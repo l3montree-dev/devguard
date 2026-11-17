@@ -397,6 +397,15 @@ func TestComplianceComponentDefinitionScopes(t *testing.T) {
 			assert.True(t, shared.IsNotFound(err))
 		})
 
+		t.Run("a component of another org is not visible", func(t *testing.T) {
+			s := newComplianceScope(t, f, "components-org")
+			other := newComplianceScope(t, f, "components-org-other")
+			require.NoError(t, definitions.SaveComponentDefinition(ctx, nil, other.org.ID, nil, nil, "", componentDefinitionJSON(t, "Components", uuid.NewString(), "Catalog A", "GOV.1")))
+
+			_, err := components.GetDetails(ctx, nil, s.org.ID, &s.subproject.ID, &s.asset.ID, list0ID(t, f, other.org.ID, nil, nil))
+			assert.True(t, shared.IsNotFound(err))
+		})
+
 		t.Run("re-uploading a component definition keeps the component and its statements", func(t *testing.T) {
 			s := newComplianceScope(t, f, "components-reupload")
 			componentUUID := uuid.NewString()
