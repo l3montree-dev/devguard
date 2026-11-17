@@ -92,7 +92,7 @@ rec {
     install -D -m 0644 ${./postgresql.conf} $out/etc/postgresql/postgresql.conf
   '';
 
-  version = "${pkgs.postgresql_16.version}-r0";
+  version = "16.16-r0";
   sbom = (import ./sbom-lib.nix { inherit (pkgs) lib runCommand jq; }).mkHandwrittenSBOM {
     name = "postgresql16";
     inherit version;
