@@ -28,13 +28,17 @@ type CompliancePostureRouter struct {
 func NewCompliancePostureRouter(
 	assetVersionGroup AssetVersionRouter,
 	compliancePostureController *controllers.CompliancePostureController,
+	complianceComponentController *controllers.ComplianceComponentController,
 ) CompliancePostureRouter {
 	compliancePostureRouter := assetVersionGroup.Group.Group("/compliance-postures")
 	compliancePostureRouter.GET("/", compliancePostureController.AssetVersionListPaged)
 	compliancePostureRouter.GET("/stats/", compliancePostureController.AssetVersionStats)
-	compliancePostureRouter.GET("/:frameworkControlID/", compliancePostureController.AssetVersionRead)
-	compliancePostureRouter.POST("/:frameworkControlID/", compliancePostureController.AssetVersionCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.GET("/:controlHash/", compliancePostureController.AssetVersionRead)
+	compliancePostureRouter.POST("/:controlHash/", compliancePostureController.AssetVersionCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	compliancePostureRouter.GET("/oscal/", compliancePostureController.AssetVersionGetOSCAL)
+	compliancePostureRouter.POST("/:controlHash/components/:complianceComponentID/", complianceComponentController.AssetVersionCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.PUT("/components/:statementID/", complianceComponentController.AssetVersionUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.DELETE("/components/:statementID/", complianceComponentController.AssetVersionDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	return CompliancePostureRouter{Group: compliancePostureRouter}
 }

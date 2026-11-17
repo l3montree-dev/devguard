@@ -29,17 +29,35 @@ import (
 type compliancePostureService struct {
 	compliancePostureRepository shared.CompliancePostureRepository
 	vulnEventRepository         shared.VulnEventRepository
+	frameworkControlRepository  shared.FrameworkControlRepository
 }
 
-func NewCompliancePostureService(compliancePostureRepository shared.CompliancePostureRepository, vulnEventRepository shared.VulnEventRepository) *compliancePostureService {
+func NewCompliancePostureService(compliancePostureRepository shared.CompliancePostureRepository, vulnEventRepository shared.VulnEventRepository, frameworkControlRepository shared.FrameworkControlRepository) *compliancePostureService {
 	return &compliancePostureService{
 		compliancePostureRepository: compliancePostureRepository,
 		vulnEventRepository:         vulnEventRepository,
+		frameworkControlRepository:  frameworkControlRepository,
 	}
 }
 
+func (s *compliancePostureService) effectiveScopeFrameworkIDs(ctx context.Context, tx shared.DB, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) ([]uuid.UUID, error) {
+	scopeFrameworks, err := s.frameworkControlRepository.GetEffectiveScopeFrameworks(ctx, tx, orgID, projectID, assetID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, len(scopeFrameworks))
+	for i, sf := range scopeFrameworks {
+		ids[i] = sf.ID
+	}
+	return ids, nil
+}
+
 func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, tx *gorm.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo shared.PageInfo, search string, filter []shared.FilterQuery, sort []shared.SortQuery) (shared.Paged[dtos.CompliancePostureWithControl], error) {
-	postures, err := s.compliancePostureRepository.GetForAllControlsPaged(ctx, tx, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
+	scopeFrameworkIDs, err := s.effectiveScopeFrameworkIDs(ctx, tx, assetID, projectID, orgID)
+	if err != nil {
+		return shared.Paged[dtos.CompliancePostureWithControl]{}, err
+	}
+	postures, err := s.compliancePostureRepository.GetForAllControlsPaged(ctx, tx, scopeFrameworkIDs, assetVersionID, assetID, projectID, orgID, pageInfo, search, filter, sort)
 	//mapping the state to string for the DTO
 	for i, posture := range postures.Data {
 		if posture.State == "" {
@@ -51,7 +69,11 @@ func (s *compliancePostureService) GetForAllControlsPaged(ctx context.Context, t
 }
 
 func (s *compliancePostureService) GetAllControls(ctx context.Context, tx *gorm.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []shared.FilterQuery, sort []shared.SortQuery) ([]dtos.CompliancePostureWithDetails, error) {
-	postures, err := s.compliancePostureRepository.GetAllControls(ctx, tx, assetVersionID, assetID, projectID, orgID, search, filter, sort)
+	scopeFrameworkIDs, err := s.effectiveScopeFrameworkIDs(ctx, tx, assetID, projectID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	postures, err := s.compliancePostureRepository.GetAllControls(ctx, tx, scopeFrameworkIDs, assetVersionID, assetID, projectID, orgID, search, filter, sort)
 	//mapping the state to string for the DTO
 	for i, posture := range postures {
 		if posture.State == "" {
@@ -92,21 +114,24 @@ func (s *compliancePostureService) updateCompliancePostureState(ctx context.Cont
 }
 
 func (s *compliancePostureService) GetStatsForAllControls(ctx context.Context, tx shared.DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []shared.FilterQuery) (dtos.CompliancePostureStats, error) {
-	return s.compliancePostureRepository.GetStatsForAllControls(ctx, tx, assetVersionID, assetID, projectID, orgID, filter)
+	scopeFrameworkIDs, err := s.effectiveScopeFrameworkIDs(ctx, tx, assetID, projectID, orgID)
+	if err != nil {
+		return dtos.CompliancePostureStats{}, err
+	}
+	return s.compliancePostureRepository.GetStatsForAllControls(ctx, tx, scopeFrameworkIDs, assetVersionID, assetID, projectID, orgID, filter)
 }
 
-func (s *compliancePostureService) GetForControl(ctx context.Context, tx *gorm.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
-	posture, err := s.compliancePostureRepository.GetForControl(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
+func (s *compliancePostureService) GetForControl(ctx context.Context, tx *gorm.DB, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
+	scopeFrameworkIDs, err := s.effectiveScopeFrameworkIDs(ctx, tx, assetID, projectID, orgID)
 	if err != nil {
 		return nil, err
 	}
-	if posture == nil {
-		return nil, gorm.ErrRecordNotFound
+	posture, err := s.compliancePostureRepository.GetForControl(ctx, tx, scopeFrameworkIDs, controlHash, assetVersionID, assetID, projectID, orgID)
+	if err != nil {
+		return nil, err
 	}
-
 	if posture.State == "" {
 		posture.State = dtos.VulnStateOpen
 	}
-
 	return posture, nil
 }

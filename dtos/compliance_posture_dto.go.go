@@ -15,10 +15,16 @@
 
 package dtos
 
+import "github.com/google/uuid"
+
 type ComplianceComponent struct {
-	UUID        string `json:"uuid"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	ID                  string     `json:"id"`
+	UUID                string     `json:"uuid"`
+	Title               string     `json:"title"`
+	Description         string     `json:"description"`
+	ComponentDefinition *string    `json:"componentDefinition"`
+	ProjectID           *uuid.UUID `json:"projectId"`
+	AssetID             *uuid.UUID `json:"assetId"`
 }
 
 // ComplianceComponentImplementsControl is a component's catalog-level claim

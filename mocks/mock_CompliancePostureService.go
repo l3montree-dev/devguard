@@ -275,8 +275,8 @@ func (_c *CompliancePostureService_GetForAllControlsPaged_Call) RunAndReturn(run
 }
 
 // GetForControl provides a mock function for the type CompliancePostureService
-func (_mock *CompliancePostureService) GetForControl(ctx context.Context, tx shared.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
-	ret := _mock.Called(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
+func (_mock *CompliancePostureService) GetForControl(ctx context.Context, tx shared.DB, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error) {
+	ret := _mock.Called(ctx, tx, controlHash, assetVersionID, assetID, projectID, orgID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetForControl")
@@ -285,17 +285,17 @@ func (_mock *CompliancePostureService) GetForControl(ctx context.Context, tx sha
 	var r0 *models.CompliancePosture
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) (*models.CompliancePosture, error)); ok {
-		return returnFunc(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
+		return returnFunc(ctx, tx, controlHash, assetVersionID, assetID, projectID, orgID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) *models.CompliancePosture); ok {
-		r0 = returnFunc(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
+		r0 = returnFunc(ctx, tx, controlHash, assetVersionID, assetID, projectID, orgID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.CompliancePosture)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string, *uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)
+		r1 = returnFunc(ctx, tx, controlHash, assetVersionID, assetID, projectID, orgID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -310,16 +310,16 @@ type CompliancePostureService_GetForControl_Call struct {
 // GetForControl is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - controlID string
+//   - controlHash string
 //   - assetVersionID *uuid.UUID
 //   - assetID *uuid.UUID
 //   - projectID *uuid.UUID
 //   - orgID uuid.UUID
-func (_e *CompliancePostureService_Expecter) GetForControl(ctx any, tx any, controlID any, assetVersionID any, assetID any, projectID any, orgID any) *CompliancePostureService_GetForControl_Call {
-	return &CompliancePostureService_GetForControl_Call{Call: _e.mock.On("GetForControl", ctx, tx, controlID, assetVersionID, assetID, projectID, orgID)}
+func (_e *CompliancePostureService_Expecter) GetForControl(ctx any, tx any, controlHash any, assetVersionID any, assetID any, projectID any, orgID any) *CompliancePostureService_GetForControl_Call {
+	return &CompliancePostureService_GetForControl_Call{Call: _e.mock.On("GetForControl", ctx, tx, controlHash, assetVersionID, assetID, projectID, orgID)}
 }
 
-func (_c *CompliancePostureService_GetForControl_Call) Run(run func(ctx context.Context, tx shared.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID)) *CompliancePostureService_GetForControl_Call {
+func (_c *CompliancePostureService_GetForControl_Call) Run(run func(ctx context.Context, tx shared.DB, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID)) *CompliancePostureService_GetForControl_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -367,7 +367,7 @@ func (_c *CompliancePostureService_GetForControl_Call) Return(compliancePosture 
 	return _c
 }
 
-func (_c *CompliancePostureService_GetForControl_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)) *CompliancePostureService_GetForControl_Call {
+func (_c *CompliancePostureService_GetForControl_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)) *CompliancePostureService_GetForControl_Call {
 	_c.Call.Return(run)
 	return _c
 }

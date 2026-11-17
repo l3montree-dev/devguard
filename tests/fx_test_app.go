@@ -49,23 +49,26 @@ type TestApp struct {
 	Broker events.Broker
 
 	// Services
-	ConfigService            shared.ConfigService
-	LicenseRiskService       shared.LicenseRiskService
-	StatisticsService        shared.StatisticsService
-	ComponentService         shared.ComponentService
-	FirstPartyVulnService    shared.FirstPartyVulnService
-	DependencyVulnService    shared.DependencyVulnService
-	ArtifactService          shared.ArtifactService
-	AssetVersionService      shared.AssetVersionService
-	AssetService             shared.AssetService
-	ProjectService           shared.ProjectService
-	OrgService               shared.OrgService
-	ScanService              shared.ScanService
-	CSAFService              shared.CSAFService
-	ReleaseService           shared.ReleaseService
-	OpenSourceInsightService shared.OpenSourceInsightService
-	MaliciousPackageChecker  shared.MaliciousPackageChecker
-	LogService               shared.LogService
+	ConfigService                        shared.ConfigService
+	LicenseRiskService                   shared.LicenseRiskService
+	StatisticsService                    shared.StatisticsService
+	ComponentService                     shared.ComponentService
+	FirstPartyVulnService                shared.FirstPartyVulnService
+	DependencyVulnService                shared.DependencyVulnService
+	ArtifactService                      shared.ArtifactService
+	AssetVersionService                  shared.AssetVersionService
+	AssetService                         shared.AssetService
+	ProjectService                       shared.ProjectService
+	OrgService                           shared.OrgService
+	ScanService                          shared.ScanService
+	CSAFService                          shared.CSAFService
+	ReleaseService                       shared.ReleaseService
+	OpenSourceInsightService             shared.OpenSourceInsightService
+	MaliciousPackageChecker              shared.MaliciousPackageChecker
+	LogService                           shared.LogService
+	ComplianceCatalogService             shared.ComplianceCatalogService
+	ComplianceComponentDefinitionService shared.ComplianceComponentDefinitionService
+	CompliancePostureService             shared.CompliancePostureService
 
 	// Controllers
 	AssetController             *controllers.AssetController
@@ -112,6 +115,9 @@ type TestApp struct {
 	ExternalReferenceRepository     shared.ExternalReferenceRepository
 	UpstreamVEXRuleRepository       shared.UpstreamVEXRuleRepository
 	LogRepository                   shared.LogRepository
+	FrameworkControlRepository      shared.FrameworkControlRepository
+	CompliancePostureRepository     shared.CompliancePostureRepository
+	ComplianceComponentRepository   shared.ComplianceComponentRepository
 
 	// Access Control
 	RBACProvider shared.RBACProvider

@@ -16,10 +16,10 @@
 package compliance
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/validation"
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
@@ -52,49 +52,28 @@ func parseOSCALCatalog(r io.Reader) (*oscalTypes.Catalog, error) {
 	return schema.Catalog, nil
 }
 
-func extractControlsFromCatalog(catalog *oscalTypes.Catalog, frameworkName frameworkName, mapper additionalMapper) []models.FrameworkControl {
+func ParseCatalog(data []byte) (string, []models.FrameworkControl, error) {
+	catalog, err := parseOSCALCatalog(bytes.NewReader(data))
+	if err != nil {
+		return "", nil, err
+	}
+	return catalog.Metadata.Title, extractControlsFromCatalog(catalog, defaultAdditionalMapper), nil
+}
+
+func extractControlsFromCatalog(catalog *oscalTypes.Catalog, mapper additionalMapper) []models.FrameworkControl {
 	ctx := newResolveContext(catalog)
 
 	var controls []models.FrameworkControl
 	for _, g := range deref(catalog.Groups) {
-		controls = append(controls, extractFromGroup(nil, g, frameworkName, mapper, ctx)...)
+		controls = append(controls, extractFromGroup(nil, g, mapper, ctx)...)
 	}
 	for _, c := range deref(catalog.Controls) {
-		controls = append(controls, controlToFrameworkControl(c, nil, nil, frameworkName, mapper, ctx)...)
+		controls = append(controls, controlToFrameworkControl(c, nil, nil, mapper, ctx)...)
 	}
 	return controls
 }
 
-func extractMappedControls(frameworkControlID string, c oscalTypes.Control) ([]models.MappedControl, error) {
-	var mappedControls []models.MappedControl
-
-	for _, link := range deref(c.Links) {
-		if link.Rel == "mapped-to" {
-			relatedControlID := link.Href
-			if relatedControlID == "" {
-				return nil, fmt.Errorf("mapped-to link missing href for control %s", c.ID)
-			}
-
-			//parse the related control ID to extract the framework and control ID
-			parts := strings.SplitN(relatedControlID, ":", 2)
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("invalid mapped-to link href format for control %s: %s", c.ID, relatedControlID)
-			}
-			relatedFramework := parts[0]
-			relatedControlID = parts[1]
-			relatedFramework = strings.TrimPrefix(relatedFramework, "#")
-			mappedControls = append(mappedControls, models.MappedControl{
-				FrameworkControlID: frameworkControlID,
-				RelatedFramework:   relatedFramework,
-				RelatedControlID:   relatedControlID,
-			})
-		}
-	}
-
-	return mappedControls, nil
-}
-
-func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkName frameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
+func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	groupTitle := &g.Title
 	if parentGroupTitle != nil {
 		combined := fmt.Sprintf("%s / %s", *parentGroupTitle, *groupTitle)
@@ -103,15 +82,15 @@ func extractFromGroup(parentGroupTitle *string, g oscalTypes.Group, frameworkNam
 
 	var controls []models.FrameworkControl
 	for _, c := range deref(g.Controls) {
-		controls = append(controls, controlToFrameworkControl(c, nil, groupTitle, frameworkName, mapper, ctx)...)
+		controls = append(controls, controlToFrameworkControl(c, nil, groupTitle, mapper, ctx)...)
 	}
 	for _, sub := range deref(g.Groups) {
-		controls = append(controls, extractFromGroup(groupTitle, sub, frameworkName, mapper, ctx)...)
+		controls = append(controls, extractFromGroup(groupTitle, sub, mapper, ctx)...)
 	}
 	return controls
 }
 
-func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, frameworkName frameworkName, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
+func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, groupTitle *string, mapper additionalMapper, ctx *resolveContext) []models.FrameworkControl {
 	parts := deref(c.Parts)
 
 	// Find the statement part for the description; fall back to any part with prose.
@@ -140,30 +119,20 @@ func controlToFrameworkControl(c oscalTypes.Control, parentControlID *string, gr
 	}
 
 	fc := models.FrameworkControl{
-		Framework:     string(frameworkName),
-		ControlID:     c.ID,
-		Title:         c.Title,
-		Class:         c.Class,
-		Description:   description,
-		Importance:    importanceString(additional["importance"]),
-		SecurityLevel: importanceString(additional["security_level"]),
-		Additional:    mustMarshalJSON(additional),
+		ControlID:       c.ID,
+		Title:           c.Title,
+		Class:           c.Class,
+		Description:     description,
+		Importance:      importanceString(additional["importance"]),
+		SecurityLevel:   importanceString(additional["security_level"]),
+		Additional:      mustMarshalJSON(additional),
+		ParentControlID: parentControlID,
 	}
-	fc.SetID()
-
-	mappedControls, err := extractMappedControls(fc.FrameworkControlID, c)
-	if err != nil {
-		fmt.Printf("Error extracting mapped controls for control %s: %v\n", c.ID, err)
-	}
-	fc.MappedControls = mappedControls
-
-	if parentControlID != nil {
-		fc.ParentFrameworkControlID = parentControlID
-	}
+	fc.ControlHash = fc.CalculateHash()
 	result = append(result, fc)
 
 	for _, sub := range deref(c.Controls) {
-		result = append(result, controlToFrameworkControl(sub, &c.ID, groupTitle, frameworkName, mapper, ctx)...)
+		result = append(result, controlToFrameworkControl(sub, &c.ID, groupTitle, mapper, ctx)...)
 	}
 	return result
 }

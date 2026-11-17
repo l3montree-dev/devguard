@@ -42,33 +42,25 @@ type DetailsCompliancePosture struct {
 }
 
 type CompliancePostureWithControl struct {
-	FrameworkControlID       string         `json:"frameworkControlId"`
-	Framework                string         `json:"framework"`
-	ControlID                string         `json:"controlId"`
-	Title                    string         `json:"title"`
-	Description              string         `json:"description"`
-	Importance               string         `json:"importance"`
-	SecurityLevel            string         `json:"securityLevel"`
-	Class                    string         `json:"class"`
-	Additional               datatypes.JSON `json:"additional" swaggertype:"object"`
-	ParentFrameworkControlID *string        `json:"parentFrameworkControlId"`
-	CompliancePostureID      string         `json:"compliancePostureId"`
-	State                    VulnState      `json:"state"`
-	OrgID                    *uuid.UUID     `json:"orgId"`
-	ProjectID                *uuid.UUID     `json:"projectId"`
-	AssetID                  *uuid.UUID     `json:"assetId"`
-	AssetVersionName         *string        `json:"assetVersionName"`
-	TicketID                 *string        `json:"ticketId"`
-	TicketURL                *string        `json:"ticketUrl"`
-
-	MappedControls []MappedControl `json:"mappedControls"`
-}
-
-type MappedControl struct {
-	FrameworkControlID string `json:"frameworkControlId"`
-	RelatedFramework   string `json:"relatedFramework"`
-	RelatedControlID   string `json:"relatedControlId"`
-	Relationship       string `json:"relationship"`
+	ControlHash         string         `json:"controlHash"`
+	FrameworkControlIDs []string       `json:"frameworkControlIds"`
+	Frameworks          []string       `json:"frameworks"`
+	ControlID           string         `json:"controlId"`
+	Title               string         `json:"title"`
+	Description         string         `json:"description"`
+	Importance          string         `json:"importance"`
+	SecurityLevel       string         `json:"securityLevel"`
+	Class               string         `json:"class"`
+	Additional          datatypes.JSON `json:"additional" swaggertype:"object"`
+	ParentControlID     *string        `json:"parentControlId"`
+	CompliancePostureID string         `json:"compliancePostureId"`
+	State               VulnState      `json:"state"`
+	OrgID               *uuid.UUID     `json:"orgId"`
+	ProjectID           *uuid.UUID     `json:"projectId"`
+	AssetID             *uuid.UUID     `json:"assetId"`
+	AssetVersionName    *string        `json:"assetVersionName"`
+	TicketID            *string        `json:"ticketId"`
+	TicketURL           *string        `json:"ticketUrl"`
 }
 
 type CompliancePostureWithDetails struct {
@@ -81,4 +73,10 @@ type CompliancePostureStats struct {
 	Open          int64 `json:"open"`
 	Implemented   int64 `json:"implemented"`
 	NotApplicable int64 `json:"notApplicable"`
+}
+
+type ScopeFramework struct {
+	Framework string     `json:"framework"`
+	ProjectID *uuid.UUID `json:"projectId"`
+	AssetID   *uuid.UUID `json:"assetId"`
 }

@@ -27,11 +27,11 @@ import (
 type CompliancePosture struct {
 	Vulnerability
 
-	FrameworkControlID string           `json:"frameworkControlId" gorm:"type:text;not null;"`
-	FrameworkControl   FrameworkControl `json:"frameworkControl" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
-	AssetVersionID     *uuid.UUID       `json:"assetVersionId" gorm:"type:uuid;column:asset_version_id"`
-	AssetVersionName   *string          `json:"assetVersionName" gorm:"type:text;"`
-	AssetVersion       AssetVersion     `json:"assetVersion" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnDelete:CASCADE;"`
+	ControlHash      string           `json:"controlHash" gorm:"type:text;not null;"`
+	FrameworkControl FrameworkControl `json:"frameworkControl" gorm:"foreignKey:ControlHash;references:ControlHash;constraint:OnDelete:CASCADE;"`
+	AssetVersionID   *uuid.UUID       `json:"assetVersionId" gorm:"type:uuid;column:asset_version_id"`
+	AssetVersionName *string          `json:"assetVersionName" gorm:"type:text;"`
+	AssetVersion     AssetVersion     `json:"assetVersion" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	AssetID   *uuid.UUID `json:"assetId" gorm:"type:uuid;column:asset_id"`
 	Asset     Asset      `json:"asset" gorm:"foreignKey:AssetID;references:ID;constraint:OnDelete:CASCADE;"`
@@ -66,15 +66,20 @@ type ComplianceComponentImplementsControlStatement struct {
 // whether it's actually enabled for a specific system is decided per-posture in ComplianceComponentImplementsControlStatement.
 type ComplianceComponentImplementsControl struct {
 	FrameworkControlID    string              `json:"frameworkControlId" gorm:"type:text;primaryKey;column:framework_control_id"`
-	FrameworkControl      FrameworkControl    `json:"frameworkControl" gorm:"foreignKey:FrameworkControlID;references:FrameworkControlID;constraint:OnDelete:CASCADE;"`
 	ComplianceComponentID uuid.UUID           `json:"complianceComponentId" gorm:"type:uuid;primaryKey;column:compliance_component_id"`
-	ComplianceComponent   ComplianceComponent `json:"complianceComponent" gorm:"foreignKey:ComplianceComponentID;references:UUID;constraint:OnDelete:CASCADE;"`
+	ComplianceComponent   ComplianceComponent `json:"complianceComponent" gorm:"foreignKey:ComplianceComponentID;references:ID;constraint:OnDelete:CASCADE;"`
 	Description           string              `json:"description" gorm:"type:text;not null;column:description"`
 }
 
 type ComplianceComponent struct {
-	UUID                uuid.UUID                              `json:"uuid" gorm:"type:uuid;primaryKey;column:uuid"`
-	ImplementedControls []ComplianceComponentImplementsControl `json:"implementedControls" gorm:"foreignKey:ComplianceComponentID;constraint:OnDelete:CASCADE;"`
+	ID uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;column:id;default:gen_random_uuid()"`
+	// uuid of the component inside the oscal component definition
+	UUID                uuid.UUID                              `json:"uuid" gorm:"type:uuid;not null;column:uuid"`
+	ComponentDefinition *string                                `json:"componentDefinition" gorm:"type:text;column:component_definition"`
+	OrgID               *uuid.UUID                             `json:"orgId" gorm:"type:uuid;column:org_id"`
+	ProjectID           *uuid.UUID                             `json:"projectId" gorm:"type:uuid;column:project_id"`
+	AssetID             *uuid.UUID                             `json:"assetId" gorm:"type:uuid;column:asset_id"`
+	ImplementedControls []ComplianceComponentImplementsControl `json:"implementedControls" gorm:"foreignKey:ComplianceComponentID;references:ID;constraint:OnDelete:CASCADE;"`
 	Title               string                                 `json:"title" gorm:"type:text;not null;column:title"`
 	Description         string                                 `json:"description" gorm:"type:text;not null;column:description"`
 }
@@ -111,7 +116,7 @@ func (m CompliancePosture) GetAssetID() uuid.UUID {
 }
 
 func (m CompliancePosture) CalculateAssetVersionIndependentHash() string {
-	s := fmt.Sprintf("%s:%s", m.FrameworkControlID, m.OrgID.String())
+	s := fmt.Sprintf("%s:%s", m.ControlHash, m.OrgID.String())
 	if m.ProjectID != nil {
 		s = fmt.Sprintf("%s:%s", s, m.ProjectID.String())
 	}
@@ -138,7 +143,7 @@ func (m CompliancePosture) TableName() string {
 }
 
 func (m CompliancePosture) CalculateHash() uuid.UUID {
-	return CalculateCompliancePostureHash(m.FrameworkControlID, m.OrgID, m.ProjectID, m.AssetID, m.AssetVersionName)
+	return CalculateCompliancePostureHash(m.ControlHash, m.OrgID, m.ProjectID, m.AssetID, m.AssetVersionName)
 }
 
 func (m CompliancePosture) BeforeSave(tx *gorm.DB) error {
@@ -146,8 +151,8 @@ func (m CompliancePosture) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
-func CalculateCompliancePostureHash(frameworkControlID string, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName *string) uuid.UUID {
-	s := fmt.Sprintf("%s:%s", frameworkControlID, orgID.String())
+func CalculateCompliancePostureHash(controlHash string, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, assetVersionName *string) uuid.UUID {
+	s := fmt.Sprintf("%s:%s", controlHash, orgID.String())
 	if projectID != nil {
 		s = fmt.Sprintf("%s:%s", s, projectID.String())
 	}

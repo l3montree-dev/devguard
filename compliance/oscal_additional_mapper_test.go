@@ -120,13 +120,3 @@ func TestEnrichProp(t *testing.T) {
 		})
 	}
 }
-
-func TestLoadGrundschutzControls(t *testing.T) {
-	controls, err := loadGrundschutzControls()
-	require.NoError(t, err)
-	assert.NotEmpty(t, controls, "expected the embedded Grundschutz++ catalog to yield at least one control")
-	for _, c := range controls {
-		assert.Equal(t, "Grundschutz++", c.Framework)
-		assert.NotEmpty(t, c.ControlID)
-	}
-}

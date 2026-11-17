@@ -18,6 +18,8 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -30,28 +32,72 @@ import (
 )
 
 type ComplianceComponentController struct {
-	complianceComponentRepository shared.ComplianceComponentRepository
-	compliancePostureRepository   shared.CompliancePostureRepository
+	complianceComponentRepository        shared.ComplianceComponentRepository
+	compliancePostureRepository          shared.CompliancePostureRepository
+	compliancePostureService             shared.CompliancePostureService
+	complianceComponentDefinitionService shared.ComplianceComponentDefinitionService
 }
 
-func NewComplianceComponentController(complianceComponentRepository shared.ComplianceComponentRepository, compliancePostureRepository shared.CompliancePostureRepository) *ComplianceComponentController {
+func NewComplianceComponentController(complianceComponentRepository shared.ComplianceComponentRepository, compliancePostureRepository shared.CompliancePostureRepository, compliancePostureService shared.CompliancePostureService, complianceComponentDefinitionService shared.ComplianceComponentDefinitionService) *ComplianceComponentController {
 	return &ComplianceComponentController{
-		complianceComponentRepository: complianceComponentRepository,
-		compliancePostureRepository:   compliancePostureRepository,
+		complianceComponentRepository:        complianceComponentRepository,
+		compliancePostureRepository:          compliancePostureRepository,
+		compliancePostureService:             compliancePostureService,
+		complianceComponentDefinitionService: complianceComponentDefinitionService,
 	}
 }
 
-// @Summary List all compliance components
+type saveComponentDefinitionRequest struct {
+	// optional, defaults to the title of the component definition
+	Name                string          `json:"name"`
+	ComponentDefinition json.RawMessage `json:"componentDefinition" swaggertype:"object"`
+}
+
+// @Summary List the compliance components which apply to the organization
 // @Tags Compliance Components
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Success 200 {array} dtos.ComplianceComponentDetails
-// @Router /compliance-components/ [get]
+// @Router /organizations/{organization}/compliance-components/ [get]
+func (c *ComplianceComponentController) OrgList(ctx shared.Context) error {
+	return c.List(ctx)
+}
+
+// @Summary List the compliance components which apply to the project
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Success 200 {array} dtos.ComplianceComponentDetails
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-components/ [get]
+func (c *ComplianceComponentController) ProjectList(ctx shared.Context) error {
+	return c.List(ctx)
+}
+
+// @Summary List the compliance components which apply to the asset
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Success 200 {array} dtos.ComplianceComponentDetails
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/ [get]
+func (c *ComplianceComponentController) AssetList(ctx shared.Context) error {
+	return c.List(ctx)
+}
+
 func (c *ComplianceComponentController) List(ctx shared.Context) error {
 	filter := shared.GetFilterQuery(ctx)
+	orgID := shared.GetOrg(ctx).ID
+	projectID, assetID, _, _ := getOwnershipFromCtx(ctx)
 
-	components, err := c.complianceComponentRepository.ListAll(ctx.Request().Context(), nil, filter)
+	components, err := c.complianceComponentRepository.ListAll(ctx.Request().Context(), nil, orgID, projectID, assetID, filter)
 	if err != nil {
 		return err
 	}
@@ -69,16 +115,53 @@ func (c *ComplianceComponentController) List(ctx shared.Context) error {
 // @Security CookieAuth
 // @Security PATAuth
 // @Security BearerAuth
+// @Param organization path string true "Organization slug"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Success 200 {object} dtos.ComplianceComponentDetails
-// @Router /compliance-components/{complianceComponentID}/ [get]
+// @Router /organizations/{organization}/compliance-components/{complianceComponentID}/ [get]
+func (c *ComplianceComponentController) OrgDetails(ctx shared.Context) error {
+	return c.Details(ctx)
+}
+
+// @Summary Get compliance component details
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param complianceComponentID path string true "Compliance component ID"
+// @Success 200 {object} dtos.ComplianceComponentDetails
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-components/{complianceComponentID}/ [get]
+func (c *ComplianceComponentController) ProjectDetails(ctx shared.Context) error {
+	return c.Details(ctx)
+}
+
+// @Summary Get compliance component details
+// @Tags Compliance Components
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param complianceComponentID path string true "Compliance component ID"
+// @Success 200 {object} dtos.ComplianceComponentDetails
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/{complianceComponentID}/ [get]
+func (c *ComplianceComponentController) AssetDetails(ctx shared.Context) error {
+	return c.Details(ctx)
+}
+
 func (c *ComplianceComponentController) Details(ctx shared.Context) error {
 	id, err := uuid.Parse(ctx.Param("complianceComponentID"))
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid complianceComponentID")
 	}
 
-	component, err := c.complianceComponentRepository.GetDetails(ctx.Request().Context(), nil, id)
+	orgID := shared.GetOrg(ctx).ID
+	projectID, assetID, _, _ := getOwnershipFromCtx(ctx)
+
+	component, err := c.complianceComponentRepository.GetDetails(ctx.Request().Context(), nil, orgID, projectID, assetID, id)
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return echo.NewHTTPError(404, "compliance component not found")
@@ -100,11 +183,11 @@ type statementPayload struct {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Param frameworkControlID path string true "Framework control ID"
+// @Param controlHash path string true "Control hash"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
 // @Success 201 {object} dtos.ComplianceComponentImplementsControlStatement
-// @Router /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/ [post]
+// @Router /organizations/{organization}/compliance-postures/{controlHash}/components/{complianceComponentID}/ [post]
 func (c *ComplianceComponentController) OrgCreateStatement(ctx shared.Context) error {
 	return c.CreateStatement(ctx)
 }
@@ -116,11 +199,11 @@ func (c *ComplianceComponentController) OrgCreateStatement(ctx shared.Context) e
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Param frameworkControlID path string true "Framework control ID"
+// @Param controlHash path string true "Control hash"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
 // @Success 201 {object} dtos.ComplianceComponentImplementsControlStatement
-// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-postures/{controlHash}/components/{complianceComponentID} [post]
 func (c *ComplianceComponentController) ProjectCreateStatement(ctx shared.Context) error {
 	return c.CreateStatement(ctx)
 }
@@ -134,17 +217,17 @@ func (c *ComplianceComponentController) ProjectCreateStatement(ctx shared.Contex
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
-// @Param frameworkControlID path string true "Framework control ID"
+// @Param controlHash path string true "Control hash"
 // @Param complianceComponentID path string true "Compliance component ID"
 // @Param body body statementPayload true "Request body"
 // @Success 201 {object} dtos.ComplianceComponentImplementsControlStatement
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID} [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{controlHash}/components/{complianceComponentID} [post]
 func (c *ComplianceComponentController) AssetVersionCreateStatement(ctx shared.Context) error {
 	return c.CreateStatement(ctx)
 }
 
 func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) error {
-	frameworkControlID, err := getFrameworkControlIDFromCtx(ctx)
+	controlHash, err := getControlHashFromCtx(ctx)
 	if err != nil {
 		return err
 	}
@@ -162,13 +245,18 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 	projectID, assetID, assetVersionID, assetVersionName := getOwnershipFromCtx(ctx)
 	userAgent := ctx.Request().UserAgent()
 
+	frameworkControlID, err := c.implementedFrameworkControlID(ctx, controlHash, complianceComponentID)
+	if err != nil {
+		return err
+	}
+
 	posture := models.CompliancePosture{
-		FrameworkControlID: frameworkControlID,
-		OrgID:              orgID,
-		ProjectID:          projectID,
-		AssetID:            assetID,
-		AssetVersionID:     assetVersionID,
-		AssetVersionName:   assetVersionName,
+		ControlHash:      controlHash,
+		OrgID:            orgID,
+		ProjectID:        projectID,
+		AssetID:          assetID,
+		AssetVersionID:   assetVersionID,
+		AssetVersionName: assetVersionName,
 	}
 	posture.ID = posture.CalculateHash()
 
@@ -200,6 +288,38 @@ func (c *ComplianceComponentController) CreateStatement(ctx shared.Context) erro
 	}
 
 	return ctx.JSON(201, transformer.ComplianceComponentImplementsControlStatementToDTO(*created))
+}
+
+// implementedFrameworkControlID returns the "<framework>:<control_id>" by which the component implements the control.
+// Both the control and the component have to apply to the scope.
+func (c *ComplianceComponentController) implementedFrameworkControlID(ctx shared.Context, controlHash string, complianceComponentID uuid.UUID) (string, error) {
+	orgID := shared.GetOrg(ctx).ID
+	projectID, assetID, assetVersionID, _ := getOwnershipFromCtx(ctx)
+
+	posture, err := c.compliancePostureService.GetForControl(ctx.Request().Context(), nil, controlHash, assetVersionID, assetID, projectID, orgID)
+	if err != nil {
+		if shared.IsNotFound(err) {
+			return "", echo.NewHTTPError(404, "control not found")
+		}
+		return "", err
+	}
+	component, err := c.complianceComponentRepository.GetDetails(ctx.Request().Context(), nil, orgID, projectID, assetID, complianceComponentID)
+	if err != nil {
+		if shared.IsNotFound(err) {
+			return "", echo.NewHTTPError(404, "compliance component not found")
+		}
+		return "", err
+	}
+
+	for _, sf := range posture.FrameworkControl.ScopeFrameworks {
+		frameworkControlID := sf.Framework + ":" + posture.FrameworkControl.ControlID
+		for _, implemented := range component.ImplementedControls {
+			if implemented.FrameworkControlID == frameworkControlID {
+				return frameworkControlID, nil
+			}
+		}
+	}
+	return "", echo.NewHTTPError(400, "the compliance component does not implement this control")
 }
 
 // @Summary Update a compliance statement
@@ -341,5 +461,125 @@ func (c *ComplianceComponentController) DeleteStatement(ctx shared.Context) erro
 		return err
 	}
 
+	return ctx.NoContent(204)
+}
+
+// @Summary Upload a component definition for the organization
+// @Tags Compliance Component Definitions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param body body saveComponentDefinitionRequest true "OSCAL component definition"
+// @Success 204
+// @Router /organizations/{organization}/compliance-components/definitions/ [post]
+func (c *ComplianceComponentController) OrgSaveComponentDefinition(ctx shared.Context) error {
+	return c.SaveComponentDefinition(ctx)
+}
+
+// @Summary Upload a component definition for the project
+// @Tags Compliance Component Definitions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param body body saveComponentDefinitionRequest true "OSCAL component definition"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-components/definitions/ [post]
+func (c *ComplianceComponentController) ProjectSaveComponentDefinition(ctx shared.Context) error {
+	return c.SaveComponentDefinition(ctx)
+}
+
+// @Summary Upload a component definition for the asset
+// @Tags Compliance Component Definitions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body saveComponentDefinitionRequest true "OSCAL component definition"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/definitions/ [post]
+func (c *ComplianceComponentController) AssetSaveComponentDefinition(ctx shared.Context) error {
+	return c.SaveComponentDefinition(ctx)
+}
+
+func (c *ComplianceComponentController) SaveComponentDefinition(ctx shared.Context) error {
+	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxOSCALDocumentSize)
+	defer ctx.Request().Body.Close()
+
+	var req saveComponentDefinitionRequest
+	if err := json.NewDecoder(ctx.Request().Body).Decode(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+	if len(req.ComponentDefinition) == 0 {
+		return echo.NewHTTPError(400, "componentDefinition is required")
+	}
+
+	orgID := shared.GetOrg(ctx).ID
+	projectID, assetID, _, _ := getOwnershipFromCtx(ctx)
+
+	if err := c.complianceComponentDefinitionService.SaveComponentDefinition(ctx.Request().Context(), nil, orgID, projectID, assetID, req.Name, req.ComponentDefinition); err != nil {
+		return err
+	}
+	return ctx.NoContent(204)
+}
+
+// @Summary Remove a component definition from the organization
+// @Tags Compliance Component Definitions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param name path string true "Component definition name"
+// @Success 204
+// @Router /organizations/{organization}/compliance-components/definitions/{name}/ [delete]
+func (c *ComplianceComponentController) OrgDeleteComponentDefinition(ctx shared.Context) error {
+	return c.DeleteComponentDefinition(ctx)
+}
+
+// @Summary Remove a component definition from the project
+// @Tags Compliance Component Definitions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param name path string true "Component definition name"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/compliance-components/definitions/{name}/ [delete]
+func (c *ComplianceComponentController) ProjectDeleteComponentDefinition(ctx shared.Context) error {
+	return c.DeleteComponentDefinition(ctx)
+}
+
+// @Summary Remove a component definition from the asset
+// @Tags Compliance Component Definitions
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param name path string true "Component definition name"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/definitions/{name}/ [delete]
+func (c *ComplianceComponentController) AssetDeleteComponentDefinition(ctx shared.Context) error {
+	return c.DeleteComponentDefinition(ctx)
+}
+
+func (c *ComplianceComponentController) DeleteComponentDefinition(ctx shared.Context) error {
+	name, err := url.PathUnescape(ctx.Param("name"))
+	if err != nil || name == "" {
+		return echo.NewHTTPError(400, "name is required")
+	}
+
+	orgID := shared.GetOrg(ctx).ID
+	projectID, assetID, _, _ := getOwnershipFromCtx(ctx)
+
+	if err := c.complianceComponentDefinitionService.DeleteComponentDefinition(ctx.Request().Context(), nil, orgID, projectID, assetID, name); err != nil {
+		return err
+	}
 	return ctx.NoContent(204)
 }
