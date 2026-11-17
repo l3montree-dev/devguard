@@ -11651,6 +11651,67 @@
                 ],
                 "type": "object"
             },
+            "dtos.SecretCreateRequest": {
+                "properties": {
+                    "name": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "value": {
+                        "maxLength": 8192,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "value"
+                ],
+                "type": "object"
+            },
+            "dtos.SecretDTO": {
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "inherited": {
+                        "type": "boolean"
+                    },
+                    "inheritedFrom": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "overridden": {
+                        "type": "boolean"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/dtos.SecretScope"
+                    }
+                },
+                "required": [
+                    "id",
+                    "inherited",
+                    "inheritedFrom",
+                    "name",
+                    "overridden",
+                    "scope"
+                ],
+                "type": "object"
+            },
+            "dtos.SecretScope": {
+                "enum": [
+                    "organization",
+                    "project",
+                    "asset"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "ScopeOrganization",
+                    "ScopeProject",
+                    "ScopeAsset"
+                ]
+            },
             "dtos.SemverEvent": {
                 "properties": {
                     "fixed": {
@@ -14592,22 +14653,16 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000
+                    1000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14627,22 +14682,16 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour"
+                    "Second"
                 ]
             },
             "transformer.MinimalTree": {
@@ -27425,6 +27474,140 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List repository secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create repository secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets/": {
             "get": {
                 "parameters": [
@@ -27485,6 +27668,68 @@
                 "summary": "Get asset secrets",
                 "tags": [
                     "Assets"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete repository secret",
+                "tags": [
+                    "Secrets"
                 ]
             }
         },
@@ -31020,6 +31265,317 @@
                 "summary": "List sub-projects and assets",
                 "tags": [
                     "Projects"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List project secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create project secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete project secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List organization secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create organization secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete organization secret",
+                "tags": [
+                    "Secrets"
                 ]
             }
         },

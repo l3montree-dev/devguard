@@ -32,6 +32,11 @@ type secretRepository struct {
 	encryptionService shared.DBEncryptionService
 }
 
+func NewSecretRepository(db *gorm.DB, encryptionService shared.DBEncryptionService) *secretRepository {
+	return &secretRepository{db: db,
+		Repository: newGormRepository[uuid.UUID, models.Secret](db), encryptionService: encryptionService}
+}
+
 func (r *secretRepository) encryptSecretInPlace(ctx context.Context, secret models.Secret) (models.Secret, error) {
 	if secret.Value == "" {
 		return secret, nil
@@ -46,6 +51,20 @@ func (r *secretRepository) encryptSecretInPlace(ctx context.Context, secret mode
 	return secret, nil
 }
 
+func (r *secretRepository) decryptSecretInPlace(ctx context.Context, secret *models.Secret) error {
+	if secret.Value == "" {
+		return nil
+	}
+
+	decryptedSecret, err := r.encryptionService.MaybeDecryptData(secret.Value)
+	if err != nil {
+		return fmt.Errorf("could not decrypt secret: %w", err)
+	}
+	secret.Value = decryptedSecret
+
+	return nil
+}
+
 func (r *secretRepository) Save(ctx context.Context, tx *gorm.DB, secret *models.Secret) error {
 	encrypted, err := r.encryptSecretInPlace(ctx, *secret)
 	if err != nil {
@@ -57,4 +76,55 @@ func (r *secretRepository) Save(ctx context.Context, tx *gorm.DB, secret *models
 	defer func() { secret.Value = originalSecret }()
 
 	return r.Repository.Save(ctx, tx, secret)
+}
+
+func (r *secretRepository) FindVisible(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error) {
+	var secrets []models.Secret
+
+	query := r.GetDB(ctx, tx).Where("org_id = ?", orgID)
+	if projectID != nil {
+		query = query.Or(`project_id IN (
+			WITH RECURSIVE ancestors AS (
+				SELECT id, parent_id FROM projects WHERE id = ?
+				UNION ALL
+				SELECT p.id, p.parent_id FROM projects p JOIN ancestors a ON p.id = a.parent_id
+			) SELECT id FROM ancestors
+		)`, *projectID)
+	}
+	if assetID != nil {
+		query = query.Or("asset_id = ?", *assetID)
+	}
+
+	if err := query.Find(&secrets).Error; err != nil {
+		return nil, err
+	}
+
+	for i := range secrets {
+		if err := r.decryptSecretInPlace(ctx, &secrets[i]); err != nil {
+			return nil, err
+		}
+	}
+
+	return secrets, nil
+}
+
+func (r *secretRepository) DeleteOwned(ctx context.Context, tx *gorm.DB, id, orgID uuid.UUID, projectID, assetID *uuid.UUID) error {
+	query := r.GetDB(ctx, tx).Where("id = ?", id)
+	switch {
+	case assetID != nil:
+		query = query.Where("asset_id = ?", *assetID)
+	case projectID != nil:
+		query = query.Where("project_id = ?", *projectID)
+	default:
+		query = query.Where("org_id = ?", orgID)
+	}
+
+	result := query.Delete(&models.Secret{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

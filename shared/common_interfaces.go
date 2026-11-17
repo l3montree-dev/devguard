@@ -646,6 +646,17 @@ type WebhookIntegrationRepository interface {
 	GetProjectWebhooks(ctx context.Context, tx DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
 }
 
+type SecretRepository interface {
+	Save(ctx context.Context, tx DB, model *models.Secret) error
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	FindVisible(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error)
+	DeleteOwned(ctx context.Context, tx DB, id, orgID uuid.UUID, projectID, assetID *uuid.UUID) error
+}
+
+type SecretService interface {
+	Resolve(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, name string) (string, error)
+}
+
 type GitlabIntegrationRepository interface {
 	Save(ctx context.Context, tx DB, model *models.GitLabIntegration) error
 	Read(ctx context.Context, tx DB, id uuid.UUID) (models.GitLabIntegration, error)

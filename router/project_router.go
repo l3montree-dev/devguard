@@ -41,6 +41,7 @@ func NewProjectRouter(
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
 	webhookIntegration *controllers.WebhookController,
+	secretController *controllers.SecretController,
 	projectRepository shared.ProjectRepository,
 	componentController *controllers.ComponentController,
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
@@ -93,6 +94,9 @@ func NewProjectRouter(
 
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
+	projectUpdateAccessControlRequired.GET("/secrets/", secretController.ProjectList)
+	projectUpdateAccessControlRequired.POST("/secrets/", secretController.ProjectCreate)
+	projectUpdateAccessControlRequired.DELETE("/secrets/:id/", secretController.ProjectDelete)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.ProjectSave)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.ProjectTest)
 	projectUpdateAccessControlRequired.POST("/members/", projectController.InviteMembers)
