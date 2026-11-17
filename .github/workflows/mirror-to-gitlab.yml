@@ -27,7 +27,8 @@ jobs:
           # On tag-triggered runs actions/checkout rewrites the triggering annotated tag as a lightweight one.
           # Restore the real tags so GitLab never receives a lightweight tag that later conflicts with the annotated one.
           # Also refreshes the branches, so a run that waited in the queue pushes the current state.
-          git fetch --force --prune --tags origin
+          # followRemoteHEAD=never: otherwise fetch creates refs/remotes/origin/HEAD, which would be pushed as a branch named HEAD.
+          git -c remote.origin.followRemoteHEAD=never fetch --force --prune --tags origin
           git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${GITLAB_REPO}.git"
           # Avoid --mirror, which also pushes refs/remotes/* that GitLab rejects as hidden refs.
           # Push from refs/remotes/origin/* so all branches are present and --prune never deletes the default branch.
