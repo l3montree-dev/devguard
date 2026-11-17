@@ -245,6 +245,19 @@ func TestComplianceCatalogScopes(t *testing.T) {
 
 			filtered := listPostures(t, f, s, shared.FilterQuery{Field: "framework", Operator: "is", FieldValue: "Catalog B"})
 			assert.ElementsMatch(t, []string{"GOV.1", "OPS.1"}, controlIDs(filtered))
+			filtered = listPostures(t, f, s, shared.FilterQuery{Field: "framework", Operator: "is not", FieldValue: "Catalog B"})
+			assert.ElementsMatch(t, []string{"GOV.2"}, controlIDs(filtered))
+			filtered = listPostures(t, f, s, shared.FilterQuery{Field: "framework", Operator: "ilike", FieldValue: "%catalog b%"})
+			assert.ElementsMatch(t, []string{"GOV.1", "OPS.1"}, controlIDs(filtered))
+
+			sorted, err := f.App.CompliancePostureService.GetForAllControlsPaged(ctx, nil, &s.assetVersion.ID, &s.asset.ID, &s.subproject.ID, s.org.ID, shared.PageInfo{Page: 1, PageSize: 100}, "", nil, []shared.SortQuery{{Field: "frameworks", Operator: "desc"}})
+			require.NoError(t, err)
+			require.Len(t, sorted.Data, 3)
+			assert.Equal(t, "OPS.1", sorted.Data[0].ControlID, "only catalog B sorts after catalog A and catalog B")
+
+			stats, err := f.App.CompliancePostureService.GetStatsForAllControls(ctx, nil, &s.assetVersion.ID, &s.asset.ID, &s.subproject.ID, s.org.ID, []shared.FilterQuery{{Field: "framework", Operator: "is not", FieldValue: "Catalog B"}})
+			require.NoError(t, err)
+			assert.Equal(t, int64(1), stats.Open)
 
 			// the project does not see the catalog of the org twice and the org does not see the catalog of the project
 			orgPostures, err := f.App.CompliancePostureService.GetForAllControlsPaged(ctx, nil, nil, nil, nil, s.org.ID, shared.PageInfo{Page: 1, PageSize: 100}, "", nil, nil)

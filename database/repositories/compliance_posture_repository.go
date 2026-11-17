@@ -150,9 +150,16 @@ func (r *CompliancePostureRepository) controlPostureQuery(ctx context.Context, t
 }
 
 func frameworkFilterCondition(f shared.FilterQuery) (string, any) {
+	if f.Operator == "ilike" {
+		return "EXISTS (SELECT 1 FROM unnest(frameworks) AS framework WHERE framework ILIKE ?)", f.FieldValue
+	}
+
 	values := pq.Array([]any{f.FieldValue})
 	if v := reflect.ValueOf(f.FieldValue); v.IsValid() && v.Kind() == reflect.Slice {
 		values = pq.Array(f.FieldValue)
+	}
+	if f.Operator == "is not" {
+		return "NOT (frameworks && ?::text[])", values
 	}
 	return "frameworks && ?::text[]", values
 }
@@ -233,7 +240,7 @@ func (r *CompliancePostureRepository) GetForAllControlsPaged(ctx context.Context
 			subquery = subquery.Where(f.Where(group).Or("state IS NULL"))
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is not":
 			subquery = f.Where(subquery).Where("state IS NOT NULL")
-		case f.Field == "framework" && (f.Operator == "is" || f.Operator == "in"):
+		case f.Field == "framework":
 			condition, values := frameworkFilterCondition(f)
 			subquery = subquery.Where(condition, values)
 		case f.Field == "has_component_coverage" && f.Operator == "is":
@@ -291,7 +298,7 @@ func (r *CompliancePostureRepository) GetAllControls(ctx context.Context, tx *go
 			subquery = subquery.Where(f.Where(group).Or("state IS NULL"))
 		case f.Field == "state" && f.FieldValue == "open" && f.Operator == "is not":
 			subquery = f.Where(subquery).Where("state IS NOT NULL")
-		case f.Field == "framework" && (f.Operator == "is" || f.Operator == "in"):
+		case f.Field == "framework":
 			condition, values := frameworkFilterCondition(f)
 			subquery = subquery.Where(condition, values)
 		case f.Field == "has_component_coverage" && f.Operator == "is":
@@ -338,7 +345,7 @@ func (r *CompliancePostureRepository) GetStatsForAllControls(ctx context.Context
 	subquery := r.GetDB(ctx, tx).Table("(?) AS sub", query)
 	// Only the "framework" filter applies here (if present)
 	for _, f := range filter {
-		if f.Field == "framework" && (f.Operator == "is" || f.Operator == "in") {
+		if f.Field == "framework" {
 			condition, values := frameworkFilterCondition(f)
 			subquery = subquery.Where(condition, values)
 		}

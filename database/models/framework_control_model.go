@@ -1,9 +1,11 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/normalize"
 	"github.com/l3montree-dev/devguard/utils"
 	"gorm.io/datatypes"
 )
@@ -43,7 +45,18 @@ func (m FrameworkControl) TableName() string {
 }
 
 func (m FrameworkControl) CalculateHash() string {
-	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", m.ControlID, m.Title, m.Class, m.Description, m.Importance, m.SecurityLevel, utils.SafeDereference(m.ParentControlID)))
+	return utils.HashString(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", m.ControlID, m.Title, m.Class, m.Description, m.Importance, m.SecurityLevel, utils.SafeDereference(m.ParentControlID), canonicalJSON(m.Additional)))
+}
+
+func canonicalJSON(data datatypes.JSON) string {
+	if len(data) == 0 {
+		return ""
+	}
+	canonical, err := normalize.EncodeCanonical(json.RawMessage(data))
+	if err != nil {
+		return string(data)
+	}
+	return string(canonical)
 }
 
 // ScopeFramework is a framework (catalog) activated or uploaded in an org, project or asset.
