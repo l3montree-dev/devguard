@@ -31,6 +31,9 @@ import (
 // the title of the component definition which was embedded before component definitions were uploaded per scope
 const legacyComponentDefinition = "Grundschutz++ Compliance Mapping"
 
+// the name of the seeded ISO 27001 Annex A catalog, which is not migrated
+const legacyISO27001Framework = "ISO27001"
+
 type legacyControl struct {
 	Framework       string
 	ControlID       string
@@ -77,6 +80,9 @@ func runComplianceScopeMigration(pool *pgxpool.Pool) error {
 	db := database.NewGormDB(pool)
 
 	return db.Transaction(func(tx *gorm.DB) error {
+		if err := deleteLegacyISO27001(tx); err != nil {
+			return err
+		}
 		migrated, err := hashLegacyControls(tx)
 		if err != nil {
 			return err
@@ -94,6 +100,31 @@ func runComplianceScopeMigration(pool *pgxpool.Pool) error {
 		}
 		return cleanupLegacyControls(tx)
 	})
+}
+
+func deleteLegacyISO27001(tx *gorm.DB) error {
+	prefix := legacyISO27001Framework + ":%"
+	result := tx.Exec(`DELETE FROM compliance_postures WHERE control_hash LIKE ?`, prefix)
+	if result.Error != nil {
+		return fmt.Errorf("could not delete the ISO 27001 postures: %w", result.Error)
+	}
+	postures := result.RowsAffected
+
+	if err := tx.Exec(`DELETE FROM compliance_component_implements_controls WHERE framework_control_id LIKE ?`, prefix).Error; err != nil {
+		return fmt.Errorf("could not delete the ISO 27001 controls of the components: %w", err)
+	}
+	if err := tx.Exec(`DELETE FROM mapped_controls WHERE framework_control_id LIKE ? OR related_framework = ?`, prefix, legacyISO27001Framework).Error; err != nil {
+		return fmt.Errorf("could not delete the ISO 27001 mapped controls: %w", err)
+	}
+
+	result = tx.Exec(`DELETE FROM compliance_controls WHERE control_hash IS NULL AND framework = ?`, legacyISO27001Framework)
+	if result.Error != nil {
+		return fmt.Errorf("could not delete the ISO 27001 controls: %w", result.Error)
+	}
+	if postures > 0 || result.RowsAffected > 0 {
+		slog.Info("deleted legacy ISO 27001 compliance data", "postures", postures, "controls", result.RowsAffected)
+	}
+	return nil
 }
 
 // hashLegacyControls calculates the hash of every control which was seeded before controls were identified by their content.
