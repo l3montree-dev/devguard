@@ -12930,13 +12930,6 @@
                     "vector": {
                         "type": "string"
                     },
-                    "weaknesses": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Weakness"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
                     "withdrawn": {
                         "type": "string"
                     }
@@ -12963,7 +12956,6 @@
                     "relationships",
                     "risk",
                     "vector",
-                    "weaknesses",
                     "withdrawn"
                 ],
                 "type": "object"
@@ -14098,29 +14090,6 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_database_models.Weakness": {
-                "properties": {
-                    "cve": {
-                        "type": "string"
-                    },
-                    "cwe": {
-                        "type": "string"
-                    },
-                    "source": {
-                        "type": "string"
-                    },
-                    "type": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "cve",
-                    "cwe",
-                    "source",
-                    "type"
-                ],
-                "type": "object"
-            },
             "github_com_l3montree-dev_devguard_database_models.WebhookIntegration": {
                 "properties": {
                     "createdAt": {
@@ -14584,30 +14553,25 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
-                    60000000000,
-                    3600000000000
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
@@ -14619,30 +14583,25 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
-                    "Minute",
-                    "Hour"
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute"
                 ]
             },
             "transformer.MinimalTree": {
@@ -27264,6 +27223,69 @@
                 "summary": "Get risk history for an asset version",
                 "tags": [
                     "Statistics"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/recommendations": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get crowdsourced VEX recommendations for all vulns of an asset",
+                "tags": [
+                    "CrowdsourcedVexing"
                 ]
             }
         },
