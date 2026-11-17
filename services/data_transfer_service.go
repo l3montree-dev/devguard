@@ -1,7 +1,9 @@
 package services
 
 import (
+	"compress/gzip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -162,7 +164,6 @@ var tablesToSync []tableProperties = []tableProperties{
 	{tableID: "artifacts", filters: []scopeFilter{assetScope}},
 
 	// artifact level
-	{tableID: "release_items", filters: []scopeFilter{assetScope}},
 	{tableID: "attestations", filters: []scopeFilter{assetScope}},
 	{tableID: "sboms", filters: []scopeFilter{assetScope}},
 	{tableID: "artifact_dependency_vulns", filters: []scopeFilter{artifactScope}},
@@ -246,11 +247,8 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 
 	// start the db query worker pool
 	group.SetLimit(concurrentDBWorkers + 1) // cap the number of concurrent db reads (1 for the producer routine)
-	for group.TryGo(func() error {
-		return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs)
-	}) {
-	}
 
+	// start the producer function first
 	group.Go(func() error {
 		defer close(jobs)
 		for _, table := range tablesToSync {
@@ -264,12 +262,23 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return nil
 	})
 
+	// then spin up the worker pool
+	for group.TryGo(func() error {
+		return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs)
+	}) {
+	}
+
 	err = group.Wait()
 	if err != nil {
 		return fmt.Errorf("encountered error during export, aborting: %w", err)
 	}
 
 	slog.Info("finished writing file data", "time", time.Since(start))
+
+	err = buildMetadataFile(ctx, jobDirectoryPath, scope)
+	if err != nil {
+		return fmt.Errorf("could not build metadata file: %w", err)
+	}
 
 	slog.Info("finished export", "job ID", jobID.String(), "time", time.Since(start))
 	return nil
@@ -279,6 +288,29 @@ type queryJob struct {
 	tableID string
 	sql     string
 	args    []any
+}
+
+type metadata struct {
+	ExportVersion int         `json:"export_version"`
+	ExportScope   exportScope `json:"export_scope"`
+}
+
+func buildMetadataFile(ctx context.Context, jobDirectoryPath string, scope exportScope) error {
+	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, "metadata.json"))
+	if err != nil {
+		return fmt.Errorf("could not create metadata file: %w", err)
+	}
+
+	exportMetadata := metadata{
+		ExportVersion: dataTransferVersion,
+		ExportScope:   scope,
+	}
+
+	err = json.NewEncoder(metadataFD).Encode(exportMetadata)
+	if err != nil {
+		return fmt.Errorf("could not write metadata file: %w", err)
+	}
+	return nil
 }
 
 func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, baseFolder string, snapshotID string, jobs chan queryJob) error {
@@ -302,11 +334,13 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 		}
 		defer rows.Close()
 
-		tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".jsonl"))
+		tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".jsonl.gz"))
 		if err != nil {
 			return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
 		}
 		defer tableFd.Close()
+		gzipWriter := gzip.NewWriter(tableFd)
+		defer gzipWriter.Close()
 
 		for rows.Next() {
 			var row []byte
@@ -315,7 +349,7 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 			}
 
 			// row is already json from row_to_json, we can just write that with a newline
-			if _, err := tableFd.Write(append(row, '\n')); err != nil {
+			if _, err := gzipWriter.Write(append(row, '\n')); err != nil {
 				return fmt.Errorf("could not write row of %s: %w", job.tableID, err)
 			}
 		}
@@ -325,7 +359,13 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 		}
 		slog.Info("successfully queried table data", "table", job.tableID, "rows count", rows.CommandTag().RowsAffected())
 		rows.Close()
-		tableFd.Close()
+		// finish up the gzip file
+		if err := gzipWriter.Close(); err != nil {
+			return fmt.Errorf("could not finish compressed file of %s: %w", job.tableID, err)
+		}
+		if err := tableFd.Close(); err != nil {
+			return fmt.Errorf("could not close file of %s: %w", job.tableID, err)
+		}
 	}
 
 	slog.Info("db worker finished")
