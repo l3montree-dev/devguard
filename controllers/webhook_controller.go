@@ -485,7 +485,7 @@ func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (w *WebhookController) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (w *WebhookController) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	// Logic to update an issue
 	return nil
 }

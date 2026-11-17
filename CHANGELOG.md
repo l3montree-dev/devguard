@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.19.0] - 2026-11-17
+
+Thanks to external contributors [@shounakjoshi88-a11y](https://github.com/shounakjoshi88-a11y) for serving the OpenVEX document with the JSON content type, [@magndotcc](https://github.com/magndotcc) for accepting SBOMs whose root component has no `bom-ref`, [@xi72yow](https://github.com/xi72yow) for fixing the Red Hat layered products matching, and [@sarankumar1325](https://github.com/sarankumar1325) for the SARIF and package sorting fixes! 🎉
+
+### Added
+
+- **VEX rule recommendations per branch** — recommendations can now be requested for a single asset version via `GET .../refs/:assetVersionSlug/vex-rules/recommendations/`
+- **Weaknesses are available in CEL rules** — the CWEs of a CVE can be used in VEX rule expressions
+- **`vuln_state_intervals` table** — the time ranges in which a vulnerability was in a given state are now stored explicitly and used to build the artifact risk history
+
+### Changed
+
+- **Statistics are calculated from vulnerability state intervals** — the release risk history and the `last_history_update` column are removed, and the artifact risk history repository was rewritten on top of the new table
+- **Asset version and artifact primary keys are single `uuid` columns** — the foreign key references are migrated, and orphaned foreign keys are cleaned up
+- Only vulnerabilities that actually changed are saved when a scan is processed
+- CI workflows abort in-progress runs from the same ref
+
+### Fixed
+
+- **Toggling VEX rules** — enabling and disabling a rule now applies correctly, and a deadlock in a migration is fixed
+- **Duplicate license risks and events** — duplicate license risk events and other duplicated vulnerability events are removed by migration, and a bug that created "fixed" license risk events is fixed
+- **Ticket updates and sync** — ticket integration updates are synchronized correctly
+- **Risk assessment `displayName`** is now set to the id
+- **SBOMs whose root component has no `bom-ref`** are accepted
+- **Red Hat layered products** — rpm packages are matched against their own Red Hat product only
+- **SARIF results** without a location, and all locations of a result, are kept
+- **Packages are sorted by distinct CVE count**, the count shown in the UI
+- The dependency proxy no longer returns the Alpine signing key in the asset version DTO
+- The OpenVEX document is served with the JSON content type
+
+---
+
 ## [v1.18.2] - 2026-11-06
 
 ### Changed

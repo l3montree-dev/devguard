@@ -389,9 +389,8 @@ func (runner *DaemonRunner) deleteOldAssetVersions(ctx context.Context, a *asset
 	// Remove just-deleted versions from the in-memory slice.
 	// DeleteOldAssetVersionsOfAsset deletes branch versions with
 	// last_accessed_at older than 7 days. Without this filter, the following
-	// inline steps (e.g. collectStats) iterate over stale artifacts that no
-	// longer exist in the DB, causing fk_artifact FK violations when
-	// inserting artifact_risk_history rows.
+	// inline steps iterate over stale asset versions and artifacts that no
+	// longer exist in the DB.
 	cutoff := time.Now().AddDate(0, 0, -7)
 	a.assetVersions = utils.Filter(a.assetVersions, func(av models.AssetVersion) bool {
 		return av.DefaultBranch || av.Type != models.AssetVersionBranch || !av.LastAccessedAt.Before(cutoff)
@@ -542,7 +541,7 @@ func (runner *DaemonRunner) applyVEXRules(ctx context.Context, asset models.Asse
 	}
 
 	for state, rulesForState := range rulesByState {
-		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, state)
+		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, nil, state)
 		if err != nil {
 			slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID, "state", state)
 			continue
@@ -701,22 +700,12 @@ func (runner *DaemonRunner) resolveDifferencesInTicketState(ctx context.Context,
 }
 
 func (runner *DaemonRunner) collectStats(ctx context.Context, a *assetWithProjectAndOrg) error {
-	errs := make([]error, 0)
-	for _, assetVersion := range a.assetVersions {
-		for _, artifact := range assetVersion.Artifacts {
-			tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-			if err := runner.statisticsService.UpdateArtifactRiskAggregation(ctx, tx, &artifact, artifact.AssetID, utils.OrDefault(artifact.LastHistoryUpdate, time.Now().AddDate(0, -1, 0)), time.Now()); err != nil {
-				tx.Rollback()
-				slog.Error("could not recalculate risk history", "err", err)
-				errs = append(errs, err)
-				continue
-			}
-			runner.finishTx(tx)
-			slog.Info("updated statistics for artifact", "artifactName", artifact.ArtifactName, "assetVersionName", assetVersion.Name, "assetID", artifact.AssetID)
-		}
+	tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+	if err := runner.statisticsService.RecalculateRiskHistory(ctx, tx, a.asset.ID); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("could not recalculate risk history: %w", err)
 	}
-	if len(errs) > 0 {
-		return fmt.Errorf("could not collect stats: %w", errors.Join(errs...))
-	}
+	runner.finishTx(tx)
+	slog.Info("recalculated risk history for asset", "assetID", a.asset.ID)
 	return nil
 }

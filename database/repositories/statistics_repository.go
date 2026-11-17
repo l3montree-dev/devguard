@@ -12,19 +12,16 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/statemachine"
 )
 
 type statisticsRepository struct {
-	createBatchSize          int
-	db                       *gorm.DB
-	dependencyVulnRepository shared.DependencyVulnRepository
+	createBatchSize int
+	db              *gorm.DB
 }
 
-func NewStatisticsRepository(db *gorm.DB, dependencyVulnRepository shared.DependencyVulnRepository) *statisticsRepository {
+func NewStatisticsRepository(db *gorm.DB) *statisticsRepository {
 	return &statisticsRepository{
-		db:                       db,
-		dependencyVulnRepository: dependencyVulnRepository,
+		db: db,
 	}
 }
 
@@ -35,45 +32,6 @@ func (r *statisticsRepository) GetDB(ctx context.Context, tx *gorm.DB) *gorm.DB 
 		return tx.Session(&gorm.Session{CreateBatchSize: r.createBatchSize})
 	}
 	return r.db.Session(&gorm.Session{Context: ctx, CreateBatchSize: r.createBatchSize})
-}
-
-// returns all dependencyVulns for the asset including the events, which were created before the given time
-// artifactID if non-nil restricts the result to the vulns of a single artifact
-func (r *statisticsRepository) TimeTravelDependencyVulnState(ctx context.Context, tx *gorm.DB, artifactID *uuid.UUID, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
-	dependencyVulns := []models.DependencyVuln{}
-	q := r.GetDB(ctx, tx).Model(&models.DependencyVuln{}).Select("dependency_vulns.*").Preload("CVE").Preload("Events", func(db *gorm.DB) *gorm.DB {
-		return db.Where("created_at <= ?", time).Order("created_at ASC")
-	}).
-		Joins("JOIN artifact_dependency_vulns adv ON adv.dependency_vuln_id = dependency_vulns.id").
-		Where("dependency_vulns.asset_id = ?", assetID).Where("dependency_vulns.created_at <= ?", time)
-	if artifactID != nil {
-		q = q.Where("adv.artifact_id = ?", *artifactID)
-	}
-	if err := q.Find(&dependencyVulns).Error; err != nil {
-		return nil, err
-	}
-
-	if err := r.dependencyVulnRepository.AttachGroupEvents(ctx, tx, dependencyVulns, &time); err != nil {
-		return nil, err
-	}
-
-	return replayHistoricalEvents(dependencyVulns), nil
-}
-
-// replayHistoricalEvents reconstructs the historical state of each
-// DependencyVuln by replaying its (already time-filtered) Events in order.
-// The State field is reset to the zero value before replay so that
-// EventTypeDetected can correctly set state to "open" even when the current
-// persisted state is "fixed" (the statemachine guard that protects fixed /
-// accepted vulns from being re-opened by detected events must not apply here).
-func replayHistoricalEvents(dependencyVulns []models.DependencyVuln) []models.DependencyVuln {
-	for i := range dependencyVulns {
-		dependencyVulns[i].State = "" // start from neutral state for correct replay
-		for _, event := range dependencyVulns[i].Events {
-			statemachine.Apply(&dependencyVulns[i], event)
-		}
-	}
-	return dependencyVulns
 }
 
 var remediationEvents = []dtos.VulnEventType{
@@ -155,44 +113,6 @@ FROM events
 WHERE type = ANY (?) AND prev_type = ANY (?);`, *artifactID, pq.Array(append(remediationEvents, openEvents...)), assetVersionID, pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	}
 
-	return results, err
-}
-
-func (r *statisticsRepository) AverageRemediationTimesForRelease(ctx context.Context, tx *gorm.DB, releaseID uuid.UUID) (dtos.RemediationTimeAverages, error) {
-	results := dtos.RemediationTimeAverages{}
-	err := r.GetDB(ctx, tx).Raw(`
-WITH RECURSIVE release_tree AS (
-	SELECT id FROM releases WHERE id = ?
-	UNION ALL
-	SELECT ri.child_release_id FROM release_items ri JOIN release_tree rt ON ri.release_id = rt.id WHERE ri.child_release_id IS NOT NULL
-),
-events AS (
-	SELECT
-		dv.risk_assessment,
-		c.cvss,
-		fe.type,
-		fe.created_at,
-		LAG(fe.type)       OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_type,
-		LAG(fe.created_at) OVER (PARTITION BY dv.id ORDER BY fe.created_at) AS prev_created_at
-	FROM dependency_vulns dv
-	JOIN vuln_events fe ON dv.id = fe.dependency_vuln_id
-	JOIN artifacts ra ON ra.asset_version_id = dv.asset_version_id
-	JOIN release_items ri ON ri.artifact_id = ra.id
-	LEFT JOIN cves c ON dv.cve_id = c.cve
-	WHERE ri.release_id IN (SELECT id FROM release_tree) AND fe.type = ANY (?)
-)
-SELECT
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 0  AND risk_assessment <  4)),0)  AS risk_avg_low,
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 4  AND risk_assessment <  7)),0)  AS risk_avg_medium,
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 7  AND risk_assessment <  9)),0)  AS risk_avg_high,
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE risk_assessment >= 9  AND risk_assessment <= 10)),0) AS risk_avg_critical,
-
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 0  AND cvss <  4)),0)  AS cvss_avg_low,
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 4  AND cvss <  7)),0)  AS cvss_avg_medium,
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 7  AND cvss <  9)),0)  AS cvss_avg_high,
-	COALESCE(EXTRACT(EPOCH FROM AVG(created_at - prev_created_at) FILTER (WHERE cvss >= 9  AND cvss <= 10)),0) AS cvss_avg_critical
-FROM events
-WHERE type = ANY (?) AND prev_type = ANY (?);`, releaseID, pq.Array(append(remediationEvents, openEvents...)), pq.Array(remediationEvents), pq.Array(openEvents)).Find(&results).Error
 	return results, err
 }
 

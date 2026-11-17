@@ -22,8 +22,8 @@ import (
 
 func AssetVersionModelToDTO(assetVersion models.AssetVersion) dtos.AssetVersion {
 	return dtos.AssetVersion{
-		CreatedAt:      assetVersion.CreatedAt.String(),
-		UpdatedAt:      assetVersion.UpdatedAt.String(),
+		CreatedAt:      assetVersion.CreatedAt,
+		UpdatedAt:      assetVersion.UpdatedAt,
 		Name:           assetVersion.Name,
 		AssetID:        assetVersion.AssetID.String(),
 		DefaultBranch:  assetVersion.DefaultBranch,
@@ -31,6 +31,6 @@ func AssetVersionModelToDTO(assetVersion models.AssetVersion) dtos.AssetVersion 
 		Type:           string(assetVersion.Type),
 		SigningPubKey:  assetVersion.SigningPubKey,
 		Metadata:       assetVersion.Metadata,
-		LastAccessedAt: assetVersion.LastAccessedAt.String(),
+		LastAccessedAt: assetVersion.LastAccessedAt,
 	}
 }

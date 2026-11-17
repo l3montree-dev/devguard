@@ -500,7 +500,19 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 
 		events.NotifyVulnEventCreated(reqCtx, githubIntegration.broker, vuln.GetAssetID(), vulnEvent.Type)
 
-		err = githubIntegration.UpdateIssue(reqCtx, asset, assetVersion.Slug, vuln, &userAgent)
+		project, err := githubIntegration.projectRepository.Read(reqCtx, nil, asset.ProjectID)
+		if err != nil {
+			slog.Error("could not read project", "err", err)
+			return err
+		}
+
+		org, err := githubIntegration.orgRepository.Read(reqCtx, nil, project.OrganizationID)
+		if err != nil {
+			slog.Error("could not read org", "err", err)
+			return err
+		}
+
+		err = githubIntegration.UpdateIssue(reqCtx, org, project, asset, assetVersion.Slug, vuln, &userAgent)
 
 		if err != nil {
 			slog.Error("could not update issue", "err", err)
@@ -813,12 +825,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 			})
 			return err
 		}
-		return githubIntegration.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
+		return githubIntegration.UpdateIssue(ctx, shared.GetOrg(event.Ctx), shared.GetProject(event.Ctx), asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 }
 
-func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := githubTracer.Start(ctx, "GithubIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -838,18 +850,6 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 
 	client, err := githubIntegration.githubClientFactory(repoID)
 	if err != nil {
-		return err
-	}
-
-	project, err := githubIntegration.projectRepository.GetProjectByAssetID(ctx, nil, asset.ID)
-	if err != nil {
-		slog.Error("could not get project by asset id", "err", err)
-		return err
-	}
-
-	org, err := githubIntegration.orgRepository.Read(ctx, nil, project.OrganizationID)
-	if err != nil {
-		slog.Error("could not get org by id", "err", err)
 		return err
 	}
 

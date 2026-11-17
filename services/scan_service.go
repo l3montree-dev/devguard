@@ -583,12 +583,12 @@ func (s *scanService) HandleScanResultForVulns(ctx context.Context, tx shared.DB
 
 	// make sure to first create a user detected event for vulnerabilities with just upstream events
 	// this way we preserve the event history
-	if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(ctx, tx, artifactName, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
+	if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(ctx, tx, branchDiff.ExistingOnOtherBranches, *assetVersion, asset); err != nil {
 		slog.Error("error when trying to add events for existing vulnerability on different branch")
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// We can create the newly found one without checking anything
-	if err := s.dependencyVulnService.UserDetectedDependencyVulns(ctx, tx, userID, userAgent, artifactName, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset); err != nil {
+	if err := s.dependencyVulnService.UserDetectedDependencyVulns(ctx, tx, userID, userAgent, utils.DereferenceSlice(branchDiff.NewToAllBranches), *assetVersion, asset); err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 

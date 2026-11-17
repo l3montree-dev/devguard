@@ -184,7 +184,7 @@ func (g *GitlabIntegration) HandleEvent(ctx context.Context, event any, userAgen
 				return err
 			}
 		}
-		return g.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
+		return g.UpdateIssue(ctx, shared.GetOrg(event.Ctx), shared.GetProject(event.Ctx), asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 }

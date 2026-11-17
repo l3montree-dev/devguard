@@ -1239,7 +1239,7 @@ func (g *GitlabIntegration) TestAndSave(ctx shared.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := gitlabTracer.Start(ctx, "GitlabIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -1248,18 +1248,6 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	)
 	client, projectID, err := g.GetClientBasedOnAsset(ctx, asset)
 	if err != nil {
-		return err
-	}
-
-	project, err := g.projectRepository.GetProjectByAssetID(ctx, nil, asset.ID)
-	if err != nil {
-		slog.Error("could not get project by asset id", "err", err)
-		return err
-	}
-
-	org, err := g.orgRepository.GetOrgByID(ctx, nil, project.OrganizationID)
-	if err != nil {
-		slog.Error("could not get org by id", "err", err)
 		return err
 	}
 

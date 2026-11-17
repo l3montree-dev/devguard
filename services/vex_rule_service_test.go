@@ -720,8 +720,9 @@ func TestParseVEXRulesInBOMMultiplePathPatternProperties(t *testing.T) {
 
 // TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet verifies that a
 // VEX rule whose CEL expression checks vuln.componentFixedVersion != null
-// reopens a previously false-positive/accepted dependency vuln once a fixed
-// version becomes known, and leaves it untouched while no fixed version is known.
+// reopens a previously accepted dependency vuln once a fixed version becomes known,
+// and leaves it untouched while no fixed version is known. A false positive is never
+// reopened - a fixed version does not make vulnerable code reachable.
 func TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet(t *testing.T) {
 	assetID := uuid.New()
 
@@ -744,7 +745,7 @@ func TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet(t *testing.T)
 			Vulnerability: models.Vulnerability{
 				ID:      uuid.New(),
 				AssetID: assetID,
-				State:   dtos.VulnStateFalsePositive,
+				State:   dtos.VulnStateAccepted,
 			},
 			CVEID:                 "CVE-2024-1234",
 			VulnerabilityPath:     []string{"pkg:golang/vulnerable-lib@v1.0"},
@@ -766,7 +767,7 @@ func TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet(t *testing.T)
 			Vulnerability: models.Vulnerability{
 				ID:      uuid.New(),
 				AssetID: assetID,
-				State:   dtos.VulnStateFalsePositive,
+				State:   dtos.VulnStateAccepted,
 			},
 			CVEID:                 "CVE-2024-1234",
 			VulnerabilityPath:     []string{"pkg:golang/vulnerable-lib@v1.0"},
@@ -777,6 +778,25 @@ func TestApplyVEXRulesToVulnsReopensWhenComponentFixedVersionIsSet(t *testing.T)
 		updatedVulns, events, err := ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{reopenRule}, []models.DependencyVuln{vuln})
 		assert.NoError(t, err)
 		assert.Empty(t, updatedVulns, "no fixed version means the rule should not match")
+		assert.Empty(t, events)
+	})
+
+	t.Run("does not reopen a false positive", func(t *testing.T) {
+		vuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				ID:      uuid.New(),
+				AssetID: assetID,
+				State:   dtos.VulnStateFalsePositive,
+			},
+			CVEID:                 "CVE-2024-1234",
+			VulnerabilityPath:     []string{"pkg:golang/vulnerable-lib@v1.0"},
+			ComponentPurl:         "pkg:golang/vulnerable-lib@v1.0",
+			ComponentFixedVersion: &fixedVersion,
+		}
+
+		updatedVulns, events, err := ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{reopenRule}, []models.DependencyVuln{vuln})
+		assert.NoError(t, err)
+		assert.Empty(t, updatedVulns)
 		assert.Empty(t, events)
 	})
 }
@@ -794,4 +814,77 @@ func TestDiffVEXRulesDiffsPerSource(t *testing.T) {
 
 	assert.ElementsMatch(t, []models.VEXRule{rule("a2", "source-a"), rule("b2", "source-b")}, rulesToAdd)
 	assert.ElementsMatch(t, []models.VEXRule{rule("a1", "source-a"), rule("b1", "source-b")}, rulesToRemove)
+}
+
+// two rules matching the same vuln used to override each other, so every scan added an event of each rule again
+func TestApplyVEXRulesToVulnsStopsOnceTheVulnIsDecided(t *testing.T) {
+	assetID := uuid.New()
+	newRule := func(id string, eventType dtos.VulnEventType, justification string) models.VEXRule {
+		return models.VEXRule{
+			UpstreamVEXRule: models.UpstreamVEXRule{
+				ID:            id,
+				CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
+				EventType:     eventType,
+				Justification: justification,
+			},
+			AssetID:     assetID,
+			Enabled:     true,
+			CreatedByID: "user-1",
+		}
+	}
+	newVuln := func(state dtos.VulnState) models.DependencyVuln {
+		return models.DependencyVuln{
+			Vulnerability:     models.Vulnerability{ID: uuid.New(), AssetID: assetID, State: state},
+			CVEID:             "CVE-2024-1234",
+			VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
+			ComponentPurl:     "pkg:golang/lib@v1.0",
+		}
+	}
+	// applies the rules like a scan would and stores the result on the vuln, returns every created event
+	scan := func(t *testing.T, rules []models.VEXRule, vuln *models.DependencyVuln, times int) []models.VulnEvent {
+		var created []models.VulnEvent
+		for range times {
+			updated, events, err := ApplyVEXRulesToVulns(context.Background(), rules, []models.DependencyVuln{*vuln})
+			assert.NoError(t, err)
+			if len(updated) > 0 {
+				vuln.State = updated[0].State
+			}
+			vuln.Events = append(vuln.Events, events...)
+			created = append(created, events...)
+		}
+		return created
+	}
+	t.Run("two accept rules add no events once the vuln is accepted", func(t *testing.T) {
+		vuln := newVuln(dtos.VulnStateOpen)
+		rules := []models.VEXRule{
+			newRule("first", dtos.EventTypeAccepted, "first justification"),
+			newRule("second", dtos.EventTypeAccepted, "second justification"),
+		}
+
+		scan(t, rules, &vuln, 1)
+
+		assert.Empty(t, scan(t, rules, &vuln, 3))
+		assert.Equal(t, dtos.VulnStateAccepted, vuln.State)
+	})
+
+	t.Run("a false positive wins over an accepted risk", func(t *testing.T) {
+		vuln := newVuln(dtos.VulnStateOpen)
+		rules := []models.VEXRule{
+			newRule("accept", dtos.EventTypeAccepted, "accepted"),
+			newRule("false-positive", dtos.EventTypeFalsePositive, "not affected"),
+		}
+
+		// the rules are matched in random order, an accepted risk applied last is turned into a false positive by the next scan
+		scan(t, rules, &vuln, 2)
+
+		assert.Empty(t, scan(t, rules, &vuln, 3))
+		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+	})
+
+	t.Run("an accept rule does not downgrade a false positive", func(t *testing.T) {
+		vuln := newVuln(dtos.VulnStateFalsePositive)
+
+		assert.Empty(t, scan(t, []models.VEXRule{newRule("accept", dtos.EventTypeAccepted, "accepted")}, &vuln, 1))
+		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
+	})
 }

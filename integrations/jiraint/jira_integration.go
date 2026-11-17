@@ -565,7 +565,7 @@ func getOpenAndDoneStatusIDs(transitions []Transition) (openStatusID, doneStatus
 
 }
 
-func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (i *JiraIntegration) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	repoID := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoID, "jira:") {
 		return nil
@@ -574,18 +574,6 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, a
 	client, _, err := i.getClientBasedOnAsset(ctx, asset)
 	if err != nil {
 		return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
-	}
-
-	project, err := i.projectRepository.GetProjectByAssetID(ctx, nil, asset.ID)
-	if err != nil {
-		slog.Error("could not get project by asset id", "err", err)
-		return err
-	}
-
-	org, err := i.orgRepository.Read(ctx, nil, project.OrganizationID)
-	if err != nil {
-		slog.Error("could not get org by id", "err", err)
-		return err
 	}
 
 	switch v := vuln.(type) {

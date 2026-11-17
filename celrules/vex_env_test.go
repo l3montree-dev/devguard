@@ -108,3 +108,25 @@ func TestNowFunctionComparesLastStateChangeAge(t *testing.T) {
 	}
 	assert.True(t, evalRule(t, rule, staleVuln), "a vuln whose state changed 31 days ago should be considered stale")
 }
+
+func TestMatchByCWE(t *testing.T) {
+	rule := models.UpstreamVEXRule{
+		ID:            "xss",
+		CELExpression: `"CWE-79" in vuln.cve.cwes`,
+	}
+
+	vulnWithCWEs := func(cwes *string) models.DependencyVuln {
+		return models.DependencyVuln{
+			AssetVersionName: "main",
+			CVEID:            "CVE-2024-0001",
+			CVE:              &models.CVE{CVE: "CVE-2024-0001", CWEs: cwes},
+		}
+	}
+	ptr := func(s string) *string { return &s }
+
+	assert.True(t, evalRule(t, rule, vulnWithCWEs(ptr("CWE-89,CWE-79"))))
+	assert.True(t, evalRule(t, rule, vulnWithCWEs(ptr("CWE-89, CWE-79"))), "whitespace around the ids should be ignored")
+	assert.False(t, evalRule(t, rule, vulnWithCWEs(ptr("CWE-790"))), "should not match on a prefix")
+	assert.False(t, evalRule(t, rule, vulnWithCWEs(ptr(""))))
+	assert.False(t, evalRule(t, rule, vulnWithCWEs(nil)))
+}

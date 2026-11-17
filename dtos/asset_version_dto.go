@@ -1,5 +1,7 @@
 package dtos
 
+import "time"
+
 type AssetMetrics struct {
 	EnabledContainerScanning       bool    `json:"enabledContainerScanning"`
 	EnabledImageSigning            bool    `json:"enabledImageSigning"`
@@ -15,8 +17,8 @@ type InformationSource struct {
 }
 
 type AssetVersion struct {
-	CreatedAt      string         `json:"createdAt"`
-	UpdatedAt      string         `json:"updatedAt"`
+	CreatedAt      time.Time      `json:"createdAt"`
+	UpdatedAt      time.Time      `json:"updatedAt"`
 	Name           string         `json:"name"`
 	AssetID        string         `json:"assetId"`
 	DefaultBranch  bool           `json:"defaultBranch"`
@@ -24,5 +26,5 @@ type AssetVersion struct {
 	Type           string         `json:"type"`
 	SigningPubKey  *string        `json:"signingPubKey,omitempty"`
 	Metadata       map[string]any `json:"metadata,omitempty"`
-	LastAccessedAt string         `json:"lastAccessedAt,omitempty"`
+	LastAccessedAt time.Time      `json:"lastAccessedAt,omitempty"`
 }

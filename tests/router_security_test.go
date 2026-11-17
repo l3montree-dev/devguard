@@ -229,6 +229,7 @@ var routeMinLevel = map[string]shared.Role{
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/vex-rules/:ruleId/":                                                       shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/vex-rules/recommendations/":                                               shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/vex-rules/recommendations/:dependencyVulnID/":                             shared.RoleMember,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/vex-rules/recommendations/":                        shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/compliance-postures/":                                                                       shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/compliance-postures/:controlHash/":                                                          shared.RoleMember,
 	"GET /api/v1/organizations/:organization/projects/:projectSlug/compliance-postures/oscal/":                                                                 shared.RoleMember,

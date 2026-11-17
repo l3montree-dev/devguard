@@ -26,7 +26,7 @@ func setupNeverCalledIntegration(t *testing.T) *mocks.IntegrationAggregate {
 		}).
 		Return(nil)
 
-	m.On("UpdateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	m.On("UpdateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Maybe().
 		Run(func(args mock.Arguments) {
 			t.Fatal("UpdateIssue was called on the real integration — dry-run must not delegate mutations")
@@ -78,7 +78,7 @@ func TestDryRunIntegration(t *testing.T) {
 
 		vuln := &models.DependencyVuln{}
 		vuln.ID = uuid.New()
-		err := dr.UpdateIssue(context.Background(), dryRunTestAsset(), "v1", vuln, nil)
+		err := dr.UpdateIssue(context.Background(), models.Org{}, models.Project{}, dryRunTestAsset(), "v1", vuln, nil)
 		assert.NoError(t, err)
 	})
 

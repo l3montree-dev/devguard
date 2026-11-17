@@ -834,6 +834,7 @@ func getMostRecentJustifications(vulns []models.DependencyVuln) (*string, *dtos.
 
 	// loop over all vulns and update the 2 latest events variables by using time.Before() if justifications are present
 	for _, vuln := range vulns {
+		// a later artifact link change must not hide the justification of the triage decision
 		lastEventForVuln := vuln.Events[len(vuln.Events)-1]
 
 		// no justification for this event -> we can skip this one
@@ -960,7 +961,7 @@ func generateTrackingObject(ctx context.Context, vulns []models.DependencyVuln, 
 	tracking := gocsaf.Tracking{}
 
 	allEvents := make([]vulnEventWithVuln, 0)
-	validEventTypes := []dtos.VulnEventType{dtos.EventTypeDetected, dtos.EventTypeFixed, dtos.EventTypeFalsePositive, dtos.EventTypeAccepted, dtos.EventTypeReopened}
+	validEventTypes := []dtos.VulnEventType{dtos.EventTypeDetected, dtos.EventTypeFixed, dtos.EventTypeFalsePositive, dtos.EventTypeAccepted, dtos.EventTypeReopened, dtos.EventTypeDetectedInArtifact, dtos.EventTypeFixedInArtifact}
 	for _, vuln := range vulns {
 		for _, event := range vuln.Events {
 			// also filter all events which are not relevant for state lifecycle of the vulnerability
@@ -1124,6 +1125,10 @@ func generateSummaryForEvent(eventType dtos.VulnEventType, amountOfEvents int, c
 		return fmt.Sprintf("Accepted %d %s in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
 	case dtos.EventTypeFalsePositive:
 		return fmt.Sprintf("Marked %d %s as false positive in package %s (%s: %s)", amountOfEvents, dynamicPathString, componentPurl, dynamicArtifactString, artifactNameString)
+	case dtos.EventTypeDetectedInArtifact:
+		return "Found in new product"
+	case dtos.EventTypeFixedInArtifact:
+		return "No longer found in product"
 	}
 	return ""
 }

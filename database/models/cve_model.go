@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/dtos"
@@ -36,7 +37,6 @@ type CVE struct {
 	CVE                   string              `json:"cve" gorm:"type:text;"`
 	DatePublished         time.Time           `json:"datePublished" cve:"datePublished"`
 	DateLastModified      time.Time           `json:"dateLastModified" cve:"dateLastModified"`
-	Weaknesses            []Weakness          `json:"weaknesses" gorm:"foreignKey:CVEID;references:CVE;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
 	Description           string              `json:"description" gorm:"type:text;" cve:"description"`
 	CVSS                  float32             `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
 	References            string              `json:"references" gorm:"type:text;" cve:"references"`
@@ -66,15 +66,6 @@ type Weakness struct {
 
 func (w Weakness) TableName() string {
 	return "weaknesses"
-}
-
-func (w Weakness) ToCELMap() map[string]any {
-	return map[string]any{
-		"source": w.Source,
-		"type":   w.Type,
-		"cve":    w.CVEID,
-		"cwe":    w.CWEID,
-	}
 }
 
 func (cve CVE) ToCELMap() map[string]any {
@@ -120,11 +111,16 @@ func (cve CVE) ToCELMap() map[string]any {
 		}
 	}
 
-	weaknesses := make([]any, len(cve.Weaknesses))
-	for i, w := range cve.Weaknesses {
-		weaknesses[i] = w.ToCELMap()
+	// exposed as a list so rules can match a weakness via: "CWE-79" in vuln.cve.cwes
+	cwes := []any{}
+	if cve.CWEs != nil {
+		for _, cwe := range strings.Split(*cve.CWEs, ",") {
+			if cwe = strings.TrimSpace(cwe); cwe != "" {
+				cwes = append(cwes, cwe)
+			}
+		}
 	}
-	m["weaknesses"] = weaknesses
+	m["cwes"] = cwes
 
 	exploits := make([]any, len(cve.Exploits))
 	for i, e := range cve.Exploits {

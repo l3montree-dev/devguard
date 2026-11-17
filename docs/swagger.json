@@ -11996,6 +11996,9 @@
             },
             "dtos.VulnEvent": {
                 "properties": {
+                    "artifactId": {
+                        "type": "string"
+                    },
                     "createdAt": {
                         "type": "string"
                     },
@@ -12046,6 +12049,7 @@
                     }
                 },
                 "required": [
+                    "artifactId",
                     "createdAt",
                     "createdByVexRule",
                     "id",
@@ -12083,6 +12087,8 @@
                     "attachedComplianceComponent",
                     "removedComplianceComponent",
                     "detected",
+                    "detectedInArtifact",
+                    "fixedInArtifact",
                     "rawRiskAssessmentUpdated"
                 ],
                 "type": "string",
@@ -12103,6 +12109,8 @@
                     "EventTypeAttachedComplianceComponent",
                     "EventTypeRemovedComplianceComponent",
                     "EventTypeDetected",
+                    "EventTypeDetectedInArtifact",
+                    "EventTypeFixedInArtifact",
                     "EventTypeRawRiskAssessmentUpdated"
                 ]
             },
@@ -12549,19 +12557,9 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastHistoryUpdate": {
-                        "type": "string"
-                    },
                     "licenseRisks": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
-                    "riskHistories": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory"
                         },
                         "type": "array",
                         "uniqueItems": false
@@ -12577,207 +12575,8 @@
                     "createdAt",
                     "dependencyVulns",
                     "id",
-                    "lastHistoryUpdate",
                     "licenseRisks",
-                    "riskHistories",
                     "vulnAssetId"
-                ],
-                "type": "object"
-            },
-            "github_com_l3montree-dev_devguard_database_models.ArtifactRiskHistory": {
-                "properties": {
-                    "artifactId": {
-                        "type": "string"
-                    },
-                    "artifactName": {
-                        "description": "not stored in this table, filled by joining artifacts and asset_versions",
-                        "type": "string"
-                    },
-                    "assetId": {
-                        "type": "string"
-                    },
-                    "assetVersionName": {
-                        "type": "string"
-                    },
-                    "averageClosedRisk": {
-                        "type": "number"
-                    },
-                    "averageOpenRisk": {
-                        "type": "number"
-                    },
-                    "critical": {
-                        "type": "integer"
-                    },
-                    "criticalCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlCritical": {
-                        "type": "integer"
-                    },
-                    "cvePurlCriticalCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableCritical": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableCriticalCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableHigh": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableHighCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableLow": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableLowCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableMedium": {
-                        "type": "integer"
-                    },
-                    "cvePurlFixableMediumCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlHigh": {
-                        "type": "integer"
-                    },
-                    "cvePurlHighCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlLow": {
-                        "type": "integer"
-                    },
-                    "cvePurlLowCvss": {
-                        "type": "integer"
-                    },
-                    "cvePurlMedium": {
-                        "type": "integer"
-                    },
-                    "cvePurlMediumCvss": {
-                        "type": "integer"
-                    },
-                    "day": {
-                        "description": "on the day 2024-08-12 the asset had a sumRisk of 25.",
-                        "type": "string"
-                    },
-                    "fixableCritical": {
-                        "type": "integer"
-                    },
-                    "fixableCriticalCvss": {
-                        "type": "integer"
-                    },
-                    "fixableHigh": {
-                        "type": "integer"
-                    },
-                    "fixableHighCvss": {
-                        "type": "integer"
-                    },
-                    "fixableLow": {
-                        "type": "integer"
-                    },
-                    "fixableLowCvss": {
-                        "type": "integer"
-                    },
-                    "fixableMedium": {
-                        "type": "integer"
-                    },
-                    "fixableMediumCvss": {
-                        "type": "integer"
-                    },
-                    "fixedDependencyVulns": {
-                        "type": "integer"
-                    },
-                    "high": {
-                        "type": "integer"
-                    },
-                    "highCvss": {
-                        "type": "integer"
-                    },
-                    "low": {
-                        "type": "integer"
-                    },
-                    "lowCvss": {
-                        "type": "integer"
-                    },
-                    "maxClosedRisk": {
-                        "type": "number"
-                    },
-                    "maxOpenRisk": {
-                        "type": "number"
-                    },
-                    "medium": {
-                        "type": "integer"
-                    },
-                    "mediumCvss": {
-                        "type": "integer"
-                    },
-                    "minClosedRisk": {
-                        "type": "number"
-                    },
-                    "minOpenRisk": {
-                        "type": "number"
-                    },
-                    "openDependencyVulns": {
-                        "type": "integer"
-                    },
-                    "sumClosedRisk": {
-                        "type": "number"
-                    },
-                    "sumOpenRisk": {
-                        "type": "number"
-                    }
-                },
-                "required": [
-                    "artifactId",
-                    "artifactName",
-                    "assetId",
-                    "assetVersionName",
-                    "averageClosedRisk",
-                    "averageOpenRisk",
-                    "critical",
-                    "criticalCvss",
-                    "cvePurlCritical",
-                    "cvePurlCriticalCvss",
-                    "cvePurlFixableCritical",
-                    "cvePurlFixableCriticalCvss",
-                    "cvePurlFixableHigh",
-                    "cvePurlFixableHighCvss",
-                    "cvePurlFixableLow",
-                    "cvePurlFixableLowCvss",
-                    "cvePurlFixableMedium",
-                    "cvePurlFixableMediumCvss",
-                    "cvePurlHigh",
-                    "cvePurlHighCvss",
-                    "cvePurlLow",
-                    "cvePurlLowCvss",
-                    "cvePurlMedium",
-                    "cvePurlMediumCvss",
-                    "day",
-                    "fixableCritical",
-                    "fixableCriticalCvss",
-                    "fixableHigh",
-                    "fixableHighCvss",
-                    "fixableLow",
-                    "fixableLowCvss",
-                    "fixableMedium",
-                    "fixableMediumCvss",
-                    "fixedDependencyVulns",
-                    "high",
-                    "highCvss",
-                    "low",
-                    "lowCvss",
-                    "maxClosedRisk",
-                    "maxOpenRisk",
-                    "medium",
-                    "mediumCvss",
-                    "minClosedRisk",
-                    "minOpenRisk",
-                    "openDependencyVulns",
-                    "sumClosedRisk",
-                    "sumOpenRisk"
                 ],
                 "type": "object"
             },
@@ -13183,13 +12982,6 @@
                     "vector": {
                         "type": "string"
                     },
-                    "weaknesses": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Weakness"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
                     "withdrawn": {
                         "type": "string"
                     }
@@ -13216,7 +13008,6 @@
                     "relationships",
                     "risk",
                     "vector",
-                    "weaknesses",
                     "withdrawn"
                 ],
                 "type": "object"
@@ -14273,6 +14064,9 @@
             },
             "github_com_l3montree-dev_devguard_database_models.VulnEvent": {
                 "properties": {
+                    "artifactId": {
+                        "type": "string"
+                    },
                     "assetSignature": {
                         "description": "set instead of DependencyVulnID for a group event applying to every\nDependencyVuln sharing this AssetSignature.",
                         "type": "integer"
@@ -14327,6 +14121,7 @@
                     }
                 },
                 "required": [
+                    "artifactId",
                     "assetSignature",
                     "compliancePostureId",
                     "createdAt",
@@ -14344,29 +14139,6 @@
                     "userId",
                     "vexRule",
                     "vexRuleId"
-                ],
-                "type": "object"
-            },
-            "github_com_l3montree-dev_devguard_database_models.Weakness": {
-                "properties": {
-                    "cve": {
-                        "type": "string"
-                    },
-                    "cwe": {
-                        "type": "string"
-                    },
-                    "source": {
-                        "type": "string"
-                    },
-                    "type": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "cve",
-                    "cwe",
-                    "source",
-                    "type"
                 ],
                 "type": "object"
             },
@@ -14872,26 +14644,10 @@
                     1000000,
                     1000000000,
                     60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
                 "x-enum-varnames": [
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
                     "minDuration",
                     "maxDuration",
                     "Nanosecond",
@@ -28260,6 +28016,69 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/recommendations": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get crowdsourced VEX recommendations for all vulns of an asset",
+                "tags": [
+                    "CrowdsourcedVexing"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json/": {
             "get": {
                 "parameters": [
@@ -32212,147 +32031,6 @@
                 "summary": "Get release SBOM as XML",
                 "tags": [
                     "Releases"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/average-fixing-time/": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Release ID",
-                        "in": "path",
-                        "name": "releaseID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/dtos.RemediationTimeAverages"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get average remediation times for a release",
-                "tags": [
-                    "Statistics"
-                ]
-            }
-        },
-        "/organizations/{organization}/projects/{projectSlug}/releases/{releaseID}/stats/risk-history/": {
-            "get": {
-                "parameters": [
-                    {
-                        "description": "Organization slug",
-                        "in": "path",
-                        "name": "organization",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Project slug",
-                        "in": "path",
-                        "name": "projectSlug",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Release ID",
-                        "in": "path",
-                        "name": "releaseID",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Start date (YYYY-MM-DD)",
-                        "in": "query",
-                        "name": "start",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "End date (YYYY-MM-DD)",
-                        "in": "query",
-                        "name": "end",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "items": {
-                                        "$ref": "#/components/schemas/dtos.RiskHistory"
-                                    },
-                                    "type": "array"
-                                }
-                            }
-                        },
-                        "description": "OK"
-                    }
-                },
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "PATAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "summary": "Get risk history for a release",
-                "tags": [
-                    "Statistics"
                 ]
             }
         },
