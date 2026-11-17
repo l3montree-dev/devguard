@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,12 +19,16 @@ import (
 
 type scopeLevel int
 
+const dataTransferVersion = 1
+
 const (
 	orgLevel scopeLevel = iota // fully exported, including everything below them
 	projectLevel
 	assetLevel
 	parentOrgLevel // only the row itself, referenced upwards by a scoped project or asset
 	parentProjectLevel
+	artifactLevel // derived from the scoped assets, for tables without a direct scope column (e.g. pivot tables)
+	externalUserLevel
 )
 
 // resolved ids for every scope level
@@ -35,20 +38,32 @@ type exportScope struct {
 	assetIDs         []string
 	parentOrgIDs     []string
 	parentProjectIDs []string
+	artifactIDs      []string
+	externalUserIDs  []string
 }
 
-func (scope exportScope) idsFor(level scopeLevel) []string {
+// ids of one scope level together with the postgres array type they are cast to
+type scopeIDs struct {
+	ids       []string
+	arrayType string
+}
+
+func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 	switch level {
 	case orgLevel:
-		return scope.orgIDs
+		return scopeIDs{ids: scope.orgIDs, arrayType: "uuid[]"}
 	case projectLevel:
-		return scope.projectIDs
+		return scopeIDs{ids: scope.projectIDs, arrayType: "uuid[]"}
 	case assetLevel:
-		return scope.assetIDs
+		return scopeIDs{ids: scope.assetIDs, arrayType: "uuid[]"}
 	case parentOrgLevel:
-		return scope.parentOrgIDs
+		return scopeIDs{ids: scope.parentOrgIDs, arrayType: "uuid[]"}
 	case parentProjectLevel:
-		return scope.parentProjectIDs
+		return scopeIDs{ids: scope.parentProjectIDs, arrayType: "uuid[]"}
+	case artifactLevel:
+		return scopeIDs{ids: scope.artifactIDs, arrayType: "uuid[]"}
+	case externalUserLevel:
+		return scopeIDs{ids: scope.externalUserIDs, arrayType: "text[]"} // external user ids are provider ids, not uuids
 	default:
 		panic(fmt.Sprintf("unknown scope level %d", level))
 	}
@@ -74,17 +89,19 @@ const (
 	projectsTableID = "projects"
 	assetsTableID   = "assets"
 
-	orgFKColumn     = "org_id"
-	projectFKColumn = "project_id"
-	assetFKColumn   = "asset_id"
+	orgFKColumn      = "org_id"
+	projectFKColumn  = "project_id"
+	assetFKColumn    = "asset_id"
+	artifactFKColumn = "artifact_id"
 )
 
 const concurrentDBWorkers = 6
 
 var (
-	orgScope     = scopeFilter{column: orgFKColumn, level: orgLevel}
-	projectScope = scopeFilter{column: projectFKColumn, level: projectLevel}
-	assetScope   = scopeFilter{column: assetFKColumn, level: assetLevel}
+	orgScope      = scopeFilter{column: orgFKColumn, level: orgLevel}
+	projectScope  = scopeFilter{column: projectFKColumn, level: projectLevel}
+	assetScope    = scopeFilter{column: assetFKColumn, level: assetLevel}
+	artifactScope = scopeFilter{column: artifactFKColumn, level: artifactLevel}
 )
 
 // all tables with a simple syntax
@@ -93,7 +110,8 @@ var tablesToSync []tableProperties = []tableProperties{
 	{tableID: orgTableID, filters: []scopeFilter{{column: "id", level: orgLevel}, {column: "id", level: parentOrgLevel}}},
 	{tableID: projectsTableID, filters: []scopeFilter{{column: "id", level: projectLevel}, {column: "id", level: parentProjectLevel}}},
 	{tableID: "compliance_postures", filters: []scopeFilter{orgScope, projectScope, assetScope}},
-	// external user org pivot table
+	{tableID: "external_users", filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
+	{tableID: "external_user_orgs", filters: []scopeFilter{orgScope}},
 
 	// project level
 	//project enabled policies (pivot table)
@@ -115,8 +133,8 @@ var tablesToSync []tableProperties = []tableProperties{
 	{tableID: "release_items", filters: []scopeFilter{assetScope}},
 	{tableID: "attestations", filters: []scopeFilter{assetScope}},
 	{tableID: "sboms", filters: []scopeFilter{assetScope}},
-	// artifact dep vulns pivot table
-	// artifact license risks pivot table
+	{tableID: "artifact_dependency_vulns", filters: []scopeFilter{artifactScope}},
+	{tableID: "artifact_license_risks", filters: []scopeFilter{artifactScope}},
 
 	// reminder load SBOM merkle data + vuln_events
 }
@@ -142,7 +160,6 @@ func checkExportOptions(options dtos.DataTransferExportOptions) error {
 }
 
 func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions) error {
-	slog.Info("starting data transfer export process...")
 	start := time.Now()
 
 	// validate export options
@@ -156,6 +173,8 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("could not create file transfer folder: %w", err)
 	}
 
+	slog.Info("starting data transfer export process...", "job ID", jobID.String())
+
 	// initiate read only and read uncommitted transaction to use as snapshot for the export
 	snapshotTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
@@ -164,6 +183,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	if err != nil {
 		return fmt.Errorf("could not start export transaction: %w", err)
 	}
+	defer snapshotTx.Commit(ctx) // ends the transaction before returning
 
 	var snapshotID string // used as reference for other transactions
 	err = snapshotTx.QueryRow(ctx, `SELECT pg_export_snapshot();`).Scan(&snapshotID)
@@ -176,48 +196,39 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return err
 	}
 
-	jobs := make(chan queryJob, 50) // small number of jobs can all be queued at once
-	output := make(chan output, 5)
-
+	// concurrent data structure setup
+	jobs := make(chan queryJob, len(tablesToSync)) // small number of jobs, all can be queued at once
 	group, errCtx := errgroup.WithContext(ctx)
-	outputDrainWG := &sync.WaitGroup{}
+
+	// start the db query worker pool
 	group.SetLimit(concurrentDBWorkers) // cap the number of concurrent db reads
-	for group.TryGo(func() error { return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs, output) }) {
+	for group.TryGo(func() error {
+		return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs)
+	}) {
 	}
 	go func() {
-		sql, args, err := sqlFromTableProperties(tablesToSync[0], scope)
-		if err != nil {
-			slog.Error("could not build export query", "err", err)
-			close(jobs)
-			return
-		}
+		for _, table := range tablesToSync {
+			sql, args, err := sqlFromTableProperties(table, scope)
+			if err != nil {
+				slog.Error("could not build export query", "err", err)
+				close(jobs)
+				return
+			}
 
-		jobs <- queryJob{tableID: tablesToSync[0].tableID, sql: sql, args: args}
+			jobs <- queryJob{tableID: table.tableID, sql: sql, args: args}
+		}
 		close(jobs)
 	}()
-
-	outputDrainWG.Go(func() {
-		for result := range output {
-			slog.Info("received query data", "table", result.tableID, "count", len(result.rows))
-		}
-	})
 
 	err = group.Wait()
 	if err != nil {
 		return fmt.Errorf("encountered error during export, aborting: %w", err)
 	}
-	close(output)
 
-	// wait for output to drain
-	outputDrainWG.Wait()
+	slog.Info("finished writing file data", "time", time.Since(start))
 
-	slog.Info("finished export", "time", time.Since(start))
+	slog.Info("finished export", "job ID", jobID.String(), "time", time.Since(start))
 	return nil
-}
-
-type output struct {
-	tableID string
-	rows    [][]byte // one json object per row
 }
 
 type queryJob struct {
@@ -226,11 +237,12 @@ type queryJob struct {
 	args    []any
 }
 
-func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, baseFolder string, snapshotID string, jobs chan queryJob, outputChan chan output) error {
+func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, baseFolder string, snapshotID string, jobs chan queryJob) error {
 	workerTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return fmt.Errorf("could not start worker tx: %w", err)
 	}
+	defer workerTx.Rollback(ctx)
 
 	_, err = workerTx.Exec(ctx, fmt.Sprintf("SET TRANSACTION SNAPSHOT '%s';", snapshotID))
 	if err != nil {
@@ -246,13 +258,12 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 		}
 		defer rows.Close()
 
-		tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".json"))
+		tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".jsonl"))
 		if err != nil {
 			return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
 		}
 		defer tableFd.Close()
 
-		var tableRows [][]byte
 		for rows.Next() {
 			var row []byte
 			if err := rows.Scan(&row); err != nil {
@@ -263,18 +274,17 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 			if _, err := tableFd.Write(append(row, '\n')); err != nil {
 				return fmt.Errorf("could not write row of %s: %w", job.tableID, err)
 			}
-			tableRows = append(tableRows, row)
 		}
 
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("error when reading rows: %w", err)
 		}
+		slog.Info("successfully queried table data", "table", job.tableID, "rows count", rows.CommandTag().RowsAffected())
 		rows.Close()
-		slog.Info("successfully queried table data", "table", job.tableID, "rows count", len(tableRows))
-		outputChan <- output{tableID: job.tableID, rows: tableRows}
+		tableFd.Close()
 	}
 
-	slog.Info("worker finished")
+	slog.Info("db worker finished")
 	return nil
 }
 
@@ -288,8 +298,9 @@ func sqlFromTableProperties(properties tableProperties, scope exportScope) (stri
 	conditions := make([]string, 0, len(properties.filters))
 	args := make([]any, 0, len(properties.filters))
 	for _, filter := range properties.filters {
-		args = append(args, scope.idsFor(filter.level))
-		conditions = append(conditions, fmt.Sprintf("t.%s = ANY($%d::uuid[])", pgx.Identifier{filter.column}.Sanitize(), len(args)))
+		scopeIDs := scope.idsFor(filter.level)
+		args = append(args, scopeIDs.ids)
+		conditions = append(conditions, fmt.Sprintf("t.%s = ANY($%d::%s)", pgx.Identifier{filter.column}.Sanitize(), len(args), scopeIDs.arrayType))
 	}
 	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{properties.tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
 }
@@ -311,6 +322,12 @@ SELECT parent_id FROM projects WHERE id = ANY($2::uuid[]) AND parent_id IS NOT N
 
 // lastly we get all referenced orgs to ensure FK-relations
 const resolveParentOrgIDsSQL = `SELECT DISTINCT organization_id FROM projects WHERE id = ANY($1::uuid[]) OR id = ANY($2::uuid[])`
+
+// artifacts of the scoped assets, used by the artifact pivot tables
+const resolveArtifactIDsSQL = `SELECT id FROM artifacts WHERE asset_id = ANY($1::uuid[])`
+
+// external users which are members of a fully scoped org
+const resolveExternalUserIDsSQL = `SELECT DISTINCT external_user_id FROM external_user_orgs WHERE org_id = ANY($1::uuid[])`
 
 // resolve the requested scopes into lists of ids for all levels
 func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntities) (exportScope, error) {
@@ -343,6 +360,20 @@ func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntitie
 		return scope, fmt.Errorf("could not resolve parent org ids: %w", err)
 	}
 	scope.parentOrgIDs = parentOrgIDs
+
+	rows, _ = tx.Query(ctx, resolveArtifactIDsSQL, scope.assetIDs)
+	artifactIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve artifact ids: %w", err)
+	}
+	scope.artifactIDs = artifactIDs
+
+	rows, _ = tx.Query(ctx, resolveExternalUserIDsSQL, scope.orgIDs)
+	externalUserIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve external user ids: %w", err)
+	}
+	scope.externalUserIDs = externalUserIDs
 
 	return scope, nil
 }

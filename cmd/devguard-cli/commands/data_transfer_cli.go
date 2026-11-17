@@ -31,7 +31,7 @@ func newDTExportCommand() *cobra.Command {
 			shared.LoadConfig() // nolint
 			options := dtos.DataTransferExportOptions{
 				AffectedEntities: dtos.AffectedEntities{
-					Orgs: []string{"361813a7-1255-4764-a7b3-c64946215ef6"},
+					Orgs: []string{"b88da5ab-ce6d-4261-a6c1-63fddbca1503"},
 				},
 			}
 			app := fx.New(
