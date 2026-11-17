@@ -303,7 +303,7 @@ type DependencyVulnRepository interface {
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
-	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
+	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
 	GetVulnsByAssetSignatures(ctx context.Context, tx *gorm.DB, assetSignatures []int64) ([]models.DependencyVuln, error)
 	GetOpenVulnsDistinctBySignatureIn(ctx context.Context, tx *gorm.DB, signatures []int64) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]

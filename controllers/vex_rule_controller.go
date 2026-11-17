@@ -169,7 +169,7 @@ func (c *VEXRuleController) cachedVulns(ctx shared.Context, state dtos.VulnState
 		return vulns, nil
 	}
 
-	vulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx.Request().Context(), nil, asset.ID, state)
+	vulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx.Request().Context(), nil, asset.ID, nil, state)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func (c *VEXRuleController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "failed to create VEX rule").WithInternal(err)
 	}
 
-	representativeVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, tx, asset.ID, lookingForVulnState)
+	representativeVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, tx, asset.ID, nil, lookingForVulnState)
 
 	if err != nil {
 		slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID)

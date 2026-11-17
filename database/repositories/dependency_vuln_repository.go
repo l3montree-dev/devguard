@@ -611,13 +611,18 @@ func (repository *dependencyVulnRepository) ApplyGroupEventsAndSave(ctx context.
 	return assetSignatures, nil
 }
 
-func (repository *dependencyVulnRepository) GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error) {
 	var vulns = []models.DependencyVuln{}
-	if err := repository.Repository.GetDB(ctx, tx).Preload("CVE", func(db *gorm.DB) *gorm.DB {
+	q := repository.Repository.GetDB(ctx, tx).Preload("CVE", func(db *gorm.DB) *gorm.DB {
 		return db.Omit("Description", "References")
 	}).Select("DISTINCT ON (signature) *").
-		Where("asset_id = ? AND state = ?", assetID, state).
-		Order("signature ASC, id ASC").
+		Where("asset_id = ? AND state = ?", assetID, state)
+
+	if assetVersionID != nil {
+		q = q.Where("asset_version_id = ?", assetVersionID)
+	}
+
+	if err := q.Order("signature ASC, id ASC").
 		Find(&vulns).Error; err != nil {
 		return nil, err
 	}

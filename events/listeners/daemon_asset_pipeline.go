@@ -541,7 +541,7 @@ func (runner *DaemonRunner) applyVEXRules(ctx context.Context, asset models.Asse
 	}
 
 	for state, rulesForState := range rulesByState {
-		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, state)
+		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, nil, state)
 		if err != nil {
 			slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID, "state", state)
 			continue
