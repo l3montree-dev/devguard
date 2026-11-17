@@ -22,24 +22,43 @@ type scopeLevel int
 const dataTransferVersion = 1
 
 const (
+	// entities
 	orgLevel scopeLevel = iota // fully exported, including everything below them
 	projectLevel
 	assetLevel
 	parentOrgLevel // only the row itself, referenced upwards by a scoped project or asset
 	parentProjectLevel
+
+	// derived entities
 	artifactLevel // derived from the scoped assets, for tables without a direct scope column (e.g. pivot tables)
+
+	// sets for table data
 	externalUserLevel
+	dependencyVulnLevel
+	firstPartyVulnLevel
+	licenseRiskLevel
+	compliancePostureLevel
+	securityAdvisoryLevel
+	assetSignatureLevel
+	sbomMerkleNodeLevel
 )
 
 // resolved ids for every scope level
 type exportScope struct {
-	orgIDs           []string
-	projectIDs       []string
-	assetIDs         []string
-	parentOrgIDs     []string
-	parentProjectIDs []string
-	artifactIDs      []string
-	externalUserIDs  []string
+	orgIDs               []string
+	projectIDs           []string
+	assetIDs             []string
+	parentOrgIDs         []string
+	parentProjectIDs     []string
+	artifactIDs          []string
+	externalUserIDs      []string
+	dependencyVulnIDs    []string
+	firstPartyVulnIDs    []string
+	licenseRiskIDs       []string
+	compliancePostureIDs []string
+	securityAdvisoryIDs  []string
+	assetSignatures      []string
+	sbomMerkleNodeHashes []string
 }
 
 // ids of one scope level together with the postgres array type they are cast to
@@ -64,6 +83,20 @@ func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 		return scopeIDs{ids: scope.artifactIDs, arrayType: "uuid[]"}
 	case externalUserLevel:
 		return scopeIDs{ids: scope.externalUserIDs, arrayType: "text[]"} // external user ids are provider ids, not uuids
+	case dependencyVulnLevel:
+		return scopeIDs{ids: scope.dependencyVulnIDs, arrayType: "uuid[]"}
+	case firstPartyVulnLevel:
+		return scopeIDs{ids: scope.firstPartyVulnIDs, arrayType: "uuid[]"}
+	case licenseRiskLevel:
+		return scopeIDs{ids: scope.licenseRiskIDs, arrayType: "uuid[]"}
+	case compliancePostureLevel:
+		return scopeIDs{ids: scope.compliancePostureIDs, arrayType: "uuid[]"}
+	case securityAdvisoryLevel:
+		return scopeIDs{ids: scope.securityAdvisoryIDs, arrayType: "uuid[]"}
+	case assetSignatureLevel:
+		return scopeIDs{ids: scope.assetSignatures, arrayType: "bigint[]"}
+	case sbomMerkleNodeLevel:
+		return scopeIDs{ids: scope.sbomMerkleNodeHashes, arrayType: "uuid[]"}
 	default:
 		panic(fmt.Sprintf("unknown scope level %d", level))
 	}
@@ -114,7 +147,6 @@ var tablesToSync []tableProperties = []tableProperties{
 	{tableID: "external_user_orgs", filters: []scopeFilter{orgScope}},
 
 	// project level
-	//project enabled policies (pivot table)
 	{tableID: assetsTableID, filters: []scopeFilter{{column: "id", level: assetLevel}}},
 
 	// asset level
@@ -136,7 +168,19 @@ var tablesToSync []tableProperties = []tableProperties{
 	{tableID: "artifact_dependency_vulns", filters: []scopeFilter{artifactScope}},
 	{tableID: "artifact_license_risks", filters: []scopeFilter{artifactScope}},
 
-	// reminder load SBOM merkle data + vuln_events
+	// package level
+	{tableID: "sbom_merkle_nodes", filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
+	{tableID: "sbom_merkle_edges", filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
+
+	// vuln level
+	{tableID: "vuln_events", filters: []scopeFilter{
+		{column: "dependency_vuln_id", level: dependencyVulnLevel},
+		{column: "first_party_vuln_id", level: firstPartyVulnLevel},
+		{column: "license_risk_id", level: licenseRiskLevel},
+		{column: "compliance_posture_id", level: compliancePostureLevel},
+		{column: "security_advisory_id", level: securityAdvisoryLevel},
+		{column: "asset_signature", level: assetSignatureLevel}, // group events of all dependency vulns sharing the signature
+	}},
 }
 
 type DataTransferService struct {
@@ -201,24 +245,24 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	group, errCtx := errgroup.WithContext(ctx)
 
 	// start the db query worker pool
-	group.SetLimit(concurrentDBWorkers) // cap the number of concurrent db reads
+	group.SetLimit(concurrentDBWorkers + 1) // cap the number of concurrent db reads (1 for the producer routine)
 	for group.TryGo(func() error {
 		return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs)
 	}) {
 	}
-	go func() {
+
+	group.Go(func() error {
+		defer close(jobs)
 		for _, table := range tablesToSync {
 			sql, args, err := sqlFromTableProperties(table, scope)
 			if err != nil {
-				slog.Error("could not build export query", "err", err)
-				close(jobs)
-				return
+				return fmt.Errorf("could not build export query: %w", err)
 			}
 
 			jobs <- queryJob{tableID: table.tableID, sql: sql, args: args}
 		}
-		close(jobs)
-	}()
+		return nil
+	})
 
 	err = group.Wait()
 	if err != nil {
@@ -329,6 +373,25 @@ const resolveArtifactIDsSQL = `SELECT id FROM artifacts WHERE asset_id = ANY($1:
 // external users which are members of a fully scoped org
 const resolveExternalUserIDsSQL = `SELECT DISTINCT external_user_id FROM external_user_orgs WHERE org_id = ANY($1::uuid[])`
 
+// vulns of the scoped assets, used by the vuln events
+const resolveDependencyVulnIDsSQL = `SELECT id FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
+const resolveFirstPartyVulnIDsSQL = `SELECT id FROM first_party_vulnerabilities WHERE asset_id = ANY($1::uuid[])`
+const resolveLicenseRiskIDsSQL = `SELECT id FROM license_risks WHERE asset_id = ANY($1::uuid[])`
+const resolveSecurityAdvisoryIDsSQL = `SELECT id FROM advisories WHERE asset_id = ANY($1::uuid[])`
+
+// same filters as the compliance_postures table export
+const resolveCompliancePostureIDsSQL = `SELECT id FROM compliance_postures WHERE org_id = ANY($1::uuid[]) OR project_id = ANY($2::uuid[]) OR asset_id = ANY($3::uuid[])`
+
+// the asset id is part of the signature hash, so signatures never span multiple assets
+const resolveAssetSignaturesSQL = `SELECT DISTINCT asset_signature::text FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
+
+// recursively walk the merkle graph down from the roots of the scoped sboms
+const resolveSBOMMerkleNodeHashesSQL = `WITH RECURSIVE reachable AS (
+	SELECT root_subtree_hash AS node_hash FROM sboms WHERE asset_id = ANY($1::uuid[])
+	UNION
+	SELECT e.direct_dependency_subtree_hash FROM sbom_merkle_edges e JOIN reachable r ON e.subtree_hash = r.node_hash
+) SELECT node_hash FROM reachable`
+
 // resolve the requested scopes into lists of ids for all levels
 func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntities) (exportScope, error) {
 	scope := exportScope{orgIDs: requested.Orgs}
@@ -374,6 +437,55 @@ func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntitie
 		return scope, fmt.Errorf("could not resolve external user ids: %w", err)
 	}
 	scope.externalUserIDs = externalUserIDs
+
+	rows, _ = tx.Query(ctx, resolveDependencyVulnIDsSQL, scope.assetIDs)
+	dependencyVulnIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve dependency vuln ids: %w", err)
+	}
+	scope.dependencyVulnIDs = dependencyVulnIDs
+
+	rows, _ = tx.Query(ctx, resolveFirstPartyVulnIDsSQL, scope.assetIDs)
+	firstPartyVulnIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve first party vuln ids: %w", err)
+	}
+	scope.firstPartyVulnIDs = firstPartyVulnIDs
+
+	rows, _ = tx.Query(ctx, resolveLicenseRiskIDsSQL, scope.assetIDs)
+	licenseRiskIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve license risk ids: %w", err)
+	}
+	scope.licenseRiskIDs = licenseRiskIDs
+
+	rows, _ = tx.Query(ctx, resolveCompliancePostureIDsSQL, scope.orgIDs, scope.projectIDs, scope.assetIDs)
+	compliancePostureIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve compliance posture ids: %w", err)
+	}
+	scope.compliancePostureIDs = compliancePostureIDs
+
+	rows, _ = tx.Query(ctx, resolveSecurityAdvisoryIDsSQL, scope.assetIDs)
+	securityAdvisoryIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve security advisory ids: %w", err)
+	}
+	scope.securityAdvisoryIDs = securityAdvisoryIDs
+
+	rows, _ = tx.Query(ctx, resolveAssetSignaturesSQL, scope.assetIDs)
+	assetSignatures, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve asset signatures: %w", err)
+	}
+	scope.assetSignatures = assetSignatures
+
+	rows, _ = tx.Query(ctx, resolveSBOMMerkleNodeHashesSQL, scope.assetIDs)
+	sbomMerkleNodeHashes, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve sbom merkle node hashes: %w", err)
+	}
+	scope.sbomMerkleNodeHashes = sbomMerkleNodeHashes
 
 	return scope, nil
 }
