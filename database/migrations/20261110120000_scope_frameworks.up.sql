@@ -15,6 +15,11 @@ ALTER TABLE public.compliance_controls RENAME COLUMN parent_framework_control_id
 -- postures reference the control by its hash, the values are migrated in go (hash migration)
 ALTER TABLE public.compliance_postures RENAME COLUMN framework_control_id TO control_hash;
 
+ALTER TABLE public.compliance_postures DROP CONSTRAINT IF EXISTS fk_compliance_postures_control_hash;
+
+ALTER TABLE ONLY public.compliance_postures
+    ADD CONSTRAINT fk_compliance_postures_control_hash FOREIGN KEY (control_hash) REFERENCES public.compliance_controls(control_hash) ON DELETE CASCADE NOT VALID;
+
 ALTER INDEX IF EXISTS public.idx_frameworks_controls_parent_framework_control_id RENAME TO idx_compliance_controls_parent_control_id;
 
 CREATE INDEX IF NOT EXISTS idx_compliance_controls_control_id ON public.compliance_controls (control_id);

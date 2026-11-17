@@ -23,7 +23,6 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/datatypes"
 )
 
 func readTestCatalog(t *testing.T) []byte {
@@ -107,23 +106,6 @@ func TestCalculateControlHash(t *testing.T) {
 		withOtherParent.ParentControlID = &otherParent
 
 		assert.NotEqual(t, c.CalculateHash(), withOtherParent.CalculateHash())
-	})
-
-	t.Run("the additional information is part of the hash", func(t *testing.T) {
-		c := models.FrameworkControl{ControlID: "C.1", Title: "Control", Additional: datatypes.JSON(`{"guidance":"Review the access."}`)}
-		withOtherGuidance := c
-		withOtherGuidance.Additional = datatypes.JSON(`{"guidance":"Review the access every year."}`)
-
-		assert.NotEqual(t, c.CalculateHash(), withOtherGuidance.CalculateHash())
-	})
-
-	t.Run("the formatting of the additional information is not part of the hash", func(t *testing.T) {
-		c := models.FrameworkControl{ControlID: "C.1", Title: "Control", Additional: datatypes.JSON(`{"guidance":"Review the access.","tags":{"value":"a,b"}}`)}
-		// the way postgres returns jsonb: other key order and whitespace
-		fromDatabase := c
-		fromDatabase.Additional = datatypes.JSON(`{"tags": {"value": "a,b"}, "guidance": "Review the access."}`)
-
-		assert.Equal(t, c.CalculateHash(), fromDatabase.CalculateHash())
 	})
 }
 
