@@ -204,7 +204,7 @@ func checkExportOptions(options dtos.DataTransferExportOptions) error {
 	return nil
 }
 
-func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions) error {
+func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions) (exitStatus error) {
 	start := time.Now()
 
 	// validate export options
@@ -218,6 +218,15 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("could not create file transfer folder: %w", err)
 	}
 
+	defer func() {
+		if exitStatus != nil {
+			if err := cleanUp(jobDirectoryPath); err != nil {
+				slog.Error("could not clean up after failed export", "err", err)
+			}
+			slog.Info("successfully cleaned up failed export")
+		}
+	}()
+
 	slog.Info("starting data transfer export process...", "job ID", jobID.String())
 
 	// initiate read only and read uncommitted transaction to use as snapshot for the export
@@ -225,6 +234,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
 	})
+
 	if err != nil {
 		return fmt.Errorf("could not start export transaction: %w", err)
 	}
@@ -234,6 +244,26 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	err = snapshotTx.QueryRow(ctx, `SELECT pg_export_snapshot();`).Scan(&snapshotID)
 	if err != nil {
 		return fmt.Errorf("could not retrieve snapshot id: %w", err)
+	}
+
+	// ensure correct export scope
+	if _, err := snapshotTx.Exec(ctx, "SET search_path TO public"); err != nil {
+		return fmt.Errorf("could not set search path for export: %w", err)
+	}
+
+	// check the schema migration version and dirtiness of the database
+	var schemaMigration struct {
+		version string
+		dirty   bool
+	}
+
+	schemaRow := snapshotTx.QueryRow(ctx, "SELECT version, dirty FROM schema_migrations LIMIT 1;")
+	if err := schemaRow.Scan(&schemaMigration.version, &schemaMigration.dirty); err != nil {
+		return fmt.Errorf("could not determine schema migration state: %w", err)
+	}
+
+	if schemaMigration.dirty {
+		return fmt.Errorf("dirty database schema detected, cannot export.")
 	}
 
 	scope, err := resolveScope(ctx, snapshotTx, options.AffectedEntities)
@@ -275,7 +305,12 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 
 	slog.Info("finished writing file data", "time", time.Since(start))
 
-	err = buildMetadataFile(ctx, jobDirectoryPath, scope)
+	var exportTimestamp time.Time
+	if err := snapshotTx.QueryRow(ctx, "SELECT current_timestamp;").Scan(&exportTimestamp); err != nil {
+		return fmt.Errorf("could not extract transaction timestamp: %w", err)
+	}
+
+	err = buildMetadataFile(ctx, jobDirectoryPath, options, schemaMigration.version, exportTimestamp)
 	if err != nil {
 		return fmt.Errorf("could not build metadata file: %w", err)
 	}
@@ -291,19 +326,30 @@ type queryJob struct {
 }
 
 type metadata struct {
-	ExportVersion int         `json:"export_version"`
-	ExportScope   exportScope `json:"export_scope"`
+	ExportVersion         int                   `json:"export_version"`
+	DatabaseSchemaVersion string                `json:"database_schema_version"`
+	ExportTimestamp       time.Time             `json:"export_timestamp"`
+	ExportScope           dtos.AffectedEntities `json:"export_scope"`
 }
 
-func buildMetadataFile(ctx context.Context, jobDirectoryPath string, scope exportScope) error {
+func cleanUp(jobDirectoryPath string) error {
+	err := os.RemoveAll(jobDirectoryPath)
+	if err != nil {
+		return fmt.Errorf("could not remove export job directory")
+	}
+	return nil
+}
+
+func buildMetadataFile(ctx context.Context, jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
 	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, "metadata.json"))
 	if err != nil {
 		return fmt.Errorf("could not create metadata file: %w", err)
 	}
 
 	exportMetadata := metadata{
-		ExportVersion: dataTransferVersion,
-		ExportScope:   scope,
+		ExportVersion:         dataTransferVersion,
+		DatabaseSchemaVersion: databaseSchemaVersion,
+		ExportScope:           exportOptions.AffectedEntities,
 	}
 
 	err = json.NewEncoder(metadataFD).Encode(exportMetadata)

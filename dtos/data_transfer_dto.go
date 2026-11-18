@@ -1,7 +1,9 @@
 package dtos
 
 type AffectedEntities struct {
-	Orgs, Projects, Assets []string
+	Orgs     []string `json:"orgs"`
+	Projects []string `json:"projects"`
+	Assets   []string `json:"assets"`
 }
 
 type DataTransferExportOptions struct {
