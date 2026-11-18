@@ -416,12 +416,17 @@ WITH vulns AS MATERIALIZED (
 		SELECT *, first_value(type) OVER (PARTITION BY dependency_vuln_id, decision_group ORDER BY created_at, id) AS decision
 		FROM grouped
 	) decided
-), changes AS (
-	SELECT *, lag(state) OVER (PARTITION BY dependency_vuln_id ORDER BY created_at, id) AS prev_state
+), collapsed AS (
+	-- events sharing a timestamp would start two intervals at the same valid_from
+	SELECT DISTINCT ON (dependency_vuln_id, created_at) dependency_vuln_id, created_at, state
 	FROM states
+	ORDER BY dependency_vuln_id, created_at, id DESC
+), changes AS (
+	SELECT *, lag(state) OVER (PARTITION BY dependency_vuln_id ORDER BY created_at) AS prev_state
+	FROM collapsed
 ), boundaries AS (
 	SELECT dependency_vuln_id, created_at, state,
-		lead(created_at) OVER (PARTITION BY dependency_vuln_id ORDER BY created_at, id) AS next_change
+		lead(created_at) OVER (PARTITION BY dependency_vuln_id ORDER BY created_at) AS next_change
 	FROM changes
 	WHERE prev_state IS NULL OR state <> prev_state
 )
