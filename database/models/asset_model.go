@@ -55,6 +55,8 @@ type Asset struct {
 	SharesInformation            bool                `json:"shareInformation" gorm:"default:false;not null;"`
 
 	State AssetState `json:"state" gorm:"type:text;default:'active';not null;"`
+
+	Labels []Label `json:"labels" gorm:"many2many:projects_assets_artifacts_labels"`
 }
 
 func (m Asset) TableName() string {

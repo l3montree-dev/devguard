@@ -52,6 +52,7 @@ func NewOrgRouter(
 	patController *controllers.PatController,
 	projectRepository shared.ProjectRepository,
 	assetRepository shared.AssetRepository,
+	labelController *controllers.LabelController,
 ) OrgRouter {
 	/**
 	Organization router
@@ -106,6 +107,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
 	organizationUpdateAccessControlRequired.GET("/pats/", patController.ListByOrg)
+	organizationUpdateAccessControlRequired.GET("/labels/", labelController.ListOnOrgLevel)
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.OrgSave)
@@ -113,6 +115,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
 	organizationUpdateAccessControlRequired.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration)
 	organizationUpdateAccessControlRequired.POST("/pats/", patController.CreateForOrg)
+	organizationUpdateAccessControlRequired.POST("/labels/", labelController.Create)
 
 	organizationUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DeletePolicy)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
@@ -121,11 +124,13 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.OrgDelete)
 	organizationUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByOrg)
+	organizationUpdateAccessControlRequired.DELETE("/labels/:labelID/", labelController.Delete)
 
 	organizationUpdateAccessControlRequired.PATCH("/", orgController.Update)
 	organizationUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.UpdatePolicy)
 	organizationUpdateAccessControlRequired.PUT("/members/:userID/", orgController.ChangeRole)
 	organizationUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.OrgUpdate)
+	organizationUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)
 
 	return OrgRouter{Group: organizationRouter}
 }

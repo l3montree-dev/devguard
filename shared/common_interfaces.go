@@ -1001,3 +1001,17 @@ type InstanceSettings struct {
 	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
 	BearerTokenAuthDisabled bool `json:"bearerTokenAuthDisabled"`
 }
+
+type LabelRepository interface {
+	ListOnOrgLevel(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.Label, error)
+	ListOnProjectLevel(ctx context.Context, tx *gorm.DB, orgID, projectID uuid.UUID) ([]models.Label, error)
+	ListOnAssetLevel(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID uuid.UUID) ([]models.Label, error)
+	Create(ctx context.Context, tx DB, label *models.Label) error
+	Save(ctx context.Context, tx DB, label *models.Label) error
+	Delete(ctx context.Context, tx DB, labelID uuid.UUID) error
+}
+type LabelService interface {
+	ListOnOrgLevel(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.Label, error)
+	ListOnProjectLevel(ctx context.Context, tx DB, orgID, projectID uuid.UUID) ([]dtos.Label, error)
+	ListOnAssetLevel(ctx context.Context, tx DB, orgID, projectID, assetID uuid.UUID) ([]dtos.Label, error)
+}
