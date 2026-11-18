@@ -183,7 +183,7 @@ func (c *SecretController) delete(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Success 200 {array} dtos.SecretDTO
-// @Router /organizations/{organization}/secrets [get]
+// @Router /organizations/{organization}/devguard-secrets [get]
 func (c *SecretController) OrgList(ctx shared.Context) error {
 	return c.list(ctx)
 }
@@ -196,7 +196,7 @@ func (c *SecretController) OrgList(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param body body dtos.SecretCreateRequest true "Request body"
 // @Success 201 {object} dtos.SecretDTO
-// @Router /organizations/{organization}/secrets [post]
+// @Router /organizations/{organization}/devguard-secrets [post]
 func (c *SecretController) OrgCreate(ctx shared.Context) error {
 	return c.create(ctx)
 }
@@ -209,7 +209,7 @@ func (c *SecretController) OrgCreate(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param id path string true "Secret ID"
 // @Success 200
-// @Router /organizations/{organization}/secrets/{id} [delete]
+// @Router /organizations/{organization}/devguard-secrets/{id} [delete]
 func (c *SecretController) OrgDelete(ctx shared.Context) error {
 	return c.delete(ctx)
 }
@@ -222,7 +222,7 @@ func (c *SecretController) OrgDelete(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Success 200 {array} dtos.SecretDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/secrets [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/devguard-secrets [get]
 func (c *SecretController) ProjectList(ctx shared.Context) error {
 	return c.list(ctx)
 }
@@ -236,7 +236,7 @@ func (c *SecretController) ProjectList(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param body body dtos.SecretCreateRequest true "Request body"
 // @Success 201 {object} dtos.SecretDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/secrets [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/devguard-secrets [post]
 func (c *SecretController) ProjectCreate(ctx shared.Context) error {
 	return c.create(ctx)
 }
@@ -250,7 +250,7 @@ func (c *SecretController) ProjectCreate(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param id path string true "Secret ID"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/secrets/{id} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/devguard-secrets/{id} [delete]
 func (c *SecretController) ProjectDelete(ctx shared.Context) error {
 	return c.delete(ctx)
 }
@@ -264,7 +264,7 @@ func (c *SecretController) ProjectDelete(ctx shared.Context) error {
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
 // @Success 200 {array} dtos.SecretDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets [get]
 func (c *SecretController) AssetList(ctx shared.Context) error {
 	return c.list(ctx)
 }
@@ -279,7 +279,7 @@ func (c *SecretController) AssetList(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param body body dtos.SecretCreateRequest true "Request body"
 // @Success 201 {object} dtos.SecretDTO
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets [post]
 func (c *SecretController) AssetCreate(ctx shared.Context) error {
 	return c.create(ctx)
 }
@@ -294,7 +294,7 @@ func (c *SecretController) AssetCreate(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param id path string true "Secret ID"
 // @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/secrets/{id} [delete]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets/{id} [delete]
 func (c *SecretController) AssetDelete(ctx shared.Context) error {
 	return c.delete(ctx)
 }

@@ -73,9 +73,9 @@ func NewAssetRouter(
 
 	assetUpdateAccessControlRequired := assetRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
-	assetUpdateAccessControlRequired.GET("/secrets/", secretController.AssetList)
-	assetUpdateAccessControlRequired.POST("/secrets/", secretController.AssetCreate)
-	assetUpdateAccessControlRequired.DELETE("/secrets/:id/", secretController.AssetDelete)
+	assetUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.AssetList)
+	assetUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.AssetCreate)
+	assetUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.AssetDelete)
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)

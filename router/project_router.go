@@ -94,9 +94,9 @@ func NewProjectRouter(
 
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
-	projectUpdateAccessControlRequired.GET("/secrets/", secretController.ProjectList)
-	projectUpdateAccessControlRequired.POST("/secrets/", secretController.ProjectCreate)
-	projectUpdateAccessControlRequired.DELETE("/secrets/:id/", secretController.ProjectDelete)
+	projectUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.ProjectList)
+	projectUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.ProjectCreate)
+	projectUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.ProjectDelete)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.ProjectSave)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.ProjectTest)
 	projectUpdateAccessControlRequired.POST("/members/", projectController.InviteMembers)
