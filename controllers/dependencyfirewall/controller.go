@@ -405,22 +405,13 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("failed to parse config: %w", err)
 		}
 		for _, config := range parsed.Registries.NpmConfig() {
-			if config.Auth == nil {
-				continue
+			if err := d.resolveAuthForConfig(config.Auth, c, orgID, projectID, assetID); err != nil {
+				return configs, err
 			}
-			if strings.HasPrefix(config.Auth.Token, "$") {
-				name, _ := strings.CutPrefix(config.Auth.Token, "$")
-				config.Auth.Token, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
-				if err != nil {
-					return configs, fmt.Errorf("failed to resolve token: %w", err)
-				}
-			}
-			if strings.HasPrefix(config.Auth.Password, "$") {
-				name, _ := strings.CutPrefix(config.Auth.Password, "$")
-				config.Auth.Password, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
-				if err != nil {
-					return configs, fmt.Errorf("failed to resolve password: %w", err)
-				}
+		}
+		if mavenConfig := parsed.Registries.MavenConfig(); mavenConfig != nil {
+			if err := d.resolveAuthForConfig(mavenConfig.Auth, c, orgID, projectID, assetID); err != nil {
+				return configs, err
 			}
 		}
 
@@ -429,6 +420,28 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	}
 
 	return configs, nil
+}
+
+func (d *DependencyProxyController) resolveAuthForConfig(auth *dtos.RegistryAuth, c shared.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID) error {
+	if auth == nil {
+		return nil
+	}
+	var err error
+	if strings.HasPrefix(auth.Token, "$") {
+		name, _ := strings.CutPrefix(auth.Token, "$")
+		auth.Token, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
+		if err != nil {
+			return fmt.Errorf("failed to resolve token: %w", err)
+		}
+	}
+	if strings.HasPrefix(auth.Password, "$") {
+		name, _ := strings.CutPrefix(auth.Password, "$")
+		auth.Password, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
+		if err != nil {
+			return fmt.Errorf("failed to resolve password: %w", err)
+		}
+	}
+	return nil
 }
 
 func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
