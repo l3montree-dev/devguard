@@ -99,10 +99,13 @@ func newSecretScopedController(t *testing.T) *DependencyProxyController {
 	proxyService.EXPECT().GetModelBySecret(mock.Anything, uuid.MustParse(testProxySecret)).Return("asset", assetID, nil)
 	assetRepository := mocks.NewAssetRepository(t)
 	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{}, nil)
+	projectRepository := mocks.NewProjectRepository(t)
+	projectRepository.EXPECT().Read(mock.Anything, mock.Anything, mock.Anything).Return(models.Project{}, nil)
 
 	return &DependencyProxyController{
 		dependencyProxyService: proxyService,
 		assetRepository:        assetRepository,
+		projectRepository:      projectRepository,
 		caches:                 newSecretCaches(t.TempDir(), 10),
 	}
 }
@@ -290,6 +293,8 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 			proxyService.EXPECT().GetModelBySecret(mock.Anything, secret).Return("asset", assetID, nil)
 			assetRepository := mocks.NewAssetRepository(t)
 			assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ConfigFiles: databasetypes.JSONB{"dependency-proxy-configs": "rules:\n  - name: min-release-age\n    action: deny\n    expr: now() - timestamp(pkg.releasedAt) < duration(\"60h\")\n"}}, nil)
+			projectRepository := mocks.NewProjectRepository(t)
+			projectRepository.EXPECT().Read(mock.Anything, mock.Anything, mock.Anything).Return(models.Project{}, nil)
 			checker := mocks.NewMaliciousPackageChecker(t)
 			checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, nil)
 
@@ -297,6 +302,7 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 				DependencyProxyController: &DependencyProxyController{
 					dependencyProxyService: proxyService,
 					assetRepository:        assetRepository,
+					projectRepository:      projectRepository,
 					maliciousChecker:       checker,
 					caches:                 newSecretCaches(t.TempDir(), 10),
 					client:                 &http.Client{Transport: pypiFileTransport{uploadTime: tc.uploadTime}},

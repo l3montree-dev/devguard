@@ -37,15 +37,22 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 
 	secret := uuid.New()
 	assetID := uuid.New()
+	projectID := uuid.New()
 
 	secretService := mocks.NewDependencyProxySecretService(t)
 	secretService.EXPECT().GetModelBySecret(mock.Anything, secret).Return("asset", assetID, nil).Maybe()
 
 	assetRepository := mocks.NewAssetRepository(t)
 	assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{
+		ProjectID: projectID,
 		ConfigFiles: databasetypes.JSONB{
 			"dependency-proxy-configs": fmt.Sprintf("rules:\n  - name: min-release-age\n    action: deny\n    expr: now() - timestamp(pkg.releasedAt) < duration(\"%dh\")\n", minReleaseAge),
 		},
+	}, nil).Maybe()
+
+	projectRepository := mocks.NewProjectRepository(t)
+	projectRepository.EXPECT().Read(mock.Anything, mock.Anything, projectID).Return(models.Project{
+		OrganizationID: uuid.New(),
 	}, nil).Maybe()
 
 	maliciousChecker := mocks.NewMaliciousPackageChecker(t)
@@ -55,6 +62,7 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 	return &DependencyProxyController{
 		dependencyProxyService: secretService,
 		assetRepository:        assetRepository,
+		projectRepository:      projectRepository,
 		maliciousChecker:       maliciousChecker,
 		caches:                 newSecretCaches(t.TempDir(), 10),
 		client:                 http.DefaultClient,

@@ -9,13 +9,13 @@ import (
 
 func TestNpmRegistryConfigsForPackage(t *testing.T) {
 	configs := dtos.NpmRegistryConfigs{
-		{URLRegistryConfig: dtos.URLRegistryConfig{URL: "https://npm.firma.de"}, Scopes: []string{"@firma"}, Token: "secret"},
+		{URLRegistryConfig: dtos.URLRegistryConfig{URL: "https://npm.firma.de"}, Scopes: []string{"@firma"}, Auth: &dtos.RegistryAuth{Type: "token", Token: "secret"}},
 		{URLRegistryConfig: dtos.URLRegistryConfig{URL: "https://fallback.de"}},
 	}
 
 	t.Run("uses the registry of a matching scope", func(t *testing.T) {
 		config := configs.ForPackage("@firma/utils")
-		if config.URL != "https://npm.firma.de" || config.Token != "secret" {
+		if config.URL != "https://npm.firma.de" || config.Auth.Token != "secret" {
 			t.Fatalf("expected firma registry with token, got %+v", config)
 		}
 	})
@@ -46,8 +46,8 @@ func TestDependencyProxyConfigNpmRegistries(t *testing.T) {
 		}
 	})
 
-	t.Run("accepts a list of registries", func(t *testing.T) {
-		content := "registries:\n  npm:\n    - url: https://npm.firma.de\n      scopes: [\"@firma\"]\n      token: secret\n    - url: https://registry.npmjs.org\n"
+	t.Run("accepts a list of registries with token and login auth", func(t *testing.T) {
+		content := "registries:\n  npm:\n    - url: https://npm.firma.de\n      scopes: [\"@firma\"]\n      auth:\n        type: token\n        token: $npm_token\n    - url: https://nexus.firma.de\n      auth:\n        type: login\n        username: ci-user\n        password: $nexus_password\n"
 		if err := dtos.ValidateDependencyProxyConfigFile([]byte(content)); err != nil {
 			t.Fatalf("expected valid, got %v", err)
 		}
@@ -57,6 +57,10 @@ func TestDependencyProxyConfigNpmRegistries(t *testing.T) {
 		for _, content := range []string{
 			"registries:\n  npm:\n    - url: not-a-url\n",
 			"registries:\n  npm:\n    - url: https://npm.firma.de\n      scopes: [\"firma\"]\n",
+			"registries:\n  npm:\n    - url: https://npm.firma.de\n      auth:\n        token: $npm_token\n",
+			"registries:\n  npm:\n    - url: https://npm.firma.de\n      auth:\n        type: token\n",
+			"registries:\n  npm:\n    - url: https://npm.firma.de\n      auth:\n        type: token\n        token: plaintext\n",
+			"registries:\n  npm:\n    - url: https://npm.firma.de\n      auth:\n        type: login\n        username: ci-user\n",
 		} {
 			if err := dtos.ValidateDependencyProxyConfigFile([]byte(content)); err == nil {
 				t.Fatalf("expected validation error for %q", content)

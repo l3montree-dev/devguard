@@ -20,21 +20,31 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
 )
 
 type secretService struct {
-	secretRepository shared.SecretRepository
+	secretRepository  shared.SecretRepository
+	projectRepository shared.ProjectRepository
 }
 
-func NewSecretService(secretRepository shared.SecretRepository) *secretService {
+func NewSecretService(secretRepository shared.SecretRepository, projectRepository shared.ProjectRepository) *secretService {
 	return &secretService{
-		secretRepository: secretRepository,
+		secretRepository:  secretRepository,
+		projectRepository: projectRepository,
 	}
 }
 
 func (s *secretService) Resolve(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, name string) (string, error) {
 	var value string
+
+	chain, err := s.ProjectChain(ctx, projectID)
+	if err != nil {
+		return "", err
+	}
+
+	projectSecretPosition := len(chain)
 
 	secrets, err := s.secretRepository.FindVisible(ctx, nil, orgID, projectID, assetID)
 	if err != nil {
@@ -49,7 +59,12 @@ func (s *secretService) Resolve(ctx context.Context, orgID uuid.UUID, projectID,
 			return secret.Value, nil
 		}
 		if secret.ProjectID != nil {
-			value = secret.Value
+			for i := range chain {
+				if chain[i].ID == *secret.ProjectID && i < projectSecretPosition {
+					value = secret.Value
+					projectSecretPosition = i
+				}
+			}
 		}
 		if secret.OrgID != nil && value == "" {
 			value = secret.Value
@@ -59,4 +74,25 @@ func (s *secretService) Resolve(ctx context.Context, orgID uuid.UUID, projectID,
 		return "", fmt.Errorf("secret %s not found", name)
 	}
 	return value, nil
+}
+
+func (s *secretService) ProjectChain(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error) {
+	if projectID == nil {
+		return nil, nil
+	}
+
+	project, err := s.projectRepository.Read(ctx, nil, *projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	chain := []models.Project{project}
+	for project.ParentID != nil {
+		project, err = s.projectRepository.Read(ctx, nil, *project.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		chain = append(chain, project)
+	}
+	return chain, nil
 }

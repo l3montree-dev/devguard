@@ -27,32 +27,15 @@ import (
 )
 
 type SecretController struct {
-	secretRepository  shared.SecretRepository
-	projectRepository shared.ProjectRepository
+	secretRepository shared.SecretRepository
+	secretService    shared.SecretService
 }
 
-func NewSecretController(secretRepository shared.SecretRepository, projectRepository shared.ProjectRepository) *SecretController {
+func NewSecretController(secretRepository shared.SecretRepository, secretService shared.SecretService) *SecretController {
 	return &SecretController{
-		secretRepository:  secretRepository,
-		projectRepository: projectRepository,
+		secretRepository: secretRepository,
+		secretService:    secretService,
 	}
-}
-
-func (c *SecretController) projectChain(ctx shared.Context) ([]models.Project, error) {
-	project, err := shared.MaybeGetProject(ctx)
-	if err != nil {
-		return nil, nil
-	}
-
-	chain := []models.Project{project}
-	for project.ParentID != nil {
-		project, err = c.projectRepository.Read(ctx.Request().Context(), nil, *project.ParentID)
-		if err != nil {
-			return nil, err
-		}
-		chain = append(chain, project)
-	}
-	return chain, nil
 }
 
 func scopeIDs(ctx shared.Context) (uuid.UUID, *uuid.UUID, *uuid.UUID) {
@@ -101,7 +84,7 @@ func (c *SecretController) list(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not load secrets").WithInternal(err)
 	}
 
-	chain, err := c.projectChain(ctx)
+	chain, err := c.secretService.ProjectChain(ctx.Request().Context(), projectID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load projects").WithInternal(err)
 	}

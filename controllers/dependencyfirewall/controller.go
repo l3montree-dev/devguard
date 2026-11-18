@@ -89,6 +89,7 @@ type DependencyProxyController struct {
 	projectRepository      shared.ProjectRepository
 	orgRepository          shared.OrganizationRepository
 	dependencyProxyService shared.DependencyProxySecretService
+	secretService          shared.SecretService
 	maliciousChecker       shared.MaliciousPackageChecker
 	caches                 *secretCaches
 	client                 *http.Client
@@ -101,6 +102,7 @@ func NewDependencyProxyController(
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	orgRepository shared.OrganizationRepository,
+	secretService shared.SecretService,
 ) *DependencyProxyController {
 	if maliciousChecker == nil {
 		panic("maliciousChecker must not be nil: dependency proxy firewall would be silently disabled")
@@ -113,6 +115,7 @@ func NewDependencyProxyController(
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
+		secretService:          secretService,
 		client: &http.Client{
 			Timeout:   60 * time.Second,
 			Transport: utils.EgressTransport,
@@ -121,10 +124,10 @@ func NewDependencyProxyController(
 }
 
 func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
-	return d.fetchFromUpstreamWithToken(ctx, eco, upstreamURL, requestPath, "", headers, body)
+	return d.fetchFromUpstreamWithAuth(ctx, eco, upstreamURL, requestPath, nil, headers, body)
 }
 
-func (d *DependencyProxyController) fetchFromUpstreamWithToken(ctx context.Context, eco ecosystem, upstreamURL, requestPath, token string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
+func (d *DependencyProxyController) fetchFromUpstreamWithAuth(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, auth *dtos.RegistryAuth, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
 	url, err := url.JoinPath(upstreamURL, requestPath)
 	if err != nil {
@@ -142,8 +145,12 @@ func (d *DependencyProxyController) fetchFromUpstreamWithToken(ctx context.Conte
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	switch {
+	case auth == nil:
+	case auth.Type == "token":
+		req.Header.Set("Authorization", "Bearer "+auth.Token)
+	case auth.Type == "login":
+		req.SetBasicAuth(auth.Username, auth.Password)
 	}
 
 	if method == "POST" {
@@ -346,31 +353,43 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	}
 	configs.Secret = uuidSecret
 
-	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
+	scope, modelID, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
 	if err != nil {
 		return configs, fmt.Errorf("failed to get dependency proxy model by secret: %w", err)
 	}
 
 	var configFilesJSON any
+	var orgID uuid.UUID
+	var projectID, assetID *uuid.UUID
 
 	switch scope {
 	case "asset":
-		asset, err := d.assetRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		asset, err := d.assetRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
+		assetID = &asset.ID
+		projectID = &asset.ProjectID
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, *projectID)
+		if err != nil {
+			return configs, fmt.Errorf("failed to load org for asset: %w", err)
+		}
+		orgID = project.OrganizationID
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
 	case "project":
-		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
+		projectID = &project.ID
+		orgID = project.OrganizationID
 		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
 	case "organization":
-		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		org, err := d.orgRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read organization: %w", err)
 		}
+		orgID = org.ID
 		configFilesJSON = org.ConfigFiles["dependency-proxy-configs"]
 	default:
 		return configs, fmt.Errorf("invalid proxy scope: %s", scope)
@@ -382,8 +401,31 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
 		parsed, err := parseDependencyProxyConfigs(s)
+		if err != nil {
+			return configs, fmt.Errorf("failed to parse config: %w", err)
+		}
+		for _, config := range parsed.Registries.NpmConfig() {
+			if config.Auth == nil {
+				continue
+			}
+			if strings.HasPrefix(config.Auth.Token, "$") {
+				name, _ := strings.CutPrefix(config.Auth.Token, "$")
+				config.Auth.Token, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
+				if err != nil {
+					return configs, fmt.Errorf("failed to resolve token: %w", err)
+				}
+			}
+			if strings.HasPrefix(config.Auth.Password, "$") {
+				name, _ := strings.CutPrefix(config.Auth.Password, "$")
+				config.Auth.Password, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
+				if err != nil {
+					return configs, fmt.Errorf("failed to resolve password: %w", err)
+				}
+			}
+		}
+
 		parsed.Secret = configs.Secret
-		return parsed, err
+		return parsed, nil
 	}
 
 	return configs, nil

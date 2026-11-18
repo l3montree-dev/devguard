@@ -655,6 +655,7 @@ type SecretRepository interface {
 
 type SecretService interface {
 	Resolve(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, name string) (string, error)
+	ProjectChain(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error)
 }
 
 type GitlabIntegrationRepository interface {

@@ -45,11 +45,18 @@ type AlpineRegistryConfig struct {
 }
 
 // NpmRegistryConfig is a modified RegistryConfig to allow different upstream registries with
-// additional scopes and token
+// additional scopes and auth
 type NpmRegistryConfig struct {
 	URLRegistryConfig `yaml:",inline"`
-	Scopes            []string `yaml:"scopes" validate:"omitempty,dive,startswith=@"`
-	Token             string   `yaml:"token" validate:"omitempty"`
+	Scopes            []string      `yaml:"scopes" validate:"omitempty,dive,startswith=@"`
+	Auth              *RegistryAuth `yaml:"auth"`
+}
+
+type RegistryAuth struct {
+	Type     string `yaml:"type" validate:"required,oneof=token login"`
+	Token    string `yaml:"token" validate:"required_if=Type token,omitempty,startswith=$"`
+	Username string `yaml:"username" validate:"required_if=Type login"`
+	Password string `yaml:"password" validate:"required_if=Type login,omitempty,startswith=$"`
 }
 
 type NpmRegistryConfigs []NpmRegistryConfig
