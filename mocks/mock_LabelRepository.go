@@ -416,6 +416,78 @@ func (_c *LabelRepository_ListOnProjectLevel_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// Read provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) Read(ctx context.Context, tx shared.DB, labelID uuid.UUID) (models.Label, error) {
+	ret := _mock.Called(ctx, tx, labelID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.Label
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.Label, error)); ok {
+		return returnFunc(ctx, tx, labelID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.Label); ok {
+		r0 = returnFunc(ctx, tx, labelID)
+	} else {
+		r0 = ret.Get(0).(models.Label)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, labelID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LabelRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type LabelRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - labelID uuid.UUID
+func (_e *LabelRepository_Expecter) Read(ctx any, tx any, labelID any) *LabelRepository_Read_Call {
+	return &LabelRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, labelID)}
+}
+
+func (_c *LabelRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, labelID uuid.UUID)) *LabelRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelRepository_Read_Call) Return(label models.Label, err error) *LabelRepository_Read_Call {
+	_c.Call.Return(label, err)
+	return _c
+}
+
+func (_c *LabelRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, labelID uuid.UUID) (models.Label, error)) *LabelRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function for the type LabelRepository
 func (_mock *LabelRepository) Save(ctx context.Context, tx shared.DB, label *models.Label) error {
 	ret := _mock.Called(ctx, tx, label)

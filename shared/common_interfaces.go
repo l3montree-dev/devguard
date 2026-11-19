@@ -1009,9 +1009,11 @@ type LabelRepository interface {
 	Create(ctx context.Context, tx DB, label *models.Label) error
 	Save(ctx context.Context, tx DB, label *models.Label) error
 	Delete(ctx context.Context, tx DB, labelID uuid.UUID) error
+	Read(ctx context.Context, tx DB, labelID uuid.UUID) (models.Label, error)
 }
 type LabelService interface {
 	ListOnOrgLevel(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.Label, error)
 	ListOnProjectLevel(ctx context.Context, tx DB, orgID, projectID uuid.UUID) ([]dtos.Label, error)
 	ListOnAssetLevel(ctx context.Context, tx DB, orgID, projectID, assetID uuid.UUID) ([]dtos.Label, error)
+	AttachLabel(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID, artifactID, labelID *uuid.UUID) error
 }

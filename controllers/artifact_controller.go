@@ -44,13 +44,14 @@ type ArtifactController struct {
 	statisticsService        shared.StatisticsService
 	assetVersionService      shared.AssetVersionService
 	csafService              shared.CSAFService
+	labelService             shared.LabelService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 	broker events.Broker
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, csafService shared.CSAFService, broker events.Broker) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, labelService shared.LabelService, csafService shared.CSAFService, broker events.Broker) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -62,6 +63,7 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 		csafService:               csafService,
+		labelService:              labelService,
 		broker:                    broker,
 	}
 }
@@ -1004,4 +1006,32 @@ func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, mediu
 		time.Duration(avgs.RiskAvgMedium * float64(time.Second)),
 		time.Duration(avgs.RiskAvgHigh * float64(time.Second)),
 		time.Duration(avgs.RiskAvgCritical * float64(time.Second))
+}
+
+// @Summary Attach label to artifact
+// @Tags Label
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Param labelID path string true "Label ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/{labelID}/ [post]
+func (c *ArtifactController) AttachLabelToArtifact(ctx shared.Context) error {
+	artifact := shared.GetArtifact(ctx)
+	labelID, err := uuid.Parse(ctx.Param("labelID"))
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid label id")
+	}
+	tx := c.artifactRepository.GetDB(ctx.Request().Context(), nil)
+	org, project, asset := shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx)
+	err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, &artifact.ID, &labelID)
+	if err != nil {
+		return attachLabelError(err, "artifact")
+	}
+	return ctx.NoContent(204)
 }

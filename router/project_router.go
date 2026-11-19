@@ -100,6 +100,7 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
 	projectUpdateAccessControlRequired.POST("/labels/", labelController.Create)
+	projectUpdateAccessControlRequired.POST("/labels/:labelID/", projectController.AttachLabelToProject)
 	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)
 	projectUpdateAccessControlRequired.GET("/labels/", labelController.ListOnProjectLevel)
 

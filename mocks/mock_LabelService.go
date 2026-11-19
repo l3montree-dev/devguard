@@ -49,6 +49,93 @@ func (_m *LabelService) EXPECT() *LabelService_Expecter {
 	return &LabelService_Expecter{mock: &_m.Mock}
 }
 
+// AttachLabel provides a mock function for the type LabelService
+func (_mock *LabelService) AttachLabel(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID, labelID *uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, artifactID, labelID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AttachLabel")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, artifactID, labelID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LabelService_AttachLabel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AttachLabel'
+type LabelService_AttachLabel_Call struct {
+	*mock.Call
+}
+
+// AttachLabel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - artifactID *uuid.UUID
+//   - labelID *uuid.UUID
+func (_e *LabelService_Expecter) AttachLabel(ctx any, tx any, orgID any, projectID any, assetID any, artifactID any, labelID any) *LabelService_AttachLabel_Call {
+	return &LabelService_AttachLabel_Call{Call: _e.mock.On("AttachLabel", ctx, tx, orgID, projectID, assetID, artifactID, labelID)}
+}
+
+func (_c *LabelService_AttachLabel_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID, labelID *uuid.UUID)) *LabelService_AttachLabel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 *uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(*uuid.UUID)
+		}
+		var arg6 *uuid.UUID
+		if args[6] != nil {
+			arg6 = args[6].(*uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelService_AttachLabel_Call) Return(err error) *LabelService_AttachLabel_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LabelService_AttachLabel_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID, labelID *uuid.UUID) error) *LabelService_AttachLabel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListOnAssetLevel provides a mock function for the type LabelService
 func (_mock *LabelService) ListOnAssetLevel(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID) ([]dtos.Label, error) {
 	ret := _mock.Called(ctx, tx, orgID, projectID, assetID)

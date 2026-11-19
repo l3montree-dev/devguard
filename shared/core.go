@@ -25,6 +25,9 @@ func SanitizeParam(s string) string {
 	return strings.Trim(s, "/")
 }
 
+// ErrLabelNotInScope is returned if a label is used outside of the level it is defined for.
+var ErrLabelNotInScope = errors.New("label is not available in this scope")
+
 func IsNotFound(err error) bool {
 	return errors.Is(err, gorm.ErrRecordNotFound)
 }
