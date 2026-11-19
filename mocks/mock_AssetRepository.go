@@ -2245,6 +2245,69 @@ func (_c *AssetRepository_ReadWithoutErrorLog_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// RemoveRepositoryConnectionByPrefix provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) RemoveRepositoryConnectionByPrefix(ctx context.Context, tx shared.DB, repositoryIDPrefix string) error {
+	ret := _mock.Called(ctx, tx, repositoryIDPrefix)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveRepositoryConnectionByPrefix")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
+		r0 = returnFunc(ctx, tx, repositoryIDPrefix)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetRepository_RemoveRepositoryConnectionByPrefix_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveRepositoryConnectionByPrefix'
+type AssetRepository_RemoveRepositoryConnectionByPrefix_Call struct {
+	*mock.Call
+}
+
+// RemoveRepositoryConnectionByPrefix is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - repositoryIDPrefix string
+func (_e *AssetRepository_Expecter) RemoveRepositoryConnectionByPrefix(ctx any, tx any, repositoryIDPrefix any) *AssetRepository_RemoveRepositoryConnectionByPrefix_Call {
+	return &AssetRepository_RemoveRepositoryConnectionByPrefix_Call{Call: _e.mock.On("RemoveRepositoryConnectionByPrefix", ctx, tx, repositoryIDPrefix)}
+}
+
+func (_c *AssetRepository_RemoveRepositoryConnectionByPrefix_Call) Run(run func(ctx context.Context, tx shared.DB, repositoryIDPrefix string)) *AssetRepository_RemoveRepositoryConnectionByPrefix_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetRepository_RemoveRepositoryConnectionByPrefix_Call) Return(err error) *AssetRepository_RemoveRepositoryConnectionByPrefix_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetRepository_RemoveRepositoryConnectionByPrefix_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, repositoryIDPrefix string) error) *AssetRepository_RemoveRepositoryConnectionByPrefix_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) Save(ctx context.Context, tx shared.DB, t *models.Asset) error {
 	ret := _mock.Called(ctx, tx, t)
