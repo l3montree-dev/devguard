@@ -72,11 +72,11 @@ func TestAssetVersionsToDelete(t *testing.T) {
 	fresh := time.Now()
 
 	assetVersions := []models.AssetVersion{
-		{Name: "main", Type: models.AssetVersionBranch, DefaultBranch: true, LastAccessedAt: stale},
-		{Name: "feature", Type: models.AssetVersionBranch, LastAccessedAt: stale},
-		{Name: "fresh-feature", Type: models.AssetVersionBranch, LastAccessedAt: fresh},
-		{Name: "v1.9.0", Type: models.AssetVersionTag, LastAccessedAt: stale},
-		{Name: "v1.10.0", Type: models.AssetVersionTag, LastAccessedAt: stale},
+		{Name: "main", Type: models.AssetVersionBranch, DefaultBranch: true, LastUploadAt: &stale},
+		{Name: "feature", Type: models.AssetVersionBranch, LastUploadAt: &stale},
+		{Name: "fresh-feature", Type: models.AssetVersionBranch, LastUploadAt: &fresh},
+		{Name: "v1.9.0", Type: models.AssetVersionTag, LastUploadAt: &stale},
+		{Name: "v1.10.0", Type: models.AssetVersionTag, LastUploadAt: &stale},
 	}
 
 	names := func(versions []models.AssetVersion) []string {

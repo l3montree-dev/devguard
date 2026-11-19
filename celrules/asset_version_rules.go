@@ -24,9 +24,9 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
-// DefaultAssetVersionRetentionPolicy keeps tags and every branch which was scanned within the last 7 days.
+// DefaultAssetVersionRetentionPolicy keeps tags, the default branch and every branch which was created or received an upload within the last 7 days.
 // it is the column default of assets.asset_version_retention_policy - keep both in sync.
-const DefaultAssetVersionRetentionPolicy = `ref.type == "tag" || timestamp(ref.lastAccessedAt) > now() - duration("168h")`
+const DefaultAssetVersionRetentionPolicy = `ref.type == "tag" || ref.defaultBranch || timestamp(ref.createdAt) > now() - duration("168h") || (has(ref.lastUploadAt) && timestamp(ref.lastUploadAt) > now() - duration("168h"))`
 
 var assetVersionCelEnv = sync.OnceValues(func() (*cel.Env, error) {
 	base, err := baseEnv()

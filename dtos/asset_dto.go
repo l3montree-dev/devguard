@@ -223,3 +223,12 @@ type AssetPatchRequest struct {
 	// an empty string resets to the default policy
 	AssetVersionRetentionPolicy *string `json:"assetVersionRetentionPolicy" validate:"omitempty,max=4000"`
 }
+
+type TestAssetVersionRetentionPolicyRequest struct {
+	AssetVersionRetentionPolicy string `json:"assetVersionRetentionPolicy" validate:"required,max=4000"`
+}
+
+type TestAssetVersionRetentionPolicyResponse struct {
+	ToDelete []AssetVersion `json:"toDelete"`
+	Kept     []AssetVersion `json:"kept"`
+}
