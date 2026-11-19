@@ -46,6 +46,7 @@ type OrgController struct {
 	adminService           shared.AdminService
 	projectRepository      shared.ProjectRepository
 	assetRepository        shared.AssetRepository
+	dataTransferService    shared.DataTransferService
 }
 
 func isInvitationExpired(invite models.Invitation) bool {
@@ -53,7 +54,7 @@ func isInvitationExpired(invite models.Invitation) bool {
 	return now.After(invite.CreatedAt.Add(expiryDuration))
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *OrgController {
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, dataTransferService shared.DataTransferService) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
@@ -63,6 +64,7 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 		adminService:           adminService,
 		projectRepository:      projectRepository,
 		assetRepository:        assetRepository,
+		dataTransferService:    dataTransferService,
 	}
 }
 
@@ -795,4 +797,19 @@ func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
 
 		return ctx.JSON(200, dtos.PermalinkResponse{OrganizationSlug: organization.Slug})
 	}
+}
+
+func (controller *OrgController) ExportOrg(ctx shared.Context) error {
+	orgID := shared.GetOrg(ctx).GetID()
+	exportOptions := dtos.DataTransferExportOptions{
+		AffectedEntities: dtos.AffectedEntities{
+			Orgs: []string{orgID.String()},
+		},
+	}
+
+	err := controller.dataTransferService.StartExport(ctx.Request().Context(), exportOptions)
+	if err != nil {
+		return echo.NewHTTPError(500, "organization export failed").WithInternal(err)
+	}
+	return ctx.NoContent(200)
 }

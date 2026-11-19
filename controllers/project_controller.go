@@ -46,9 +46,10 @@ type ProjectController struct {
 	webhookRepository      shared.WebhookIntegrationRepository
 	scanService            shared.ScanService
 	broker                 events.Broker
+	dataTransferService    shared.DataTransferService
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker, dataTransferService shared.DataTransferService) *ProjectController {
 	return &ProjectController{
 		projectRepository:      repository,
 		assetRepository:        assetRepository,
@@ -61,6 +62,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 		webhookRepository:      webhookRepository,
 		scanService:            scanService,
 		broker:                 broker,
+		dataTransferService:    dataTransferService,
 	}
 }
 
@@ -839,4 +841,19 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 	}
 
 	return ctx.JSON(200, transformer.BuildExternalProjectTree(projects, subProjects, allAssets, allAssetVersions, allArtifacts))
+}
+
+func (projectController *ProjectController) ExportProject(ctx shared.Context) error {
+	projectID := shared.GetProject(ctx).ID
+	exportOptions := dtos.DataTransferExportOptions{
+		AffectedEntities: dtos.AffectedEntities{
+			Projects: []string{projectID.String()},
+		},
+	}
+
+	err := projectController.dataTransferService.StartExport(ctx.Request().Context(), exportOptions)
+	if err != nil {
+		return echo.NewHTTPError(500, "project export failed").WithInternal(err)
+	}
+	return ctx.NoContent(200)
 }

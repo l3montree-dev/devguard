@@ -93,6 +93,9 @@ func NewProjectRouter(
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
 	projectRouter.POST("/releases/", releaseController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionCreate))
 
+	// only project admins are allowed to export a project
+	projectRouter.GET("/export/", projectController.ExportProject, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionDelete))
+
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.ProjectSave)

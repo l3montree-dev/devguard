@@ -27,9 +27,10 @@ type AssetController struct {
 	thirdPartyIntegration         shared.IntegrationAggregate
 	daemonRunner                  shared.DaemonRunner
 	broker                        events.Broker
+	dataTransferService           shared.DataTransferService
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner, dataTransferService shared.DataTransferService) *AssetController {
 	return &AssetController{
 		assetRepository:               repository,
 		assetVersionRepository:        assetVersionRepository,
@@ -40,6 +41,7 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 		thirdPartyIntegration:         thirdPartyIntegration,
 		broker:                        broker,
 		daemonRunner:                  daemonRunner,
+		dataTransferService:           dataTransferService,
 	}
 }
 
@@ -735,4 +737,19 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 	}
 
 	return c.NoContent(200)
+}
+
+func (a *AssetController) ExportAsset(ctx shared.Context) error {
+	assetID := shared.GetAsset(ctx).GetID()
+	exportOptions := dtos.DataTransferExportOptions{
+		AffectedEntities: dtos.AffectedEntities{
+			Assets: []string{assetID.String()},
+		},
+	}
+
+	err := a.dataTransferService.StartExport(ctx.Request().Context(), exportOptions)
+	if err != nil {
+		return echo.NewHTTPError(500, "asset export failed").WithInternal(err)
+	}
+	return ctx.NoContent(200)
 }

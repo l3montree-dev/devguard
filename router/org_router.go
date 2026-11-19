@@ -70,6 +70,8 @@ func NewOrgRouter(
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
 	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
+	// only owner are allowed to export an organization
+	organizationRouter.GET("/export/", orgController.ExportOrg, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
 	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
 
