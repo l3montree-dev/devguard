@@ -448,6 +448,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		}
 	}
 
+	oldRetentionPolicy := asset.AssetVersionRetentionPolicy
 	updated := transformer.ApplyAssetPatchRequestToModel(patchRequest, &asset)
 	if asset.Name == "" || asset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
@@ -463,6 +464,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	// after the update - the job reads the new thresholds from the database
 	if syncTickets {
 		events.NotifyAssetTicketSettingsChanged(reqCtx, a.broker, asset.ID)
+	}
+
+	if asset.AssetVersionRetentionPolicy != oldRetentionPolicy {
+		if err := a.broker.Notify(reqCtx, nil, events.TopicPipelineDeleteOldAssetVersions, events.AssetPipelinePayload{AssetID: asset.ID}, nil); err != nil {
+			slog.Error("could not enqueue asset version cleanup", "assetID", asset.ID, "err", err)
+		}
 	}
 
 	members, err := services.FetchMembersOfAsset(ctx)
