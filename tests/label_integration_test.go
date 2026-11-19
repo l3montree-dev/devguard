@@ -381,6 +381,26 @@ func TestLabelControllerIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("create and update reject invalid bodies", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		target := f.labels["org-a"]
+
+		for name, body := range map[string]string{
+			"missing label":      `{"background_color":"#123456"}`,
+			"missing color":      `{"label":"x"}`,
+			"color without hash": `{"label":"x","background_color":"123456"}`,
+			"short color":        `{"label":"x","background_color":"#123"}`,
+			"not a color":        `{"label":"x","background_color":"red"}`,
+			"label too long":     fmt.Sprintf(`{"label":%q,"background_color":"#123456"}`, strings.Repeat("a", 257)),
+		} {
+			c, rec := newCtx(f, http.MethodPost, orgLevel, "", body)
+			assert.Equal(t, http.StatusBadRequest, statusOf(f.controller.Create(c), rec), "create: "+name)
+
+			c, rec = newCtx(f, http.MethodPut, orgLevel, target.ID.String(), body)
+			assert.Equal(t, http.StatusBadRequest, statusOf(f.controller.Update(c), rec), "update: "+name)
+		}
+	})
+
 	t.Run("update changes the label on its own level", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
@@ -403,7 +423,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		target, other := f.labels["org-a"], f.labels["org-b"]
 
-		body := fmt.Sprintf(`{"id":%q,"label":"hijack","organization_id":%q}`, other.ID, f.orgB.ID)
+		body := fmt.Sprintf(`{"id":%q,"label":"hijack","background_color":"#123456","organization_id":%q}`, other.ID, f.orgB.ID)
 		c, rec := newCtx(f, http.MethodPut, orgLevel, target.ID.String(), body)
 		require.Equal(t, http.StatusOK, statusOf(f.controller.Update(c), rec))
 

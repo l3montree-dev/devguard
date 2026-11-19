@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
@@ -44,9 +46,9 @@ func attachLabelError(err error, target string) error {
 	case shared.IsNotFound(err):
 		return echo.NewHTTPError(404, "label not found").WithInternal(err)
 	case errors.Is(err, shared.ErrLabelNotInScope):
-		return echo.NewHTTPError(403, "label is not available for this "+target).WithInternal(err)
+		return echo.NewHTTPError(403, fmt.Sprintf("label is not available for this %s", target)).WithInternal(err)
 	}
-	return echo.NewHTTPError(500, "could not attach label to "+target).WithInternal(err)
+	return echo.NewHTTPError(500, fmt.Sprintf("could not attach label to %s", target)).WithInternal(err)
 }
 
 func (l *LabelController) readLabelOnLevel(ctx shared.Context) (models.Label, error) {
@@ -76,18 +78,21 @@ func (l *LabelController) readLabelOnLevel(ctx shared.Context) (models.Label, er
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string false "Project slug (project and asset level)"
 // @Param assetSlug path string false "Asset slug (asset level)"
-// @Param body body models.Label true "Label data"
+// @Param body body dtos.LabelRequest true "Label data"
 // @Success 200
 // @Router /organizations/{organization}/labels/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/ [post]
 func (l *LabelController) Create(ctx shared.Context) error {
-	var label models.Label
-
-	if err := ctx.Bind(&label); err != nil {
+	var req dtos.LabelRequest
+	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not parse request body").WithInternal(err)
 	}
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
 
+	label := models.Label{Label: req.Label, BackgroundColor: req.BackgroundColor}
 	setLabelScope(ctx, &label)
 
 	err := l.labelRepository.Create(ctx.Request().Context(), nil, &label)
@@ -107,7 +112,7 @@ func (l *LabelController) Create(ctx shared.Context) error {
 // @Param projectSlug path string false "Project slug (project and asset level)"
 // @Param assetSlug path string false "Asset slug (asset level)"
 // @Param labelID path string true "Label ID"
-// @Param body body models.Label true "Label data"
+// @Param body body dtos.LabelRequest true "Label data"
 // @Success 200
 // @Router /organizations/{organization}/labels/{labelID}/ [put]
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/{labelID}/ [put]
@@ -118,14 +123,23 @@ func (l *LabelController) Update(ctx shared.Context) error {
 		return err
 	}
 
-	var label models.Label
-	if err := ctx.Bind(&label); err != nil {
+	var req dtos.LabelRequest
+	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not parse request body").WithInternal(err)
 	}
+	if err := dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
 
-	label.ID = existing.ID
-	label.OrganizationID, label.ProjectID, label.AssetID = existing.OrganizationID, existing.ProjectID, existing.AssetID
-	label.CreatedAt = existing.CreatedAt
+	label := models.Label{
+		ID:              existing.ID,
+		OrganizationID:  existing.OrganizationID,
+		ProjectID:       existing.ProjectID,
+		AssetID:         existing.AssetID,
+		CreatedAt:       existing.CreatedAt,
+		Label:           req.Label,
+		BackgroundColor: req.BackgroundColor,
+	}
 
 	if err := l.labelRepository.Save(ctx.Request().Context(), nil, &label); err != nil {
 		return echo.NewHTTPError(500, "could not update label").WithInternal(err)

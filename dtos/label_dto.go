@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type LabelRequest struct {
+	Label           string `json:"label" validate:"required,max=256"`
+	BackgroundColor string `json:"background_color" validate:"required,hexcolor,len=7"`
+}
+
 type Label struct {
 	ID              uuid.UUID  `json:"id"`
 	OrganizationID  *uuid.UUID `json:"organization_id"`
