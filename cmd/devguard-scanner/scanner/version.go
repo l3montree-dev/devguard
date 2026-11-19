@@ -28,6 +28,7 @@ import (
 	buildconfig "github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/telemetry"
+	"github.com/l3montree-dev/devguard/utils"
 )
 
 var versionCheckOnce sync.Once
@@ -67,7 +68,7 @@ func fetchAPIVersion() (string, error) {
 		return "", err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := utils.EgressClient.Do(req)
 	if err != nil {
 		return "", err
 	}
