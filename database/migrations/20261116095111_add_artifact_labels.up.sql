@@ -32,3 +32,10 @@ CREATE TABLE public.projects_assets_artifacts_labels (
     CHECK (num_nonnulls(project_id, asset_id, artifact_id) = 1)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS projects_labels_unique
+    ON public.projects_assets_artifacts_labels (project_id, label_id) WHERE project_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS assets_labels_unique
+    ON public.projects_assets_artifacts_labels (asset_id, label_id) WHERE asset_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS artifacts_labels_unique
+    ON public.projects_assets_artifacts_labels (artifact_id, label_id) WHERE artifact_id IS NOT NULL;
+
