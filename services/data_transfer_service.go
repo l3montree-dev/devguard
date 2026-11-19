@@ -2,6 +2,7 @@ package services
 
 import (
 	"archive/tar"
+	"cmp"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,13 +19,17 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/dtos"
-	"github.com/l3montree-dev/devguard/utils"
 	"golang.org/x/sync/errgroup"
 )
 
 type scopeLevel int
 
 const dataTransferVersion = 1
+
+const (
+	metadataFileName   = "metadata.json"
+	tableFileExtension = ".jsonl.gz"
+)
 
 const (
 	// entities
@@ -111,13 +117,6 @@ type scopeFilter struct {
 	level  scopeLevel // which resolved ID set the column is matched against
 }
 
-type tableProperties struct {
-	tableID   string
-	filters   []scopeFilter
-	model     utils.Tabler
-	customSQL *string
-}
-
 // SQL foreign key column constants
 const (
 	orgTableID      = "organizations"
@@ -139,42 +138,47 @@ var (
 	artifactScope = scopeFilter{column: artifactFKColumn, level: artifactLevel}
 )
 
-// all tables with a simple syntax
-var tablesToSync []tableProperties = []tableProperties{
+type tableProperties struct {
+	filters     []scopeFilter
+	importOrder int // tables only reference tables with a lower import order, equal ones are independent of each other
+}
+
+// all tables with a simple syntax, keyed by table name
+var tablesToSync = map[string]tableProperties{
 	// org level
-	{tableID: orgTableID, filters: []scopeFilter{{column: "id", level: orgLevel}, {column: "id", level: parentOrgLevel}}},
-	{tableID: projectsTableID, filters: []scopeFilter{{column: "id", level: projectLevel}, {column: "id", level: parentProjectLevel}}},
-	{tableID: "compliance_postures", filters: []scopeFilter{orgScope, projectScope, assetScope}},
-	{tableID: "external_users", filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
-	{tableID: "external_user_orgs", filters: []scopeFilter{orgScope}},
+	orgTableID:            {importOrder: 0, filters: []scopeFilter{{column: "id", level: orgLevel}, {column: "id", level: parentOrgLevel}}},
+	projectsTableID:       {importOrder: 1, filters: []scopeFilter{{column: "id", level: projectLevel}, {column: "id", level: parentProjectLevel}}},
+	"compliance_postures": {importOrder: 4, filters: []scopeFilter{orgScope, projectScope, assetScope}},
+	"external_users":      {importOrder: 0, filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
+	"external_user_orgs":  {importOrder: 1, filters: []scopeFilter{orgScope}},
 
 	// project level
-	{tableID: assetsTableID, filters: []scopeFilter{{column: "id", level: assetLevel}}},
+	assetsTableID: {importOrder: 2, filters: []scopeFilter{{column: "id", level: assetLevel}}},
 
 	// asset level
-	{tableID: "external_references", filters: []scopeFilter{assetScope}},
-	{tableID: "vex_rules", filters: []scopeFilter{assetScope}},
-	{tableID: "asset_versions", filters: []scopeFilter{assetScope}},
+	"external_references": {importOrder: 3, filters: []scopeFilter{assetScope}},
+	"vex_rules":           {importOrder: 3, filters: []scopeFilter{assetScope}},
+	"asset_versions":      {importOrder: 3, filters: []scopeFilter{assetScope}},
 
 	// asset version level
-	{tableID: "license_risks", filters: []scopeFilter{assetScope}},
-	{tableID: "first_party_vulnerabilities", filters: []scopeFilter{assetScope}},
-	{tableID: "dependency_vulns", filters: []scopeFilter{assetScope}},
-	{tableID: "advisories", filters: []scopeFilter{assetScope}},
-	{tableID: "artifacts", filters: []scopeFilter{assetScope}},
+	"license_risks":               {importOrder: 4, filters: []scopeFilter{assetScope}},
+	"first_party_vulnerabilities": {importOrder: 4, filters: []scopeFilter{assetScope}},
+	"dependency_vulns":            {importOrder: 4, filters: []scopeFilter{assetScope}},
+	"advisories":                  {importOrder: 4, filters: []scopeFilter{assetScope}},
+	"artifacts":                   {importOrder: 4, filters: []scopeFilter{assetScope}},
 
 	// artifact level
-	{tableID: "attestations", filters: []scopeFilter{assetScope}},
-	{tableID: "sboms", filters: []scopeFilter{assetScope}},
-	{tableID: "artifact_dependency_vulns", filters: []scopeFilter{artifactScope}},
-	{tableID: "artifact_license_risks", filters: []scopeFilter{artifactScope}},
+	"attestations":              {importOrder: 5, filters: []scopeFilter{assetScope}},
+	"sboms":                     {importOrder: 5, filters: []scopeFilter{assetScope}},
+	"artifact_dependency_vulns": {importOrder: 5, filters: []scopeFilter{artifactScope}},
+	"artifact_license_risks":    {importOrder: 5, filters: []scopeFilter{artifactScope}},
 
 	// package level
-	{tableID: "sbom_merkle_nodes", filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
-	{tableID: "sbom_merkle_edges", filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
+	"sbom_merkle_nodes": {importOrder: 0, filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
+	"sbom_merkle_edges": {importOrder: 1, filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
 
 	// vuln level
-	{tableID: "vuln_events", filters: []scopeFilter{
+	"vuln_events": {importOrder: 5, filters: []scopeFilter{
 		{column: "dependency_vuln_id", level: dependencyVulnLevel},
 		{column: "first_party_vuln_id", level: firstPartyVulnLevel},
 		{column: "license_risk_id", level: licenseRiskLevel},
@@ -278,13 +282,13 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	// start the producer function first
 	group.Go(func() error {
 		defer close(jobs)
-		for _, table := range tablesToSync {
-			sql, args, err := sqlFromTableProperties(table, scope)
+		for tableID, table := range tablesToSync {
+			sql, args, err := sqlFromTableProperties(tableID, table, scope)
 			if err != nil {
 				return fmt.Errorf("could not build export query: %w", err)
 			}
 
-			jobs <- queryJob{tableID: table.tableID, sql: sql, args: args}
+			jobs <- queryJob{tableID: tableID, sql: sql, args: args}
 		}
 		return nil
 	})
@@ -346,7 +350,7 @@ type metadata struct {
 }
 
 func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
-	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, "metadata.json"))
+	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, metadataFileName))
 	if err != nil {
 		return fmt.Errorf("could not create metadata file: %w", err)
 	}
@@ -398,7 +402,7 @@ func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob
 	}
 	defer rows.Close()
 
-	tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".jsonl.gz"))
+	tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+tableFileExtension))
 	if err != nil {
 		return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
 	}
@@ -434,10 +438,10 @@ func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob
 }
 
 // build the scoped row_to_json query for an exported table, args are ordered like the placeholders
-func sqlFromTableProperties(properties tableProperties, scope exportScope) (string, []any, error) {
+func sqlFromTableProperties(tableID string, properties tableProperties, scope exportScope) (string, []any, error) {
 	// fail closed, an unfiltered query would export data of other tenants
 	if len(properties.filters) == 0 {
-		return "", nil, fmt.Errorf("table %s has no scope filter", properties.tableID)
+		return "", nil, fmt.Errorf("table %s has no scope filter", tableID)
 	}
 
 	conditions := make([]string, 0, len(properties.filters))
@@ -447,7 +451,7 @@ func sqlFromTableProperties(properties tableProperties, scope exportScope) (stri
 		args = append(args, scopeIDs.ids)
 		conditions = append(conditions, fmt.Sprintf("t.%s = ANY($%d::%s)", pgx.Identifier{filter.column}.Sanitize(), len(args), scopeIDs.arrayType))
 	}
-	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{properties.tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
+	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
 }
 
 // resolve subprojects to recursively find all projects in scope
@@ -589,4 +593,166 @@ func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntitie
 	scope.sbomMerkleNodeHashes = sbomMerkleNodeHashes
 
 	return scope, nil
+}
+
+type errorHandling struct {
+	method       string // nothing, update (columns)
+	updateColumn []string
+}
+
+type importJob struct {
+	tableName        string
+	tableImportOrder int
+	pathToFile       string
+}
+
+func (service *DataTransferService) ImportFile(ctx context.Context, importFile io.Reader) error {
+	slog.Info("start importing data...")
+	start := time.Now()
+
+	importDirectoryPath, err := os.MkdirTemp("", "devguard-import-*")
+	if err != nil {
+		return fmt.Errorf("could not create import directory: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(importDirectoryPath); err != nil {
+			slog.Error("could not clean up import directory", "path", importDirectoryPath, "err", err)
+		}
+	}()
+
+	if err := extractImportArchive(importFile, importDirectoryPath); err != nil {
+		return fmt.Errorf("could not extract import archive: %w", err)
+	}
+
+	importTx, err := service.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("could not start import transaction: %w", err)
+	}
+	defer importTx.Rollback(ctx) // no-op after a successful commit
+
+	if _, err := importTx.Exec(ctx, "SET LOCAL search_path TO public"); err != nil {
+		return fmt.Errorf("could not set search path for import: %w", err)
+	}
+
+	if err := checkImportMetadata(ctx, importTx, importDirectoryPath); err != nil {
+		return err // error explained in the called function
+	}
+
+	importFiles, err := os.ReadDir(importDirectoryPath)
+	if err != nil {
+		return fmt.Errorf("could not read import directory: %w", err)
+	}
+
+	jobs := make([]importJob, 0, len(importFiles))
+	// validate files and parse them into jobs
+	for _, file := range importFiles {
+		if file.Name() == metadataFileName {
+			continue
+		}
+
+		fileID, found := strings.CutSuffix(file.Name(), tableFileExtension)
+		if !found {
+			return fmt.Errorf("invalid file encoding for file: %s", file.Name())
+		}
+
+		tableData, ok := tablesToSync[fileID]
+		if !ok {
+			return fmt.Errorf("invalid fileName detected: %s", file.Name())
+		}
+
+		jobs = append(jobs, importJob{
+			tableName:        fileID,
+			tableImportOrder: tableData.importOrder,
+			pathToFile:       filepath.Join(importDirectoryPath, file.Name()),
+		})
+	}
+
+	// sort the jobs to ensure no FK violations
+	slices.SortFunc(jobs, func(job1, job2 importJob) int {
+		return cmp.Compare(job1.tableImportOrder, job2.tableImportOrder)
+	})
+
+	if err := importTx.Commit(ctx); err != nil {
+		return fmt.Errorf("could not commit import transaction: %w", err)
+	}
+
+	slog.Info("successfully finished import", "time", time.Since(start))
+	return nil
+}
+
+// TODO handle file inclusion attacks vectors
+func extractImportArchive(importFile io.Reader, importDirectoryPath string) error {
+	allowedFiles := map[string]bool{metadataFileName: true}
+	for tableID := range tablesToSync {
+		allowedFiles[tableID+tableFileExtension] = true
+	}
+
+	tarReader := tar.NewReader(importFile)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("could not read archive entry: %w", err)
+		}
+
+		if header.Typeflag != tar.TypeReg || !allowedFiles[header.Name] {
+			return fmt.Errorf("unexpected archive entry: %s", header.Name)
+		}
+
+		if err := extractArchiveFile(tarReader, filepath.Join(importDirectoryPath, header.Name)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func extractArchiveFile(tarReader *tar.Reader, filePath string) error {
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return fmt.Errorf("could not create file %s: %w", filepath.Base(filePath), err)
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(file, tarReader); err != nil {
+		return fmt.Errorf("could not extract file %s: %w", filepath.Base(filePath), err)
+	}
+	return nil
+}
+
+// the rows are only valid for the exact schema they were exported from
+func checkImportMetadata(ctx context.Context, tx pgx.Tx, importDirectoryPath string) error {
+	metadataFile, err := os.Open(filepath.Join(importDirectoryPath, metadataFileName))
+	if err != nil {
+		return fmt.Errorf("could not open metadata file: %w", err)
+	}
+	defer metadataFile.Close()
+
+	var importMetadata metadata
+	if err := json.NewDecoder(metadataFile).Decode(&importMetadata); err != nil {
+		return fmt.Errorf("could not read metadata file: %w", err)
+	}
+
+	if importMetadata.ExportVersion != dataTransferVersion {
+		return fmt.Errorf("export version does not match DevGuard version (export: %d, current: %d)", importMetadata.ExportVersion, dataTransferVersion)
+	}
+
+	var schemaMigration struct {
+		version string
+		dirty   bool
+	}
+	schemaRow := tx.QueryRow(ctx, "SELECT version, dirty FROM schema_migrations LIMIT 1;")
+	if err := schemaRow.Scan(&schemaMigration.version, &schemaMigration.dirty); err != nil {
+		return fmt.Errorf("could not determine schema migration state: %w", err)
+	}
+
+	if schemaMigration.dirty {
+		return fmt.Errorf("dirty database schema detected, cannot import")
+	}
+
+	if importMetadata.DatabaseSchemaVersion != schemaMigration.version {
+		return fmt.Errorf("export schema version %s does not match database schema version %s", importMetadata.DatabaseSchemaVersion, schemaMigration.version)
+	}
+	return nil
 }
