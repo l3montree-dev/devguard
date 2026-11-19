@@ -28,7 +28,6 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/labstack/echo/v4"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -36,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -546,7 +546,12 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "deleted":
 			slog.Info("app installation deleted", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
 			// delete the installation from the database
-			err := githubIntegration.githubAppInstallationRepository.Delete(reqCtx, nil, int(*event.Installation.ID))
+			err := githubIntegration.assetRepository.Transaction(reqCtx, func(tx shared.DB) error {
+				if err := githubIntegration.githubAppInstallationRepository.Delete(reqCtx, tx, int(*event.Installation.ID)); err != nil {
+					return err
+				}
+				return githubIntegration.assetRepository.RemoveRepositoryConnectionByPrefix(reqCtx, tx, fmt.Sprintf("github:%d:", *event.Installation.ID))
+			})
 			if err != nil {
 				slog.Error("could not delete github app installation", "err", err)
 				return err

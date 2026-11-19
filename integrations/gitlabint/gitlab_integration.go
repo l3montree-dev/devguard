@@ -1221,7 +1221,12 @@ func (g *GitlabIntegration) Delete(ctx shared.Context) error {
 		})
 	}
 
-	err = g.gitlabIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
+	err = g.assetRepository.Transaction(ctx.Request().Context(), func(tx shared.DB) error {
+		if err := g.gitlabIntegrationRepository.Delete(ctx.Request().Context(), tx, parsedID); err != nil {
+			return err
+		}
+		return g.assetRepository.RemoveRepositoryConnectionByPrefix(ctx.Request().Context(), tx, fmt.Sprintf("gitlab:%s:", parsedID))
+	})
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return ctx.JSON(404, map[string]any{

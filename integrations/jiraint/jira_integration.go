@@ -154,7 +154,12 @@ func (i *JiraIntegration) Delete(ctx shared.Context) error {
 		})
 	}
 
-	err = i.jiraIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
+	err = i.assetRepository.Transaction(ctx.Request().Context(), func(tx shared.DB) error {
+		if err := i.jiraIntegrationRepository.Delete(ctx.Request().Context(), tx, parsedID); err != nil {
+			return err
+		}
+		return i.assetRepository.RemoveRepositoryConnectionByPrefix(ctx.Request().Context(), tx, fmt.Sprintf("jira:%s:", parsedID))
+	})
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return ctx.JSON(404, map[string]any{
