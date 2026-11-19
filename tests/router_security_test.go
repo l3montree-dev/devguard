@@ -386,6 +386,22 @@ var routeMinLevel = map[string]shared.Role{
 	"PUT /api/v1/organizations/:organization/projects/:projectSlug/integrations/webhook/:id/":                                                             shared.RoleAdmin,
 	"PUT /api/v1/organizations/:organization/projects/:projectSlug/members/:userID/":                                                                      shared.RoleAdmin,
 	"PUT /api/v1/organizations/:organization/projects/:projectSlug/policies/:policyID/":                                                                   shared.RoleAdmin,
+	// labels: managing and attaching labels requires update access on the owning resource
+	"DELETE /api/v1/organizations/:organization/labels/:labelID/":                                                                                      shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/labels/":                                                                                                  shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/labels/":                                                                                                 shared.RoleAdmin,
+	"PUT /api/v1/organizations/:organization/labels/:labelID/":                                                                                         shared.RoleAdmin,
+	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/labels/:labelID/":                                                                shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/labels/":                                                                            shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/labels/":                                                                           shared.RoleAdmin,
+	"PUT /api/v1/organizations/:organization/projects/:projectSlug/labels/:labelID/":                                                                   shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/labels/:labelID/":                                                                  shared.RoleAdmin,
+	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/:labelID/":                                              shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/":                                                          shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/":                                                         shared.RoleAdmin,
+	"PUT /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/:labelID/":                                                 shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/:labelID/":                                                shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/labels/:labelID/": shared.RoleAdmin,
 }
 
 // accessLevelFor is a strict lookup - every route from e.Routes() must be
