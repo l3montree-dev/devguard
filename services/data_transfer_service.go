@@ -1,10 +1,12 @@
 package services
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -116,8 +118,6 @@ type tableProperties struct {
 	customSQL *string
 }
 
-const transferFileLocation = "transfer-files/"
-
 // SQL foreign key column constants
 const (
 	orgTableID      = "organizations"
@@ -204,7 +204,7 @@ func checkExportOptions(options dtos.DataTransferExportOptions) error {
 	return nil
 }
 
-func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions) (exitStatus error) {
+func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error {
 	start := time.Now()
 
 	// validate export options
@@ -212,22 +212,19 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("invalid export options provided: %w", err)
 	}
 
-	jobID := uuid.New() // id of this data transfer job (used for referencing)
-	jobDirectoryPath := filepath.Join(transferFileLocation, jobID.String())
-	if err := os.MkdirAll(jobDirectoryPath, 0o750); err != nil {
-		return fmt.Errorf("could not create file transfer folder: %w", err)
+	jobDirectoryPath, err := os.MkdirTemp("", "devguard-export-*")
+	if err != nil {
+		return fmt.Errorf("could not create export directory: %w", err)
 	}
 
+	// the files are only needed until they are written to out
 	defer func() {
-		if exitStatus != nil {
-			if err := cleanUp(jobDirectoryPath); err != nil {
-				slog.Error("could not clean up after failed export", "err", err)
-			}
-			slog.Info("successfully cleaned up failed export")
+		if err := os.RemoveAll(jobDirectoryPath); err != nil {
+			slog.Error("could not clean up export directory", "path", jobDirectoryPath, "err", err)
 		}
 	}()
 
-	slog.Info("starting data transfer export process...", "job ID", jobID.String())
+	slog.Info("starting data transfer export process...", "directory", jobDirectoryPath)
 
 	// initiate read only and read uncommitted transaction to use as snapshot for the export
 	snapshotTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{
@@ -310,12 +307,28 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("could not extract transaction timestamp: %w", err)
 	}
 
-	err = buildMetadataFile(ctx, jobDirectoryPath, options, schemaMigration.version, exportTimestamp)
+	err = buildMetadataFile(jobDirectoryPath, options, schemaMigration.version, exportTimestamp)
 	if err != nil {
 		return fmt.Errorf("could not build metadata file: %w", err)
 	}
 
-	slog.Info("finished export", "job ID", jobID.String(), "time", time.Since(start))
+	// release the snapshot before sending, a slow client should not keep the transaction open
+	if err := snapshotTx.Commit(ctx); err != nil {
+		return fmt.Errorf("could not end export transaction: %w", err)
+	}
+
+	slog.Info("finished export, sending archive", "time", time.Since(start))
+
+	// the table files are already gzipped, so the archive itself stays uncompressed
+	tarWriter := tar.NewWriter(out)
+	if err := tarWriter.AddFS(os.DirFS(jobDirectoryPath)); err != nil {
+		return fmt.Errorf("could not write export archive: %w", err)
+	}
+	if err := tarWriter.Close(); err != nil {
+		return fmt.Errorf("could not finish export archive: %w", err)
+	}
+
+	slog.Info("finished sending archive", "time", time.Since(start))
 	return nil
 }
 
@@ -332,23 +345,17 @@ type metadata struct {
 	ExportScope           dtos.AffectedEntities `json:"export_scope"`
 }
 
-func cleanUp(jobDirectoryPath string) error {
-	err := os.RemoveAll(jobDirectoryPath)
-	if err != nil {
-		return fmt.Errorf("could not remove export job directory")
-	}
-	return nil
-}
-
-func buildMetadataFile(ctx context.Context, jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
+func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
 	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, "metadata.json"))
 	if err != nil {
 		return fmt.Errorf("could not create metadata file: %w", err)
 	}
+	defer metadataFD.Close()
 
 	exportMetadata := metadata{
 		ExportVersion:         dataTransferVersion,
 		DatabaseSchemaVersion: databaseSchemaVersion,
+		ExportTimestamp:       exportTimestamp,
 		ExportScope:           exportOptions.AffectedEntities,
 	}
 
@@ -356,7 +363,7 @@ func buildMetadataFile(ctx context.Context, jobDirectoryPath string, exportOptio
 	if err != nil {
 		return fmt.Errorf("could not write metadata file: %w", err)
 	}
-	return nil
+	return metadataFD.Close()
 }
 
 func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, baseFolder string, snapshotID string, jobs chan queryJob) error {
@@ -372,49 +379,57 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 	}
 
 	for job := range jobs {
-		job.sql = job.sql + ";"
-		slog.Info("starting new job", "sql", job.sql)
-		rows, err := workerTx.Query(ctx, job.sql, job.args...)
-		if err != nil {
-			return fmt.Errorf("could not query table: %w\n\nSQL: %s", err, job.sql)
-		}
-		defer rows.Close()
-
-		tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".jsonl.gz"))
-		if err != nil {
-			return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
-		}
-		defer tableFd.Close()
-		gzipWriter := gzip.NewWriter(tableFd)
-		defer gzipWriter.Close()
-
-		for rows.Next() {
-			var row []byte
-			if err := rows.Scan(&row); err != nil {
-				return fmt.Errorf("could not scan row of %s: %w", job.tableID, err)
-			}
-
-			// row is already json from row_to_json, we can just write that with a newline
-			if _, err := gzipWriter.Write(append(row, '\n')); err != nil {
-				return fmt.Errorf("could not write row of %s: %w", job.tableID, err)
-			}
-		}
-
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("error when reading rows: %w", err)
-		}
-		slog.Info("successfully queried table data", "table", job.tableID, "rows count", rows.CommandTag().RowsAffected())
-		rows.Close()
-		// finish up the gzip file
-		if err := gzipWriter.Close(); err != nil {
-			return fmt.Errorf("could not finish compressed file of %s: %w", job.tableID, err)
-		}
-		if err := tableFd.Close(); err != nil {
-			return fmt.Errorf("could not close file of %s: %w", job.tableID, err)
+		if err := exportTable(ctx, workerTx, baseFolder, job); err != nil {
+			return err
 		}
 	}
 
 	slog.Info("db worker finished")
+	return nil
+}
+
+// separate function so the defers run per table instead of piling up until the worker returns
+func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob) error {
+	job.sql = job.sql + ";"
+	slog.Info("starting new job", "sql", job.sql)
+	rows, err := tx.Query(ctx, job.sql, job.args...)
+	if err != nil {
+		return fmt.Errorf("could not query table: %w\n\nSQL: %s", err, job.sql)
+	}
+	defer rows.Close()
+
+	tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+".jsonl.gz"))
+	if err != nil {
+		return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
+	}
+	defer tableFd.Close()
+	gzipWriter := gzip.NewWriter(tableFd)
+	defer gzipWriter.Close()
+
+	for rows.Next() {
+		var row []byte
+		if err := rows.Scan(&row); err != nil {
+			return fmt.Errorf("could not scan row of %s: %w", job.tableID, err)
+		}
+
+		// row is already json from row_to_json, we can just write that with a newline
+		if _, err := gzipWriter.Write(append(row, '\n')); err != nil {
+			return fmt.Errorf("could not write row of %s: %w", job.tableID, err)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error when reading rows: %w", err)
+	}
+	slog.Info("successfully queried table data", "table", job.tableID, "rows count", rows.CommandTag().RowsAffected())
+	rows.Close()
+	// finish up the gzip file
+	if err := gzipWriter.Close(); err != nil {
+		return fmt.Errorf("could not finish compressed file of %s: %w", job.tableID, err)
+	}
+	if err := tableFd.Close(); err != nil {
+		return fmt.Errorf("could not close file of %s: %w", job.tableID, err)
+	}
 	return nil
 }
 

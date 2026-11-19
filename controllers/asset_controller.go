@@ -747,9 +747,13 @@ func (a *AssetController) ExportAsset(ctx shared.Context) error {
 		},
 	}
 
-	err := a.dataTransferService.StartExport(ctx.Request().Context(), exportOptions)
+	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")
+	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="devguard-export.tar"`)
+
+	err := a.dataTransferService.StartExport(ctx.Request().Context(), exportOptions, ctx.Response())
 	if err != nil {
+		ctx.Response().Header().Del(echo.HeaderContentDisposition)
 		return echo.NewHTTPError(500, "asset export failed").WithInternal(err)
 	}
-	return ctx.NoContent(200)
+	return nil
 }

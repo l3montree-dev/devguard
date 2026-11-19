@@ -18,6 +18,7 @@ package shared
 import (
 	"context"
 	"errors"
+	"io"
 	"iter"
 	"net/http"
 	"time"
@@ -778,7 +779,7 @@ type ImportOptions struct {
 }
 
 type DataTransferService interface {
-	StartExport(ctx context.Context, options dtos.DataTransferExportOptions) error
+	StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error
 }
 
 type VulnDBService interface {

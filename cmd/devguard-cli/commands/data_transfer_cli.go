@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database"
@@ -31,7 +32,7 @@ func newDTExportCommand() *cobra.Command {
 			shared.LoadConfig() // nolint
 			options := dtos.DataTransferExportOptions{
 				AffectedEntities: dtos.AffectedEntities{
-					Orgs: []string{"b88da5ab-ce6d-4261-a6c1-63fddbca1503"},
+					Projects: []string{"d1c1ae53-6b95-4657-8275-b241d700c22e"},
 				},
 			}
 			app := fx.New(
@@ -40,7 +41,12 @@ func newDTExportCommand() *cobra.Command {
 				database.Module,
 				services.ServiceModule,
 				fx.Invoke(func(dataTransferService shared.DataTransferService) error {
-					return dataTransferService.StartExport(context.Background(), options)
+					exportFile, err := os.Create("devguard-export.tar")
+					if err != nil {
+						return err
+					}
+					defer exportFile.Close()
+					return dataTransferService.StartExport(context.Background(), options, exportFile)
 				}),
 			)
 
