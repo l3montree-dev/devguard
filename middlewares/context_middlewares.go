@@ -16,10 +16,8 @@
 package middlewares
 
 import (
-	"context"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/normalize"
@@ -131,18 +129,6 @@ func AssetVersionMiddleware(repository shared.AssetVersionRepository) func(next 
 
 			shared.SetAssetVersion(ctx, assetVersion)
 
-			// Update LastAccessedAt in a goroutine to avoid blocking the request
-			if !shared.GetSession(ctx).IsAnonymousSession() && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
-				go func() {
-					now := time.Now()
-					assetVersion.LastAccessedAt = now
-					// Use nil for tx to use the default database connection
-					if err := repository.Save(context.Background(), nil, &assetVersion); err != nil {
-						slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
-					}
-				}()
-			}
-
 			return next(ctx)
 		}
 	}
@@ -161,18 +147,6 @@ func ScanMiddleware(assetVersionRepository shared.AssetVersionRepository) func(n
 			if err != nil {
 				// if the asset version is not found, we do not return an error here, because the asset version might not exist yet
 				return next(ctx)
-			}
-
-			// Update LastAccessedAt in a goroutine to avoid blocking the request
-			if !shared.GetSession(ctx).IsAnonymousSession() && time.Since(assetVersion.LastAccessedAt) > 10*time.Minute {
-				go func() {
-					now := time.Now()
-					assetVersion.LastAccessedAt = now
-					// Use nil for tx to use the default database connection
-					if err := assetVersionRepository.Save(context.Background(), nil, &assetVersion); err != nil {
-						slog.Error("failed to update LastAccessedAt", "error", err, "assetVersion", assetVersion.Name)
-					}
-				}()
 			}
 
 			shared.SetAssetVersion(ctx, assetVersion)

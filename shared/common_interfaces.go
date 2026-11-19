@@ -549,8 +549,7 @@ type AssetVersionRepository interface {
 	GetDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID) (models.AssetVersion, error)
 	GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
-	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
-	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
+	UpdateLastUploadAt(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
 	FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }

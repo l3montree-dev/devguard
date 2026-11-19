@@ -266,6 +266,12 @@ func (s *ScanController) DependencyVulnScan(c shared.Context, bom *cdx.BOM) (ope
 			span.SetStatus(codes.Error, err.Error())
 			return nil, nil, nil, empty, err
 		}
+		if err := s.assetVersionRepository.UpdateLastUploadAt(scanCtx, tx, &assetVersion); err != nil {
+			slog.Error("could not update last upload", "err", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, nil, nil, empty, err
+		}
 	}
 
 	if noWrite {
@@ -371,6 +377,7 @@ func (s *ScanController) FirstPartyVulnScan(ctx shared.Context) error {
 		return ctx.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
 
+	assetVersion.LastUploadAt = new(time.Now())
 	err = s.assetVersionRepository.Save(reqCtx, nil, &assetVersion)
 	if err != nil {
 		slog.Error("could not save asset", "err", err)
@@ -785,6 +792,7 @@ func (s *ScanController) ScanSarifFile(c shared.Context) error {
 			span.SetStatus(codes.Error, err.Error())
 			return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 		}
+		assetVersion.LastUploadAt = new(time.Now())
 		if err := s.assetVersionRepository.Save(c.Request().Context(), nil, &assetVersion); err != nil {
 			slog.Error("could not save asset", "err", err)
 		}

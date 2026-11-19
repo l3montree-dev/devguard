@@ -640,7 +640,7 @@ type IntegrationAggregate_HasAccessToExternalEntityProvider_Call struct {
 // HasAccessToExternalEntityProvider is a helper method to define mock.On call
 //   - ctx shared.Context
 //   - externalEntityProviderID string
-func (_e *IntegrationAggregate_Expecter) HasAccessToExternalEntityProvider(ctx interface{}, externalEntityProviderID interface{}) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+func (_e *IntegrationAggregate_Expecter) HasAccessToExternalEntityProvider(ctx any, externalEntityProviderID any) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	return &IntegrationAggregate_HasAccessToExternalEntityProvider_Call{Call: _e.mock.On("HasAccessToExternalEntityProvider", ctx, externalEntityProviderID)}
 }
 
