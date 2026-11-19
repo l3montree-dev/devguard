@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/utils"
@@ -87,6 +88,7 @@ func AssetModelToDTO(asset models.Asset) dtos.Asset {
 		ParanoidMode:                 asset.ParanoidMode,
 		SharesInformation:            asset.SharesInformation,
 		State:                        string(asset.State),
+		AssetVersionRetentionPolicy:  asset.AssetVersionRetentionPolicy,
 	}
 }
 
@@ -264,6 +266,15 @@ func ApplyAssetPatchRequestToModel(assetPatch dtos.AssetPatchRequest, asset *mod
 	if assetPatch.ParanoidMode != nil {
 		updated = true
 		asset.ParanoidMode = *assetPatch.ParanoidMode
+	}
+
+	if assetPatch.AssetVersionRetentionPolicy != nil {
+		updated = true
+		if *assetPatch.AssetVersionRetentionPolicy == "" {
+			asset.AssetVersionRetentionPolicy = celrules.DefaultAssetVersionRetentionPolicy
+		} else {
+			asset.AssetVersionRetentionPolicy = *assetPatch.AssetVersionRetentionPolicy
+		}
 	}
 
 	if assetPatch.ModifiedAttackVector != nil {

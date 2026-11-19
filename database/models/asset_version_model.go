@@ -42,3 +42,15 @@ type AssetVersion struct {
 func (m AssetVersion) TableName() string {
 	return "asset_versions"
 }
+
+func (m AssetVersion) ToCELMap() map[string]any {
+	return map[string]any{
+		"name":           m.Name,
+		"slug":           m.Slug,
+		"type":           string(m.Type),
+		"defaultBranch":  m.DefaultBranch,
+		"createdAt":      TimeToCEL(m.CreatedAt),
+		"updatedAt":      TimeToCEL(m.UpdatedAt),
+		"lastAccessedAt": TimeToCEL(m.LastAccessedAt),
+	}
+}

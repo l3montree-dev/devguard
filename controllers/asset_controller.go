@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -307,6 +308,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 	if err := dtos.V.Struct(patchRequest); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	if patchRequest.AssetVersionRetentionPolicy != nil && *patchRequest.AssetVersionRetentionPolicy != "" {
+		if _, err := celrules.CompileAssetVersionRetentionPolicy(*patchRequest.AssetVersionRetentionPolicy); err != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid asset version retention policy: %s", err.Error()))
+		}
 	}
 
 	var changes []string
