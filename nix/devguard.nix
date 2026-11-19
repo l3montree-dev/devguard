@@ -10,7 +10,7 @@
   trivy ? null,
 }:
 rec {
-  common = import ./common.nix { inherit self lib; };
+  common = import ./common.nix { inherit self; };
   ldflags = [
     "-s"
     "-w"
