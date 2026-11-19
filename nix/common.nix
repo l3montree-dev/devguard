@@ -1,4 +1,4 @@
-{ self, lib }:
+{ self }:
 let
   # Nix has no way to know a checkout's branch/tag from source content alone
   # (self excludes .git, and rev/shortRev are commit-only) - only CI knows
