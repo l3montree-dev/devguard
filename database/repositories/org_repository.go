@@ -40,11 +40,11 @@ func NewOrgRepository(db *gorm.DB) *orgRepository {
 }
 
 func (g *orgRepository) Create(ctx context.Context, tx *gorm.DB, org *models.Org) error {
-	firstFreeSlug, err := g.firstFreeSlug(ctx, tx, org.Slug)
+	freeSlug, err := firstFreeSlug(g.GetDB(ctx, tx).Model(&models.Org{}), org.Slug)
 	if err != nil {
 		return fmt.Errorf("could not generate next slug: %w", err)
 	}
-	org.Slug = firstFreeSlug
+	org.Slug = freeSlug
 
 	return g.GetDB(ctx, tx).Create(org).Error
 }
@@ -52,11 +52,11 @@ func (g *orgRepository) Create(ctx context.Context, tx *gorm.DB, org *models.Org
 func (g *orgRepository) Save(ctx context.Context, tx *gorm.DB, org *models.Org) error {
 	// if the slug is empty, generate a new one
 	if org.ID == uuid.Nil {
-		firstFreeSlug, err := g.firstFreeSlug(ctx, tx, org.Name)
+		freeSlug, err := firstFreeSlug(g.GetDB(ctx, tx).Model(&models.Org{}), org.Name)
 		if err != nil {
 			return fmt.Errorf("could not generate next slug: %w", err)
 		}
-		org.Slug = firstFreeSlug
+		org.Slug = freeSlug
 	}
 
 	return g.GetDB(ctx, tx).Save(org).Error
@@ -100,36 +100,6 @@ func (g *orgRepository) GetOrgByIDs(ctx context.Context, tx *gorm.DB, ids []uuid
 	var orgs []models.Org
 	err := g.GetDB(ctx, tx).Model(models.Org{}).Where("id = ANY (?)", pq.Array(ids)).Find(&orgs).Error
 	return orgs, err
-}
-
-func (g *orgRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, organizationSlug string) (string, error) {
-	var slugs []string
-	err := g.GetDB(ctx, tx).Model(&models.Org{}).
-		Where("slug LIKE ?", organizationSlug+"%").
-		Pluck("slug", &slugs).Error
-	if err != nil {
-		return "", err
-	}
-
-	baseTaken := false
-	existing := make(map[string]bool)
-	for _, s := range slugs {
-		existing[s] = true
-		if s == organizationSlug {
-			baseTaken = true
-		}
-	}
-
-	if !baseTaken {
-		return organizationSlug, nil
-	}
-
-	for i := 1; ; i++ {
-		candidate := fmt.Sprintf("%s-%d", organizationSlug, i)
-		if !existing[candidate] {
-			return candidate, nil
-		}
-	}
 }
 
 func (g *orgRepository) GetOrgsWithVulnSharingAssets(ctx context.Context, tx *gorm.DB) ([]models.Org, error) {

@@ -165,7 +165,6 @@ func init() {
 		NewSarifCommand(),
 		newKyvernoSarifCommand(),
 		newSarifMarkdownCommand(),
-		NewSlugCommand(),
 		NewSbomCommand(),
 		NewGetCommand(),
 		NewCurlCommand(),

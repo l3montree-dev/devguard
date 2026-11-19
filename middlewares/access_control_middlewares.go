@@ -382,12 +382,12 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 			}
 
 			// resolve asset version from path param
-			assetVersionSlug, err := shared.GetURLDecodedParam(ctx, "assetVersionSlug")
+			assetVersionSlug, err := shared.GetAssetVersionSlugOrName(ctx)
 			if err != nil {
 				slog.Error("could not get assetVersionSlug from url", "err", err)
 				return echo.NewHTTPError(400, "invalid assetVersionSlug")
 			}
-			assetVersion, err := assetVersionRepository.ReadBySlug(ctx.Request().Context(), nil, asset.ID, assetVersionSlug)
+			assetVersion, err := readAssetVersionBySlugOrName(ctx.Request().Context(), assetVersionRepository, asset.ID, assetVersionSlug)
 			if err != nil {
 				slog.Error("could not find asset version in ShareMiddleware", "assetID", assetID, "assetVersionSlug", assetVersionSlug, "err", err)
 				return echo.NewHTTPError(404, "could not find asset version")

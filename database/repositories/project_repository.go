@@ -511,11 +511,11 @@ func (g *projectRepository) EnableCommunityManagedPolicies(ctx context.Context, 
 
 func (g *projectRepository) Create(ctx context.Context, tx *gorm.DB, project *models.Project) error {
 	// set the slug if not set
-	slug, err := g.firstFreeSlug(ctx, tx, project.OrganizationID, project.Slug)
+	freeSlug, err := firstFreeSlug(g.GetDB(ctx, tx).Model(&models.Project{}).Where("organization_id = ?", project.OrganizationID), project.Slug)
 	if err != nil {
 		return err
 	}
-	project.Slug = slug
+	project.Slug = freeSlug
 
 	return g.GetDB(ctx, tx).Create(project).Error
 }
@@ -567,36 +567,6 @@ func (g *projectRepository) UpsertSplit(ctx context.Context, tx *gorm.DB, extern
 	}
 	// return the new and updated projects
 	return newProjects, updatedProjects, nil
-}
-
-func (g *projectRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectSlug string) (string, error) {
-	var slugs []string
-	err := g.GetDB(ctx, tx).Model(&models.Project{}).
-		Where("organization_id = ? AND slug LIKE ?", orgID, projectSlug+"%").
-		Pluck("slug", &slugs).Error
-	if err != nil {
-		return "", err
-	}
-
-	baseTaken := false
-	existing := make(map[string]bool)
-	for _, s := range slugs {
-		existing[s] = true
-		if s == projectSlug {
-			baseTaken = true
-		}
-	}
-
-	if !baseTaken {
-		return projectSlug, nil
-	}
-
-	for i := 1; ; i++ {
-		candidate := fmt.Sprintf("%s-%d", projectSlug, i)
-		if !existing[candidate] {
-			return candidate, nil
-		}
-	}
 }
 
 func (g *projectRepository) prepareUniqueSlugs(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projects []*models.Project) error {
