@@ -45,7 +45,7 @@ func CVEToDTO(cve models.CVE) dtos.CVE {
 		Relationships:         utils.Map(cve.Relationships, RelationshipToDTO),
 		EUVDExploitAdd:        cve.EUVDExploitAdd,
 		AffectedComponents:    utils.Map(cve.AffectedComponents, affectedComponentToDTOWithoutCVEs),
-		CWEs:                  strings.Split(utils.OrDefault(cve.CWEs, ""), ","),
+		CWEs:                  strings.FieldsFunc(utils.OrDefault(cve.CWEs, ""), func(r rune) bool { return r == ',' }),
 	}
 }
 
