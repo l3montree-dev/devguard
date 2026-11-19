@@ -326,6 +326,7 @@ var routeMinLevel = map[string]shared.Role{
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/pats/":                                                                 shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/pipeline-trigger/":                                                     shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/":                                                                 shared.RoleAdmin,
+	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/retention-policy/test/":                                                shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/advisory/":                                      shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/":                                     shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/sync-external-sources/": shared.RoleAdmin,

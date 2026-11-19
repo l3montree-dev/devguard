@@ -48,7 +48,7 @@ func CompileAssetVersionRetentionPolicy(expression string) (cel.Program, error) 
 }
 
 // AssetVersionsToDelete returns the asset versions of a single asset which the retention policy does not keep.
-// the default branch is always kept, as is every asset version the policy fails to evaluate for - a broken policy must never delete data.
+// every asset version the policy fails to evaluate for is kept - a broken policy must never delete data.
 func AssetVersionsToDelete(policy string, assetVersions []models.AssetVersion) ([]models.AssetVersion, error) {
 	prg, err := CompileAssetVersionRetentionPolicy(policy)
 	if err != nil {

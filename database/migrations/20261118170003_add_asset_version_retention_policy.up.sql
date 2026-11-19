@@ -13,8 +13,8 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
--- a CEL expression deciding which asset versions the daemon keeps. the default branch is always kept.
--- the default: tags are kept, branches are deleted 7 days after their creation or their last upload, whichever is later.
+-- a CEL expression deciding which asset versions the daemon keeps.
+-- the default: tags and the default branch are kept, branches are deleted 7 days after their creation or their last upload, whichever is later.
 -- keep in sync with celrules.DefaultAssetVersionRetentionPolicy
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS asset_version_retention_policy text NOT NULL
     DEFAULT 'ref.type == "tag" || ref.defaultBranch || timestamp(ref.createdAt) > now() - duration("168h") || (has(ref.lastUploadAt) && timestamp(ref.lastUploadAt) > now() - duration("168h"))';

@@ -95,7 +95,7 @@ func TestAssetVersionsToDelete(t *testing.T) {
 			.all(other, semver(ref.name) >= semver(other.name))`
 		toDelete, err := AssetVersionsToDelete(policy, assetVersions)
 		require.NoError(t, err)
-		assert.Equal(t, []string{"feature", "fresh-feature", "v1.9.0"}, names(toDelete))
+		assert.Equal(t, []string{"main", "feature", "fresh-feature", "v1.9.0"}, names(toDelete))
 	})
 
 	t.Run("keeps an asset version the policy fails to evaluate for", func(t *testing.T) {
