@@ -19,6 +19,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
@@ -49,13 +51,34 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 	}
 }
 
-// WarnIfUnauthenticated prints a warning to stderr when no token and no assetName are
-// provided. It should be called after config has been parsed for commands that support
-// unauthenticated scanning (results will not be saved to DevGuard).
-func WarnIfUnauthenticated() {
-	if config.RuntimeBaseConfig.Token == "" || config.RuntimeBaseConfig.AssetName == "" {
-		fmt.Fprintln(os.Stderr, "Warning: You are scanning without saving the results. Provide --token and --assetName to save results to DevGuard.")
+var noTokenWarning bool
+
+func CheckTokenAndAssetName() error {
+	if config.RuntimeBaseConfig.Token == "" {
+		noTokenWarning = true
+		return nil
 	}
+	if config.RuntimeBaseConfig.AssetName == "" {
+		return fmt.Errorf("--assetName is required when a token is provided")
+	}
+	return nil
+}
+
+func PrintNoTokenWarning() {
+	if !noTokenWarning {
+		return
+	}
+	style := table.StyleBold
+	style.Color.Border = text.Colors{text.FgYellow, text.Bold}
+	style.Box.PaddingLeft = "  "
+	style.Box.PaddingRight = "  "
+
+	tw := table.NewWriter()
+	tw.SetStyle(style)
+	tw.AppendRow(table.Row{text.Colors{text.FgYellow, text.Bold}.Sprint("WARNING: NO TOKEN PROVIDED")})
+	tw.AppendRow(table.Row{text.FgYellow.Sprint("The results of this scan were NOT saved to DevGuard.")})
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, tw.Render())
 }
 
 func AddDependencyVulnsScanFlags(cmd *cobra.Command) {

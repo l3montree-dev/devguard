@@ -62,7 +62,9 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 }
 
 func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
-	WarnIfUnauthenticated()
+	if err := CheckTokenAndAssetName(); err != nil {
+		return nil, func() {}, err
+	}
 	WarnOnVersionMismatch()
 
 	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second

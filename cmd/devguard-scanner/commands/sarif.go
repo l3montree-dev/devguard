@@ -252,7 +252,9 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		scanner.WarnIfUnauthenticated()
+		if err := scanner.CheckTokenAndAssetName(); err != nil {
+			return err
+		}
 		scanner.WarnOnVersionMismatch()
 
 		sarifResult, err := executeCodeScan(cmd.Context(), scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
