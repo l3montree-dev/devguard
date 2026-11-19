@@ -471,6 +471,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 
 		// Mock the repository to return an error for default slug
 		mockAssetVersionRepository.On("ReadBySlug", mock.Anything, mock.Anything, assetID, "default").Return(models.AssetVersion{}, errors.New("not found"))
+		mockAssetVersionRepository.On("ReadByName", mock.Anything, mock.Anything, "default", assetID).Return(models.AssetVersion{}, errors.New("not found"))
 
 		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
@@ -513,6 +514,7 @@ func TestAssetVersionMiddleware(t *testing.T) {
 
 		// Mock the repository to return an error
 		mockAssetVersionRepository.On("ReadBySlug", mock.Anything, mock.Anything, assetID, assetVersionSlug).Return(models.AssetVersion{}, errors.New("not found"))
+		mockAssetVersionRepository.On("ReadByName", mock.Anything, mock.Anything, assetVersionSlug, assetID).Return(models.AssetVersion{}, errors.New("not found"))
 
 		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
