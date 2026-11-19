@@ -35,6 +35,8 @@ import (
 )
 
 func UploadVEX(vex io.Reader) (*http.Response, error) {
+	WarnOnVersionMismatch()
+
 	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -61,6 +63,7 @@ func UploadVEX(vex io.Reader) (*http.Response, error) {
 
 func UploadBOM(bom io.Reader) (*http.Response, context.CancelFunc, error) {
 	WarnIfUnauthenticated()
+	WarnOnVersionMismatch()
 
 	timeout := time.Duration(config.RuntimeBaseConfig.Timeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -180,6 +183,8 @@ func UploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetNam
 }
 
 func UploadAttestation(ctx context.Context, predicate string) error {
+	WarnOnVersionMismatch()
+
 	// read the file
 	file, err := os.ReadFile(predicate)
 	if err != nil {

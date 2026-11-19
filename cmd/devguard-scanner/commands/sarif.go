@@ -40,6 +40,8 @@ import (
 )
 
 func sarifCmd(cmd *cobra.Command, args []string) error {
+	scanner.WarnOnVersionMismatch()
+
 	filePath := args[0]
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("file does not exist: %s", filePath)
@@ -251,6 +253,7 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		scanner.WarnIfUnauthenticated()
+		scanner.WarnOnVersionMismatch()
 
 		sarifResult, err := executeCodeScan(cmd.Context(), scannerID, config.RuntimeBaseConfig.Path, config.RuntimeBaseConfig.OutputPath)
 		if err != nil {
