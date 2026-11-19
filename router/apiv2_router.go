@@ -49,6 +49,7 @@ func NewAPIV2Router(
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
 		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.MultiOrganizationMiddlewareRBAC(),
 		middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead),
 		middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead),
 		middlewares.ScanMiddleware(assetVersionRepository),

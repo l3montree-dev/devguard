@@ -261,6 +261,15 @@ func (repository *assetRepository) Update(ctx context.Context, tx *gorm.DB, asse
 	return repository.GetDB(ctx, tx).Save(asset).Error
 }
 
+func (repository *assetRepository) RemoveRepositoryConnectionByPrefix(ctx context.Context, tx *gorm.DB, repositoryIDPrefix string) error {
+	return repository.GetDB(ctx, tx).Model(&models.Asset{}).
+		Where("repository_id LIKE ?", repositoryIDPrefix+"%").
+		Updates(map[string]any{
+			"repository_id":   nil,
+			"repository_name": nil,
+		}).Error
+}
+
 func (repository *assetRepository) GetAllAssetsFromDB(ctx context.Context, tx *gorm.DB) ([]models.Asset, error) {
 	var assets []models.Asset
 	err := repository.GetDB(ctx, tx).Preload("AssetVersions").Find(&assets).Error

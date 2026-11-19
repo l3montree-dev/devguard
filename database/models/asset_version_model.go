@@ -34,11 +34,29 @@ type AssetVersion struct {
 	Type            AssetVersionType `json:"type" gorm:"type:text;not null;"`
 	SupplyChains    []SupplyChain    `json:"supplyChains" gorm:"foreignKey:AssetVersionID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	SigningPubKey  *string             `json:"signingPubKey" gorm:"type:text;"`
-	Metadata       databasetypes.JSONB `json:"metadata" gorm:"type:jsonb"`
-	LastAccessedAt time.Time           `json:"lastAccessedAt" gorm:"default:NOW();"`
+	SigningPubKey *string             `json:"signingPubKey" gorm:"type:text;"`
+	Metadata      databasetypes.JSONB `json:"metadata" gorm:"type:jsonb"`
+	// only set by scans uploaded by a client - background rescans of upstream SBOMs do not count
+	// includes both sbom and sarif imports
+	LastUploadAt *time.Time `json:"lastUploadAt"`
 }
 
 func (m AssetVersion) TableName() string {
 	return "asset_versions"
+}
+
+func (m AssetVersion) ToCELMap() map[string]any {
+	res := map[string]any{
+		"name":          m.Name,
+		"slug":          m.Slug,
+		"type":          string(m.Type),
+		"defaultBranch": m.DefaultBranch,
+		"createdAt":     TimeToCEL(m.CreatedAt),
+		"updatedAt":     TimeToCEL(m.UpdatedAt),
+	}
+	// absent instead of null, so policies can guard with has(ref.lastUploadAt)
+	if m.LastUploadAt != nil {
+		res["lastUploadAt"] = TimeToCEL(*m.LastUploadAt)
+	}
+	return res
 }

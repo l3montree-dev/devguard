@@ -130,3 +130,19 @@ func TestMatchByCWE(t *testing.T) {
 	assert.False(t, evalRule(t, rule, vulnWithCWEs(ptr(""))))
 	assert.False(t, evalRule(t, rule, vulnWithCWEs(nil)))
 }
+
+func TestMatchesPatternWithEmptyVulnerabilityPath(t *testing.T) {
+	rule := models.UpstreamVEXRule{
+		ID:            "picomatch",
+		CELExpression: `matchesPattern(vuln, ["ROOT", "*", "pkg:npm/picomatch@*"])`,
+	}
+
+	for _, path := range [][]string{nil, {}} {
+		vuln := models.DependencyVuln{
+			AssetVersionName:  "main",
+			CVEID:             "CVE-2024-0001",
+			VulnerabilityPath: path,
+		}
+		assert.False(t, evalRule(t, rule, vuln), "a vuln without a path must not match a pattern that requires one (path=%#v)", path)
+	}
+}

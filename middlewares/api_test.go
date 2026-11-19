@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -401,7 +400,7 @@ func TestMiddlewareNeededScope(t *testing.T) {
 }
 
 func TestAssetVersionMiddleware(t *testing.T) {
-	t.Run("it should update LastAccessedAt timestamp when asset version is found", func(t *testing.T) {
+	t.Run("it should set the asset version in the context when it is found", func(t *testing.T) {
 		// arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -430,14 +429,6 @@ func TestAssetVersionMiddleware(t *testing.T) {
 
 		// Mock the repository calls
 		mockAssetVersionRepository.On("ReadBySlug", mock.Anything, mock.Anything, assetID, assetVersionSlug).Return(assetVersion, nil)
-		mockAssetVersionRepository.On("Save", mock.Anything, (*gorm.DB)(nil), mock.MatchedBy(func(av *models.AssetVersion) bool {
-			// Verify that the asset version has the correct basic fields
-			if av.Name != "v1.0.0" || av.AssetID != assetID || av.Slug != assetVersionSlug {
-				return false
-			}
-			// Verify that LastAccessedAt is set and is recent (should not be zero time)
-			return !av.LastAccessedAt.IsZero() && time.Since(av.LastAccessedAt) < time.Minute
-		})).Return(nil)
 
 		middleware := middlewares.AssetVersionMiddleware(mockAssetVersionRepository)
 
@@ -445,9 +436,6 @@ func TestAssetVersionMiddleware(t *testing.T) {
 		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
 		})(ctx)
-
-		// Wait a bit for the goroutine to complete
-		time.Sleep(100 * time.Millisecond)
 
 		// assert
 		assert.NoError(t, err)

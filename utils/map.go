@@ -30,3 +30,16 @@ func Keys[K comparable, T any](m map[K]T) []K {
 	}
 	return res
 }
+
+func Merge[T any](elements ...[]T) []T {
+	// count all elements
+	count := 0
+	for _, el := range elements {
+		count += len(el)
+	}
+	result := make([]T, 0, count)
+	for _, el := range elements {
+		result = append(result, el...)
+	}
+	return result
+}

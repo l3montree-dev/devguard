@@ -365,6 +365,10 @@ func (offline *offlineIntegrationAggregate) ListRepositories(ctx shared.Context)
 	return nil, nil
 }
 
+func (offline *offlineIntegrationAggregate) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	return false, nil
+}
+
 func (offline *offlineIntegrationAggregate) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	offline.events.Add(1)
 	return nil

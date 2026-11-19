@@ -69,6 +69,7 @@ func NewSessionRouter(
 		middlewares.NeededScope([]string{"scan"}),
 		middlewares.AssetNameMiddleware(),
 		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.MultiOrganizationMiddlewareRBAC(),
 		middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionRead),
 		middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead),
 	}

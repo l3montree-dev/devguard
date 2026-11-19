@@ -154,7 +154,12 @@ func (i *JiraIntegration) Delete(ctx shared.Context) error {
 		})
 	}
 
-	err = i.jiraIntegrationRepository.Delete(ctx.Request().Context(), nil, parsedID)
+	err = i.assetRepository.Transaction(ctx.Request().Context(), func(tx shared.DB) error {
+		if err := i.jiraIntegrationRepository.Delete(ctx.Request().Context(), tx, parsedID); err != nil {
+			return err
+		}
+		return i.assetRepository.RemoveRepositoryConnectionByPrefix(ctx.Request().Context(), tx, fmt.Sprintf("jira:%s:", parsedID))
+	})
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return ctx.JSON(404, map[string]any{
@@ -271,7 +276,10 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 	return adfComment
 
 }
-
+func (i *JiraIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	// Jira integration does not have access control in the same way as GitLab or GitHub
+	return false, nil
+}
 func (i *JiraIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	// Jira integration does not have groups in the same way as GitLab or GitHub
 	return "", fmt.Errorf("Jira integration does not support getting role in group")

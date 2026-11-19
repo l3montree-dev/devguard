@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.19.1] - 2026-11-18
+
+### Changed
+
+- The PostgreSQL image is bumped to `16.16`, and the PostgreSQL version of the Nix dev shell is pinned so the `devguard-maint` CLI works again
+- The GitLab mirror workflow uses a concurrency group
+
+### Fixed
+
+- **OAuth2 reauthorization redirect** — for organizations backed by an external entity provider (e.g. GitLab) the oauth2 token is now verified against the provider, so users with an expired token are redirected to reauthorize instead of running into errors. Successful checks are cached for 15 minutes
+- **Conflicting VEX rules** — if several VEX rules matched the same vulnerability, their events were written with the same timestamp and applied in random order. The event is now picked deterministically (`falsePositive` > `reopened` > `accepted`, then the smallest rule id)
+- **Migration for VEX rule conflicts** — removes the conflicting VEX rule events and rebuilds the vulnerability state intervals and the current state of the affected vulnerabilities
+- **Vulnerability state intervals** — events sharing a timestamp no longer start two intervals at the same `valid_from`
+
+---
+
 ## [v1.19.0] - 2026-11-17
 
 Thanks to external contributors [@shounakjoshi88-a11y](https://github.com/shounakjoshi88-a11y) for serving the OpenVEX document with the JSON content type, [@magndotcc](https://github.com/magndotcc) for accepting SBOMs whose root component has no `bom-ref`, [@xi72yow](https://github.com/xi72yow) for fixing the Red Hat layered products matching, and [@sarankumar1325](https://github.com/sarankumar1325) for the SARIF and package sorting fixes! 🎉

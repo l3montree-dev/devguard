@@ -199,6 +199,7 @@ type AssetRepository interface {
 	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadInProjectTree(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, rootProjectID uuid.UUID) (models.Asset, error)
 	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
+	RemoveRepositoryConnectionByPrefix(ctx context.Context, tx DB, repositoryIDPrefix string) error
 }
 
 type AttestationRepository interface {
@@ -549,8 +550,7 @@ type AssetVersionRepository interface {
 	GetDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID) (models.AssetVersion, error)
 	GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
-	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
-	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
+	UpdateLastUploadAt(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
 	FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }

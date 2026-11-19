@@ -140,6 +140,7 @@ type Asset struct {
 	SharesInformation               bool    `json:"sharesInformation"`
 	CentralDependencyVulnManagement bool    `json:"centralDependencyVulnManagement"`
 	State                           string  `json:"state"`
+	AssetVersionRetentionPolicy     string  `json:"assetVersionRetentionPolicy"`
 }
 
 type AssetWithSecrets struct {
@@ -218,4 +219,16 @@ type AssetPatchRequest struct {
 	ParanoidMode       *bool   `json:"paranoidMode"`
 
 	SharesInformation *bool `json:"sharesInformation"`
+
+	// an empty string resets to the default policy
+	AssetVersionRetentionPolicy *string `json:"assetVersionRetentionPolicy" validate:"omitempty,max=4000"`
+}
+
+type TestAssetVersionRetentionPolicyRequest struct {
+	AssetVersionRetentionPolicy string `json:"assetVersionRetentionPolicy" validate:"required,max=4000"`
+}
+
+type TestAssetVersionRetentionPolicyResponse struct {
+	ToDelete []AssetVersion `json:"toDelete"`
+	Kept     []AssetVersion `json:"kept"`
 }

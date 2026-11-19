@@ -1626,3 +1626,66 @@ func (_c *AssetVersionRepository_UpdateAssetDefaultBranch_Call) RunAndReturn(run
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateLastUploadAt provides a mock function for the type AssetVersionRepository
+func (_mock *AssetVersionRepository) UpdateLastUploadAt(ctx context.Context, tx shared.DB, assetVersion *models.AssetVersion) error {
+	ret := _mock.Called(ctx, tx, assetVersion)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateLastUploadAt")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.AssetVersion) error); ok {
+		r0 = returnFunc(ctx, tx, assetVersion)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetVersionRepository_UpdateLastUploadAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateLastUploadAt'
+type AssetVersionRepository_UpdateLastUploadAt_Call struct {
+	*mock.Call
+}
+
+// UpdateLastUploadAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - assetVersion *models.AssetVersion
+func (_e *AssetVersionRepository_Expecter) UpdateLastUploadAt(ctx any, tx any, assetVersion any) *AssetVersionRepository_UpdateLastUploadAt_Call {
+	return &AssetVersionRepository_UpdateLastUploadAt_Call{Call: _e.mock.On("UpdateLastUploadAt", ctx, tx, assetVersion)}
+}
+
+func (_c *AssetVersionRepository_UpdateLastUploadAt_Call) Run(run func(ctx context.Context, tx shared.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_UpdateLastUploadAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.AssetVersion
+		if args[2] != nil {
+			arg2 = args[2].(*models.AssetVersion)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AssetVersionRepository_UpdateLastUploadAt_Call) Return(err error) *AssetVersionRepository_UpdateLastUploadAt_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetVersionRepository_UpdateLastUploadAt_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, assetVersion *models.AssetVersion) error) *AssetVersionRepository_UpdateLastUploadAt_Call {
+	_c.Call.Return(run)
+	return _c
+}

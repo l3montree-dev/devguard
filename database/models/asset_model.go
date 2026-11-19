@@ -53,6 +53,7 @@ type Asset struct {
 	IsPublic                     bool                `json:"isPublic" gorm:"default:false;not null;"`
 	ParanoidMode                 bool                `json:"paranoidMode" gorm:"default:false;not null;"`
 	SharesInformation            bool                `json:"shareInformation" gorm:"default:false;not null;"`
+	AssetVersionRetentionPolicy  string              `json:"assetVersionRetentionPolicy" gorm:"type:text;not null;default:(-)"` // the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy
 
 	State AssetState `json:"state" gorm:"type:text;default:'active';not null;"`
 

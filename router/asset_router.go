@@ -76,6 +76,8 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
+
+	assetUpdateAccessControlRequired.POST("/retention-policy/test/", assetController.TestAssetVersionRetentionPolicy)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
