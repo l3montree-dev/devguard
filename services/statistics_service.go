@@ -49,6 +49,11 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactID *uu
 
 	uniqueCombinations := make(map[string]struct{})
 	for _, dependencyVuln := range dependencyVulns {
+		cvss := float64(dependencyVuln.GetCVE().CVSS)
+		if cvss < 0 {
+			continue
+		}
+
 		componentName := dependencyVuln.ComponentPurl
 		if _, exists := distributionPerComponent[componentName]; !exists {
 			distributionPerComponent[componentName] = models.Distribution{}
@@ -63,7 +68,6 @@ func (s *statisticsService) GetComponentRisk(ctx context.Context, artifactID *uu
 		distribution := distributionPerComponent[componentName]
 
 		risk := utils.OrDefault(dependencyVuln.RiskAssessment, 0)
-		cvss := float64(dependencyVuln.GetCVE().CVSS)
 
 		switch {
 		case risk >= 0.0 && risk < 4.0:
