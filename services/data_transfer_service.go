@@ -205,22 +205,18 @@ var tablesToSync = map[string]tableProperties{
 }
 
 type DataTransferService struct {
-	pool              *pgxpool.Pool
-	rbacProvider      shared.RBACProvider
-	projectService    shared.ProjectService
-	assetService      shared.AssetService
-	projectRepository shared.ProjectRepository
-	assetRepository   shared.AssetRepository
+	pool           *pgxpool.Pool
+	rbacProvider   shared.RBACProvider
+	projectService shared.ProjectService
+	assetService   shared.AssetService
 }
 
-func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider, projectService shared.ProjectService, assetService shared.AssetService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *DataTransferService {
+func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider, projectService shared.ProjectService, assetService shared.AssetService) *DataTransferService {
 	return &DataTransferService{
-		pool:              pool,
-		rbacProvider:      rbacProvider,
-		projectService:    projectService,
-		assetService:      assetService,
-		projectRepository: projectRepository,
-		assetRepository:   assetRepository,
+		pool:           pool,
+		rbacProvider:   rbacProvider,
+		projectService: projectService,
+		assetService:   assetService,
 	}
 }
 
@@ -682,13 +678,14 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		}
 	}
 
-	if err := importTx.Commit(ctx); err != nil {
-		return fmt.Errorf("could not commit import transaction: %w", err)
+	// casbin uses its own connection, so the rules are added before the commit to roll back the import if they fail
+	if err := service.bootstrapImportedRBAC(ctx, importTx, importMetadata, options); err != nil {
+		return fmt.Errorf("could not set up permissions for imported data: %w", err)
 	}
 
-	// casbin uses its own connection, so the rules can only be added once the data is committed
-	if err := service.bootstrapImportedRBAC(ctx, importMetadata, options); err != nil {
-		return fmt.Errorf("could not set up permissions for imported data: %w", err)
+	// rules of a failed commit are kept, they only point to ids which do not exist on this instance
+	if err := importTx.Commit(ctx); err != nil {
+		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
 	slog.Info("successfully finished import", "time", time.Since(start))
@@ -696,7 +693,7 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 }
 
 // the importer gets the highest role on the imported entity, the rules of the import target stay untouched
-func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, importMetadata metadata, options dtos.DataTransferImportOptions) error {
+func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, tx pgx.Tx, importMetadata metadata, options dtos.DataTransferImportOptions) error {
 	owner := shared.NewSession(options.OwnerID, shared.SessionActorUser, nil, false)
 
 	switch importMetadata.EntityType {
@@ -706,49 +703,32 @@ func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, i
 			return fmt.Errorf("could not bootstrap organization: %w", err)
 		}
 
-		projects, err := service.projectRepository.GetByOrgID(ctx, nil, importMetadata.EntityID)
+		projects, assets, err := loadImportedProjectsAndAssets(ctx, tx, importedOrgProjectsSQL, importMetadata.EntityID)
 		if err != nil {
-			return fmt.Errorf("could not load imported projects: %w", err)
-		}
-		assets, err := service.assetRepository.GetByOrgID(ctx, nil, importMetadata.EntityID)
-		if err != nil {
-			return fmt.Errorf("could not load imported assets: %w", err)
+			return err
 		}
 		return service.bootstrapProjectsAndAssets(ctx, rbac, projects, assets)
 
 	case dtos.DataTransferEntityProject:
 		rbac := service.rbacProvider.GetDomainRBAC(options.TargetOrgID.String())
-		rootProject, err := service.projectRepository.Read(ctx, nil, importMetadata.EntityID)
+		projects, assets, err := loadImportedProjectsAndAssets(ctx, tx, importedSubProjectsSQL, importMetadata.EntityID)
 		if err != nil {
-			return fmt.Errorf("could not load imported project: %w", err)
-		}
-		subProjects, err := service.projectRepository.RecursivelyGetChildProjects(ctx, nil, rootProject.ID)
-		if err != nil {
-			return fmt.Errorf("could not load imported sub projects: %w", err)
-		}
-		projects := append([]models.Project{rootProject}, subProjects...)
-
-		projectIDs := make([]uuid.UUID, 0, len(projects))
-		for _, project := range projects {
-			projectIDs = append(projectIDs, project.ID)
-		}
-		assets, err := service.assetRepository.GetByProjectIDs(ctx, nil, projectIDs)
-		if err != nil {
-			return fmt.Errorf("could not load imported assets: %w", err)
+			return err
 		}
 		if err := service.bootstrapProjectsAndAssets(ctx, rbac, projects, assets); err != nil {
 			return err
 		}
 
 		// sub projects and assets inherit the admin role of the imported project
-		if err := rbac.GrantRoleInProject(ctx, owner, shared.RoleAdmin, rootProject.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(ctx, owner, shared.RoleAdmin, importMetadata.EntityID.String()); err != nil {
 			return fmt.Errorf("could not grant admin role on imported project: %w", err)
 		}
 		return nil
 
 	case dtos.DataTransferEntityAsset:
 		rbac := service.rbacProvider.GetDomainRBAC(options.TargetOrgID.String())
-		asset, err := service.assetRepository.Read(ctx, nil, importMetadata.EntityID)
+		rows, _ := tx.Query(ctx, importedAssetSQL, importMetadata.EntityID)
+		asset, err := pgx.CollectExactlyOneRow(rows, scanImportedAsset)
 		if err != nil {
 			return fmt.Errorf("could not load imported asset: %w", err)
 		}
@@ -763,6 +743,50 @@ func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, i
 	default:
 		return fmt.Errorf("unknown imported entity type: %s", importMetadata.EntityType)
 	}
+}
+
+// the imported rows are not committed yet, so they are loaded through the import transaction and not the repositories
+const importedOrgProjectsSQL = `SELECT id, parent_id FROM projects WHERE organization_id = $1`
+
+const importedSubProjectsSQL = `WITH RECURSIVE sub_projects AS (
+	SELECT id, parent_id FROM projects WHERE id = $1
+	UNION
+	SELECT p.id, p.parent_id FROM projects p JOIN sub_projects sp ON p.parent_id = sp.id
+) SELECT id, parent_id FROM sub_projects`
+
+const importedProjectAssetsSQL = `SELECT id, project_id FROM assets WHERE project_id = ANY($1::uuid[])`
+const importedAssetSQL = `SELECT id, project_id FROM assets WHERE id = $1`
+
+// only scans the fields the rbac bootstrap needs
+func scanImportedProject(row pgx.CollectableRow) (models.Project, error) {
+	var project models.Project
+	err := row.Scan(&project.ID, &project.ParentID)
+	return project, err
+}
+
+func scanImportedAsset(row pgx.CollectableRow) (models.Asset, error) {
+	var asset models.Asset
+	err := row.Scan(&asset.ID, &asset.ProjectID)
+	return asset, err
+}
+
+func loadImportedProjectsAndAssets(ctx context.Context, tx pgx.Tx, projectsSQL string, entityID uuid.UUID) ([]models.Project, []models.Asset, error) {
+	rows, _ := tx.Query(ctx, projectsSQL, entityID)
+	projects, err := pgx.CollectRows(rows, scanImportedProject)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not load imported projects: %w", err)
+	}
+
+	projectIDs := make([]uuid.UUID, 0, len(projects))
+	for _, project := range projects {
+		projectIDs = append(projectIDs, project.ID)
+	}
+	rows, _ = tx.Query(ctx, importedProjectAssetsSQL, projectIDs)
+	assets, err := pgx.CollectRows(rows, scanImportedAsset)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not load imported assets: %w", err)
+	}
+	return projects, assets, nil
 }
 
 func (service *DataTransferService) bootstrapProjectsAndAssets(ctx context.Context, rbac shared.AccessControl, projects []models.Project, assets []models.Asset) error {
