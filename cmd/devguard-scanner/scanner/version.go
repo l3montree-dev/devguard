@@ -54,7 +54,7 @@ func WarnOnVersionMismatch() {
 		}
 
 		if scannerSemver.Major() != apiSemver.Major() || scannerSemver.Minor() != apiSemver.Minor() {
-			slog.Warn("devguard-scanner and DevGuard API differ in minor version - compatibility is not guaranteed, please use a matching scanner version", "scannerVersion", scannerVersion, "apiVersion", apiVersion)
+			config.AddWarning("VERSION MISMATCH", fmt.Sprintf("devguard-scanner %s and DevGuard API %s differ in minor version - compatibility is not guaranteed, please use a matching scanner version.", scannerVersion, apiVersion))
 		}
 	})
 }

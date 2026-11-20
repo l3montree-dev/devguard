@@ -178,7 +178,7 @@ func UploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetNam
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("could not upload public key: %s", resp.Status)
+		return fmt.Errorf("could not upload public key: %w", devguard.NewAPIError(resp))
 	}
 
 	return nil
@@ -223,12 +223,7 @@ func UploadAttestation(ctx context.Context, predicate string) error {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		// read the body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
-		}
-		return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
+		return fmt.Errorf("could not upload attestation: %w", devguard.NewAPIError(resp))
 	}
 
 	slog.Info("attestation uploaded successfully", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType)
@@ -260,12 +255,12 @@ func SignBuildProvenance(ctx context.Context, statement []byte, workloadIdentity
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("could not sign build provenance: %w", devguard.NewAPIError(resp))
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("could not read signed build provenance: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("could not sign build provenance: %s %s", resp.Status, string(body))
 	}
 	return body, nil
 }

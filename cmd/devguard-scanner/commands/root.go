@@ -25,7 +25,6 @@ import (
 
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
 	buildconfig "github.com/l3montree-dev/devguard/config"
 	"github.com/l3montree-dev/devguard/telemetry"
 	"github.com/l3montree-dev/devguard/utils"
@@ -53,6 +52,7 @@ const (
 
 var RootCmd = &cobra.Command{
 	SilenceUsage:      true,
+	SilenceErrors:     true,
 	Use:               "devguard-scanner",
 	Short:             "Secure your Software Supply Chain",
 	Version:           scannerVersion(),
@@ -124,8 +124,9 @@ and 'attest' to interact with the platform. Configuration can be provided via a
 
 func Execute() {
 	err := RootCmd.Execute()
-	scanner.PrintNoTokenWarning()
+	config.PrintWarnings()
 	if err != nil {
+		config.PrintError(err)
 		os.Exit(1)
 	}
 }

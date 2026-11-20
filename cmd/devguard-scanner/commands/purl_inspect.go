@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/normalize"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -100,7 +101,7 @@ func purlInspectCmd(cmd *cobra.Command, args []string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("API returned status code %d", resp.StatusCode)
+		return fmt.Errorf("could not inspect purl: %w", devguard.NewAPIError(resp))
 	}
 
 	var result struct {

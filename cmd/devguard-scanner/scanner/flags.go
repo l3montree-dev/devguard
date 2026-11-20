@@ -17,10 +17,7 @@ package scanner
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
@@ -51,34 +48,15 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 	}
 }
 
-var noTokenWarning bool
-
 func CheckTokenAndAssetName() error {
 	if config.RuntimeBaseConfig.Token == "" {
-		noTokenWarning = true
+		config.AddWarning("NO TOKEN PROVIDED", "The results of this scan were NOT saved to DevGuard.")
 		return nil
 	}
 	if config.RuntimeBaseConfig.AssetName == "" {
 		return fmt.Errorf("--assetName is required when a token is provided")
 	}
 	return nil
-}
-
-func PrintNoTokenWarning() {
-	if !noTokenWarning {
-		return
-	}
-	style := table.StyleBold
-	style.Color.Border = text.Colors{text.FgYellow, text.Bold}
-	style.Box.PaddingLeft = "  "
-	style.Box.PaddingRight = "  "
-
-	tw := table.NewWriter()
-	tw.SetStyle(style)
-	tw.AppendRow(table.Row{text.Colors{text.FgYellow, text.Bold}.Sprint("WARNING: NO TOKEN PROVIDED")})
-	tw.AppendRow(table.Row{text.FgYellow.Sprint("The results of this scan were NOT saved to DevGuard.")})
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, tw.Render())
 }
 
 func AddDependencyVulnsScanFlags(cmd *cobra.Command) {

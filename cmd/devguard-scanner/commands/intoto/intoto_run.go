@@ -103,7 +103,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("unexpected status code: %d", resp.StatusCode)
+		return errors.Wrap(devguard.NewAPIError(resp), "could not upload in-toto link")
 	}
 
 	return nil

@@ -58,7 +58,7 @@ func verify(cmd *cobra.Command, args []string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("supply chain verification failed (HTTP %d) — check that all pipeline steps uploaded their links", resp.StatusCode)
+		return fmt.Errorf("supply chain verification failed — check that all pipeline steps uploaded their links: %w", devguard.NewAPIError(resp))
 	}
 
 	return nil
