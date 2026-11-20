@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -76,14 +77,29 @@ func newDTExportCommand() *cobra.Command {
 }
 
 func newDTImportCommand() *cobra.Command {
-	return &cobra.Command{
+	var targetOrg, targetProject string
+	importCmd := &cobra.Command{
 		Use:   "import <owner-user-id>",
-		Short: "imports the data for a specified set of entities",
-		Long:  "imports the data for a specified set of entities, the given user becomes owner of all imported organizations",
+		Short: "imports an exported org, project or asset",
+		Long:  "imports an exported org, project or asset, the given user gets the highest role on the imported entity",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
-			ownerID := args[0]
+			options := dtos.DataTransferImportOptions{OwnerID: args[0]}
+			if targetOrg != "" {
+				orgID, err := uuid.Parse(targetOrg)
+				if err != nil {
+					return fmt.Errorf("invalid target org id: %w", err)
+				}
+				options.TargetOrgID = orgID
+			}
+			if targetProject != "" {
+				projectID, err := uuid.Parse(targetProject)
+				if err != nil {
+					return fmt.Errorf("invalid target project id: %w", err)
+				}
+				options.TargetProjectID = &projectID
+			}
 
 			app := fx.New(
 				fx.NopLogger,
@@ -101,7 +117,7 @@ func newDTImportCommand() *cobra.Command {
 						return err
 					}
 					defer exportFile.Close()
-					return dataTransferService.ImportFile(context.Background(), exportFile, ownerID)
+					return dataTransferService.ImportFile(context.Background(), exportFile, options)
 				}),
 			)
 
@@ -117,4 +133,7 @@ func newDTImportCommand() *cobra.Command {
 			return app.Stop(stopCtx)
 		},
 	}
+	importCmd.Flags().StringVar(&targetOrg, "target-org", "", "org a project or asset archive gets imported into")
+	importCmd.Flags().StringVar(&targetProject, "target-project", "", "parent project of an imported project, required for an asset archive")
+	return importCmd
 }

@@ -777,7 +777,7 @@ type ImportOptions struct {
 
 type DataTransferService interface {
 	StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error
-	ImportFile(ctx context.Context, importFile io.Reader, ownerID string) error
+	ImportFile(ctx context.Context, importFile io.Reader, options dtos.DataTransferImportOptions) error
 }
 
 type VulnDBService interface {

@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"golang.org/x/sync/errgroup"
@@ -39,8 +40,6 @@ const (
 	orgLevel scopeLevel = iota // fully exported, including everything below them
 	projectLevel
 	assetLevel
-	parentOrgLevel // only the row itself, referenced upwards by a scoped project or asset
-	parentProjectLevel
 
 	// derived entities
 	artifactLevel // derived from the scoped assets, for tables without a direct scope column (e.g. pivot tables)
@@ -66,8 +65,6 @@ type exportScope struct {
 	orgIDs               []string
 	projectIDs           []string
 	assetIDs             []string
-	parentOrgIDs         []string
-	parentProjectIDs     []string
 	artifactIDs          []string
 	externalUserIDs      []string
 	dependencyVulnIDs    []string
@@ -96,10 +93,6 @@ func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 		return scopeIDs{ids: scope.projectIDs, arrayType: "uuid[]"}
 	case assetLevel:
 		return scopeIDs{ids: scope.assetIDs, arrayType: "uuid[]"}
-	case parentOrgLevel:
-		return scopeIDs{ids: scope.parentOrgIDs, arrayType: "uuid[]"}
-	case parentProjectLevel:
-		return scopeIDs{ids: scope.parentProjectIDs, arrayType: "uuid[]"}
 	case artifactLevel:
 		return scopeIDs{ids: scope.artifactIDs, arrayType: "uuid[]"}
 	case externalUserLevel:
@@ -164,9 +157,9 @@ type tableProperties struct {
 // all tables with a simple syntax, keyed by table name
 var tablesToSync = map[string]tableProperties{
 	// org level
-	orgTableID:            {importOrder: 0, filters: []scopeFilter{{column: "id", level: orgLevel}, {column: "id", level: parentOrgLevel}}},
-	projectsTableID:       {importOrder: 1, filters: []scopeFilter{{column: "id", level: projectLevel}, {column: "id", level: parentProjectLevel}}},
-	"compliance_postures": {importOrder: 4, filters: []scopeFilter{orgScope, projectScope, assetScope}},
+	orgTableID:            {importOrder: 0, filters: []scopeFilter{{column: "id", level: orgLevel}}},
+	projectsTableID:       {importOrder: 1, filters: []scopeFilter{{column: "id", level: projectLevel}}},
+	"compliance_postures": {importOrder: 4, filters: []scopeFilter{orgScope}}, // only org exports, the posture id is a hash over the org
 	"external_users":      {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
 	"external_user_orgs":  {importOrder: 1, filters: []scopeFilter{orgScope}},
 
@@ -486,13 +479,6 @@ const resolveSubProjectIDsSQL = `WITH RECURSIVE sub_projects AS (
 
 const resolveAssetIDsSQL = `SELECT id FROM assets WHERE project_id = ANY($1::uuid[])`
 
-// the given project and all its parents up to the root project
-const resolveParentProjectIDsSQL = `WITH RECURSIVE parent_projects AS (
-	SELECT id, parent_id FROM projects WHERE id = $1
-	UNION
-	SELECT p.id, p.parent_id FROM projects p JOIN parent_projects pp ON p.id = pp.parent_id
-) SELECT id FROM parent_projects`
-
 // artifacts of the scoped assets, used by the artifact pivot tables
 const resolveArtifactIDsSQL = `SELECT id FROM artifacts WHERE asset_id = ANY($1::uuid[])`
 
@@ -505,8 +491,8 @@ const resolveFirstPartyVulnIDsSQL = `SELECT id FROM first_party_vulnerabilities 
 const resolveLicenseRiskIDsSQL = `SELECT id FROM license_risks WHERE asset_id = ANY($1::uuid[])`
 const resolveSecurityAdvisoryIDsSQL = `SELECT id FROM advisories WHERE asset_id = ANY($1::uuid[])`
 
-// same filters as the compliance_postures table export
-const resolveCompliancePostureIDsSQL = `SELECT id FROM compliance_postures WHERE org_id = ANY($1::uuid[]) OR project_id = ANY($2::uuid[]) OR asset_id = ANY($3::uuid[])`
+// same filter as the compliance_postures table export
+const resolveCompliancePostureIDsSQL = `SELECT id FROM compliance_postures WHERE org_id = ANY($1::uuid[])`
 
 // the asset id is part of the signature hash, so signatures never span multiple assets
 const resolveAssetSignaturesSQL = `SELECT DISTINCT asset_signature::text FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
@@ -527,14 +513,11 @@ const resolveComponentProjectKeysSQL = `SELECT DISTINCT project_key FROM compone
 // framework controls referenced by the scoped compliance postures
 const resolveFrameworkControlIDsSQL = `SELECT DISTINCT framework_control_id FROM compliance_postures WHERE id = ANY($1::uuid[]) AND framework_control_id IS NOT NULL`
 
-// resolve the exported entity into lists of ids for all levels
+// resolve the exported entity and everything below it into lists of ids, parents are never exported
 func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExportOptions) (exportScope, error) {
 	entityID := options.EntityID.String()
 	scope := exportScope{}
 	var err error
-
-	// projects and assets reference their parent projects and org, the chain starts at this project
-	var parentStartProjectID string
 
 	switch options.EntityType {
 	case dtos.DataTransferEntityOrg:
@@ -546,12 +529,8 @@ func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExpor
 		if scope.projectIDs, err = collectIDs(ctx, tx, resolveSubProjectIDsSQL, entityID); err != nil {
 			return scope, fmt.Errorf("could not resolve project ids: %w", err)
 		}
-		parentStartProjectID = entityID
 	case dtos.DataTransferEntityAsset:
 		scope.assetIDs = []string{entityID}
-		if err := tx.QueryRow(ctx, "SELECT project_id FROM assets WHERE id = $1", entityID).Scan(&parentStartProjectID); err != nil {
-			return scope, fmt.Errorf("could not resolve project of asset: %w", err)
-		}
 	default:
 		return scope, fmt.Errorf("unknown export entity type: %s", options.EntityType)
 	}
@@ -559,15 +538,6 @@ func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExpor
 	if options.EntityType != dtos.DataTransferEntityAsset {
 		if scope.assetIDs, err = collectIDs(ctx, tx, resolveAssetIDsSQL, scope.projectIDs); err != nil {
 			return scope, fmt.Errorf("could not resolve asset ids: %w", err)
-		}
-	}
-
-	if parentStartProjectID != "" {
-		if scope.parentProjectIDs, err = collectIDs(ctx, tx, resolveParentProjectIDsSQL, parentStartProjectID); err != nil {
-			return scope, fmt.Errorf("could not resolve parent project ids: %w", err)
-		}
-		if scope.parentOrgIDs, err = collectIDs(ctx, tx, "SELECT organization_id FROM projects WHERE id = $1", parentStartProjectID); err != nil {
-			return scope, fmt.Errorf("could not resolve parent org id: %w", err)
 		}
 	}
 
@@ -591,7 +561,7 @@ func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExpor
 		return scope, fmt.Errorf("could not resolve license risk ids: %w", err)
 	}
 
-	if scope.compliancePostureIDs, err = collectIDs(ctx, tx, resolveCompliancePostureIDsSQL, scope.orgIDs, scope.projectIDs, scope.assetIDs); err != nil {
+	if scope.compliancePostureIDs, err = collectIDs(ctx, tx, resolveCompliancePostureIDsSQL, scope.orgIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve compliance posture ids: %w", err)
 	}
 
@@ -634,7 +604,7 @@ type importJob struct {
 	pathToFile       string
 }
 
-func (service *DataTransferService) ImportFile(ctx context.Context, importFile io.Reader, ownerID string) error {
+func (service *DataTransferService) ImportFile(ctx context.Context, importFile io.Reader, options dtos.DataTransferImportOptions) error {
 	slog.Info("start importing data...")
 	start := time.Now()
 
@@ -662,7 +632,8 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return fmt.Errorf("could not set search path for import: %w", err)
 	}
 
-	if err := checkImportMetadata(ctx, importTx, importDirectoryPath); err != nil {
+	importMetadata, err := checkImportMetadata(ctx, importTx, importDirectoryPath)
+	if err != nil {
 		return err // error explained in the called function
 	}
 
@@ -705,19 +676,9 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return fmt.Errorf("could not create staging table: %w", err)
 	}
 
-	var importedOrgIDs []uuid.UUID
 	for _, job := range jobs {
-		if err := importTable(ctx, importTx, job); err != nil {
+		if err := importTable(ctx, importTx, job, importMetadata, options); err != nil {
 			return err
-		}
-
-		// the staging table still holds the rows of the table that was just imported
-		if job.tableName == orgTableID {
-			rows, _ := importTx.Query(ctx, "SELECT (data->>'id')::uuid FROM import_staging")
-			importedOrgIDs, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-			if err != nil {
-				return fmt.Errorf("could not collect imported organization ids: %w", err)
-			}
 		}
 	}
 
@@ -726,7 +687,7 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 	}
 
 	// casbin uses its own connection, so the rules can only be added once the data is committed
-	if err := service.bootstrapImportedRBAC(ctx, importedOrgIDs, ownerID); err != nil {
+	if err := service.bootstrapImportedRBAC(ctx, importMetadata, options); err != nil {
 		return fmt.Errorf("could not set up permissions for imported data: %w", err)
 	}
 
@@ -734,42 +695,111 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 	return nil
 }
 
-// importing an existing organization fails, so every project and asset of an imported organization was imported as well
-func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, orgIDs []uuid.UUID, ownerID string) error {
-	for _, orgID := range orgIDs {
-		rbac := service.rbacProvider.GetDomainRBAC(orgID.String())
+// the importer gets the highest role on the imported entity, the rules of the import target stay untouched
+func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, importMetadata metadata, options dtos.DataTransferImportOptions) error {
+	owner := shared.NewSession(options.OwnerID, shared.SessionActorUser, nil, false)
 
-		// projects and assets inherit the owner through the admin roles linked in their bootstrap
-		if err := shared.BootstrapOrg(ctx, rbac, ownerID, shared.RoleOwner); err != nil {
-			return fmt.Errorf("could not bootstrap organization %s: %w", orgID, err)
+	switch importMetadata.EntityType {
+	case dtos.DataTransferEntityOrg:
+		rbac := service.rbacProvider.GetDomainRBAC(importMetadata.EntityID.String())
+		if err := shared.BootstrapOrg(ctx, rbac, options.OwnerID, shared.RoleOwner); err != nil {
+			return fmt.Errorf("could not bootstrap organization: %w", err)
 		}
 
-		projects, err := service.projectRepository.GetByOrgID(ctx, nil, orgID)
+		projects, err := service.projectRepository.GetByOrgID(ctx, nil, importMetadata.EntityID)
 		if err != nil {
-			return fmt.Errorf("could not load projects of organization %s: %w", orgID, err)
+			return fmt.Errorf("could not load imported projects: %w", err)
 		}
-		for i := range projects {
-			if err := service.projectService.BootstrapProject(ctx, rbac, &projects[i]); err != nil {
-				return fmt.Errorf("could not bootstrap project %s: %w", projects[i].ID, err)
-			}
-		}
-
-		assets, err := service.assetRepository.GetByOrgID(ctx, nil, orgID)
+		assets, err := service.assetRepository.GetByOrgID(ctx, nil, importMetadata.EntityID)
 		if err != nil {
-			return fmt.Errorf("could not load assets of organization %s: %w", orgID, err)
+			return fmt.Errorf("could not load imported assets: %w", err)
 		}
-		for i := range assets {
-			if err := service.assetService.BootstrapAsset(ctx, rbac, &assets[i]); err != nil {
-				return fmt.Errorf("could not bootstrap asset %s: %w", assets[i].ID, err)
-			}
+		return service.bootstrapProjectsAndAssets(ctx, rbac, projects, assets)
+
+	case dtos.DataTransferEntityProject:
+		rbac := service.rbacProvider.GetDomainRBAC(options.TargetOrgID.String())
+		rootProject, err := service.projectRepository.Read(ctx, nil, importMetadata.EntityID)
+		if err != nil {
+			return fmt.Errorf("could not load imported project: %w", err)
+		}
+		subProjects, err := service.projectRepository.RecursivelyGetChildProjects(ctx, nil, rootProject.ID)
+		if err != nil {
+			return fmt.Errorf("could not load imported sub projects: %w", err)
+		}
+		projects := append([]models.Project{rootProject}, subProjects...)
+
+		projectIDs := make([]uuid.UUID, 0, len(projects))
+		for _, project := range projects {
+			projectIDs = append(projectIDs, project.ID)
+		}
+		assets, err := service.assetRepository.GetByProjectIDs(ctx, nil, projectIDs)
+		if err != nil {
+			return fmt.Errorf("could not load imported assets: %w", err)
+		}
+		if err := service.bootstrapProjectsAndAssets(ctx, rbac, projects, assets); err != nil {
+			return err
 		}
 
-		slog.Info("set up permissions for imported organization", "organization", orgID, "projects", len(projects), "assets", len(assets))
+		// sub projects and assets inherit the admin role of the imported project
+		if err := rbac.GrantRoleInProject(ctx, owner, shared.RoleAdmin, rootProject.ID.String()); err != nil {
+			return fmt.Errorf("could not grant admin role on imported project: %w", err)
+		}
+		return nil
+
+	case dtos.DataTransferEntityAsset:
+		rbac := service.rbacProvider.GetDomainRBAC(options.TargetOrgID.String())
+		asset, err := service.assetRepository.Read(ctx, nil, importMetadata.EntityID)
+		if err != nil {
+			return fmt.Errorf("could not load imported asset: %w", err)
+		}
+		if err := service.bootstrapProjectsAndAssets(ctx, rbac, nil, []models.Asset{asset}); err != nil {
+			return err
+		}
+		if err := rbac.GrantRoleInAsset(ctx, owner, shared.RoleAdmin, asset.ID.String()); err != nil {
+			return fmt.Errorf("could not grant admin role on imported asset: %w", err)
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("unknown imported entity type: %s", importMetadata.EntityType)
+	}
+}
+
+func (service *DataTransferService) bootstrapProjectsAndAssets(ctx context.Context, rbac shared.AccessControl, projects []models.Project, assets []models.Asset) error {
+	for i := range projects {
+		if err := service.projectService.BootstrapProject(ctx, rbac, &projects[i]); err != nil {
+			return fmt.Errorf("could not bootstrap project %s: %w", projects[i].ID, err)
+		}
+	}
+	for i := range assets {
+		if err := service.assetService.BootstrapAsset(ctx, rbac, &assets[i]); err != nil {
+			return fmt.Errorf("could not bootstrap asset %s: %w", assets[i].ID, err)
+		}
+	}
+	slog.Info("set up permissions for imported data", "projects", len(projects), "assets", len(assets))
+	return nil
+}
+
+// the top level rows of a project or asset archive get attached to the entity they are imported into
+func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, importMetadata metadata, options dtos.DataTransferImportOptions) error {
+	switch {
+	case importMetadata.EntityType == dtos.DataTransferEntityProject && tableName == projectsTableID:
+		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{organization_id}', to_jsonb($1::uuid))`, options.TargetOrgID); err != nil {
+			return fmt.Errorf("could not attach imported projects to organization: %w", err)
+		}
+		// sub projects keep their parent, a missing target project makes the imported project a root project
+		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{parent_id}', COALESCE(to_jsonb($1::uuid), 'null'::jsonb)) WHERE data->>'id' = $2`, options.TargetProjectID, importMetadata.EntityID.String()); err != nil {
+			return fmt.Errorf("could not attach imported project to parent project: %w", err)
+		}
+	case importMetadata.EntityType == dtos.DataTransferEntityAsset && tableName == assetsTableID:
+		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{project_id}', to_jsonb($1::uuid))`, options.TargetProjectID); err != nil {
+			return fmt.Errorf("could not attach imported asset to project: %w", err)
+		}
 	}
 	return nil
 }
 
-func importTable(ctx context.Context, tx pgx.Tx, job importJob) error {
+func importTable(ctx context.Context, tx pgx.Tx, job importJob, importMetadata metadata, options dtos.DataTransferImportOptions) error {
 	file, err := os.Open(job.pathToFile)
 	if err != nil {
 		return fmt.Errorf("could not open file of %s: %w", job.tableName, err)
@@ -790,6 +820,10 @@ func importTable(ctx context.Context, tx pgx.Tx, job importJob) error {
 	copyTag, err := tx.Conn().PgConn().CopyFrom(ctx, gzipReader, `COPY import_staging (data) FROM STDIN WITH (FORMAT csv, QUOTE E'\x01', DELIMITER E'\x02')`)
 	if err != nil {
 		return fmt.Errorf("could not copy rows of %s: %w", job.tableName, err)
+	}
+
+	if err := attachToImportTarget(ctx, tx, job.tableName, importMetadata, options); err != nil {
+		return err
 	}
 
 	table := pgx.Identifier{job.tableName}.Sanitize()
@@ -854,20 +888,20 @@ func extractArchiveFile(tarReader *tar.Reader, filePath string) error {
 }
 
 // the rows are only valid for the exact schema they were exported from
-func checkImportMetadata(ctx context.Context, tx pgx.Tx, importDirectoryPath string) error {
+func checkImportMetadata(ctx context.Context, tx pgx.Tx, importDirectoryPath string) (metadata, error) {
 	metadataFile, err := os.Open(filepath.Join(importDirectoryPath, metadataFileName))
 	if err != nil {
-		return fmt.Errorf("could not open metadata file: %w", err)
+		return metadata{}, fmt.Errorf("could not open metadata file: %w", err)
 	}
 	defer metadataFile.Close()
 
 	var importMetadata metadata
 	if err := json.NewDecoder(metadataFile).Decode(&importMetadata); err != nil {
-		return fmt.Errorf("could not read metadata file: %w", err)
+		return metadata{}, fmt.Errorf("could not read metadata file: %w", err)
 	}
 
 	if importMetadata.ExportVersion != dataTransferVersion {
-		return fmt.Errorf("export version does not match DevGuard version (export: %d, current: %d)", importMetadata.ExportVersion, dataTransferVersion)
+		return metadata{}, fmt.Errorf("export version does not match DevGuard version (export: %d, current: %d)", importMetadata.ExportVersion, dataTransferVersion)
 	}
 
 	var schemaMigration struct {
@@ -876,15 +910,15 @@ func checkImportMetadata(ctx context.Context, tx pgx.Tx, importDirectoryPath str
 	}
 	schemaRow := tx.QueryRow(ctx, "SELECT version, dirty FROM schema_migrations LIMIT 1;")
 	if err := schemaRow.Scan(&schemaMigration.version, &schemaMigration.dirty); err != nil {
-		return fmt.Errorf("could not determine schema migration state: %w", err)
+		return metadata{}, fmt.Errorf("could not determine schema migration state: %w", err)
 	}
 
 	if schemaMigration.dirty {
-		return fmt.Errorf("dirty database schema detected, cannot import")
+		return metadata{}, fmt.Errorf("dirty database schema detected, cannot import")
 	}
 
 	if importMetadata.DatabaseSchemaVersion != schemaMigration.version {
-		return fmt.Errorf("export schema version %s does not match database schema version %s", importMetadata.DatabaseSchemaVersion, schemaMigration.version)
+		return metadata{}, fmt.Errorf("export schema version %s does not match database schema version %s", importMetadata.DatabaseSchemaVersion, schemaMigration.version)
 	}
-	return nil
+	return importMetadata, nil
 }
