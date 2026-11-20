@@ -9,7 +9,6 @@ import (
 
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,18 +23,19 @@ func createProviderProjectAndAsset(t *testing.T, f *TestFixture, rbac shared.Acc
 		Name:                     name,
 		Slug:                     name,
 		OrganizationID:           org.ID,
-		ExternalEntityProviderID: utils.Ptr(providerID),
-		ExternalEntityID:         utils.Ptr(name),
+		ExternalEntityProviderID: &providerID,
+		ExternalEntityID:         &name,
 	}
 	require.NoError(t, f.DB.Create(&project).Error)
 	require.NoError(t, f.App.ProjectService.BootstrapProject(ctx, rbac, &project))
 
+	assetName := name + "-asset"
 	asset := models.Asset{
-		Name:                     name + "-asset",
-		Slug:                     name + "-asset",
+		Name:                     assetName,
+		Slug:                     assetName,
 		ProjectID:                project.ID,
-		ExternalEntityProviderID: utils.Ptr(providerID),
-		ExternalEntityID:         utils.Ptr(name + "-asset"),
+		ExternalEntityProviderID: &providerID,
+		ExternalEntityID:         &assetName,
 	}
 	require.NoError(t, f.DB.Create(&asset).Error)
 	require.NoError(t, f.App.AssetService.BootstrapAsset(ctx, rbac, &asset))
@@ -75,7 +75,8 @@ func TestExternalEntityProviderCollectGarbage(t *testing.T) {
 		})
 
 		t.Run("should delete projects and assets of a gitlab provider org which no user can reach anymore", func(t *testing.T) {
-			org := models.Org{Name: "gitlab", Slug: "@gitlab", ExternalEntityProviderID: utils.Ptr("gitlab")}
+			providerID := "gitlab"
+			org := models.Org{Name: providerID, Slug: "@" + providerID, ExternalEntityProviderID: &providerID}
 			require.NoError(t, f.DB.Create(&org).Error)
 			rbac := f.App.RBACProvider.GetDomainRBAC(org.ID.String())
 			// an org owner must not keep provider projects alive
@@ -90,7 +91,8 @@ func TestExternalEntityProviderCollectGarbage(t *testing.T) {
 		})
 
 		t.Run("should keep projects and assets of a gitlab provider org which a user can still reach", func(t *testing.T) {
-			org := models.Org{Name: "opencode", Slug: "@opencode", ExternalEntityProviderID: utils.Ptr("opencode")}
+			providerID := "opencode"
+			org := models.Org{Name: providerID, Slug: "@" + providerID, ExternalEntityProviderID: &providerID}
 			require.NoError(t, f.DB.Create(&org).Error)
 			rbac := f.App.RBACProvider.GetDomainRBAC(org.ID.String())
 
