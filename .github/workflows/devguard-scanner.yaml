@@ -236,7 +236,7 @@ jobs:
       security-events: write
       id-token: write
     with:
-      upstream-version: "16.15"
+      upstream-version: "16.16"
       nix-target-amd64: postgresql-amd64
       nix-target-arm64: postgresql-arm64
       nix-version: '2.34.4'

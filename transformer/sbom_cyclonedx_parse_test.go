@@ -655,3 +655,74 @@ func TestPathIncludesRootWithNonPURLBOMRef(t *testing.T) {
 	assert.Equal(t, "pkg:npm/my-app@1.0.0,pkg:npm/express@4.18.0,pkg:npm/qs@6.5.0", paths[0].String(),
 		"root component with non-PURL BOMRef must still appear in the vulnerability path, keyed by its PackageURL")
 }
+
+// bom-ref is optional in CycloneDX. JFrog Xray omits it on the root component
+// and lists the root again under components, matched by purl.
+func TestRootComponentWithoutBOMRef(t *testing.T) {
+	jfrogStyleBOM := func() *cdx.BOM {
+		return &cdx.BOM{
+			BOMFormat:   "CycloneDX",
+			SpecVersion: cdx.SpecVersion1_6,
+			Metadata: &cdx.Metadata{
+				Component: &cdx.Component{
+					Name:       "lorem-ipsum.zip",
+					PackageURL: "pkg:generic/lorem-ipsum.zip@1.0.0",
+					Type:       cdx.ComponentTypeApplication,
+				},
+			},
+			Components: &[]cdx.Component{
+				{BOMRef: "pkg:generic/lorem-ipsum.zip@1.0.0", Name: "lorem-ipsum.zip", PackageURL: "pkg:generic/lorem-ipsum.zip@1.0.0", Type: cdx.ComponentTypeApplication},
+				{BOMRef: "pkg:npm/express@4.18.0", Name: "express", Version: "4.18.0", PackageURL: "pkg:npm/express@4.18.0", Type: cdx.ComponentTypeLibrary},
+				{BOMRef: "pkg:npm/qs@6.5.0", Name: "qs", Version: "6.5.0", PackageURL: "pkg:npm/qs@6.5.0", Type: cdx.ComponentTypeLibrary},
+			},
+		}
+	}
+
+	t.Run("root is matched to the listed component with the same purl", func(t *testing.T) {
+		parsed, err := MerkleTreeFromCycloneDX(jfrogStyleBOM(), "test-artifact")
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"pkg:generic/lorem-ipsum.zip@1.0.0"}, parsed.Tree.DirectDependencies())
+		paths := parsed.Tree.PathsToPURL("pkg:npm/qs@6.5.0", 0)
+		require.Len(t, paths, 1)
+		assert.Equal(t, "pkg:generic/lorem-ipsum.zip@1.0.0,pkg:npm/qs@6.5.0", paths[0].String(),
+			"the root must not be listed as a dependency of itself")
+	})
+
+	t.Run("root that is the artifact itself does not depend on itself", func(t *testing.T) {
+		parsed, err := MerkleTreeFromCycloneDX(jfrogStyleBOM(), "pkg:generic/lorem-ipsum.zip@1.0.0")
+		require.NoError(t, err)
+
+		directDeps := parsed.Tree.DirectDependencies()
+		assert.ElementsMatch(t, []string{"pkg:npm/express@4.18.0", "pkg:npm/qs@6.5.0"}, directDeps)
+	})
+
+	t.Run("dependency entries pointing at the matched ref reach the root", func(t *testing.T) {
+		bom := jfrogStyleBOM()
+		bom.Dependencies = &[]cdx.Dependency{
+			{Ref: "pkg:generic/lorem-ipsum.zip@1.0.0", Dependencies: &[]string{"pkg:npm/express@4.18.0"}},
+			{Ref: "pkg:npm/express@4.18.0", Dependencies: &[]string{"pkg:npm/qs@6.5.0"}},
+		}
+
+		parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
+		require.NoError(t, err)
+
+		paths := parsed.Tree.PathsToPURL("pkg:npm/qs@6.5.0", 0)
+		require.Len(t, paths, 1)
+		assert.Equal(t, "pkg:generic/lorem-ipsum.zip@1.0.0,pkg:npm/express@4.18.0,pkg:npm/qs@6.5.0", paths[0].String())
+	})
+
+	t.Run("root without a matching component keeps all components", func(t *testing.T) {
+		bom := jfrogStyleBOM()
+		components := (*bom.Components)[1:]
+		bom.Components = &components
+
+		parsed, err := MerkleTreeFromCycloneDX(bom, "test-artifact")
+		require.NoError(t, err)
+
+		assert.Equal(t, []string{"pkg:generic/lorem-ipsum.zip@1.0.0"}, parsed.Tree.DirectDependencies())
+		assert.ElementsMatch(t,
+			[]string{"pkg:generic/lorem-ipsum.zip@1.0.0", "pkg:npm/express@4.18.0", "pkg:npm/qs@6.5.0"},
+			parsed.Tree.ComponentIDs())
+	})
+}

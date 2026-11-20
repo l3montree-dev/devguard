@@ -28,7 +28,6 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/database/models"
-	"github.com/labstack/echo/v4"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -36,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/statemachine"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/l3montree-dev/devguard/vulndb"
+	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -151,6 +151,10 @@ func (githubIntegration *GithubIntegration) ListGroups(ctx context.Context, user
 func (githubIntegration *GithubIntegration) ListOrgs(ctx shared.Context) ([]models.Org, error) {
 	// currently not supported.
 	return nil, fmt.Errorf("not implemented")
+}
+
+func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	return false, nil
 }
 
 func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (shared.Role, error) {
@@ -500,7 +504,19 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 
 		events.NotifyVulnEventCreated(reqCtx, githubIntegration.broker, vuln.GetAssetID(), vulnEvent.Type)
 
-		err = githubIntegration.UpdateIssue(reqCtx, asset, assetVersion.Slug, vuln, &userAgent)
+		project, err := githubIntegration.projectRepository.Read(reqCtx, nil, asset.ProjectID)
+		if err != nil {
+			slog.Error("could not read project", "err", err)
+			return err
+		}
+
+		org, err := githubIntegration.orgRepository.Read(reqCtx, nil, project.OrganizationID)
+		if err != nil {
+			slog.Error("could not read org", "err", err)
+			return err
+		}
+
+		err = githubIntegration.UpdateIssue(reqCtx, org, project, asset, assetVersion.Slug, vuln, &userAgent)
 
 		if err != nil {
 			slog.Error("could not update issue", "err", err)
@@ -530,7 +546,12 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "deleted":
 			slog.Info("app installation deleted", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
 			// delete the installation from the database
-			err := githubIntegration.githubAppInstallationRepository.Delete(reqCtx, nil, int(*event.Installation.ID))
+			err := githubIntegration.assetRepository.Transaction(reqCtx, func(tx shared.DB) error {
+				if err := githubIntegration.githubAppInstallationRepository.Delete(reqCtx, tx, int(*event.Installation.ID)); err != nil {
+					return err
+				}
+				return githubIntegration.assetRepository.RemoveRepositoryConnectionByPrefix(reqCtx, tx, fmt.Sprintf("github:%d:", *event.Installation.ID))
+			})
 			if err != nil {
 				slog.Error("could not delete github app installation", "err", err)
 				return err
@@ -813,12 +834,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(ctx context.Context, eve
 			})
 			return err
 		}
-		return githubIntegration.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
+		return githubIntegration.UpdateIssue(ctx, shared.GetOrg(event.Ctx), shared.GetProject(event.Ctx), asset, assetVersionSlug, vuln, userAgent)
 	}
 	return nil
 }
 
-func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	ctx, span := githubTracer.Start(ctx, "GithubIntegration.UpdateIssue")
 	defer span.End()
 	span.SetAttributes(
@@ -838,18 +859,6 @@ func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, ass
 
 	client, err := githubIntegration.githubClientFactory(repoID)
 	if err != nil {
-		return err
-	}
-
-	project, err := githubIntegration.projectRepository.GetProjectByAssetID(ctx, nil, asset.ID)
-	if err != nil {
-		slog.Error("could not get project by asset id", "err", err)
-		return err
-	}
-
-	org, err := githubIntegration.orgRepository.Read(ctx, nil, project.OrganizationID)
-	if err != nil {
-		slog.Error("could not get org by id", "err", err)
 		return err
 	}
 

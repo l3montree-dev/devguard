@@ -36,10 +36,11 @@ type AuthSession interface {
 }
 
 type session struct {
-	ownerID         string
-	scopes          []string
-	isInstanceAdmin bool
-	ownerType       SessionActor
+	ownerID          string
+	tokenDescription string
+	scopes           []string
+	isInstanceAdmin  bool
+	ownerType        SessionActor
 }
 
 func (a session) IsInstanceAdmin() bool {
@@ -59,6 +60,9 @@ func (a session) GetScopes() []string {
 }
 
 func (a session) GetActorName() string {
+	if a.ownerType != SessionActorUser && a.tokenDescription != "" {
+		return a.tokenDescription
+	}
 	switch a.ownerType {
 	case SessionActorUser:
 		return a.ownerID
@@ -84,6 +88,12 @@ func NewSession(ownerID string, ownerType SessionActor, scopes []string, isInsta
 		scopes:          scopes,
 		isInstanceAdmin: isInstanceAdmin,
 	}
+}
+
+func NewPATSession(ownerID, tokenDescription string, ownerType SessionActor, scopes []string) session {
+	s := NewSession(ownerID, ownerType, scopes, false)
+	s.tokenDescription = tokenDescription
+	return s
 }
 
 const NoSessionID = "NO_SESSION"

@@ -65,7 +65,7 @@ func (r *MaliciousPackageRepository) GetMaliciousAffectedComponents(ctx context.
 		}
 	}
 	query := r.GetDB(ctx, tx).Model(&models.MaliciousAffectedComponent{}).Where("purl = ANY(?)", pq.Array(searchPurls))
-	query = BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace)
+	query = BuildQualifierQuery(query, matchCtx.Qualifiers, matchCtx.Namespace, matchCtx.OriginalVersion)
 
 	err := query.Order("id").Find(&components).Error
 	return components, err

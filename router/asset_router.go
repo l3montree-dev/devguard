@@ -79,6 +79,7 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
 	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
+	assetUpdateAccessControlRequired.POST("/retention-policy/test/", assetController.TestAssetVersionRetentionPolicy)
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)

@@ -365,6 +365,10 @@ func (offline *offlineIntegrationAggregate) ListRepositories(ctx shared.Context)
 	return nil, nil
 }
 
+func (offline *offlineIntegrationAggregate) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	return false, nil
+}
+
 func (offline *offlineIntegrationAggregate) HandleEvent(ctx context.Context, event any, userAgent *string) error {
 	offline.events.Add(1)
 	return nil
@@ -375,7 +379,7 @@ func (offline *offlineIntegrationAggregate) CreateIssue(ctx context.Context, ass
 	return nil
 }
 
-func (offline *offlineIntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (offline *offlineIntegrationAggregate) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	offline.issuesUpdated.Add(1)
 	return nil
 }

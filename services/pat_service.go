@@ -300,13 +300,13 @@ func (p *PatService) VerifyAPIToken(ctx context.Context, token string) (shared.A
 func patToSession(pat models.PAT) (shared.AuthSession, error) {
 	switch true {
 	case pat.UserID != nil:
-		return shared.NewSession(pat.UserID.String(), shared.SessionActorUser, strings.Fields(pat.Scopes), false), nil
+		return shared.NewPATSession(pat.UserID.String(), pat.Description, shared.SessionActorUser, strings.Fields(pat.Scopes)), nil
 	case pat.OrgID != nil:
-		return shared.NewSession(pat.OrgID.String(), shared.SessionActorOrg, strings.Fields(pat.Scopes), false), nil
+		return shared.NewPATSession(pat.OrgID.String(), pat.Description, shared.SessionActorOrg, strings.Fields(pat.Scopes)), nil
 	case pat.ProjectID != nil:
-		return shared.NewSession(pat.ProjectID.String(), shared.SessionActorProject, strings.Fields(pat.Scopes), false), nil
+		return shared.NewPATSession(pat.ProjectID.String(), pat.Description, shared.SessionActorProject, strings.Fields(pat.Scopes)), nil
 	case pat.AssetID != nil:
-		return shared.NewSession(pat.AssetID.String(), shared.SessionActorAsset, strings.Fields(pat.Scopes), false), nil
+		return shared.NewPATSession(pat.AssetID.String(), pat.Description, shared.SessionActorAsset, strings.Fields(pat.Scopes)), nil
 	default:
 		return nil, fmt.Errorf("invalid token owner type")
 	}

@@ -43,9 +43,17 @@ const (
 	// Automated Events (Events that are triggered by automation's on the server)
 	EventTypeDetected VulnEventType = "detected"
 
+	// record when a dependency vuln got linked to / unlinked from an artifact - they never change the vuln state
+	EventTypeDetectedInArtifact VulnEventType = "detectedInArtifact"
+	EventTypeFixedInArtifact    VulnEventType = "fixedInArtifact"
+
 	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
 )
+
+func (t VulnEventType) IsArtifactLinkEvent() bool {
+	return t == EventTypeDetectedInArtifact || t == EventTypeFixedInArtifact
+}
 
 type MechanicalJustificationType string
 
@@ -67,13 +75,14 @@ type VulnEvent struct {
 	Justification           *string                     `json:"justification"`
 	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification"`
 
-	CreatedAt                time.Time `json:"createdAt"`
-	OriginalAssetVersionName *string   `json:"originalAssetVersionName"`
-	ResourceIdentifier       string    `json:"resourceIdentifier"`
-	PackageName              string    `json:"packageName"`
-	URI                      string    `json:"uri"`
-	CreatedByVexRule         bool      `json:"createdByVexRule"`
-	UserAgent                string    `json:"userAgent"`
-	VexRuleID                *string   `json:"vexRuleId"`
-	VexRule                  *VEXRule  `json:"vexRule,omitempty"`
+	CreatedAt                time.Time  `json:"createdAt"`
+	OriginalAssetVersionName *string    `json:"originalAssetVersionName"`
+	ResourceIdentifier       string     `json:"resourceIdentifier"`
+	PackageName              string     `json:"packageName"`
+	URI                      string     `json:"uri"`
+	CreatedByVexRule         bool       `json:"createdByVexRule"`
+	UserAgent                string     `json:"userAgent"`
+	VexRuleID                *string    `json:"vexRuleId"`
+	VexRule                  *VEXRule   `json:"vexRule,omitempty"`
+	ArtifactID               *uuid.UUID `json:"artifactId"`
 }

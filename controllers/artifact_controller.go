@@ -477,6 +477,8 @@ func (c *ArtifactController) OpenCycloneDXVexJSON(ctx shared.Context) error {
 		return err
 	}
 
+	ctx.Response().Header().Set("Content-Type", "application/json")
+
 	return vex.ToJSON(ctx.Response().Writer)
 }
 

@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -173,7 +175,12 @@ func ProjectAccessControl(obj shared.Object, act shared.Action) shared.Middlewar
 // MultiOrganizationMiddlewareRBAC assumes ResourceFetchMiddleware has already
 // resolved the org, the domain RBAC and the actor scope into the context - it
 // never fetches anything itself, it only checks organization membership.
+// For external entity provider orgs it additionally verifies the user's oauth2
+// token against the provider; successful checks are cached for 15 minutes.
 func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
+	// userID/providerID -> expiry of the last successful token check
+	validTokenCache := &sync.Map{}
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx shared.Context) (err error) {
 			org := shared.GetOrg(ctx)
@@ -182,8 +189,33 @@ func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 			actorScope := shared.GetActorScope(ctx)
 
 			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session, &org, actorScope)
+
+			if err == nil && allowed && org.IsExternalEntity() && session.GetSessionActorType() == shared.SessionActorUser {
+				// if the organization is an external entity, we need to make sure, that we check if the token is still valid.
+				// we cache successfull results for 15 minutes. This is important for the ErrOauth2TokenNotValidRedirectionRequired if statement returning 403 if we need the user to reauthorize.
+				providerID := *org.ExternalEntityProviderID
+				cacheKey := session.GetActorID() + "/" + providerID
+				if expiry, ok := validTokenCache.Load(cacheKey); !ok || time.Now().After(expiry.(time.Time)) {
+					allowed, err = shared.GetThirdPartyIntegration(ctx).HasAccessToExternalEntityProvider(ctx, providerID)
+					if err == nil && allowed {
+						validTokenCache.Store(cacheKey, time.Now().Add(15*time.Minute))
+					}
+				}
+			}
+
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
+					// the user does not need a valid oauth2 token, if the request targets a public project/asset.
+					// org-level requests (no project and no asset in context) always require a valid token.
+					project, projectErr := shared.MaybeGetProject(ctx)
+					asset, assetErr := shared.MaybeGetAsset(ctx)
+					hasResource := projectErr == nil || assetErr == nil
+					projectPublic := projectErr != nil || project.IsPublic
+					assetPublic := assetErr != nil || asset.IsPublic
+					if hasResource && projectPublic && assetPublic {
+						return next(ctx)
+					}
+
 					slog.Info("oauth2 token not valid, asking user to reauthorize", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
@@ -361,12 +393,12 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 			}
 
 			// resolve asset version from path param
-			assetVersionSlug, err := shared.GetURLDecodedParam(ctx, "assetVersionSlug")
+			assetVersionSlug, err := shared.GetAssetVersionSlugOrName(ctx)
 			if err != nil {
 				slog.Error("could not get assetVersionSlug from url", "err", err)
 				return echo.NewHTTPError(400, "invalid assetVersionSlug")
 			}
-			assetVersion, err := assetVersionRepository.ReadBySlug(ctx.Request().Context(), nil, asset.ID, assetVersionSlug)
+			assetVersion, err := readAssetVersionBySlugOrName(ctx.Request().Context(), assetVersionRepository, asset.ID, assetVersionSlug)
 			if err != nil {
 				slog.Error("could not find asset version in ShareMiddleware", "assetID", assetID, "assetVersionSlug", assetVersionSlug, "err", err)
 				return echo.NewHTTPError(404, "could not find asset version")

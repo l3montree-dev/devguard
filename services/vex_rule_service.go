@@ -79,42 +79,45 @@ func createVulnEventFromVEXRule(vuln models.DependencyVuln, rule *models.VEXRule
 	return ev, nil
 }
 
-func isVexEventAlreadyApplied(vuln models.DependencyVuln, event models.VulnEvent) bool {
-	events := vuln.GetEvents()
-	if len(events) == 0 {
+func shouldApplyVexEvent(vuln models.DependencyVuln, event models.VulnEvent) bool {
+	// we never accept a false positive.
+	// we never reopen a false positive
+	switch vuln.State {
+	case dtos.VulnStateFalsePositive:
+		if event.Type != dtos.EventTypeFalsePositive { // this does not make much sense - but we might have a better false positive description
+			return false
+		}
+	case dtos.VulnStateAccepted:
+		if event.Type != dtos.EventTypeFalsePositive && event.Type != dtos.EventTypeReopened {
+			return false
+		}
+	case dtos.VulnStateOpen:
+	default:
 		return false
 	}
 
+	// an event that does not change the state is only applied if it differs from the last one
 	probe := vuln
 	statemachine.Apply(&probe, event)
 	if probe.GetState() != vuln.GetState() {
-		return false
+		return true
 	}
-	var ev models.VulnEvent
-	found := false
 
+	events := vuln.GetEvents()
 	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].Type == dtos.EventTypeRawRiskAssessmentUpdated {
+		if events[i].Type == dtos.EventTypeRawRiskAssessmentUpdated || events[i].Type.IsArtifactLinkEvent() {
 			continue
 		}
-		ev = events[i]
-		found = true
-		break
+		last := events[i]
+		if last.Type != event.Type {
+			return true
+		}
+		if last.Justification == nil || event.Justification == nil {
+			return last.Justification != nil || event.Justification != nil
+		}
+		return *last.Justification != *event.Justification
 	}
-
-	if !found {
-		return false
-	}
-
-	if ev.Type != event.Type {
-		return false
-	}
-
-	if ev.Justification == nil || event.Justification == nil {
-		return ev.Justification == nil && event.Justification == nil
-	}
-
-	return *ev.Justification == *event.Justification
+	return true
 }
 
 func MatchRulesToVulns(ctx context.Context, rules []models.UpstreamVEXRule, vulns []models.DependencyVuln) (map[string][]models.DependencyVuln, error) {
@@ -180,8 +183,11 @@ func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []m
 		ruleMap[rules[i].ID] = &rules[i]
 	}
 
-	vulnMap := make(map[uuid.UUID]models.DependencyVuln)
-	eventsByVuln := make(map[uuid.UUID][]models.VulnEvent)
+	type vexCandidate struct {
+		vuln models.DependencyVuln
+		ev   models.VulnEvent
+	}
+	candidates := make(map[uuid.UUID]vexCandidate)
 
 	for ruleID, matchingVulns := range vulnsByRule {
 		rule := ruleMap[ruleID]
@@ -192,30 +198,28 @@ func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []m
 				return nil, nil, err
 			}
 
-			if isVexEventAlreadyApplied(vuln, ev) {
+			if !shouldApplyVexEvent(vuln, ev) {
 				continue
 			}
 
-			vulnID := vuln.ID
-			vulnMap[vulnID] = vuln
-			eventsByVuln[vulnID] = append(eventsByVuln[vulnID], ev)
+			// only a single event per vuln is applied, multiple matching rules would otherwise be applied in random map order
+			if current, ok := candidates[vuln.ID]; !ok || eventHasHigherPriority(ev, current.ev) {
+				candidates[vuln.ID] = vexCandidate{vuln: vuln, ev: ev}
+			}
 		}
 	}
 
-	if len(vulnMap) == 0 {
+	if len(candidates) == 0 {
 		return nil, nil, nil
 	}
 
-	updatedVulns = make([]models.DependencyVuln, 0, len(vulnMap))
-	events = make([]models.VulnEvent, 0)
+	updatedVulns = make([]models.DependencyVuln, 0, len(candidates))
+	events = make([]models.VulnEvent, 0, len(candidates))
 
-	for vulnID, vuln := range vulnMap {
-		updatedVuln := vuln
-		for _, ev := range eventsByVuln[vulnID] {
-			statemachine.Apply(&updatedVuln, ev)
-			events = append(events, ev)
-		}
-		updatedVulns = append(updatedVulns, updatedVuln)
+	for _, c := range candidates {
+		statemachine.Apply(&c.vuln, c.ev)
+		events = append(events, c.ev)
+		updatedVulns = append(updatedVulns, c.vuln)
 	}
 
 	slog.Info("applied VEX rules to existing vulnerabilities",
@@ -223,6 +227,18 @@ func ApplyVEXRulesToVulns(ctx context.Context, rules []models.VEXRule, vulns []m
 		"vulnsUpdated", len(updatedVulns),
 		"eventsCreated", len(events))
 	return updatedVulns, events, nil
+}
+
+var vexEventPriority = map[dtos.VulnEventType]int{
+	dtos.EventTypeFalsePositive: 3,
+	dtos.EventTypeReopened:      2,
+	dtos.EventTypeAccepted:      1,
+}
+
+// falsePositive > reopened > accepted, ties between rules of the same type are broken by rule id
+func eventHasHigherPriority(a, b models.VulnEvent) bool {
+	pa, pb := vexEventPriority[a.Type], vexEventPriority[b.Type]
+	return pa > pb || (pa == pb && *a.VexRuleID < *b.VexRuleID)
 }
 
 func VulnStateForVEXRuleEventType(eventType dtos.VulnEventType) dtos.VulnState {

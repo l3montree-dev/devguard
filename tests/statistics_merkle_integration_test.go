@@ -37,8 +37,7 @@ func TestStatisticsQueriesAgainstMerkleSBOMs(t *testing.T) {
 	org, project, asset, assetVersion := CreateOrgProjectAndAssetAssetVersion(db)
 
 	sbomRepo := repositories.NewSBOMRepository(db)
-	dependencyVulnRepo := repositories.NewDependencyVulnRepository(db)
-	statsRepo := repositories.NewStatisticsRepository(db, dependencyVulnRepo)
+	statsRepo := repositories.NewStatisticsRepository(db)
 	ctx := context.Background()
 
 	// -- seed data ---------------------------------------------------------

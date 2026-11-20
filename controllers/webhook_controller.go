@@ -470,6 +470,11 @@ func (w *WebhookController) ListRepositories(ctx shared.Context) ([]dtos.GitRepo
 	return nil, nil
 }
 
+func (w *WebhookController) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	// Logic to check access to external entity provider
+	return false, nil
+}
+
 func (w *WebhookController) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	// Logic to get role in group
 	return "", nil
@@ -485,7 +490,7 @@ func (w *WebhookController) CreateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (w *WebhookController) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (w *WebhookController) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	// Logic to update an issue
 	return nil
 }

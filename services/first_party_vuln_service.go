@@ -160,9 +160,13 @@ func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 	if err != nil {
 		return fmt.Errorf("could not get first-party vulnerability by asset version: %w", err)
 	}
+	vulnList = utils.Filter(vulnList, func(v models.FirstPartyVuln) bool {
+		// a closed vuln with a ticket has to be synced as well - its ticket needs to be closed
+		return time.Since(v.UpdatedAt) < ticketSyncWindow && (v.State == dtos.VulnStateOpen || v.TicketID != nil)
+	})
 
 	if len(vulnList) == 0 {
-		slog.Info("no first-party vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
+		slog.Info("no recently changed first-party vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
 		return nil
 	}
 
@@ -177,7 +181,7 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID != nil {
 			errgroup.Go(func() (any, error) {
-				return s.updateIssue(ctx, asset, assetVersion.Slug, vulnerability, userAgent), nil
+				return s.updateIssue(ctx, org, project, asset, assetVersion.Slug, vulnerability, userAgent), nil
 			})
 		}
 	}
@@ -186,11 +190,11 @@ func (s *firstPartyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	return err
 }
 
-func (s *firstPartyVulnService) updateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln, userAgent *string) error {
+func (s *firstPartyVulnService) updateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vulnerability models.FirstPartyVuln, userAgent *string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, assetVersionSlug, &vulnerability, userAgent)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, org, project, asset, assetVersionSlug, &vulnerability, userAgent)
 	if err != nil {
 		return err
 	}

@@ -499,7 +499,7 @@ func GetAssetSlug(ctx Context) (string, error) {
 	return assetSlug, nil
 }
 
-func GetAssetVersionSlug(ctx Context) (string, error) {
+func GetAssetVersionSlugOrName(ctx Context) (string, error) {
 	assetVersionSlug := GetParam(ctx, "assetVersionSlug")
 	if assetVersionSlug == "" {
 		return "", fmt.Errorf("could not get asset version slug")

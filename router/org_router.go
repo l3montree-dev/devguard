@@ -66,6 +66,7 @@ func NewOrgRouter(
 	*/
 	organizationRouter := orgRouter.Group("/:organization",
 		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.MultiOrganizationMiddlewareRBAC(),
 		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 

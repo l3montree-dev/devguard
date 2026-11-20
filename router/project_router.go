@@ -79,8 +79,6 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/:releaseID/vex.xml/", releaseController.CycloneDXVexXML)
 	projectRouter.GET("/releases/:releaseID/csaf.json/", releaseController.CSAFJSON)
 	projectRouter.GET("/releases/:releaseID/openvex.json/", releaseController.OpenCycloneDXVexJSON)
-	projectRouter.GET("/releases/:releaseID/stats/risk-history/", statisticsController.GetReleaseRiskHistory)
-	projectRouter.GET("/releases/:releaseID/stats/average-fixing-time/", statisticsController.GetAverageReleaseFixingTime)
 	projectRouter.GET("/releases/:releaseID/candidates/", releaseController.ListCandidates)
 	projectRouter.GET("/releases/candidates/", releaseController.ListCandidates)
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)

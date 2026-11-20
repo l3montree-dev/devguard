@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.uber.org/fx"
 )
@@ -270,29 +272,16 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			vuln.State = dtos.VulnStateOpen
 			assert.Nil(t, f.DB.Save(&vuln).Error)
 
-			// Create an artifact associated with the vulnerability
-			artifact := models.Artifact{
-				ArtifactName:   "test-artifact-comment",
-				AssetVersionID: assetVersion.ID,
-				AssetID:        asset.ID,
-			}
-			assert.Nil(t, f.DB.Create(&artifact).Error)
+			detected := models.NewDetectedEvent(vuln.ID, dtos.VulnTypeDependencyVuln, "system", false, nil)
+			assert.Nil(t, f.DB.Create(&detected).Error)
+			assert.Nil(t, f.App.StatisticsService.RecalculateRiskHistory(context.Background(), nil, asset.ID))
 
-			// Associate the artifact with the vulnerability
-			assert.Nil(t, f.DB.Model(&vuln).Association("Artifacts").Append(&artifact))
+			today := time.Now().UTC()
+			historyBefore, err := f.App.StatisticsService.GetArtifactRiskHistory(context.Background(), nil, assetVersion.ID, today, today)
+			require.NoError(t, err)
+			require.Len(t, historyBefore, 1)
+			assert.Equal(t, 1, historyBefore[0].OpenDependencyVulns, "the vuln should be open before processing the comment")
 
-			// Pre-create an artifact risk history record for today to see if it gets updated
-			artifactRiskHistory := models.ArtifactRiskHistory{
-				ArtifactID: artifact.ID,
-				AssetID:    artifact.AssetID,
-				History: models.History{
-					Day: time.Now().UTC(),
-					Distribution: models.Distribution{
-						Critical: 1,
-					},
-				},
-			}
-			assert.Nil(t, f.DB.Create(&artifactRiskHistory).Error) // Test a comment event that changes vulnerability state to accepted
 			// Note Hook events have different structure than Issue Hook events according to GitLab documentation
 			commentEvent := map[string]any{
 				"object_kind":   "note",
@@ -328,14 +317,6 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			client.On("IsProjectMember", mock.Anything, 0, 2, mock.Anything).Return(true, nil).Once()
 			client.On("EditIssue", mock.Anything, 0, 123, mock.Anything).Return(nil, nil, nil).Once()
 
-			// Check if there are any artifact risk history records before the webhook call
-			var artifactRiskHistoryBefore models.ArtifactRiskHistory
-			err = f.DB.Where("artifact_id = ? AND day = CURRENT_DATE", artifact.ID).
-				Find(&artifactRiskHistoryBefore).Error
-			assert.Nil(t, err, "Should find artifact risk history record for today before webhook processing")
-
-			assert.Equal(t, 1, artifactRiskHistoryBefore.Critical, "Critical risk count should be 1 before processing comment")
-
 			// Call the webhook handler
 			assert.Nil(t, gitlabInt.HandleWebhook(ctx))
 
@@ -344,16 +325,11 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 			assert.Nil(t, f.DB.Preload("Artifacts").First(&vulnFromDB, "id = ?", vuln.ID).Error)
 			assert.Equal(t, dtos.VulnStateAccepted, vulnFromDB.State)
 
-			// Verify that the vulnerability has artifacts
-			assert.NotEmpty(t, vulnFromDB.GetArtifacts(), "Vulnerability should have associated artifacts for risk history update")
-
-			// Verify that risk history was updated for today's date
-			var artifactRiskHistoryAfter models.ArtifactRiskHistory
-			err = f.DB.Where("artifact_id = ? AND day = CURRENT_DATE", artifact.ID).
-				Find(&artifactRiskHistoryAfter).Error
-			assert.Nil(t, err, "Should find artifact risk history record for today after webhook processing")
-
-			assert.Equal(t, artifactRiskHistoryAfter.Critical, 0, "Critical risk count should be 0")
+			// the accepted event enqueues the stats collection, which the test broker runs inline
+			historyAfter, err := f.App.StatisticsService.GetArtifactRiskHistory(context.Background(), nil, assetVersion.ID, today, today)
+			require.NoError(t, err)
+			require.Len(t, historyAfter, 1)
+			assert.Equal(t, 0, historyAfter[0].OpenDependencyVulns, "the accepted vuln should not be open anymore")
 
 		})
 	})

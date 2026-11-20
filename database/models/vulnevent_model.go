@@ -25,6 +25,7 @@ type VulnEvent struct {
 	OriginalAssetVersionName *string                          `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 	CreatedByVexRule         bool                             `json:"createdByVexRule" gorm:"column:created_by_vex_rule;default:false;not null"`
 	UserAgent                *string                          `json:"userAgent" gorm:"column:user_agent;type:text;default:null;"`
+	ArtifactID               *uuid.UUID                       `json:"artifactId" gorm:"type:uuid;column:artifact_id"`
 
 	// set instead of DependencyVulnID for a group event applying to every
 	// DependencyVuln sharing this AssetSignature.
@@ -187,6 +188,28 @@ func NewDetectedEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, c
 		UserID:           userID,
 		CreatedByVexRule: createdByRule,
 		UserAgent:        userAgent,
+	}
+	SetVulnIDOnEvent(&ev, vulnID, vulnType)
+	return ev
+}
+
+func NewDetectedInArtifactEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, artifactID uuid.UUID, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:       dtos.EventTypeDetectedInArtifact,
+		UserID:     userID,
+		ArtifactID: &artifactID,
+		UserAgent:  userAgent,
+	}
+	SetVulnIDOnEvent(&ev, vulnID, vulnType)
+	return ev
+}
+
+func NewFixedInArtifactEvent(vulnID uuid.UUID, vulnType dtos.VulnType, userID string, artifactID uuid.UUID, userAgent *string) VulnEvent {
+	ev := VulnEvent{
+		Type:       dtos.EventTypeFixedInArtifact,
+		UserID:     userID,
+		ArtifactID: &artifactID,
+		UserAgent:  userAgent,
 	}
 	SetVulnIDOnEvent(&ev, vulnID, vulnType)
 	return ev

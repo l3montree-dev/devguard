@@ -42,9 +42,11 @@ func CVEToDTO(cve models.CVE) dtos.CVE {
 		Vector:                cve.Vector,
 		Risk:                  cve.Risk,
 		Exploits:              utils.Map(cve.Exploits, ExploitModelToDTO),
+		Withdrawn:             cve.Withdrawn,
 		Relationships:         utils.Map(cve.Relationships, RelationshipToDTO),
 		EUVDExploitAdd:        cve.EUVDExploitAdd,
 		AffectedComponents:    utils.Map(cve.AffectedComponents, affectedComponentToDTOWithoutCVEs),
+		CWEs:                  strings.FieldsFunc(utils.OrDefault(cve.CWEs, ""), func(r rune) bool { return r == ',' }),
 	}
 }
 

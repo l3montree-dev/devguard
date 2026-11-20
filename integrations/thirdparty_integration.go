@@ -125,6 +125,21 @@ func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string
 	return assets, roles, nil
 }
 
+func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	for _, i := range t.integrations {
+		access, unauth := i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
+		if unauth != nil {
+			// we COULD actually use this provider
+			return access, unauth
+		}
+		if access {
+			// we have access to this provider
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (t *thirdPartyIntegrations) ListRepositories(ctx shared.Context) ([]dtos.GitRepository, error) {
 	wg := utils.ErrGroup[[]dtos.GitRepository](-1)
 	for _, i := range t.integrations {
@@ -231,11 +246,11 @@ func (t *thirdPartyIntegrations) HandleEvent(ctx context.Context, event any, use
 	return err
 }
 
-func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, org models.Org, project models.Project, asset models.Asset, assetVersionSlug string, vuln models.Vuln, userAgent *string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.UpdateIssue(ctx, asset, assetVersionSlug, vuln, userAgent)
+			return struct{}{}, i.UpdateIssue(ctx, org, project, asset, assetVersionSlug, vuln, userAgent)
 		})
 	}
 	_, err := wg.WaitAndCollect()

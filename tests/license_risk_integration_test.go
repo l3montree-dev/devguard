@@ -148,6 +148,53 @@ func TestLicenseRiskClosedOnceTheLicenseIsValid(t *testing.T) {
 	})
 }
 
+// every scan used to fix the already fixed license risks again and added the same event over and over
+func TestLicenseRiskIsFixedOnlyOnce(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		_, _, _, assetVersion := f.CreateOrgProjectAssetAndVersion()
+
+		countEvents := func(t *testing.T, eventType dtos.VulnEventType) int64 {
+			var count int64
+			assert.NoError(t, f.DB.Model(&models.VulnEvent{}).
+				Where("license_risk_id IS NOT NULL AND type = ?", eventType).
+				Count(&count).Error)
+			return count
+		}
+
+		t.Run("component removed", func(t *testing.T) {
+			comp := models.Component{ID: "pkg:npm/removed-package@1.0.0", License: new("PROPRIETARY")}
+			assert.NoError(t, f.DB.Create(&comp).Error)
+			artifact := models.Artifact{ArtifactName: "removed-artifact", AssetVersionID: assetVersion.ID, AssetID: assetVersion.AssetID}
+			assert.NoError(t, f.DB.Create(&artifact).Error)
+
+			assert.NoError(t, f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{comp}, artifact))
+
+			for range 3 {
+				assert.NoError(t, f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{}, artifact))
+			}
+
+			assert.Equal(t, int64(1), countEvents(t, dtos.EventTypeFixed))
+		})
+
+		t.Run("license valid now", func(t *testing.T) {
+			comp := models.Component{ID: "pkg:npm/relicensed-package@1.0.0", License: new("PROPRIETARY")}
+			assert.NoError(t, f.DB.Create(&comp).Error)
+			artifact := models.Artifact{ArtifactName: "relicensed-artifact", AssetVersionID: assetVersion.ID, AssetID: assetVersion.AssetID}
+			assert.NoError(t, f.DB.Create(&artifact).Error)
+
+			assert.NoError(t, f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{comp}, artifact))
+
+			comp.License = new("MIT")
+			for range 3 {
+				assert.NoError(t, f.App.LicenseRiskService.FindLicenseRisksInComponents(context.Background(), nil, "system", nil, assetVersion, []models.Component{comp}, artifact))
+			}
+
+			assert.Equal(t, int64(1), countEvents(t, dtos.EventTypeLicenseDecision))
+		})
+	})
+}
+
 func getSBOMWithWithLicenseRisk() io.Reader {
 	file, err := os.Open("testdata/sbom-with-license-risk.json")
 	if err != nil {
