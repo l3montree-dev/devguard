@@ -17,6 +17,8 @@ package dtos
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -40,6 +42,45 @@ type DebianRegistryConfig struct {
 type AlpineRegistryConfig struct {
 	URLRegistryConfig `yaml:",inline"`
 	Keys              []string `yaml:"keys" validate:"omitempty,dive,rsa_public_key"`
+}
+
+// NpmRegistryConfig is a modified RegistryConfig to allow different upstream registries with
+// additional scopes and auth
+type NpmRegistryConfig struct {
+	URLRegistryConfig `yaml:",inline"`
+	Scopes            []string      `yaml:"scopes" validate:"omitempty,dive,startswith=@"`
+	Auth              *RegistryAuth `yaml:"auth"`
+}
+
+type RegistryAuth struct {
+	Type     string `yaml:"type" validate:"required,oneof=token login"`
+	Token    string `yaml:"token" validate:"required_if=Type token,omitempty,startswith=$"`
+	Username string `yaml:"username" validate:"required_if=Type login"`
+	Password string `yaml:"password" validate:"required_if=Type login,omitempty,startswith=$"`
+}
+
+type NpmRegistryConfigs []NpmRegistryConfig
+
+func (c NpmRegistryConfigs) GetURL() string {
+	return c.ForPackage("").URL
+}
+
+func (c NpmRegistryConfigs) ForPackage(packageName string) NpmRegistryConfig {
+	scope, _, _ := strings.Cut(packageName, "/")
+
+	for _, entry := range c {
+		if slices.Contains(entry.Scopes, scope) {
+			return entry
+		}
+	}
+
+	for _, entry := range c {
+		if len(entry.Scopes) == 0 {
+			return entry
+		}
+	}
+
+	return NpmRegistryConfig{URLRegistryConfig: URLRegistryConfig{URL: "https://registry.npmjs.org"}}
 }
 
 type RegistryConfig interface {
@@ -66,6 +107,11 @@ func (r RegistryConfigs) AlpineConfig() *AlpineRegistryConfig {
 	return nil
 }
 
+func (r RegistryConfigs) NpmConfig() NpmRegistryConfigs {
+	config, _ := r["npm"].(NpmRegistryConfigs)
+	return config
+}
+
 func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]yaml.Node
 	if err := node.Decode(&raw); err != nil {
@@ -87,7 +133,21 @@ func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 				return fmt.Errorf("registries.%s: %w", eco, err)
 			}
 			(*r)[eco] = config
-		case "npm", "go", "pypi", "maven", "composer":
+		case "npm":
+			if value.Kind == yaml.ScalarNode {
+				var url string
+				if err := value.Decode(&url); err != nil {
+					return fmt.Errorf("registries.%s: %w", eco, err)
+				}
+				(*r)[eco] = NpmRegistryConfigs{{URLRegistryConfig: URLRegistryConfig{URL: url}}}
+				continue
+			}
+			var config NpmRegistryConfigs
+			if err := value.Decode(&config); err != nil {
+				return fmt.Errorf("registries.%s: %w", eco, err)
+			}
+			(*r)[eco] = config
+		case "go", "pypi", "maven", "composer":
 			var url string
 			if err := value.Decode(&url); err != nil {
 				return fmt.Errorf("registries.%s: %w", eco, err)
@@ -114,5 +174,8 @@ func ValidateDependencyProxyConfigFile(content []byte) error {
 	if err := yaml.Unmarshal(content, &cfg); err != nil {
 		return err
 	}
-	return V.Struct(cfg)
+	if err := V.Struct(cfg); err != nil {
+		return err
+	}
+	return V.Var(cfg.Registries.NpmConfig(), "omitempty,dive")
 }
