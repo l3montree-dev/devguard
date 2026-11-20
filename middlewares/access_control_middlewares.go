@@ -205,6 +205,17 @@ func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
+					// the user does not need a valid oauth2 token, if the request targets a public project/asset.
+					// org-level requests (no project and no asset in context) always require a valid token.
+					project, projectErr := shared.MaybeGetProject(ctx)
+					asset, assetErr := shared.MaybeGetAsset(ctx)
+					hasResource := projectErr == nil || assetErr == nil
+					projectPublic := projectErr != nil || project.IsPublic
+					assetPublic := assetErr != nil || asset.IsPublic
+					if hasResource && projectPublic && assetPublic {
+						return next(ctx)
+					}
+
 					slog.Info("oauth2 token not valid, asking user to reauthorize", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
