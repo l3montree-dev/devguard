@@ -51,6 +51,11 @@ const (
 	securityAdvisoryLevel
 	assetSignatureLevel
 	sbomMerkleNodeLevel
+
+	// shared reference data, only the rows referenced by the scoped entities
+	componentLevel
+	componentProjectLevel
+	frameworkControlLevel
 )
 
 // resolved ids for every scope level
@@ -69,6 +74,9 @@ type exportScope struct {
 	securityAdvisoryIDs  []string
 	assetSignatures      []string
 	sbomMerkleNodeHashes []string
+	componentIDs         []string
+	componentProjectKeys []string
+	frameworkControlIDs  []string
 }
 
 // ids of one scope level together with the postgres array type they are cast to
@@ -107,6 +115,12 @@ func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 		return scopeIDs{ids: scope.assetSignatures, arrayType: "bigint[]"}
 	case sbomMerkleNodeLevel:
 		return scopeIDs{ids: scope.sbomMerkleNodeHashes, arrayType: "uuid[]"}
+	case componentLevel:
+		return scopeIDs{ids: scope.componentIDs, arrayType: "text[]"} // component ids are purls
+	case componentProjectLevel:
+		return scopeIDs{ids: scope.componentProjectKeys, arrayType: "text[]"}
+	case frameworkControlLevel:
+		return scopeIDs{ids: scope.frameworkControlIDs, arrayType: "text[]"}
 	default:
 		panic(fmt.Sprintf("unknown scope level %d", level))
 	}
@@ -139,8 +153,9 @@ var (
 )
 
 type tableProperties struct {
-	filters     []scopeFilter
-	importOrder int // tables only reference tables with a lower import order, equal ones are independent of each other
+	filters      []scopeFilter
+	importOrder  int  // tables only reference tables with a lower import order, equal ones are independent of each other
+	skipExisting bool // shared reference data, rows already present on the target are kept
 }
 
 // all tables with a simple syntax, keyed by table name
@@ -176,6 +191,11 @@ var tablesToSync = map[string]tableProperties{
 	// package level
 	"sbom_merkle_nodes": {importOrder: 0, filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
 	"sbom_merkle_edges": {importOrder: 1, filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
+
+	// shared reference data
+	"component_projects":  {importOrder: 0, skipExisting: true, filters: []scopeFilter{{column: "project_key", level: componentProjectLevel}}},
+	"components":          {importOrder: 1, skipExisting: true, filters: []scopeFilter{{column: "id", level: componentLevel}}},
+	"frameworks_controls": {importOrder: 0, skipExisting: true, filters: []scopeFilter{{column: "framework_control_id", level: frameworkControlLevel}}},
 
 	// vuln level
 	"vuln_events": {importOrder: 5, filters: []scopeFilter{
@@ -497,6 +517,15 @@ const resolveSBOMMerkleNodeHashesSQL = `WITH RECURSIVE reachable AS (
 	SELECT e.direct_dependency_subtree_hash FROM sbom_merkle_edges e JOIN reachable r ON e.subtree_hash = r.node_hash
 ) SELECT node_hash FROM reachable`
 
+// components referenced by the scoped license risks
+const resolveComponentIDsSQL = `SELECT DISTINCT component_purl FROM license_risks WHERE id = ANY($1::uuid[])`
+
+// projects of those components, project_key is optional
+const resolveComponentProjectKeysSQL = `SELECT DISTINCT project_key FROM components WHERE id = ANY($1::text[]) AND project_key IS NOT NULL`
+
+// framework controls referenced by the scoped compliance postures
+const resolveFrameworkControlIDsSQL = `SELECT DISTINCT framework_control_id FROM compliance_postures WHERE id = ANY($1::uuid[]) AND framework_control_id IS NOT NULL`
+
 // resolve the requested scopes into lists of ids for all levels
 func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntities) (exportScope, error) {
 	scope := exportScope{orgIDs: requested.Orgs}
@@ -592,6 +621,27 @@ func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntitie
 	}
 	scope.sbomMerkleNodeHashes = sbomMerkleNodeHashes
 
+	rows, _ = tx.Query(ctx, resolveComponentIDsSQL, scope.licenseRiskIDs)
+	componentIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve component ids: %w", err)
+	}
+	scope.componentIDs = componentIDs
+
+	rows, _ = tx.Query(ctx, resolveComponentProjectKeysSQL, scope.componentIDs)
+	componentProjectKeys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve component project keys: %w", err)
+	}
+	scope.componentProjectKeys = componentProjectKeys
+
+	rows, _ = tx.Query(ctx, resolveFrameworkControlIDsSQL, scope.compliancePostureIDs)
+	frameworkControlIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return scope, fmt.Errorf("could not resolve framework control ids: %w", err)
+	}
+	scope.frameworkControlIDs = frameworkControlIDs
+
 	return scope, nil
 }
 
@@ -672,11 +722,59 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return cmp.Compare(job1.tableImportOrder, job2.tableImportOrder)
 	})
 
+	// every table is copied into this staging table first, so postgres can convert the json rows itself
+	if _, err := importTx.Exec(ctx, "CREATE TEMP TABLE import_staging (data jsonb) ON COMMIT DROP"); err != nil {
+		return fmt.Errorf("could not create staging table: %w", err)
+	}
+
+	for _, job := range jobs {
+		if err := importTable(ctx, importTx, job); err != nil {
+			return err
+		}
+	}
+
 	if err := importTx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
 	slog.Info("successfully finished import", "time", time.Since(start))
+	return nil
+}
+
+func importTable(ctx context.Context, tx pgx.Tx, job importJob) error {
+	file, err := os.Open(job.pathToFile)
+	if err != nil {
+		return fmt.Errorf("could not open file of %s: %w", job.tableName, err)
+	}
+	defer file.Close()
+
+	gzipReader, err := gzip.NewReader(file)
+	if err != nil {
+		return fmt.Errorf("could not decompress file of %s: %w", job.tableName, err)
+	}
+	defer gzipReader.Close()
+
+	if _, err := tx.Exec(ctx, "TRUNCATE import_staging"); err != nil {
+		return fmt.Errorf("could not reset staging table: %w", err)
+	}
+
+	// csv with control characters as quote and delimiter, so COPY leaves the json backslash escapes untouched
+	copyTag, err := tx.Conn().PgConn().CopyFrom(ctx, gzipReader, `COPY import_staging (data) FROM STDIN WITH (FORMAT csv, QUOTE E'\x01', DELIMITER E'\x02')`)
+	if err != nil {
+		return fmt.Errorf("could not copy rows of %s: %w", job.tableName, err)
+	}
+
+	table := pgx.Identifier{job.tableName}.Sanitize()
+	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT r.* FROM import_staging, jsonb_populate_record(NULL::%s, data) r", table, table)
+	if tablesToSync[job.tableName].skipExisting {
+		insertSQL += " ON CONFLICT DO NOTHING"
+	}
+	insertTag, err := tx.Exec(ctx, insertSQL)
+	if err != nil {
+		return fmt.Errorf("could not insert rows of %s: %w", job.tableName, err)
+	}
+
+	slog.Info("imported table", "table", job.tableName, "copied rows", copyTag.RowsAffected(), "inserted rows", insertTag.RowsAffected())
 	return nil
 }
 
