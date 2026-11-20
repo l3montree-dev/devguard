@@ -18,6 +18,7 @@ Thanks to external contributor [@amalsaidov](https://github.com/amalsaidov) for 
 
 ### Fixed
 
+- **Tickets of fixed vulnerabilities are closed again** — the ticket sync skipped every vulnerability which was not open, so tickets of fixed (or accepted / false positive) dependency and first party vulnerabilities were no longer updated and closed
 - **OAuth2 error on public resources** — requests targeting a public project or asset no longer require a valid oauth2 token for the external entity provider
 - **Project search in subgroups** — a search from inside a subgroup is restricted to its descendants, so matches outside the subgroup no longer push the subgroup's own results out of the page
 - **Integration deletion** — the asset repository connection is cleared when the GitHub, GitLab or Jira integration is deleted
