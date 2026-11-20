@@ -366,9 +366,8 @@ func (s externalEntityProviderService) revokeAccessForRemovedAssets(ctx context.
 func (s externalEntityProviderService) CollectGarbage(ctx context.Context) error {
 	// we need to inspect which project and which asset does not have any members anymore - if its part of an external entity provider
 	return s.assetRepository.GetDB(ctx, nil).Transaction(func(tx *gorm.DB) error {
-		// WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
-		// those are org scoped roles - project roles have the format project::<project_id>|role::<role_name> and asset roles have the format asset::<asset_id>|role::<role_name>
-		// thus if we find an org admin or an org owner, those won't keep the project or asset alive
+		// Follow all inherited roles so organization owners and admins keep provider-managed
+		// projects and assets alive when their access is inherited through project roles.
 
 		assetsDeleted := tx.Exec(`
 WITH RECURSIVE closure AS (
@@ -379,7 +378,6 @@ WITH RECURSIVE closure AS (
     SELECT c.start_user, c.domain, cr.v1
     FROM closure c
     JOIN casbin_rule cr ON cr.ptype = 'g' AND cr.v0 = c.reached AND cr.v2 = c.domain
-    WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
 ),
 reachable_assets AS (
     SELECT DISTINCT domain, (regexp_match(reached, '^asset::(.+)\|role::(member|admin)$'))[1] AS asset_id
@@ -409,7 +407,6 @@ WITH RECURSIVE closure AS (
     SELECT c.start_user, c.domain, cr.v1
     FROM closure c
     JOIN casbin_rule cr ON cr.ptype = 'g' AND cr.v0 = c.reached AND cr.v2 = c.domain
-    WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
 ),
 reachable_projects AS (
     SELECT DISTINCT domain, (regexp_match(reached, '^project::(.+)\|role::(member|admin)$'))[1] AS project_id
