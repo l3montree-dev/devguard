@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/accesscontrol"
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database"
@@ -37,9 +38,8 @@ func newDTExportCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 			options := dtos.DataTransferExportOptions{
-				AffectedEntities: dtos.AffectedEntities{
-					Projects: []string{"d1c1ae53-6b95-4657-8275-b241d700c22e"},
-				},
+				EntityType: dtos.DataTransferEntityProject,
+				EntityID:   uuid.MustParse("d1c1ae53-6b95-4657-8275-b241d700c22e"),
 			}
 			app := fx.New(
 				fx.NopLogger,

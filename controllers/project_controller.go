@@ -849,11 +849,9 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 }
 
 func (projectController *ProjectController) ExportProject(ctx shared.Context) error {
-	projectID := shared.GetProject(ctx).ID
 	exportOptions := dtos.DataTransferExportOptions{
-		AffectedEntities: dtos.AffectedEntities{
-			Projects: []string{projectID.String()},
-		},
+		EntityType: dtos.DataTransferEntityProject,
+		EntityID:   shared.GetProject(ctx).ID,
 	}
 
 	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")

@@ -1,11 +1,17 @@
 package dtos
 
-type AffectedEntities struct {
-	Orgs     []string `json:"orgs"`
-	Projects []string `json:"projects"`
-	Assets   []string `json:"assets"`
-}
+import "github.com/google/uuid"
 
+type DataTransferEntityType string
+
+const (
+	DataTransferEntityOrg     DataTransferEntityType = "org"
+	DataTransferEntityProject DataTransferEntityType = "project"
+	DataTransferEntityAsset   DataTransferEntityType = "asset"
+)
+
+// the exported entity is exported as a whole, including everything below it
 type DataTransferExportOptions struct {
-	AffectedEntities AffectedEntities
+	EntityType DataTransferEntityType
+	EntityID   uuid.UUID
 }

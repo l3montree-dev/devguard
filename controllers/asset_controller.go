@@ -801,11 +801,9 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 }
 
 func (a *AssetController) ExportAsset(ctx shared.Context) error {
-	assetID := shared.GetAsset(ctx).GetID()
 	exportOptions := dtos.DataTransferExportOptions{
-		AffectedEntities: dtos.AffectedEntities{
-			Assets: []string{assetID.String()},
-		},
+		EntityType: dtos.DataTransferEntityAsset,
+		EntityID:   shared.GetAsset(ctx).GetID(),
 	}
 
 	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")

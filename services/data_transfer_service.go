@@ -229,22 +229,8 @@ func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider
 	}
 }
 
-func checkExportOptions(options dtos.DataTransferExportOptions) error {
-	for _, id := range append(options.AffectedEntities.Orgs, append(options.AffectedEntities.Projects, options.AffectedEntities.Assets...)...) {
-		if _, err := uuid.Parse(id); err != nil {
-			return fmt.Errorf("export options contain invalid uuid (%s): %w", id, err)
-		}
-	}
-	return nil
-}
-
 func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error {
 	start := time.Now()
-
-	// validate export options
-	if err := checkExportOptions(options); err != nil {
-		return fmt.Errorf("invalid export options provided: %w", err)
-	}
 
 	jobDirectoryPath, err := os.MkdirTemp("", "devguard-export-*")
 	if err != nil {
@@ -297,7 +283,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("dirty database schema detected, cannot export.")
 	}
 
-	scope, err := resolveScope(ctx, snapshotTx, options.AffectedEntities)
+	scope, err := resolveScope(ctx, snapshotTx, options)
 	if err != nil {
 		return err
 	}
@@ -373,10 +359,11 @@ type queryJob struct {
 }
 
 type metadata struct {
-	ExportVersion         int                   `json:"export_version"`
-	DatabaseSchemaVersion string                `json:"database_schema_version"`
-	ExportTimestamp       time.Time             `json:"export_timestamp"`
-	ExportScope           dtos.AffectedEntities `json:"export_scope"`
+	ExportVersion         int                         `json:"export_version"`
+	DatabaseSchemaVersion string                      `json:"database_schema_version"`
+	ExportTimestamp       time.Time                   `json:"export_timestamp"`
+	EntityType            dtos.DataTransferEntityType `json:"entity_type"`
+	EntityID              uuid.UUID                   `json:"entity_id"`
 }
 
 func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
@@ -390,7 +377,8 @@ func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferE
 		ExportVersion:         dataTransferVersion,
 		DatabaseSchemaVersion: databaseSchemaVersion,
 		ExportTimestamp:       exportTimestamp,
-		ExportScope:           exportOptions.AffectedEntities,
+		EntityType:            exportOptions.EntityType,
+		EntityID:              exportOptions.EntityID,
 	}
 
 	err = json.NewEncoder(metadataFD).Encode(exportMetadata)
@@ -484,23 +472,24 @@ func sqlFromTableProperties(tableID string, properties tableProperties, scope ex
 	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
 }
 
-// resolve subprojects to recursively find all projects in scope
-const resolveProjectIDsSQL = `WITH RECURSIVE scoped_projects AS (
-	SELECT id FROM projects WHERE organization_id = ANY($1::uuid[]) OR id = ANY($2::uuid[])
+// all projects of an org, sub projects belong to the same org
+const resolveOrgProjectIDsSQL = `SELECT id FROM projects WHERE organization_id = $1`
+
+// the exported project and all its sub projects
+const resolveSubProjectIDsSQL = `WITH RECURSIVE sub_projects AS (
+	SELECT id FROM projects WHERE id = $1
 	UNION
-	SELECT p.id FROM projects p JOIN scoped_projects sp ON p.parent_id = sp.id
-) SELECT id FROM scoped_projects`
+	SELECT p.id FROM projects p JOIN sub_projects sp ON p.parent_id = sp.id
+) SELECT id FROM sub_projects`
 
-// resolve all implicit asset ids (via projects) and the explicit ones set by the request
-const resolveAssetIDsSQL = `SELECT id FROM assets WHERE project_id = ANY($1::uuid[]) OR id = ANY($2::uuid[])`
+const resolveAssetIDsSQL = `SELECT id FROM assets WHERE project_id = ANY($1::uuid[])`
 
-// then we also need to get all the projects referenced by those assets to ensure FK-relations
-const resolveParentProjectIDsSQL = `SELECT project_id FROM assets WHERE id = ANY($1::uuid[])
-UNION
-SELECT parent_id FROM projects WHERE id = ANY($2::uuid[]) AND parent_id IS NOT NULL`
-
-// lastly we get all referenced orgs to ensure FK-relations
-const resolveParentOrgIDsSQL = `SELECT DISTINCT organization_id FROM projects WHERE id = ANY($1::uuid[]) OR id = ANY($2::uuid[])`
+// the given project and all its parents up to the root project
+const resolveParentProjectIDsSQL = `WITH RECURSIVE parent_projects AS (
+	SELECT id, parent_id FROM projects WHERE id = $1
+	UNION
+	SELECT p.id, p.parent_id FROM projects p JOIN parent_projects pp ON p.id = pp.parent_id
+) SELECT id FROM parent_projects`
 
 // artifacts of the scoped assets, used by the artifact pivot tables
 const resolveArtifactIDsSQL = `SELECT id FROM artifacts WHERE asset_id = ANY($1::uuid[])`
@@ -536,123 +525,105 @@ const resolveComponentProjectKeysSQL = `SELECT DISTINCT project_key FROM compone
 // framework controls referenced by the scoped compliance postures
 const resolveFrameworkControlIDsSQL = `SELECT DISTINCT framework_control_id FROM compliance_postures WHERE id = ANY($1::uuid[]) AND framework_control_id IS NOT NULL`
 
-// resolve the requested scopes into lists of ids for all levels
-func resolveScope(ctx context.Context, tx pgx.Tx, requested dtos.AffectedEntities) (exportScope, error) {
-	scope := exportScope{orgIDs: requested.Orgs}
+// resolve the exported entity into lists of ids for all levels
+func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExportOptions) (exportScope, error) {
+	entityID := options.EntityID.String()
+	scope := exportScope{}
+	var err error
 
-	rows, _ := tx.Query(ctx, resolveProjectIDsSQL, requested.Orgs, requested.Projects)
-	projectIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return scope, fmt.Errorf("could not resolve project ids: %w", err)
+	// projects and assets reference their parent projects and org, the chain starts at this project
+	var parentStartProjectID string
+
+	switch options.EntityType {
+	case dtos.DataTransferEntityOrg:
+		scope.orgIDs = []string{entityID}
+		if scope.projectIDs, err = collectIDs(ctx, tx, resolveOrgProjectIDsSQL, entityID); err != nil {
+			return scope, fmt.Errorf("could not resolve project ids: %w", err)
+		}
+	case dtos.DataTransferEntityProject:
+		if scope.projectIDs, err = collectIDs(ctx, tx, resolveSubProjectIDsSQL, entityID); err != nil {
+			return scope, fmt.Errorf("could not resolve project ids: %w", err)
+		}
+		parentStartProjectID = entityID
+	case dtos.DataTransferEntityAsset:
+		scope.assetIDs = []string{entityID}
+		if err := tx.QueryRow(ctx, "SELECT project_id FROM assets WHERE id = $1", entityID).Scan(&parentStartProjectID); err != nil {
+			return scope, fmt.Errorf("could not resolve project of asset: %w", err)
+		}
+	default:
+		return scope, fmt.Errorf("unknown export entity type: %s", options.EntityType)
 	}
-	scope.projectIDs = projectIDs
 
-	rows, _ = tx.Query(ctx, resolveAssetIDsSQL, scope.projectIDs, requested.Assets)
-	assetIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return scope, fmt.Errorf("could not resolve asset ids: %w", err)
+	if options.EntityType != dtos.DataTransferEntityAsset {
+		if scope.assetIDs, err = collectIDs(ctx, tx, resolveAssetIDsSQL, scope.projectIDs); err != nil {
+			return scope, fmt.Errorf("could not resolve asset ids: %w", err)
+		}
 	}
-	scope.assetIDs = assetIDs
 
-	rows, _ = tx.Query(ctx, resolveParentProjectIDsSQL, requested.Assets, requested.Projects)
-	parentProjectIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return scope, fmt.Errorf("could not resolve parent project ids: %w", err)
+	if parentStartProjectID != "" {
+		if scope.parentProjectIDs, err = collectIDs(ctx, tx, resolveParentProjectIDsSQL, parentStartProjectID); err != nil {
+			return scope, fmt.Errorf("could not resolve parent project ids: %w", err)
+		}
+		if scope.parentOrgIDs, err = collectIDs(ctx, tx, "SELECT organization_id FROM projects WHERE id = $1", parentStartProjectID); err != nil {
+			return scope, fmt.Errorf("could not resolve parent org id: %w", err)
+		}
 	}
-	scope.parentProjectIDs = parentProjectIDs
 
-	rows, _ = tx.Query(ctx, resolveParentOrgIDsSQL, scope.projectIDs, scope.parentProjectIDs)
-	parentOrgIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return scope, fmt.Errorf("could not resolve parent org ids: %w", err)
-	}
-	scope.parentOrgIDs = parentOrgIDs
-
-	rows, _ = tx.Query(ctx, resolveArtifactIDsSQL, scope.assetIDs)
-	artifactIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.artifactIDs, err = collectIDs(ctx, tx, resolveArtifactIDsSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve artifact ids: %w", err)
 	}
-	scope.artifactIDs = artifactIDs
 
-	rows, _ = tx.Query(ctx, resolveExternalUserIDsSQL, scope.orgIDs)
-	externalUserIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.externalUserIDs, err = collectIDs(ctx, tx, resolveExternalUserIDsSQL, scope.orgIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve external user ids: %w", err)
 	}
-	scope.externalUserIDs = externalUserIDs
 
-	rows, _ = tx.Query(ctx, resolveDependencyVulnIDsSQL, scope.assetIDs)
-	dependencyVulnIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.dependencyVulnIDs, err = collectIDs(ctx, tx, resolveDependencyVulnIDsSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve dependency vuln ids: %w", err)
 	}
-	scope.dependencyVulnIDs = dependencyVulnIDs
 
-	rows, _ = tx.Query(ctx, resolveFirstPartyVulnIDsSQL, scope.assetIDs)
-	firstPartyVulnIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.firstPartyVulnIDs, err = collectIDs(ctx, tx, resolveFirstPartyVulnIDsSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve first party vuln ids: %w", err)
 	}
-	scope.firstPartyVulnIDs = firstPartyVulnIDs
 
-	rows, _ = tx.Query(ctx, resolveLicenseRiskIDsSQL, scope.assetIDs)
-	licenseRiskIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.licenseRiskIDs, err = collectIDs(ctx, tx, resolveLicenseRiskIDsSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve license risk ids: %w", err)
 	}
-	scope.licenseRiskIDs = licenseRiskIDs
 
-	rows, _ = tx.Query(ctx, resolveCompliancePostureIDsSQL, scope.orgIDs, scope.projectIDs, scope.assetIDs)
-	compliancePostureIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.compliancePostureIDs, err = collectIDs(ctx, tx, resolveCompliancePostureIDsSQL, scope.orgIDs, scope.projectIDs, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve compliance posture ids: %w", err)
 	}
-	scope.compliancePostureIDs = compliancePostureIDs
 
-	rows, _ = tx.Query(ctx, resolveSecurityAdvisoryIDsSQL, scope.assetIDs)
-	securityAdvisoryIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.securityAdvisoryIDs, err = collectIDs(ctx, tx, resolveSecurityAdvisoryIDsSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve security advisory ids: %w", err)
 	}
-	scope.securityAdvisoryIDs = securityAdvisoryIDs
 
-	rows, _ = tx.Query(ctx, resolveAssetSignaturesSQL, scope.assetIDs)
-	assetSignatures, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.assetSignatures, err = collectIDs(ctx, tx, resolveAssetSignaturesSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve asset signatures: %w", err)
 	}
-	scope.assetSignatures = assetSignatures
 
-	rows, _ = tx.Query(ctx, resolveSBOMMerkleNodeHashesSQL, scope.assetIDs)
-	sbomMerkleNodeHashes, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.sbomMerkleNodeHashes, err = collectIDs(ctx, tx, resolveSBOMMerkleNodeHashesSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve sbom merkle node hashes: %w", err)
 	}
-	scope.sbomMerkleNodeHashes = sbomMerkleNodeHashes
 
-	rows, _ = tx.Query(ctx, resolveComponentIDsSQL, scope.licenseRiskIDs)
-	componentIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.componentIDs, err = collectIDs(ctx, tx, resolveComponentIDsSQL, scope.licenseRiskIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve component ids: %w", err)
 	}
-	scope.componentIDs = componentIDs
 
-	rows, _ = tx.Query(ctx, resolveComponentProjectKeysSQL, scope.componentIDs)
-	componentProjectKeys, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.componentProjectKeys, err = collectIDs(ctx, tx, resolveComponentProjectKeysSQL, scope.componentIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve component project keys: %w", err)
 	}
-	scope.componentProjectKeys = componentProjectKeys
 
-	rows, _ = tx.Query(ctx, resolveFrameworkControlIDsSQL, scope.compliancePostureIDs)
-	frameworkControlIDs, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
+	if scope.frameworkControlIDs, err = collectIDs(ctx, tx, resolveFrameworkControlIDsSQL, scope.compliancePostureIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve framework control ids: %w", err)
 	}
-	scope.frameworkControlIDs = frameworkControlIDs
 
 	return scope, nil
+}
+
+// runs a query which returns a single id column
+func collectIDs(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]string, error) {
+	rows, _ := tx.Query(ctx, sql, args...)
+	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
 type errorHandling struct {

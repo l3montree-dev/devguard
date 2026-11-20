@@ -800,11 +800,9 @@ func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
 }
 
 func (controller *OrgController) ExportOrg(ctx shared.Context) error {
-	orgID := shared.GetOrg(ctx).GetID()
 	exportOptions := dtos.DataTransferExportOptions{
-		AffectedEntities: dtos.AffectedEntities{
-			Orgs: []string{orgID.String()},
-		},
+		EntityType: dtos.DataTransferEntityOrg,
+		EntityID:   shared.GetOrg(ctx).GetID(),
 	}
 
 	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")
