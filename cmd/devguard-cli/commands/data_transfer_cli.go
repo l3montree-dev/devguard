@@ -5,8 +5,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/l3montree-dev/devguard/accesscontrol"
+	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database"
+	"github.com/l3montree-dev/devguard/database/repositories"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/events"
+	"github.com/l3montree-dev/devguard/integrations"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/spf13/cobra"
@@ -40,7 +45,12 @@ func newDTExportCommand() *cobra.Command {
 				fx.NopLogger,
 				fx.Supply(database.GetPoolConfigFromEnv()),
 				database.Module,
+				events.Module,
+				repositories.Module,
 				services.ServiceModule,
+				accesscontrol.AccessControlModule,
+				controllers.ControllerModule,
+				integrations.Module,
 				fx.Invoke(func(dataTransferService shared.DataTransferService) error {
 					exportFile, err := os.Create("devguard-export.tar")
 					if err != nil {
@@ -67,23 +77,31 @@ func newDTExportCommand() *cobra.Command {
 
 func newDTImportCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "import",
+		Use:   "import <owner-user-id>",
 		Short: "imports the data for a specified set of entities",
+		Long:  "imports the data for a specified set of entities, the given user becomes owner of all imported organizations",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
+			ownerID := args[0]
 
 			app := fx.New(
 				fx.NopLogger,
 				fx.Supply(database.GetPoolConfigFromEnv()),
 				database.Module,
+				events.Module, // publishes the policy changes, so running instances reload the new rbac rules
+				repositories.Module,
 				services.ServiceModule,
+				accesscontrol.AccessControlModule,
+				controllers.ControllerModule,
+				integrations.Module,
 				fx.Invoke(func(dataTransferService shared.DataTransferService) error {
 					exportFile, err := os.Open("devguard-export.tar")
 					if err != nil {
 						return err
 					}
 					defer exportFile.Close()
-					return dataTransferService.ImportFile(context.Background(), exportFile)
+					return dataTransferService.ImportFile(context.Background(), exportFile, ownerID)
 				}),
 			)
 

@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -209,13 +210,22 @@ var tablesToSync = map[string]tableProperties{
 }
 
 type DataTransferService struct {
-	pool *pgxpool.Pool
-	// Event Broker?
+	pool              *pgxpool.Pool
+	rbacProvider      shared.RBACProvider
+	projectService    shared.ProjectService
+	assetService      shared.AssetService
+	projectRepository shared.ProjectRepository
+	assetRepository   shared.AssetRepository
 }
 
-func NewDataTransferService(pool *pgxpool.Pool) *DataTransferService {
+func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider, projectService shared.ProjectService, assetService shared.AssetService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *DataTransferService {
 	return &DataTransferService{
-		pool: pool,
+		pool:              pool,
+		rbacProvider:      rbacProvider,
+		projectService:    projectService,
+		assetService:      assetService,
+		projectRepository: projectRepository,
+		assetRepository:   assetRepository,
 	}
 }
 
@@ -656,7 +666,7 @@ type importJob struct {
 	pathToFile       string
 }
 
-func (service *DataTransferService) ImportFile(ctx context.Context, importFile io.Reader) error {
+func (service *DataTransferService) ImportFile(ctx context.Context, importFile io.Reader, ownerID string) error {
 	slog.Info("start importing data...")
 	start := time.Now()
 
@@ -727,9 +737,19 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return fmt.Errorf("could not create staging table: %w", err)
 	}
 
+	var importedOrgIDs []uuid.UUID
 	for _, job := range jobs {
 		if err := importTable(ctx, importTx, job); err != nil {
 			return err
+		}
+
+		// the staging table still holds the rows of the table that was just imported
+		if job.tableName == orgTableID {
+			rows, _ := importTx.Query(ctx, "SELECT (data->>'id')::uuid FROM import_staging")
+			importedOrgIDs, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+			if err != nil {
+				return fmt.Errorf("could not collect imported organization ids: %w", err)
+			}
 		}
 	}
 
@@ -737,7 +757,47 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
+	// casbin uses its own connection, so the rules can only be added once the data is committed
+	if err := service.bootstrapImportedRBAC(ctx, importedOrgIDs, ownerID); err != nil {
+		return fmt.Errorf("could not set up permissions for imported data: %w", err)
+	}
+
 	slog.Info("successfully finished import", "time", time.Since(start))
+	return nil
+}
+
+// importing an existing organization fails, so every project and asset of an imported organization was imported as well
+func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, orgIDs []uuid.UUID, ownerID string) error {
+	for _, orgID := range orgIDs {
+		rbac := service.rbacProvider.GetDomainRBAC(orgID.String())
+
+		// projects and assets inherit the owner through the admin roles linked in their bootstrap
+		if err := shared.BootstrapOrg(ctx, rbac, ownerID, shared.RoleOwner); err != nil {
+			return fmt.Errorf("could not bootstrap organization %s: %w", orgID, err)
+		}
+
+		projects, err := service.projectRepository.GetByOrgID(ctx, nil, orgID)
+		if err != nil {
+			return fmt.Errorf("could not load projects of organization %s: %w", orgID, err)
+		}
+		for i := range projects {
+			if err := service.projectService.BootstrapProject(ctx, rbac, &projects[i]); err != nil {
+				return fmt.Errorf("could not bootstrap project %s: %w", projects[i].ID, err)
+			}
+		}
+
+		assets, err := service.assetRepository.GetByOrgID(ctx, nil, orgID)
+		if err != nil {
+			return fmt.Errorf("could not load assets of organization %s: %w", orgID, err)
+		}
+		for i := range assets {
+			if err := service.assetService.BootstrapAsset(ctx, rbac, &assets[i]); err != nil {
+				return fmt.Errorf("could not bootstrap asset %s: %w", assets[i].ID, err)
+			}
+		}
+
+		slog.Info("set up permissions for imported organization", "organization", orgID, "projects", len(projects), "assets", len(assets))
+	}
 	return nil
 }
 
