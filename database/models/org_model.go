@@ -21,7 +21,8 @@ type Org struct {
 
 	GitLabIntegrations []GitLabIntegration `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
-	JiraIntegrations []JiraIntegration `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
+	JiraIntegrations    []JiraIntegration    `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
+	RedmineIntegrations []RedmineIntegration `json:"redmineIntegrations" gorm:"foreignKey:OrgID;"`
 
 	SharesVulnInformation bool                 `json:"sharesVulnInformation" gorm:"default:false"`
 	Webhooks              []WebhookIntegration `json:"webhooks" gorm:"foreignKey:OrgID;"`
