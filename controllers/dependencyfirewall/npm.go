@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
@@ -168,8 +169,9 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
-	registry := configs.getRegistry(npm, npmRegistry)
-	metadata, _, metaStatus, err := d.fetchPackageMetadata(ctx, packageName, registry)
+	registryConfig := configs.Registries.NpmConfig().ForPackage(packageName)
+	registry := registryConfig.URL
+	metadata, _, metaStatus, err := d.fetchPackageMetadata(ctx, packageName, registryConfig)
 	if err != nil || metaStatus != http.StatusOK {
 		slog.Warn("Could not load package metadata", "proxy", "npm", "package", packageName, "error", err)
 		if len(configs.Rules) > 0 {
@@ -203,7 +205,7 @@ func (d *NPMDependencyProxyController) ProxyNPMTarball(c shared.Context) error {
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, npm, registry, requestPath, c.Request().Header, nil)
+	data, headers, statusCode, err := d.fetchFromUpstreamWithAuth(ctx, npm, registry, requestPath, registryConfig.Auth, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -243,20 +245,22 @@ var npmMetadata = utils.NewTTLCache[string](5*time.Minute, 256*1024*1024, func(e
 
 // fetchPackageMetadata returns the full (non-abbreviated) npm package document.
 // Only successful responses are cached.
-func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context, packageName, registry string) ([]byte, http.Header, int, error) {
-	cacheKey := "npm/metadata/" + packageName
-	if entry, ok := npmMetadata.Get(cacheKey); ok {
-		slog.Debug("Cache hit for metadata", "proxy", "npm", "package", packageName)
-		headers := http.Header{}
-		headers.Set("Content-Type", entry.contentType)
-		return entry.data, headers, http.StatusOK, nil
+func (d *NPMDependencyProxyController) fetchPackageMetadata(ctx context.Context, packageName string, registryConfig dtos.NpmRegistryConfig) ([]byte, http.Header, int, error) {
+	cacheKey := "npm/metadata/" + registryConfig.URL + "/" + packageName
+	if registryConfig.Auth == nil {
+		if entry, ok := npmMetadata.Get(cacheKey); ok {
+			slog.Debug("Cache hit for metadata", "proxy", "npm", "package", packageName)
+			headers := http.Header{}
+			headers.Set("Content-Type", entry.contentType)
+			return entry.data, headers, http.StatusOK, nil
+		}
 	}
 
-	data, headers, status, err := d.fetchFromUpstream(ctx, npm, registry, "/"+packageName, nil, nil)
+	data, headers, status, err := d.fetchFromUpstreamWithAuth(ctx, npm, registryConfig.URL, "/"+packageName, registryConfig.Auth, nil, nil)
 	if err != nil {
 		return nil, nil, status, fmt.Errorf("failed to fetch metadata from upstream: %w", err)
 	}
-	if status == http.StatusOK {
+	if status == http.StatusOK && registryConfig.Auth == nil {
 		npmMetadata.Set(cacheKey, npmMetadataCacheEntry{data: data, contentType: headers.Get("Content-Type")})
 	}
 	return data, headers, status, nil
@@ -318,8 +322,9 @@ func (d *NPMDependencyProxyController) ProxyNPMMetadata(c shared.Context) error 
 		return d.blockMaliciousPackage(c, npm, requestPath, reason, status)
 	}
 
-	registry := configs.getRegistry(npm, npmRegistry)
-	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName, registry)
+	registryConfig := configs.Registries.NpmConfig().ForPackage(packageName)
+	registry := registryConfig.URL
+	data, headers, statusCode, err := d.fetchPackageMetadata(ctx, packageName, registryConfig)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

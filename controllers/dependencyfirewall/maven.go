@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
@@ -168,6 +169,7 @@ func (d *MavenDependencyProxyController) ProxyMaven(c shared.Context) error {
 
 // proxyMavenPackage handles explicit-version Maven package downloads.
 func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context, requestPath string) error {
+	var auth *dtos.RegistryAuth
 	configs, err := d.GetDependencyProxyConfigs(c)
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
@@ -235,7 +237,12 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context, req
 
 	span.SetAttributes(attribute.Bool("proxy.cache_hit", false))
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, requestPath, c.Request().Header, nil)
+	registryConfig := configs.Registries.MavenConfig()
+	if registryConfig != nil {
+		auth = registryConfig.Auth
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstreamWithAuth(ctx, maven, registry, requestPath, auth, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -250,7 +257,7 @@ func (d *MavenDependencyProxyController) proxyMavenPackage(c shared.Context, req
 
 	releaseTime := mavenReleaseTime(headers)
 	if releaseTime.IsZero() && registry != mavenRegistry && version != "" {
-		releaseTime, _ = d.fetchMavenReleaseTime(ctx, packageName, version, registry, secretCache)
+		releaseTime, _ = d.fetchMavenReleaseTime(ctx, packageName, version, registry, secretCache, configs)
 	}
 	notAllowed, notAllowedReason := d.CheckNotAllowedPackage(newPackage(maven, registry, packageName, version, releaseTime), configs)
 	if notAllowed {
@@ -300,6 +307,7 @@ func mavenReleaseTime(headers http.Header) time.Time {
 // all-version malicious entries can be evaluated here.
 func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context, requestPath string) error {
 	configs, err := d.GetDependencyProxyConfigs(c)
+	var auth *dtos.RegistryAuth
 	if err != nil {
 		slog.Error("Error getting dependency proxy configs", "error", err)
 		if strings.Contains(err.Error(), "invalid dependency proxy secret") {
@@ -345,7 +353,12 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context, re
 
 	registry := configs.getRegistry(maven, mavenRegistry)
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, requestPath, c.Request().Header, nil)
+	registryConfig := configs.Registries.MavenConfig()
+	if registryConfig != nil {
+		auth = registryConfig.Auth
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstreamWithAuth(ctx, maven, registry, requestPath, auth, c.Request().Header, nil)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -374,7 +387,7 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context, re
 			if isMaliciousVersion(maven, malicious, v) {
 				return false
 			}
-			releaseTime, _ := d.fetchMavenReleaseTime(ctx, packageName, v, registry, secretCache)
+			releaseTime, _ := d.fetchMavenReleaseTime(ctx, packageName, v, registry, secretCache, configs)
 			blocked, _ := d.CheckNotAllowedPackage(newPackage(maven, registry, packageName, v, releaseTime), configs)
 			return !blocked
 		})
@@ -393,7 +406,9 @@ func (d *MavenDependencyProxyController) proxyMavenMetadata(c shared.Context, re
 // the version's POM is the only source. The POM is used rather than the JAR because it is
 // small and always exists, even for pom-packaging artifacts. The cache key matches the one
 // proxyMavenPackage uses, so a POM that was proxied normally is reused here.
-func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version, registry string, secretCache *cache) (time.Time, error) {
+func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Context, packageName, version, registry string, secretCache *cache, configs DependencyProxyConfigs) (time.Time, error) {
+	var auth *dtos.RegistryAuth
+
 	groupID, artifactID, ok := strings.Cut(packageName, "/")
 	if !ok {
 		return time.Time{}, fmt.Errorf("invalid maven coordinates %q", packageName)
@@ -406,7 +421,12 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 		return entry.releaseTime, nil
 	}
 
-	data, headers, statusCode, err := d.fetchFromUpstream(ctx, maven, registry, pomPath, http.Header{}, nil)
+	registryConfig := configs.Registries.MavenConfig()
+	if registryConfig != nil {
+		auth = registryConfig.Auth
+	}
+
+	data, headers, statusCode, err := d.fetchFromUpstreamWithAuth(ctx, maven, registry, pomPath, auth, http.Header{}, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -414,7 +434,7 @@ func (d *MavenDependencyProxyController) fetchMavenReleaseTime(ctx context.Conte
 		return time.Time{}, fmt.Errorf("upstream returned status %d for %s", statusCode, pomPath)
 	}
 	releaseTime := mavenReleaseTime(headers)
-	if releaseTime.IsZero() && registry != mavenRegistry {
+	if releaseTime.IsZero() && registry != mavenRegistry && auth == nil {
 		releaseTime = d.centralReleaseTime(ctx, pomPath)
 	}
 	if releaseTime.IsZero() {
