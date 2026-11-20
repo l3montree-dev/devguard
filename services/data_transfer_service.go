@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
@@ -154,9 +156,9 @@ var (
 )
 
 type tableProperties struct {
-	filters      []scopeFilter
-	importOrder  int  // tables only reference tables with a lower import order, equal ones are independent of each other
-	skipExisting bool // shared reference data, rows already present on the target are kept
+	filters          []scopeFilter
+	importOrder      int  // tables only reference tables with a lower import order, equal ones are independent of each other
+	conflictsAllowed bool // the key identifies the content itself, so an existing row is the same object and gets kept
 }
 
 // all tables with a simple syntax, keyed by table name
@@ -165,7 +167,7 @@ var tablesToSync = map[string]tableProperties{
 	orgTableID:            {importOrder: 0, filters: []scopeFilter{{column: "id", level: orgLevel}, {column: "id", level: parentOrgLevel}}},
 	projectsTableID:       {importOrder: 1, filters: []scopeFilter{{column: "id", level: projectLevel}, {column: "id", level: parentProjectLevel}}},
 	"compliance_postures": {importOrder: 4, filters: []scopeFilter{orgScope, projectScope, assetScope}},
-	"external_users":      {importOrder: 0, filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
+	"external_users":      {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
 	"external_user_orgs":  {importOrder: 1, filters: []scopeFilter{orgScope}},
 
 	// project level
@@ -190,13 +192,13 @@ var tablesToSync = map[string]tableProperties{
 	"artifact_license_risks":    {importOrder: 5, filters: []scopeFilter{artifactScope}},
 
 	// package level
-	"sbom_merkle_nodes": {importOrder: 0, filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
-	"sbom_merkle_edges": {importOrder: 1, filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
+	"sbom_merkle_nodes": {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
+	"sbom_merkle_edges": {importOrder: 1, conflictsAllowed: true, filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
 
 	// shared reference data
-	"component_projects":  {importOrder: 0, skipExisting: true, filters: []scopeFilter{{column: "project_key", level: componentProjectLevel}}},
-	"components":          {importOrder: 1, skipExisting: true, filters: []scopeFilter{{column: "id", level: componentLevel}}},
-	"frameworks_controls": {importOrder: 0, skipExisting: true, filters: []scopeFilter{{column: "framework_control_id", level: frameworkControlLevel}}},
+	"component_projects":  {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "project_key", level: componentProjectLevel}}},
+	"components":          {importOrder: 1, conflictsAllowed: true, filters: []scopeFilter{{column: "id", level: componentLevel}}},
+	"frameworks_controls": {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "framework_control_id", level: frameworkControlLevel}}},
 
 	// vuln level
 	"vuln_events": {importOrder: 5, filters: []scopeFilter{
@@ -626,11 +628,6 @@ func collectIDs(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]stri
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-type errorHandling struct {
-	method       string // nothing, update (columns)
-	updateColumn []string
-}
-
 type importJob struct {
 	tableName        string
 	tableImportOrder int
@@ -797,15 +794,21 @@ func importTable(ctx context.Context, tx pgx.Tx, job importJob) error {
 
 	table := pgx.Identifier{job.tableName}.Sanitize()
 	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT r.* FROM import_staging, jsonb_populate_record(NULL::%s, data) r", table, table)
-	if tablesToSync[job.tableName].skipExisting {
+	// every other table fails on a conflict, since its rows have to be new on this instance
+	if tablesToSync[job.tableName].conflictsAllowed {
 		insertSQL += " ON CONFLICT DO NOTHING"
 	}
 	insertTag, err := tx.Exec(ctx, insertSQL)
 	if err != nil {
+		// mostly a slug or name which is already taken on this instance, the detail names the conflicting value
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+			return fmt.Errorf("could not insert rows of %s, %s rename or remove the existing entry and retry the import: %w", job.tableName, pgErr.Detail, err)
+		}
 		return fmt.Errorf("could not insert rows of %s: %w", job.tableName, err)
 	}
 
-	slog.Info("imported table", "table", job.tableName, "copied rows", copyTag.RowsAffected(), "inserted rows", insertTag.RowsAffected())
+	slog.Info("imported table", "table", job.tableName, "inserted rows", insertTag.RowsAffected(), "skipped existing rows", copyTag.RowsAffected()-insertTag.RowsAffected())
 	return nil
 }
 
