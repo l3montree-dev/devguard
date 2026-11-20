@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.19.2] - 2026-11-20
+
+Thanks to external contributor [@amalsaidov](https://github.com/amalsaidov) for scoping the project search to the current subgroup! 🎉
+
+### Added
+
+- **Asset version retention policy (Preview)** — each asset has a configurable `assetVersionRetentionPolicy`, a CEL expression deciding which asset versions the daemon keeps. The default reproduces the former hard coded cleanup: tags are kept, branches are deleted after 7 days without a scan.
+- **Asset versions are addressable by name** — if the path parameter is not a known asset version slug, it is looked up as the asset version name. The `devguard-scanner slug` command is removed, as it is no longer needed
+- `security-insights.yml` describing the security posture of the project
+
+### Changed
+
+- Asset version slugs are unique per asset. The migration renames colliding slugs (e.g. `feature/foo` and `feature-foo`): the oldest asset version keeps the slug, the others get the first free `-<n>` suffix
+
+### Fixed
+
+- **OAuth2 error on public resources** — requests targeting a public project or asset no longer require a valid oauth2 token for the external entity provider
+- **Project search in subgroups** — a search from inside a subgroup is restricted to its descendants, so matches outside the subgroup no longer push the subgroup's own results out of the page
+- **Integration deletion** — the asset repository connection is cleared when the GitHub, GitLab or Jira integration is deleted
+- **VEX path patterns** — fixes an error in the path pattern matching
+- **Withdrawn CVEs** — the `withdrawn` flag is now included in the CVE API response
+- An empty CWE list is returned for CVEs without CWEs
+- Nix flake check passes again
+
+---
+
 ## [v1.19.1] - 2026-11-18
 
 ### Changed
