@@ -24,8 +24,13 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/utils"
 	"golang.org/x/sync/errgroup"
 )
+
+//-------------------------------------------------------------------
+//						Module Definitions
+//-------------------------------------------------------------------
 
 const dataTransferVersion = 1 // current data transfer version to check compatibility
 // if breaking changes are introduced increase by 1
@@ -34,6 +39,26 @@ const (
 	metadataFileName   = "metadata.json"
 	tableFileExtension = ".jsonl.gz"
 )
+
+type DataTransferService struct {
+	pool           *pgxpool.Pool
+	rbacProvider   shared.RBACProvider
+	projectService shared.ProjectService
+	assetService   shared.AssetService
+}
+
+func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider, projectService shared.ProjectService, assetService shared.AssetService) *DataTransferService {
+	return &DataTransferService{
+		pool:           pool,
+		rbacProvider:   rbacProvider,
+		projectService: projectService,
+		assetService:   assetService,
+	}
+}
+
+//-------------------------------------------------------------------
+//						Structs and Types
+//-------------------------------------------------------------------
 
 // resolved ids keyed by id set name, resolveScope sets every key so a misspelled key fails the export
 type exportScope map[string][]string
@@ -106,26 +131,64 @@ var tablesToSync = map[string]tableProperties{
 	}},
 }
 
-type DataTransferService struct {
-	pool           *pgxpool.Pool
-	rbacProvider   shared.RBACProvider
-	projectService shared.ProjectService
-	assetService   shared.AssetService
-}
+//-------------------------------------------------------------------
+//		SQL constants for resolving table data from id sets
+//-------------------------------------------------------------------
 
-func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider, projectService shared.ProjectService, assetService shared.AssetService) *DataTransferService {
-	return &DataTransferService{
-		pool:           pool,
-		rbacProvider:   rbacProvider,
-		projectService: projectService,
-		assetService:   assetService,
-	}
-}
+// all projects of an org, sub projects belong to the same org
+const resolveOrgProjectIDsSQL = `SELECT id FROM projects WHERE organization_id = $1`
+
+// the exported project and all its sub projects
+const resolveSubProjectIDsSQL = `WITH RECURSIVE sub_projects AS (
+	SELECT id FROM projects WHERE id = $1
+	UNION
+	SELECT p.id FROM projects p JOIN sub_projects sp ON p.parent_id = sp.id
+) SELECT id FROM sub_projects`
+
+const resolveAssetIDsSQL = `SELECT id FROM assets WHERE project_id = ANY($1::uuid[])`
+
+// artifacts of the scoped assets, used by the artifact pivot tables
+const resolveArtifactIDsSQL = `SELECT id FROM artifacts WHERE asset_id = ANY($1::uuid[])`
+
+// external users which are members of a fully scoped org
+const resolveExternalUserIDsSQL = `SELECT DISTINCT external_user_id FROM external_user_orgs WHERE org_id = ANY($1::uuid[])`
+
+// vulns of the scoped assets, used by the vuln events
+const resolveDependencyVulnIDsSQL = `SELECT id FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
+const resolveFirstPartyVulnIDsSQL = `SELECT id FROM first_party_vulnerabilities WHERE asset_id = ANY($1::uuid[])`
+const resolveLicenseRiskIDsSQL = `SELECT id FROM license_risks WHERE asset_id = ANY($1::uuid[])`
+const resolveSecurityAdvisoryIDsSQL = `SELECT id FROM advisories WHERE asset_id = ANY($1::uuid[])`
+
+// same filter as the compliance_postures table export
+const resolveCompliancePostureIDsSQL = `SELECT id FROM compliance_postures WHERE org_id = ANY($1::uuid[])`
+
+// the asset id is part of the signature hash, so signatures never span multiple assets
+const resolveAssetSignaturesSQL = `SELECT DISTINCT asset_signature::text FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
+
+// recursively walk the merkle graph down from the roots of the scoped sboms
+const resolveSBOMMerkleNodeHashesSQL = `WITH RECURSIVE reachable AS (
+	SELECT root_subtree_hash AS node_hash FROM sboms WHERE asset_id = ANY($1::uuid[])
+	UNION
+	SELECT e.direct_dependency_subtree_hash FROM sbom_merkle_edges e JOIN reachable r ON e.subtree_hash = r.node_hash
+) SELECT node_hash FROM reachable`
+
+// components referenced by the scoped license risks
+const resolveComponentIDsSQL = `SELECT DISTINCT component_purl FROM license_risks WHERE id = ANY($1::uuid[])`
+
+// projects of those components, project_key is optional
+const resolveComponentProjectKeysSQL = `SELECT DISTINCT project_key FROM components WHERE id = ANY($1::text[]) AND project_key IS NOT NULL`
+
+// framework controls referenced by the scoped compliance postures
+const resolveFrameworkControlIDsSQL = `SELECT DISTINCT framework_control_id FROM compliance_postures WHERE id = ANY($1::uuid[]) AND framework_control_id IS NOT NULL`
+
+//-------------------------------------------------------------------
+//							Export Logic
+//-------------------------------------------------------------------
 
 func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error {
 	start := time.Now()
 
-	// export will be build here and then discarded after successful transmission
+	// export will be built here and then discarded after successful transmission
 	jobDirectoryPath, err := os.MkdirTemp("", "devguard-export-*")
 	if err != nil {
 		return fmt.Errorf("could not create export directory: %w", err)
@@ -142,7 +205,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 
 	// initiate read only and repeatable read transaction to use as snapshot for the export
 	// read only enforces no writes and makes queries more efficient
-	// repeatable read enforces as snapshot on the current state of the database eliminating race conditions
+	// repeatable read enforces a snapshot on the current state of the database eliminating race conditions
 	snapshotTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
@@ -150,7 +213,8 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	if err != nil {
 		return fmt.Errorf("could not start export transaction: %w", err)
 	}
-	defer snapshotTx.Commit(ctx) // ends the transaction before returning
+	defer snapshotTx.Commit(ctx) // nolint
+	// ends the transaction (releases snapshot) before returning
 
 	var snapshotID string // used as reference for the other transactions -> use the same snapshot
 	err = snapshotTx.QueryRow(ctx, `SELECT pg_export_snapshot();`).Scan(&snapshotID)
@@ -176,7 +240,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	}
 
 	// now we resolved the export scope into a set of ids for each affected table
-	// this make each table lookup an independent job, thus allowing for concurrent reads
+	// this makes each table lookup an independent job, thus allowing for concurrent reads
 	jobs := make(chan string, len(tablesToSync)) // small number of jobs, all can be queued at once
 	for tableID := range tablesToSync {
 		jobs <- tableID
@@ -234,14 +298,6 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	return nil
 }
 
-type metadata struct {
-	ExportVersion         int                         `json:"export_version"`
-	DatabaseSchemaVersion string                      `json:"database_schema_version"`
-	ExportTimestamp       time.Time                   `json:"export_timestamp"`
-	EntityType            dtos.DataTransferEntityType `json:"entity_type"`
-	EntityID              uuid.UUID                   `json:"entity_id"`
-}
-
 // builds the metadata file from the aggregated information
 func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
 	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, metadataFileName))
@@ -250,7 +306,7 @@ func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferE
 	}
 	defer metadataFD.Close()
 
-	exportMetadata := metadata{
+	exportMetadata := dtos.DataTransferMetadata{
 		ExportVersion:         dataTransferVersion,
 		DatabaseSchemaVersion: databaseSchemaVersion,
 		ExportTimestamp:       exportTimestamp,
@@ -271,7 +327,7 @@ func (service *DataTransferService) databaseQueryWorker(ctx context.Context, bas
 	if err != nil {
 		return fmt.Errorf("could not start worker tx: %w", err)
 	}
-	defer workerTx.Rollback(ctx)
+	defer workerTx.Rollback(ctx) // nolint
 
 	// own transaction but uses the same underlying snapshot of the database
 	_, err = workerTx.Exec(ctx, fmt.Sprintf("SET TRANSACTION SNAPSHOT '%s';", snapshotID))
@@ -314,7 +370,7 @@ func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, tableID stri
 	defer gzipWriter.Close()
 
 	for rows.Next() {
-		// scan each row into a buffer and stream that ito the file through the gzip compression
+		// scan each row into a buffer and stream that into the file through the gzip compression
 		var row []byte
 		if err := rows.Scan(&row); err != nil {
 			return fmt.Errorf("could not scan row of %s: %w", tableID, err)
@@ -349,7 +405,6 @@ func sqlFromTableProperties(tableID string, properties tableProperties, scope ex
 		return "", nil, fmt.Errorf("table %s has no scope filter", tableID)
 	}
 
-	// TODO sanitize everything?
 	// for each filter build the SQL condition and the respective argument (sanitized)
 	conditions := make([]string, 0, len(properties.filters))
 	args := make([]any, 0, len(properties.filters))
@@ -363,52 +418,6 @@ func sqlFromTableProperties(tableID string, properties tableProperties, scope ex
 	}
 	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
 }
-
-// all projects of an org, sub projects belong to the same org
-const resolveOrgProjectIDsSQL = `SELECT id FROM projects WHERE organization_id = $1`
-
-// the exported project and all its sub projects
-const resolveSubProjectIDsSQL = `WITH RECURSIVE sub_projects AS (
-	SELECT id FROM projects WHERE id = $1
-	UNION
-	SELECT p.id FROM projects p JOIN sub_projects sp ON p.parent_id = sp.id
-) SELECT id FROM sub_projects`
-
-const resolveAssetIDsSQL = `SELECT id FROM assets WHERE project_id = ANY($1::uuid[])`
-
-// artifacts of the scoped assets, used by the artifact pivot tables
-const resolveArtifactIDsSQL = `SELECT id FROM artifacts WHERE asset_id = ANY($1::uuid[])`
-
-// external users which are members of a fully scoped org
-const resolveExternalUserIDsSQL = `SELECT DISTINCT external_user_id FROM external_user_orgs WHERE org_id = ANY($1::uuid[])`
-
-// vulns of the scoped assets, used by the vuln events
-const resolveDependencyVulnIDsSQL = `SELECT id FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
-const resolveFirstPartyVulnIDsSQL = `SELECT id FROM first_party_vulnerabilities WHERE asset_id = ANY($1::uuid[])`
-const resolveLicenseRiskIDsSQL = `SELECT id FROM license_risks WHERE asset_id = ANY($1::uuid[])`
-const resolveSecurityAdvisoryIDsSQL = `SELECT id FROM advisories WHERE asset_id = ANY($1::uuid[])`
-
-// same filter as the compliance_postures table export
-const resolveCompliancePostureIDsSQL = `SELECT id FROM compliance_postures WHERE org_id = ANY($1::uuid[])`
-
-// the asset id is part of the signature hash, so signatures never span multiple assets
-const resolveAssetSignaturesSQL = `SELECT DISTINCT asset_signature::text FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
-
-// recursively walk the merkle graph down from the roots of the scoped sboms
-const resolveSBOMMerkleNodeHashesSQL = `WITH RECURSIVE reachable AS (
-	SELECT root_subtree_hash AS node_hash FROM sboms WHERE asset_id = ANY($1::uuid[])
-	UNION
-	SELECT e.direct_dependency_subtree_hash FROM sbom_merkle_edges e JOIN reachable r ON e.subtree_hash = r.node_hash
-) SELECT node_hash FROM reachable`
-
-// components referenced by the scoped license risks
-const resolveComponentIDsSQL = `SELECT DISTINCT component_purl FROM license_risks WHERE id = ANY($1::uuid[])`
-
-// projects of those components, project_key is optional
-const resolveComponentProjectKeysSQL = `SELECT DISTINCT project_key FROM components WHERE id = ANY($1::text[]) AND project_key IS NOT NULL`
-
-// framework controls referenced by the scoped compliance postures
-const resolveFrameworkControlIDsSQL = `SELECT DISTINCT framework_control_id FROM compliance_postures WHERE id = ANY($1::uuid[]) AND framework_control_id IS NOT NULL`
 
 // recursively collect all id sets in order: first entities, then direct referenced tables and lastly indirect referenced tables
 func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExportOptions) (exportScope, error) {
@@ -506,37 +515,47 @@ func collectIDs(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]stri
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
+//-------------------------------------------------------------------
+//						Import Logic
+//-------------------------------------------------------------------
+
 func (service *DataTransferService) ImportFile(ctx context.Context, importFile io.Reader, options dtos.DataTransferImportOptions) error {
 	slog.Info("start importing data...")
 	start := time.Now()
 
+	// unpack the files locally into a temp folder so we are able to handle them in the appropriate order
 	importDirectoryPath, err := os.MkdirTemp("", "devguard-import-*")
 	if err != nil {
 		return fmt.Errorf("could not create import directory: %w", err)
 	}
+	// clean up after the import finishes
 	defer func() {
 		if err := os.RemoveAll(importDirectoryPath); err != nil {
 			slog.Error("could not clean up import directory", "path", importDirectoryPath, "err", err)
 		}
 	}()
 
+	// write the imported file to the temp directory, it now lives there
 	if err := extractImportArchive(importFile, importDirectoryPath); err != nil {
 		return fmt.Errorf("could not extract import archive: %w", err)
 	}
 
+	// transaction ensures atomicity for the import but also disallows concurrent writes
 	importTx, err := service.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("could not start import transaction: %w", err)
 	}
-	defer importTx.Rollback(ctx) // no-op after a successful commit
+	defer importTx.Rollback(ctx) // nolint
+	//no-op after a successful commit
 
 	if _, err := importTx.Exec(ctx, "SET LOCAL search_path TO public"); err != nil {
 		return fmt.Errorf("could not set search path for import: %w", err)
 	}
 
+	// check if the transfer version (program logic) and the schema migrations (database version) match the one of the export
 	importMetadata, err := checkImportMetadata(ctx, importTx, importDirectoryPath)
 	if err != nil {
-		return err // error explained in the called function
+		return err // errors are detailed in the called function
 	}
 
 	// sort the tables to ensure no FK violations
@@ -555,13 +574,14 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		}
 	}
 
-	// casbin uses its own connection, so the rules are added before the commit to roll back the import if they fail
+	// now we also need to setup RBAC rules so the user can access the imported contents
+	// this cannot be done inside one shared transaction
 	if err := service.bootstrapImportedRBAC(ctx, importTx, importMetadata, options); err != nil {
 		return fmt.Errorf("could not set up permissions for imported data: %w", err)
 	}
 
-	// rules of a failed commit are kept, they only point to ids which do not exist on this instance
 	if err := importTx.Commit(ctx); err != nil {
+		// a failed commit leaves the RBAC rules hanging -> no-op for non existing users
 		return fmt.Errorf("could not commit import transaction: %w", err)
 	}
 
@@ -570,13 +590,15 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 }
 
 // the importer gets the highest role on the imported entity, the rules of the import target stay untouched
-func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, tx pgx.Tx, importMetadata metadata, options dtos.DataTransferImportOptions) error {
+func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, tx pgx.Tx, importMetadata dtos.DataTransferMetadata, options dtos.DataTransferImportOptions) error {
 	owner := shared.NewSession(options.OwnerID, shared.SessionActorUser, nil, false)
 
 	switch importMetadata.EntityType {
 	case dtos.DataTransferEntityOrg:
 		rbac := service.rbacProvider.GetDomainRBAC(importMetadata.EntityID.String())
-		if err := shared.BootstrapOrg(ctx, rbac, options.OwnerID, shared.RoleOwner); err != nil {
+
+		err := shared.BootstrapOrg(ctx, rbac, options.OwnerID, shared.RoleOwner)
+		if err != nil {
 			return fmt.Errorf("could not bootstrap organization: %w", err)
 		}
 
@@ -588,6 +610,7 @@ func (service *DataTransferService) bootstrapImportedRBAC(ctx context.Context, t
 
 	case dtos.DataTransferEntityProject:
 		rbac := service.rbacProvider.GetDomainRBAC(options.TargetOrgID.String())
+
 		projects, assets, err := loadImportedProjectsAndAssets(ctx, tx, importedSubProjectsSQL, importMetadata.EntityID)
 		if err != nil {
 			return err
@@ -647,17 +670,18 @@ func scanImportedAsset(row pgx.CollectableRow) (models.Asset, error) {
 	return asset, err
 }
 
+// recalculates what projects and assets have been inserted by the import entity
 func loadImportedProjectsAndAssets(ctx context.Context, tx pgx.Tx, projectsSQL string, entityID uuid.UUID) ([]models.Project, []models.Asset, error) {
+	// first select all the affected projects
 	rows, _ := tx.Query(ctx, projectsSQL, entityID)
 	projects, err := pgx.CollectRows(rows, scanImportedProject)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not load imported projects: %w", err)
 	}
 
-	importedProjectIDs := make([]uuid.UUID, 0, len(projects))
-	for _, project := range projects {
-		importedProjectIDs = append(importedProjectIDs, project.ID)
-	}
+	importedProjectIDs := utils.Map(projects, func(project models.Project) uuid.UUID { return project.ID })
+
+	// then all the assets included in those projects
 	rows, _ = tx.Query(ctx, importedProjectAssetsSQL, importedProjectIDs)
 	assets, err := pgx.CollectRows(rows, scanImportedAsset)
 	if err != nil {
@@ -682,8 +706,9 @@ func (service *DataTransferService) bootstrapProjectsAndAssets(ctx context.Conte
 }
 
 // the top level rows of a project or asset archive get attached to the entity they are imported into
-func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, importMetadata metadata, options dtos.DataTransferImportOptions) error {
+func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, importMetadata dtos.DataTransferMetadata, options dtos.DataTransferImportOptions) error {
 	switch {
+	// projects get attached to an org
 	case importMetadata.EntityType == dtos.DataTransferEntityProject && tableName == "projects":
 		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{organization_id}', to_jsonb($1::uuid))`, options.TargetOrgID); err != nil {
 			return fmt.Errorf("could not attach imported projects to organization: %w", err)
@@ -693,6 +718,7 @@ func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, impo
 			return fmt.Errorf("could not attach imported project to parent project: %w", err)
 		}
 	case importMetadata.EntityType == dtos.DataTransferEntityAsset && tableName == "assets":
+		// assets get attached to a project
 		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{project_id}', to_jsonb($1::uuid))`, options.TargetProjectID); err != nil {
 			return fmt.Errorf("could not attach imported asset to project: %w", err)
 		}
@@ -701,7 +727,7 @@ func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, impo
 }
 
 // every export contains a file for each table, so a missing file means a broken archive
-func importTable(ctx context.Context, tx pgx.Tx, importDirectoryPath string, tableName string, importMetadata metadata, options dtos.DataTransferImportOptions) error {
+func importTable(ctx context.Context, tx pgx.Tx, importDirectoryPath string, tableName string, importMetadata dtos.DataTransferMetadata, options dtos.DataTransferImportOptions) error {
 	file, err := os.Open(filepath.Join(importDirectoryPath, tableName+tableFileExtension))
 	if err != nil {
 		return fmt.Errorf("could not open file of %s: %w", tableName, err)
@@ -714,23 +740,28 @@ func importTable(ctx context.Context, tx pgx.Tx, importDirectoryPath string, tab
 	}
 	defer gzipReader.Close()
 
+	// clear the staging table first
 	if _, err := tx.Exec(ctx, "TRUNCATE import_staging"); err != nil {
 		return fmt.Errorf("could not reset staging table: %w", err)
 	}
 
-	// csv with control characters as quote and delimiter, so COPY leaves the json backslash escapes untouched
+	// stream the new data into the staging table
+	// use CSV with control characters as quote and delimiter, so COPY leaves the json backslash escapes untouched
 	copyTag, err := tx.Conn().PgConn().CopyFrom(ctx, gzipReader, `COPY import_staging (data) FROM STDIN WITH (FORMAT csv, QUOTE E'\x01', DELIMITER E'\x02')`)
 	if err != nil {
 		return fmt.Errorf("could not copy rows of %s: %w", tableName, err)
 	}
 
+	// attach the top level table (projects or assets) to the passed parent entity
 	if err := attachToImportTarget(ctx, tx, tableName, importMetadata, options); err != nil {
 		return err
 	}
 
 	table := pgx.Identifier{tableName}.Sanitize()
+	// we can just insert from the staging table (json_populate_records ensures column matching)
 	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT r.* FROM import_staging, jsonb_populate_record(NULL::%s, data) r", table, table)
-	// every other table fails on a conflict, since its rows have to be new on this instance
+
+	// determine conflict handling: content hashes mean no conflict handling needed since its the same entry
 	if tablesToSync[tableName].conflictsAllowed {
 		insertSQL += " ON CONFLICT DO NOTHING"
 	}
@@ -789,29 +820,29 @@ func extractArchiveFile(tarReader *tar.Reader, filePath string) error {
 }
 
 // the rows are only valid for the exact schema they were exported from
-func checkImportMetadata(ctx context.Context, tx pgx.Tx, importDirectoryPath string) (metadata, error) {
+func checkImportMetadata(ctx context.Context, tx pgx.Tx, importDirectoryPath string) (dtos.DataTransferMetadata, error) {
 	metadataFile, err := os.Open(filepath.Join(importDirectoryPath, metadataFileName))
 	if err != nil {
-		return metadata{}, fmt.Errorf("could not open metadata file: %w", err)
+		return dtos.DataTransferMetadata{}, fmt.Errorf("could not open metadata file: %w", err)
 	}
 	defer metadataFile.Close()
 
-	var importMetadata metadata
+	var importMetadata dtos.DataTransferMetadata
 	if err := json.NewDecoder(metadataFile).Decode(&importMetadata); err != nil {
-		return metadata{}, fmt.Errorf("could not read metadata file: %w", err)
+		return dtos.DataTransferMetadata{}, fmt.Errorf("could not read metadata file: %w", err)
 	}
 
 	if importMetadata.ExportVersion != dataTransferVersion {
-		return metadata{}, fmt.Errorf("export version does not match DevGuard version (export: %d, current: %d)", importMetadata.ExportVersion, dataTransferVersion)
+		return dtos.DataTransferMetadata{}, fmt.Errorf("export version does not match DevGuard version (export: %d, current: %d)", importMetadata.ExportVersion, dataTransferVersion)
 	}
 
 	databaseSchemaVersion, err := currentSchemaVersion(ctx, tx)
 	if err != nil {
-		return metadata{}, err
+		return dtos.DataTransferMetadata{}, err
 	}
 
 	if importMetadata.DatabaseSchemaVersion != databaseSchemaVersion {
-		return metadata{}, fmt.Errorf("export schema version %s does not match database schema version %s", importMetadata.DatabaseSchemaVersion, databaseSchemaVersion)
+		return dtos.DataTransferMetadata{}, fmt.Errorf("export schema version %s does not match database schema version %s", importMetadata.DatabaseSchemaVersion, databaseSchemaVersion)
 	}
 	return importMetadata, nil
 }

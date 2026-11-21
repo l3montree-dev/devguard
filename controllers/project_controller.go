@@ -848,6 +848,17 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 	return ctx.JSON(200, transformer.BuildExternalProjectTree(projects, subProjects, allAssets, allAssetVersions, allArtifacts))
 }
 
+// @Summary Export project
+// @Description Exports the project with all its sub projects and assets as an archive which can be imported into another DevGuard instance.
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Produce application/x-tar
+// @Success 200 {file} file "Export archive"
+// @Router /organizations/{organization}/projects/{projectSlug}/export [get]
 func (projectController *ProjectController) ExportProject(ctx shared.Context) error {
 	exportOptions := dtos.DataTransferExportOptions{
 		EntityType: dtos.DataTransferEntityProject,

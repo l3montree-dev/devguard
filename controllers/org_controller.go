@@ -799,6 +799,16 @@ func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
 	}
 }
 
+// @Summary Export organization
+// @Description Exports the organization with all its projects and assets as an archive which can be imported into another DevGuard instance.
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Produce application/x-tar
+// @Success 200 {file} file "Export archive"
+// @Router /organizations/{organization}/export [get]
 func (controller *OrgController) ExportOrg(ctx shared.Context) error {
 	exportOptions := dtos.DataTransferExportOptions{
 		EntityType: dtos.DataTransferEntityOrg,

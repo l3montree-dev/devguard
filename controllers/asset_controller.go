@@ -800,6 +800,18 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 	return c.NoContent(200)
 }
 
+// @Summary Export asset
+// @Description Exports the asset as an archive which can be imported into another DevGuard instance.
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Produce application/x-tar
+// @Success 200 {file} file "Export archive"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/export [get]
 func (a *AssetController) ExportAsset(ctx shared.Context) error {
 	exportOptions := dtos.DataTransferExportOptions{
 		EntityType: dtos.DataTransferEntityAsset,

@@ -1,6 +1,10 @@
 package dtos
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type DataTransferEntityType string
 
@@ -21,4 +25,12 @@ type DataTransferImportOptions struct {
 	OwnerID         string     // gets the highest role on the imported entity
 	TargetOrgID     uuid.UUID  // org of an imported project or asset
 	TargetProjectID *uuid.UUID // optional parent of an imported project, project of an imported asset
+}
+
+type DataTransferMetadata struct {
+	ExportVersion         int                    `json:"export_version"`
+	DatabaseSchemaVersion string                 `json:"database_schema_version"`
+	ExportTimestamp       time.Time              `json:"export_timestamp"`
+	EntityType            DataTransferEntityType `json:"entity_type"`
+	EntityID              uuid.UUID              `json:"entity_id"`
 }
