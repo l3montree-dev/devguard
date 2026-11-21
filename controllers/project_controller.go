@@ -46,9 +46,10 @@ type ProjectController struct {
 	webhookRepository      shared.WebhookIntegrationRepository
 	scanService            shared.ScanService
 	broker                 events.Broker
+	dataTransferService    shared.DataTransferService
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker, dataTransferService shared.DataTransferService) *ProjectController {
 	return &ProjectController{
 		projectRepository:      repository,
 		assetRepository:        assetRepository,
@@ -61,6 +62,7 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 		webhookRepository:      webhookRepository,
 		scanService:            scanService,
 		broker:                 broker,
+		dataTransferService:    dataTransferService,
 	}
 }
 
@@ -844,4 +846,32 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 	}
 
 	return ctx.JSON(200, transformer.BuildExternalProjectTree(projects, subProjects, allAssets, allAssetVersions, allArtifacts))
+}
+
+// @Summary Export project
+// @Description Exports the project with all its sub projects and assets as an archive which can be imported into another DevGuard instance.
+// @Tags Projects
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Produce application/x-tar
+// @Success 200 {file} file "Export archive"
+// @Router /organizations/{organization}/projects/{projectSlug}/export [get]
+func (projectController *ProjectController) ExportProject(ctx shared.Context) error {
+	exportOptions := dtos.DataTransferExportOptions{
+		EntityType: dtos.DataTransferEntityProject,
+		EntityID:   shared.GetProject(ctx).ID,
+	}
+
+	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")
+	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="devguard-export.tar"`)
+
+	err := projectController.dataTransferService.StartExport(ctx.Request().Context(), exportOptions, ctx.Response())
+	if err != nil {
+		ctx.Response().Header().Del(echo.HeaderContentDisposition)
+		return echo.NewHTTPError(500, "project export failed").WithInternal(err)
+	}
+	return nil
 }

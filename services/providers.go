@@ -45,6 +45,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewGitHubVexFetcher, fx.As(new(shared.GitHubVexFetcher)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(shared.LogService)))),
 	fx.Provide(fx.Annotate(NewLogsService, fx.As(new(monitoring.AlertLogService)))),
+	fx.Provide(fx.Annotate(NewDataTransferService, fx.As(new(shared.DataTransferService)))),
 	fx.Provide(func(db shared.DB, broker events.Broker) *scan.PurlComparer {
 		return scan.NewPurlComparer(db, broker, nil) // nil to use default cache size
 	}),

@@ -66,6 +66,8 @@ func NewAssetRouter(
 	assetRouter.GET("/logs/", logController.ListPagedForAsset, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead))
 
 	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
+	// only asset admins are allowed to export an asset
+	assetRouter.GET("/export/", assetController.ExportAsset, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.POST("/in-toto/", intotoController.Create, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))

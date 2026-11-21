@@ -18,6 +18,7 @@ package shared
 import (
 	"context"
 	"errors"
+	"io"
 	"iter"
 	"net/http"
 	"time"
@@ -772,6 +773,11 @@ type ImportOptions struct {
 	Debug bool
 	// LocalArchive reads from vulndb.tar.zst in the current directory instead of pulling from OCI.
 	LocalArchive bool
+}
+
+type DataTransferService interface {
+	StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error
+	ImportFile(ctx context.Context, importFile io.Reader, options dtos.DataTransferImportOptions) error
 }
 
 type VulnDBService interface {
