@@ -26,25 +26,27 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type scopeLevel int
+type scopeLevel int // identify export scopes
 
-const dataTransferVersion = 1
+const dataTransferVersion = 1 // current data transfer version to check compatibility
+// if breaking changes are introduced increase by 1
 
 const (
 	metadataFileName   = "metadata.json"
 	tableFileExtension = ".jsonl.gz"
 )
 
+// all sets of saved ids are listed here as scopes
 const (
-	// entities
-	orgLevel scopeLevel = iota // fully exported, including everything below them
+	// entities, fully exported, including everything below them
+	orgLevel scopeLevel = iota
 	projectLevel
 	assetLevel
 
 	// derived entities
 	artifactLevel // derived from the scoped assets, for tables without a direct scope column (e.g. pivot tables)
 
-	// sets for table data
+	// set of foreign key ids to query Fk tales against
 	externalUserLevel
 	dependencyVulnLevel
 	firstPartyVulnLevel
@@ -54,7 +56,7 @@ const (
 	assetSignatureLevel
 	sbomMerkleNodeLevel
 
-	// shared reference data, only the rows referenced by the scoped entities
+	// shared global reference data
 	componentLevel
 	componentProjectLevel
 	frameworkControlLevel
@@ -80,11 +82,13 @@ type exportScope struct {
 }
 
 // ids of one scope level together with the postgres array type they are cast to
+// since different ids, have different datatypes
 type scopeIDs struct {
 	ids       []string
 	arrayType string
 }
 
+// returns the scoped ids for each scope level
 func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 	switch level {
 	case orgLevel:
@@ -96,7 +100,7 @@ func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 	case artifactLevel:
 		return scopeIDs{ids: scope.artifactIDs, arrayType: "uuid[]"}
 	case externalUserLevel:
-		return scopeIDs{ids: scope.externalUserIDs, arrayType: "text[]"} // external user ids are provider ids, not uuids
+		return scopeIDs{ids: scope.externalUserIDs, arrayType: "text[]"}
 	case dependencyVulnLevel:
 		return scopeIDs{ids: scope.dependencyVulnIDs, arrayType: "uuid[]"}
 	case firstPartyVulnLevel:
@@ -112,13 +116,13 @@ func (scope exportScope) idsFor(level scopeLevel) scopeIDs {
 	case sbomMerkleNodeLevel:
 		return scopeIDs{ids: scope.sbomMerkleNodeHashes, arrayType: "uuid[]"}
 	case componentLevel:
-		return scopeIDs{ids: scope.componentIDs, arrayType: "text[]"} // component ids are purls
+		return scopeIDs{ids: scope.componentIDs, arrayType: "text[]"}
 	case componentProjectLevel:
 		return scopeIDs{ids: scope.componentProjectKeys, arrayType: "text[]"}
 	case frameworkControlLevel:
 		return scopeIDs{ids: scope.frameworkControlIDs, arrayType: "text[]"}
 	default:
-		panic(fmt.Sprintf("unknown scope level %d", level))
+		panic(fmt.Sprintf("unknown scope level %d", level)) // should never happen something broke
 	}
 }
 
@@ -129,17 +133,11 @@ type scopeFilter struct {
 
 // SQL foreign key column constants
 const (
-	orgTableID      = "organizations"
-	projectsTableID = "projects"
-	assetsTableID   = "assets"
-
 	orgFKColumn      = "org_id"
 	projectFKColumn  = "project_id"
 	assetFKColumn    = "asset_id"
 	artifactFKColumn = "artifact_id"
 )
-
-const concurrentDBWorkers = 6
 
 var (
 	orgScope      = scopeFilter{column: orgFKColumn, level: orgLevel}
@@ -148,23 +146,25 @@ var (
 	artifactScope = scopeFilter{column: artifactFKColumn, level: artifactLevel}
 )
 
+const concurrentDBWorkers = 6
+
 type tableProperties struct {
 	filters          []scopeFilter
-	importOrder      int  // tables only reference tables with a lower import order, equal ones are independent of each other
-	conflictsAllowed bool // the key identifies the content itself, so an existing row is the same object and gets kept
+	importOrder      int  // tables only reference tables on lower import order values
+	conflictsAllowed bool // true = on conflict do nothing, else fail on conflict
 }
 
 // all tables with a simple syntax, keyed by table name
 var tablesToSync = map[string]tableProperties{
 	// org level
-	orgTableID:            {importOrder: 0, filters: []scopeFilter{{column: "id", level: orgLevel}}},
-	projectsTableID:       {importOrder: 1, filters: []scopeFilter{{column: "id", level: projectLevel}}},
-	"compliance_postures": {importOrder: 4, filters: []scopeFilter{orgScope}}, // only org exports, the posture id is a hash over the org
+	"organizations":       {importOrder: 0, filters: []scopeFilter{{column: "id", level: orgLevel}}},
+	"projects":            {importOrder: 1, filters: []scopeFilter{{column: "id", level: projectLevel}}},
+	"compliance_postures": {importOrder: 4, filters: []scopeFilter{orgScope}}, // only org exports, the posture id is a hash over the org so it does not make sense to export on project or asset level
 	"external_users":      {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "id", level: externalUserLevel}}},
 	"external_user_orgs":  {importOrder: 1, filters: []scopeFilter{orgScope}},
 
 	// project level
-	assetsTableID: {importOrder: 2, filters: []scopeFilter{{column: "id", level: assetLevel}}},
+	"assets": {importOrder: 2, filters: []scopeFilter{{column: "id", level: assetLevel}}},
 
 	// asset level
 	"external_references": {importOrder: 3, filters: []scopeFilter{assetScope}},
@@ -184,7 +184,7 @@ var tablesToSync = map[string]tableProperties{
 	"artifact_dependency_vulns": {importOrder: 5, filters: []scopeFilter{artifactScope}},
 	"artifact_license_risks":    {importOrder: 5, filters: []scopeFilter{artifactScope}},
 
-	// package level
+	// sbom data
 	"sbom_merkle_nodes": {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "node_hash", level: sbomMerkleNodeLevel}}},
 	"sbom_merkle_edges": {importOrder: 1, conflictsAllowed: true, filters: []scopeFilter{{column: "subtree_hash", level: sbomMerkleNodeLevel}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
 
@@ -193,7 +193,7 @@ var tablesToSync = map[string]tableProperties{
 	"components":          {importOrder: 1, conflictsAllowed: true, filters: []scopeFilter{{column: "id", level: componentLevel}}},
 	"frameworks_controls": {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "framework_control_id", level: frameworkControlLevel}}},
 
-	// vuln level
+	// vuln events
 	"vuln_events": {importOrder: 5, filters: []scopeFilter{
 		{column: "dependency_vuln_id", level: dependencyVulnLevel},
 		{column: "first_party_vuln_id", level: firstPartyVulnLevel},
@@ -223,12 +223,13 @@ func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider
 func (service *DataTransferService) StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error {
 	start := time.Now()
 
+	// export will be build here and then discarded after successful transmission
 	jobDirectoryPath, err := os.MkdirTemp("", "devguard-export-*")
 	if err != nil {
 		return fmt.Errorf("could not create export directory: %w", err)
 	}
 
-	// the files are only needed until they are written to out
+	// clean up temp directory
 	defer func() {
 		if err := os.RemoveAll(jobDirectoryPath); err != nil {
 			slog.Error("could not clean up export directory", "path", jobDirectoryPath, "err", err)
@@ -237,18 +238,19 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 
 	slog.Info("starting data transfer export process...", "directory", jobDirectoryPath)
 
-	// initiate read only and read uncommitted transaction to use as snapshot for the export
+	// initiate read only and repeatable read transaction to use as snapshot for the export
+	// read only enforces no writes and makes queries more efficient
+	// repeatable read enforces as snapshot on the current state of the database eliminating race conditions
 	snapshotTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
 	})
-
 	if err != nil {
 		return fmt.Errorf("could not start export transaction: %w", err)
 	}
 	defer snapshotTx.Commit(ctx) // ends the transaction before returning
 
-	var snapshotID string // used as reference for other transactions
+	var snapshotID string // used as reference for the other transactions -> use the same snapshot
 	err = snapshotTx.QueryRow(ctx, `SELECT pg_export_snapshot();`).Scan(&snapshotID)
 	if err != nil {
 		return fmt.Errorf("could not retrieve snapshot id: %w", err)
@@ -260,11 +262,11 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	}
 
 	// check the schema migration version and dirtiness of the database
+	// version must match and be non dirty
 	var schemaMigration struct {
 		version string
 		dirty   bool
 	}
-
 	schemaRow := snapshotTx.QueryRow(ctx, "SELECT version, dirty FROM schema_migrations LIMIT 1;")
 	if err := schemaRow.Scan(&schemaMigration.version, &schemaMigration.dirty); err != nil {
 		return fmt.Errorf("could not determine schema migration state: %w", err)
@@ -274,22 +276,26 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("dirty database schema detected, cannot export.")
 	}
 
+	// first step is to resolve the export scope into set of ids to query the actual tables with
+	// each scope level gets its own set of ids found in scope
 	scope, err := resolveScope(ctx, snapshotTx, options)
 	if err != nil {
 		return err
 	}
 
-	// concurrent data structure setup
-	jobs := make(chan queryJob, len(tablesToSync)) // small number of jobs, all can be queued at once
+	// now we resolved the export scope into a set of ids for each affected table
+	// this make each table lookup an independent job, thus allowing for concurrent reads
 	group, errCtx := errgroup.WithContext(ctx)
-
-	// start the db query worker pool
 	group.SetLimit(concurrentDBWorkers + 1) // cap the number of concurrent db reads (1 for the producer routine)
 
-	// start the producer function first
+	jobs := make(chan queryJob, len(tablesToSync)) // small number of jobs, all can be queued at once
+
+	// start the producer function of the jobs first
 	group.Go(func() error {
 		defer close(jobs)
 		for tableID, table := range tablesToSync {
+			// for each tabled listed in tablesToSync:
+			// build the SQL query + args from the table properties and the ids of the scope
 			sql, args, err := sqlFromTableProperties(tableID, table, scope)
 			if err != nil {
 				return fmt.Errorf("could not build export query: %w", err)
@@ -300,7 +306,8 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return nil
 	})
 
-	// then spin up the worker pool
+	// then spin up the worker pool:
+	// each worker receives a query, executes it and writes the result to the temporary directory
 	for group.TryGo(func() error {
 		return service.DatabaseQueryWorker(errCtx, jobDirectoryPath, snapshotID, jobs)
 	}) {
@@ -313,7 +320,10 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 
 	slog.Info("finished writing file data", "time", time.Since(start))
 
+	// at this point all the table data has been exported in the temp directory each in a separate compressed json file
+	// now we just need to wrap it up with a metadata file
 	var exportTimestamp time.Time
+	// current_timestamp is constant across the whole transaction
 	if err := snapshotTx.QueryRow(ctx, "SELECT current_timestamp;").Scan(&exportTimestamp); err != nil {
 		return fmt.Errorf("could not extract transaction timestamp: %w", err)
 	}
@@ -323,7 +333,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 		return fmt.Errorf("could not build metadata file: %w", err)
 	}
 
-	// release the snapshot before sending, a slow client should not keep the transaction open
+	// release the snapshot when the export part is finished
 	if err := snapshotTx.Commit(ctx); err != nil {
 		return fmt.Errorf("could not end export transaction: %w", err)
 	}
@@ -331,6 +341,7 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 	slog.Info("finished export, sending archive", "time", time.Since(start))
 
 	// the table files are already gzipped, so the archive itself stays uncompressed
+	// response is written inside the export on the provided out path
 	tarWriter := tar.NewWriter(out)
 	if err := tarWriter.AddFS(os.DirFS(jobDirectoryPath)); err != nil {
 		return fmt.Errorf("could not write export archive: %w", err)
@@ -357,6 +368,7 @@ type metadata struct {
 	EntityID              uuid.UUID                   `json:"entity_id"`
 }
 
+// builds the metadata file from the aggregated information
 func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferExportOptions, databaseSchemaVersion string, exportTimestamp time.Time) error {
 	metadataFD, err := os.Create(filepath.Join(jobDirectoryPath, metadataFileName))
 	if err != nil {
@@ -376,9 +388,10 @@ func buildMetadataFile(jobDirectoryPath string, exportOptions dtos.DataTransferE
 	if err != nil {
 		return fmt.Errorf("could not write metadata file: %w", err)
 	}
-	return metadataFD.Close()
+	return nil
 }
 
+// receives an SQL query job, executes it and writes the output to the respective file
 func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, baseFolder string, snapshotID string, jobs chan queryJob) error {
 	workerTx, err := service.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
@@ -386,12 +399,14 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 	}
 	defer workerTx.Rollback(ctx)
 
+	// own transaction but uses the same underlying snapshot of the database
 	_, err = workerTx.Exec(ctx, fmt.Sprintf("SET TRANSACTION SNAPSHOT '%s';", snapshotID))
 	if err != nil {
 		return fmt.Errorf("could not set worker transaction snapshot: %w", err)
 	}
 
 	for job := range jobs {
+		// run in a function so defers work
 		if err := exportTable(ctx, workerTx, baseFolder, job); err != nil {
 			return err
 		}
@@ -401,9 +416,9 @@ func (service *DataTransferService) DatabaseQueryWorker(ctx context.Context, bas
 	return nil
 }
 
-// separate function so the defers run per table instead of piling up until the worker returns
 func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob) error {
-	job.sql = job.sql + ";"
+	job.sql = job.sql + ";" // ensure EoL delimiter
+
 	slog.Info("starting new job", "sql", job.sql)
 	rows, err := tx.Query(ctx, job.sql, job.args...)
 	if err != nil {
@@ -411,15 +426,18 @@ func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob
 	}
 	defer rows.Close()
 
+	// create the table file regardless of output size
 	tableFd, err := os.Create(filepath.Join(baseFolder, job.tableID+tableFileExtension))
 	if err != nil {
 		return fmt.Errorf("could not create file for table data, table (%s): %w", job.tableID, err)
 	}
 	defer tableFd.Close()
+
 	gzipWriter := gzip.NewWriter(tableFd)
 	defer gzipWriter.Close()
 
 	for rows.Next() {
+		// scan each row into a buffer and stream that ito the file through the gzip compression
 		var row []byte
 		if err := rows.Scan(&row); err != nil {
 			return fmt.Errorf("could not scan row of %s: %w", job.tableID, err)
@@ -436,6 +454,7 @@ func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob
 	}
 	slog.Info("successfully queried table data", "table", job.tableID, "rows count", rows.CommandTag().RowsAffected())
 	rows.Close()
+
 	// finish up the gzip file
 	if err := gzipWriter.Close(); err != nil {
 		return fmt.Errorf("could not finish compressed file of %s: %w", job.tableID, err)
@@ -448,11 +467,13 @@ func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, job queryJob
 
 // build the scoped row_to_json query for an exported table, args are ordered like the placeholders
 func sqlFromTableProperties(tableID string, properties tableProperties, scope exportScope) (string, []any, error) {
-	// fail closed, an unfiltered query would export data of other tenants
+	// no filter would leak data of the whole table
 	if len(properties.filters) == 0 {
 		return "", nil, fmt.Errorf("table %s has no scope filter", tableID)
 	}
 
+	// TODO sanitize everything?
+	// for each filter build the SQL condition and the respective argument (sanitized)
 	conditions := make([]string, 0, len(properties.filters))
 	args := make([]any, 0, len(properties.filters))
 	for _, filter := range properties.filters {
@@ -509,34 +530,43 @@ const resolveComponentProjectKeysSQL = `SELECT DISTINCT project_key FROM compone
 // framework controls referenced by the scoped compliance postures
 const resolveFrameworkControlIDsSQL = `SELECT DISTINCT framework_control_id FROM compliance_postures WHERE id = ANY($1::uuid[]) AND framework_control_id IS NOT NULL`
 
-// resolve the exported entity and everything below it into lists of ids, parents are never exported
+// recursively collect all id sets in order: first entities, then direct referenced tables and lastly indirect referenced tables
 func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExportOptions) (exportScope, error) {
 	entityID := options.EntityID.String()
 	scope := exportScope{}
 	var err error
 
+	// resolve all set of entity ids based on export scope
 	switch options.EntityType {
 	case dtos.DataTransferEntityOrg:
+		// for an org recursively find all projects in this org
 		scope.orgIDs = []string{entityID}
 		if scope.projectIDs, err = collectIDs(ctx, tx, resolveOrgProjectIDsSQL, entityID); err != nil {
 			return scope, fmt.Errorf("could not resolve project ids: %w", err)
 		}
+
+		// then resolve all affected assets
+		if scope.assetIDs, err = collectIDs(ctx, tx, resolveAssetIDsSQL, scope.projectIDs); err != nil {
+			return scope, fmt.Errorf("could not resolve asset ids: %w", err)
+		}
 	case dtos.DataTransferEntityProject:
+		// for a project only find sub projects of this project downwards
 		if scope.projectIDs, err = collectIDs(ctx, tx, resolveSubProjectIDsSQL, entityID); err != nil {
 			return scope, fmt.Errorf("could not resolve project ids: %w", err)
 		}
+
+		// then resolve all affected assets
+		if scope.assetIDs, err = collectIDs(ctx, tx, resolveAssetIDsSQL, scope.projectIDs); err != nil {
+			return scope, fmt.Errorf("could not resolve asset ids: %w", err)
+		}
 	case dtos.DataTransferEntityAsset:
+		// for assets just set the assetID
 		scope.assetIDs = []string{entityID}
 	default:
 		return scope, fmt.Errorf("unknown export entity type: %s", options.EntityType)
 	}
 
-	if options.EntityType != dtos.DataTransferEntityAsset {
-		if scope.assetIDs, err = collectIDs(ctx, tx, resolveAssetIDsSQL, scope.projectIDs); err != nil {
-			return scope, fmt.Errorf("could not resolve asset ids: %w", err)
-		}
-	}
-
+	// now with the entities resolved we can first get all the entity related ids
 	if scope.artifactIDs, err = collectIDs(ctx, tx, resolveArtifactIDsSQL, scope.assetIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve artifact ids: %w", err)
 	}
@@ -573,6 +603,7 @@ func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExpor
 		return scope, fmt.Errorf("could not resolve sbom merkle node hashes: %w", err)
 	}
 
+	// and after that we can get all the ids one level deeper (e.g. resolving pivot tables)
 	if scope.componentIDs, err = collectIDs(ctx, tx, resolveComponentIDsSQL, scope.licenseRiskIDs); err != nil {
 		return scope, fmt.Errorf("could not resolve component ids: %w", err)
 	}
@@ -588,7 +619,7 @@ func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExpor
 	return scope, nil
 }
 
-// runs a query which returns a single id column
+// helper function to query one id column
 func collectIDs(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]string, error) {
 	rows, _ := tx.Query(ctx, sql, args...)
 	return pgx.CollectRows(rows, pgx.RowTo[string])
@@ -807,7 +838,7 @@ func (service *DataTransferService) bootstrapProjectsAndAssets(ctx context.Conte
 // the top level rows of a project or asset archive get attached to the entity they are imported into
 func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, importMetadata metadata, options dtos.DataTransferImportOptions) error {
 	switch {
-	case importMetadata.EntityType == dtos.DataTransferEntityProject && tableName == projectsTableID:
+	case importMetadata.EntityType == dtos.DataTransferEntityProject && tableName == "projects":
 		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{organization_id}', to_jsonb($1::uuid))`, options.TargetOrgID); err != nil {
 			return fmt.Errorf("could not attach imported projects to organization: %w", err)
 		}
@@ -815,7 +846,7 @@ func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, impo
 		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{parent_id}', COALESCE(to_jsonb($1::uuid), 'null'::jsonb)) WHERE data->>'id' = $2`, options.TargetProjectID, importMetadata.EntityID.String()); err != nil {
 			return fmt.Errorf("could not attach imported project to parent project: %w", err)
 		}
-	case importMetadata.EntityType == dtos.DataTransferEntityAsset && tableName == assetsTableID:
+	case importMetadata.EntityType == dtos.DataTransferEntityAsset && tableName == "assets":
 		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{project_id}', to_jsonb($1::uuid))`, options.TargetProjectID); err != nil {
 			return fmt.Errorf("could not attach imported asset to project: %w", err)
 		}
@@ -870,7 +901,6 @@ func importTable(ctx context.Context, tx pgx.Tx, job importJob, importMetadata m
 	return nil
 }
 
-// TODO handle file inclusion attacks vectors
 func extractImportArchive(importFile io.Reader, importDirectoryPath string) error {
 	allowedFiles := map[string]bool{metadataFileName: true}
 	for tableID := range tablesToSync {
