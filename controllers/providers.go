@@ -150,4 +150,6 @@ var ControllerModule = fx.Options(
 
 	fx.Provide(NewAdvisoryController),
 	fx.Provide(NewSLSAController),
+
+	fx.Provide(NewLabelController),
 )

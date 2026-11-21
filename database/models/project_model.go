@@ -51,6 +51,8 @@ type Project struct {
 	Webhooks []WebhookIntegration `json:"webhooks" gorm:"foreignKey:ProjectID;"`
 
 	State ProjectState `json:"state" gorm:"type:text;not null;default:'active';"`
+
+	Labels []Label `json:"labels" gorm:"many2many:projects_assets_artifacts_labels"`
 }
 
 func (m Project) TableName() string {

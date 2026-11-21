@@ -56,6 +56,8 @@ type Asset struct {
 	AssetVersionRetentionPolicy  string              `json:"assetVersionRetentionPolicy" gorm:"type:text;not null;default:(-)"` // the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy
 
 	State AssetState `json:"state" gorm:"type:text;default:'active';not null;"`
+
+	Labels []Label `json:"labels" gorm:"many2many:projects_assets_artifacts_labels"`
 }
 
 func (m Asset) TableName() string {

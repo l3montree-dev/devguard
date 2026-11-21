@@ -29,10 +29,11 @@ type AssetController struct {
 	statisticsService             shared.StatisticsService
 	thirdPartyIntegration         shared.IntegrationAggregate
 	daemonRunner                  shared.DaemonRunner
+	labelService                  shared.LabelService
 	broker                        events.Broker
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner, labelService shared.LabelService) *AssetController {
 	return &AssetController{
 		assetRepository:               repository,
 		assetVersionRepository:        assetVersionRepository,
@@ -41,6 +42,7 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 		dependencyVulnService:         dependencyVulnService,
 		statisticsService:             statisticsService,
 		thirdPartyIntegration:         thirdPartyIntegration,
+		labelService:                  labelService,
 		broker:                        broker,
 		daemonRunner:                  daemonRunner,
 	}
@@ -796,4 +798,30 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 	}
 
 	return c.NoContent(200)
+}
+
+// @Summary Attach label to asset
+// @Tags Label
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param labelID path string true "Label ID"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/{labelID}/ [post]
+func (a *AssetController) AttachLabelToAsset(ctx shared.Context) error {
+	asset := shared.GetAsset(ctx)
+	labelID, err := uuid.Parse(ctx.Param("labelID"))
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid label id")
+	}
+	tx := a.assetRepository.GetDB(ctx.Request().Context(), nil)
+	org, project := shared.GetOrg(ctx), shared.GetProject(ctx)
+	err = a.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, nil, &labelID)
+	if err != nil {
+		return attachLabelError(err, "asset")
+	}
+	return ctx.NoContent(204)
 }

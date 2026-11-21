@@ -41,6 +41,7 @@ func NewAssetRouter(
 	assetRepository shared.AssetRepository,
 	patController *controllers.PatController,
 	logController *controllers.LogController,
+	labelController *controllers.LabelController,
 ) AssetRouter {
 	/**
 	Asset scoped router
@@ -75,15 +76,23 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
-	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
-	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
+
 	assetUpdateAccessControlRequired.POST("/retention-policy/test/", assetController.TestAssetVersionRetentionPolicy)
-	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
-	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
+	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
+	assetUpdateAccessControlRequired.POST("/labels/", labelController.Create)
+	assetUpdateAccessControlRequired.POST("/labels/:labelID/", assetController.AttachLabelToAsset)
 	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
+	assetUpdateAccessControlRequired.GET("/labels/", labelController.ListOnAssetLevel)
+
+	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
+	assetUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)
+	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
+
+	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
+	assetUpdateAccessControlRequired.DELETE("/labels/:labelID/", labelController.Delete)
 
 	return AssetRouter{Group: assetRouter}
 }

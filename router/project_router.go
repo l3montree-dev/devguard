@@ -46,6 +46,7 @@ func NewProjectRouter(
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 	patController *controllers.PatController,
 	logController *controllers.LogController,
+	labelController *controllers.LabelController,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -98,7 +99,10 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/members/", projectController.InviteMembers)
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
+	projectUpdateAccessControlRequired.POST("/labels/", labelController.Create)
+	projectUpdateAccessControlRequired.POST("/labels/:labelID/", projectController.AttachLabelToProject)
 	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)
+	projectUpdateAccessControlRequired.GET("/labels/", labelController.ListOnProjectLevel)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.ProjectDelete)
 	projectUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject)
@@ -107,8 +111,10 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/", releaseController.Delete)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/items/:itemID/", releaseController.RemoveItem)
 	projectUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByProject)
+	projectUpdateAccessControlRequired.DELETE("/labels/:labelID/", labelController.Delete)
 
 	projectUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.ProjectUpdate)
+	projectUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)
 	projectUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.EnablePolicyForProject)
 	projectUpdateAccessControlRequired.PATCH("/", projectController.Update)
 	projectUpdateAccessControlRequired.PUT("/members/:userID/", projectController.ChangeRole)
