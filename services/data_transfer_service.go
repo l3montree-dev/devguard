@@ -41,18 +41,14 @@ const (
 )
 
 type DataTransferService struct {
-	pool           *pgxpool.Pool
-	rbacProvider   shared.RBACProvider
-	projectService shared.ProjectService
-	assetService   shared.AssetService
+	pool         *pgxpool.Pool
+	rbacProvider shared.RBACProvider
 }
 
-func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider, projectService shared.ProjectService, assetService shared.AssetService) *DataTransferService {
+func NewDataTransferService(pool *pgxpool.Pool, rbacProvider shared.RBACProvider) *DataTransferService {
 	return &DataTransferService{
-		pool:           pool,
-		rbacProvider:   rbacProvider,
-		projectService: projectService,
-		assetService:   assetService,
+		pool:         pool,
+		rbacProvider: rbacProvider,
 	}
 }
 
@@ -691,15 +687,8 @@ func loadImportedProjectsAndAssets(ctx context.Context, tx pgx.Tx, projectsSQL s
 }
 
 func (service *DataTransferService) bootstrapProjectsAndAssets(ctx context.Context, rbac shared.AccessControl, projects []models.Project, assets []models.Asset) error {
-	for i := range projects {
-		if err := service.projectService.BootstrapProject(ctx, rbac, &projects[i]); err != nil {
-			return fmt.Errorf("could not bootstrap project %s: %w", projects[i].ID, err)
-		}
-	}
-	for i := range assets {
-		if err := service.assetService.BootstrapAsset(ctx, rbac, &assets[i]); err != nil {
-			return fmt.Errorf("could not bootstrap asset %s: %w", assets[i].ID, err)
-		}
+	if err := rbac.BootstrapProjectsAndAssets(ctx, projects, assets); err != nil {
+		return fmt.Errorf("could not set up permissions for imported data: %w", err)
 	}
 	slog.Info("set up permissions for imported data", "projects", len(projects), "assets", len(assets))
 	return nil

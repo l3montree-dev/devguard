@@ -851,6 +851,8 @@ type AccessControl interface {
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
 
+	BootstrapProjectsAndAssets(ctx context.Context, projects []models.Project, assets []models.Asset) error
+
 	GetAllProjectsForSession(ctx context.Context, session AuthSession) ([]string, error)
 	GetAllAssetsForSession(ctx context.Context, session AuthSession) ([]string, error)
 

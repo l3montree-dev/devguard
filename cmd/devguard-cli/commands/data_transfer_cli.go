@@ -39,8 +39,8 @@ func newDTExportCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shared.LoadConfig() // nolint
 			options := dtos.DataTransferExportOptions{
-				EntityType: dtos.DataTransferEntityProject,
-				EntityID:   uuid.MustParse("d1c1ae53-6b95-4657-8275-b241d700c22e"),
+				EntityType: dtos.DataTransferEntityOrg,
+				EntityID:   uuid.MustParse("abccd789-abe0-4b03-8b1f-c8e2aafcb0ed"),
 			}
 			app := fx.New(
 				fx.NopLogger,
