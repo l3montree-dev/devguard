@@ -554,6 +554,13 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return err // errors are detailed in the called function
 	}
 
+	// imported projects and the rbac rules need the org, which a target project already defines
+	if options.TargetProjectID != nil {
+		if err := importTx.QueryRow(ctx, `SELECT organization_id FROM projects WHERE id = $1`, *options.TargetProjectID).Scan(&options.TargetOrgID); err != nil {
+			return fmt.Errorf("could not find target project %s: %w", *options.TargetProjectID, err)
+		}
+	}
+
 	// sort the tables to ensure no FK violations
 	tableNames := slices.SortedFunc(maps.Keys(tablesToSync), func(table1, table2 string) int {
 		return cmp.Compare(tablesToSync[table1].importOrder, tablesToSync[table2].importOrder)
