@@ -26,6 +26,8 @@ func TestRunMigrations(t *testing.T) {
 	require.NoError(t, pool.QueryRow(ctx, `SELECT version, dirty FROM public.schema_migrations`).Scan(&version, &dirty))
 	assert.GreaterOrEqual(t, version, 20260818140001)
 	assert.False(t, dirty)
+
+	assertDatabaseTablesMatchExpectedTables(t, db)
 }
 
 func TestRunMigrationsFromSourceRollsBackOnFailure(t *testing.T) {
