@@ -98,7 +98,7 @@ func NeededScope(NeededScopes []string) shared.MiddlewareFunc {
 			ok := utils.ContainsAll(userScopes, NeededScopes)
 			if !ok {
 				slog.Error("user does not have the required scopes", "NeededScopes", NeededScopes, "userScopes", userScopes)
-				return echo.NewHTTPError(403, fmt.Sprintf("your personal access token does not have the required scope, needed scopes: %s", strings.Join(NeededScopes, ", ")))
+				return echo.NewHTTPError(403, fmt.Sprintf("the token was not accepted or does not have the required scope (%s) - check that the token is valid, not expired and belongs to this DevGuard instance", strings.Join(NeededScopes, ", ")))
 			}
 
 			return next(c)
@@ -136,7 +136,7 @@ func AssetAccessControl(obj shared.Object, act shared.Action) shared.MiddlewareF
 			// check if the user has the required role
 			if !allowed {
 				slog.Warn("access denied in AssetAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "assetSlug", asset.Slug)
-				return echo.NewHTTPError(404, "could not find asset")
+				return echo.NewHTTPError(404, "could not find asset - it does not exist or your token does not have access to it")
 			}
 			return next(ctx)
 		}
@@ -164,7 +164,7 @@ func ProjectAccessControl(obj shared.Object, act shared.Action) shared.Middlewar
 			// check if the user has the required role
 			if !allowed {
 				slog.Warn("access denied in ProjectAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "projectSlug", project.Slug)
-				return echo.NewHTTPError(404, "could not find project")
+				return echo.NewHTTPError(404, "could not find project - it does not exist or your token does not have access to it")
 			}
 
 			return next(ctx)
@@ -205,6 +205,17 @@ func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 
 			if err != nil {
 				if errors.Is(err, shared.ErrOauth2TokenNotValidRedirectionRequired) {
+					// the user does not need a valid oauth2 token, if the request targets a public project/asset.
+					// org-level requests (no project and no asset in context) always require a valid token.
+					project, projectErr := shared.MaybeGetProject(ctx)
+					asset, assetErr := shared.MaybeGetAsset(ctx)
+					hasResource := projectErr == nil || assetErr == nil
+					projectPublic := projectErr != nil || project.IsPublic
+					assetPublic := assetErr != nil || asset.IsPublic
+					if hasResource && projectPublic && assetPublic {
+						return next(ctx)
+					}
+
 					slog.Info("oauth2 token not valid, asking user to reauthorize", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
 					return ctx.JSON(403, map[string]string{"error": "oauth2 token not valid, please reauthorize"})
 				}
@@ -214,7 +225,7 @@ func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 			if !allowed {
 				// not allowed and not a public organization
 				slog.Error("access denied in multiOrganizationMiddleware", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "organization", org.Slug)
-				return ctx.JSON(404, map[string]string{"error": "could not find organization"})
+				return ctx.JSON(404, map[string]string{"error": "could not find organization - it does not exist or your token does not have access to it"})
 			}
 
 			// continue to the request
@@ -250,7 +261,7 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 
 			org, err := organizationService.ReadBySlug(ctx.Request().Context(), organization)
 			if err != nil {
-				return echo.NewHTTPError(404, "could not find organization").WithInternal(err)
+				return echo.NewHTTPError(404, "could not find organization - it does not exist or your token does not have access to it").WithInternal(err)
 			}
 
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
@@ -266,7 +277,7 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 			if projectSlug, slugErr := shared.GetProjectSlug(ctx); slugErr == nil {
 				project, err := projectRepository.ReadBySlug(ctx.Request().Context(), nil, org.ID, projectSlug)
 				if err != nil {
-					return echo.NewHTTPError(404, "could not find project")
+					return echo.NewHTTPError(404, "could not find project - it does not exist or your token does not have access to it")
 				}
 				resolvedProject = &project
 				shared.SetProject(ctx, project)
@@ -275,7 +286,7 @@ func ResourceFetchMiddleware(rbacProvider shared.RBACProvider, organizationServi
 				if assetSlug, aErr := shared.GetAssetSlug(ctx); aErr == nil {
 					asset, err := assetRepository.ReadBySlug(ctx.Request().Context(), nil, project.ID, assetSlug)
 					if err != nil {
-						return echo.NewHTTPError(404, "could not find asset")
+						return echo.NewHTTPError(404, "could not find asset - it does not exist or your token does not have access to it")
 					}
 					// the asset's project is exactly the one we just resolved -
 					// backfill it without an extra query.
@@ -382,12 +393,12 @@ func ShareMiddleware(orgRepository shared.OrganizationRepository, projectReposit
 			}
 
 			// resolve asset version from path param
-			assetVersionSlug, err := shared.GetURLDecodedParam(ctx, "assetVersionSlug")
+			assetVersionSlug, err := shared.GetAssetVersionSlugOrName(ctx)
 			if err != nil {
 				slog.Error("could not get assetVersionSlug from url", "err", err)
 				return echo.NewHTTPError(400, "invalid assetVersionSlug")
 			}
-			assetVersion, err := assetVersionRepository.ReadBySlug(ctx.Request().Context(), nil, asset.ID, assetVersionSlug)
+			assetVersion, err := readAssetVersionBySlugOrName(ctx.Request().Context(), assetVersionRepository, asset.ID, assetVersionSlug)
 			if err != nil {
 				slog.Error("could not find asset version in ShareMiddleware", "assetID", assetID, "assetVersionSlug", assetVersionSlug, "err", err)
 				return echo.NewHTTPError(404, "could not find asset version")

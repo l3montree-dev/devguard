@@ -130,11 +130,11 @@ func (repository *assetRepository) Upsert(ctx context.Context, tx *gorm.DB, t *[
 
 func (repository *assetRepository) Create(ctx context.Context, tx *gorm.DB, asset *models.Asset) error {
 	// get the next slug for the asset
-	firstFreeSlug, err := repository.firstFreeSlug(ctx, tx, asset.ProjectID, asset.Slug)
+	freeSlug, err := firstFreeSlug(repository.GetDB(ctx, tx).Model(&models.Asset{}).Where("project_id = ?", asset.ProjectID), asset.Slug)
 	if err != nil {
 		return fmt.Errorf("failed to get next slug: %w", err)
 	}
-	asset.Slug = firstFreeSlug
+	asset.Slug = freeSlug
 
 	if err := repository.GetDB(ctx, tx).Create(asset).Error; err != nil {
 		return err
@@ -145,11 +145,11 @@ func (repository *assetRepository) Create(ctx context.Context, tx *gorm.DB, asse
 func (repository *assetRepository) Save(ctx context.Context, tx *gorm.DB, asset *models.Asset) error {
 	if asset.ID == uuid.Nil {
 		// get the next slug for the asset
-		firstFreeSlug, err := repository.firstFreeSlug(ctx, tx, asset.ProjectID, asset.Slug)
+		freeSlug, err := firstFreeSlug(repository.GetDB(ctx, tx).Model(&models.Asset{}).Where("project_id = ?", asset.ProjectID), asset.Slug)
 		if err != nil {
 			return fmt.Errorf("failed to get next slug: %w", err)
 		}
-		asset.Slug = firstFreeSlug
+		asset.Slug = freeSlug
 	}
 
 	if err := repository.GetDB(ctx, tx).Save(asset).Error; err != nil {
@@ -299,36 +299,6 @@ func (repository *assetRepository) ReadWithAssetVersions(ctx context.Context, tx
 		return models.Asset{}, err
 	}
 	return asset, nil
-}
-
-func (repository *assetRepository) firstFreeSlug(ctx context.Context, tx *gorm.DB, projectID uuid.UUID, assetSlug string) (string, error) {
-	var slugs []string
-	err := repository.GetDB(ctx, tx).Model(&models.Asset{}).
-		Where("project_id = ? AND slug LIKE ?", projectID, assetSlug+"%").
-		Pluck("slug", &slugs).Error
-	if err != nil {
-		return "", err
-	}
-
-	baseTaken := false
-	existing := make(map[string]bool)
-	for _, s := range slugs {
-		existing[s] = true
-		if s == assetSlug {
-			baseTaken = true
-		}
-	}
-
-	if !baseTaken {
-		return assetSlug, nil
-	}
-
-	for i := 1; ; i++ {
-		candidate := fmt.Sprintf("%s-%d", assetSlug, i)
-		if !existing[candidate] {
-			return candidate, nil
-		}
-	}
 }
 
 func (repository *assetRepository) GetAssetsWithVulnSharingEnabled(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.Asset, error) {

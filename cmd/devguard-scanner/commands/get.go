@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/spf13/cobra"
 )
@@ -62,7 +63,7 @@ provided token or the DEVGUARD_TOKEN environment variable.`,
 			defer resp.Body.Close()
 
 			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+				return fmt.Errorf("request failed: %w", devguard.NewAPIError(resp))
 			}
 
 			// just print the body
