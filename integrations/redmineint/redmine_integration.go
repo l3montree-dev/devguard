@@ -70,6 +70,10 @@ func NewRedmineIntegration(redmineIntegrationRepository shared.RedmineIntegratio
 	}
 }
 
+func (i *RedmineIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, _ string) (bool, error) {
+	return false, nil
+}
+
 func (i *RedmineIntegration) WantsToHandleWebhook(ctx shared.Context) bool {
 	// TODO: Implement webhook handling for Redmine integration
 	return false

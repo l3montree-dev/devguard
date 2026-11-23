@@ -32,7 +32,7 @@ import (
 )
 
 // receives an uri and matches the extension to supported extensions, if not valid or not supported we return txt extension
-func GetLanguage(URI string) string {
+func getLanguage(URI string) string {
 
 	extension := filepath.Ext(URI)
 	switch extension {
@@ -92,7 +92,7 @@ func RenderMarkdownForFirstPartyVuln(
 		slog.Error("could not parse snippet contents", "error", err)
 		return str.String()
 	}
-	extension := GetLanguage(firstPartyVuln.URI)
+	extension := getLanguage(firstPartyVuln.URI)
 
 	// dynamically change the headline to the amount of Snippets
 	str.WriteString("\n\n")
