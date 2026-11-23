@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
+	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
@@ -279,6 +282,51 @@ func applyChange[T ~string](changes *[]string, label string, field *T, patch *T)
 	*field = *patch
 }
 
+// @Summary Test an asset version retention policy against the current asset versions without deleting anything
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param body body dtos.TestAssetVersionRetentionPolicyRequest true "Retention policy to test"
+// @Success 200 {object} dtos.TestAssetVersionRetentionPolicyResponse
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/retention-policy/test/ [post]
+func (a *AssetController) TestAssetVersionRetentionPolicy(ctx shared.Context) error {
+	var req dtos.TestAssetVersionRetentionPolicyRequest
+	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "invalid request body").WithInternal(err)
+	}
+	if err := dtos.V.Struct(&req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	asset := shared.GetAsset(ctx)
+	assetVersions, err := a.assetVersionRepository.GetAssetVersionsByAssetID(ctx.Request().Context(), nil, asset.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch asset versions").WithInternal(err)
+	}
+
+	toDelete, err := celrules.AssetVersionsToDelete(req.AssetVersionRetentionPolicy, assetVersions)
+	if err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("invalid asset version retention policy: %s", err.Error()))
+	}
+
+	deleted := make(map[uuid.UUID]bool, len(toDelete))
+	for _, assetVersion := range toDelete {
+		deleted[assetVersion.ID] = true
+	}
+	kept := utils.Filter(assetVersions, func(assetVersion models.AssetVersion) bool {
+		return !deleted[assetVersion.ID]
+	})
+
+	return ctx.JSON(200, dtos.TestAssetVersionRetentionPolicyResponse{
+		ToDelete: utils.Map(toDelete, transformer.AssetVersionModelToDTO),
+		Kept:     utils.Map(kept, transformer.AssetVersionModelToDTO),
+	})
+}
+
 // @Summary Update asset
 // @Tags Assets
 // @Security CookieAuth
@@ -307,6 +355,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 	if err := dtos.V.Struct(patchRequest); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	if patchRequest.AssetVersionRetentionPolicy != nil && *patchRequest.AssetVersionRetentionPolicy != "" {
+		if _, err := celrules.CompileAssetVersionRetentionPolicy(*patchRequest.AssetVersionRetentionPolicy); err != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid asset version retention policy: %s", err.Error()))
+		}
 	}
 
 	var changes []string
@@ -394,6 +448,7 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		}
 	}
 
+	oldRetentionPolicy := asset.AssetVersionRetentionPolicy
 	updated := transformer.ApplyAssetPatchRequestToModel(patchRequest, &asset)
 	if asset.Name == "" || asset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
@@ -409,6 +464,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 	// after the update - the job reads the new thresholds from the database
 	if syncTickets {
 		events.NotifyAssetTicketSettingsChanged(reqCtx, a.broker, asset.ID)
+	}
+
+	if asset.AssetVersionRetentionPolicy != oldRetentionPolicy {
+		if err := a.broker.Notify(reqCtx, nil, events.TopicPipelineDeleteOldAssetVersions, events.AssetPipelinePayload{AssetID: asset.ID}, nil); err != nil {
+			slog.Error("could not enqueue asset version cleanup", "assetID", asset.ID, "err", err)
+		}
 	}
 
 	members, err := services.FetchMembersOfAsset(ctx)

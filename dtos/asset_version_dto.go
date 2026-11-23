@@ -17,14 +17,14 @@ type InformationSource struct {
 }
 
 type AssetVersion struct {
-	CreatedAt      time.Time      `json:"createdAt"`
-	UpdatedAt      time.Time      `json:"updatedAt"`
-	Name           string         `json:"name"`
-	AssetID        string         `json:"assetId"`
-	DefaultBranch  bool           `json:"defaultBranch"`
-	Slug           string         `json:"slug"`
-	Type           string         `json:"type"`
-	SigningPubKey  *string        `json:"signingPubKey,omitempty"`
-	Metadata       map[string]any `json:"metadata,omitempty"`
-	LastAccessedAt time.Time      `json:"lastAccessedAt,omitempty"`
+	CreatedAt     time.Time      `json:"createdAt"`
+	UpdatedAt     time.Time      `json:"updatedAt"`
+	Name          string         `json:"name"`
+	AssetID       string         `json:"assetId"`
+	DefaultBranch bool           `json:"defaultBranch"`
+	Slug          string         `json:"slug"`
+	Type          string         `json:"type"`
+	SigningPubKey *string        `json:"signingPubKey,omitempty"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+	LastUploadAt  *time.Time     `json:"lastUploadAt,omitempty"`
 }

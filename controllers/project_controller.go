@@ -767,6 +767,11 @@ func (projectController *ProjectController) HandleExternalSubprojectRequest(ctx 
 		return ctx.JSON(500, map[string]string{"error": "scan failed"})
 	}
 
+	if err := projectController.assetVersionRepository.UpdateLastUploadAt(ctx.Request().Context(), tx, &assetVersion); err != nil {
+		slog.Error("trivy operator: could not update last upload", "err", err)
+		return ctx.JSON(500, map[string]string{"error": "could not update last upload"})
+	}
+
 	tx.Commit()
 	artifactEvent := events.ArtifactPayload{AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name, ArtifactName: artifact.ArtifactName, UserAgent: userAgent}
 	events.NotifySBOMCreatedWithVulns(ctx.Request().Context(), projectController.broker, artifactEvent, utils.Map(opened, func(v models.DependencyVuln) uuid.UUID { return v.CalculateHash() }))

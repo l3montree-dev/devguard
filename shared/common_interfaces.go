@@ -199,6 +199,7 @@ type AssetRepository interface {
 	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadInProjectTree(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, rootProjectID uuid.UUID) (models.Asset, error)
 	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
+	RemoveRepositoryConnectionByPrefix(ctx context.Context, tx DB, repositoryIDPrefix string) error
 }
 
 type AttestationRepository interface {
@@ -303,7 +304,7 @@ type DependencyVulnRepository interface {
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
-	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
+	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
 	GetVulnsByAssetSignatures(ctx context.Context, tx *gorm.DB, assetSignatures []int64) ([]models.DependencyVuln, error)
 	GetOpenVulnsDistinctBySignatureIn(ctx context.Context, tx *gorm.DB, signatures []int64) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
@@ -549,8 +550,7 @@ type AssetVersionRepository interface {
 	GetDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID) (models.AssetVersion, error)
 	GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
-	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
-	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
+	UpdateLastUploadAt(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
 	FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }

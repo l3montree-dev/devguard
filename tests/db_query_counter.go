@@ -99,6 +99,11 @@ func (q *QueryCounter) before(db *gorm.DB) {
 }
 
 func (q *QueryCounter) after(db *gorm.DB) {
+	// GORM renders subqueries by running the callbacks in dry-run mode - nothing
+	// reaches the database, and the real statement embeds the subquery anyway
+	if db.DryRun {
+		return
+	}
 	var elapsed time.Duration
 	if start, ok := db.InstanceGet(queryCounterStartKey); ok {
 		if t, ok := start.(time.Time); ok {

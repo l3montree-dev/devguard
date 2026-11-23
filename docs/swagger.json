@@ -5916,6 +5916,9 @@
             },
             "dtos.Asset": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6021,6 +6024,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "centralDependencyVulnManagement",
@@ -6164,6 +6168,9 @@
             },
             "dtos.AssetDetails": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6276,6 +6283,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "centralDependencyVulnManagement",
@@ -6315,6 +6323,9 @@
             },
             "dtos.AssetDetailsWithSecrets": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6430,6 +6441,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "centralDependencyVulnManagement",
@@ -6509,6 +6521,11 @@
             },
             "dtos.AssetPatchRequest": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "description": "an empty string resets to the default policy",
+                        "maxLength": 4000,
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6597,6 +6614,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
@@ -6636,7 +6654,7 @@
                     "defaultBranch": {
                         "type": "boolean"
                     },
-                    "lastAccessedAt": {
+                    "lastUploadAt": {
                         "type": "string"
                     },
                     "metadata": {
@@ -6663,7 +6681,7 @@
                     "assetId",
                     "createdAt",
                     "defaultBranch",
-                    "lastAccessedAt",
+                    "lastUploadAt",
                     "metadata",
                     "name",
                     "signingPubKey",
@@ -11879,6 +11897,41 @@
                 ],
                 "type": "object"
             },
+            "dtos.TestAssetVersionRetentionPolicyRequest": {
+                "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "maxLength": 4000,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetVersionRetentionPolicy"
+                ],
+                "type": "object"
+            },
+            "dtos.TestAssetVersionRetentionPolicyResponse": {
+                "properties": {
+                    "kept": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "toDelete": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "kept",
+                    "toDelete"
+                ],
+                "type": "object"
+            },
             "dtos.TestVEXRulesRequest": {
                 "properties": {
                     "celExpression": {
@@ -12685,6 +12738,10 @@
             },
             "github_com_l3montree-dev_devguard_database_models.Asset": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "description": "the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy",
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -12806,6 +12863,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "confidentialityRequirement",
@@ -12902,7 +12960,8 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastAccessedAt": {
+                    "lastUploadAt": {
+                        "description": "only set by scans uploaded by a client - background rescans of upstream SBOMs do not count\nincludes both sbom and sarif imports",
                         "type": "string"
                     },
                     "metadata": {
@@ -12939,7 +12998,7 @@
                     "defaultBranch",
                     "dependencyVulns",
                     "id",
-                    "lastAccessedAt",
+                    "lastUploadAt",
                     "metadata",
                     "name",
                     "signingPubKey",
@@ -13085,13 +13144,6 @@
                     "vector": {
                         "type": "string"
                     },
-                    "weaknesses": {
-                        "items": {
-                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Weakness"
-                        },
-                        "type": "array",
-                        "uniqueItems": false
-                    },
                     "withdrawn": {
                         "type": "string"
                     }
@@ -13118,7 +13170,6 @@
                     "relationships",
                     "risk",
                     "vector",
-                    "weaknesses",
                     "withdrawn"
                 ],
                 "type": "object"
@@ -14341,29 +14392,6 @@
                 ],
                 "type": "object"
             },
-            "github_com_l3montree-dev_devguard_database_models.Weakness": {
-                "properties": {
-                    "cve": {
-                        "type": "string"
-                    },
-                    "cwe": {
-                        "type": "string"
-                    },
-                    "source": {
-                        "type": "string"
-                    },
-                    "type": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "cve",
-                    "cwe",
-                    "source",
-                    "type"
-                ],
-                "type": "object"
-            },
             "github_com_l3montree-dev_devguard_database_models.WebhookIntegration": {
                 "properties": {
                     "createdAt": {
@@ -14850,6 +14878,22 @@
                     1000000,
                     1000000000,
                     60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
                     3600000000000
                 ],
                 "type": "integer",
@@ -14880,6 +14924,22 @@
                     "Hour",
                     "minDuration",
                     "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -27762,6 +27822,69 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/recommendations": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "$ref": "#/components/schemas/dtos.VexRuleRecommendation"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Get crowdsourced VEX recommendations for all vulns of an asset",
+                "tags": [
+                    "CrowdsourcedVexing"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json/": {
             "get": {
                 "parameters": [
@@ -27828,6 +27951,79 @@
                 "summary": "Get VEX as CycloneDX JSON",
                 "tags": [
                     "Asset Versions"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/retention-policy/test/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.TestAssetVersionRetentionPolicyRequest",
+                                "summary": "body",
+                                "description": "Retention policy to test"
+                            }
+                        }
+                    },
+                    "description": "Retention policy to test",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.TestAssetVersionRetentionPolicyResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test an asset version retention policy against the current asset versions without deleting anything",
+                "tags": [
+                    "Assets"
                 ]
             }
         },

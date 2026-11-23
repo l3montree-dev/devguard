@@ -153,6 +153,10 @@ func (githubIntegration *GithubIntegration) ListOrgs(ctx shared.Context) ([]mode
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx shared.Context, externalEntityProviderID string) (bool, error) {
+	return false, nil
+}
+
 func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (shared.Role, error) {
 	// currently not supported.
 	return shared.RoleGuest, fmt.Errorf("not implemented")
@@ -542,7 +546,12 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx shared.Context) er
 		case "deleted":
 			slog.Info("app installation deleted", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
 			// delete the installation from the database
-			err := githubIntegration.githubAppInstallationRepository.Delete(reqCtx, nil, int(*event.Installation.ID))
+			err := githubIntegration.assetRepository.Transaction(reqCtx, func(tx shared.DB) error {
+				if err := githubIntegration.githubAppInstallationRepository.Delete(reqCtx, tx, int(*event.Installation.ID)); err != nil {
+					return err
+				}
+				return githubIntegration.assetRepository.RemoveRepositoryConnectionByPrefix(reqCtx, tx, fmt.Sprintf("github:%d:", *event.Installation.ID))
+			})
 			if err != nil {
 				slog.Error("could not delete github app installation", "err", err)
 				return err

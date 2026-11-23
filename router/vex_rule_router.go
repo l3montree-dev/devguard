@@ -27,6 +27,7 @@ type VEXRuleRouter struct {
 
 func NewVEXRuleRouter(
 	assetRouter AssetRouter,
+	assetVersionRouter AssetVersionRouter,
 	vexRuleController *controllers.VEXRuleController,
 	vexRecommendationController *controllers.VexRuleRecommendationController,
 ) VEXRuleRouter {
@@ -43,6 +44,9 @@ func NewVEXRuleRouter(
 	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
 	ruleWriteGroup.POST("/", vexRuleController.Create, middlewares.DisallowPublicRequests)           // Create rule
 	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete, middlewares.DisallowPublicRequests) // Delete rule by ID
+
+	assetVersionRuleGroup := assetVersionRouter.Group.Group("/vex-rules")
+	assetVersionRuleGroup.GET("/recommendations/", vexRecommendationController.RecommendForAsset)
 
 	return VEXRuleRouter{Group: ruleGroup}
 }

@@ -72,7 +72,7 @@ include:
       nix_target_arm64: "postgresql-arm64"
       arm64_runner_tag: "arm"
       job_suffix: ":postgresql"
-      upstream_version: "16.15"
+      upstream_version: "16.16"
     rules:
       - if: $CI_COMMIT_TAG
 
