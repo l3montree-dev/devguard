@@ -134,14 +134,6 @@ func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 			}
 			(*r)[eco] = config
 		case "npm":
-			if value.Kind == yaml.ScalarNode {
-				var url string
-				if err := value.Decode(&url); err != nil {
-					return fmt.Errorf("registries.%s: %w", eco, err)
-				}
-				(*r)[eco] = NpmRegistryConfigs{{URLRegistryConfig: URLRegistryConfig{URL: url}}}
-				continue
-			}
 			var config NpmRegistryConfigs
 			if err := value.Decode(&config); err != nil {
 				return fmt.Errorf("registries.%s: %w", eco, err)

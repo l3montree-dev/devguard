@@ -36,13 +36,10 @@ func TestNpmRegistryConfigsForPackage(t *testing.T) {
 }
 
 func TestDependencyProxyConfigNpmRegistries(t *testing.T) {
-	t.Run("parses the legacy string format", func(t *testing.T) {
+	t.Run("rejects the legacy string format", func(t *testing.T) {
 		var cfg dtos.DependencyProxyConfig
-		if err := yaml.Unmarshal([]byte("registries:\n  npm: https://npm.firma.de\n"), &cfg); err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-		if url := cfg.Registries.NpmConfig().ForPackage("next").URL; url != "https://npm.firma.de" {
-			t.Fatalf("expected legacy registry, got %s", url)
+		if err := yaml.Unmarshal([]byte("registries:\n  npm: https://npm.firma.de\n"), &cfg); err == nil {
+			t.Fatal("expected an error for the legacy string format")
 		}
 	})
 

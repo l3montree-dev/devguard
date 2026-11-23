@@ -110,3 +110,46 @@ func TestConvertLegacyDependencyProxyConfig(t *testing.T) {
 		}
 	})
 }
+
+func TestConvertScalarNpmRegistry(t *testing.T) {
+	t.Run("rewrites a scalar npm registry and keeps the rest", func(t *testing.T) {
+		for _, content := range []string{
+			"# my config\nregistries:\n  npm: https://npm.example.com\n  go: https://go.example.com\nrules:\n  - name: x\n    action: deny\n    expr: pkg.name == \"x\"\n",
+			`{"registries":{"npm":"https://npm.example.com","go":"https://go.example.com"},"rules":[{"name":"x","action":"deny","expr":"pkg.name == \"x\""}]}`,
+		} {
+			migrated, changed, err := convertScalarNpmRegistry(content)
+			require.NoError(t, err)
+			require.True(t, changed, content)
+			require.NoError(t, dtos.ValidateDependencyProxyConfigFile([]byte(migrated)))
+
+			var cfg dtos.DependencyProxyConfig
+			require.NoError(t, yaml.Unmarshal([]byte(migrated), &cfg))
+			assert.Equal(t, dtos.NpmRegistryConfigs{{URLRegistryConfig: dtos.URLRegistryConfig{URL: "https://npm.example.com"}}}, cfg.Registries.NpmConfig())
+			assert.Equal(t, "https://go.example.com", cfg.Registries["go"].GetURL())
+
+			rules, err := celrules.ParsePackageRules(migrated)
+			require.NoError(t, err)
+			assert.Len(t, rules, 1)
+		}
+	})
+
+	t.Run("keeps comments", func(t *testing.T) {
+		migrated, changed, err := convertScalarNpmRegistry("# my config\nregistries:\n  npm: https://npm.example.com\n")
+		require.NoError(t, err)
+		require.True(t, changed)
+		assert.Contains(t, migrated, "# my config")
+	})
+
+	t.Run("configs without a scalar npm registry are not touched", func(t *testing.T) {
+		for _, content := range []string{
+			"registries:\n  npm:\n    - url: https://npm.example.com\n",
+			"registries:\n  go: https://go.example.com\n",
+			"rules:\n  - name: x\n    action: deny\n    expr: pkg.name == \"x\"\n",
+			"",
+		} {
+			_, changed, err := convertScalarNpmRegistry(content)
+			require.NoError(t, err)
+			assert.False(t, changed, content)
+		}
+	})
+}
