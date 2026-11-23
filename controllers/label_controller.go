@@ -54,7 +54,7 @@ func saveLabelError(err error, msg string) error {
 	if shared.IsUniqueViolation(err) {
 		return echo.NewHTTPError(409, "a label with this name and color already exists on this level").WithInternal(err)
 	}
-	return echo.NewHTTPError(500, msg).WithInternal(err)
+	return echo.NewHTTPError(500, fmt.Sprintf("could not save label: %s", msg)).WithInternal(err)
 }
 
 func (l *LabelController) readLabelOnLevel(ctx shared.Context) (models.Label, error) {
