@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/joho/godotenv"
 
 	"github.com/labstack/echo/v4"
@@ -25,8 +26,10 @@ func SanitizeParam(s string) string {
 	return strings.Trim(s, "/")
 }
 
-// ErrLabelNotInScope is returned if a label is used outside of the level it is defined for.
-var ErrLabelNotInScope = errors.New("label is not available in this scope")
+func IsUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
 
 func IsNotFound(err error) bool {
 	return errors.Is(err, gorm.ErrRecordNotFound)

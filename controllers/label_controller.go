@@ -1,13 +1,15 @@
 package controllers
 
 import (
-	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -42,29 +44,34 @@ func setLabelScope(ctx shared.Context, label *models.Label) {
 }
 
 func attachLabelError(err error, target string) error {
-	switch {
-	case shared.IsNotFound(err):
+	if shared.IsNotFound(err) {
 		return echo.NewHTTPError(404, "label not found").WithInternal(err)
-	case errors.Is(err, shared.ErrLabelNotInScope):
-		return echo.NewHTTPError(403, fmt.Sprintf("label is not available for this %s", target)).WithInternal(err)
 	}
 	return echo.NewHTTPError(500, fmt.Sprintf("could not attach label to %s", target)).WithInternal(err)
 }
 
+func saveLabelError(err error, msg string) error {
+	if shared.IsUniqueViolation(err) {
+		return echo.NewHTTPError(409, "a label with this name and color already exists on this level").WithInternal(err)
+	}
+	return echo.NewHTTPError(500, msg).WithInternal(err)
+}
+
 func (l *LabelController) readLabelOnLevel(ctx shared.Context) (models.Label, error) {
+	organizationID := shared.GetOrg(ctx).ID
+	projectID, assetID := scopeIDs(ctx)
 	labelID, err := uuid.Parse(ctx.Param("labelID"))
 	if err != nil {
 		return models.Label{}, echo.NewHTTPError(400, "invalid label id").WithInternal(err)
 	}
-	label, err := l.labelRepository.Read(ctx.Request().Context(), nil, labelID)
+	label, err := l.labelRepository.FindLabelByIDThroughHierarchy(ctx.Request().Context(), nil, &labelID, &organizationID, projectID, assetID)
 	if err != nil {
 		if shared.IsNotFound(err) {
 			return models.Label{}, echo.NewHTTPError(404, "label not found")
 		}
 		return models.Label{}, echo.NewHTTPError(500, "could not read label").WithInternal(err)
 	}
-	projectID, assetID := scopeIDs(ctx)
-	if !label.IsDefinedAt(shared.GetOrg(ctx).ID, projectID, assetID) {
+	if !label.IsDefinedAt(organizationID, projectID, assetID) {
 		return models.Label{}, echo.NewHTTPError(403, "not allowed to modify this label")
 	}
 	return label, nil
@@ -95,9 +102,8 @@ func (l *LabelController) Create(ctx shared.Context) error {
 	label := models.Label{Label: req.Label, BackgroundColor: req.BackgroundColor}
 	setLabelScope(ctx, &label)
 
-	err := l.labelRepository.Create(ctx.Request().Context(), nil, &label)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not save label").WithInternal(err)
+	if err := l.labelRepository.Create(ctx.Request().Context(), nil, &label); err != nil {
+		return saveLabelError(err, "could not save label")
 	}
 
 	return ctx.NoContent(200)
@@ -142,7 +148,7 @@ func (l *LabelController) Update(ctx shared.Context) error {
 	}
 
 	if err := l.labelRepository.Save(ctx.Request().Context(), nil, &label); err != nil {
-		return echo.NewHTTPError(500, "could not update label").WithInternal(err)
+		return saveLabelError(err, "could not update label")
 	}
 
 	return ctx.NoContent(200)
@@ -182,11 +188,18 @@ func (l *LabelController) Delete(ctx shared.Context) error {
 // @Router /organizations/{organization}/labels/ [get]
 func (l *LabelController) ListOnOrgLevel(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
-	labels, err := l.labelService.ListOnOrgLevel(ctx.Request().Context(), nil, org.ID)
+	labels, err := l.labelRepository.ListThroughHierarchy(ctx.Request().Context(), nil, &org.ID, nil, nil)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find labels for this org").WithInternal(err)
 	}
-	return ctx.JSON(200, labels)
+	labelDTOs := utils.Map(labels, func(label models.Label) dtos.Label {
+		textColor, err := utils.GetTextColorToBackgroundColor(label.BackgroundColor)
+		if err != nil {
+			slog.Warn("text color could not be established", "err", err, "labelID", label.ID)
+		}
+		return transformer.LabelToDTO(label, textColor)
+	})
+	return ctx.JSON(200, labelDTOs)
 }
 
 // @Summary List labels on project level
@@ -201,11 +214,18 @@ func (l *LabelController) ListOnOrgLevel(ctx shared.Context) error {
 func (l *LabelController) ListOnProjectLevel(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
-	labels, err := l.labelService.ListOnProjectLevel(ctx.Request().Context(), nil, org.ID, project.ID)
+	labels, err := l.labelRepository.ListThroughHierarchy(ctx.Request().Context(), nil, &org.ID, &project.ID, nil)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find labels for this project").WithInternal(err)
 	}
-	return ctx.JSON(200, labels)
+	labelDTOs := utils.Map(labels, func(label models.Label) dtos.Label {
+		textColor, err := utils.GetTextColorToBackgroundColor(label.BackgroundColor)
+		if err != nil {
+			slog.Warn("text color could not be established", "err", err, "labelID", label.ID)
+		}
+		return transformer.LabelToDTO(label, textColor)
+	})
+	return ctx.JSON(200, labelDTOs)
 }
 
 // @Summary List labels on asset level
@@ -222,9 +242,16 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
 	project := shared.GetProject(ctx)
 	asset := shared.GetAsset(ctx)
-	labels, err := l.labelService.ListOnAssetLevel(ctx.Request().Context(), nil, org.ID, project.ID, asset.ID)
+	labels, err := l.labelRepository.ListThroughHierarchy(ctx.Request().Context(), nil, &org.ID, &project.ID, &asset.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find labels for this asset").WithInternal(err)
 	}
-	return ctx.JSON(200, labels)
+	labelDTOs := utils.Map(labels, func(label models.Label) dtos.Label {
+		textColor, err := utils.GetTextColorToBackgroundColor(label.BackgroundColor)
+		if err != nil {
+			slog.Warn("text color could not be established", "err", err, "labelID", label.ID)
+		}
+		return transformer.LabelToDTO(label, textColor)
+	})
+	return ctx.JSON(200, labelDTOs)
 }

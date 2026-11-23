@@ -60,31 +60,33 @@ func NewAssetRouter(
 	assetRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
-	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
 	assetRouter.GET("/logs/", logController.ListPagedForAsset, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead))
-
-	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.GET("/labels/", labelController.ListOnAssetLevel)
+
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.POST("/in-toto/", intotoController.Create, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
+	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+
+	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
+
 	assetUpdateAccessControlRequired := assetRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+
+	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
 
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
-
 	assetUpdateAccessControlRequired.POST("/retention-policy/test/", assetController.TestAssetVersionRetentionPolicy)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
 	assetUpdateAccessControlRequired.POST("/labels/", labelController.Create)
 	assetUpdateAccessControlRequired.POST("/labels/:labelID/", assetController.AttachLabelToAsset)
-	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
-	assetUpdateAccessControlRequired.GET("/labels/", labelController.ListOnAssetLevel)
 
 	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)

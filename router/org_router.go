@@ -71,15 +71,12 @@ func NewOrgRouter(
 		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
-	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
-
 	organizationRouter.GET("/stats/vuln-statistics/", statisticsController.GetOrgStatistics, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate)) // use ActionUpdate to control access only for admin users and above
 
 	organizationRouter.GET("/logs/", logController.ListPagedForOrganization, middlewares.NeededScope([]string{"scan"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead))
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	organizationRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetOrgDependencyProxyURLs)
 	organizationRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
-	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/trigger-sync/", externalEntityProviderController.TriggerSync)
 	organizationRouter.GET("/settings/", orgController.AdminSettings, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 	organizationRouter.GET("/", orgController.Read)
@@ -92,23 +89,28 @@ func NewOrgRouter(
 	organizationRouter.GET("/compliance-postures/oscal/", compliancePostureController.OrgGetOSCAL)
 	organizationRouter.GET("/compliance-postures/stats/", compliancePostureController.OrgStats)
 	organizationRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.OrgRead)
-	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.OrgCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
-	organizationRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.OrgCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
-	organizationRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.OrgUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
-	organizationRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.OrgDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
 	organizationRouter.GET("/policies/:policyID/", policyController.GetPolicy)
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	organizationRouter.GET("/projects/", projectController.List)
-	organizationRouter.POST("/projects/", projectController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectProject, shared.ActionCreate))
 	organizationRouter.GET("/projects/search/", projectController.SearchProjectsWithSubProjectsAndAssets)
 	organizationRouter.GET("/integrations/repositories/", integrationController.OrgListRepositories)
+	organizationRouter.GET("/labels/", labelController.ListOnOrgLevel)
+
+	organizationRouter.POST("/projects/", projectController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectProject, shared.ActionCreate))
+	organizationRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.OrgCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.OrgCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+
+	organizationRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.OrgUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.PUT("/config-files/:config-file/", orgController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
+
+	organizationRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.OrgDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate), middlewares.DisallowPublicRequests)
+	organizationRouter.DELETE("/", orgController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionDelete))
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
 	organizationUpdateAccessControlRequired.GET("/pats/", patController.ListByOrg)
-	organizationUpdateAccessControlRequired.GET("/labels/", labelController.ListOnOrgLevel)
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.OrgSave)

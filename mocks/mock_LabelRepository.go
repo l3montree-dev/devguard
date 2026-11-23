@@ -113,6 +113,87 @@ func (_c *LabelRepository_Create_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// CreateLabelAttachment provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) CreateLabelAttachment(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, labelID, projectID, assetID, artifactID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateLabelAttachment")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, labelID, projectID, assetID, artifactID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LabelRepository_CreateLabelAttachment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateLabelAttachment'
+type LabelRepository_CreateLabelAttachment_Call struct {
+	*mock.Call
+}
+
+// CreateLabelAttachment is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - labelID *uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - artifactID *uuid.UUID
+func (_e *LabelRepository_Expecter) CreateLabelAttachment(ctx any, tx any, labelID any, projectID any, assetID any, artifactID any) *LabelRepository_CreateLabelAttachment_Call {
+	return &LabelRepository_CreateLabelAttachment_Call{Call: _e.mock.On("CreateLabelAttachment", ctx, tx, labelID, projectID, assetID, artifactID)}
+}
+
+func (_c *LabelRepository_CreateLabelAttachment_Call) Run(run func(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID)) *LabelRepository_CreateLabelAttachment_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 *uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(*uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 *uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(*uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelRepository_CreateLabelAttachment_Call) Return(err error) *LabelRepository_CreateLabelAttachment_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LabelRepository_CreateLabelAttachment_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID) error) *LabelRepository_CreateLabelAttachment_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type LabelRepository
 func (_mock *LabelRepository) Delete(ctx context.Context, tx shared.DB, labelID uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, labelID)
@@ -176,50 +257,49 @@ func (_c *LabelRepository_Delete_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
-// ListOnAssetLevel provides a mock function for the type LabelRepository
-func (_mock *LabelRepository) ListOnAssetLevel(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID) ([]models.Label, error) {
-	ret := _mock.Called(ctx, tx, orgID, projectID, assetID)
+// FindLabelByIDThroughHierarchy provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) FindLabelByIDThroughHierarchy(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) (models.Label, error) {
+	ret := _mock.Called(ctx, tx, labelID, orgID, projectID, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListOnAssetLevel")
+		panic("no return value specified for FindLabelByIDThroughHierarchy")
 	}
 
-	var r0 []models.Label
+	var r0 models.Label
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, uuid.UUID, uuid.UUID) ([]models.Label, error)); ok {
-		return returnFunc(ctx, tx, orgID, projectID, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) (models.Label, error)); ok {
+		return returnFunc(ctx, tx, labelID, orgID, projectID, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, uuid.UUID, uuid.UUID) []models.Label); ok {
-		r0 = returnFunc(ctx, tx, orgID, projectID, assetID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) models.Label); ok {
+		r0 = returnFunc(ctx, tx, labelID, orgID, projectID, assetID)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Label)
-		}
+		r0 = ret.Get(0).(models.Label)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID, uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, orgID, projectID, assetID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, labelID, orgID, projectID, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// LabelRepository_ListOnAssetLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListOnAssetLevel'
-type LabelRepository_ListOnAssetLevel_Call struct {
+// LabelRepository_FindLabelByIDThroughHierarchy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindLabelByIDThroughHierarchy'
+type LabelRepository_FindLabelByIDThroughHierarchy_Call struct {
 	*mock.Call
 }
 
-// ListOnAssetLevel is a helper method to define mock.On call
+// FindLabelByIDThroughHierarchy is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx *gorm.DB
-//   - orgID uuid.UUID
-//   - projectID uuid.UUID
-//   - assetID uuid.UUID
-func (_e *LabelRepository_Expecter) ListOnAssetLevel(ctx any, tx any, orgID any, projectID any, assetID any) *LabelRepository_ListOnAssetLevel_Call {
-	return &LabelRepository_ListOnAssetLevel_Call{Call: _e.mock.On("ListOnAssetLevel", ctx, tx, orgID, projectID, assetID)}
+//   - labelID *uuid.UUID
+//   - orgID *uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+func (_e *LabelRepository_Expecter) FindLabelByIDThroughHierarchy(ctx any, tx any, labelID any, orgID any, projectID any, assetID any) *LabelRepository_FindLabelByIDThroughHierarchy_Call {
+	return &LabelRepository_FindLabelByIDThroughHierarchy_Call{Call: _e.mock.On("FindLabelByIDThroughHierarchy", ctx, tx, labelID, orgID, projectID, assetID)}
 }
 
-func (_c *LabelRepository_ListOnAssetLevel_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID)) *LabelRepository_ListOnAssetLevel_Call {
+func (_c *LabelRepository_FindLabelByIDThroughHierarchy_Call) Run(run func(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID)) *LabelRepository_FindLabelByIDThroughHierarchy_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -229,17 +309,108 @@ func (_c *LabelRepository_ListOnAssetLevel_Call) Run(run func(ctx context.Contex
 		if args[1] != nil {
 			arg1 = args[1].(*gorm.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 *uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(*uuid.UUID)
 		}
-		var arg3 uuid.UUID
+		var arg3 *uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
+			arg3 = args[3].(*uuid.UUID)
 		}
-		var arg4 uuid.UUID
+		var arg4 *uuid.UUID
 		if args[4] != nil {
-			arg4 = args[4].(uuid.UUID)
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 *uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(*uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelRepository_FindLabelByIDThroughHierarchy_Call) Return(label models.Label, err error) *LabelRepository_FindLabelByIDThroughHierarchy_Call {
+	_c.Call.Return(label, err)
+	return _c
+}
+
+func (_c *LabelRepository_FindLabelByIDThroughHierarchy_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) (models.Label, error)) *LabelRepository_FindLabelByIDThroughHierarchy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListThroughHierarchy provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) ListThroughHierarchy(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.Label, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListThroughHierarchy")
+	}
+
+	var r0 []models.Label
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID) ([]models.Label, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID) []models.Label); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Label)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, *uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LabelRepository_ListThroughHierarchy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListThroughHierarchy'
+type LabelRepository_ListThroughHierarchy_Call struct {
+	*mock.Call
+}
+
+// ListThroughHierarchy is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - orgID *uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+func (_e *LabelRepository_Expecter) ListThroughHierarchy(ctx any, tx any, orgID any, projectID any, assetID any) *LabelRepository_ListThroughHierarchy_Call {
+	return &LabelRepository_ListThroughHierarchy_Call{Call: _e.mock.On("ListThroughHierarchy", ctx, tx, orgID, projectID, assetID)}
+}
+
+func (_c *LabelRepository_ListThroughHierarchy_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID)) *LabelRepository_ListThroughHierarchy_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 *uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(*uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
 		}
 		run(
 			arg0,
@@ -252,166 +423,12 @@ func (_c *LabelRepository_ListOnAssetLevel_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *LabelRepository_ListOnAssetLevel_Call) Return(labels []models.Label, err error) *LabelRepository_ListOnAssetLevel_Call {
+func (_c *LabelRepository_ListThroughHierarchy_Call) Return(labels []models.Label, err error) *LabelRepository_ListThroughHierarchy_Call {
 	_c.Call.Return(labels, err)
 	return _c
 }
 
-func (_c *LabelRepository_ListOnAssetLevel_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID, assetID uuid.UUID) ([]models.Label, error)) *LabelRepository_ListOnAssetLevel_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListOnOrgLevel provides a mock function for the type LabelRepository
-func (_mock *LabelRepository) ListOnOrgLevel(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.Label, error) {
-	ret := _mock.Called(ctx, tx, orgID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListOnOrgLevel")
-	}
-
-	var r0 []models.Label
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) ([]models.Label, error)); ok {
-		return returnFunc(ctx, tx, orgID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID) []models.Label); ok {
-		r0 = returnFunc(ctx, tx, orgID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Label)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, orgID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LabelRepository_ListOnOrgLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListOnOrgLevel'
-type LabelRepository_ListOnOrgLevel_Call struct {
-	*mock.Call
-}
-
-// ListOnOrgLevel is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx *gorm.DB
-//   - orgID uuid.UUID
-func (_e *LabelRepository_Expecter) ListOnOrgLevel(ctx any, tx any, orgID any) *LabelRepository_ListOnOrgLevel_Call {
-	return &LabelRepository_ListOnOrgLevel_Call{Call: _e.mock.On("ListOnOrgLevel", ctx, tx, orgID)}
-}
-
-func (_c *LabelRepository_ListOnOrgLevel_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID)) *LabelRepository_ListOnOrgLevel_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *gorm.DB
-		if args[1] != nil {
-			arg1 = args[1].(*gorm.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *LabelRepository_ListOnOrgLevel_Call) Return(labels []models.Label, err error) *LabelRepository_ListOnOrgLevel_Call {
-	_c.Call.Return(labels, err)
-	return _c
-}
-
-func (_c *LabelRepository_ListOnOrgLevel_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.Label, error)) *LabelRepository_ListOnOrgLevel_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListOnProjectLevel provides a mock function for the type LabelRepository
-func (_mock *LabelRepository) ListOnProjectLevel(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.Label, error) {
-	ret := _mock.Called(ctx, tx, orgID, projectID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListOnProjectLevel")
-	}
-
-	var r0 []models.Label
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, uuid.UUID) ([]models.Label, error)); ok {
-		return returnFunc(ctx, tx, orgID, projectID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, uuid.UUID) []models.Label); ok {
-		r0 = returnFunc(ctx, tx, orgID, projectID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Label)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, orgID, projectID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// LabelRepository_ListOnProjectLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListOnProjectLevel'
-type LabelRepository_ListOnProjectLevel_Call struct {
-	*mock.Call
-}
-
-// ListOnProjectLevel is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx *gorm.DB
-//   - orgID uuid.UUID
-//   - projectID uuid.UUID
-func (_e *LabelRepository_Expecter) ListOnProjectLevel(ctx any, tx any, orgID any, projectID any) *LabelRepository_ListOnProjectLevel_Call {
-	return &LabelRepository_ListOnProjectLevel_Call{Call: _e.mock.On("ListOnProjectLevel", ctx, tx, orgID, projectID)}
-}
-
-func (_c *LabelRepository_ListOnProjectLevel_Call) Run(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID)) *LabelRepository_ListOnProjectLevel_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *gorm.DB
-		if args[1] != nil {
-			arg1 = args[1].(*gorm.DB)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		var arg3 uuid.UUID
-		if args[3] != nil {
-			arg3 = args[3].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *LabelRepository_ListOnProjectLevel_Call) Return(labels []models.Label, err error) *LabelRepository_ListOnProjectLevel_Call {
-	_c.Call.Return(labels, err)
-	return _c
-}
-
-func (_c *LabelRepository_ListOnProjectLevel_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.Label, error)) *LabelRepository_ListOnProjectLevel_Call {
+func (_c *LabelRepository_ListThroughHierarchy_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.Label, error)) *LabelRepository_ListThroughHierarchy_Call {
 	_c.Call.Return(run)
 	return _c
 }

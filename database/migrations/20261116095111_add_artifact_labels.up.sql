@@ -15,15 +15,16 @@
 
 CREATE TABLE IF NOT EXISTS public.labels (
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE,
+    organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
     asset_id uuid REFERENCES public.assets(id) ON DELETE CASCADE,
-    label text,
+    label text NOT NULL,
     background_color VARCHAR(7),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() 
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT label_unique UNIQUE NULLS NOT DISTINCT (label, background_color, organization_id, project_id, asset_id)
 );
 
-CREATE TABLE public.projects_assets_artifacts_labels (
+CREATE TABLE IF NOT EXISTS public.projects_assets_artifacts_labels (
     id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
     asset_id uuid REFERENCES public.assets(id) ON DELETE CASCADE,

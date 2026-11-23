@@ -110,67 +110,47 @@ func TestLabelIntegration(t *testing.T) {
 	defer terminate()
 	ctx := context.Background()
 
+	list := func(t *testing.T, f *labelFixture, org models.Org, project *models.Project, asset *models.Asset) []string {
+		t.Helper()
+		var projectID, assetID *uuid.UUID
+		if project != nil {
+			projectID = &project.ID
+		}
+		if asset != nil {
+			assetID = &asset.ID
+		}
+		labels, err := f.repo.ListThroughHierarchy(ctx, nil, &org.ID, projectID, assetID)
+		require.NoError(t, err)
+		names := make([]string, 0, len(labels))
+		for _, l := range labels {
+			names = append(names, l.Label)
+		}
+		return names
+	}
+
 	t.Run("List returns the labels of the own level and every level above, never of other orgs", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
-		org, err := f.service.ListOnOrgLevel(ctx, nil, f.orgA.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a"}, labelNames(org))
-
-		project1, err := f.service.ListOnProjectLevel(ctx, nil, f.orgA.ID, f.p1.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a", "p1"}, labelNames(project1), "sibling project p2 must not leak")
-
-		project2, err := f.service.ListOnProjectLevel(ctx, nil, f.orgA.ID, f.p2.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a", "p2"}, labelNames(project2))
-
-		asset1, err := f.service.ListOnAssetLevel(ctx, nil, f.orgA.ID, f.p1.ID, f.a1.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a", "p1", "a1"}, labelNames(asset1), "sibling asset a2 must not leak")
-
-		asset2, err := f.service.ListOnAssetLevel(ctx, nil, f.orgA.ID, f.p1.ID, f.a2.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a", "p1", "a2"}, labelNames(asset2))
-
-		asset3, err := f.service.ListOnAssetLevel(ctx, nil, f.orgA.ID, f.p2.ID, f.a3.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a", "p2", "a3"}, labelNames(asset3), "labels of project p1 must not leak")
+		assert.ElementsMatch(t, []string{"org-a"}, list(t, f, f.orgA, nil, nil))
+		assert.ElementsMatch(t, []string{"org-a", "p1"}, list(t, f, f.orgA, &f.p1, nil), "sibling project p2 must not leak")
+		assert.ElementsMatch(t, []string{"org-a", "p2"}, list(t, f, f.orgA, &f.p2, nil))
+		assert.ElementsMatch(t, []string{"org-a", "p1", "a1"}, list(t, f, f.orgA, &f.p1, &f.a1), "sibling asset a2 must not leak")
+		assert.ElementsMatch(t, []string{"org-a", "p1", "a2"}, list(t, f, f.orgA, &f.p1, &f.a2))
+		assert.ElementsMatch(t, []string{"org-a", "p2", "a3"}, list(t, f, f.orgA, &f.p2, &f.a3), "labels of project p1 must not leak")
 
 		// the other tenant only sees its own labels
-		orgB, err := f.service.ListOnAssetLevel(ctx, nil, f.orgB.ID, f.pB.ID, f.aB.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-b", "pb", "ab"}, labelNames(orgB))
+		assert.ElementsMatch(t, []string{"org-b", "pb", "ab"}, list(t, f, f.orgB, &f.pB, &f.aB))
 	})
 
 	t.Run("List does not return labels when asking with a project or asset of another org", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
 		// org B asking for the ids of org A: only org B's org-level label may show up
-		project, err := f.service.ListOnProjectLevel(ctx, nil, f.orgB.ID, f.p1.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-b"}, labelNames(project))
-
-		asset, err := f.service.ListOnAssetLevel(ctx, nil, f.orgB.ID, f.p1.ID, f.a1.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-b"}, labelNames(asset))
+		assert.ElementsMatch(t, []string{"org-b"}, list(t, f, f.orgB, &f.p1, nil))
+		assert.ElementsMatch(t, []string{"org-b"}, list(t, f, f.orgB, &f.p1, &f.a1))
 
 		// an asset which does not belong to the project does not match the asset level labels
-		asset, err = f.service.ListOnAssetLevel(ctx, nil, f.orgA.ID, f.p2.ID, f.a1.ID)
-		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"org-a", "p2"}, labelNames(asset))
-	})
-
-	t.Run("List includes the computed text color and scope ids", func(t *testing.T) {
-		f := newLabelFixture(t, db)
-
-		labels, err := f.service.ListOnAssetLevel(ctx, nil, f.orgA.ID, f.p1.ID, f.a1.ID)
-		require.NoError(t, err)
-		for _, l := range labels {
-			assert.NotEmpty(t, l.TextColor, l.Label)
-			require.NotNil(t, l.OrganizationID, l.Label)
-			assert.Equal(t, f.orgA.ID, *l.OrganizationID)
-		}
+		assert.ElementsMatch(t, []string{"org-a", "p2"}, list(t, f, f.orgA, &f.p2, &f.a1))
 	})
 
 	t.Run("repository create, read, save and delete", func(t *testing.T) {
@@ -265,7 +245,7 @@ func TestLabelIntegration(t *testing.T) {
 					require.NoError(t, err)
 					assert.Equal(t, before+1, attachmentCount(t, db, label.ID))
 				} else {
-					assert.ErrorIs(t, err, shared.ErrLabelNotInScope)
+					assert.True(t, shared.IsNotFound(err), "label must not be visible from the target")
 					assert.Equal(t, before, attachmentCount(t, db, label.ID), "nothing may be attached")
 				}
 			})
@@ -440,32 +420,35 @@ func TestLabelControllerIntegration(t *testing.T) {
 	t.Run("update and delete reject labels of other levels and other orgs", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
+		// labels visible from the level of the request, but defined on another level: forbidden.
+		// labels not visible from the level of the request at all: not found.
 		cases := []struct {
-			name  string
-			label string
-			lvl   level
+			name   string
+			label  string
+			lvl    level
+			status int
 		}{
-			{"org label from project level", "org-a", projectLevel},
-			{"org label from asset level", "org-a", assetLevel},
-			{"project label from org level", "p1", orgLevel},
-			{"project label from asset level", "p1", assetLevel},
-			{"asset label from project level", "a1", projectLevel},
-			{"asset label from org level", "a1", orgLevel},
-			{"sibling project label", "p2", projectLevel},
-			{"sibling asset label", "a2", assetLevel},
-			{"label of another org on org level", "org-b", orgLevel},
-			{"label of another org on project level", "pb", projectLevel},
-			{"label of another org on asset level", "ab", assetLevel},
+			{"org label from project level", "org-a", projectLevel, http.StatusForbidden},
+			{"org label from asset level", "org-a", assetLevel, http.StatusForbidden},
+			{"project label from asset level", "p1", assetLevel, http.StatusForbidden},
+			{"project label from org level", "p1", orgLevel, http.StatusNotFound},
+			{"asset label from project level", "a1", projectLevel, http.StatusNotFound},
+			{"asset label from org level", "a1", orgLevel, http.StatusNotFound},
+			{"sibling project label", "p2", projectLevel, http.StatusNotFound},
+			{"sibling asset label", "a2", assetLevel, http.StatusNotFound},
+			{"label of another org on org level", "org-b", orgLevel, http.StatusNotFound},
+			{"label of another org on project level", "pb", projectLevel, http.StatusNotFound},
+			{"label of another org on asset level", "ab", assetLevel, http.StatusNotFound},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
 				label := f.labels[tc.label]
 
 				c, rec := newCtx(f, http.MethodPut, tc.lvl, label.ID.String(), `{"label":"changed"}`)
-				assert.Equal(t, http.StatusForbidden, statusOf(f.controller.Update(c), rec), "update")
+				assert.Equal(t, tc.status, statusOf(f.controller.Update(c), rec), "update")
 
 				c, rec = newCtx(f, http.MethodDelete, tc.lvl, label.ID.String(), "")
-				assert.Equal(t, http.StatusForbidden, statusOf(f.controller.Delete(c), rec), "delete")
+				assert.Equal(t, tc.status, statusOf(f.controller.Delete(c), rec), "delete")
 
 				read, err := f.repo.Read(context.Background(), nil, label.ID)
 				require.NoError(t, err, "label must still exist")
@@ -515,4 +498,41 @@ func TestLabelControllerIntegration(t *testing.T) {
 		assert.ElementsMatch(t, []string{"org-a", "p1"}, read(f.controller.ListOnProjectLevel, projectLevel))
 		assert.ElementsMatch(t, []string{"org-a", "p1", "a1"}, read(f.controller.ListOnAssetLevel, assetLevel))
 	})
+
+	t.Run("list endpoints include the computed text color and scope ids", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+
+		c, rec := newCtx(f, http.MethodGet, assetLevel, "", "")
+		require.Equal(t, http.StatusOK, statusOf(f.controller.ListOnAssetLevel(c), rec))
+		var labels []dtos.Label
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &labels))
+		require.NotEmpty(t, labels)
+		for _, l := range labels {
+			assert.NotEmpty(t, l.TextColor, l.Label)
+			require.NotNil(t, l.OrganizationID, l.Label)
+			assert.Equal(t, f.orgA.ID, *l.OrganizationID)
+		}
+	})
+
+	t.Run("create and update reject duplicates on every level", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		body := `{"label":"dup","background_color":"#123456"}`
+
+		for _, lvl := range []level{orgLevel, projectLevel, assetLevel} {
+			c, rec := newCtx(f, http.MethodPost, lvl, "", body)
+			require.Equal(t, http.StatusOK, statusOf(f.controller.Create(c), rec), "first create")
+
+			c, rec = newCtx(f, http.MethodPost, lvl, "", body)
+			assert.Equal(t, http.StatusConflict, statusOf(f.controller.Create(c), rec), "duplicate create, level %d", lvl)
+		}
+
+		// renaming into an existing label of the same level is a conflict too
+		c, rec := newCtx(f, http.MethodPut, orgLevel, f.labels["org-a"].ID.String(), body)
+		assert.Equal(t, http.StatusConflict, statusOf(f.controller.Update(c), rec))
+
+		// the same label on a different level is fine
+		c, rec = newCtx(f, http.MethodPost, projectLevel, "", `{"label":"org-a","background_color":"#ff0000"}`)
+		assert.Equal(t, http.StatusOK, statusOf(f.controller.Create(c), rec))
+	})
+
 }

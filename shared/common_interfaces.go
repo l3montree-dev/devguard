@@ -1003,17 +1003,14 @@ type InstanceSettings struct {
 }
 
 type LabelRepository interface {
-	ListOnOrgLevel(ctx context.Context, tx *gorm.DB, orgID uuid.UUID) ([]models.Label, error)
-	ListOnProjectLevel(ctx context.Context, tx *gorm.DB, orgID, projectID uuid.UUID) ([]models.Label, error)
-	ListOnAssetLevel(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID uuid.UUID) ([]models.Label, error)
 	Create(ctx context.Context, tx DB, label *models.Label) error
 	Save(ctx context.Context, tx DB, label *models.Label) error
 	Delete(ctx context.Context, tx DB, labelID uuid.UUID) error
 	Read(ctx context.Context, tx DB, labelID uuid.UUID) (models.Label, error)
+	FindLabelByIDThroughHierarchy(ctx context.Context, tx *gorm.DB, labelID, orgID, projectID, assetID *uuid.UUID) (models.Label, error)
+	CreateLabelAttachment(ctx context.Context, tx *gorm.DB, labelID, projectID, assetID, artifactID *uuid.UUID) error
+	ListThroughHierarchy(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error)
 }
 type LabelService interface {
-	ListOnOrgLevel(ctx context.Context, tx DB, orgID uuid.UUID) ([]dtos.Label, error)
-	ListOnProjectLevel(ctx context.Context, tx DB, orgID, projectID uuid.UUID) ([]dtos.Label, error)
-	ListOnAssetLevel(ctx context.Context, tx DB, orgID, projectID, assetID uuid.UUID) ([]dtos.Label, error)
 	AttachLabel(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID, artifactID, labelID *uuid.UUID) error
 }

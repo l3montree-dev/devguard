@@ -64,16 +64,11 @@ func NewProjectRouter(
 	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.ProjectGetOSCAL)
 	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.ProjectStats)
 	projectRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectRead)
-	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.ProjectCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.ProjectUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.ProjectDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
 	projectRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetProjectDependencyProxyURLs)
 	projectRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
-	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON)
 	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML)
 	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.CycloneDXVexJSON)
@@ -85,12 +80,19 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
-
-	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
+	projectRouter.GET("/labels/", labelController.ListOnProjectLevel)
 	projectRouter.GET("/external/:providerID/", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 
+	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
 	projectRouter.POST("/releases/", releaseController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionCreate))
+	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.ProjectCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+
+	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
+	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.ProjectUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+
+	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.ProjectDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
@@ -102,7 +104,6 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/labels/", labelController.Create)
 	projectUpdateAccessControlRequired.POST("/labels/:labelID/", projectController.AttachLabelToProject)
 	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)
-	projectUpdateAccessControlRequired.GET("/labels/", labelController.ListOnProjectLevel)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.ProjectDelete)
 	projectUpdateAccessControlRequired.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject)
