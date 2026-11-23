@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -48,116 +48,51 @@ func (_m *SecretService) EXPECT() *SecretService_Expecter {
 	return &SecretService_Expecter{mock: &_m.Mock}
 }
 
-// ProjectChain provides a mock function for the type SecretService
-func (_mock *SecretService) ProjectChain(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error) {
-	ret := _mock.Called(ctx, projectID)
+// GetSecrets provides a mock function for the type SecretService
+func (_mock *SecretService) GetSecrets(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, orgName string, assetName *string) ([]dtos.SecretDTO, error) {
+	ret := _mock.Called(ctx, orgID, projectID, assetID, orgName, assetName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ProjectChain")
+		panic("no return value specified for GetSecrets")
 	}
 
-	var r0 []models.Project
+	var r0 []dtos.SecretDTO
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *uuid.UUID) ([]models.Project, error)); ok {
-		return returnFunc(ctx, projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string, *string) ([]dtos.SecretDTO, error)); ok {
+		return returnFunc(ctx, orgID, projectID, assetID, orgName, assetName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *uuid.UUID) []models.Project); ok {
-		r0 = returnFunc(ctx, projectID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string, *string) []dtos.SecretDTO); ok {
+		r0 = returnFunc(ctx, orgID, projectID, assetID, orgName, assetName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Project)
+			r0 = ret.Get(0).([]dtos.SecretDTO)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, projectID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string, *string) error); ok {
+		r1 = returnFunc(ctx, orgID, projectID, assetID, orgName, assetName)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// SecretService_ProjectChain_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProjectChain'
-type SecretService_ProjectChain_Call struct {
+// SecretService_GetSecrets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSecrets'
+type SecretService_GetSecrets_Call struct {
 	*mock.Call
 }
 
-// ProjectChain is a helper method to define mock.On call
-//   - ctx context.Context
-//   - projectID *uuid.UUID
-func (_e *SecretService_Expecter) ProjectChain(ctx any, projectID any) *SecretService_ProjectChain_Call {
-	return &SecretService_ProjectChain_Call{Call: _e.mock.On("ProjectChain", ctx, projectID)}
-}
-
-func (_c *SecretService_ProjectChain_Call) Run(run func(ctx context.Context, projectID *uuid.UUID)) *SecretService_ProjectChain_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(*uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *SecretService_ProjectChain_Call) Return(projects []models.Project, err error) *SecretService_ProjectChain_Call {
-	_c.Call.Return(projects, err)
-	return _c
-}
-
-func (_c *SecretService_ProjectChain_Call) RunAndReturn(run func(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error)) *SecretService_ProjectChain_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Resolve provides a mock function for the type SecretService
-func (_mock *SecretService) Resolve(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string) (string, error) {
-	ret := _mock.Called(ctx, orgID, projectID, assetID, name)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Resolve")
-	}
-
-	var r0 string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string) (string, error)); ok {
-		return returnFunc(ctx, orgID, projectID, assetID, name)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string) string); ok {
-		r0 = returnFunc(ctx, orgID, projectID, assetID, name)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string) error); ok {
-		r1 = returnFunc(ctx, orgID, projectID, assetID, name)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// SecretService_Resolve_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Resolve'
-type SecretService_Resolve_Call struct {
-	*mock.Call
-}
-
-// Resolve is a helper method to define mock.On call
+// GetSecrets is a helper method to define mock.On call
 //   - ctx context.Context
 //   - orgID uuid.UUID
 //   - projectID *uuid.UUID
 //   - assetID *uuid.UUID
-//   - name string
-func (_e *SecretService_Expecter) Resolve(ctx any, orgID any, projectID any, assetID any, name any) *SecretService_Resolve_Call {
-	return &SecretService_Resolve_Call{Call: _e.mock.On("Resolve", ctx, orgID, projectID, assetID, name)}
+//   - orgName string
+//   - assetName *string
+func (_e *SecretService_Expecter) GetSecrets(ctx any, orgID any, projectID any, assetID any, orgName any, assetName any) *SecretService_GetSecrets_Call {
+	return &SecretService_GetSecrets_Call{Call: _e.mock.On("GetSecrets", ctx, orgID, projectID, assetID, orgName, assetName)}
 }
 
-func (_c *SecretService_Resolve_Call) Run(run func(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string)) *SecretService_Resolve_Call {
+func (_c *SecretService_GetSecrets_Call) Run(run func(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, orgName string, assetName *string)) *SecretService_GetSecrets_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -179,23 +114,124 @@ func (_c *SecretService_Resolve_Call) Run(run func(ctx context.Context, orgID uu
 		if args[4] != nil {
 			arg4 = args[4].(string)
 		}
+		var arg5 *string
+		if args[5] != nil {
+			arg5 = args[5].(*string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
 			arg4,
+			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *SecretService_Resolve_Call) Return(s string, err error) *SecretService_Resolve_Call {
+func (_c *SecretService_GetSecrets_Call) Return(secretDTOs []dtos.SecretDTO, err error) *SecretService_GetSecrets_Call {
+	_c.Call.Return(secretDTOs, err)
+	return _c
+}
+
+func (_c *SecretService_GetSecrets_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, orgName string, assetName *string) ([]dtos.SecretDTO, error)) *SecretService_GetSecrets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReplaceSecretsInString provides a mock function for the type SecretService
+func (_mock *SecretService) ReplaceSecretsInString(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, orgName string, assetName *string, payload string) (string, error) {
+	ret := _mock.Called(ctx, orgID, projectID, assetID, orgName, assetName, payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceSecretsInString")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string, *string, string) (string, error)); ok {
+		return returnFunc(ctx, orgID, projectID, assetID, orgName, assetName, payload)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string, *string, string) string); ok {
+		r0 = returnFunc(ctx, orgID, projectID, assetID, orgName, assetName, payload)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, *uuid.UUID, *uuid.UUID, string, *string, string) error); ok {
+		r1 = returnFunc(ctx, orgID, projectID, assetID, orgName, assetName, payload)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// SecretService_ReplaceSecretsInString_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceSecretsInString'
+type SecretService_ReplaceSecretsInString_Call struct {
+	*mock.Call
+}
+
+// ReplaceSecretsInString is a helper method to define mock.On call
+//   - ctx context.Context
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - orgName string
+//   - assetName *string
+//   - payload string
+func (_e *SecretService_Expecter) ReplaceSecretsInString(ctx any, orgID any, projectID any, assetID any, orgName any, assetName any, payload any) *SecretService_ReplaceSecretsInString_Call {
+	return &SecretService_ReplaceSecretsInString_Call{Call: _e.mock.On("ReplaceSecretsInString", ctx, orgID, projectID, assetID, orgName, assetName, payload)}
+}
+
+func (_c *SecretService_ReplaceSecretsInString_Call) Run(run func(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, orgName string, assetName *string, payload string)) *SecretService_ReplaceSecretsInString_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 *uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(*uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 *string
+		if args[5] != nil {
+			arg5 = args[5].(*string)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *SecretService_ReplaceSecretsInString_Call) Return(s string, err error) *SecretService_ReplaceSecretsInString_Call {
 	_c.Call.Return(s, err)
 	return _c
 }
 
-func (_c *SecretService_Resolve_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string) (string, error)) *SecretService_Resolve_Call {
+func (_c *SecretService_ReplaceSecretsInString_Call) RunAndReturn(run func(ctx context.Context, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, orgName string, assetName *string, payload string) (string, error)) *SecretService_ReplaceSecretsInString_Call {
 	_c.Call.Return(run)
 	return _c
 }

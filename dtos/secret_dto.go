@@ -29,9 +29,9 @@ type SecretDTO struct {
 	ID            uuid.UUID   `json:"id"`
 	Name          string      `json:"name"`
 	Scope         SecretScope `json:"scope"`
-	Inherited     bool        `json:"inherited"`
-	InheritedFrom string      `json:"inheritedFrom"`
+	InheritedFrom *string     `json:"inheritedFrom"`
 	Overridden    bool        `json:"overridden"`
+	Value         string      `json:"-"`
 }
 
 type SecretCreateRequest struct {

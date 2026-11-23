@@ -121,6 +121,7 @@ type ProjectRepository interface {
 	Create(ctx context.Context, tx DB, project *models.Project) error
 	Activate(ctx context.Context, tx DB, projectID uuid.UUID) error
 	RecursivelyGetChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
+	GetAncestors(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjectsWithProviderID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string) ([]models.Project, error)
 	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
@@ -657,13 +658,13 @@ type WebhookIntegrationRepository interface {
 type SecretRepository interface {
 	Save(ctx context.Context, tx DB, model *models.Secret) error
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
-	FindVisible(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error)
+	All(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error)
 	DeleteOwned(ctx context.Context, tx DB, id, orgID uuid.UUID, projectID, assetID *uuid.UUID) error
 }
 
 type SecretService interface {
-	Resolve(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, name string) (string, error)
-	ProjectChain(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error)
+	ReplaceSecretsInString(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string, payload string) (string, error)
+	GetSecrets(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string) ([]dtos.SecretDTO, error)
 }
 
 type GitlabIntegrationRepository interface {

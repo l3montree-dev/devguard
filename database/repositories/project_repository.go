@@ -480,6 +480,25 @@ func (g *projectRepository) RecursivelyGetChildProjects(ctx context.Context, tx 
 	return projects, err
 }
 
+// returns the project itself followed by its ancestors, ordered from nearest to root
+func (g *projectRepository) GetAncestors(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.Project, error) {
+	var projects []models.Project
+	// ordering by id to get a deterministic ordering
+	err := g.GetDB(ctx, tx).Raw(`
+		WITH RECURSIVE ancestors AS (
+			SELECT p.*, 0 AS depth
+			FROM projects p
+			WHERE p.id = ?
+			UNION ALL
+			SELECT p.*, a.depth + 1
+			FROM projects p
+			INNER JOIN ancestors a ON p.id = a.parent_id
+		)
+		SELECT * FROM ancestors ORDER BY depth, id
+	`, projectID).Scan(&projects).Error
+	return projects, err
+}
+
 func (g *projectRepository) GetDirectChildProjects(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	err := g.GetDB(ctx, tx).Where("parent_id = ?", projectID).Find(&projects).Error

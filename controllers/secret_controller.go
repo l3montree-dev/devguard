@@ -23,6 +23,8 @@ import (
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
+	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -31,7 +33,7 @@ type SecretController struct {
 	secretService    shared.SecretService
 }
 
-func NewSecretController(secretRepository shared.SecretRepository, secretService shared.SecretService) *SecretController {
+func NewSecretController(secretRepository shared.SecretRepository, projectRepository shared.ProjectRepository, secretService shared.SecretService) *SecretController {
 	return &SecretController{
 		secretRepository: secretRepository,
 		secretService:    secretService,
@@ -55,78 +57,17 @@ func scopeIDs(ctx shared.Context) (uuid.UUID, *uuid.UUID, *uuid.UUID) {
 	return orgID, projectID, assetID
 }
 
-func currentScope(projectID, assetID *uuid.UUID) dtos.SecretScope {
-	if assetID != nil {
-		return dtos.ScopeAsset
-	}
-	if projectID != nil {
-		return dtos.ScopeProject
-	}
-	return dtos.ScopeOrganization
-}
-
-func secretToDTO(secret models.Secret, inheritedFrom string, overridden bool) dtos.SecretDTO {
-	return dtos.SecretDTO{
-		ID:            secret.ID,
-		Name:          secret.Name,
-		Scope:         currentScope(secret.ProjectID, secret.AssetID),
-		Inherited:     inheritedFrom != "",
-		InheritedFrom: inheritedFrom,
-		Overridden:    overridden,
-	}
-}
-
 func (c *SecretController) list(ctx shared.Context) error {
 	orgID, projectID, assetID := scopeIDs(ctx)
+	// we swallow the error - if there is no asset, we will go with nil asset name
+	asset, _ := shared.MaybeGetAsset(ctx)
 
-	secrets, err := c.secretRepository.FindVisible(ctx.Request().Context(), nil, orgID, projectID, assetID)
+	secrets, err := c.secretService.GetSecrets(ctx.Request().Context(), orgID, projectID, assetID, shared.GetOrg(ctx).Name, utils.EmptyThenNil(asset.Name))
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load secrets").WithInternal(err)
 	}
 
-	chain, err := c.secretService.ProjectChain(ctx.Request().Context(), projectID)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not load projects").WithInternal(err)
-	}
-
-	ownLevel := len(chain) + 1
-	if assetID != nil {
-		ownLevel = 0
-	} else if projectID != nil {
-		ownLevel = 1
-	}
-
-	level := func(secret models.Secret) (int, string) {
-		if secret.AssetID != nil {
-			return 0, shared.GetAsset(ctx).Name
-		}
-		for i, project := range chain {
-			if secret.ProjectID != nil && *secret.ProjectID == project.ID {
-				return i + 1, project.Name
-			}
-		}
-		return len(chain) + 1, shared.GetOrg(ctx).Name
-	}
-
-	lowestLevel := map[string]int{}
-	for _, secret := range secrets {
-		l, _ := level(secret)
-		if current, ok := lowestLevel[secret.Name]; !ok || l < current {
-			lowestLevel[secret.Name] = l
-		}
-	}
-
-	result := make([]dtos.SecretDTO, 0, len(secrets))
-	for _, secret := range secrets {
-		l, ownerName := level(secret)
-		inheritedFrom := ""
-		if l != ownLevel {
-			inheritedFrom = ownerName
-		}
-		result = append(result, secretToDTO(secret, inheritedFrom, l > lowestLevel[secret.Name]))
-	}
-
-	return ctx.JSON(200, result)
+	return ctx.JSON(200, secrets)
 }
 
 func (c *SecretController) create(ctx shared.Context) error {
@@ -156,7 +97,7 @@ func (c *SecretController) create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not save secret").WithInternal(err)
 	}
 
-	return ctx.JSON(201, secretToDTO(secret, "", false))
+	return ctx.JSON(201, transformer.SecretToDTO(secret, nil, false))
 }
 
 func (c *SecretController) delete(ctx shared.Context) error {

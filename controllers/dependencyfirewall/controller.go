@@ -360,20 +360,22 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 
 	var configFilesJSON any
 	var orgID uuid.UUID
-	var projectID, assetID *uuid.UUID
+	var asset models.Asset
+	var assetID *uuid.UUID
+	var projectID *uuid.UUID
 
 	switch scope {
 	case "asset":
-		asset, err := d.assetRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		asset, err = d.assetRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
-		assetID = &asset.ID
-		projectID = &asset.ProjectID
-		project, err := d.projectRepository.Read(c.Request().Context(), nil, *projectID)
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, asset.ProjectID)
 		if err != nil {
 			return configs, fmt.Errorf("failed to load org for asset: %w", err)
 		}
+		projectID = &project.ID
+		assetID = &asset.ID
 		orgID = project.OrganizationID
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
 	case "project":
@@ -381,8 +383,9 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
-		projectID = &project.ID
+
 		orgID = project.OrganizationID
+		projectID = &project.ID
 		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
 	case "organization":
 		org, err := d.orgRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
@@ -400,28 +403,16 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 		if !ok {
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
-		parsed, err := parseDependencyProxyConfigs(s)
+
+		// fetch the org
+		org, err := d.orgRepository.Read(c.Request().Context(), nil, orgID)
+		if err != nil {
+			return DependencyProxyConfigs{}, err
+		}
+
+		parsed, err := d.parseDependencyProxyConfigs(c.Request().Context(), orgID, projectID, assetID, org.Name, utils.EmptyThenNil(asset.Name), s)
 		if err != nil {
 			return configs, fmt.Errorf("failed to parse config: %w", err)
-		}
-		for _, config := range parsed.Registries.NpmConfig() {
-			if config.Auth == nil {
-				continue
-			}
-			if strings.HasPrefix(config.Auth.Token, "$") {
-				name, _ := strings.CutPrefix(config.Auth.Token, "$")
-				config.Auth.Token, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
-				if err != nil {
-					return configs, fmt.Errorf("failed to resolve token: %w", err)
-				}
-			}
-			if strings.HasPrefix(config.Auth.Password, "$") {
-				name, _ := strings.CutPrefix(config.Auth.Password, "$")
-				config.Auth.Password, err = d.secretService.Resolve(c.Request().Context(), orgID, projectID, assetID, name)
-				if err != nil {
-					return configs, fmt.Errorf("failed to resolve password: %w", err)
-				}
-			}
 		}
 
 		parsed.Secret = configs.Secret
@@ -431,7 +422,12 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	return configs, nil
 }
 
-func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
+func (d *DependencyProxyController) parseDependencyProxyConfigs(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string, s string) (DependencyProxyConfigs, error) {
+	s, err := d.secretService.ReplaceSecretsInString(ctx, orgID, projectID, assetID, orgName, assetName, s)
+	if err != nil {
+		return DependencyProxyConfigs{}, err
+	}
+
 	var configs DependencyProxyConfigs
 	if err := yaml.Unmarshal([]byte(s), &configs); err != nil {
 		return configs, err

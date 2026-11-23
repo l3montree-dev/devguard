@@ -54,7 +54,7 @@ func (r *secretRepository) Save(ctx context.Context, tx *gorm.DB, secret *models
 	return nil
 }
 
-func (r *secretRepository) FindVisible(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error) {
+func (r *secretRepository) All(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error) {
 	var secrets []models.Secret
 
 	query := r.GetDB(ctx, tx).Where("org_id = ?", orgID)

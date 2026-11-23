@@ -17,11 +17,14 @@ package services
 
 import (
 	"context"
-	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
+	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/l3montree-dev/devguard/transformer"
 )
 
 type secretService struct {
@@ -36,63 +39,82 @@ func NewSecretService(secretRepository shared.SecretRepository, projectRepositor
 	}
 }
 
-func (s *secretService) Resolve(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, name string) (string, error) {
-	var value string
+var _ shared.SecretService = &secretService{}
 
-	chain, err := s.ProjectChain(ctx, projectID)
-	if err != nil {
-		return "", err
-	}
-
-	projectSecretPosition := len(chain)
-
-	secrets, err := s.secretRepository.FindVisible(ctx, nil, orgID, projectID, assetID)
-	if err != nil {
-		return "", fmt.Errorf("could not find secrets: %w", err)
-	}
-
-	for _, secret := range secrets {
-		if secret.Name != name {
-			continue
-		}
-		if secret.AssetID != nil {
-			return secret.Value, nil
-		}
-		if secret.ProjectID != nil {
-			for i := range chain {
-				if chain[i].ID == *secret.ProjectID && i < projectSecretPosition {
-					value = secret.Value
-					projectSecretPosition = i
-				}
-			}
-		}
-		if secret.OrgID != nil && value == "" {
-			value = secret.Value
-		}
-	}
-	if value == "" {
-		return "", fmt.Errorf("secret %s not found", name)
-	}
-	return value, nil
-}
-
-func (s *secretService) ProjectChain(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error) {
-	if projectID == nil {
-		return nil, nil
-	}
-
-	project, err := s.projectRepository.Read(ctx, nil, *projectID)
+func (s *secretService) GetSecrets(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string) ([]dtos.SecretDTO, error) {
+	secrets, err := s.secretRepository.All(ctx, nil, orgID, projectID, assetID)
 	if err != nil {
 		return nil, err
 	}
 
-	chain := []models.Project{project}
-	for project.ParentID != nil {
-		project, err = s.projectRepository.Read(ctx, nil, *project.ParentID)
+	var chain []models.Project
+	if projectID != nil {
+		chain, err = s.projectRepository.GetAncestors(ctx, nil, *projectID)
 		if err != nil {
 			return nil, err
 		}
-		chain = append(chain, project)
 	}
-	return chain, nil
+
+	ownLevel := len(chain) + 1
+	if assetID != nil {
+		ownLevel = 0
+	} else if projectID != nil {
+		ownLevel = 1
+	}
+
+	level := func(secret models.Secret) (int, string) {
+		if secret.AssetID != nil {
+			// assetName has to exist in. this case
+			return 0, *assetName
+		}
+		for i, project := range chain {
+			if secret.ProjectID != nil && *secret.ProjectID == project.ID {
+				return i + 1, project.Name
+			}
+		}
+		// org name does always exist
+		return len(chain) + 1, orgName
+	}
+
+	lowestLevel := map[string]int{}
+	for _, secret := range secrets {
+		l, _ := level(secret)
+		if current, ok := lowestLevel[secret.Name]; !ok || l < current {
+			lowestLevel[secret.Name] = l
+		}
+	}
+
+	result := make([]dtos.SecretDTO, 0, len(secrets))
+	for _, secret := range secrets {
+		l, ownerName := level(secret)
+		var inheritedFrom *string = nil
+		if l != ownLevel {
+			inheritedFrom = &ownerName
+		}
+		result = append(result, transformer.SecretToDTO(secret, inheritedFrom, l > lowestLevel[secret.Name]))
+	}
+
+	return result, nil
+}
+
+func (s *secretService) ReplaceSecretsInString(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string, payload string) (string, error) {
+	secrets, err := s.GetSecrets(ctx, orgID, projectID, assetID, orgName, assetName)
+
+	if err != nil {
+		return "", err
+	}
+	// build up the replacer based on the dtos
+	replacer := make([]string, 0)
+	// sort the secrets by name length to avoid replacing $TEST_2 and $TEST with <value of $TEST>_2
+	slices.SortFunc(secrets, func(a, b dtos.SecretDTO) int {
+		return len(b.Name) - len(a.Name)
+	})
+
+	for _, secret := range secrets {
+		if !secret.Overridden {
+			replacer = append(replacer, []string{"$" + secret.Name, secret.Value}...)
+		}
+	}
+
+	return strings.NewReplacer(replacer...).Replace(payload), nil
 }
