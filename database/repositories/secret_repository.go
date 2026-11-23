@@ -37,45 +37,21 @@ func NewSecretRepository(db *gorm.DB, encryptionService shared.DBEncryptionServi
 		Repository: newGormRepository[uuid.UUID, models.Secret](db), encryptionService: encryptionService}
 }
 
-func (r *secretRepository) encryptSecretInPlace(ctx context.Context, secret models.Secret) (models.Secret, error) {
-	if secret.Value == "" {
-		return secret, nil
-	}
-
+func (r *secretRepository) Save(ctx context.Context, tx *gorm.DB, secret *models.Secret) error {
 	encryptedSecret, err := r.encryptionService.EncryptAndWrapData(secret.Value)
 	if err != nil {
-		return secret, fmt.Errorf("could not encrypt secret before saving to db: %w", err)
-	}
-	secret.Value = encryptedSecret
-
-	return secret, nil
-}
-
-func (r *secretRepository) decryptSecretInPlace(ctx context.Context, secret *models.Secret) error {
-	if secret.Value == "" {
-		return nil
-	}
-
-	decryptedSecret, err := r.encryptionService.MaybeDecryptData(secret.Value)
-	if err != nil {
-		return fmt.Errorf("could not decrypt secret: %w", err)
-	}
-	secret.Value = decryptedSecret
-
-	return nil
-}
-
-func (r *secretRepository) Save(ctx context.Context, tx *gorm.DB, secret *models.Secret) error {
-	encrypted, err := r.encryptSecretInPlace(ctx, *secret)
-	if err != nil {
-		return err
+		return fmt.Errorf("could not encrypt secret before saving to db: %w", err)
 	}
 
 	originalSecret := secret.Value
-	secret.Value = encrypted.Value
+	secret.Value = encryptedSecret
 	defer func() { secret.Value = originalSecret }()
 
-	return r.Repository.Save(ctx, tx, secret)
+	if err := r.Repository.Save(ctx, tx, secret); err != nil {
+		return err
+	}
+	secret.Value = originalSecret
+	return nil
 }
 
 func (r *secretRepository) FindVisible(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error) {
@@ -100,9 +76,11 @@ func (r *secretRepository) FindVisible(ctx context.Context, tx *gorm.DB, orgID u
 	}
 
 	for i := range secrets {
-		if err := r.decryptSecretInPlace(ctx, &secrets[i]); err != nil {
-			return nil, err
+		decryptedSecret, err := r.encryptionService.MaybeDecryptData(secrets[i].Value)
+		if err != nil {
+			return nil, fmt.Errorf("could not decrypt secret: %w", err)
 		}
+		secrets[i].Value = decryptedSecret
 	}
 
 	return secrets, nil

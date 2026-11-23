@@ -149,7 +149,7 @@ func (d *DependencyProxyController) fetchFromUpstreamWithAuth(ctx context.Contex
 	case auth == nil:
 	case auth.Type == "token":
 		req.Header.Set("Authorization", "Bearer "+auth.Token)
-	case auth.Type == "login":
+	case auth.Type == "basic-auth":
 		req.SetBasicAuth(auth.Username, auth.Password)
 	}
 

@@ -53,10 +53,10 @@ type NpmRegistryConfig struct {
 }
 
 type RegistryAuth struct {
-	Type     string `yaml:"type" validate:"required,oneof=token login"`
+	Type     string `yaml:"type" validate:"required,oneof=token basic-auth"`
 	Token    string `yaml:"token" validate:"required_if=Type token,omitempty,startswith=$"`
-	Username string `yaml:"username" validate:"required_if=Type login"`
-	Password string `yaml:"password" validate:"required_if=Type login,omitempty,startswith=$"`
+	Username string `yaml:"username" validate:"required_if=Type basic-auth"`
+	Password string `yaml:"password" validate:"required_if=Type basic-auth,omitempty,startswith=$"`
 }
 
 type NpmRegistryConfigs []NpmRegistryConfig

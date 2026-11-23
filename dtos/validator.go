@@ -19,15 +19,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-playground/validator/v10"
 )
-
-var secretNameRegex = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 var V = func() *validator.Validate {
 	v := validator.New()
@@ -48,9 +45,6 @@ var V = func() *validator.Validate {
 		return err == nil
 	})
 
-	v.RegisterValidation("secret_name", func(fl validator.FieldLevel) bool { //nolint:errcheck
-		return secretNameRegex.MatchString(fl.Field().String())
-	})
 	return v
 }()
 
