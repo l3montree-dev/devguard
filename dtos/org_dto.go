@@ -98,6 +98,8 @@ type Org struct {
 
 	JiraIntegrations []JiraIntegration `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
+	RedmineIntegrations []RedmineIntegration `json:"redmineIntegrations" gorm:"foreignKey:OrgID;"`
+
 	SharesVulnInformation    bool           `json:"sharesVulnInformation"`
 	IsPublic                 bool           `json:"isPublic" gorm:"default:false;"`
 	ConfigFiles              map[string]any `json:"configFiles"`

@@ -1,6 +1,33 @@
 package repositories
 
-import "fmt"
+import (
+	"fmt"
+
+	"gorm.io/gorm"
+)
+
+func firstFreeSlug(query *gorm.DB, base string) (string, error) {
+	var slugs []string
+	if err := query.Where("slug LIKE ?", base+"%").Pluck("slug", &slugs).Error; err != nil {
+		return "", err
+	}
+
+	existing := make(map[string]bool, len(slugs))
+	for _, s := range slugs {
+		existing[s] = true
+	}
+
+	if !existing[base] {
+		return base, nil
+	}
+
+	for i := 1; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		if !existing[candidate] {
+			return candidate, nil
+		}
+	}
+}
 
 type slugger[T any] interface {
 	Same(T) bool

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -388,12 +387,13 @@ func (s *DependencyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 	if err != nil {
 		return fmt.Errorf("could not get dependencyVulns by asset version: %w", err)
 	}
-	vulnList = slices.DeleteFunc(vulnList, func(v models.DependencyVuln) bool {
-		return v.State != dtos.VulnStateOpen || time.Since(v.UpdatedAt) >= ticketSyncWindow
+	vulnList = utils.Filter(vulnList, func(v models.DependencyVuln) bool {
+		// a closed vuln with a ticket has to be synced as well - its ticket needs to be closed
+		return time.Since(v.UpdatedAt) < ticketSyncWindow && (v.State == dtos.VulnStateOpen || v.TicketID != nil)
 	})
 
 	if len(vulnList) == 0 {
-		slog.Info("no recently changed open dependency vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
+		slog.Info("no recently changed dependency vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
 		return nil
 	}
 

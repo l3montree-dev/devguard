@@ -299,5 +299,49 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 			assert.Equal(t, 0, createIssueCallCount, "CreateIssue should not be called when ticket already exists")
 			assert.Equal(t, 1, updateIssueCallCount, "UpdateIssue should be called once when ticket already exists")
 		})
+
+		t.Run("should update the ticket of a fixed vuln so it gets closed", func(t *testing.T) {
+			createIssueCallCount = 0
+			updateIssueCallCount = 0
+
+			fixedAssetVersion := models.AssetVersion{
+				Name:          "fixed-branch",
+				AssetID:       asset.ID,
+				DefaultBranch: true,
+				Slug:          "fixed-branch",
+				Type:          "branch",
+			}
+			assert.NoError(t, f.DB.Create(&fixedAssetVersion).Error)
+
+			cve := models.CVE{
+				CVE:              "CVE-2024-88888",
+				Description:      "Test vulnerability which got fixed",
+				CVSS:             9.0,
+				Vector:           "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+				DatePublished:    fixedAssetVersion.CreatedAt,
+				DateLastModified: fixedAssetVersion.UpdatedAt,
+			}
+			assert.NoError(t, f.DB.Create(&cve).Error)
+
+			ticketID := "ISSUE-456"
+			depVuln := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetVersionID: fixedAssetVersion.ID,
+					State:          dtos.VulnStateFixed,
+					AssetID:        asset.ID,
+					TicketID:       &ticketID,
+				},
+				AssetVersionName: fixedAssetVersion.Name,
+				CVEID:            cve.CVE,
+				ComponentPurl:    "pkg:npm/fixed-package@1.0.0",
+			}
+			assert.NoError(t, f.DB.Create(&depVuln).Error)
+
+			err := f.App.DependencyVulnService.SyncAllIssues(context.Background(), org, project, asset, fixedAssetVersion, nil)
+			assert.NoError(t, err)
+
+			assert.Equal(t, 0, createIssueCallCount)
+			assert.Equal(t, 1, updateIssueCallCount, "UpdateIssue should be called for a fixed vuln with a ticket, otherwise the ticket stays open")
+		})
 	})
 }

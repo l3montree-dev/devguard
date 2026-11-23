@@ -2956,8 +2956,8 @@ func (_c *DependencyVulnRepository_GetVulnsByAssetSignatures_Call) RunAndReturn(
 }
 
 // GetVulnsDistinctBySignature provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error) {
-	ret := _mock.Called(ctx, tx, assetID, state)
+func (_mock *DependencyVulnRepository) GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(ctx, tx, assetID, assetVersionID, state)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVulnsDistinctBySignature")
@@ -2965,18 +2965,18 @@ func (_mock *DependencyVulnRepository) GetVulnsDistinctBySignature(ctx context.C
 
 	var r0 []models.DependencyVuln
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, dtos.VulnState) ([]models.DependencyVuln, error)); ok {
-		return returnFunc(ctx, tx, assetID, state)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, *uuid.UUID, dtos.VulnState) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(ctx, tx, assetID, assetVersionID, state)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, dtos.VulnState) []models.DependencyVuln); ok {
-		r0 = returnFunc(ctx, tx, assetID, state)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, uuid.UUID, *uuid.UUID, dtos.VulnState) []models.DependencyVuln); ok {
+		r0 = returnFunc(ctx, tx, assetID, assetVersionID, state)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID, dtos.VulnState) error); ok {
-		r1 = returnFunc(ctx, tx, assetID, state)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, uuid.UUID, *uuid.UUID, dtos.VulnState) error); ok {
+		r1 = returnFunc(ctx, tx, assetID, assetVersionID, state)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2992,12 +2992,13 @@ type DependencyVulnRepository_GetVulnsDistinctBySignature_Call struct {
 //   - ctx context.Context
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
+//   - assetVersionID *uuid.UUID
 //   - state dtos.VulnState
-func (_e *DependencyVulnRepository_Expecter) GetVulnsDistinctBySignature(ctx any, tx any, assetID any, state any) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
-	return &DependencyVulnRepository_GetVulnsDistinctBySignature_Call{Call: _e.mock.On("GetVulnsDistinctBySignature", ctx, tx, assetID, state)}
+func (_e *DependencyVulnRepository_Expecter) GetVulnsDistinctBySignature(ctx any, tx any, assetID any, assetVersionID any, state any) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
+	return &DependencyVulnRepository_GetVulnsDistinctBySignature_Call{Call: _e.mock.On("GetVulnsDistinctBySignature", ctx, tx, assetID, assetVersionID, state)}
 }
 
-func (_c *DependencyVulnRepository_GetVulnsDistinctBySignature_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState)) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
+func (_c *DependencyVulnRepository_GetVulnsDistinctBySignature_Call) Run(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState)) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -3011,15 +3012,20 @@ func (_c *DependencyVulnRepository_GetVulnsDistinctBySignature_Call) Run(run fun
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
-		var arg3 dtos.VulnState
+		var arg3 *uuid.UUID
 		if args[3] != nil {
-			arg3 = args[3].(dtos.VulnState)
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 dtos.VulnState
+		if args[4] != nil {
+			arg4 = args[4].(dtos.VulnState)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -3030,7 +3036,7 @@ func (_c *DependencyVulnRepository_GetVulnsDistinctBySignature_Call) Return(depe
 	return _c
 }
 
-func (_c *DependencyVulnRepository_GetVulnsDistinctBySignature_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
+func (_c *DependencyVulnRepository_GetVulnsDistinctBySignature_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetVulnsDistinctBySignature_Call {
 	_c.Call.Return(run)
 	return _c
 }

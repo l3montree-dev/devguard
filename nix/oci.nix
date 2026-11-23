@@ -44,7 +44,6 @@ rec {
 
   common = import ./common.nix {
     inherit self;
-    inherit (pkgs) lib;
   };
   # Docker tags can't contain "/", so a branch like "feature/foo" -> "feature-foo".
   dockerTag = builtins.replaceStrings [ "/" ] [ "-" ] common.version;

@@ -19,6 +19,9 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -36,4 +39,37 @@ func PurlVersionMatches(patternPurl, pathPurl packageurl.PackageURL) (bool, erro
 		return false, fmt.Errorf("invalid path version: %w", err)
 	}
 	return constraint.Check(version), nil
+}
+
+func purlLib() []cel.EnvOption {
+	return []cel.EnvOption{cel.Function("matchesPurl",
+		cel.Overload("matchesPurl_string_string", []*cel.Type{cel.StringType, cel.StringType}, cel.BoolType,
+			cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
+				purl, ok := lhs.Value().(string)
+				if !ok {
+					return types.NewErr("matchesPurl: invalid purl argument: %v", lhs)
+				}
+				pattern, ok := rhs.Value().(string)
+				if !ok {
+					return types.NewErr("matchesPurl: invalid pattern argument: %v", rhs)
+				}
+				purlObj, err := packageurl.FromString(purl)
+				if err != nil {
+					return types.NewErr("matchesPurl: invalid purl: %v", err)
+				}
+				patternObj, err := packageurl.FromString(pattern)
+				if err != nil {
+					return types.NewErr("matchesPurl: invalid pattern purl: %v", err)
+				}
+
+				matches, err := PurlVersionMatches(patternObj, purlObj)
+				if err != nil {
+					return types.NewErr("matchesPurl: %v", err)
+				}
+
+				return types.Bool(matches)
+			}),
+		),
+	),
+	}
 }

@@ -22,15 +22,15 @@ import (
 
 func AssetVersionModelToDTO(assetVersion models.AssetVersion) dtos.AssetVersion {
 	return dtos.AssetVersion{
-		CreatedAt:      assetVersion.CreatedAt,
-		UpdatedAt:      assetVersion.UpdatedAt,
-		Name:           assetVersion.Name,
-		AssetID:        assetVersion.AssetID.String(),
-		DefaultBranch:  assetVersion.DefaultBranch,
-		Slug:           assetVersion.Slug,
-		Type:           string(assetVersion.Type),
-		SigningPubKey:  assetVersion.SigningPubKey,
-		Metadata:       assetVersion.Metadata,
-		LastAccessedAt: assetVersion.LastAccessedAt,
+		CreatedAt:     assetVersion.CreatedAt,
+		UpdatedAt:     assetVersion.UpdatedAt,
+		Name:          assetVersion.Name,
+		AssetID:       assetVersion.AssetID.String(),
+		DefaultBranch: assetVersion.DefaultBranch,
+		Slug:          assetVersion.Slug,
+		Type:          string(assetVersion.Type),
+		SigningPubKey: assetVersion.SigningPubKey,
+		Metadata:      assetVersion.Metadata,
+		LastUploadAt:  assetVersion.LastUploadAt,
 	}
 }
