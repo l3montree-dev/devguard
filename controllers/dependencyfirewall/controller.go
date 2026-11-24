@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -41,6 +42,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 	"gopkg.in/yaml.v3"
 )
 
@@ -93,6 +95,8 @@ type DependencyProxyController struct {
 	maliciousChecker       shared.MaliciousPackageChecker
 	caches                 *secretCaches
 	client                 *http.Client
+	configCache            *expirable.LRU[string, DependencyProxyConfigs]
+	configInFlight         *singleflight.Group
 }
 
 func NewDependencyProxyController(
@@ -116,6 +120,8 @@ func NewDependencyProxyController(
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
 		secretService:          secretService,
+		configInFlight:         &singleflight.Group{},
+		configCache:            expirable.NewLRU[string, DependencyProxyConfigs](0, nil, 5*time.Minute),
 		client: &http.Client{
 			Timeout:   60 * time.Second,
 			Transport: utils.EgressTransport,
@@ -341,8 +347,8 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	return ctx.JSON(http.StatusOK, proxies)
 }
 
-// LoadConfigsBySecret resolves DependencyProxyConfigs for a secret string.
-func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret string) (DependencyProxyConfigs, error) {
+// loadConfigsBySecret resolves DependencyProxyConfigs for a secret string.
+func (d *DependencyProxyController) loadConfigsBySecret(c shared.Context, secret string) (DependencyProxyConfigs, error) {
 	var configs DependencyProxyConfigs
 	if secret == "" {
 		return configs, errors.New("invalid dependency proxy secret: empty")
@@ -445,8 +451,24 @@ func (d *DependencyProxyController) parseDependencyProxyConfigs(ctx context.Cont
 
 // GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
 // parameter and delegates to LoadConfigsBySecret.
+// will cache the resolved dependency config to avoid database hits.
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
-	return d.LoadConfigsBySecret(c, c.Param("secret"))
+	// running this in singleflight to avoid an initial burst of an npm install
+	secret := c.Param("secret")
+	// check if already in cache
+	if v, ok := d.configCache.Get(secret); ok {
+		return v, nil
+	}
+
+	v, err, _ := d.configInFlight.Do(secret, func() (any, error) {
+		return d.loadConfigsBySecret(c, secret)
+	})
+	if err != nil {
+		return DependencyProxyConfigs{}, err
+	}
+	config := v.(DependencyProxyConfigs)
+	d.configCache.Add(secret, config)
+	return config, nil
 }
 
 func proxyBaseURL(c shared.Context, prefixRe *regexp.Regexp) string {

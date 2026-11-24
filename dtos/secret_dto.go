@@ -35,6 +35,6 @@ type SecretDTO struct {
 }
 
 type SecretCreateRequest struct {
-	Name  string `json:"name" validate:"required,max=256,alphanum"`
+	Name  string `json:"name" validate:"required,max=256,secret_name"`
 	Value string `json:"value" validate:"required,max=8192"`
 }
