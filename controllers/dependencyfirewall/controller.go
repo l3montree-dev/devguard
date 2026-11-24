@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
@@ -41,6 +42,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/singleflight"
 	"gopkg.in/yaml.v3"
 )
 
@@ -89,9 +91,12 @@ type DependencyProxyController struct {
 	projectRepository      shared.ProjectRepository
 	orgRepository          shared.OrganizationRepository
 	dependencyProxyService shared.DependencyProxySecretService
+	secretService          shared.SecretService
 	maliciousChecker       shared.MaliciousPackageChecker
 	caches                 *secretCaches
 	client                 *http.Client
+	configCache            *expirable.LRU[string, DependencyProxyConfigs]
+	configInFlight         *singleflight.Group
 }
 
 func NewDependencyProxyController(
@@ -101,6 +106,7 @@ func NewDependencyProxyController(
 	assetRepository shared.AssetRepository,
 	projectRepository shared.ProjectRepository,
 	orgRepository shared.OrganizationRepository,
+	secretService shared.SecretService,
 ) *DependencyProxyController {
 	if maliciousChecker == nil {
 		panic("maliciousChecker must not be nil: dependency proxy firewall would be silently disabled")
@@ -113,6 +119,9 @@ func NewDependencyProxyController(
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
+		secretService:          secretService,
+		configInFlight:         &singleflight.Group{},
+		configCache:            expirable.NewLRU[string, DependencyProxyConfigs](0, nil, 5*time.Minute),
 		client: &http.Client{
 			Timeout:   60 * time.Second,
 			Transport: utils.EgressTransport,
@@ -121,6 +130,10 @@ func NewDependencyProxyController(
 }
 
 func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
+	return d.fetchFromUpstreamWithAuth(ctx, eco, upstreamURL, requestPath, nil, headers, body)
+}
+
+func (d *DependencyProxyController) fetchFromUpstreamWithAuth(ctx context.Context, eco ecosystem, upstreamURL, requestPath string, auth *dtos.RegistryAuth, headers http.Header, body io.Reader) ([]byte, http.Header, int, error) {
 	requestPath = strings.TrimRight(requestPath, "/")
 	url, err := url.JoinPath(upstreamURL, requestPath)
 	if err != nil {
@@ -136,6 +149,14 @@ func (d *DependencyProxyController) fetchFromUpstream(ctx context.Context, eco e
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	switch {
+	case auth == nil:
+	case auth.Type == "token":
+		req.Header.Set("Authorization", "Bearer "+auth.Token)
+	case auth.Type == "basic-auth":
+		req.SetBasicAuth(auth.Username, auth.Password)
 	}
 
 	if method == "POST" {
@@ -326,8 +347,8 @@ func (d *DependencyProxyController) GetDependencyProxyURLs(ctx shared.Context) e
 	return ctx.JSON(http.StatusOK, proxies)
 }
 
-// LoadConfigsBySecret resolves DependencyProxyConfigs for a secret string.
-func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret string) (DependencyProxyConfigs, error) {
+// loadConfigsBySecret resolves DependencyProxyConfigs for a secret string.
+func (d *DependencyProxyController) loadConfigsBySecret(c shared.Context, secret string) (DependencyProxyConfigs, error) {
 	var configs DependencyProxyConfigs
 	if secret == "" {
 		return configs, errors.New("invalid dependency proxy secret: empty")
@@ -338,31 +359,46 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 	}
 	configs.Secret = uuidSecret
 
-	scope, uuid, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
+	scope, modelID, err := d.dependencyProxyService.GetModelBySecret(c.Request().Context(), uuidSecret)
 	if err != nil {
 		return configs, fmt.Errorf("failed to get dependency proxy model by secret: %w", err)
 	}
 
 	var configFilesJSON any
+	var orgID uuid.UUID
+	var asset models.Asset
+	var assetID *uuid.UUID
+	var projectID *uuid.UUID
 
 	switch scope {
 	case "asset":
-		asset, err := d.assetRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		asset, err = d.assetRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read asset: %w", err)
 		}
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, asset.ProjectID)
+		if err != nil {
+			return configs, fmt.Errorf("failed to load org for asset: %w", err)
+		}
+		projectID = &project.ID
+		assetID = &asset.ID
+		orgID = project.OrganizationID
 		configFilesJSON = asset.ConfigFiles["dependency-proxy-configs"]
 	case "project":
-		project, err := d.projectRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		project, err := d.projectRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read project: %w", err)
 		}
+
+		orgID = project.OrganizationID
+		projectID = &project.ID
 		configFilesJSON = project.ConfigFiles["dependency-proxy-configs"]
 	case "organization":
-		org, err := d.orgRepository.Read(c.Request().Context(), nil, uuid) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
+		org, err := d.orgRepository.Read(c.Request().Context(), nil, modelID) // nosemgrep: bola-controller-read-without-tenant-check -- uuid comes from a secret-authenticated proxy token lookup (not a user-controlled path param); the secret already scopes the request to this tenant
 		if err != nil {
 			return configs, fmt.Errorf("failed to read organization: %w", err)
 		}
+		orgID = org.ID
 		configFilesJSON = org.ConfigFiles["dependency-proxy-configs"]
 	default:
 		return configs, fmt.Errorf("invalid proxy scope: %s", scope)
@@ -373,15 +409,31 @@ func (d *DependencyProxyController) LoadConfigsBySecret(c shared.Context, secret
 		if !ok {
 			return configs, fmt.Errorf("unexpected config file json type: %T", configFilesJSON)
 		}
-		parsed, err := parseDependencyProxyConfigs(s)
+
+		// fetch the org
+		org, err := d.orgRepository.Read(c.Request().Context(), nil, orgID)
+		if err != nil {
+			return DependencyProxyConfigs{}, err
+		}
+
+		parsed, err := d.parseDependencyProxyConfigs(c.Request().Context(), orgID, projectID, assetID, org.Name, utils.EmptyThenNil(asset.Name), s)
+		if err != nil {
+			return configs, fmt.Errorf("failed to parse config: %w", err)
+		}
+
 		parsed.Secret = configs.Secret
-		return parsed, err
+		return parsed, nil
 	}
 
 	return configs, nil
 }
 
-func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
+func (d *DependencyProxyController) parseDependencyProxyConfigs(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string, s string) (DependencyProxyConfigs, error) {
+	s, err := d.secretService.ReplaceSecretsInString(ctx, orgID, projectID, assetID, orgName, assetName, s)
+	if err != nil {
+		return DependencyProxyConfigs{}, err
+	}
+
 	var configs DependencyProxyConfigs
 	if err := yaml.Unmarshal([]byte(s), &configs); err != nil {
 		return configs, err
@@ -399,8 +451,24 @@ func parseDependencyProxyConfigs(s string) (DependencyProxyConfigs, error) {
 
 // GetDependencyProxyConfigs reads the proxy secret from the `:secret` route
 // parameter and delegates to LoadConfigsBySecret.
+// will cache the resolved dependency config to avoid database hits.
 func (d *DependencyProxyController) GetDependencyProxyConfigs(c shared.Context) (DependencyProxyConfigs, error) {
-	return d.LoadConfigsBySecret(c, c.Param("secret"))
+	// running this in singleflight to avoid an initial burst of an npm install
+	secret := c.Param("secret")
+	// check if already in cache
+	if v, ok := d.configCache.Get(secret); ok {
+		return v, nil
+	}
+
+	v, err, _ := d.configInFlight.Do(secret, func() (any, error) {
+		return d.loadConfigsBySecret(c, secret)
+	})
+	if err != nil {
+		return DependencyProxyConfigs{}, err
+	}
+	config := v.(DependencyProxyConfigs)
+	d.configCache.Add(secret, config)
+	return config, nil
 }
 
 func proxyBaseURL(c shared.Context, prefixRe *regexp.Regexp) string {

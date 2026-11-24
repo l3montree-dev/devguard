@@ -31,7 +31,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 11
+	CurrentHashVersion = 12
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -184,6 +184,13 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 				return fmt.Errorf("failed to backfill dependency proxy signing keys (v11): %w", err)
 			}
 			slog.Info("backfilled dependency proxy signing keys", "count", updated)
+		}
+
+		if currentVersion < 12 {
+			// npm registries switched from a single url to a list of scoped registries
+			if err := runNpmRegistryListMigration(pool); err != nil {
+				return fmt.Errorf("failed to migrate npm registries to list format (v12): %w", err)
+			}
 		}
 
 		// persisted only once every migration succeeded - a failed migration re-runs on the next startup

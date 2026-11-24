@@ -46,6 +46,7 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewPolicyRepository, fx.As(new(shared.PolicyRepository)))),
 	fx.Provide(fx.Annotate(NewLicenseRiskRepository, fx.As(new(shared.LicenseRiskRepository)))),
 	fx.Provide(fx.Annotate(NewWebhookRepository, fx.As(new(shared.WebhookIntegrationRepository)))),
+	fx.Provide(fx.Annotate(NewSecretRepository, fx.As(new(shared.SecretRepository)))),
 	fx.Provide(fx.Annotate(NewArtifactRepository, fx.As(new(shared.ArtifactRepository)))),
 	fx.Provide(fx.Annotate(NewInvitationRepository, fx.As(new(shared.InvitationRepository)))),
 	fx.Provide(fx.Annotate(NewExternalUserRepository, fx.As(new(shared.ExternalUserRepository)))),
