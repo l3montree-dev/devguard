@@ -97,7 +97,7 @@ func (c *SecretController) create(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "could not save secret").WithInternal(err)
 	}
 
-	return ctx.JSON(201, transformer.SecretToDTO(secret, nil, false))
+	return ctx.JSON(201, transformer.SecretToDTO(secret, nil))
 }
 
 func (c *SecretController) delete(ctx shared.Context) error {

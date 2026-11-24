@@ -30,7 +30,6 @@ type SecretDTO struct {
 	Name          string      `json:"name"`
 	Scope         SecretScope `json:"scope"`
 	InheritedFrom *string     `json:"inheritedFrom"`
-	Overridden    bool        `json:"overridden"`
 	Value         string      `json:"-"`
 }
 

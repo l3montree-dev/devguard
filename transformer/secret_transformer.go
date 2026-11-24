@@ -16,13 +16,12 @@ func currentScope(projectID, assetID *uuid.UUID) dtos.SecretScope {
 	return dtos.ScopeOrganization
 }
 
-func SecretToDTO(secret models.Secret, inheritedFrom *string, overridden bool) dtos.SecretDTO {
+func SecretToDTO(secret models.Secret, inheritedFrom *string) dtos.SecretDTO {
 	return dtos.SecretDTO{
 		ID:            secret.ID,
 		Name:          secret.Name,
 		Scope:         currentScope(secret.ProjectID, secret.AssetID),
 		InheritedFrom: inheritedFrom,
-		Overridden:    overridden,
 		Value:         secret.Value,
 	}
 }

@@ -91,7 +91,10 @@ func (s *secretService) GetSecrets(ctx context.Context, orgID uuid.UUID, project
 		if l != ownLevel {
 			inheritedFrom = &ownerName
 		}
-		result = append(result, transformer.SecretToDTO(secret, inheritedFrom, l > lowestLevel[secret.Name]))
+		if l > lowestLevel[secret.Name] {
+			continue
+		}
+		result = append(result, transformer.SecretToDTO(secret, inheritedFrom))
 	}
 
 	return result, nil
@@ -111,9 +114,7 @@ func (s *secretService) ReplaceSecretsInString(ctx context.Context, orgID uuid.U
 	})
 
 	for _, secret := range secrets {
-		if !secret.Overridden {
-			replacer = append(replacer, []string{"$" + secret.Name, secret.Value}...)
-		}
+		replacer = append(replacer, []string{"$" + secret.Name, secret.Value}...)
 	}
 
 	return strings.NewReplacer(replacer...).Replace(payload), nil
