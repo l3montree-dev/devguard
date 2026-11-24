@@ -26,11 +26,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/sync/singleflight"
 )
 
 func TestPyPIParsePackage(t *testing.T) {
@@ -107,6 +109,8 @@ func newSecretScopedController(t *testing.T) *DependencyProxyController {
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
 		caches:                 newSecretCaches(t.TempDir(), 10),
+		configInFlight:         &singleflight.Group{},
+		configCache:            expirable.NewLRU[string, DependencyProxyConfigs](0, nil, 5*time.Minute),
 	}
 }
 
@@ -295,6 +299,8 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 			assetRepository.EXPECT().Read(mock.Anything, mock.Anything, assetID).Return(models.Asset{ConfigFiles: databasetypes.JSONB{"dependency-proxy-configs": "rules:\n  - name: min-release-age\n    action: deny\n    expr: now() - timestamp(pkg.releasedAt) < duration(\"60h\")\n"}}, nil)
 			projectRepository := mocks.NewProjectRepository(t)
 			projectRepository.EXPECT().Read(mock.Anything, mock.Anything, mock.Anything).Return(models.Project{}, nil)
+			orgRepository := mocks.NewOrganizationRepository(t)
+			orgRepository.EXPECT().Read(mock.Anything, mock.Anything, mock.Anything).Return(models.Org{}, nil)
 			checker := mocks.NewMaliciousPackageChecker(t)
 			checker.EXPECT().GetMaliciousComponents(mock.Anything, "pypi", "requests").Return(nil, nil)
 
@@ -303,9 +309,13 @@ func TestProxyPyPIPackageMinReleaseAge(t *testing.T) {
 					dependencyProxyService: proxyService,
 					assetRepository:        assetRepository,
 					projectRepository:      projectRepository,
+					orgRepository:          orgRepository,
+					secretService:          newPassthroughSecretService(t),
 					maliciousChecker:       checker,
 					caches:                 newSecretCaches(t.TempDir(), 10),
 					client:                 &http.Client{Transport: pypiFileTransport{uploadTime: tc.uploadTime}},
+					configInFlight:         &singleflight.Group{},
+					configCache:            expirable.NewLRU[string, DependencyProxyConfigs](0, nil, 5*time.Minute),
 				},
 			}
 
