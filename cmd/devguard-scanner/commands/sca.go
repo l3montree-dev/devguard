@@ -33,6 +33,7 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/utils"
@@ -795,24 +796,18 @@ func scanExternalImage(ctx context.Context, openSourceInsightService shared.Open
 		// but it is not from upstream - it is the image we are currently looking at.
 		vexResp, err := scanner.UploadVEX(vexBuff)
 		if err != nil {
-			slog.Error("could not upload vex", "err", err)
+			config.AddWarning("VEX NOT UPLOADED", err.Error())
 		} else {
 			defer vexResp.Body.Close()
 			if vexResp.StatusCode != http.StatusOK {
-				slog.Error("could not upload vex", "status", vexResp.Status)
+				config.AddWarning("VEX NOT UPLOADED", devguard.NewAPIError(vexResp).Error())
 			} else {
 				slog.Info("uploaded vex successfully")
 			}
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		// read the body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "could not scan file")
-		}
-
-		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+		return fmt.Errorf("could not scan file: %w", devguard.NewAPIError(resp))
 	}
 
 	return handleScanResponse(resp.Body)
@@ -891,13 +886,7 @@ func scanLocalFilePath(ctx context.Context, openSourceInsightService shared.Open
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// read the body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "could not scan file")
-		}
-
-		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+		return fmt.Errorf("could not scan file: %w", devguard.NewAPIError(resp))
 	}
 
 	return handleScanResponse(resp.Body)

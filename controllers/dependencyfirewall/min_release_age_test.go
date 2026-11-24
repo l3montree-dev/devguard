@@ -16,6 +16,7 @@
 package dependencyfirewall
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,11 +24,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/l3montree-dev/devguard/database/models"
 	databasetypes "github.com/l3montree-dev/devguard/database/types"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/sync/singleflight"
 )
 
 // newMinReleaseAgeController builds a proxy controller whose configs resolve to
@@ -38,6 +41,7 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 	secret := uuid.New()
 	assetID := uuid.New()
 	projectID := uuid.New()
+	orgID := uuid.New()
 
 	secretService := mocks.NewDependencyProxySecretService(t)
 	secretService.EXPECT().GetModelBySecret(mock.Anything, secret).Return("asset", assetID, nil).Maybe()
@@ -52,8 +56,11 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 
 	projectRepository := mocks.NewProjectRepository(t)
 	projectRepository.EXPECT().Read(mock.Anything, mock.Anything, projectID).Return(models.Project{
-		OrganizationID: uuid.New(),
+		OrganizationID: orgID,
 	}, nil).Maybe()
+
+	orgRepository := mocks.NewOrganizationRepository(t)
+	orgRepository.EXPECT().Read(mock.Anything, mock.Anything, orgID).Return(models.Org{}, nil).Maybe()
 
 	maliciousChecker := mocks.NewMaliciousPackageChecker(t)
 	maliciousChecker.EXPECT().GetMaliciousComponents(mock.Anything, mock.Anything, mock.Anything).
@@ -63,10 +70,24 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 		dependencyProxyService: secretService,
 		assetRepository:        assetRepository,
 		projectRepository:      projectRepository,
+		orgRepository:          orgRepository,
+		secretService:          newPassthroughSecretService(t),
 		maliciousChecker:       maliciousChecker,
 		caches:                 newSecretCaches(t.TempDir(), 10),
 		client:                 http.DefaultClient,
+		configInFlight:         &singleflight.Group{},
+		configCache:            expirable.NewLRU[string, DependencyProxyConfigs](0, nil, 5*time.Minute),
 	}, secret
+}
+
+// newPassthroughSecretService returns the config string unchanged, as if it contained no secret placeholders.
+func newPassthroughSecretService(t *testing.T) *mocks.SecretService {
+	secretService := mocks.NewSecretService(t)
+	secretService.EXPECT().ReplaceSecretsInString(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ uuid.UUID, _, _ *uuid.UUID, _ string, _ *string, payload string) (string, error) {
+			return payload, nil
+		}).Maybe()
+	return secretService
 }
 
 // newProxyRequest builds an echo context for a proxy request that carries the secret.

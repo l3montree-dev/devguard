@@ -113,6 +113,7 @@ func (c *VexRuleRecommendationController) Recommend(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Success 200 {object} map[string]dtos.VexRuleRecommendation
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/vex-rules/recommendations [get]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/recommendations [get]
 func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) error {
 	reqCtx, span := controllersTracer.Start(ctx.Request().Context(), "CrowdsourcedVexingController.RecommendForAsset")
 	defer span.End()
@@ -120,6 +121,11 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 
 	asset := shared.GetAsset(ctx)
 	span.SetAttributes(attribute.String("asset.id", asset.ID.String()))
+
+	var assetVersionID *uuid.UUID = nil
+	if assetVersion, err := shared.MaybeGetAssetVersion(ctx); err == nil {
+		assetVersionID = &assetVersion.ID
+	}
 
 	sessionAssetIDs, err := sessionAssetIDsExcluding(ctx, asset.ID)
 	if err != nil {
@@ -153,11 +159,11 @@ func (c *VexRuleRecommendationController) RecommendForAsset(ctx shared.Context) 
 	// closed rules (accept/false-positive) only make sense against open vulns, and
 	// reopen rules only make sense against already-accepted vulns - so match each
 	// rule set against its own vuln set instead of running every rule against every vuln.
-	openVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, asset.ID, dtos.VulnStateOpen)
+	openVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, asset.ID, assetVersionID, dtos.VulnStateOpen)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}
-	acceptedVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, asset.ID, dtos.VulnStateAccepted)
+	acceptedVulns, err := c.dependencyVulnRepository.GetVulnsDistinctBySignature(reqCtx, nil, asset.ID, assetVersionID, dtos.VulnStateAccepted)
 	if err != nil {
 		return traceErr(span, 500, "Could not calculate recommendation.", err)
 	}

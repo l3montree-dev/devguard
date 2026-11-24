@@ -27,6 +27,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -64,13 +65,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// read the body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "could not scan file")
-		}
-
-		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+		return fmt.Errorf("could not scan file: %w", devguard.NewAPIError(resp))
 	}
 
 	return handleScanResponse(resp.Body)

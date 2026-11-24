@@ -603,6 +603,80 @@ func (_c *ProjectRepository_EnablePolicyForProject_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// GetAncestors provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) GetAncestors(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.Project, error) {
+	ret := _mock.Called(ctx, tx, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAncestors")
+	}
+
+	var r0 []models.Project
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) ([]models.Project, error)); ok {
+		return returnFunc(ctx, tx, projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) []models.Project); ok {
+		r0 = returnFunc(ctx, tx, projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectRepository_GetAncestors_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAncestors'
+type ProjectRepository_GetAncestors_Call struct {
+	*mock.Call
+}
+
+// GetAncestors is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - projectID uuid.UUID
+func (_e *ProjectRepository_Expecter) GetAncestors(ctx any, tx any, projectID any) *ProjectRepository_GetAncestors_Call {
+	return &ProjectRepository_GetAncestors_Call{Call: _e.mock.On("GetAncestors", ctx, tx, projectID)}
+}
+
+func (_c *ProjectRepository_GetAncestors_Call) Run(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID)) *ProjectRepository_GetAncestors_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_GetAncestors_Call) Return(projects []models.Project, err error) *ProjectRepository_GetAncestors_Call {
+	_c.Call.Return(projects, err)
+	return _c
+}
+
+func (_c *ProjectRepository_GetAncestors_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, projectID uuid.UUID) ([]models.Project, error)) *ProjectRepository_GetAncestors_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByOrgID provides a mock function for the type ProjectRepository
 func (_mock *ProjectRepository) GetByOrgID(ctx context.Context, tx shared.DB, organizationID uuid.UUID) ([]models.Project, error) {
 	ret := _mock.Called(ctx, tx, organizationID)

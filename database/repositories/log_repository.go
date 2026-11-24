@@ -61,6 +61,7 @@ func pruneScope(tx *gorm.DB, log *models.Log) error {
 		Order("created_at DESC, id DESC").
 		Limit(maxLogsPerScope)
 
+	// nosemgrep:sql-use-of-where-in its a subquery not a slice
 	return tx.Where(scopeWhere, scopeID).
 		Where("id NOT IN (?)", keep).
 		Delete(&models.Log{}).Error

@@ -9,7 +9,7 @@ services:
     depends_on:
       - postgresql
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:16.15
+    image: ghcr.io/l3montree-dev/devguard/postgresql:16.16
     shm_size: 1g
     # If you want to build the image locally, uncomment the following lines
     # build:

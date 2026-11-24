@@ -52,6 +52,7 @@ const (
 
 var RootCmd = &cobra.Command{
 	SilenceUsage:      true,
+	SilenceErrors:     true,
 	Use:               "devguard-scanner",
 	Short:             "Secure your Software Supply Chain",
 	Version:           scannerVersion(),
@@ -123,7 +124,9 @@ and 'attest' to interact with the platform. Configuration can be provided via a
 
 func Execute() {
 	err := RootCmd.Execute()
+	config.PrintWarnings()
 	if err != nil {
+		config.PrintError(err)
 		os.Exit(1)
 	}
 }
@@ -165,7 +168,6 @@ func init() {
 		NewSarifCommand(),
 		newKyvernoSarifCommand(),
 		newSarifMarkdownCommand(),
-		NewSlugCommand(),
 		NewSbomCommand(),
 		NewGetCommand(),
 		NewCurlCommand(),

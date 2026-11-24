@@ -115,7 +115,7 @@ jobs:
         nix develop . --command bash -c '
           set -euo pipefail
           go test -list "^Test" ./tests/... | grep "^Test" > all_tests.txt
-          awk -v shard="$SHARD" -v total="$SHARD_COUNT" "NR % total == shard" all_tests.txt > shard_tests.txt
+          awk -v shard="$SHARD" -v total="$SHARD_COUNT" "NR % total == shard - 1" all_tests.txt > shard_tests.txt
           echo "Shard $SHARD/$SHARD_COUNT running $(wc -l < shard_tests.txt) of $(wc -l < all_tests.txt) tests:"
           cat shard_tests.txt
           pattern=$(paste -sd "|" shard_tests.txt)
@@ -236,7 +236,7 @@ jobs:
       security-events: write
       id-token: write
     with:
-      upstream-version: "16.15"
+      upstream-version: "16.16"
       nix-target-amd64: postgresql-amd64
       nix-target-arm64: postgresql-arm64
       nix-version: '2.34.4'

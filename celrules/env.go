@@ -25,7 +25,6 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/l3montree-dev/devguard/utils"
-	"github.com/package-url/packageurl-go"
 )
 
 type programKey struct {
@@ -36,45 +35,21 @@ type programKey struct {
 var programCache = utils.NewTTLCache[programKey, cel.Program](time.Hour, 10_000, nil)
 
 var baseEnv = sync.OnceValues(func() (*cel.Env, error) {
-	return cel.NewEnv(
-		cel.OptionalTypes(),
-		cel.Function("now",
-			cel.Overload("now_timestamp", []*cel.Type{}, cel.TimestampType,
-				cel.FunctionBinding(func(args ...ref.Val) ref.Val {
-					return types.Timestamp{Time: time.Now()}
-				}),
+	semverOpts, err := semverLib()
+	if err != nil {
+		return nil, err
+	}
+	return cel.NewEnv(utils.Merge(semverOpts, purlLib(),
+		[]cel.EnvOption{cel.OptionalTypes(),
+			cel.Function("now",
+				cel.Overload("now_timestamp", []*cel.Type{}, cel.TimestampType,
+					cel.FunctionBinding(func(args ...ref.Val) ref.Val {
+						return types.Timestamp{Time: time.Now()}
+					}),
+				),
 			),
-		),
-		cel.Function("matchesPurl",
-			cel.Overload("matchesPurl_string_string", []*cel.Type{cel.StringType, cel.StringType}, cel.BoolType,
-				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val {
-					purl, ok := lhs.Value().(string)
-					if !ok {
-						return types.NewErr("matchesPurl: invalid purl argument: %v", lhs)
-					}
-					pattern, ok := rhs.Value().(string)
-					if !ok {
-						return types.NewErr("matchesPurl: invalid pattern argument: %v", rhs)
-					}
-					purlObj, err := packageurl.FromString(purl)
-					if err != nil {
-						return types.NewErr("matchesPurl: invalid purl: %v", err)
-					}
-					patternObj, err := packageurl.FromString(pattern)
-					if err != nil {
-						return types.NewErr("matchesPurl: invalid pattern purl: %v", err)
-					}
-
-					matches, err := PurlVersionMatches(patternObj, purlObj)
-					if err != nil {
-						return types.NewErr("matchesPurl: %v", err)
-					}
-
-					return types.Bool(matches)
-				}),
-			),
-		),
-	)
+		},
+	)...)
 })
 
 func compile(env *cel.Env, expression string) (cel.Program, error) {

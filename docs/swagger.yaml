@@ -4412,6 +4412,8 @@ components:
       type: object
     dtos.Asset:
       properties:
+        assetVersionRetentionPolicy:
+          type: string
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         avatar:
@@ -4482,6 +4484,7 @@ components:
         state:
           type: string
       required:
+      - assetVersionRetentionPolicy
       - availabilityRequirement
       - avatar
       - centralDependencyVulnManagement
@@ -4595,6 +4598,8 @@ components:
       type: object
     dtos.AssetDetails:
       properties:
+        assetVersionRetentionPolicy:
+          type: string
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         avatar:
@@ -4670,6 +4675,7 @@ components:
         state:
           type: string
       required:
+      - assetVersionRetentionPolicy
       - availabilityRequirement
       - avatar
       - centralDependencyVulnManagement
@@ -4707,6 +4713,8 @@ components:
       type: object
     dtos.AssetDetailsWithSecrets:
       properties:
+        assetVersionRetentionPolicy:
+          type: string
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         avatar:
@@ -4784,6 +4792,7 @@ components:
         webhookSecret:
           type: string
       required:
+      - assetVersionRetentionPolicy
       - availabilityRequirement
       - avatar
       - centralDependencyVulnManagement
@@ -4849,6 +4858,10 @@ components:
       type: object
     dtos.AssetPatchRequest:
       properties:
+        assetVersionRetentionPolicy:
+          description: an empty string resets to the default policy
+          maxLength: 4000
+          type: string
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         centralDependencyVulnManagement:
@@ -4910,6 +4923,7 @@ components:
           maxLength: 1024
           type: string
       required:
+      - assetVersionRetentionPolicy
       - availabilityRequirement
       - centralDependencyVulnManagement
       - confidentialityRequirement
@@ -4944,7 +4958,7 @@ components:
           type: string
         defaultBranch:
           type: boolean
-        lastAccessedAt:
+        lastUploadAt:
           type: string
         metadata:
           additionalProperties: {}
@@ -4963,7 +4977,7 @@ components:
       - assetId
       - createdAt
       - defaultBranch
-      - lastAccessedAt
+      - lastUploadAt
       - metadata
       - name
       - signingPubKey
@@ -7052,6 +7066,11 @@ components:
             $ref: '#/components/schemas/dtos.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -7079,6 +7098,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -7201,6 +7221,11 @@ components:
             $ref: '#/components/schemas/dtos.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -7230,6 +7255,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -7535,6 +7561,11 @@ components:
             $ref: '#/components/schemas/dtos.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -7569,6 +7600,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -8109,6 +8141,98 @@ components:
       required:
       - recommendedVersion
       type: object
+    dtos.RedmineIntegration:
+      properties:
+        closeStatusId:
+          type: integer
+        criticalPriorityId:
+          type: integer
+        defaultStatusId:
+          type: integer
+        highPriorityId:
+          type: integer
+        id:
+          type: string
+        lowPriorityId:
+          type: integer
+        mediumPriorityId:
+          type: integer
+        mermaidIntegration:
+          type: string
+        name:
+          type: string
+        obfuscatedToken:
+          type: string
+        trackerId:
+          type: integer
+        url:
+          type: string
+      required:
+      - closeStatusId
+      - criticalPriorityId
+      - defaultStatusId
+      - highPriorityId
+      - id
+      - lowPriorityId
+      - mediumPriorityId
+      - mermaidIntegration
+      - name
+      - obfuscatedToken
+      - trackerId
+      - url
+      type: object
+    dtos.RedmineIntegrationProperties:
+      properties:
+        priorities:
+          items:
+            $ref: '#/components/schemas/dtos.RedminePriority'
+          type: array
+          uniqueItems: false
+        statuses:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineStatus'
+          type: array
+          uniqueItems: false
+        trackers:
+          items:
+            $ref: '#/components/schemas/dtos.RedmineTracker'
+          type: array
+          uniqueItems: false
+      required:
+      - priorities
+      - statuses
+      - trackers
+      type: object
+    dtos.RedminePriority:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      type: object
+    dtos.RedmineStatus:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      type: object
+    dtos.RedmineTracker:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+      type: object
     dtos.Relationship:
       properties:
         relationshipType:
@@ -8629,22 +8753,16 @@ components:
       properties:
         id:
           type: string
-        inherited:
-          type: boolean
         inheritedFrom:
           type: string
         name:
           type: string
-        overridden:
-          type: boolean
         scope:
           $ref: '#/components/schemas/dtos.SecretScope'
       required:
       - id
-      - inherited
       - inheritedFrom
       - name
-      - overridden
       - scope
       type: object
     dtos.SecretScope:
@@ -8707,6 +8825,30 @@ components:
       - subProjectDescription
       - subProjectExternalEntityId
       - subProjectName
+      type: object
+    dtos.TestAssetVersionRetentionPolicyRequest:
+      properties:
+        assetVersionRetentionPolicy:
+          maxLength: 4000
+          type: string
+      required:
+      - assetVersionRetentionPolicy
+      type: object
+    dtos.TestAssetVersionRetentionPolicyResponse:
+      properties:
+        kept:
+          items:
+            $ref: '#/components/schemas/dtos.AssetVersion'
+          type: array
+          uniqueItems: false
+        toDelete:
+          items:
+            $ref: '#/components/schemas/dtos.AssetVersion'
+          type: array
+          uniqueItems: false
+      required:
+      - kept
+      - toDelete
       type: object
     dtos.TestVEXRulesRequest:
       properties:
@@ -9324,6 +9466,9 @@ components:
       type: object
     github_com_l3montree-dev_devguard_database_models.Asset:
       properties:
+        assetVersionRetentionPolicy:
+          description: the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy
+          type: string
         availabilityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         avatar:
@@ -9406,6 +9551,7 @@ components:
         webhookSecret:
           type: string
       required:
+      - assetVersionRetentionPolicy
       - availabilityRequirement
       - avatar
       - confidentialityRequirement
@@ -9485,7 +9631,10 @@ components:
           uniqueItems: false
         id:
           type: string
-        lastAccessedAt:
+        lastUploadAt:
+          description: |-
+            only set by scans uploaded by a client - background rescans of upstream SBOMs do not count
+            includes both sbom and sarif imports
           type: string
         metadata:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
@@ -9512,7 +9661,7 @@ components:
       - defaultBranch
       - dependencyVulns
       - id
-      - lastAccessedAt
+      - lastUploadAt
       - metadata
       - name
       - signingPubKey
@@ -9617,11 +9766,6 @@ components:
           $ref: '#/components/schemas/dtos.RiskMetrics'
         vector:
           type: string
-        weaknesses:
-          items:
-            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Weakness'
-          type: array
-          uniqueItems: false
         withdrawn:
           type: string
       required:
@@ -9646,7 +9790,6 @@ components:
       - relationships
       - risk
       - vector
-      - weaknesses
       - withdrawn
       type: object
     github_com_l3montree-dev_devguard_database_models.CVERelationship:
@@ -10084,6 +10227,16 @@ components:
       - updatedAt
       - vulnAssetId
       type: object
+    github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType:
+      enum:
+      - none
+      - macro
+      - commonmark
+      type: string
+      x-enum-varnames:
+      - None
+      - Macro
+      - CommonMark
     github_com_l3montree-dev_devguard_database_models.Org:
       properties:
         configFiles:
@@ -10138,6 +10291,11 @@ components:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
           type: array
           uniqueItems: false
+        redmineIntegrations:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.RedmineIntegration'
+          type: array
+          uniqueItems: false
         sharesVulnInformation:
           type: boolean
         slug:
@@ -10170,6 +10328,7 @@ components:
       - nist
       - numberOfEmployees
       - projects
+      - redmineIntegrations
       - sharesVulnInformation
       - slug
       - updatedAt
@@ -10352,6 +10511,55 @@ components:
       x-enum-varnames:
       - ProjectTypeDefault
       - ProjectTypeDynamic
+    github_com_l3montree-dev_devguard_database_models.RedmineIntegration:
+      properties:
+        closeStatusId:
+          type: integer
+        createdAt:
+          type: string
+        criticalPriorityId:
+          type: integer
+        defaultStatusId:
+          type: integer
+        highPriorityId:
+          type: integer
+        id:
+          type: string
+        lowPriorityId:
+          type: integer
+        mediumPriorityId:
+          type: integer
+        mermaidIntegration:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType'
+        name:
+          type: string
+        org:
+          $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org'
+        orgId:
+          type: string
+        trackerId:
+          type: integer
+        updatedAt:
+          type: string
+        url:
+          type: string
+      required:
+      - closeStatusId
+      - createdAt
+      - criticalPriorityId
+      - defaultStatusId
+      - highPriorityId
+      - id
+      - lowPriorityId
+      - mediumPriorityId
+      - mermaidIntegration
+      - name
+      - org
+      - orgId
+      - trackerId
+      - updatedAt
+      - url
+      type: object
     github_com_l3montree-dev_devguard_database_models.SupplyChain:
       properties:
         assetId:
@@ -10497,22 +10705,6 @@ components:
       - userId
       - vexRule
       - vexRuleId
-      type: object
-    github_com_l3montree-dev_devguard_database_models.Weakness:
-      properties:
-        cve:
-          type: string
-        cwe:
-          type: string
-        source:
-          type: string
-        type:
-          type: string
-      required:
-      - cve
-      - cwe
-      - source
-      - type
       type: object
     github_com_l3montree-dev_devguard_database_models.WebhookIntegration:
       properties:
@@ -10878,12 +11070,24 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -10932,12 +11136,24 @@ components:
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -13073,6 +13289,154 @@ paths:
       - PATAuth: []
       - BearerAuth: []
       summary: Test and save Jira integration credentials
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Redmine integration ID
+        in: path
+        name: redmine_integration_id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete a Redmine integration access token
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Redmine integration ID
+        in: path
+        name: redmine_integration_id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.RedmineIntegrationProperties'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Retrieve Redmine integration properties (trackers, statuses, priorities)
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings/:
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Redmine integration ID
+        in: path
+        name: redmine_integration_id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                closeStatus:
+                  type: integer
+                criticalPriority:
+                  type: integer
+                defaultStatus:
+                  type: integer
+                highPriority:
+                  type: integer
+                lowPriority:
+                  type: integer
+                mediumPriority:
+                  type: integer
+                mermaidIntegration:
+                  type: string
+                tracker:
+                  type: integer
+              title: body
+              type: object
+        description: Redmine integration settings
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.RedmineIntegration'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Update Redmine integration settings
+      tags:
+      - Integrations
+  /organizations/{organization}/integrations/redmine/test-and-save/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                token:
+                  type: string
+                tracker:
+                  type: string
+                url:
+                  type: string
+              title: body
+              type: object
+        description: Redmine credentials
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.RedmineIntegration'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Test and save Redmine integration credentials
       tags:
       - Integrations
   /organizations/{organization}/integrations/repositories:
@@ -18609,6 +18973,43 @@ paths:
       summary: Get risk history for an asset version
       tags:
       - Statistics
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex-rules/recommendations:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  $ref: '#/components/schemas/dtos.VexRuleRecommendation'
+                type: object
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get crowdsourced VEX recommendations for all vulns of an asset
+      tags:
+      - CrowdsourcedVexing
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/vex.json/:
     get:
       parameters:
@@ -18650,6 +19051,51 @@ paths:
       summary: Get VEX as CycloneDX JSON
       tags:
       - Asset Versions
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/retention-policy/test/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.TestAssetVersionRetentionPolicyRequest'
+              description: Retention policy to test
+              summary: body
+        description: Retention policy to test
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.TestAssetVersionRetentionPolicyResponse'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Test an asset version retention policy against the current asset versions
+        without deleting anything
+      tags:
+      - Assets
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file:
     post:
       parameters:

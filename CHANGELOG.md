@@ -2,6 +2,81 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.19.2] - 2026-11-20
+
+Thanks to external contributor [@amalsaidov](https://github.com/amalsaidov) for scoping the project search to the current subgroup! 🎉
+
+### Added
+
+- **Asset version retention policy (Preview)** — each asset has a configurable `assetVersionRetentionPolicy`, a CEL expression deciding which asset versions the daemon keeps. The default reproduces the former hard coded cleanup: tags are kept, branches are deleted after 7 days without a scan.
+- **Asset versions are addressable by name** — if the path parameter is not a known asset version slug, it is looked up as the asset version name. The `devguard-scanner slug` command is removed, as it is no longer needed
+- `security-insights.yml` describing the security posture of the project
+
+### Changed
+
+- Asset version slugs are unique per asset. The migration renames colliding slugs (e.g. `feature/foo` and `feature-foo`): the oldest asset version keeps the slug, the others get the first free `-<n>` suffix
+
+### Fixed
+
+- **Tickets of fixed vulnerabilities are closed again** — the ticket sync skipped every vulnerability which was not open, so tickets of fixed (or accepted / false positive) dependency and first party vulnerabilities were no longer updated and closed
+- **OAuth2 error on public resources** — requests targeting a public project or asset no longer require a valid oauth2 token for the external entity provider
+- **Project search in subgroups** — a search from inside a subgroup is restricted to its descendants, so matches outside the subgroup no longer push the subgroup's own results out of the page
+- **Integration deletion** — the asset repository connection is cleared when the GitHub, GitLab or Jira integration is deleted
+- **VEX path patterns** — fixes an error in the path pattern matching
+- **Withdrawn CVEs** — the `withdrawn` flag is now included in the CVE API response
+- An empty CWE list is returned for CVEs without CWEs
+- Nix flake check passes again
+
+---
+
+## [v1.19.1] - 2026-11-18
+
+### Changed
+
+- The PostgreSQL image is bumped to `16.16`, and the PostgreSQL version of the Nix dev shell is pinned so the `devguard-maint` CLI works again
+- The GitLab mirror workflow uses a concurrency group
+
+### Fixed
+
+- **OAuth2 reauthorization redirect** — for organizations backed by an external entity provider (e.g. GitLab) the oauth2 token is now verified against the provider, so users with an expired token are redirected to reauthorize instead of running into errors. Successful checks are cached for 15 minutes
+- **Conflicting VEX rules** — if several VEX rules matched the same vulnerability, their events were written with the same timestamp and applied in random order. The event is now picked deterministically (`falsePositive` > `reopened` > `accepted`, then the smallest rule id)
+- **Migration for VEX rule conflicts** — removes the conflicting VEX rule events and rebuilds the vulnerability state intervals and the current state of the affected vulnerabilities
+- **Vulnerability state intervals** — events sharing a timestamp no longer start two intervals at the same `valid_from`
+
+---
+
+## [v1.19.0] - 2026-11-17
+
+Thanks to external contributors [@shounakjoshi88-a11y](https://github.com/shounakjoshi88-a11y) for serving the OpenVEX document with the JSON content type, [@magndotcc](https://github.com/magndotcc) for accepting SBOMs whose root component has no `bom-ref`, [@xi72yow](https://github.com/xi72yow) for fixing the Red Hat layered products matching, and [@sarankumar1325](https://github.com/sarankumar1325) for the SARIF and package sorting fixes! 🎉
+
+### Added
+
+- **VEX rule recommendations per branch** — recommendations can now be requested for a single asset version via `GET .../refs/:assetVersionSlug/vex-rules/recommendations/`
+- **Weaknesses are available in CEL rules** — the CWEs of a CVE can be used in VEX rule expressions
+- **`vuln_state_intervals` table** — the time ranges in which a vulnerability was in a given state are now stored explicitly and used to build the artifact risk history
+
+### Changed
+
+- **Statistics are calculated from vulnerability state intervals** — the release risk history and the `last_history_update` column are removed, and the artifact risk history repository was rewritten on top of the new table
+- **Asset version and artifact primary keys are single `uuid` columns** — the foreign key references are migrated, and orphaned foreign keys are cleaned up
+- Only vulnerabilities that actually changed are saved when a scan is processed
+- CI workflows abort in-progress runs from the same ref
+
+### Fixed
+
+- **Toggling VEX rules** — enabling and disabling a rule now applies correctly, and a deadlock in a migration is fixed
+- **Duplicate license risks and events** — duplicate license risk events and other duplicated vulnerability events are removed by migration, and a bug that created "fixed" license risk events is fixed
+- **Ticket updates and sync** — ticket integration updates are synchronized correctly
+- **Risk assessment `displayName`** is now set to the id
+- **SBOMs whose root component has no `bom-ref`** are accepted
+- **Red Hat layered products** — rpm packages are matched against their own Red Hat product only
+- **SARIF results** without a location, and all locations of a result, are kept
+- **Packages are sorted by distinct CVE count**, the count shown in the UI
+- The dependency proxy no longer returns the Alpine signing key in the asset version DTO
+- The OpenVEX document is served with the JSON content type
+
+---
+
 ## [v1.18.2] - 2026-11-06
 
 ### Changed

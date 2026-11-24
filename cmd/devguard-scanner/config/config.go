@@ -398,7 +398,7 @@ func GetConfigFile(ctx context.Context, configID string, assetName string) (stri
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("could not get config file: %s", resp.Status)
+		return "", fmt.Errorf("could not get config file: %w", devguard.NewAPIError(resp))
 	}
 
 	body, err := io.ReadAll(resp.Body)

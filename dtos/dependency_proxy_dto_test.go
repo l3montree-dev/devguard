@@ -36,18 +36,15 @@ func TestNpmRegistryConfigsForPackage(t *testing.T) {
 }
 
 func TestDependencyProxyConfigNpmRegistries(t *testing.T) {
-	t.Run("parses the legacy string format", func(t *testing.T) {
+	t.Run("rejects the legacy string format", func(t *testing.T) {
 		var cfg dtos.DependencyProxyConfig
-		if err := yaml.Unmarshal([]byte("registries:\n  npm: https://npm.firma.de\n"), &cfg); err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-		if url := cfg.Registries.NpmConfig().ForPackage("next").URL; url != "https://npm.firma.de" {
-			t.Fatalf("expected legacy registry, got %s", url)
+		if err := yaml.Unmarshal([]byte("registries:\n  npm: https://npm.firma.de\n"), &cfg); err == nil {
+			t.Fatal("expected an error for the legacy string format")
 		}
 	})
 
 	t.Run("accepts a list of registries with token and login auth", func(t *testing.T) {
-		content := "registries:\n  npm:\n    - url: https://npm.firma.de\n      scopes: [\"@firma\"]\n      auth:\n        type: token\n        token: $npm_token\n    - url: https://nexus.firma.de\n      auth:\n        type: login\n        username: ci-user\n        password: $nexus_password\n"
+		content := "registries:\n  npm:\n    - url: https://npm.firma.de\n      scopes: [\"@firma\"]\n      auth:\n        type: token\n        token: $npm_token\n    - url: https://nexus.firma.de\n      auth:\n        type: basic-auth\n        username: ci-user\n        password: $nexus_password\n"
 		if err := dtos.ValidateDependencyProxyConfigFile([]byte(content)); err != nil {
 			t.Fatalf("expected valid, got %v", err)
 		}

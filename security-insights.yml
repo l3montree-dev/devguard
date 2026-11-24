@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2023-2026 L3montree Cybersecurity GmbH
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# OpenSSF Security Insights: https://github.com/ossf/security-insights
+header:
+  schema-version: 2.2.0
+  last-updated: '2026-11-19'
+  last-reviewed: '2026-11-19'
+  url: https://raw.githubusercontent.com/l3montree-dev/devguard/main/security-insights.yml
+
+project:
+  name: DevGuard
+  homepage: https://devguard.org
+  roadmap: https://devguard.org
+  administrators:
+    - name: L3montree GmbH
+      affiliation: L3montree GmbH
+      email: info@l3montree.com
+      primary: true
+  documentation:
+    quickstart-guide: https://docs.devguard.org/getting-started
+    detailed-guide: https://docs.devguard.org
+    code-of-conduct: https://github.com/l3montree-dev/devguard/blob/main/CODE_OF_CONDUCT.md
+  repositories:
+    - name: devguard
+      url: https://github.com/l3montree-dev/devguard
+      comment: The DevGuard backend, scanner CLI and vulnerability database.
+    - name: devguard (openCode mirror)
+      url: https://gitlab.opencode.de/oci-community/images/l3montree/devguard/devguard
+      comment: Mirror of the GitHub repository on openCode.
+  vulnerability-reporting:
+    reports-accepted: true
+    bug-bounty-available: false
+    policy: https://github.com/l3montree-dev/devguard/blob/main/SECURITY.md
+    contact:
+      name: L3montree development team
+      affiliation: L3montree GmbH
+      email: developer@l3montree.com
+      primary: true
+    comment: |
+      Report vulnerabilities via GitHub's Private Vulnerability Reporting:
+      https://github.com/l3montree-dev/devguard/security/advisories/new
+      or by email, encrypted with https://l3montree.com/developer@l3montree.com-0xA71508222B6168D5-pub.asc
+
+repository:
+  url: https://github.com/l3montree-dev/devguard
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: false
+  core-team:
+    - name: L3montree GmbH
+      affiliation: L3montree GmbH
+      email: info@l3montree.com
+      primary: true
+  license:
+    url: https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
+    expression: AGPL-3.0-or-later
+  documentation:
+    contributing-guide: https://github.com/l3montree-dev/devguard/blob/main/CONTRIBUTING.md
+    security-policy: https://github.com/l3montree-dev/devguard/blob/main/SECURITY.md
+  security:
+    assessments:
+      self:
+        comment: |
+          DevGuard scans itself with DevGuard on every push and release. The findings are public.
+        evidence: https://main.devguard.org/l3montree-cybersecurity/projects/devguard
+  release:
+    automated-pipeline: true
+    changelog: https://github.com/l3montree-dev/devguard/blob/main/CHANGELOG.md
+    distribution-points:
+      - uri: https://github.com/l3montree-dev/devguard/releases
+        comment: GitHub releases, including the devguard-scanner CLI binaries for Linux, macOS and Windows.
+      - uri: pkg:oci/devguard?repository_url=ghcr.io/l3montree-dev/devguard
+        comment: DevGuard API container image on GitHub.
+      - uri: pkg:oci/devguard?repository_url=registry.opencode.de/oci-community/images/l3montree/devguard/devguard
+        comment: DevGuard API container image on openCode.
+      - uri: pkg:oci/scanner?repository_url=ghcr.io/l3montree-dev/devguard/scanner
+        comment: devguard-scanner CLI container image on GitHub.
+      - uri: pkg:oci/scanner?repository_url=registry.opencode.de/oci-community/images/l3montree/devguard/devguard/scanner
+        comment: devguard-scanner CLI container image on openCode.
+      - uri: pkg:oci/kratos?repository_url=ghcr.io/l3montree-dev/devguard/kratos
+        comment: Patched Ory Kratos container image on GitHub, tagged with the upstream Kratos version.
+      - uri: pkg:oci/kratos?repository_url=registry.opencode.de/oci-community/images/l3montree/devguard/devguard/kratos
+        comment: Patched Ory Kratos container image on openCode, tagged with the upstream Kratos version.
+    attestations:
+      - name: Release VEX
+        predicate-uri: https://cyclonedx.org/vex
+        location: https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/{version}/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard%26arch%3Damd64%26tag%3D{version}-amd64/vex.json/
+        comment: CycloneDX VEX of the amd64 container image. Replace {version} with the URL-encoded release tag, e.g. v1.19.1.
+      - name: Release SBOM
+        predicate-uri: https://cyclonedx.org/bom
+        location: https://api.main.devguard.org/api/v1/public/e1f24270-6e68-4571-9168-9c151c639c97/refs/{version}/artifacts/pkg%3Aoci%2Fdevguard%3Frepository_url%3Dghcr.io%2Fl3montree-dev%2Fdevguard%26arch%3Damd64%26tag%3D{version}-amd64/sbom.json/
+        comment: CycloneDX SBOM of the amd64 container image. Replace {version} with the URL-encoded release tag, e.g. v1.19.1.

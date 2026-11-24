@@ -60,7 +60,7 @@ func TestApplyRulesToExistingIdempotent(t *testing.T) {
 	assert.Len(t, events, 1, "first call should create exactly 1 event")
 
 	// Second call with the same vulns — should NOT create another event
-	// BUG: the in-memory vuln.Events is never updated, so isVexEventAlreadyApplied
+	// BUG: the in-memory vuln.Events is never updated, so shouldApplyVexEvent
 	// does not see the event from the first call, and a duplicate is created.
 	_, events, err = services.ApplyVEXRulesToVulns(context.Background(), []models.VEXRule{rule}, vulns)
 	require.NoError(t, err)

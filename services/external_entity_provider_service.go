@@ -369,6 +369,8 @@ func (s externalEntityProviderService) CollectGarbage(ctx context.Context) error
 		// WHERE c.reached NOT IN ('role::owner', 'role::admin', 'role::member')
 		// those are org scoped roles - project roles have the format project::<project_id>|role::<role_name> and asset roles have the format asset::<asset_id>|role::<role_name>
 		// thus if we find an org admin or an org owner, those won't keep the project or asset alive
+		// only collect entities of providers which also manage the membership of the org (e.g. gitlab orgs).
+		// providers like the k8s image inventory only push content into a regular org and clean up on their own
 
 		assetsDeleted := tx.Exec(`
 WITH RECURSIVE closure AS (
@@ -387,9 +389,11 @@ reachable_assets AS (
     WHERE reached LIKE 'asset::%|role::member' OR reached LIKE 'asset::%|role::admin'
 )
 DELETE FROM assets a
-USING projects p
+USING projects p, organizations o
 WHERE p.id = a.project_id
+AND o.id = p.organization_id
 AND a.external_entity_provider_id IS NOT NULL
+AND a.external_entity_provider_id = o.external_entity_provider_id
 AND NOT EXISTS (
     SELECT 1 FROM reachable_assets ra
     WHERE ra.domain = 'domain::' || p.organization_id
@@ -417,7 +421,10 @@ reachable_projects AS (
     WHERE reached LIKE 'project::%|role::member' OR reached LIKE 'project::%|role::admin'
 )
 DELETE FROM projects p
-WHERE p.external_entity_provider_id IS NOT NULL
+USING organizations o
+WHERE o.id = p.organization_id
+AND p.external_entity_provider_id IS NOT NULL
+AND p.external_entity_provider_id = o.external_entity_provider_id
 AND NOT EXISTS (
     SELECT 1 FROM reachable_projects rp
     WHERE rp.domain = 'domain::' || p.organization_id

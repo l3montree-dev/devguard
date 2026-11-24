@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
@@ -375,25 +376,32 @@ func (runner *DaemonRunner) finishTx(tx shared.DB) {
 }
 
 func (runner *DaemonRunner) deleteOldAssetVersions(ctx context.Context, a *assetWithProjectAndOrg) error {
-	tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
-	deleted, err := runner.assetVersionRepository.DeleteOldAssetVersionsOfAsset(ctx, tx, a.asset.ID, 7)
+	toDelete, err := celrules.AssetVersionsToDelete(a.asset.AssetVersionRetentionPolicy, a.assetVersions)
 	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("could not delete old asset versions: %w", err)
+		// an invalid policy must not stop the remaining pipeline steps - nothing gets deleted
+		slog.Error("could not apply asset version retention policy", "assetID", a.asset.ID, "err", err)
+		return nil
+	}
+	if len(toDelete) == 0 {
+		return nil
+	}
+
+	tx := runner.db.Begin() // nosemgrep: tx-begin-without-defer-rollback
+	for i := range toDelete {
+		if err := runner.assetVersionRepository.Delete(ctx, tx, &toDelete[i]); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("could not delete asset version %s: %w", toDelete[i].Name, err)
+		}
 	}
 	runner.finishTx(tx)
-	if deleted > 0 && !runner.debugOptions.DryRun {
+	if !runner.debugOptions.DryRun {
 		events.NotifyAssetVersionDeleted(ctx, runner.broker, a.asset.ID)
 	}
 
-	// Remove just-deleted versions from the in-memory slice.
-	// DeleteOldAssetVersionsOfAsset deletes branch versions with
-	// last_accessed_at older than 7 days. Without this filter, the following
-	// inline steps iterate over stale asset versions and artifacts that no
-	// longer exist in the DB.
-	cutoff := time.Now().AddDate(0, 0, -7)
+	// without this filter, the following inline steps iterate over asset versions and artifacts that no longer exist in the DB
+	deletedIDs := utils.Map(toDelete, func(av models.AssetVersion) uuid.UUID { return av.ID })
 	a.assetVersions = utils.Filter(a.assetVersions, func(av models.AssetVersion) bool {
-		return av.DefaultBranch || av.Type != models.AssetVersionBranch || !av.LastAccessedAt.Before(cutoff)
+		return !slices.Contains(deletedIDs, av.ID)
 	})
 	return nil
 }
@@ -541,7 +549,7 @@ func (runner *DaemonRunner) applyVEXRules(ctx context.Context, asset models.Asse
 	}
 
 	for state, rulesForState := range rulesByState {
-		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, state)
+		representativeVulns, err := runner.dependencyVulnRepository.GetVulnsDistinctBySignature(ctx, runner.db, asset.ID, nil, state)
 		if err != nil {
 			slog.Error("failed to fetch existing vulns for asset", "error", err, "assetID", asset.ID, "state", state)
 			continue

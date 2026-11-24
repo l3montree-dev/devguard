@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.secrets (
     CONSTRAINT exactly_one_owner CHECK (
         num_nonnulls(org_id, project_id, asset_id) = 1
     ),
-    CONSTRAINT secrets_name_format CHECK (name ~ '^[a-z0-9_]+$')
+    CONSTRAINT secrets_name_format CHECK (name ~ '^[a-zA-Z0-9_]+$')
 );
 CREATE UNIQUE INDEX IF NOT EXISTS secrets_unique_org_id_name
     ON public.secrets (org_id, name)

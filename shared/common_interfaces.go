@@ -121,6 +121,7 @@ type ProjectRepository interface {
 	Create(ctx context.Context, tx DB, project *models.Project) error
 	Activate(ctx context.Context, tx DB, projectID uuid.UUID) error
 	RecursivelyGetChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
+	GetAncestors(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjectsWithProviderID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string) ([]models.Project, error)
 	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
@@ -199,6 +200,7 @@ type AssetRepository interface {
 	ReadWithoutErrorLog(ctx context.Context, tx *gorm.DB, id uuid.UUID) (models.Asset, error)
 	ReadInProjectTree(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, rootProjectID uuid.UUID) (models.Asset, error)
 	GetOrgProjectAssetSlugsByAssetID(ctx context.Context, tx DB, assetID uuid.UUID) (string, string, string, error)
+	RemoveRepositoryConnectionByPrefix(ctx context.Context, tx DB, repositoryIDPrefix string) error
 }
 
 type AttestationRepository interface {
@@ -303,7 +305,7 @@ type DependencyVulnRepository interface {
 	GetAllOpenVulnsByAssetIDWithoutEvents(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetAllOpenVulnsByAssetID(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
 	GetOpenVulnsDistinctBySignatureWithoutUpstreamRecommendation(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
-	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
+	GetVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, assetVersionID *uuid.UUID, state dtos.VulnState) ([]models.DependencyVuln, error)
 	GetVulnsByAssetSignatures(ctx context.Context, tx *gorm.DB, assetSignatures []int64) ([]models.DependencyVuln, error)
 	GetOpenVulnsDistinctBySignatureIn(ctx context.Context, tx *gorm.DB, signatures []int64) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsDistinctBySignature(ctx context.Context, tx *gorm.DB, batchSize int) iter.Seq2[[]models.DependencyVuln, error]
@@ -549,8 +551,7 @@ type AssetVersionRepository interface {
 	GetDefaultAssetVersion(ctx context.Context, tx DB, assetID uuid.UUID) (models.AssetVersion, error)
 	GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	UpdateAssetDefaultBranch(ctx context.Context, tx DB, assetID uuid.UUID, defaultBranch string) error
-	DeleteOldAssetVersions(ctx context.Context, tx DB, day int) (int64, error)
-	DeleteOldAssetVersionsOfAsset(ctx context.Context, tx DB, assetID uuid.UUID, day int) (int64, error)
+	UpdateLastUploadAt(ctx context.Context, tx DB, assetVersion *models.AssetVersion) error
 	GetAmountOfAssetVersionsInOrg(ctx context.Context, tx DB, orgID uuid.UUID) (int, error)
 	FindUpstreamVEXRuleApplicableAssetVersions(ctx context.Context, tx DB) ([]models.AssetVersion, error)
 }
@@ -637,6 +638,14 @@ type JiraIntegrationRepository interface {
 	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.JiraIntegration, error)
 }
 
+type RedmineIntegrationRepository interface {
+	Save(ctx context.Context, tx DB, model *models.RedmineIntegration) error
+	Read(ctx context.Context, tx DB, id uuid.UUID) (models.RedmineIntegration, error)
+	FindByOrganizationID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.RedmineIntegration, error)
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.RedmineIntegration, error)
+}
+
 type WebhookIntegrationRepository interface {
 	Save(ctx context.Context, tx DB, model *models.WebhookIntegration) error
 	Read(ctx context.Context, tx DB, id uuid.UUID) (models.WebhookIntegration, error)
@@ -649,13 +658,13 @@ type WebhookIntegrationRepository interface {
 type SecretRepository interface {
 	Save(ctx context.Context, tx DB, model *models.Secret) error
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
-	FindVisible(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error)
+	All(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error)
 	DeleteOwned(ctx context.Context, tx DB, id, orgID uuid.UUID, projectID, assetID *uuid.UUID) error
 }
 
 type SecretService interface {
-	Resolve(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, name string) (string, error)
-	ProjectChain(ctx context.Context, projectID *uuid.UUID) ([]models.Project, error)
+	ReplaceSecretsInString(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string, payload string) (string, error)
+	GetSecrets(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string) ([]dtos.SecretDTO, error)
 }
 
 type GitlabIntegrationRepository interface {

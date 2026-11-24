@@ -59,10 +59,10 @@ type MavenRegistryConfig struct {
 }
 
 type RegistryAuth struct {
-	Type     string `yaml:"type" validate:"required,oneof=token login"`
+	Type     string `yaml:"type" validate:"required,oneof=token basic-auth"`
 	Token    string `yaml:"token" validate:"required_if=Type token,omitempty,startswith=$"`
-	Username string `yaml:"username" validate:"required_if=Type login"`
-	Password string `yaml:"password" validate:"required_if=Type login,omitempty,startswith=$"`
+	Username string `yaml:"username" validate:"required_if=Type basic-auth"`
+	Password string `yaml:"password" validate:"required_if=Type basic-auth,omitempty,startswith=$"`
 }
 
 type NpmRegistryConfigs []NpmRegistryConfig
@@ -149,14 +149,6 @@ func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 			}
 			(*r)[eco] = config
 		case "npm":
-			if value.Kind == yaml.ScalarNode {
-				var url string
-				if err := value.Decode(&url); err != nil {
-					return fmt.Errorf("registries.%s: %w", eco, err)
-				}
-				(*r)[eco] = NpmRegistryConfigs{{URLRegistryConfig: URLRegistryConfig{URL: url}}}
-				continue
-			}
 			var config NpmRegistryConfigs
 			if err := value.Decode(&config); err != nil {
 				return fmt.Errorf("registries.%s: %w", eco, err)
