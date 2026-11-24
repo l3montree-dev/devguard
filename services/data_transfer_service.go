@@ -67,8 +67,9 @@ type scopeFilter struct {
 
 type tableProperties struct {
 	filters          []scopeFilter
-	importOrder      int  // tables only reference tables on lower import order values
-	conflictsAllowed bool // true = on conflict do nothing, else fail on conflict
+	importOrder      int      // tables only reference tables on lower import order values
+	conflictsAllowed bool     // true = on conflict do nothing, else fail on conflict
+	clearedColumns   []string // instance specific columns which are not exported, they are imported as NULL
 }
 
 // shortcut for common scope filters
@@ -80,14 +81,14 @@ var (
 // all tables with a simple syntax, keyed by table name
 var tablesToSync = map[string]tableProperties{
 	// org level
-	"organizations":       {importOrder: 0, filters: []scopeFilter{{column: "id", ids: "orgIDs", arrayType: "uuid[]"}}},
-	"projects":            {importOrder: 1, filters: []scopeFilter{{column: "id", ids: "projectIDs", arrayType: "uuid[]"}}},
+	"organizations":       {importOrder: 0, clearedColumns: []string{"external_entity_provider_id"}, filters: []scopeFilter{{column: "id", ids: "orgIDs", arrayType: "uuid[]"}}},
+	"projects":            {importOrder: 1, clearedColumns: []string{"external_entity_provider_id", "external_entity_id"}, filters: []scopeFilter{{column: "id", ids: "projectIDs", arrayType: "uuid[]"}}},
 	"compliance_postures": {importOrder: 4, filters: []scopeFilter{{column: "org_id", ids: "orgIDs", arrayType: "uuid[]"}}}, // only org exports, the posture id is a hash over the org so it does not make sense to export on project or asset level
 	"external_users":      {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "id", ids: "externalUserIDs", arrayType: "text[]"}}},
 	"external_user_orgs":  {importOrder: 1, filters: []scopeFilter{{column: "org_id", ids: "orgIDs", arrayType: "uuid[]"}}},
 
 	// project level
-	"assets": {importOrder: 2, filters: []scopeFilter{{column: "id", ids: "assetIDs", arrayType: "uuid[]"}}},
+	"assets": {importOrder: 2, clearedColumns: []string{"external_entity_provider_id", "external_entity_id"}, filters: []scopeFilter{{column: "id", ids: "assetIDs", arrayType: "uuid[]"}}},
 
 	// asset level
 	"external_references": {importOrder: 3, filters: []scopeFilter{assetScope}},
@@ -412,7 +413,13 @@ func sqlFromTableProperties(tableID string, properties tableProperties, scope ex
 		args = append(args, ids)
 		conditions = append(conditions, fmt.Sprintf("t.%s = ANY($%d::%s)", pgx.Identifier{filter.column}.Sanitize(), len(args), filter.arrayType))
 	}
-	return fmt.Sprintf("SELECT row_to_json(t) FROM %s t WHERE %s", pgx.Identifier{tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
+
+	selection := "row_to_json(t)"
+	if len(properties.clearedColumns) > 0 {
+		args = append(args, properties.clearedColumns)
+		selection = fmt.Sprintf("to_jsonb(t) - $%d::text[]", len(args))
+	}
+	return fmt.Sprintf("SELECT %s FROM %s t WHERE %s", selection, pgx.Identifier{tableID}.Sanitize(), strings.Join(conditions, " OR ")), args, nil
 }
 
 // recursively collect all id sets in order: first entities, then direct referenced tables and lastly indirect referenced tables
