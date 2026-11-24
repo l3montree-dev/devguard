@@ -22,7 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/l3montree-dev/devguard/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -32,7 +31,7 @@ func newComponentRiskVuln(componentPurl, cveID string, cvss float32, risk float6
 		CVEID:          cveID,
 		CVE:            &models.CVE{CVE: cveID, CVSS: cvss},
 		ComponentPurl:  componentPurl,
-		RiskAssessment: utils.Ptr(risk),
+		RiskAssessment: new(risk),
 	}
 }
 
