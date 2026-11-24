@@ -52,6 +52,12 @@ type NpmRegistryConfig struct {
 	Auth              *RegistryAuth `yaml:"auth"`
 }
 
+// MavenRegistryConfig is a modified RegistryConfig to allow additional auth
+type MavenRegistryConfig struct {
+	URLRegistryConfig `yaml:",inline"`
+	Auth              *RegistryAuth `yaml:"auth"`
+}
+
 type RegistryAuth struct {
 	Type     string `yaml:"type" validate:"required,oneof=token basic-auth"`
 	Token    string `yaml:"token" validate:"required_if=Type token,omitempty,startswith=$"`
@@ -112,6 +118,15 @@ func (r RegistryConfigs) NpmConfig() NpmRegistryConfigs {
 	return config
 }
 
+func (r RegistryConfigs) MavenConfig() *MavenRegistryConfig {
+	if config, ok := r["maven"]; ok {
+		if mavenConfig, ok := config.(MavenRegistryConfig); ok {
+			return &mavenConfig
+		}
+	}
+	return nil
+}
+
 func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]yaml.Node
 	if err := node.Decode(&raw); err != nil {
@@ -139,7 +154,21 @@ func (r *RegistryConfigs) UnmarshalYAML(node *yaml.Node) error {
 				return fmt.Errorf("registries.%s: %w", eco, err)
 			}
 			(*r)[eco] = config
-		case "go", "pypi", "maven", "composer":
+		case "maven":
+			if value.Kind == yaml.ScalarNode {
+				var url string
+				if err := value.Decode(&url); err != nil {
+					return fmt.Errorf("registries.%s: %w", eco, err)
+				}
+				(*r)[eco] = MavenRegistryConfig{URLRegistryConfig: URLRegistryConfig{URL: url}}
+				continue
+			}
+			var config MavenRegistryConfig
+			if err := value.Decode(&config); err != nil {
+				return fmt.Errorf("registries.%s: %w", eco, err)
+			}
+			(*r)[eco] = config
+		case "go", "pypi", "composer":
 			var url string
 			if err := value.Decode(&url); err != nil {
 				return fmt.Errorf("registries.%s: %w", eco, err)

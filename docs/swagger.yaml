@@ -8753,22 +8753,16 @@ components:
       properties:
         id:
           type: string
-        inherited:
-          type: boolean
         inheritedFrom:
           type: string
         name:
           type: string
-        overridden:
-          type: boolean
         scope:
           $ref: '#/components/schemas/dtos.SecretScope'
       required:
       - id
-      - inherited
       - inheritedFrom
       - name
-      - overridden
       - scope
       type: object
     dtos.SecretScope:
@@ -11068,16 +11062,32 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
+      - -9223372036854775808
+      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -11118,16 +11128,32 @@ components:
       - Second
       - Minute
       - Hour
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+      - minDuration
+      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
+      - minDuration
+      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond

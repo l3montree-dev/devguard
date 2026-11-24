@@ -65,3 +65,35 @@ func TestDependencyProxyConfigNpmRegistries(t *testing.T) {
 		}
 	})
 }
+
+func TestDependencyProxyConfigMavenRegistry(t *testing.T) {
+	t.Run("parses the legacy string format", func(t *testing.T) {
+		var cfg dtos.DependencyProxyConfig
+		if err := yaml.Unmarshal([]byte("registries:\n  maven: https://nexus.firma.de\n"), &cfg); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		maven := cfg.Registries.MavenConfig()
+		if maven == nil || maven.URL != "https://nexus.firma.de" || maven.Auth != nil {
+			t.Fatalf("expected legacy registry without auth, got %+v", maven)
+		}
+	})
+
+	t.Run("accepts a registry with login auth", func(t *testing.T) {
+		content := "registries:\n  maven:\n    url: https://nexus.firma.de\n    auth:\n      type: login\n      username: ci-user\n      password: $nexus_password\n"
+		if err := dtos.ValidateDependencyProxyConfigFile([]byte(content)); err != nil {
+			t.Fatalf("expected valid, got %v", err)
+		}
+	})
+
+	t.Run("rejects invalid entries", func(t *testing.T) {
+		for _, content := range []string{
+			"registries:\n  maven:\n    url: not-a-url\n",
+			"registries:\n  maven:\n    url: https://nexus.firma.de\n    auth:\n      type: token\n      token: plaintext\n",
+			"registries:\n  maven:\n    url: https://nexus.firma.de\n    auth:\n      type: login\n      username: ci-user\n",
+		} {
+			if err := dtos.ValidateDependencyProxyConfigFile([]byte(content)); err == nil {
+				t.Fatalf("expected validation error for %q", content)
+			}
+		}
+	})
+}
