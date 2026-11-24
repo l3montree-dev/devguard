@@ -78,7 +78,7 @@ func newMinReleaseAgeController(t *testing.T, minReleaseAge int) (*DependencyPro
 		projectRepository:      projectRepository,
 		orgRepository:          orgRepository,
 		secretService:          configSecretService,
-		maliciousChecker:      maliciousChecker,
+		maliciousChecker:       maliciousChecker,
 		caches:                 newSecretCaches(t.TempDir(), 10),
 		client:                 http.DefaultClient,
 		configInFlight:         &singleflight.Group{},
