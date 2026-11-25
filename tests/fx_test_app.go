@@ -203,8 +203,8 @@ func NewTestApp(t testing.TB, db shared.DB, pool *pgxpool.Pool, opts *TestAppOpt
 	}
 
 	if opts.DryRunIntegrations {
-		fxOptions = append(fxOptions, fx.Decorate(func(aggregate shared.IntegrationAggregate) shared.IntegrationAggregate {
-			return integrations.NewDryRunIntegration(aggregate)
+		fxOptions = append(fxOptions, fx.Decorate(func(aggregate shared.IntegrationAggregate, assetVersionRepository shared.AssetVersionRepository) shared.IntegrationAggregate {
+			return integrations.NewDryRunIntegration(aggregate, assetVersionRepository)
 		}))
 	}
 

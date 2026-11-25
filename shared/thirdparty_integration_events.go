@@ -109,9 +109,7 @@ type AssetObject struct {
 	LastDastScan      *time.Time `json:"lastDastScan"`
 	SigningPubKey     *string    `json:"signingPubKey"`
 
-	EnableTicketRange            bool     `json:"enableTicketRange"`
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
+	TicketRangeCelExpression *string `json:"ticketRangeCelExpression"`
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
@@ -166,9 +164,8 @@ func ToAssetObject(a models.Asset) AssetObject {
 		RepositoryID:   a.RepositoryID,
 		RepositoryName: a.RepositoryName,
 
-		SigningPubKey:                a.SigningPubKey,
-		CVSSAutomaticTicketThreshold: a.CVSSAutomaticTicketThreshold,
-		RiskAutomaticTicketThreshold: a.RiskAutomaticTicketThreshold,
+		SigningPubKey:            a.SigningPubKey,
+		TicketRangeCelExpression: a.TicketRangeCelExpression,
 
 		ExternalEntityProviderID: a.ExternalEntityProviderID,
 		ExternalEntityID:         a.ExternalEntityID,

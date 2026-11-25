@@ -39,21 +39,20 @@ type Asset struct {
 	Project       Project        `json:"project" gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
 	Importance    int            `json:"importance" gorm:"default:1;"`
 	dtos.Environmental
-	RepositoryID                 *string             `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
-	RepositoryName               *string             `json:"repositoryName" gorm:"type:text;"`
-	CVSSAutomaticTicketThreshold *float64            `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
-	RiskAutomaticTicketThreshold *float64            `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
-	SigningPubKey                *string             `json:"signingPubKey" gorm:"type:text;"`
-	ConfigFiles                  databasetypes.JSONB `json:"configFiles" gorm:"type:jsonb"`
-	WebhookSecret                *uuid.UUID          `json:"webhookSecret" gorm:"type:uuid;default:gen_random_uuid();"`
-	ExternalEntityID             *string             `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	ExternalEntityProviderID     *string             `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	RepositoryProvider           *string             `json:"repositoryProvider" gorm:"type:text;"`
-	Metadata                     databasetypes.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
-	IsPublic                     bool                `json:"isPublic" gorm:"default:false;not null;"`
-	ParanoidMode                 bool                `json:"paranoidMode" gorm:"default:false;not null;"`
-	SharesInformation            bool                `json:"shareInformation" gorm:"default:false;not null;"`
-	AssetVersionRetentionPolicy  string              `json:"assetVersionRetentionPolicy" gorm:"type:text;not null;default:(-)"` // the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy
+	RepositoryID                *string             `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
+	RepositoryName              *string             `json:"repositoryName" gorm:"type:text;"`
+	TicketRangeCelExpression    *string             `json:"ticketRangeCelExpression" gorm:"type:text;"`
+	SigningPubKey               *string             `json:"signingPubKey" gorm:"type:text;"`
+	ConfigFiles                 databasetypes.JSONB `json:"configFiles" gorm:"type:jsonb"`
+	WebhookSecret               *uuid.UUID          `json:"webhookSecret" gorm:"type:uuid;default:gen_random_uuid();"`
+	ExternalEntityID            *string             `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	ExternalEntityProviderID    *string             `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	RepositoryProvider          *string             `json:"repositoryProvider" gorm:"type:text;"`
+	Metadata                    databasetypes.JSONB `json:"metadata" gorm:"column:metadata;type:jsonb;"`
+	IsPublic                    bool                `json:"isPublic" gorm:"default:false;not null;"`
+	ParanoidMode                bool                `json:"paranoidMode" gorm:"default:false;not null;"`
+	SharesInformation           bool                `json:"shareInformation" gorm:"default:false;not null;"`
+	AssetVersionRetentionPolicy string              `json:"assetVersionRetentionPolicy" gorm:"type:text;not null;default:(-)"` // the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy
 
 	State AssetState `json:"state" gorm:"type:text;default:'active';not null;"`
 }

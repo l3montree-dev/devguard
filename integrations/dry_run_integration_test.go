@@ -64,7 +64,7 @@ func dryRunTestAsset() models.Asset {
 func TestDryRunIntegration(t *testing.T) {
 	t.Run("CreateIssue does not delegate to real integration", func(t *testing.T) {
 		real := setupNeverCalledIntegration(t)
-		dr := NewDryRunIntegration(real)
+		dr := NewDryRunIntegration(real, mocks.NewAssetVersionRepository(t))
 
 		vuln := &models.DependencyVuln{}
 		vuln.ID = uuid.New()
@@ -74,7 +74,9 @@ func TestDryRunIntegration(t *testing.T) {
 
 	t.Run("UpdateIssue does not delegate to real integration", func(t *testing.T) {
 		real := setupNeverCalledIntegration(t)
-		dr := NewDryRunIntegration(real)
+		assetVersionRepository := mocks.NewAssetVersionRepository(t)
+		assetVersionRepository.On("Read", mock.Anything, mock.Anything, mock.Anything).Return(models.AssetVersion{DefaultBranch: true}, nil)
+		dr := NewDryRunIntegration(real, assetVersionRepository)
 
 		vuln := &models.DependencyVuln{}
 		vuln.ID = uuid.New()
@@ -84,7 +86,7 @@ func TestDryRunIntegration(t *testing.T) {
 
 	t.Run("CreateLabels does not delegate to real integration", func(t *testing.T) {
 		real := setupNeverCalledIntegration(t)
-		dr := NewDryRunIntegration(real)
+		dr := NewDryRunIntegration(real, mocks.NewAssetVersionRepository(t))
 
 		err := dr.CreateLabels(context.Background(), dryRunTestAsset())
 		assert.NoError(t, err)
@@ -92,7 +94,7 @@ func TestDryRunIntegration(t *testing.T) {
 
 	t.Run("CompareIssueStates uses read-only GetExcessTicketIDs and never closes tickets", func(t *testing.T) {
 		real := setupNeverCalledIntegration(t)
-		dr := NewDryRunIntegration(real)
+		dr := NewDryRunIntegration(real, mocks.NewAssetVersionRepository(t))
 
 		ticketID := "abc/42"
 		vulns := []models.DependencyVuln{

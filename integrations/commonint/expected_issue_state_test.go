@@ -10,38 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShouldCreateIssue(t *testing.T) {
-	t.Run("should return false if the assetVersion is not the default branch", func(t *testing.T) {
-		assetVersion := models.AssetVersion{
-			DefaultBranch: false,
-		}
-
-		defaultBranch := commonint.ShouldCreateIssues(assetVersion)
-		if defaultBranch {
-			t.Fail()
-		}
-	})
-	t.Run("should return true if the assetVersion is the default branch", func(t *testing.T) {
-		assetVersion := models.AssetVersion{
-			DefaultBranch: true,
-		}
-
-		defaultBranch := commonint.ShouldCreateIssues(assetVersion)
-		if !defaultBranch {
-			t.Fail()
-		}
-	})
-
-}
-
 func TestGetExpectedIssueState(t *testing.T) {
-	cvssThreshold := 7.0
-	riskThreshold := 0.5
+	cvssRule := `vuln.cve != null && vuln.cve.cvss >= 7`
+	riskRule := `vuln.riskAssessment != null && vuln.riskAssessment >= 0.5`
+	bothRule := "(" + cvssRule + ") || (" + riskRule + ")"
+	defaultBranchRule := `vuln.ref.defaultBranch == true && vuln.cve != null && vuln.cve.cvss >= 7`
+	defaultBranch := models.AssetVersion{DefaultBranch: true}
 
-	makeAsset := func(cvss, risk *float64) models.Asset {
+	makeAsset := func(cel *string) models.Asset {
 		return models.Asset{
-			CVSSAutomaticTicketThreshold: cvss,
-			RiskAutomaticTicketThreshold: risk,
+			TicketRangeCelExpression: cel,
 		}
 	}
 	makeDepVuln := func(state dtos.VulnState, cvss float32, risk *float64, manual bool) *models.DependencyVuln {
@@ -55,56 +33,69 @@ func TestGetExpectedIssueState(t *testing.T) {
 		}
 	}
 
-	t.Run("Ticket should stay open if the cvss threshold is still exceeded", func(t *testing.T) {
-		asset := makeAsset(&cvssThreshold, nil)
+	t.Run("Ticket should stay open if the cvss rule still matches", func(t *testing.T) {
+		asset := makeAsset(&cvssRule)
 		dep := makeDepVuln(dtos.VulnStateOpen, 8.0, nil, false)
-		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("Ticket should stay open if the risk threshold is still exceeded", func(t *testing.T) {
-		asset := makeAsset(nil, &riskThreshold)
+	t.Run("Ticket should stay open if the risk rule still matches", func(t *testing.T) {
+		asset := makeAsset(&riskRule)
 		risk := 0.7
 		dep := makeDepVuln(dtos.VulnStateOpen, 0.0, &risk, false)
-		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("Ticket should stay open, even if the risk threshold is not exceeded anymore - BUT the user created it manually.", func(t *testing.T) {
-		asset := makeAsset(&cvssThreshold, &riskThreshold)
+	t.Run("Ticket should stay open, even if the rule does not match anymore - BUT the user created it manually.", func(t *testing.T) {
+		asset := makeAsset(&bothRule)
 		risk := 0.1
 		dep := makeDepVuln(dtos.VulnStateOpen, 1.0, &risk, true)
-		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("Ticket should get closed, if the ticket was not manually created and the thresholds are not exceeded anymore", func(t *testing.T) {
-		asset := makeAsset(&cvssThreshold, &riskThreshold)
+	t.Run("Ticket should get closed, if the ticket was not manually created and the rule does not match anymore", func(t *testing.T) {
+		asset := makeAsset(&bothRule)
 		risk := 0.1
 		dep := makeDepVuln(dtos.VulnStateOpen, 1.0, &risk, false)
-		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("Ticket should stay closed, if it is fixed but the thresholds are exceeded", func(t *testing.T) {
-		asset := makeAsset(&cvssThreshold, &riskThreshold)
+	t.Run("Ticket should stay closed, if it is fixed but the rule matches", func(t *testing.T) {
+		asset := makeAsset(&bothRule)
 		risk := 1.0
 		dep := makeDepVuln(dtos.VulnStateFixed, 10.0, &risk, false)
-		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("ticket should stay closed, if it is fixed and the thresholds are not exceeded (trivial)", func(t *testing.T) {
-		asset := makeAsset(&cvssThreshold, &riskThreshold)
+	t.Run("ticket should stay closed, if it is fixed and the rule does not match (trivial)", func(t *testing.T) {
+		asset := makeAsset(&bothRule)
 		risk := 0.1
 		dep := makeDepVuln(dtos.VulnStateFixed, 1.0, &risk, false)
-		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("Close the ticket if the thresholds are disabled and the ticket was not created manually", func(t *testing.T) {
-		asset := makeAsset(nil, nil)
+	t.Run("Close the ticket if the rule is disabled and the ticket was not created manually", func(t *testing.T) {
+		asset := makeAsset(nil)
 		dep := makeDepVuln(dtos.VulnStateOpen, 0.0, nil, false)
-		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 
-	t.Run("Keep the ticket open even if the thresholds dont exist anymore", func(t *testing.T) {
-		asset := makeAsset(nil, nil)
+	t.Run("Keep the ticket open even if the rule does not exist anymore", func(t *testing.T) {
+		asset := makeAsset(nil)
 		dep := makeDepVuln(dtos.VulnStateOpen, 0.0, nil, true)
-		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep))
+		assert.Equal(t, commonint.ExpectedIssueStateOpen, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
+	})
+
+	t.Run("Close the ticket if the rule only matches the default branch and the vuln is on another branch", func(t *testing.T) {
+		asset := makeAsset(&defaultBranchRule)
+		dep := makeDepVuln(dtos.VulnStateOpen, 9.0, nil, false)
+		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep, models.AssetVersion{DefaultBranch: false}))
+	})
+
+	t.Run("Close the ticket if the rule fails to evaluate", func(t *testing.T) {
+		rule := `vuln.cve.cvss >= 7`
+		asset := makeAsset(&rule)
+		dep := &models.DependencyVuln{Vulnerability: models.Vulnerability{State: dtos.VulnStateOpen}}
+		assert.Equal(t, commonint.ExpectedIssueStateClosed, commonint.GetExpectedIssueState(asset, dep, defaultBranch))
 	})
 }

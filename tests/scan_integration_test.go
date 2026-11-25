@@ -1723,7 +1723,7 @@ func TestTicketHandling(t *testing.T) {
 
 		t.Run("should open tickets for vulnerabilities if the risk threshold is exceeded", func(t *testing.T) {
 
-			asset.CVSSAutomaticTicketThreshold = new(7.0)
+			asset.TicketRangeCelExpression = new(`vuln.ref.defaultBranch == true && vuln.cve != null && vuln.cve.cvss >= 7`)
 			asset.RepositoryID = new(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)
@@ -1877,7 +1877,7 @@ func TestTicketHandling(t *testing.T) {
 		})
 		t.Run("should add the correct path to the component inside the ticket, even if the vulnerability is found by two scanners", func(t *testing.T) {
 			// Ensure asset has thresholds and integration set for ticket creation
-			asset.CVSSAutomaticTicketThreshold = new(7.0)
+			asset.TicketRangeCelExpression = new(`vuln.ref.defaultBranch == true && vuln.cve != null && vuln.cve.cvss >= 7`)
 			asset.RepositoryID = new(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
 			err = f.DB.Save(&asset).Error
 			assert.Nil(t, err)

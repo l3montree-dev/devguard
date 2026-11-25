@@ -5931,14 +5931,8 @@
                     "confidentialityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "description": {
                         "type": "string"
-                    },
-                    "enableTicketRange": {
-                        "type": "boolean"
                     },
                     "externalBotUserLink": {
                         "type": "string"
@@ -6007,9 +6001,6 @@
                     "repositoryProvider": {
                         "type": "string"
                     },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "sharesInformation": {
                         "type": "boolean"
                     },
@@ -6021,6 +6012,9 @@
                     },
                     "state": {
                         "type": "string"
+                    },
+                    "ticketRangeCelExpression": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -6029,9 +6023,7 @@
                     "avatar",
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
-                    "cvssAutomaticTicketThreshold",
                     "description",
-                    "enableTicketRange",
                     "externalBotUserLink",
                     "externalEntityId",
                     "externalEntityProviderId",
@@ -6053,11 +6045,11 @@
                     "repositoryId",
                     "repositoryName",
                     "repositoryProvider",
-                    "riskAutomaticTicketThreshold",
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
-                    "state"
+                    "state",
+                    "ticketRangeCelExpression"
                 ],
                 "type": "object"
             },
@@ -6087,15 +6079,9 @@
                     "confidentialityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "description": {
                         "maxLength": 4000,
                         "type": "string"
-                    },
-                    "enableTicketRange": {
-                        "type": "boolean"
                     },
                     "importance": {
                         "type": "integer"
@@ -6139,17 +6125,15 @@
                         ],
                         "type": "string"
                     },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
+                    "ticketRangeCelExpression": {
+                        "type": "string"
                     }
                 },
                 "required": [
                     "availabilityRequirement",
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
-                    "cvssAutomaticTicketThreshold",
                     "description",
-                    "enableTicketRange",
                     "importance",
                     "integrityRequirement",
                     "modifiedAttackComplexity",
@@ -6162,7 +6146,7 @@
                     "modifiedUserInteraction",
                     "name",
                     "repositoryProvider",
-                    "riskAutomaticTicketThreshold"
+                    "ticketRangeCelExpression"
                 ],
                 "type": "object"
             },
@@ -6183,14 +6167,8 @@
                     "confidentialityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "description": {
                         "type": "string"
-                    },
-                    "enableTicketRange": {
-                        "type": "boolean"
                     },
                     "externalBotUserLink": {
                         "type": "string"
@@ -6266,9 +6244,6 @@
                     "repositoryProvider": {
                         "type": "string"
                     },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "sharesInformation": {
                         "type": "boolean"
                     },
@@ -6280,6 +6255,9 @@
                     },
                     "state": {
                         "type": "string"
+                    },
+                    "ticketRangeCelExpression": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -6288,9 +6266,7 @@
                     "avatar",
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
-                    "cvssAutomaticTicketThreshold",
                     "description",
-                    "enableTicketRange",
                     "externalBotUserLink",
                     "externalEntityId",
                     "externalEntityProviderId",
@@ -6313,11 +6289,11 @@
                     "repositoryId",
                     "repositoryName",
                     "repositoryProvider",
-                    "riskAutomaticTicketThreshold",
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
-                    "state"
+                    "state",
+                    "ticketRangeCelExpression"
                 ],
                 "type": "object"
             },
@@ -6338,14 +6314,8 @@
                     "confidentialityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "description": {
                         "type": "string"
-                    },
-                    "enableTicketRange": {
-                        "type": "boolean"
                     },
                     "externalBotUserLink": {
                         "type": "string"
@@ -6421,9 +6391,6 @@
                     "repositoryProvider": {
                         "type": "string"
                     },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "sharesInformation": {
                         "type": "boolean"
                     },
@@ -6436,6 +6403,9 @@
                     "state": {
                         "type": "string"
                     },
+                    "ticketRangeCelExpression": {
+                        "type": "string"
+                    },
                     "webhookSecret": {
                         "type": "string"
                     }
@@ -6446,9 +6416,7 @@
                     "avatar",
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
-                    "cvssAutomaticTicketThreshold",
                     "description",
-                    "enableTicketRange",
                     "externalBotUserLink",
                     "externalEntityId",
                     "externalEntityProviderId",
@@ -6471,11 +6439,11 @@
                     "repositoryId",
                     "repositoryName",
                     "repositoryProvider",
-                    "riskAutomaticTicketThreshold",
                     "sharesInformation",
                     "signingPubKey",
                     "slug",
                     "state",
+                    "ticketRangeCelExpression",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -6539,15 +6507,9 @@
                         "additionalProperties": {},
                         "type": "object"
                     },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "description": {
                         "maxLength": 4000,
                         "type": "string"
-                    },
-                    "enableTicketRange": {
-                        "type": "boolean"
                     },
                     "integrityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
@@ -6602,11 +6564,11 @@
                         ],
                         "type": "string"
                     },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "sharesInformation": {
                         "type": "boolean"
+                    },
+                    "ticketRangeCelExpression": {
+                        "type": "string"
                     },
                     "webhookSecret": {
                         "maxLength": 1024,
@@ -6619,9 +6581,7 @@
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
                     "configFiles",
-                    "cvssAutomaticTicketThreshold",
                     "description",
-                    "enableTicketRange",
                     "integrityRequirement",
                     "isPublic",
                     "modifiedAttackComplexity",
@@ -6637,8 +6597,8 @@
                     "repositoryId",
                     "repositoryName",
                     "repositoryProvider",
-                    "riskAutomaticTicketThreshold",
                     "sharesInformation",
+                    "ticketRangeCelExpression",
                     "webhookSecret"
                 ],
                 "type": "object"
@@ -12810,9 +12770,6 @@
                     "createdAt": {
                         "type": "string"
                     },
-                    "cvssAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "description": {
                         "type": "string"
                     },
@@ -12890,9 +12847,6 @@
                     "repositoryProvider": {
                         "type": "string"
                     },
-                    "riskAutomaticTicketThreshold": {
-                        "type": "number"
-                    },
                     "shareInformation": {
                         "type": "boolean"
                     },
@@ -12904,6 +12858,9 @@
                     },
                     "state": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetState"
+                    },
+                    "ticketRangeCelExpression": {
+                        "type": "string"
                     },
                     "type": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetType"
@@ -12922,7 +12879,6 @@
                     "confidentialityRequirement",
                     "configFiles",
                     "createdAt",
-                    "cvssAutomaticTicketThreshold",
                     "description",
                     "externalEntityId",
                     "externalEntityProviderId",
@@ -12947,11 +12903,11 @@
                     "repositoryId",
                     "repositoryName",
                     "repositoryProvider",
-                    "riskAutomaticTicketThreshold",
                     "shareInformation",
                     "signingPubKey",
                     "slug",
                     "state",
+                    "ticketRangeCelExpression",
                     "type",
                     "updatedAt",
                     "webhookSecret"
@@ -14908,56 +14864,18 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14975,56 +14893,18 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",

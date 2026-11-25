@@ -240,6 +240,12 @@ func (a *AssetController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
+	if req.TicketRangeCelExpression != nil && *req.TicketRangeCelExpression != "" {
+		if _, err := celrules.CompileTicketRangeRule(*req.TicketRangeCelExpression); err != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid ticket range cel expression: %s", err.Error()))
+		}
+	}
+
 	project := shared.GetProject(ctx)
 
 	newAsset := transformer.AssetCreateRequestToModel(req, project.GetID())
@@ -363,6 +369,12 @@ func (a *AssetController) Update(ctx shared.Context) error {
 		}
 	}
 
+	if patchRequest.TicketRangeCelExpression != nil && *patchRequest.TicketRangeCelExpression != "" {
+		if _, err := celrules.CompileTicketRangeRule(*patchRequest.TicketRangeCelExpression); err != nil {
+			return echo.NewHTTPError(400, fmt.Sprintf("invalid ticket range cel expression: %s", err.Error()))
+		}
+	}
+
 	var changes []string
 	applyChange(&changes, "Confidentiality Requirement", &asset.ConfidentialityRequirement, patchRequest.ConfidentialityRequirement)
 	applyChange(&changes, "Integrity Requirement", &asset.IntegrityRequirement, patchRequest.IntegrityRequirement)
@@ -384,47 +396,16 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 	enableTicketRangeUpdated := false
 
-	if patchRequest.EnableTicketRange != nil && *patchRequest.EnableTicketRange {
-		if patchRequest.CVSSAutomaticTicketThreshold != nil {
-			if asset.CVSSAutomaticTicketThreshold != nil {
-				if !utils.CompareFirstTwoDecimals(*patchRequest.CVSSAutomaticTicketThreshold, *asset.CVSSAutomaticTicketThreshold) {
-					enableTicketRangeUpdated = true
-					asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
-				}
+	if patchRequest.TicketRangeCelExpression != nil {
+		oldExpr := utils.SafeDereference(asset.TicketRangeCelExpression)
+		if oldExpr != *patchRequest.TicketRangeCelExpression {
+			if *patchRequest.TicketRangeCelExpression == "" {
+				asset.TicketRangeCelExpression = nil
 			} else {
-				enableTicketRangeUpdated = true
-				asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+				asset.TicketRangeCelExpression = patchRequest.TicketRangeCelExpression
 			}
-		} else {
-			if asset.CVSSAutomaticTicketThreshold != nil {
-				enableTicketRangeUpdated = true
-				asset.CVSSAutomaticTicketThreshold = nil
-			}
+			enableTicketRangeUpdated = true
 		}
-
-		if patchRequest.RiskAutomaticTicketThreshold != nil {
-			if asset.RiskAutomaticTicketThreshold != nil {
-				if !utils.CompareFirstTwoDecimals(*patchRequest.RiskAutomaticTicketThreshold, *asset.RiskAutomaticTicketThreshold) {
-					enableTicketRangeUpdated = true
-					asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
-				}
-			} else {
-				enableTicketRangeUpdated = true
-				asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
-			}
-		} else {
-			if asset.RiskAutomaticTicketThreshold != nil {
-				enableTicketRangeUpdated = true
-				asset.RiskAutomaticTicketThreshold = nil
-			}
-		}
-
-	} else if patchRequest.EnableTicketRange != nil && !*patchRequest.EnableTicketRange {
-		// if the enableTicketRange is set to false, we do need to call the ticket sync
-		asset.CVSSAutomaticTicketThreshold = nil
-		asset.RiskAutomaticTicketThreshold = nil
-
-		enableTicketRangeUpdated = true
 	}
 
 	syncTickets := enableTicketRangeUpdated || len(changes) > 0

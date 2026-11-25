@@ -40,6 +40,7 @@ type RedmineIntegration struct {
 	firstPartyVulnRepository     shared.FirstPartyVulnRepository
 	orgRepository                shared.OrganizationRepository
 	projectRepository            shared.ProjectRepository
+	assetVersionRepository       shared.AssetVersionRepository
 	frontendURL                  string
 	utils.FireAndForgetSynchronizer
 }
@@ -52,6 +53,7 @@ func NewRedmineIntegration(redmineIntegrationRepository shared.RedmineIntegratio
 	firstPartyVulnRepository shared.FirstPartyVulnRepository,
 	orgRepository shared.OrganizationRepository,
 	projectRepository shared.ProjectRepository,
+	assetVersionRepository shared.AssetVersionRepository,
 	synchronizer utils.FireAndForgetSynchronizer) *RedmineIntegration {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -65,6 +67,7 @@ func NewRedmineIntegration(redmineIntegrationRepository shared.RedmineIntegratio
 		firstPartyVulnRepository:     firstPartyVulnRepository,
 		projectRepository:            projectRepository,
 		orgRepository:                orgRepository,
+		assetVersionRepository:       assetVersionRepository,
 		frontendURL:                  frontendURL,
 		FireAndForgetSynchronizer:    synchronizer,
 	}
@@ -425,7 +428,11 @@ func (i *RedmineIntegration) updateDependencyVulnTicket(
 	priority := riskToPriorityID(*settings, *dependencyVuln.RiskAssessment)
 	componentTree := FormatComponentTree(*settings, dependencyVuln)
 
-	expectedIssueState, err := expectedIssueStateToID(ctx, client, ticketID, *settings, commonint.GetExpectedIssueState(asset, dependencyVuln))
+	assetVersion, err := i.assetVersionRepository.Read(ctx, nil, dependencyVuln.GetAssetVersionID())
+	if err != nil {
+		return fmt.Errorf("could not read asset version: %w", err)
+	}
+	expectedIssueState, err := expectedIssueStateToID(ctx, client, ticketID, *settings, commonint.GetExpectedIssueState(asset, dependencyVuln, assetVersion))
 	if err != nil {
 		slog.Warn("failed to get expected issue state for dependency vuln, status will not be updated", "err", err, "vulnID", dependencyVuln.GetID(), "ticketID", ticketID)
 		expectedIssueState = nil

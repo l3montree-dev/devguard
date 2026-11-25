@@ -17,14 +17,15 @@ import (
 // Read-only operations are forwarded to the real implementation so log
 // output reflects actual remote state.
 type dryRunIntegration struct {
-	real shared.IntegrationAggregate
+	real                   shared.IntegrationAggregate
+	assetVersionRepository shared.AssetVersionRepository
 }
 
 var _ shared.IntegrationAggregate = &dryRunIntegration{}
 
-func NewDryRunIntegration(real shared.IntegrationAggregate) shared.IntegrationAggregate {
+func NewDryRunIntegration(real shared.IntegrationAggregate, assetVersionRepository shared.AssetVersionRepository) shared.IntegrationAggregate {
 	slog.Warn("[DRY-RUN] ticket operations are disabled — no writes to any external system will occur")
-	return &dryRunIntegration{real: real}
+	return &dryRunIntegration{real: real, assetVersionRepository: assetVersionRepository}
 }
 
 func (d *dryRunIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string, userAgent *string) error {
@@ -36,7 +37,11 @@ func (d *dryRunIntegration) UpdateIssue(ctx context.Context, org models.Org, pro
 	var expectedState string
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		expectedState = string(commonint.GetExpectedIssueState(asset, v))
+		assetVersion, err := d.assetVersionRepository.Read(ctx, nil, v.GetAssetVersionID())
+		if err != nil {
+			return fmt.Errorf("could not read asset version: %w", err)
+		}
+		expectedState = string(commonint.GetExpectedIssueState(asset, v, assetVersion))
 	case *models.FirstPartyVuln:
 		expectedState = string(commonint.GetExpectedIssueStateForFirstPartyVuln(asset, v))
 	default:

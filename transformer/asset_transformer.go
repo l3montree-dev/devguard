@@ -67,28 +67,27 @@ func AssetModelToDTO(asset models.Asset) dtos.Asset {
 		botUserLink = getBotUserLinkForExternalProvider(*asset.ExternalEntityProviderID)
 	}
 	return dtos.Asset{
-		ID:                           asset.ID,
-		Name:                         asset.Name,
-		Avatar:                       asset.Avatar,
-		Slug:                         asset.Slug,
-		Description:                  asset.Description,
-		ProjectID:                    asset.ProjectID,
-		Environmental:                asset.Environmental,
-		RepositoryID:                 asset.RepositoryID,
-		RepositoryName:               asset.RepositoryName,
-		SigningPubKey:                asset.SigningPubKey,
-		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
-		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
-		AssetVersions:                utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
-		ExternalEntityProviderID:     asset.ExternalEntityProviderID,
-		ExternalEntityID:             asset.ExternalEntityID,
-		ExternalBotUserLink:          botUserLink,
-		RepositoryProvider:           asset.RepositoryProvider,
-		IsPublic:                     asset.IsPublic,
-		ParanoidMode:                 asset.ParanoidMode,
-		SharesInformation:            asset.SharesInformation,
-		State:                        string(asset.State),
-		AssetVersionRetentionPolicy:  asset.AssetVersionRetentionPolicy,
+		ID:                          asset.ID,
+		Name:                        asset.Name,
+		Avatar:                      asset.Avatar,
+		Slug:                        asset.Slug,
+		Description:                 asset.Description,
+		ProjectID:                   asset.ProjectID,
+		Environmental:               asset.Environmental,
+		RepositoryID:                asset.RepositoryID,
+		RepositoryName:              asset.RepositoryName,
+		SigningPubKey:               asset.SigningPubKey,
+		TicketRangeCelExpression:    asset.TicketRangeCelExpression,
+		AssetVersions:               utils.Map(asset.AssetVersions, AssetVersionModelToDTO),
+		ExternalEntityProviderID:    asset.ExternalEntityProviderID,
+		ExternalEntityID:            asset.ExternalEntityID,
+		ExternalBotUserLink:         botUserLink,
+		RepositoryProvider:          asset.RepositoryProvider,
+		IsPublic:                    asset.IsPublic,
+		ParanoidMode:                asset.ParanoidMode,
+		SharesInformation:           asset.SharesInformation,
+		State:                       string(asset.State),
+		AssetVersionRetentionPolicy: asset.AssetVersionRetentionPolicy,
 	}
 }
 
@@ -124,10 +123,7 @@ func AssetCreateRequestToModel(assetCreateRequest dtos.AssetCreateRequest, proje
 		RepositoryProvider: assetCreateRequest.RepositoryProvider,
 	}
 
-	if assetCreateRequest.EnableTicketRange {
-		asset.CVSSAutomaticTicketThreshold = assetCreateRequest.CVSSAutomaticTicketThreshold
-		asset.RiskAutomaticTicketThreshold = assetCreateRequest.RiskAutomaticTicketThreshold
-	}
+	asset.TicketRangeCelExpression = assetCreateRequest.TicketRangeCelExpression
 
 	return asset
 }
