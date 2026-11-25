@@ -29,11 +29,10 @@ type AssetController struct {
 	statisticsService             shared.StatisticsService
 	thirdPartyIntegration         shared.IntegrationAggregate
 	daemonRunner                  shared.DaemonRunner
-	labelService                  shared.LabelService
 	broker                        events.Broker
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner, labelService shared.LabelService) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner) *AssetController {
 	return &AssetController{
 		assetRepository:               repository,
 		assetVersionRepository:        assetVersionRepository,
@@ -42,7 +41,6 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 		dependencyVulnService:         dependencyVulnService,
 		statisticsService:             statisticsService,
 		thirdPartyIntegration:         thirdPartyIntegration,
-		labelService:                  labelService,
 		broker:                        broker,
 		daemonRunner:                  daemonRunner,
 	}

@@ -12,13 +12,11 @@ import (
 )
 
 type LabelController struct {
-	labelService    shared.LabelService
 	labelRepository shared.LabelRepository
 }
 
-func NewLabelController(labelService shared.LabelService, labelRepository shared.LabelRepository) *LabelController {
+func NewLabelController(labelRepository shared.LabelRepository) *LabelController {
 	return &LabelController{
-		labelService:    labelService,
 		labelRepository: labelRepository,
 	}
 }
@@ -250,12 +248,15 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
 func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	var org models.Org
-	var project models.Project
-	var asset models.Asset
-	var artifact models.Artifact
+	var projectID *uuid.UUID = nil
+	var assetID *uuid.UUID = nil
+	var artifactID *uuid.UUID = nil
 
 	var req dtos.AttachLabelRequest
 	var err error
+	requestCtx := ctx.Request().Context()
+	tx := c.labelRepository.GetDB(requestCtx, nil)
+
 	if err = ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not parse request body").WithInternal(err)
 	}
@@ -263,12 +264,12 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	if !shared.HasOrganization(ctx) {
-		return echo.NewHTTPError(400, "missing organization ID")
-	}
 	uniqueLabels := utils.UniqBy(req.Labels, func(label string) string {
 		return label
 	})
+	if len(uniqueLabels) != len(req.Labels) {
+		return echo.NewHTTPError(400, "duplicate labels detected, cannot attach the same id to the same resource twice")
+	}
 	var parsedLabels []uuid.UUID
 	for _, stringLabel := range uniqueLabels {
 		parsed, err := uuid.Parse(stringLabel)
@@ -278,47 +279,39 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 		parsedLabels = append(parsedLabels, parsed)
 	}
 
-	tx := c.labelRepository.GetDB(ctx.Request().Context(), nil)
-	org = shared.GetOrg(ctx)
+	if !shared.HasOrganization(ctx) {
+		return echo.NewHTTPError(400, "organization ID is missing")
+	}
 
 	if !shared.HasProject(ctx) {
-		return echo.NewHTTPError(400, "attaching labels requires at least a project ID")
-	}
-	project = shared.GetProject(ctx)
-
-	if org.ID != project.OrganizationID {
-		return echo.NewHTTPError(403, "project does not belong to organization")
+		return echo.NewHTTPError(400, "project ID is required at minimum")
 	}
 
-	if !shared.HasAsset(ctx) {
-		err = c.labelService.AttachLabels(ctx.Request().Context(), tx, org.ID, &project.ID, nil, nil, parsedLabels)
-		if err != nil {
-			return attachLabelError(err, "project")
-		}
-		return ctx.NoContent(204)
+	org = shared.GetOrg(ctx)
+	projectExtract := shared.GetProject(ctx)
+	projectID = &projectExtract.ID
+
+	if shared.HasAsset(ctx) {
+		assetExtract := shared.GetAsset(ctx)
+		assetID = &assetExtract.ID
 	}
 
-	asset = shared.GetAsset(ctx)
-	if project.ID != asset.ProjectID {
-		return echo.NewHTTPError(403, "asset does not belong to project")
+	if shared.HasArtifact(ctx) {
+		artifactExtract := shared.GetArtifact(ctx)
+		artifactID = &artifactExtract.ID
 	}
 
-	if !shared.HasArtifact(ctx) {
-		err = c.labelService.AttachLabels(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, nil, parsedLabels)
-		if err != nil {
-			return attachLabelError(err, "asset")
-		}
-		return ctx.NoContent(204)
-	}
-
-	artifact = shared.GetArtifact(ctx)
-	if asset.ID != artifact.AssetID {
-		return echo.NewHTTPError(403, "artifact does not belong to asset")
-	}
-
-	err = c.labelService.AttachLabels(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, &artifact.ID, parsedLabels)
+	existingLabels, err := c.labelRepository.FindLabelsByIDsThroughHierarchy(requestCtx, tx, parsedLabels, &org.ID, projectID, assetID)
 	if err != nil {
-		return attachLabelError(err, "artifact")
+		return err
+	}
+	if len(existingLabels) != len(req.Labels) {
+		return echo.NewHTTPError(400, "could not find all labels, labelID list might contain invalid IDs")
+	}
+
+	err = c.labelRepository.CreateLabelAttachmentBatch(requestCtx, tx, parsedLabels, projectID, assetID, artifactID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not attach labels to resources")
 	}
 	return ctx.NoContent(204)
 }

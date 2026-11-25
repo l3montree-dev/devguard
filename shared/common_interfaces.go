@@ -1022,6 +1022,3 @@ type LabelRepository interface {
 	CreateLabelAttachmentBatch(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID, assetID, artifactID *uuid.UUID) error
 	ListThroughHierarchy(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error)
 }
-type LabelService interface {
-	AttachLabels(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID, assetID, artifactID *uuid.UUID, labelIDs []uuid.UUID) error
-}

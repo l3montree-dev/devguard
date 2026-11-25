@@ -45,11 +45,10 @@ type ProjectController struct {
 	projectService         shared.ProjectService
 	webhookRepository      shared.WebhookIntegrationRepository
 	scanService            shared.ScanService
-	labelService           shared.LabelService
 	broker                 events.Broker
 }
 
-func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker, labelService shared.LabelService) *ProjectController {
+func NewProjectController(repository shared.ProjectRepository, assetRepository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRepository shared.ArtifactRepository, assetVersionService shared.AssetVersionService, assetService shared.AssetService, releaseService shared.ReleaseService, projectService shared.ProjectService, webhookRepository shared.WebhookIntegrationRepository, scanService shared.ScanService, broker events.Broker) *ProjectController {
 	return &ProjectController{
 		projectRepository:      repository,
 		assetRepository:        assetRepository,
@@ -61,7 +60,6 @@ func NewProjectController(repository shared.ProjectRepository, assetRepository s
 		projectService:         projectService,
 		webhookRepository:      webhookRepository,
 		scanService:            scanService,
-		labelService:           labelService,
 		broker:                 broker,
 	}
 }

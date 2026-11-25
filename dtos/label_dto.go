@@ -6,5 +6,5 @@ type LabelRequest struct {
 }
 
 type AttachLabelRequest struct {
-	Labels []string `json:"label" validate:"required"`
+	Labels []string `json:"label" validate:"required,min=1"`
 }

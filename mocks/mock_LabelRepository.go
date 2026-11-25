@@ -194,6 +194,87 @@ func (_c *LabelRepository_CreateLabelAttachment_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// CreateLabelAttachmentBatch provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) CreateLabelAttachmentBatch(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID) error {
+	ret := _mock.Called(ctx, tx, labelIDs, projectID, assetID, artifactID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateLabelAttachmentBatch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r0 = returnFunc(ctx, tx, labelIDs, projectID, assetID, artifactID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LabelRepository_CreateLabelAttachmentBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateLabelAttachmentBatch'
+type LabelRepository_CreateLabelAttachmentBatch_Call struct {
+	*mock.Call
+}
+
+// CreateLabelAttachmentBatch is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - labelIDs []uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - artifactID *uuid.UUID
+func (_e *LabelRepository_Expecter) CreateLabelAttachmentBatch(ctx any, tx any, labelIDs any, projectID any, assetID any, artifactID any) *LabelRepository_CreateLabelAttachmentBatch_Call {
+	return &LabelRepository_CreateLabelAttachmentBatch_Call{Call: _e.mock.On("CreateLabelAttachmentBatch", ctx, tx, labelIDs, projectID, assetID, artifactID)}
+}
+
+func (_c *LabelRepository_CreateLabelAttachmentBatch_Call) Run(run func(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID)) *LabelRepository_CreateLabelAttachmentBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 *uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(*uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelRepository_CreateLabelAttachmentBatch_Call) Return(err error) *LabelRepository_CreateLabelAttachmentBatch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LabelRepository_CreateLabelAttachmentBatch_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, artifactID *uuid.UUID) error) *LabelRepository_CreateLabelAttachmentBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type LabelRepository
 func (_mock *LabelRepository) Delete(ctx context.Context, tx shared.DB, labelID uuid.UUID) error {
 	ret := _mock.Called(ctx, tx, labelID)
@@ -343,6 +424,157 @@ func (_c *LabelRepository_FindLabelByIDThroughHierarchy_Call) Return(label model
 }
 
 func (_c *LabelRepository_FindLabelByIDThroughHierarchy_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, labelID *uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) (models.Label, error)) *LabelRepository_FindLabelByIDThroughHierarchy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindLabelsByIDsThroughHierarchy provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) FindLabelsByIDsThroughHierarchy(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.Label, error) {
+	ret := _mock.Called(ctx, tx, labelIDs, orgID, projectID, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindLabelsByIDsThroughHierarchy")
+	}
+
+	var r0 []models.Label
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) ([]models.Label, error)); ok {
+		return returnFunc(ctx, tx, labelIDs, orgID, projectID, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gorm.DB, []uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) []models.Label); ok {
+		r0 = returnFunc(ctx, tx, labelIDs, orgID, projectID, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Label)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gorm.DB, []uuid.UUID, *uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, labelIDs, orgID, projectID, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LabelRepository_FindLabelsByIDsThroughHierarchy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindLabelsByIDsThroughHierarchy'
+type LabelRepository_FindLabelsByIDsThroughHierarchy_Call struct {
+	*mock.Call
+}
+
+// FindLabelsByIDsThroughHierarchy is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx *gorm.DB
+//   - labelIDs []uuid.UUID
+//   - orgID *uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+func (_e *LabelRepository_Expecter) FindLabelsByIDsThroughHierarchy(ctx any, tx any, labelIDs any, orgID any, projectID any, assetID any) *LabelRepository_FindLabelsByIDsThroughHierarchy_Call {
+	return &LabelRepository_FindLabelsByIDsThroughHierarchy_Call{Call: _e.mock.On("FindLabelsByIDsThroughHierarchy", ctx, tx, labelIDs, orgID, projectID, assetID)}
+}
+
+func (_c *LabelRepository_FindLabelsByIDsThroughHierarchy_Call) Run(run func(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID)) *LabelRepository_FindLabelsByIDsThroughHierarchy_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gorm.DB
+		if args[1] != nil {
+			arg1 = args[1].(*gorm.DB)
+		}
+		var arg2 []uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 *uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(*uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelRepository_FindLabelsByIDsThroughHierarchy_Call) Return(labels []models.Label, err error) *LabelRepository_FindLabelsByIDsThroughHierarchy_Call {
+	_c.Call.Return(labels, err)
+	return _c
+}
+
+func (_c *LabelRepository_FindLabelsByIDsThroughHierarchy_Call) RunAndReturn(run func(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID *uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.Label, error)) *LabelRepository_FindLabelsByIDsThroughHierarchy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDB provides a mock function for the type LabelRepository
+func (_mock *LabelRepository) GetDB(ctx context.Context, db shared.DB) shared.DB {
+	ret := _mock.Called(ctx, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 shared.DB
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) shared.DB); ok {
+		r0 = returnFunc(ctx, db)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(shared.DB)
+		}
+	}
+	return r0
+}
+
+// LabelRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type LabelRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - ctx context.Context
+//   - db shared.DB
+func (_e *LabelRepository_Expecter) GetDB(ctx any, db any) *LabelRepository_GetDB_Call {
+	return &LabelRepository_GetDB_Call{Call: _e.mock.On("GetDB", ctx, db)}
+}
+
+func (_c *LabelRepository_GetDB_Call) Run(run func(ctx context.Context, db shared.DB)) *LabelRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *LabelRepository_GetDB_Call) Return(dB shared.DB) *LabelRepository_GetDB_Call {
+	_c.Call.Return(dB)
+	return _c
+}
+
+func (_c *LabelRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, db shared.DB) shared.DB) *LabelRepository_GetDB_Call {
 	_c.Call.Return(run)
 	return _c
 }

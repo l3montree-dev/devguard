@@ -44,14 +44,13 @@ type ArtifactController struct {
 	statisticsService        shared.StatisticsService
 	assetVersionService      shared.AssetVersionService
 	csafService              shared.CSAFService
-	labelService             shared.LabelService
 	// mark public to let it be overridden in tests
 	utils.FireAndForgetSynchronizer
 	shared.ScanService
 	broker events.Broker
 }
 
-func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, labelService shared.LabelService, csafService shared.CSAFService, broker events.Broker) *ArtifactController {
+func NewArtifactController(artifactRepository shared.ArtifactRepository, artifactService shared.ArtifactService, assetVersionService shared.AssetVersionService, dependencyVulnService shared.DependencyVulnService, statisticsRepository shared.StatisticsRepository, statisticsService shared.StatisticsService, scanService shared.ScanService, synchronizer utils.FireAndForgetSynchronizer, dependencyVulnRepository shared.DependencyVulnRepository, csafService shared.CSAFService, broker events.Broker) *ArtifactController {
 	return &ArtifactController{
 		artifactRepository:        artifactRepository,
 		artifactService:           artifactService,
@@ -63,7 +62,6 @@ func NewArtifactController(artifactRepository shared.ArtifactRepository, artifac
 		dependencyVulnRepository:  dependencyVulnRepository,
 		ScanService:               scanService,
 		csafService:               csafService,
-		labelService:              labelService,
 		broker:                    broker,
 	}
 }
