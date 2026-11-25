@@ -42,6 +42,7 @@ func NewAssetRouter(
 	patController *controllers.PatController,
 	logController *controllers.LogController,
 	labelController *controllers.LabelController,
+	secretController *controllers.SecretController,
 ) AssetRouter {
 	/**
 	Asset scoped router
@@ -77,7 +78,9 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired := assetRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
+	assetUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.AssetList)
 
+	assetUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.AssetCreate)
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
@@ -95,6 +98,7 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
 	assetUpdateAccessControlRequired.DELETE("/labels/:labelID/", labelController.Delete)
+	assetUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.AssetDelete)
 
 	return AssetRouter{Group: assetRouter}
 }

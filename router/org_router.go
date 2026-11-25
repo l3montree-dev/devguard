@@ -42,6 +42,7 @@ func NewOrgRouter(
 	componentController *controllers.ComponentController,
 	integrationController *controllers.IntegrationController,
 	webhookIntegration *controllers.WebhookController,
+	secretController *controllers.SecretController,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	externalEntityProviderController *controllers.ExternalEntityProviderController,
 	logController *controllers.LogController,
@@ -110,6 +111,9 @@ func NewOrgRouter(
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
+	organizationUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.OrgList)
+	organizationUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.OrgCreate)
+	organizationUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.OrgDelete)
 	organizationUpdateAccessControlRequired.GET("/pats/", patController.ListByOrg)
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)

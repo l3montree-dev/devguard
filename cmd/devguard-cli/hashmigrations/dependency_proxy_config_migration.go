@@ -70,11 +70,14 @@ func convertLegacyDependencyProxyConfig(content string) (string, bool, error) {
 	if len(legacy.Registries) > 0 {
 		migrated.Registries = make(map[string]any, len(legacy.Registries))
 		for eco, url := range legacy.Registries {
-			if eco == "deb" {
+			switch eco {
+			case "deb":
 				migrated.Registries[eco] = map[string]string{"url": url}
-				continue
+			case "npm":
+				migrated.Registries[eco] = []map[string]string{{"url": url}}
+			default:
+				migrated.Registries[eco] = url
 			}
-			migrated.Registries[eco] = url
 		}
 	}
 
@@ -119,10 +122,62 @@ func convertLegacyDependencyProxyConfig(content string) (string, bool, error) {
 	return string(out), true, nil
 }
 
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// convertScalarNpmRegistry rewrites `npm: <url>` into the list format introduced with scoped npm registries.
+// It works on the yaml node tree, so rules and comments of the config are kept.
+// It returns false if content has no scalar npm registry.
+func convertScalarNpmRegistry(content string) (string, bool, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(content), &doc); err != nil || len(doc.Content) == 0 {
+		return "", false, nil
+	}
+	npm := mappingValue(mappingValue(doc.Content[0], "registries"), "npm")
+	if npm == nil || npm.Kind != yaml.ScalarNode {
+		return "", false, nil
+	}
+
+	url := npm.Value
+	*npm = yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq", Content: []*yaml.Node{{
+		Kind: yaml.MappingNode,
+		Tag:  "!!map",
+		Content: []*yaml.Node{
+			{Kind: yaml.ScalarNode, Tag: "!!str", Value: "url"},
+			{Kind: yaml.ScalarNode, Tag: "!!str", Value: url},
+		},
+	}}}
+
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return "", true, err
+	}
+	return string(out), true, nil
+}
+
 func runDependencyProxyConfigMigration(pool *pgxpool.Pool) error {
+	return rewriteDependencyProxyConfigs(pool, "dependency proxy config migration", convertLegacyDependencyProxyConfig)
+}
+
+func runNpmRegistryListMigration(pool *pgxpool.Pool) error {
+	return rewriteDependencyProxyConfigs(pool, "npm registry list migration", convertScalarNpmRegistry)
+}
+
+// rewriteDependencyProxyConfigs replaces every org, project and asset dependency proxy config for which
+// convert reports a change.
+func rewriteDependencyProxyConfigs(pool *pgxpool.Pool, name string, convert func(content string) (string, bool, error)) error {
 	start := time.Now()
 	defer func() {
-		slog.Info("dependency proxy config migration completed", "duration", time.Since(start))
+		slog.Info(name+" completed", "duration", time.Since(start))
 	}()
 	db := database.NewGormDB(pool)
 
@@ -137,7 +192,7 @@ func runDependencyProxyConfigMigration(pool *pgxpool.Pool) error {
 			}
 
 			for _, row := range rows {
-				migrated, isLegacy, err := convertLegacyDependencyProxyConfig(row.Content)
+				migrated, isLegacy, err := convert(row.Content)
 				if err != nil {
 					// keep the original config - the proxy reports the parse error for this scope
 					slog.Warn("could not migrate dependency proxy config, keeping it", "table", table, "id", row.ID, "error", err)
