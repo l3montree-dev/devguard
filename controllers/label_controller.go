@@ -82,7 +82,7 @@ func (l *LabelController) readLabelOnLevel(ctx shared.Context) (models.Label, er
 // @Param projectSlug path string false "Project slug (project and asset level)"
 // @Param assetSlug path string false "Asset slug (asset level)"
 // @Param body body dtos.LabelRequest true "Label data"
-// @Success 200
+// @Success 200 {object} models.Label
 // @Router /organizations/{organization}/labels/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/ [post]
@@ -95,14 +95,14 @@ func (l *LabelController) Create(ctx shared.Context) error {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
-	label := models.Label{Label: req.Label, BackgroundColor: req.BackgroundColor}
+	label := models.Label{Label: req.Label, BackgroundColor: req.BackgroundColor, Description: req.Description}
 	setLabelScope(ctx, &label)
 
 	if err := l.labelRepository.Create(ctx.Request().Context(), nil, &label); err != nil {
 		return saveLabelError(err, "could not save label")
 	}
 
-	return ctx.NoContent(200)
+	return ctx.JSON(200, label)
 }
 
 // @Summary Update label
@@ -115,7 +115,7 @@ func (l *LabelController) Create(ctx shared.Context) error {
 // @Param assetSlug path string false "Asset slug (asset level)"
 // @Param labelID path string true "Label ID"
 // @Param body body dtos.LabelRequest true "Label data"
-// @Success 200
+// @Success 200 {object} models.Label
 // @Router /organizations/{organization}/labels/{labelID}/ [put]
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/{labelID}/ [put]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/{labelID}/ [put]
@@ -141,13 +141,14 @@ func (l *LabelController) Update(ctx shared.Context) error {
 		CreatedAt:       existing.CreatedAt,
 		Label:           req.Label,
 		BackgroundColor: req.BackgroundColor,
+		Description:     req.Description,
 	}
 
 	if err := l.labelRepository.Save(ctx.Request().Context(), nil, &label); err != nil {
 		return saveLabelError(err, "could not update label")
 	}
 
-	return ctx.NoContent(200)
+	return ctx.JSON(200, label)
 }
 
 // @Summary Delete label
@@ -242,7 +243,7 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
 // @Param body body dtos.AttachLabelRequest true "Label data"
-// @Success 204
+// @Success 200 {array} models.Label
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/attach/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
@@ -270,14 +271,6 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	if len(uniqueLabels) != len(req.Labels) {
 		return echo.NewHTTPError(400, "duplicate labels detected, cannot attach the same id to the same resource twice")
 	}
-	var parsedLabels []uuid.UUID
-	for _, stringLabel := range uniqueLabels {
-		parsed, err := uuid.Parse(stringLabel)
-		if err != nil {
-			return echo.NewHTTPError(400, "could not parse label ID, ID might be invalid")
-		}
-		parsedLabels = append(parsedLabels, parsed)
-	}
 
 	if !shared.HasOrganization(ctx) {
 		return echo.NewHTTPError(400, "organization ID is missing")
@@ -301,6 +294,15 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 		artifactID = &artifactExtract.ID
 	}
 
+	var parsedLabels []uuid.UUID
+	for _, stringLabel := range uniqueLabels {
+		parsed, err := uuid.Parse(stringLabel)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse label ID, ID might be invalid")
+		}
+		parsedLabels = append(parsedLabels, parsed)
+	}
+
 	existingLabels, err := c.labelRepository.FindLabelsByIDsThroughHierarchy(requestCtx, tx, parsedLabels, &org.ID, projectID, assetID)
 	if err != nil {
 		return err
@@ -313,5 +315,5 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not attach labels to resources")
 	}
-	return ctx.NoContent(204)
+	return ctx.JSON(200, existingLabels)
 }

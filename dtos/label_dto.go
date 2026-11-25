@@ -2,6 +2,7 @@ package dtos
 
 type LabelRequest struct {
 	Label           string `json:"label" validate:"required,max=256"`
+	Description     string `json:"description"`
 	BackgroundColor string `json:"background_color" validate:"required,hexcolor"`
 }
 

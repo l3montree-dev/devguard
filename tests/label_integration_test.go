@@ -97,6 +97,13 @@ func newLabelFixture(t *testing.T, db shared.DB) *labelFixture {
 // The level is derived from the nil-ness of project, asset and artifact. The organization is always org A.
 func (f *labelFixture) attachBody(t *testing.T, project *models.Project, asset *models.Asset, artifact *models.Artifact, body string) int {
 	t.Helper()
+	status, _ := f.attachBodyResponse(t, project, asset, artifact, body)
+	return status
+}
+
+// attachBodyResponse is attachBody, additionally returning the raw response body.
+func (f *labelFixture) attachBodyResponse(t *testing.T, project *models.Project, asset *models.Asset, artifact *models.Artifact, body string) (int, []byte) {
+	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
@@ -115,9 +122,9 @@ func (f *labelFixture) attachBody(t *testing.T, project *models.Project, asset *
 	if err := f.controller.AttachLabel(c); err != nil {
 		var he *echo.HTTPError
 		require.ErrorAs(t, err, &he)
-		return he.Code
+		return he.Code, nil
 	}
-	return rec.Code
+	return rec.Code, rec.Body.Bytes()
 }
 
 // attach attaches the labels with the given ids on the given level and returns the http status.
@@ -130,6 +137,26 @@ func (f *labelFixture) attach(t *testing.T, project *models.Project, asset *mode
 	body, err := json.Marshal(map[string][]string{"label": labels})
 	require.NoError(t, err)
 	return f.attachBody(t, project, asset, artifact, string(body))
+}
+
+// attachAndRead attaches the labels with the given ids on the given level and returns the http status
+// together with the labels of the response body.
+func (f *labelFixture) attachAndRead(t *testing.T, project *models.Project, asset *models.Asset, artifact *models.Artifact, ids ...uuid.UUID) (int, []models.Label) {
+	t.Helper()
+	labels := make([]string, 0, len(ids))
+	for _, id := range ids {
+		labels = append(labels, id.String())
+	}
+	body, err := json.Marshal(map[string][]string{"label": labels})
+	require.NoError(t, err)
+
+	status, raw := f.attachBodyResponse(t, project, asset, artifact, string(body))
+	if status != http.StatusOK {
+		return status, nil
+	}
+	var res []models.Label
+	require.NoError(t, json.Unmarshal(raw, &res), "response must be a list of labels")
+	return status, res
 }
 
 func labelNames(labels []models.Label) []string {
@@ -216,7 +243,7 @@ func TestLabelIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["org-a"]
 
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, nil, nil, label.ID))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, nil, nil, label.ID))
 		assert.Equal(t, 1, attachmentCount(t, db, label.ID))
 
 		require.NoError(t, f.repo.Delete(ctx, nil, label.ID))
@@ -271,7 +298,7 @@ func TestLabelIntegration(t *testing.T) {
 
 				status := f.attach(t, c.target.project, c.target.asset, c.target.artifact, label.ID)
 				if c.allowed {
-					require.Equal(t, http.StatusNoContent, status)
+					require.Equal(t, http.StatusOK, status)
 					assert.Equal(t, before+1, attachmentCount(t, db, label.ID))
 				} else {
 					assert.Equal(t, http.StatusBadRequest, status, "label must not be visible from the target")
@@ -291,7 +318,7 @@ func TestLabelIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		ids := []uuid.UUID{f.labels["org-a"].ID, f.labels["p1"].ID, f.labels["a1"].ID}
 
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, &f.a1, &f.artifactOnAsset1, ids...))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, &f.a1, &f.artifactOnAsset1, ids...))
 
 		var artifact models.Artifact
 		require.NoError(t, db.Preload("Labels").First(&artifact, "id = ?", f.artifactOnAsset1.ID).Error)
@@ -302,19 +329,53 @@ func TestLabelIntegration(t *testing.T) {
 		assert.ElementsMatch(t, ids, attached)
 	})
 
+	t.Run("attach returns the attached labels", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		requested := []uuid.UUID{f.labels["org-a"].ID, f.labels["p1"].ID, f.labels["a1"].ID}
+
+		status, returned := f.attachAndRead(t, &f.p1, &f.a1, &f.artifactOnAsset1, requested...)
+		require.Equal(t, http.StatusOK, status)
+
+		// the order of the response is not guaranteed, so compare the ids and the content
+		returnedIDs := make([]uuid.UUID, 0, len(returned))
+		for _, l := range returned {
+			returnedIDs = append(returnedIDs, l.ID)
+			expected := f.labels[l.Label]
+			assert.Equal(t, expected.ID, l.ID, l.Label)
+			assert.Equal(t, expected.BackgroundColor, l.BackgroundColor, l.Label)
+			assert.Equal(t, expected.OrganizationID, l.OrganizationID, l.Label)
+			assert.Equal(t, expected.ProjectID, l.ProjectID, l.Label)
+			assert.Equal(t, expected.AssetID, l.AssetID, l.Label)
+		}
+		assert.ElementsMatch(t, requested, returnedIDs, "exactly the requested labels must be returned")
+	})
+
+	t.Run("attach returns the labels again when they are already attached", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		label := f.labels["org-a"]
+
+		status, _ := f.attachAndRead(t, &f.p1, nil, nil, label.ID)
+		require.Equal(t, http.StatusOK, status)
+
+		status, returned := f.attachAndRead(t, &f.p1, nil, nil, label.ID)
+		require.Equal(t, http.StatusOK, status)
+		require.Len(t, returned, 1)
+		assert.Equal(t, label.ID, returned[0].ID)
+	})
+
 	t.Run("attach multiple labels on every level", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
 		// project level
 		projectLabels := []uuid.UUID{f.labels["org-a"].ID, f.labels["p1"].ID}
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, nil, nil, projectLabels...))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, nil, nil, projectLabels...))
 		for _, id := range projectLabels {
 			assert.Equal(t, 1, attachmentCount(t, db, id))
 		}
 
 		// asset level
 		assetLabels := []uuid.UUID{f.labels["org-a"].ID, f.labels["a1"].ID}
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, &f.a1, nil, assetLabels...))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, &f.a1, nil, assetLabels...))
 		assert.Equal(t, 2, attachmentCount(t, db, f.labels["org-a"].ID), "org-a is now attached to the project and the asset")
 		assert.Equal(t, 1, attachmentCount(t, db, f.labels["a1"].ID))
 	})
@@ -358,7 +419,7 @@ func TestLabelIntegration(t *testing.T) {
 	t.Run("attached labels show up on the target", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["p1"]
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, &f.a1, &f.artifactOnAsset1, label.ID))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, &f.a1, &f.artifactOnAsset1, label.ID))
 
 		var artifact models.Artifact
 		require.NoError(t, db.Preload("Labels").First(&artifact, "id = ?", f.artifactOnAsset1.ID).Error)
@@ -370,9 +431,102 @@ func TestLabelIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["org-a"]
 
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, nil, nil, label.ID))
-		require.Equal(t, http.StatusNoContent, f.attach(t, &f.p1, nil, nil, label.ID))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, nil, nil, label.ID))
+		require.Equal(t, http.StatusOK, f.attach(t, &f.p1, nil, nil, label.ID))
 		assert.Equal(t, 1, attachmentCount(t, db, label.ID), "attachment must be idempotent")
+	})
+}
+
+func TestLabelRepositoryCreateLabelAttachmentBatch(t *testing.T) {
+	db, _, terminate := InitDatabaseContainer("../initdb.sql")
+	defer terminate()
+	ctx := context.Background()
+
+	type attachmentRow struct {
+		ProjectID  *uuid.UUID
+		AssetID    *uuid.UUID
+		ArtifactID *uuid.UUID
+		LabelID    uuid.UUID
+	}
+	ptr := func(id uuid.UUID) *uuid.UUID { return &id }
+	rowsOf := func(t *testing.T, labelIDs ...uuid.UUID) []attachmentRow {
+		t.Helper()
+		var rows []attachmentRow
+		require.NoError(t, db.Raw("SELECT project_id, asset_id, artifact_id, label_id FROM projects_assets_artifacts_labels WHERE label_id IN ?", labelIDs).Scan(&rows).Error)
+		return rows
+	}
+
+	t.Run("an empty batch is a no-op", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, nil, &f.p1.ID, nil, nil))
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{}, &f.p1.ID, nil, nil))
+	})
+
+	t.Run("the batch is stored on the most specific level that is given", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		onProject, onAsset, onArtifact := f.labels["org-a"], f.labels["p1"], f.labels["a1"]
+
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{onProject.ID}, &f.p1.ID, nil, nil))
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{onAsset.ID}, &f.p1.ID, &f.a1.ID, nil))
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{onArtifact.ID}, &f.p1.ID, &f.a1.ID, &f.artifactOnAsset1.ID))
+
+		// only the target of the most specific level is persisted, the other columns stay NULL
+		assert.ElementsMatch(t, []attachmentRow{
+			{ProjectID: ptr(f.p1.ID), LabelID: onProject.ID},
+			{AssetID: ptr(f.a1.ID), LabelID: onAsset.ID},
+			{ArtifactID: ptr(f.artifactOnAsset1.ID), LabelID: onArtifact.ID},
+		}, rowsOf(t, onProject.ID, onAsset.ID, onArtifact.ID))
+	})
+
+	t.Run("many labels can be attached to the same target in one batch", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		ids := []uuid.UUID{f.labels["org-a"].ID, f.labels["p1"].ID, f.labels["a1"].ID}
+
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, ids, &f.p1.ID, &f.a1.ID, &f.artifactOnAsset1.ID))
+
+		rows := rowsOf(t, ids...)
+		require.Len(t, rows, len(ids))
+		attached := make([]uuid.UUID, 0, len(rows))
+		for _, r := range rows {
+			require.NotNil(t, r.ArtifactID)
+			assert.Equal(t, f.artifactOnAsset1.ID, *r.ArtifactID)
+			assert.Nil(t, r.ProjectID)
+			assert.Nil(t, r.AssetID)
+			attached = append(attached, r.LabelID)
+		}
+		assert.ElementsMatch(t, ids, attached)
+	})
+
+	t.Run("the same label can be attached to different targets", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		label := f.labels["org-a"]
+		ids := []uuid.UUID{label.ID}
+
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, ids, &f.p1.ID, nil, nil))
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, ids, &f.p1.ID, &f.a1.ID, nil))
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, ids, &f.p1.ID, &f.a2.ID, nil))
+		assert.Equal(t, 3, attachmentCount(t, db, label.ID))
+	})
+
+	t.Run("existing attachments are skipped without failing the rest of the batch", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		existing, fresh := f.labels["org-a"], f.labels["p1"]
+
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{existing.ID}, &f.p1.ID, nil, nil))
+		require.NoError(t, f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{existing.ID, fresh.ID}, &f.p1.ID, nil, nil))
+
+		assert.Equal(t, 1, attachmentCount(t, db, existing.ID), "no duplicate row")
+		assert.Equal(t, 1, attachmentCount(t, db, fresh.ID), "new row next to the skipped one is still inserted")
+	})
+
+	t.Run("an unknown label id fails the whole batch", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		valid := f.labels["org-a"]
+
+		err := f.repo.CreateLabelAttachmentBatch(ctx, nil, []uuid.UUID{valid.ID, uuid.New()}, &f.p1.ID, nil, nil)
+		require.Error(t, err, "foreign key on label_id must reject the unknown label")
+		assert.Equal(t, 0, attachmentCount(t, db, valid.ID), "the valid row must be rolled back with the invalid one")
 	})
 }
 
