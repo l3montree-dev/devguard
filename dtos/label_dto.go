@@ -11,6 +11,10 @@ type LabelRequest struct {
 	BackgroundColor string `json:"background_color" validate:"required,hexcolor,len=7"`
 }
 
+type AttachLabelRequest struct {
+	Labels []string `json:"label" validate:"required"`
+}
+
 type Label struct {
 	ID              uuid.UUID  `json:"id"`
 	OrganizationID  *uuid.UUID `json:"organizationID"`

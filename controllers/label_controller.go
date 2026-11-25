@@ -276,14 +276,30 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	var asset models.Asset
 	var artifact models.Artifact
 
-	labelID, err := uuid.Parse(ctx.Param("labelID"))
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid label id")
+	var req dtos.AttachLabelRequest
+	var err error
+	if err = ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "could not parse request body").WithInternal(err)
+	}
+	if err = dtos.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
 	}
 
 	if !shared.HasOrganization(ctx) {
 		return echo.NewHTTPError(400, "missing organization ID")
 	}
+	uniqueLabels := utils.UniqBy(req.Labels, func(label string) string {
+		return label
+	})
+	var parsedLabels []uuid.UUID
+	for _, stringLabel := range uniqueLabels {
+		parsed, err := uuid.Parse(stringLabel)
+		if err != nil {
+			return echo.NewHTTPError(400, "could not parse label ID, ID might be invalid")
+		}
+		parsedLabels = append(parsedLabels, parsed)
+	}
+
 	tx := c.labelRepository.GetDB(ctx.Request().Context(), nil)
 	org = shared.GetOrg(ctx)
 
@@ -297,7 +313,7 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	}
 
 	if !shared.HasAsset(ctx) {
-		err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, nil, nil, &labelID)
+		err = c.labelService.AttachLabels(ctx.Request().Context(), tx, org.ID, &project.ID, nil, nil, parsedLabels)
 		if err != nil {
 			return attachLabelError(err, "project")
 		}
@@ -310,7 +326,7 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	}
 
 	if !shared.HasArtifact(ctx) {
-		err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, nil, &labelID)
+		err = c.labelService.AttachLabels(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, nil, parsedLabels)
 		if err != nil {
 			return attachLabelError(err, "asset")
 		}
@@ -322,7 +338,7 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 		return echo.NewHTTPError(403, "artifact does not belong to asset")
 	}
 
-	err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, &artifact.ID, &labelID)
+	err = c.labelService.AttachLabels(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, &artifact.ID, parsedLabels)
 	if err != nil {
 		return attachLabelError(err, "artifact")
 	}

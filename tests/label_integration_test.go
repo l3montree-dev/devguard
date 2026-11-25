@@ -181,7 +181,7 @@ func TestLabelIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["org-a"]
 
-		require.NoError(t, f.service.AttachLabel(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, &label.ID))
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, []uuid.UUID{label.ID}))
 		assert.Equal(t, 1, attachmentCount(t, db, label.ID))
 
 		require.NoError(t, f.repo.Delete(ctx, nil, label.ID))
@@ -240,7 +240,7 @@ func TestLabelIntegration(t *testing.T) {
 				label := f.labels[c.label]
 				before := attachmentCount(t, db, label.ID)
 
-				err := f.service.AttachLabel(ctx, db, f.orgA.ID, &c.target.project.ID, assetID, c.target.artifact, &label.ID)
+				err := f.service.AttachLabels(ctx, db, f.orgA.ID, &c.target.project.ID, assetID, c.target.artifact, []uuid.UUID{label.ID})
 				if c.allowed {
 					require.NoError(t, err)
 					assert.Equal(t, before+1, attachmentCount(t, db, label.ID))
@@ -256,23 +256,82 @@ func TestLabelIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		unknown := uuid.New()
 
-		err := f.service.AttachLabel(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, &unknown)
+		err := f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, []uuid.UUID{unknown})
 		assert.True(t, shared.IsNotFound(err))
+	})
+
+	t.Run("attach multiple labels at once", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		ids := []uuid.UUID{f.labels["org-a"].ID, f.labels["p1"].ID, f.labels["a1"].ID}
+
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, &f.a1.ID, &f.artifactOnAsset1.ID, ids))
+
+		var artifact models.Artifact
+		require.NoError(t, db.Preload("Labels").First(&artifact, "id = ?", f.artifactOnAsset1.ID).Error)
+		attached := make([]uuid.UUID, 0, len(artifact.Labels))
+		for _, l := range artifact.Labels {
+			attached = append(attached, l.ID)
+		}
+		assert.ElementsMatch(t, ids, attached)
+	})
+
+	t.Run("attach multiple labels on every level", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+
+		// project level
+		projectLabels := []uuid.UUID{f.labels["org-a"].ID, f.labels["p1"].ID}
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, projectLabels))
+		for _, id := range projectLabels {
+			assert.Equal(t, 1, attachmentCount(t, db, id))
+		}
+
+		// asset level
+		assetLabels := []uuid.UUID{f.labels["org-a"].ID, f.labels["a1"].ID}
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, &f.a1.ID, nil, assetLabels))
+		assert.Equal(t, 2, attachmentCount(t, db, f.labels["org-a"].ID), "org-a is now attached to the project and the asset")
+		assert.Equal(t, 1, attachmentCount(t, db, f.labels["a1"].ID))
+	})
+
+	t.Run("attaching multiple labels is all or nothing", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		valid := f.labels["org-a"]
+
+		for name, invalid := range map[string]uuid.UUID{
+			"unknown label":        uuid.New(),
+			"label of another org": f.labels["org-b"].ID,
+			"sibling project":      f.labels["p2"].ID,
+			"sibling asset":        f.labels["a2"].ID,
+		} {
+			err := f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, &f.a1.ID, nil, []uuid.UUID{valid.ID, invalid})
+			assert.True(t, shared.IsNotFound(err), name)
+			assert.Equal(t, 0, attachmentCount(t, db, valid.ID), "%s: the valid label must not be attached either", name)
+		}
+	})
+
+	t.Run("attach ignores duplicate ids in the same request", func(t *testing.T) {
+		f := newLabelFixture(t, db)
+		label := f.labels["org-a"]
+
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, []uuid.UUID{label.ID, label.ID}))
+		assert.Equal(t, 1, attachmentCount(t, db, label.ID))
 	})
 
 	t.Run("attach validates its input", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["org-a"]
 
-		assert.Error(t, f.service.AttachLabel(ctx, nil, f.orgA.ID, &f.p1.ID, nil, nil, &label.ID), "missing tx")
-		assert.Error(t, f.service.AttachLabel(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, nil), "missing label")
-		assert.Error(t, f.service.AttachLabel(ctx, db, f.orgA.ID, nil, nil, nil, &label.ID), "missing project")
+		ids := []uuid.UUID{label.ID}
+
+		assert.Error(t, f.service.AttachLabels(ctx, nil, f.orgA.ID, &f.p1.ID, nil, nil, ids), "missing tx")
+		assert.Error(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, nil), "nil labels")
+		assert.Error(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, []uuid.UUID{}), "empty labels")
+		assert.Error(t, f.service.AttachLabels(ctx, db, f.orgA.ID, nil, nil, nil, ids), "missing project")
 	})
 
 	t.Run("attached labels show up on the target", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["p1"]
-		require.NoError(t, f.service.AttachLabel(ctx, db, f.orgA.ID, &f.p1.ID, &f.a1.ID, &f.artifactOnAsset1.ID, &label.ID))
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, &f.a1.ID, &f.artifactOnAsset1.ID, []uuid.UUID{label.ID}))
 
 		var artifact models.Artifact
 		require.NoError(t, db.Preload("Labels").First(&artifact, "id = ?", f.artifactOnAsset1.ID).Error)
@@ -284,8 +343,8 @@ func TestLabelIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		label := f.labels["org-a"]
 
-		require.NoError(t, f.service.AttachLabel(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, &label.ID))
-		require.NoError(t, f.service.AttachLabel(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, &label.ID))
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, []uuid.UUID{label.ID}))
+		require.NoError(t, f.service.AttachLabels(ctx, db, f.orgA.ID, &f.p1.ID, nil, nil, []uuid.UUID{label.ID}))
 		assert.Equal(t, 1, attachmentCount(t, db, label.ID), "attachment must be idempotent")
 	})
 }

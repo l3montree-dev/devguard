@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -34,6 +35,19 @@ func (l *LabelRepository) FindLabelByIDThroughHierarchy(ctx context.Context, tx 
 	return label, nil
 }
 
+func (l *LabelRepository) FindLabelsByIDsThroughHierarchy(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error) {
+	var labels []models.Label
+	err := l.GetDB(ctx, tx).Where(`id IN ? AND organization_id = ? AND (
+	(project_id IS NULL AND asset_id IS NULL) OR 
+	(project_id = ? AND asset_id IS NULL) OR 
+	(project_id = ? AND asset_id = ?)
+	)`, labelIDs, orgID, projectID, projectID, assetID).Find(&labels).Error
+	if err != nil {
+		return []models.Label{}, err
+	}
+	return labels, nil
+}
+
 func (l *LabelRepository) ListThroughHierarchy(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error) {
 	var labels []models.Label
 	err := l.GetDB(ctx, tx).Where(`organization_id = ? AND(
@@ -62,4 +76,33 @@ func (l *LabelRepository) CreateLabelAttachment(ctx context.Context, tx *gorm.DB
 			projectID, labelID)
 	}
 	return res.Error
+}
+
+func (l *LabelRepository) CreateLabelAttachmentBatch(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID, assetID, artifactID *uuid.UUID) error {
+	if len(labelIDs) == 0 {
+		return nil
+	}
+
+	var rowTemplate string
+	var target *uuid.UUID
+	switch {
+	case artifactID != nil:
+		rowTemplate, target = "(NULL, NULL, ?, ?)", artifactID
+	case assetID != nil:
+		rowTemplate, target = "(NULL, ?, NULL, ?)", assetID
+	default:
+		rowTemplate, target = "(?, NULL, NULL, ?)", projectID
+	}
+
+	placeholders := make([]string, 0, len(labelIDs))
+	args := make([]any, 0, len(labelIDs)*2)
+	for _, labelID := range labelIDs {
+		placeholders = append(placeholders, rowTemplate)
+		args = append(args, target, labelID)
+	}
+
+	return l.GetDB(ctx, tx).Exec(
+		"INSERT INTO projects_assets_artifacts_labels (project_id, asset_id, artifact_id, label_id) VALUES "+
+			strings.Join(placeholders, ", ")+" ON CONFLICT DO NOTHING",
+		args...).Error
 }
