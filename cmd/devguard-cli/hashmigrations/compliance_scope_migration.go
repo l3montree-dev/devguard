@@ -380,5 +380,16 @@ func cleanupLegacyControls(tx *gorm.DB) error {
 	if err := tx.Exec(`ALTER TABLE compliance_postures VALIDATE CONSTRAINT fk_compliance_postures_control_hash`).Error; err != nil {
 		return fmt.Errorf("could not validate the control foreign key of the postures: %w", err)
 	}
+
+	// the schema migration already added the primary key if there were no legacy controls
+	if err := tx.Exec(`DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'compliance_controls_pkey') THEN
+				ALTER TABLE ONLY public.compliance_controls
+					ADD CONSTRAINT compliance_controls_pkey PRIMARY KEY USING INDEX compliance_controls_pkey;
+			END IF;
+		END $$`).Error; err != nil {
+		return fmt.Errorf("could not add the primary key of the controls: %w", err)
+	}
 	return nil
 }

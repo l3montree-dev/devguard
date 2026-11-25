@@ -54,11 +54,10 @@ func (r *FrameworkControlRepository) SaveScopeFramework(ctx context.Context, tx 
 			return err
 		}
 
-		scopeFramework.ID = existing.ID
 		if err := tx.Model(&existing).Association("Controls").Replace(scopeFramework.Controls); err != nil {
 			return err
 		}
-		return deleteOrphanedControls(tx, previousHashes)
+		return deleteOrphanedControls(tx, scopeFramework.OrgID, previousHashes)
 	})
 }
 
@@ -81,7 +80,7 @@ func (r *FrameworkControlRepository) DeleteScopeFramework(ctx context.Context, t
 		if err := tx.Delete(&scopeFramework).Error; err != nil {
 			return err
 		}
-		if err := deleteOrphanedControls(tx, hashes); err != nil {
+		if err := deleteOrphanedControls(tx, orgID, hashes); err != nil {
 			return err
 		}
 
@@ -97,28 +96,32 @@ func linkedControlHashes(tx *gorm.DB, scopeFrameworkID uuid.UUID) ([]string, err
 	return hashes, err
 }
 
-func deleteOrphanedControls(tx *gorm.DB, hashes []string) error {
+func deleteOrphanedControls(tx *gorm.DB, orgID uuid.UUID, hashes []string) error {
 	if len(hashes) == 0 {
 		return nil
 	}
 
-	var orphanedHashes []string
-	if err := tx.Raw(`
-		SELECT control_hash FROM compliance_controls cc
+	if err := tx.Exec(`
+		DELETE FROM compliance_postures cp
+		WHERE cp.org_id = ?
+			AND cp.control_hash = ANY(?)
+			AND NOT EXISTS (
+				SELECT 1 FROM scope_framework_controls sfc
+				JOIN scope_frameworks sf ON sf.id = sfc.scope_framework_id
+				WHERE sfc.control_hash = cp.control_hash AND sf.org_id = cp.org_id
+			)`,
+		orgID, pq.Array(hashes),
+	).Error; err != nil {
+		return err
+	}
+
+	// the postures of other orgs reference only controls which are still linked, so no posture is left behind
+	return tx.Exec(`
+		DELETE FROM compliance_controls cc
 		WHERE cc.control_hash = ANY(?)
 			AND NOT EXISTS (SELECT 1 FROM scope_framework_controls sfc WHERE sfc.control_hash = cc.control_hash)`,
 		pq.Array(hashes),
-	).Scan(&orphanedHashes).Error; err != nil {
-		return err
-	}
-	if len(orphanedHashes) == 0 {
-		return nil
-	}
-
-	if err := tx.Where("control_hash = ANY(?)", pq.Array(orphanedHashes)).Delete(&models.CompliancePosture{}).Error; err != nil {
-		return err
-	}
-	return tx.Where("control_hash = ANY(?)", pq.Array(orphanedHashes)).Delete(&models.FrameworkControl{}).Error
+	).Error
 }
 
 func (r *FrameworkControlRepository) GetEffectiveScopeFrameworks(ctx context.Context, tx *gorm.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.ScopeFramework, error) {

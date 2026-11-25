@@ -41,6 +41,10 @@ func (s *complianceCatalogService) SaveCatalog(ctx context.Context, tx shared.DB
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid OSCAL catalog").WithInternal(err)
 	}
+	if len(controls) == 0 {
+		return echo.NewHTTPError(400, "the catalog contains no controls")
+	}
+
 	if name == "" {
 		name = title
 	}

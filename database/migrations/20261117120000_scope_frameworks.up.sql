@@ -6,9 +6,9 @@ ALTER TABLE public.compliance_controls DROP COLUMN IF EXISTS framework_control_i
 
 ALTER TABLE public.compliance_controls ADD COLUMN IF NOT EXISTS control_hash text;
 
-ALTER TABLE public.compliance_controls DROP CONSTRAINT IF EXISTS compliance_controls_control_hash_unique;
-ALTER TABLE public.compliance_controls
-    ADD CONSTRAINT compliance_controls_control_hash_unique UNIQUE (control_hash);
+-- the hash of existing controls is calculated in go (hash migration v12), until then the column contains nulls
+-- and can not be the primary key. The index already carries the name of the primary key, which is added on top of it.
+CREATE UNIQUE INDEX IF NOT EXISTS compliance_controls_pkey ON public.compliance_controls (control_hash);
 
 ALTER TABLE public.compliance_controls RENAME COLUMN parent_framework_control_id TO parent_control_id;
 
@@ -66,3 +66,11 @@ ALTER TABLE ONLY public.scope_framework_controls
     ADD CONSTRAINT fk_scope_framework_controls_control FOREIGN KEY (control_hash) REFERENCES public.compliance_controls(control_hash) ON DELETE CASCADE;
 
 CREATE INDEX IF NOT EXISTS idx_scope_framework_controls_control_hash ON public.scope_framework_controls (control_hash);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.compliance_controls WHERE control_hash IS NULL) THEN
+        ALTER TABLE ONLY public.compliance_controls
+            ADD CONSTRAINT compliance_controls_pkey PRIMARY KEY USING INDEX compliance_controls_pkey;
+    END IF;
+END $$;
