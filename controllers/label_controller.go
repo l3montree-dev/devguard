@@ -162,7 +162,7 @@ func (l *LabelController) Delete(ctx shared.Context) error {
 // @Security PATAuth
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
-// @Success 200 {array} dtos.Label
+// @Success 200 {array} models.Label
 // @Router /organizations/{organization}/labels/ [get]
 func (l *LabelController) ListOnOrgLevel(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
@@ -230,9 +230,9 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
 func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	var org models.Org
-	var projectID *uuid.UUID = nil
-	var assetID *uuid.UUID = nil
-	var artifactID *uuid.UUID = nil
+	var projectID *uuid.UUID
+	var assetID *uuid.UUID
+	var artifactID *uuid.UUID
 
 	var req dtos.AttachLabelRequest
 	var err error

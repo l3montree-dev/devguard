@@ -544,7 +544,6 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
-          description: New in 1.7
         issuerName:
           type: string
         notValidAfter:
@@ -1876,6 +1875,7 @@ components:
       - workflows
       type: object
     cyclonedx.Hash:
+      description: New in 1.7
       properties:
         alg:
           $ref: '#/components/schemas/cyclonedx.HashAlgorithm'
@@ -2752,7 +2752,6 @@ components:
           uniqueItems: false
         manufacture:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
-          description: 'Deprecated: Use Component Manufacturer instead.'
         manufacturer:
           $ref: '#/components/schemas/cyclonedx.OrganizationalEntity'
         properties:
@@ -2806,6 +2805,7 @@ components:
       - phone
       type: object
     cyclonedx.OrganizationalEntity:
+      description: 'Deprecated: Use Component Manufacturer instead.'
       properties:
         address:
           $ref: '#/components/schemas/cyclonedx.PostalAddress'
@@ -3026,7 +3026,6 @@ components:
           type: string
         fingerprint:
           $ref: '#/components/schemas/cyclonedx.Hash'
-          description: New in 1.7
         format:
           type: string
         id:
@@ -5035,6 +5034,19 @@ components:
       - projectSlug
       - slug
       type: object
+    dtos.AttachLabelRequest:
+      properties:
+        label:
+          items:
+            maxLength: 256
+            type: string
+          maxItems: 256
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - label
+      type: object
     dtos.AverageRemediationTimes:
       properties:
         criticalCVSSOpen:
@@ -5722,10 +5734,6 @@ components:
           type: string
         type:
           $ref: '#/components/schemas/dtos.ExternalReferenceType'
-          enum:
-          - cyclonedx
-          - csaf
-          - openvex
         url:
           maxLength: 2048
           type: string
@@ -5765,10 +5773,6 @@ components:
           type: string
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
-          enum:
-          - accepted
-          - falsePositive
-          - reopened
         justification:
           maxLength: 4000
           type: string
@@ -5840,6 +5844,7 @@ components:
       - waitDuration
       type: object
     dtos.DatabaseSpecifics:
+      description: specific additional information, not standardized
       properties:
         cwe_ids:
           description: array of cwe ids associated with this vulnerability
@@ -6340,6 +6345,9 @@ components:
       - csaf
       - openvex
       - unknown
+      - cyclonedx
+      - csaf
+      - openvex
       type: string
       x-enum-varnames:
       - ExternalReferenceTypeCycloneDX
@@ -6711,6 +6719,22 @@ components:
       - url
       - userEmail
       type: object
+    dtos.LabelRequest:
+      properties:
+        background_color:
+          maxLength: 7
+          type: string
+        description:
+          maxLength: 2000
+          type: string
+        label:
+          maxLength: 256
+          type: string
+      required:
+      - background_color
+      - description
+      - label
+      type: object
     dtos.LicenseRiskArtifact:
       properties:
         artifactName:
@@ -6884,6 +6908,12 @@ components:
       - low
       - high
       - X
+      - X
+      - low
+      - high
+      - X
+      - low
+      - high
       type: string
       x-enum-varnames:
       - MACLow
@@ -6896,6 +6926,16 @@ components:
       - local
       - physical
       - X
+      - X
+      - network
+      - adjacent
+      - local
+      - physical
+      - X
+      - network
+      - adjacent
+      - local
+      - physical
       type: string
       x-enum-varnames:
       - MAVNetwork
@@ -6909,6 +6949,14 @@ components:
       - low
       - high
       - X
+      - X
+      - none
+      - low
+      - high
+      - X
+      - none
+      - low
+      - high
       type: string
       x-enum-varnames:
       - MPRNone
@@ -6917,6 +6965,30 @@ components:
       - MPRNotDefined
     dtos.ModifiedRequirementLevel:
       enum:
+      - X
+      - none
+      - low
+      - high
+      - X
+      - none
+      - low
+      - high
+      - X
+      - none
+      - low
+      - high
+      - X
+      - none
+      - low
+      - high
+      - X
+      - none
+      - low
+      - high
+      - X
+      - none
+      - low
+      - high
       - X
       - none
       - low
@@ -6932,6 +7004,12 @@ components:
       - unchanged
       - changed
       - X
+      - X
+      - unchanged
+      - changed
+      - X
+      - unchanged
+      - changed
       type: string
       x-enum-varnames:
       - MSUnchanged
@@ -6939,6 +7017,12 @@ components:
       - MSNotDefined
     dtos.ModifiedUserInteraction:
       enum:
+      - X
+      - none
+      - required
+      - X
+      - none
+      - required
       - X
       - none
       - required
@@ -6961,7 +7045,6 @@ components:
           uniqueItems: false
         database_specific:
           $ref: '#/components/schemas/dtos.DatabaseSpecifics'
-          description: specific additional information, not standardized
         details:
           type: string
         id:
@@ -7833,7 +7916,6 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.Project'
-          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -7979,7 +8061,6 @@ components:
           type: string
         parent:
           $ref: '#/components/schemas/dtos.Project'
-          description: recursive structure
         parentId:
           type: string
         repositoryId:
@@ -8381,6 +8462,24 @@ components:
       type: object
     dtos.RequirementLevel:
       enum:
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
+      - low
+      - medium
+      - high
       - low
       - medium
       - high
@@ -8860,10 +8959,6 @@ components:
           uniqueItems: false
         eventType:
           $ref: '#/components/schemas/dtos.VulnEventType'
-          enum:
-          - accepted
-          - falsePositive
-          - reopened
       required:
       - celExpression
       - eventType
@@ -9090,6 +9185,12 @@ components:
       - detectedInArtifact
       - fixedInArtifact
       - rawRiskAssessmentUpdated
+      - accepted
+      - falsePositive
+      - reopened
+      - accepted
+      - falsePositive
+      - reopened
       type: string
       x-enum-varnames:
       - EventTypeFixed
@@ -9447,6 +9548,11 @@ components:
           uniqueItems: false
         id:
           type: string
+        labels:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          type: array
+          uniqueItems: false
         licenseRisks:
           items:
             $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk'
@@ -9461,6 +9567,7 @@ components:
       - createdAt
       - dependencyVulns
       - id
+      - labels
       - licenseRisks
       - vulnAssetId
       type: object
@@ -9495,6 +9602,11 @@ components:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         isPublic:
           type: boolean
+        labels:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          type: array
+          uniqueItems: false
         metadata:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         modifiedAttackComplexity:
@@ -9565,6 +9677,7 @@ components:
       - importance
       - integrityRequirement
       - isPublic
+      - labels
       - metadata
       - modifiedAttackComplexity
       - modifiedAttackVector
@@ -9804,9 +9917,6 @@ components:
           type: string
         target_cve_data:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE'
-          description: |-
-            TargetCVEData is populated by GORM nested preload. It is nil when the target
-            CVE does not exist in this database — no DB-level FK constraint is added.
       required:
       - relationship_type
       - source_cve
@@ -10162,6 +10272,52 @@ components:
       - url
       - userEmail
       type: object
+    github_com_l3montree-dev_devguard_database_models.Label:
+      properties:
+        artifacts:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact'
+          type: array
+          uniqueItems: false
+        assetID:
+          type: string
+        assets:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
+          type: array
+          uniqueItems: false
+        backgroundColor:
+          type: string
+        createdAt:
+          type: string
+        description:
+          type: string
+        id:
+          type: string
+        label:
+          type: string
+        organizationID:
+          type: string
+        projectID:
+          type: string
+        projects:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project'
+          type: array
+          uniqueItems: false
+      required:
+      - artifacts
+      - assetID
+      - assets
+      - backgroundColor
+      - createdAt
+      - description
+      - id
+      - label
+      - organizationID
+      - projectID
+      - projects
+      type: object
     github_com_l3montree-dev_devguard_database_models.LicenseRisk:
       properties:
         artifacts:
@@ -10441,6 +10597,11 @@ components:
           type: string
         isPublic:
           type: boolean
+        labels:
+          items:
+            $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          type: array
+          uniqueItems: false
         name:
           type: string
         organization:
@@ -10482,6 +10643,7 @@ components:
       - externalEntityProviderParentId
       - id
       - isPublic
+      - labels
       - name
       - organization
       - organizationId
@@ -10592,7 +10754,6 @@ components:
       properties:
         asset:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset'
-          description: Relationships
         assetId:
           description: Composite key components (for indexing and queries)
           type: string
@@ -11062,32 +11223,17 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -11128,32 +11274,17 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -13620,6 +13751,154 @@ paths:
       summary: Revoke an organization invitation
       tags:
       - Organizations
+  /organizations/{organization}/labels/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List labels on organization level
+      tags:
+      - Label
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.LabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Create label
+      tags:
+      - Label
+  /organizations/{organization}/labels/{labelID}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete label
+      tags:
+      - Label
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.LabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Update label
+      tags:
+      - Label
   /organizations/{organization}/logs/:
     get:
       parameters:
@@ -15276,6 +15555,224 @@ paths:
       summary: Auto-setup the GitLab integration for an asset
       tags:
       - Integrations
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List labels on asset level
+      tags:
+      - Label
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.LabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Create label
+      tags:
+      - Label
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/{labelID}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete label
+      tags:
+      - Label
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.LabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Update label
+      tags:
+      - Label
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.AttachLabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Attach label to artifact
+      tags:
+      - Label
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/:
     get:
       parameters:
@@ -16442,6 +16939,64 @@ paths:
       summary: Get an aggregated CSAF VEX for all of the artifact's vulnerabilities
       tags:
       - Artifacts
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/
+  : post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.AttachLabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Attach label to artifact
+      tags:
+      - Label
   ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/openvex.json/
   : get:
       parameters:
@@ -19124,16 +19679,10 @@ paths:
           type: string
       requestBody:
         content:
-          multipart/form-data:
+          application/x-www-form-urlencoded:
             schema:
-              properties:
-                file:
-                  description: SBOM file
-                  format: binary
-                  type: string
-              required:
-              - file
-              type: object
+              title: file
+              type: file
         description: SBOM file
         required: true
       responses:
@@ -20451,6 +21000,218 @@ paths:
       summary: Create webhook integration (project)
       tags:
       - Webhooks
+  /organizations/{organization}/projects/{projectSlug}/labels/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List labels on project level
+      tags:
+      - Label
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.LabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Create label
+      tags:
+      - Label
+  /organizations/{organization}/projects/{projectSlug}/labels/{labelID}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Delete label
+      tags:
+      - Label
+    put:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug (project and asset level)
+        in: path
+        name: projectSlug
+        schema:
+          type: string
+      - description: Asset slug (asset level)
+        in: path
+        name: assetSlug
+        schema:
+          type: string
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.LabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Update label
+      tags:
+      - Label
+  /organizations/{organization}/projects/{projectSlug}/labels/attach/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset version slug
+        in: path
+        name: assetVersionSlug
+        required: true
+        schema:
+          type: string
+      - description: Artifact name
+        in: path
+        name: artifactName
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dtos.AttachLabelRequest'
+              description: Label data
+              summary: body
+        description: Label data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Attach label to artifact
+      tags:
+      - Label
   /organizations/{organization}/projects/{projectSlug}/logs/:
     get:
       parameters:
