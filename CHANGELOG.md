@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.20.0] - 2026-11-25
+
+Thanks to external contributors [@Xenira](https://github.com/Xenira) for the Redmine integration and for fixing the integration test sharding, and [@tridev-tej](https://github.com/tridev-tej) for fixing the vulnerable components statistics! 🎉
+
+### Added
+
+- **Redmine integration** — DevGuard can create, update, close and reopen Redmine issues for vulnerabilities, like the existing GitHub, GitLab and Jira integrations. Organizations can configure the tracker, state and priority of the created issues. If an issue was deleted in Redmine, it is recreated on reopen
+- **DevGuard secrets** — organizations, projects and assets can store secrets via `GET/POST/DELETE .../devguard-secrets/`. Secrets are inherited down the hierarchy: an asset secret overrides a project secret, which overrides a secret of a parent project or the organization. Secret values are encrypted and never returned by the API
+- **Multiple npm registries for the dependency proxy** — `registries.npm` is now a list. Each entry can be bound to package scopes (e.g. `@my-company`), and the entry without scopes is used for all other packages
+- **Authenticated upstream registries** — npm and Maven registries of the dependency proxy accept an `auth` block of type `token` or `basic-auth`. Tokens and passwords reference a DevGuard secret (`$MY_SECRET`) instead of being stored in plain text
+- **Scanner version check** — `devguard-scanner` warns if its minor version differs from the DevGuard API version
+- `FUNDING.yml`
+
+### Changed
+
+- **`devguard-scanner` requires `--assetName` when a token is provided** — a scan without a token still runs, but shows a warning box stating that the results were not saved to DevGuard
+- **Readable scanner errors** — API errors are shown with their message in a highlighted box instead of the raw response body, and "not found" and missing scope errors for token requests are explained
+- **npm registry config migration** — existing `npm: <url>` dependency proxy configs are migrated to the new list format. Rules and comments in the config are kept
+- The dependency proxy caches resolved configs for 5 minutes and deduplicates concurrent lookups, so an `npm install` no longer causes a burst of database queries
+- An index on `(signature, id)` of open dependency vulnerabilities speeds up the VEX rule recommendation daemon
+
+### Fixed
+
+- **External entity garbage collection** — only projects and assets of the provider which manages the organization are garbage collected. Previously, provider-created projects and assets in organizations whose members only hold organization level roles were deleted
+- **Vulnerable components statistics** — CVEs without a CVSS score no longer show up as components with `0 0 0 0` vulnerabilities
+- **Integration test sharding** — a quarter of the integration tests was not executed in CI
+- The scanner API version check uses the egress client
+
+---
+
 ## [v1.19.2] - 2026-11-20
 
 Thanks to external contributor [@amalsaidov](https://github.com/amalsaidov) for scoping the project search to the current subgroup! 🎉
