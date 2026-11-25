@@ -1020,7 +1020,7 @@ func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, mediu
 // @Param artifactName path string true "Artifact name"
 // @Param labelID path string true "Label ID"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/{labelID}/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
 func (c *ArtifactController) AttachLabelToArtifact(ctx shared.Context) error {
 	artifact := shared.GetArtifact(ctx)
 	labelID, err := uuid.Parse(ctx.Param("labelID"))

@@ -102,7 +102,7 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
 	projectUpdateAccessControlRequired.POST("/labels/", labelController.Create)
-	projectUpdateAccessControlRequired.POST("/labels/:labelID/", projectController.AttachLabelToProject)
+	projectUpdateAccessControlRequired.POST("/labels/attach", projectController.AttachLabelToProject)
 	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.ProjectDelete)

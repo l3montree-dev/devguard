@@ -810,7 +810,7 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param labelID path string true "Label ID"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/{labelID}/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/ [post]
 func (a *AssetController) AttachLabelToAsset(ctx shared.Context) error {
 	asset := shared.GetAsset(ctx)
 	labelID, err := uuid.Parse(ctx.Param("labelID"))

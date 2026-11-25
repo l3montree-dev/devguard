@@ -857,7 +857,7 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 // @Param projectSlug path string true "Project slug"
 // @Param labelID path string true "Label ID"
 // @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/labels/{labelID}/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/labels/attach/ [post]
 func (projectController *ProjectController) AttachLabelToProject(ctx shared.Context) error {
 	project := shared.GetProject(ctx)
 	labelID, err := uuid.Parse(ctx.Param("labelID"))
