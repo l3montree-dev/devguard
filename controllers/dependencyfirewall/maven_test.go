@@ -52,7 +52,7 @@ func TestMavenCustomRegistryAuth(t *testing.T) {
 	configs := DependencyProxyConfigs{Registries: dtos.RegistryConfigs{
 		"maven": dtos.MavenRegistryConfig{
 			URLRegistryConfig: dtos.URLRegistryConfig{URL: registry},
-			Auth:              &dtos.RegistryAuth{Type: "login", Username: "ci-user", Password: "resolved-password"},
+			Auth:              &dtos.RegistryAuth{Type: "basic-auth", Username: "ci-user", Password: "resolved-password"},
 		},
 	}}
 
