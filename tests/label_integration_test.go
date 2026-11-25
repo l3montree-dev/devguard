@@ -16,7 +16,6 @@ import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/database/repositories"
-	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
@@ -75,7 +74,7 @@ func newLabelFixture(t *testing.T, db shared.DB) *labelFixture {
 
 	ptr := func(id uuid.UUID) *uuid.UUID { return &id }
 	add := func(name string, org models.Org, project *models.Project, asset *models.Asset) {
-		l := models.Label{Label: name, BackgroundColor: "#ff0000", OrganizationID: ptr(org.ID)}
+		l := models.Label{Label: name, BackgroundColor: "#ff0000", OrganizationID: org.ID}
 		if project != nil {
 			l.ProjectID = ptr(project.ID)
 		}
@@ -97,7 +96,7 @@ func newLabelFixture(t *testing.T, db shared.DB) *labelFixture {
 	return f
 }
 
-func labelNames(labels []dtos.Label) []string {
+func labelNames(labels []models.Label) []string {
 	names := make([]string, 0, len(labels))
 	for _, l := range labels {
 		names = append(names, l.Label)
@@ -156,7 +155,7 @@ func TestLabelIntegration(t *testing.T) {
 	t.Run("repository create, read, save and delete", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
-		label := models.Label{Label: "crud", BackgroundColor: "#00ff00", OrganizationID: &f.orgA.ID}
+		label := models.Label{Label: "crud", BackgroundColor: "#00ff00", OrganizationID: f.orgA.ID}
 		require.NoError(t, f.repo.Create(ctx, nil, &label))
 		assert.NotEqual(t, uuid.Nil, label.ID, "id must be generated")
 
@@ -469,7 +468,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 		read, err := f.repo.Read(context.Background(), nil, target.ID)
 		require.NoError(t, err)
 		assert.Equal(t, "hijack", read.Label)
-		assert.Equal(t, f.orgA.ID, *read.OrganizationID)
+		assert.Equal(t, f.orgA.ID, read.OrganizationID)
 
 		untouched, err := f.repo.Read(context.Background(), nil, other.ID)
 		require.NoError(t, err)
@@ -549,7 +548,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 		read := func(handler func(echo.Context) error, lvl level) []string {
 			c, rec := newCtx(f, http.MethodGet, lvl, "", "")
 			require.Equal(t, http.StatusOK, statusOf(handler(c), rec))
-			var labels []dtos.Label
+			var labels []models.Label
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &labels))
 			return labelNames(labels)
 		}
@@ -558,18 +557,17 @@ func TestLabelControllerIntegration(t *testing.T) {
 		assert.ElementsMatch(t, []string{"org-a", "p1", "a1"}, read(f.controller.ListOnAssetLevel, assetLevel))
 	})
 
-	t.Run("list endpoints include the computed text color and scope ids", func(t *testing.T) {
+	t.Run("list endpoints include the scope ids", func(t *testing.T) {
 		f := newLabelFixture(t, db)
 
 		c, rec := newCtx(f, http.MethodGet, assetLevel, "", "")
 		require.Equal(t, http.StatusOK, statusOf(f.controller.ListOnAssetLevel(c), rec))
-		var labels []dtos.Label
+		var labels []models.Label
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &labels))
 		require.NotEmpty(t, labels)
 		for _, l := range labels {
-			assert.NotEmpty(t, l.TextColor, l.Label)
 			require.NotNil(t, l.OrganizationID, l.Label)
-			assert.Equal(t, f.orgA.ID, *l.OrganizationID)
+			assert.Equal(t, f.orgA.ID, l.OrganizationID)
 		}
 	})
 

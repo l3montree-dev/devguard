@@ -8,10 +8,11 @@ import (
 
 type Label struct {
 	ID              uuid.UUID  `json:"id" gorm:"primarykey;type:uuid;default:gen_random_uuid()"`
-	OrganizationID  *uuid.UUID `json:"organizationID"`
+	OrganizationID  uuid.UUID  `json:"organizationID"`
 	ProjectID       *uuid.UUID `json:"projectID"`
 	AssetID         *uuid.UUID `json:"assetID"`
 	Label           string     `json:"label"`
+	Description     string     `json:"description"`
 	BackgroundColor string     `json:"backgroundColor"`
 	CreatedAt       time.Time  `json:"createdAt"`
 	Projects        []Project  `json:"projects" gorm:"many2many:projects_assets_artifacts_labels"`
@@ -32,6 +33,6 @@ func sameID(a, b *uuid.UUID) bool {
 
 // reports whether the label is defined exactly on the given level.
 func (l Label) IsDefinedAt(orgID uuid.UUID, projectID, assetID *uuid.UUID) bool {
-	return l.OrganizationID != nil && *l.OrganizationID == orgID &&
+	return l.OrganizationID == orgID &&
 		sameID(l.ProjectID, projectID) && sameID(l.AssetID, assetID)
 }

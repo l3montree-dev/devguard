@@ -2,13 +2,11 @@ package controllers
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/shared"
-	"github.com/l3montree-dev/devguard/transformer"
 	"github.com/l3montree-dev/devguard/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -39,7 +37,7 @@ func scopeIDs(ctx shared.Context) (projectID, assetID *uuid.UUID) {
 
 func setLabelScope(ctx shared.Context, label *models.Label) {
 	org := shared.GetOrg(ctx)
-	label.OrganizationID = &org.ID
+	label.OrganizationID = org.ID
 	label.ProjectID, label.AssetID = scopeIDs(ctx)
 }
 
@@ -192,14 +190,7 @@ func (l *LabelController) ListOnOrgLevel(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find labels for this org").WithInternal(err)
 	}
-	labelDTOs := utils.Map(labels, func(label models.Label) dtos.Label {
-		textColor, err := utils.GetTextColorToBackgroundColor(label.BackgroundColor)
-		if err != nil {
-			slog.Warn("text color could not be established", "err", err, "labelID", label.ID)
-		}
-		return transformer.LabelToDTO(label, textColor)
-	})
-	return ctx.JSON(200, labelDTOs)
+	return ctx.JSON(200, labels)
 }
 
 // @Summary List labels on project level
@@ -209,7 +200,7 @@ func (l *LabelController) ListOnOrgLevel(ctx shared.Context) error {
 // @Security BearerAuth
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
-// @Success 200 {array} dtos.Label
+// @Success 200 {array} models.Label
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/ [get]
 func (l *LabelController) ListOnProjectLevel(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
@@ -218,14 +209,7 @@ func (l *LabelController) ListOnProjectLevel(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find labels for this project").WithInternal(err)
 	}
-	labelDTOs := utils.Map(labels, func(label models.Label) dtos.Label {
-		textColor, err := utils.GetTextColorToBackgroundColor(label.BackgroundColor)
-		if err != nil {
-			slog.Warn("text color could not be established", "err", err, "labelID", label.ID)
-		}
-		return transformer.LabelToDTO(label, textColor)
-	})
-	return ctx.JSON(200, labelDTOs)
+	return ctx.JSON(200, labels)
 }
 
 // @Summary List labels on asset level
@@ -236,7 +220,7 @@ func (l *LabelController) ListOnProjectLevel(ctx shared.Context) error {
 // @Param organization path string true "Organization slug"
 // @Param projectSlug path string true "Project slug"
 // @Param assetSlug path string true "Asset slug"
-// @Success 200 {array} dtos.Label
+// @Success 200 {array} models.Label
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/ [get]
 func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 	org := shared.GetOrg(ctx)
@@ -246,14 +230,7 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not find labels for this asset").WithInternal(err)
 	}
-	labelDTOs := utils.Map(labels, func(label models.Label) dtos.Label {
-		textColor, err := utils.GetTextColorToBackgroundColor(label.BackgroundColor)
-		if err != nil {
-			slog.Warn("text color could not be established", "err", err, "labelID", label.ID)
-		}
-		return transformer.LabelToDTO(label, textColor)
-	})
-	return ctx.JSON(200, labelDTOs)
+	return ctx.JSON(200, labels)
 }
 
 // @Summary Attach label to artifact
@@ -266,6 +243,7 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 // @Param assetSlug path string true "Asset slug"
 // @Param assetVersionSlug path string true "Asset version slug"
 // @Param artifactName path string true "Artifact name"
+// @Param body body dtos.AttachLabelRequest true "Label data"
 // @Success 204
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/attach/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/ [post]

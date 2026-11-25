@@ -19,13 +19,13 @@ CREATE TABLE IF NOT EXISTS public.labels (
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
     asset_id uuid REFERENCES public.assets(id) ON DELETE CASCADE,
     label text NOT NULL,
+    description text,
     background_color VARCHAR(7),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT label_unique UNIQUE NULLS NOT DISTINCT (label, background_color, organization_id, project_id, asset_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.projects_assets_artifacts_labels (
-    id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
     asset_id uuid REFERENCES public.assets(id) ON DELETE CASCADE,
     artifact_id uuid REFERENCES public.artifacts(id) ON DELETE CASCADE,
@@ -39,4 +39,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS assets_labels_unique
     ON public.projects_assets_artifacts_labels (asset_id, label_id) WHERE asset_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS artifacts_labels_unique
     ON public.projects_assets_artifacts_labels (artifact_id, label_id) WHERE artifact_id IS NOT NULL;
-
+CREATE INDEX IF NOT EXISTS label_id_lookup 
+    ON public.projects_assets_artifacts_labels USING hash (label_id);
