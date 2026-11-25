@@ -6,7 +6,7 @@ ALTER TABLE public.compliance_controls DROP COLUMN IF EXISTS framework_control_i
 
 ALTER TABLE public.compliance_controls ADD COLUMN IF NOT EXISTS control_hash text;
 
--- the hash of existing controls is calculated in go (hash migration v12), until then the column contains nulls
+-- the hash of existing controls is calculated in go (hash migration v13), until then the column contains nulls
 -- and can not be the primary key. The index already carries the name of the primary key, which is added on top of it.
 CREATE UNIQUE INDEX IF NOT EXISTS compliance_controls_pkey ON public.compliance_controls (control_hash);
 

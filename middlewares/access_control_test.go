@@ -506,6 +506,60 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		mockAccessControl.AssertExpectations(t)
 	})
 
+	t.Run("invalid oauth2 token is only tolerated for public projects and assets", func(t *testing.T) {
+		publicProject := &models.Project{Slug: "p", IsPublic: true}
+		privateProject := &models.Project{Slug: "p", IsPublic: false}
+		publicAsset := &models.Asset{Slug: "a", IsPublic: true}
+		privateAsset := &models.Asset{Slug: "a", IsPublic: false}
+
+		cases := []struct {
+			name         string
+			project      *models.Project
+			asset        *models.Asset
+			expectedCode int
+		}{
+			{"public project", publicProject, nil, http.StatusOK},
+			{"private project", privateProject, nil, http.StatusForbidden},
+			{"public project and public asset", publicProject, publicAsset, http.StatusOK},
+			{"public project and private asset", publicProject, privateAsset, http.StatusForbidden},
+			{"private project and public asset", privateProject, publicAsset, http.StatusForbidden},
+			{"public asset only", nil, publicAsset, http.StatusOK},
+			{"private asset only", nil, privateAsset, http.StatusForbidden},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				e := echo.New()
+				req := httptest.NewRequest(http.MethodGet, "/", nil)
+				rec := httptest.NewRecorder()
+				ctx := e.NewContext(req, rec)
+
+				org := models.Org{Model: models.Model{ID: uuid.New()}, Slug: "test-org"}
+				mockAccessControl := mocks.AccessControl{}
+				mockSession := shared.NewSession("user-id", shared.SessionActorUser, []string{}, false)
+
+				mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything, mock.Anything).Return(false, shared.ErrOauth2TokenNotValidRedirectionRequired)
+
+				shared.SetSession(ctx, mockSession)
+				shared.SetOrg(ctx, org)
+				shared.SetRBAC(ctx, &mockAccessControl)
+				if tc.project != nil {
+					shared.SetProject(ctx, *tc.project)
+				}
+				if tc.asset != nil {
+					shared.SetAsset(ctx, *tc.asset)
+				}
+
+				err := MultiOrganizationMiddlewareRBAC()(func(ctx shared.Context) error {
+					return ctx.JSON(http.StatusOK, "success")
+				})(ctx)
+
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedCode, rec.Code)
+			})
+		}
+	})
+
 	t.Run("returns 401 for generic HasAccess error on private org", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)

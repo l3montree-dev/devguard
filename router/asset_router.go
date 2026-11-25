@@ -43,6 +43,7 @@ func NewAssetRouter(
 	logController *controllers.LogController,
 	complianceComponentController *controllers.ComplianceComponentController,
 	complianceCatalogController *controllers.ComplianceCatalogController,
+	secretController *controllers.SecretController,
 ) AssetRouter {
 	/**
 	Asset scoped router
@@ -77,11 +78,15 @@ func NewAssetRouter(
 
 	assetUpdateAccessControlRequired := assetRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
+	assetUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.AssetList)
+	assetUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.AssetCreate)
+	assetUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.AssetDelete)
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
 	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
+	assetUpdateAccessControlRequired.POST("/retention-policy/test/", assetController.TestAssetVersionRetentionPolicy)
 	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)

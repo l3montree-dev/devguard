@@ -17,7 +17,6 @@ package scanner
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
@@ -49,13 +48,15 @@ func AddGenerateTagFlags(cmd *cobra.Command) {
 	}
 }
 
-// WarnIfUnauthenticated prints a warning to stderr when no token and no assetName are
-// provided. It should be called after config has been parsed for commands that support
-// unauthenticated scanning (results will not be saved to DevGuard).
-func WarnIfUnauthenticated() {
-	if config.RuntimeBaseConfig.Token == "" || config.RuntimeBaseConfig.AssetName == "" {
-		fmt.Fprintln(os.Stderr, "Warning: You are scanning without saving the results. Provide --token and --assetName to save results to DevGuard.")
+func CheckTokenAndAssetName() error {
+	if config.RuntimeBaseConfig.Token == "" {
+		config.AddWarning("NO TOKEN PROVIDED", "The results of this scan were NOT saved to DevGuard.")
+		return nil
 	}
+	if config.RuntimeBaseConfig.AssetName == "" {
+		return fmt.Errorf("--assetName is required when a token is provided")
+	}
+	return nil
 }
 
 func AddDependencyVulnsScanFlags(cmd *cobra.Command) {

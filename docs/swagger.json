@@ -5948,6 +5948,9 @@
             },
             "dtos.Asset": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6053,6 +6056,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "centralDependencyVulnManagement",
@@ -6196,6 +6200,9 @@
             },
             "dtos.AssetDetails": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6308,6 +6315,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "centralDependencyVulnManagement",
@@ -6347,6 +6355,9 @@
             },
             "dtos.AssetDetailsWithSecrets": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6462,6 +6473,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "centralDependencyVulnManagement",
@@ -6541,6 +6553,11 @@
             },
             "dtos.AssetPatchRequest": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "description": "an empty string resets to the default policy",
+                        "maxLength": 4000,
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -6629,6 +6646,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "centralDependencyVulnManagement",
                     "confidentialityRequirement",
@@ -6668,7 +6686,7 @@
                     "defaultBranch": {
                         "type": "boolean"
                     },
-                    "lastAccessedAt": {
+                    "lastUploadAt": {
                         "type": "string"
                     },
                     "metadata": {
@@ -6695,7 +6713,7 @@
                     "assetId",
                     "createdAt",
                     "defaultBranch",
-                    "lastAccessedAt",
+                    "lastUploadAt",
                     "metadata",
                     "name",
                     "signingPubKey",
@@ -9555,6 +9573,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9586,6 +9611,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -9757,6 +9783,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9790,6 +9823,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -10208,6 +10242,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -10248,6 +10289,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -10995,6 +11037,137 @@
                 ],
                 "type": "object"
             },
+            "dtos.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "obfuscatedToken": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "obfuscatedToken",
+                    "trackerId",
+                    "url"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineIntegrationProperties": {
+                "properties": {
+                    "priorities": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedminePriority"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "statuses": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineStatus"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "trackers": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineTracker"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "priorities",
+                    "statuses",
+                    "trackers"
+                ],
+                "type": "object"
+            },
+            "dtos.RedminePriority": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineStatus": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineTracker": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
             "dtos.Relationship": {
                 "properties": {
                     "relationshipType": {
@@ -11684,24 +11857,58 @@
                 ],
                 "type": "object"
             },
-            "dtos.ScopeFramework": {
+            "dtos.SecretCreateRequest": {
                 "properties": {
-                    "assetId": {
+                    "name": {
+                        "maxLength": 256,
                         "type": "string"
                     },
-                    "framework": {
-                        "type": "string"
-                    },
-                    "projectId": {
+                    "value": {
+                        "maxLength": 8192,
                         "type": "string"
                     }
                 },
                 "required": [
-                    "assetId",
-                    "framework",
-                    "projectId"
+                    "name",
+                    "value"
                 ],
                 "type": "object"
+            },
+            "dtos.SecretDTO": {
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "inheritedFrom": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/dtos.SecretScope"
+                    }
+                },
+                "required": [
+                    "id",
+                    "inheritedFrom",
+                    "name",
+                    "scope"
+                ],
+                "type": "object"
+            },
+            "dtos.SecretScope": {
+                "enum": [
+                    "organization",
+                    "project",
+                    "asset"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "ScopeOrganization",
+                    "ScopeProject",
+                    "ScopeAsset"
+                ]
             },
             "dtos.SemverEvent": {
                 "properties": {
@@ -11773,6 +11980,41 @@
                     "subProjectDescription",
                     "subProjectExternalEntityId",
                     "subProjectName"
+                ],
+                "type": "object"
+            },
+            "dtos.TestAssetVersionRetentionPolicyRequest": {
+                "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "maxLength": 4000,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "assetVersionRetentionPolicy"
+                ],
+                "type": "object"
+            },
+            "dtos.TestAssetVersionRetentionPolicyResponse": {
+                "properties": {
+                    "kept": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "toDelete": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.AssetVersion"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "kept",
+                    "toDelete"
                 ],
                 "type": "object"
             },
@@ -12582,6 +12824,10 @@
             },
             "github_com_l3montree-dev_devguard_database_models.Asset": {
                 "properties": {
+                    "assetVersionRetentionPolicy": {
+                        "description": "the default lives in the database, see celrules.DefaultAssetVersionRetentionPolicy",
+                        "type": "string"
+                    },
                     "availabilityRequirement": {
                         "$ref": "#/components/schemas/dtos.RequirementLevel"
                     },
@@ -12703,6 +12949,7 @@
                     }
                 },
                 "required": [
+                    "assetVersionRetentionPolicy",
                     "availabilityRequirement",
                     "avatar",
                     "confidentialityRequirement",
@@ -12799,7 +13046,8 @@
                     "id": {
                         "type": "string"
                     },
-                    "lastAccessedAt": {
+                    "lastUploadAt": {
+                        "description": "only set by scans uploaded by a client - background rescans of upstream SBOMs do not count\nincludes both sbom and sarif imports",
                         "type": "string"
                     },
                     "metadata": {
@@ -12836,7 +13084,7 @@
                     "defaultBranch",
                     "dependencyVulns",
                     "id",
-                    "lastAccessedAt",
+                    "lastUploadAt",
                     "metadata",
                     "name",
                     "signingPubKey",
@@ -13592,6 +13840,19 @@
                 ],
                 "type": "object"
             },
+            "github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType": {
+                "enum": [
+                    "none",
+                    "macro",
+                    "commonmark"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "None",
+                    "Macro",
+                    "CommonMark"
+                ]
+            },
             "github_com_l3montree-dev_devguard_database_models.Org": {
                 "properties": {
                     "configFiles": {
@@ -13670,6 +13931,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -13708,6 +13976,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -13952,6 +14221,73 @@
                     "ProjectTypeDefault",
                     "ProjectTypeDynamic"
                 ]
+            },
+            "github_com_l3montree-dev_devguard_database_models.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "org": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org"
+                    },
+                    "orgId": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "createdAt",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "org",
+                    "orgId",
+                    "trackerId",
+                    "updatedAt",
+                    "url"
+                ],
+                "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.SupplyChain": {
                 "properties": {
@@ -14618,12 +14954,34 @@
                     1000,
                     1000000,
                     1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
+                    -9223372036854775808,
+                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14654,12 +15012,34 @@
                     "Microsecond",
                     "Millisecond",
                     "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
+                    "minDuration",
+                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -18097,6 +18477,148 @@
                 ]
             }
         },
+        "/organizations/{organization}/devguard-secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List organization secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create organization secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/devguard-secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete organization secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
         "/organizations/{organization}/first-party-vulns": {
             "get": {
                 "parameters": [
@@ -18413,6 +18935,258 @@
                     }
                 ],
                 "summary": "Delete a Jira integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/test-and-save/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "string"
+                                    },
+                                    "url": {
+                                        "type": "string"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine credentials",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test and save Redmine integration credentials",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete a Redmine integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegrationProperties"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Retrieve Redmine integration properties (trackers, statuses, priorities)",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings/": {
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "closeStatus": {
+                                        "type": "integer"
+                                    },
+                                    "criticalPriority": {
+                                        "type": "integer"
+                                    },
+                                    "defaultStatus": {
+                                        "type": "integer"
+                                    },
+                                    "highPriority": {
+                                        "type": "integer"
+                                    },
+                                    "lowPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mediumPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mermaidIntegration": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine integration settings",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update Redmine integration settings",
                 "tags": [
                     "Integrations"
                 ]
@@ -21430,6 +22204,202 @@
                 "summary": "Get dependency proxy cache statistics for an organization, project or asset",
                 "tags": [
                     "Dependency Firewall"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List repository secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create repository secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete repository secret",
+                "tags": [
+                    "Secrets"
                 ]
             }
         },
@@ -28118,6 +29088,79 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/retention-policy/test/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.TestAssetVersionRetentionPolicyRequest",
+                                "summary": "body",
+                                "description": "Retention policy to test"
+                            }
+                        }
+                    },
+                    "description": "Retention policy to test",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.TestAssetVersionRetentionPolicyResponse"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test an asset version retention policy against the current asset versions without deleting anything",
+                "tags": [
+                    "Assets"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/sbom-file": {
             "post": {
                 "parameters": [
@@ -30216,6 +31259,175 @@
                 "summary": "List dependency vulnerabilities by project",
                 "tags": [
                     "Vulnerabilities"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/devguard-secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List project secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create project secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/devguard-secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete project secret",
+                "tags": [
+                    "Secrets"
                 ]
             }
         },

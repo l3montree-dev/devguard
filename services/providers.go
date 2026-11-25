@@ -37,6 +37,7 @@ var ServiceModule = fx.Options(
 	fx.Provide(fx.Annotate(NewDependencyVulnService, fx.As(new(shared.DependencyVulnService)))),
 	fx.Provide(fx.Annotate(NewOpenSourceInsightService, fx.As(new(shared.OpenSourceInsightService)))),
 	fx.Provide(fx.Annotate(NewDependencyProxyService, fx.As(new(shared.DependencyProxySecretService)))),
+	fx.Provide(fx.Annotate(NewSecretService, fx.As(new(shared.SecretService)))),
 	fx.Provide(fx.Annotate(NewAdminService, fx.As(new(shared.AdminService)))),
 	fx.Provide(fx.Annotate(NewDBEncryptionService, fx.As(new(shared.DBEncryptionService)))),
 	fx.Provide(fx.Annotate(NewCVERelationshipService, fx.As(new(shared.CVERelationshipService)))),

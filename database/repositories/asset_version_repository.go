@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -131,14 +132,8 @@ func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *
 			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
 		}
 
-		err := repository.GetDB(ctx, tx).Create(&assetVersion).Error
-		// a concurrent request might have created the asset version in the meantime, read it to get its id
-		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			assetVersion, err = repository.findByAssetVersionNameAndAssetID(ctx, tx, assetVersionName, assetID)
-			if err != nil {
-				return models.AssetVersion{}, err
-			}
-		} else if err != nil {
+		assetVersion, err = repository.create(ctx, tx, assetVersion)
+		if err != nil {
 			return models.AssetVersion{}, err
 		}
 	}
@@ -156,6 +151,37 @@ func (repository *assetVersionRepository) FindOrCreate(ctx context.Context, tx *
 	return assetVersion, nil
 }
 
+// create stores a new asset version under the first free slug, since different
+// names can share a slug (e.g. "feature/foo" and "feature-foo").
+func (repository *assetVersionRepository) create(ctx context.Context, tx *gorm.DB, assetVersion models.AssetVersion) (models.AssetVersion, error) {
+	baseSlug := assetVersion.Slug
+	for attempt := 0; ; attempt++ {
+		freeSlug, err := firstFreeSlug(repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Where("asset_id = ?", assetVersion.AssetID), baseSlug)
+		if err != nil {
+			return models.AssetVersion{}, fmt.Errorf("failed to get next slug: %w", err)
+		}
+		assetVersion.Slug = freeSlug
+
+		err = repository.GetDB(ctx, tx).Create(&assetVersion).Error
+		if err == nil {
+			return assetVersion, nil
+		}
+		if !strings.Contains(err.Error(), "duplicate key value violates") {
+			return models.AssetVersion{}, err
+		}
+
+		// a concurrent request might have created the asset version in the meantime, read it to get its id
+		existing, readErr := repository.findByAssetVersionNameAndAssetID(ctx, tx, assetVersion.Name, assetVersion.AssetID)
+		if readErr == nil {
+			return existing, nil
+		}
+		// otherwise a concurrent request took the slug for another name, try the next free one
+		if attempt == 2 {
+			return models.AssetVersion{}, err
+		}
+	}
+}
+
 func (repository *assetVersionRepository) UpdateAssetDefaultBranch(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, defaultBranch string) error {
 	return repository.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
 		// reset the default branch for all versions of this asset
@@ -171,6 +197,16 @@ func (repository *assetVersionRepository) UpdateAssetDefaultBranch(ctx context.C
 		}
 		return nil
 	})
+}
+
+func (repository *assetVersionRepository) UpdateLastUploadAt(ctx context.Context, tx *gorm.DB, assetVersion *models.AssetVersion) error {
+	now := time.Now()
+	// update a single column - the callers hold a possibly stale copy of the asset version
+	if err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).Where("id = ?", assetVersion.ID).UpdateColumn("last_upload_at", now).Error; err != nil {
+		return err
+	}
+	assetVersion.LastUploadAt = &now
+	return nil
 }
 
 func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) ([]models.AssetVersion, error) {
@@ -250,107 +286,6 @@ func (repository *assetVersionRepository) GetAssetVersionsByAssetIDWithArtifacts
 	var assetVersion []models.AssetVersion
 	err := repository.GetDB(ctx, tx).Preload("Artifacts").Where("asset_id = ?", assetID).Find(&assetVersion).Error
 	return assetVersion, err
-}
-
-func (repository *assetVersionRepository) DeleteOldAssetVersions(ctx context.Context, tx *gorm.DB, day int) (int64, error) {
-	//this is not exploitable because the day is an int and golang is statically typed
-	interval := fmt.Sprintf("INTERVAL '%d days'", day)
-	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch'", interval)
-
-	var count int64
-	err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).
-		Where(query).
-		Count(&count).Error
-	if err != nil {
-		return 0, err
-	}
-
-	if count > 0 {
-		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-		err = repository.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
-			// Delete all artifacts for the asset versions being deleted in a single query
-			artifactDeleteQuery := `
-				DELETE FROM artifacts 
-				WHERE asset_version_id IN (
-					SELECT id 
-					FROM asset_versions 
-					WHERE last_accessed_at < NOW() - INTERVAL '` + fmt.Sprintf("%d", day) + ` days' 
-					AND default_branch = false 
-					AND type = 'branch'
-				)`
-
-			if err := tx.Exec(artifactDeleteQuery).Error; err != nil {
-				slog.Error("error deleting artifacts for old asset versions", "err", err)
-				return err
-			}
-
-			// Now delete the asset versions, which should cascade to delete other related records
-			if err := tx.Unscoped().Where(query).Delete(&models.AssetVersion{}).Error; err != nil {
-				slog.Error("error deleting old asset versions", "err", err)
-				return err
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return 0, err
-		}
-
-	}
-
-	return count, nil
-}
-
-func (repository *assetVersionRepository) DeleteOldAssetVersionsOfAsset(ctx context.Context, tx *gorm.DB, assetID uuid.UUID, day int) (int64, error) {
-
-	//this is not exploitable because the day is an int and golang is statically typed
-	interval := fmt.Sprintf("INTERVAL '%d days'", day)
-	query := fmt.Sprintf("last_accessed_at < NOW() - %s AND default_branch = false AND type = 'branch' AND asset_id = ?", interval)
-
-	var count int64
-	err := repository.GetDB(ctx, tx).Model(&models.AssetVersion{}).
-		Where(query, assetID).
-		Count(&count).Error
-	if err != nil {
-		return 0, err
-	}
-
-	if count > 0 {
-
-		// Use a transaction to ensure both artifact deletion and asset version deletion succeed or fail together
-		err = repository.GetDB(ctx, tx).Transaction(func(tx *gorm.DB) error {
-			// Delete all artifacts for the asset versions being deleted in a single query
-			artifactDeleteQuery := `
-				DELETE FROM artifacts 
-				WHERE asset_version_id IN (
-					SELECT id 
-					FROM asset_versions 
-					WHERE last_accessed_at < NOW() - INTERVAL '` + fmt.Sprintf("%d", day) + ` days' 
-					AND default_branch = false 
-					AND type = 'branch'
-					AND asset_id = ?
-				)`
-
-			if err := tx.Exec(artifactDeleteQuery, assetID).Error; err != nil {
-				slog.Error("error deleting artifacts for old asset versions", "err", err)
-				return err
-			}
-
-			// Now delete the asset versions, which should cascade to delete other related records
-			if err := tx.Unscoped().Where(query, assetID).Delete(&models.AssetVersion{}).Error; err != nil {
-				slog.Error("error deleting old asset versions", "err", err)
-				return err
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return 0, err
-		}
-	}
-	return count, nil
 }
 
 func (repository *assetVersionRepository) GetAllTagsAndDefaultBranchForAsset(ctx context.Context, tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {

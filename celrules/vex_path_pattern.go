@@ -189,10 +189,7 @@ func matchPattern(pattern, path []string) bool {
 					break
 				}
 			}
-			if allWildcards {
-				return true
-			}
-			return pathIdx == len(path)
+			return allWildcards
 		}
 
 		// ROOT is a stop marker — it is never stored in VulnerabilityPath,

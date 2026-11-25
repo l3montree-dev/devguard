@@ -115,7 +115,7 @@ func TestIsVulnInTargetState(t *testing.T) {
 	})
 }
 
-// TestIsVexEventAlreadyAppliedPointerComparison demonstrates that isVexEventAlreadyApplied
+// TestIsVexEventAlreadyAppliedPointerComparison demonstrates that shouldApplyVexEvent
 // fails to detect duplicates because Justification is *string and == compares pointer addresses.
 func TestIsVexEventAlreadyAppliedPointerComparison(t *testing.T) {
 	justificationA := "not_affected"
@@ -140,7 +140,7 @@ func TestIsVexEventAlreadyAppliedPointerComparison(t *testing.T) {
 
 	// This SHOULD return true (same type + same justification string),
 	// but returns false because &justificationA != &justificationB.
-	assert.True(t, isVexEventAlreadyApplied(vuln, newEvent),
+	assert.False(t, shouldApplyVexEvent(vuln, newEvent),
 		"should detect duplicate event with same type and justification value")
 }
 
@@ -166,7 +166,7 @@ func TestIsVexEventAlreadyAppliedStateDiverged(t *testing.T) {
 			Vulnerability: models.Vulnerability{State: dtos.VulnStateOpen},
 			Events:        []models.VulnEvent{appliedEvent},
 		}
-		assert.False(t, isVexEventAlreadyApplied(vuln, newEvent))
+		assert.True(t, shouldApplyVexEvent(vuln, newEvent))
 	})
 
 	t.Run("state matches the event - applied", func(t *testing.T) {
@@ -174,7 +174,7 @@ func TestIsVexEventAlreadyAppliedStateDiverged(t *testing.T) {
 			Vulnerability: models.Vulnerability{State: dtos.VulnStateFalsePositive},
 			Events:        []models.VulnEvent{appliedEvent},
 		}
-		assert.True(t, isVexEventAlreadyApplied(vuln, newEvent))
+		assert.False(t, shouldApplyVexEvent(vuln, newEvent))
 	})
 
 	t.Run("does not mutate the vuln it inspects", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestIsVexEventAlreadyAppliedStateDiverged(t *testing.T) {
 			Vulnerability: models.Vulnerability{State: dtos.VulnStateOpen},
 			Events:        []models.VulnEvent{appliedEvent},
 		}
-		isVexEventAlreadyApplied(vuln, newEvent)
+		shouldApplyVexEvent(vuln, newEvent)
 		assert.Equal(t, dtos.VulnStateOpen, vuln.State)
 	})
 }
@@ -874,8 +874,8 @@ func TestApplyVEXRulesToVulnsStopsOnceTheVulnIsDecided(t *testing.T) {
 			newRule("false-positive", dtos.EventTypeFalsePositive, "not affected"),
 		}
 
-		// the rules are matched in random order, an accepted risk applied last is turned into a false positive by the next scan
-		scan(t, rules, &vuln, 2)
+		scan(t, rules, &vuln, 1)
+		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 
 		assert.Empty(t, scan(t, rules, &vuln, 3))
 		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
@@ -887,4 +887,99 @@ func TestApplyVEXRulesToVulnsStopsOnceTheVulnIsDecided(t *testing.T) {
 		assert.Empty(t, scan(t, []models.VEXRule{newRule("accept", dtos.EventTypeAccepted, "accepted")}, &vuln, 1))
 		assert.Equal(t, dtos.VulnStateFalsePositive, vuln.State)
 	})
+}
+
+// several rules matching the same vuln were all applied in one transaction with the same timestamp,
+// in random map order - only a single event may be created per vuln
+func TestApplyVEXRulesToVulnsAppliesASingleEventPerVuln(t *testing.T) {
+	assetID := uuid.New()
+	newRule := func(id string, eventType dtos.VulnEventType) models.VEXRule {
+		return models.VEXRule{
+			UpstreamVEXRule: models.UpstreamVEXRule{
+				ID:            id,
+				CELExpression: celFor("CVE-2024-1234", []string{"pkg:golang/lib@v1.0"}),
+				EventType:     eventType,
+				Justification: "justification of " + id,
+			},
+			AssetID:     assetID,
+			Enabled:     true,
+			CreatedByID: "user-1",
+		}
+	}
+
+	testCases := []struct {
+		name          string
+		state         dtos.VulnState
+		rules         []models.VEXRule
+		expectedRule  string
+		expectedState dtos.VulnState
+	}{
+		{
+			name:          "false positive wins over reopened",
+			state:         dtos.VulnStateOpen,
+			rules:         []models.VEXRule{newRule("reopen", dtos.EventTypeReopened), newRule("false-positive", dtos.EventTypeFalsePositive)},
+			expectedRule:  "false-positive",
+			expectedState: dtos.VulnStateFalsePositive,
+		},
+		{
+			name:          "false positive wins over reopened on an accepted vuln",
+			state:         dtos.VulnStateAccepted,
+			rules:         []models.VEXRule{newRule("reopen", dtos.EventTypeReopened), newRule("false-positive", dtos.EventTypeFalsePositive)},
+			expectedRule:  "false-positive",
+			expectedState: dtos.VulnStateFalsePositive,
+		},
+		{
+			name:          "false positive wins over accepted",
+			state:         dtos.VulnStateOpen,
+			rules:         []models.VEXRule{newRule("accept", dtos.EventTypeAccepted), newRule("false-positive", dtos.EventTypeFalsePositive)},
+			expectedRule:  "false-positive",
+			expectedState: dtos.VulnStateFalsePositive,
+		},
+		{
+			name:          "reopened wins over accepted",
+			state:         dtos.VulnStateOpen,
+			rules:         []models.VEXRule{newRule("accept", dtos.EventTypeAccepted), newRule("reopen", dtos.EventTypeReopened)},
+			expectedRule:  "reopen",
+			expectedState: dtos.VulnStateOpen,
+		},
+		{
+			name:  "false positive wins over every other rule",
+			state: dtos.VulnStateOpen,
+			rules: []models.VEXRule{
+				newRule("accept", dtos.EventTypeAccepted),
+				newRule("reopen", dtos.EventTypeReopened),
+				newRule("false-positive", dtos.EventTypeFalsePositive),
+			},
+			expectedRule:  "false-positive",
+			expectedState: dtos.VulnStateFalsePositive,
+		},
+		{
+			name:          "the smallest rule id wins between rules of the same type",
+			state:         dtos.VulnStateOpen,
+			rules:         []models.VEXRule{newRule("b", dtos.EventTypeFalsePositive), newRule("c", dtos.EventTypeFalsePositive), newRule("a", dtos.EventTypeFalsePositive)},
+			expectedRule:  "a",
+			expectedState: dtos.VulnStateFalsePositive,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			vuln := models.DependencyVuln{
+				Vulnerability:     models.Vulnerability{ID: uuid.New(), AssetID: assetID, State: tc.state},
+				CVEID:             "CVE-2024-1234",
+				VulnerabilityPath: []string{"pkg:golang/lib@v1.0"},
+				ComponentPurl:     "pkg:golang/lib@v1.0",
+			}
+
+			// the rules are iterated in random map order, every run has to pick the same event
+			for range 20 {
+				updated, events, err := ApplyVEXRulesToVulns(context.Background(), tc.rules, []models.DependencyVuln{vuln})
+				assert.NoError(t, err)
+				assert.Len(t, events, 1)
+				assert.Len(t, updated, 1)
+				assert.Equal(t, tc.expectedRule, *events[0].VexRuleID)
+				assert.Equal(t, tc.expectedState, updated[0].State)
+			}
+		})
+	}
 }

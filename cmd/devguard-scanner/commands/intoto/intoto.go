@@ -200,7 +200,7 @@ func downloadSupplyChainLinks(ctx context.Context, c *devguard.HTTPClient, linkD
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("unexpected status code: %d", resp.StatusCode)
+		return errors.Wrap(devguard.NewAPIError(resp), "could not download in-toto links")
 	}
 
 	// get the zip content and decode it

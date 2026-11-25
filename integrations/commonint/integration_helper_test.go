@@ -363,24 +363,24 @@ deploy-production:
 func TestPathsToMermaid(t *testing.T) {
 	t.Run("Everything works as expected with empty paths", func(t *testing.T) {
 		result := PathsToMermaid([][]string{})
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid\n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\nflowchart TD\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 
 	t.Run("Everything works as expected with a non empty path", func(t *testing.T) {
 		result := PathsToMermaid([][]string{{"pkg:npm/root-dep@1.0.0", "pkg:npm/test-package@1.0.0"}})
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid\n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\nflowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 
 	t.Run("should not escape @ symbols in labels", func(t *testing.T) {
 		result := PathsToMermaid([][]string{{"pkg:npm/root-dep@1.0.0", "pkg:npm/test-package@1.0.0"}})
 		assert.Contains(t, result, `["pkg:npm/root-dep@1.0.0"]`)
 		assert.NotContains(t, result, `\@`)
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid\n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\nflowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"])\npkg_npm_root_dep_1_0_0([\"pkg:npm/root-dep@1.0.0\"]) --- pkg_npm_test_package_1_0_0([\"pkg:npm/test-package@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 
 	t.Run("should render single node path", func(t *testing.T) {
 		result := PathsToMermaid([][]string{{"pkg:npm/single@1.0.0"}})
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_single_1_0_0([\"pkg:npm/single@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
+		assert.Equal(t, "```mermaid\n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\nflowchart TD\nYour_application([\"Your application\"]) --- pkg_npm_single_1_0_0([\"pkg:npm/single@1.0.0\"])\n\nclassDef default stroke-width:2px\n```\n", result)
 	})
 }
 func TestEscapeNodeID(t *testing.T) {
@@ -626,7 +626,7 @@ func TestRenderMarkdown(t *testing.T) {
 			Message: new("A detailed Message"),
 			URI:     "the/uri/of/the/vuln",
 		}
-		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, true)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "TestSnippet")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L64)")
@@ -648,10 +648,29 @@ func TestRenderMarkdown(t *testing.T) {
 			URI:     "the/uri/of/the/vuln",
 		}
 
-		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug)
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, true)
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
 		assert.Contains(t, result, fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/code-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, firstPartyVuln.ID))
+	})
+	t.Run("should not include slash commands if disabled", func(t *testing.T) {
+		snippetContents := dtos.SnippetContents{
+			Snippets: []dtos.SnippetContent{
+				{},
+			},
+		}
+		snippetJSON, err := transformer.SnippetContentsToJSON(snippetContents)
+		assert.NoError(t, err)
+		firstPartyVuln := models.FirstPartyVuln{
+			SnippetContents: snippetJSON,
+			Vulnerability: models.Vulnerability{
+				ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")},
+			Message: new("A detailed Message"),
+			URI:     "the/uri/of/the/vuln",
+		}
+
+		result := RenderMarkdownForFirstPartyVuln(firstPartyVuln, baseURL, orgSlug, projectSlug, assetSlug, assertVersionSlug, false)
+		assert.NotContains(t, result, "# Interact with this vulnerability")
 	})
 }
 

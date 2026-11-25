@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"time"
 
 	"github.com/l3montree-dev/devguard/database/models"
@@ -161,12 +160,13 @@ func (s *firstPartyVulnService) SyncAllIssues(ctx context.Context, org models.Or
 	if err != nil {
 		return fmt.Errorf("could not get first-party vulnerability by asset version: %w", err)
 	}
-	vulnList = slices.DeleteFunc(vulnList, func(v models.FirstPartyVuln) bool {
-		return v.State != dtos.VulnStateOpen || time.Since(v.UpdatedAt) >= ticketSyncWindow
+	vulnList = utils.Filter(vulnList, func(v models.FirstPartyVuln) bool {
+		// a closed vuln with a ticket has to be synced as well - its ticket needs to be closed
+		return time.Since(v.UpdatedAt) < ticketSyncWindow && (v.State == dtos.VulnStateOpen || v.TicketID != nil)
 	})
 
 	if len(vulnList) == 0 {
-		slog.Info("no recently changed open first-party vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
+		slog.Info("no recently changed first-party vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
 		return nil
 	}
 

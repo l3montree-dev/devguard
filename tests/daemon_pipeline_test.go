@@ -182,14 +182,16 @@ func TestDaemonPipelineDeleteOldVersionsDoesNotCauseRiskHistoryFKViolation(t *te
 		// Main branch: survives DeleteOldAssetVersions
 		mainVersion := f.CreateAssetVersion(asset.ID, "main", true)
 
-		// Stale branch: last_accessed_at is 10 days ago → qualifies for deletion
+		// Stale branch: created and last uploaded 10 days ago → qualifies for deletion
+		// (the retention policy keeps branches created or uploaded within the last 7 days)
 		staleVersion := models.AssetVersion{
-			Name:           "stale-branch",
-			AssetID:        asset.ID,
-			DefaultBranch:  false,
-			Slug:           "stale-branch",
-			Type:           models.AssetVersionBranch,
-			LastAccessedAt: time.Now().AddDate(0, 0, -10),
+			CreatedAt:     time.Now().AddDate(0, 0, -10),
+			Name:          "stale-branch",
+			AssetID:       asset.ID,
+			DefaultBranch: false,
+			Slug:          "stale-branch",
+			Type:          models.AssetVersionBranch,
+			LastUploadAt:  new(time.Now().AddDate(0, 0, -10)),
 		}
 		err := f.DB.Create(&staleVersion).Error
 		assert.NoError(t, err)

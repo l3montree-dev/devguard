@@ -43,6 +43,7 @@ func NewOrgRouter(
 	componentController *controllers.ComponentController,
 	integrationController *controllers.IntegrationController,
 	webhookIntegration *controllers.WebhookController,
+	secretController *controllers.SecretController,
 	externalEntityProviderService shared.ExternalEntityProviderService,
 	externalEntityProviderController *controllers.ExternalEntityProviderController,
 	logController *controllers.LogController,
@@ -67,6 +68,7 @@ func NewOrgRouter(
 	*/
 	organizationRouter := orgRouter.Group("/:organization",
 		middlewares.ResourceFetchMiddleware(casbinRBACProvider, orgService, projectRepository, assetRepository),
+		middlewares.MultiOrganizationMiddlewareRBAC(),
 		middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionRead),
 		middlewares.ExternalEntityProviderRefreshMiddleware(externalEntityProviderService))
 
@@ -119,9 +121,15 @@ func NewOrgRouter(
 
 	organizationUpdateAccessControlRequired := organizationRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.OrganizationAccessControlMiddleware(shared.ObjectOrganization, shared.ActionUpdate))
 
+	organizationUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.OrgList)
+	organizationUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.OrgCreate)
+	organizationUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.OrgDelete)
 	organizationUpdateAccessControlRequired.GET("/pats/", patController.ListByOrg)
 	organizationUpdateAccessControlRequired.POST("/members/", orgController.InviteMember)
 	organizationUpdateAccessControlRequired.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration)
+	organizationUpdateAccessControlRequired.POST("/integrations/redmine/test-and-save/", integrationController.TestAndSaveRedmineIntegration)
+	organizationUpdateAccessControlRequired.GET("/integrations/redmine/:redmine_integration_id/properties/", integrationController.GetRedmineIntegrationProperties)
+	organizationUpdateAccessControlRequired.PUT("/integrations/redmine/:redmine_integration_id/settings/", integrationController.UpdateRedmineIntegrationSettings)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.OrgSave)
 	organizationUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.OrgTest)
 	organizationUpdateAccessControlRequired.POST("/policies/", policyController.CreatePolicy)
@@ -133,6 +141,7 @@ func NewOrgRouter(
 	organizationUpdateAccessControlRequired.DELETE("/members/:userID/", orgController.RemoveMember)
 	organizationUpdateAccessControlRequired.DELETE("/invitation/:ID/", orgController.RevokeInvitation)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken)
+	organizationUpdateAccessControlRequired.DELETE("/integrations/redmine/:redmine_integration_id/", integrationController.DeleteRedmineAccessToken)
 	organizationUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.OrgDelete)
 	organizationUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByOrg)
 
