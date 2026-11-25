@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -37,11 +38,11 @@ func (l *LabelRepository) FindLabelByIDThroughHierarchy(ctx context.Context, tx 
 
 func (l *LabelRepository) FindLabelsByIDsThroughHierarchy(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error) {
 	var labels []models.Label
-	err := l.GetDB(ctx, tx).Where(`id IN ? AND organization_id = ? AND (
+	err := l.GetDB(ctx, tx).Where(`id = ANY(?) AND organization_id = ? AND (
 	(project_id IS NULL AND asset_id IS NULL) OR 
 	(project_id = ? AND asset_id IS NULL) OR 
 	(project_id = ? AND asset_id = ?)
-	)`, labelIDs, orgID, projectID, projectID, assetID).Find(&labels).Error
+	)`, pq.Array(labelIDs), orgID, projectID, projectID, assetID).Find(&labels).Error
 	if err != nil {
 		return []models.Label{}, err
 	}

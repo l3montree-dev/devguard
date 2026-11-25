@@ -21,24 +21,6 @@ func NewLabelController(labelRepository shared.LabelRepository) *LabelController
 	}
 }
 
-func scopeIDs(ctx shared.Context) (projectID, assetID *uuid.UUID) {
-	if shared.HasProject(ctx) {
-		project := shared.GetProject(ctx)
-		projectID = &project.ID
-	}
-	if shared.HasAsset(ctx) {
-		asset := shared.GetAsset(ctx)
-		assetID = &asset.ID
-	}
-	return projectID, assetID
-}
-
-func setLabelScope(ctx shared.Context, label *models.Label) {
-	org := shared.GetOrg(ctx)
-	label.OrganizationID = org.ID
-	label.ProjectID, label.AssetID = scopeIDs(ctx)
-}
-
 func attachLabelError(err error, target string) error {
 	if shared.IsNotFound(err) {
 		return echo.NewHTTPError(404, "label not found").WithInternal(err)
@@ -54,8 +36,7 @@ func saveLabelError(err error, msg string) error {
 }
 
 func (l *LabelController) readLabelOnLevel(ctx shared.Context) (models.Label, error) {
-	organizationID := shared.GetOrg(ctx).ID
-	projectID, assetID := scopeIDs(ctx)
+	organizationID, projectID, assetID := scopeIDs(ctx)
 	labelID, err := uuid.Parse(ctx.Param("labelID"))
 	if err != nil {
 		return models.Label{}, echo.NewHTTPError(400, "invalid label id").WithInternal(err)
@@ -96,7 +77,7 @@ func (l *LabelController) Create(ctx shared.Context) error {
 	}
 
 	label := models.Label{Label: req.Label, BackgroundColor: req.BackgroundColor, Description: req.Description}
-	setLabelScope(ctx, &label)
+	label.OrganizationID, label.ProjectID, label.AssetID = scopeIDs(ctx)
 
 	if err := l.labelRepository.Create(ctx.Request().Context(), nil, &label); err != nil {
 		return saveLabelError(err, "could not save label")
