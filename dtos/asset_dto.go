@@ -124,11 +124,9 @@ type Asset struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	SigningPubKey                *string        `json:"signingPubKey"`
-	EnableTicketRange            bool           `json:"enableTicketRange"`
-	CVSSAutomaticTicketThreshold *float64       `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64       `json:"riskAutomaticTicketThreshold"`
-	AssetVersions                []AssetVersion `json:"refs"`
+	SigningPubKey            *string        `json:"signingPubKey"`
+	TicketRangeCelExpression *string        `json:"ticketRangeCelExpression"`
+	AssetVersions            []AssetVersion `json:"refs"`
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
@@ -162,9 +160,7 @@ type AssetCreateRequest struct {
 	Name        string `json:"name" validate:"required,max=256"`
 	Description string `json:"description" validate:"max=4000"`
 
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	EnableTicketRange            bool     `json:"enableTicketRange"`
+	TicketRangeCelExpression *string `json:"ticketRangeCelExpression"`
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
@@ -189,9 +185,7 @@ type AssetPatchRequest struct {
 	Name        *string `json:"name" validate:"omitempty,max=256"`
 	Description *string `json:"description" validate:"omitempty,max=4000"`
 
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	EnableTicketRange            *bool    `json:"enableTicketRange"`
+	TicketRangeCelExpression *string `json:"ticketRangeCelExpression"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 

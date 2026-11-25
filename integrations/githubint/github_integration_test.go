@@ -319,11 +319,15 @@ func TestGithubIntegrationUpdateIssueUnlinksDeletedGithubIssue(t *testing.T) {
 		}),
 	).Return(nil).Once()
 
+	assetVersionRepository := mocks.NewAssetVersionRepository(t)
+	assetVersionRepository.On("Read", mock.Anything, mock.Anything, mock.Anything).Return(models.AssetVersion{DefaultBranch: true}, nil).Once()
+
 	integration := GithubIntegration{
 		githubClientFactory: func(repoID string) (shared.GithubClientFacade, error) {
 			return githubClient, nil
 		},
 		aggregatedVulnRepository: vulnRepository,
+		assetVersionRepository:   assetVersionRepository,
 		frontendURL:              "http://localhost:3000",
 	}
 

@@ -428,7 +428,7 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 	for _, vulnerability := range vulnMap {
 		if vulnerability.TicketID == nil {
 			// ask if we should create an issue AFTER checking if a ticket already exists - this way, we keep manually created tickets up to date.
-			if !commonint.ShouldCreateIssues(assetVersion) || !commonint.ShouldCreateThisIssue(asset, &vulnerability) {
+			if !commonint.ShouldCreateThisIssue(asset, &vulnerability, assetVersion) {
 				continue
 			}
 			errgroup.Go(func() (any, error) {

@@ -725,7 +725,11 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 		return fmt.Errorf("failed to edit Jira issue: %w", err)
 	}
 
-	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
+	assetVersion, err := i.assetVersionRepository.Read(ctx, nil, dependencyVuln.GetAssetVersionID())
+	if err != nil {
+		return fmt.Errorf("could not read asset version: %w", err)
+	}
+	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln, assetVersion)
 
 	slog.Info("updating jira ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedIssueState))
 

@@ -4422,12 +4422,8 @@ components:
           type: boolean
         confidentialityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
-        cvssAutomaticTicketThreshold:
-          type: number
         description:
           type: string
-        enableTicketRange:
-          type: boolean
         externalBotUserLink:
           type: string
         externalEntityId:
@@ -4473,8 +4469,6 @@ components:
           type: string
         repositoryProvider:
           type: string
-        riskAutomaticTicketThreshold:
-          type: number
         sharesInformation:
           type: boolean
         signingPubKey:
@@ -4483,15 +4477,15 @@ components:
           type: string
         state:
           type: string
+        ticketRangeCelExpression:
+          type: string
       required:
       - assetVersionRetentionPolicy
       - availabilityRequirement
       - avatar
       - centralDependencyVulnManagement
       - confidentialityRequirement
-      - cvssAutomaticTicketThreshold
       - description
-      - enableTicketRange
       - externalBotUserLink
       - externalEntityId
       - externalEntityProviderId
@@ -4513,11 +4507,11 @@ components:
       - repositoryId
       - repositoryName
       - repositoryProvider
-      - riskAutomaticTicketThreshold
       - sharesInformation
       - signingPubKey
       - slug
       - state
+      - ticketRangeCelExpression
       type: object
     dtos.AssetChangeRoleRequest:
       properties:
@@ -4537,13 +4531,9 @@ components:
           type: boolean
         confidentialityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
-        cvssAutomaticTicketThreshold:
-          type: number
         description:
           maxLength: 4000
           type: string
-        enableTicketRange:
-          type: boolean
         importance:
           type: integer
         integrityRequirement:
@@ -4573,15 +4563,13 @@ components:
           - github
           - gitlab
           type: string
-        riskAutomaticTicketThreshold:
-          type: number
+        ticketRangeCelExpression:
+          type: string
       required:
       - availabilityRequirement
       - centralDependencyVulnManagement
       - confidentialityRequirement
-      - cvssAutomaticTicketThreshold
       - description
-      - enableTicketRange
       - importance
       - integrityRequirement
       - modifiedAttackComplexity
@@ -4594,7 +4582,7 @@ components:
       - modifiedUserInteraction
       - name
       - repositoryProvider
-      - riskAutomaticTicketThreshold
+      - ticketRangeCelExpression
       type: object
     dtos.AssetDetails:
       properties:
@@ -4608,12 +4596,8 @@ components:
           type: boolean
         confidentialityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
-        cvssAutomaticTicketThreshold:
-          type: number
         description:
           type: string
-        enableTicketRange:
-          type: boolean
         externalBotUserLink:
           type: string
         externalEntityId:
@@ -4664,8 +4648,6 @@ components:
           type: string
         repositoryProvider:
           type: string
-        riskAutomaticTicketThreshold:
-          type: number
         sharesInformation:
           type: boolean
         signingPubKey:
@@ -4674,15 +4656,15 @@ components:
           type: string
         state:
           type: string
+        ticketRangeCelExpression:
+          type: string
       required:
       - assetVersionRetentionPolicy
       - availabilityRequirement
       - avatar
       - centralDependencyVulnManagement
       - confidentialityRequirement
-      - cvssAutomaticTicketThreshold
       - description
-      - enableTicketRange
       - externalBotUserLink
       - externalEntityId
       - externalEntityProviderId
@@ -4705,11 +4687,11 @@ components:
       - repositoryId
       - repositoryName
       - repositoryProvider
-      - riskAutomaticTicketThreshold
       - sharesInformation
       - signingPubKey
       - slug
       - state
+      - ticketRangeCelExpression
       type: object
     dtos.AssetDetailsWithSecrets:
       properties:
@@ -4723,12 +4705,8 @@ components:
           type: boolean
         confidentialityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
-        cvssAutomaticTicketThreshold:
-          type: number
         description:
           type: string
-        enableTicketRange:
-          type: boolean
         externalBotUserLink:
           type: string
         externalEntityId:
@@ -4779,8 +4757,6 @@ components:
           type: string
         repositoryProvider:
           type: string
-        riskAutomaticTicketThreshold:
-          type: number
         sharesInformation:
           type: boolean
         signingPubKey:
@@ -4788,6 +4764,8 @@ components:
         slug:
           type: string
         state:
+          type: string
+        ticketRangeCelExpression:
           type: string
         webhookSecret:
           type: string
@@ -4797,9 +4775,7 @@ components:
       - avatar
       - centralDependencyVulnManagement
       - confidentialityRequirement
-      - cvssAutomaticTicketThreshold
       - description
-      - enableTicketRange
       - externalBotUserLink
       - externalEntityId
       - externalEntityProviderId
@@ -4822,11 +4798,11 @@ components:
       - repositoryId
       - repositoryName
       - repositoryProvider
-      - riskAutomaticTicketThreshold
       - sharesInformation
       - signingPubKey
       - slug
       - state
+      - ticketRangeCelExpression
       - webhookSecret
       type: object
     dtos.AssetEntry:
@@ -4871,13 +4847,9 @@ components:
         configFiles:
           additionalProperties: {}
           type: object
-        cvssAutomaticTicketThreshold:
-          type: number
         description:
           maxLength: 4000
           type: string
-        enableTicketRange:
-          type: boolean
         integrityRequirement:
           $ref: '#/components/schemas/dtos.RequirementLevel'
         isPublic:
@@ -4915,10 +4887,10 @@ components:
           - github
           - gitlab
           type: string
-        riskAutomaticTicketThreshold:
-          type: number
         sharesInformation:
           type: boolean
+        ticketRangeCelExpression:
+          type: string
         webhookSecret:
           maxLength: 1024
           type: string
@@ -4928,9 +4900,7 @@ components:
       - centralDependencyVulnManagement
       - confidentialityRequirement
       - configFiles
-      - cvssAutomaticTicketThreshold
       - description
-      - enableTicketRange
       - integrityRequirement
       - isPublic
       - modifiedAttackComplexity
@@ -4946,8 +4916,8 @@ components:
       - repositoryId
       - repositoryName
       - repositoryProvider
-      - riskAutomaticTicketThreshold
       - sharesInformation
+      - ticketRangeCelExpression
       - webhookSecret
       type: object
     dtos.AssetVersion:
@@ -9479,8 +9449,6 @@ components:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB'
         createdAt:
           type: string
-        cvssAutomaticTicketThreshold:
-          type: number
         description:
           type: string
         externalEntityId:
@@ -9534,8 +9502,6 @@ components:
           type: string
         repositoryProvider:
           type: string
-        riskAutomaticTicketThreshold:
-          type: number
         shareInformation:
           type: boolean
         signingPubKey:
@@ -9544,6 +9510,8 @@ components:
           type: string
         state:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetState'
+        ticketRangeCelExpression:
+          type: string
         type:
           $ref: '#/components/schemas/github_com_l3montree-dev_devguard_database_models.AssetType'
         updatedAt:
@@ -9557,7 +9525,6 @@ components:
       - confidentialityRequirement
       - configFiles
       - createdAt
-      - cvssAutomaticTicketThreshold
       - description
       - externalEntityId
       - externalEntityProviderId
@@ -9582,11 +9549,11 @@ components:
       - repositoryId
       - repositoryName
       - repositoryProvider
-      - riskAutomaticTicketThreshold
       - shareInformation
       - signingPubKey
       - slug
       - state
+      - ticketRangeCelExpression
       - type
       - updatedAt
       - webhookSecret
@@ -11038,56 +11005,18 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -11104,56 +11033,18 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond

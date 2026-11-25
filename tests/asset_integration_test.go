@@ -89,11 +89,9 @@ func TestAssetUpdate(t *testing.T) {
 			org, project, asset1, _ := f.CreateOrgProjectAssetAndVersion()
 
 			updateRequest := dtos.AssetPatchRequest{
-				Name:                         new("test-asset"),
-				Description:                  new("test description"),
-				EnableTicketRange:            new(true),
-				CVSSAutomaticTicketThreshold: new(7.0),
-				RiskAutomaticTicketThreshold: new(5.0),
+				Name:                     new("test-asset"),
+				Description:              new("test description"),
+				TicketRangeCelExpression: new(`vuln.cve != null && vuln.cve.cvss >= 7`),
 			}
 
 			updateRequestBytes, err := json.Marshal(updateRequest)
@@ -120,8 +118,7 @@ func TestAssetUpdate(t *testing.T) {
 			updatedAsset, err := f.App.AssetRepository.Read(context.Background(), nil, asset1.ID)
 			assert.Nil(t, err)
 
-			assert.Equal(t, 7.0, *updatedAsset.CVSSAutomaticTicketThreshold)
-			assert.Equal(t, 5.0, *updatedAsset.RiskAutomaticTicketThreshold)
+			assert.Equal(t, `vuln.cve != null && vuln.cve.cvss >= 7`, *updatedAsset.TicketRangeCelExpression)
 		})
 	})
 }

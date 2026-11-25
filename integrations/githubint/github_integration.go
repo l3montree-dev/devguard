@@ -920,7 +920,11 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	_, ticketNumber := githubTicketIDToIDAndNumber(*dependencyVuln.TicketID)
 
-	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln)
+	assetVersion, err := githubIntegration.assetVersionRepository.Read(ctx, nil, dependencyVuln.GetAssetVersionID())
+	if err != nil {
+		return fmt.Errorf("could not read asset version: %w", err)
+	}
+	expectedIssueState := commonint.GetExpectedIssueState(asset, dependencyVuln, assetVersion)
 
 	labels := commonint.GetLabels(dependencyVuln, orgSlug, projectSlug, asset.Slug)
 	issueRequest := &github.IssueRequest{
@@ -932,7 +936,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	slog.Info("updating github ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", expectedIssueState.ToGithub())
 
-	_, _, err := client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
+	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
 	return err
 }
 

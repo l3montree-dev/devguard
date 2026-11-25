@@ -1372,7 +1372,11 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	}
 	labels := commonint.GetLabels(dependencyVuln, orgSlug, projectSlug, asset.Slug)
 
-	expectedState := commonint.GetExpectedIssueState(asset, dependencyVuln)
+	assetVersion, err := g.assetVersionRepository.Read(ctx, nil, dependencyVuln.GetAssetVersionID())
+	if err != nil {
+		return fmt.Errorf("could not read asset version: %w", err)
+	}
+	expectedState := commonint.GetExpectedIssueState(asset, dependencyVuln, assetVersion)
 
 	slog.Info("updating gitlab ticket", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "ticketURL", utils.SafeDereference(dependencyVuln.TicketURL), "expectedState", string(expectedState))
 

@@ -171,8 +171,8 @@ func runPipelineForAsset(assetIDStr, assetVersionSlug string, dryRun bool, stage
 	}
 
 	if dryRun {
-		fxOpts = append(fxOpts, fx.Decorate(func(real shared.IntegrationAggregate) shared.IntegrationAggregate {
-			return integrations.NewDryRunIntegration(real)
+		fxOpts = append(fxOpts, fx.Decorate(func(real shared.IntegrationAggregate, assetVersionRepository shared.AssetVersionRepository) shared.IntegrationAggregate {
+			return integrations.NewDryRunIntegration(real, assetVersionRepository)
 		}))
 	}
 

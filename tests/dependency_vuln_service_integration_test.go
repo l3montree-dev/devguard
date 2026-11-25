@@ -63,8 +63,7 @@ func TestSyncAllIssuesDuplicateTicketCreation(t *testing.T) {
 		asset.IntegrityRequirement = dtos.RequirementLevelHigh
 		asset.AvailabilityRequirement = dtos.RequirementLevelHigh
 		// Set thresholds to ensure tickets are created
-		cvssThreshold := 5.0
-		asset.CVSSAutomaticTicketThreshold = &cvssThreshold
+		asset.TicketRangeCelExpression = new(`vuln.ref.defaultBranch == true && vuln.cve != null && vuln.cve.cvss >= 5`)
 		assert.NoError(t, f.DB.Save(&asset).Error)
 
 		t.Run("should create only one ticket when vuln exists in two artifacts", func(t *testing.T) {
@@ -251,8 +250,7 @@ func TestSyncIssuesWithExistingTickets(t *testing.T) {
 		asset.ConfidentialityRequirement = dtos.RequirementLevelHigh
 		asset.IntegrityRequirement = dtos.RequirementLevelHigh
 		asset.AvailabilityRequirement = dtos.RequirementLevelHigh
-		cvssThreshold := 5.0
-		asset.CVSSAutomaticTicketThreshold = &cvssThreshold
+		asset.TicketRangeCelExpression = new(`vuln.ref.defaultBranch == true && vuln.cve != null && vuln.cve.cvss >= 5`)
 		assert.NoError(t, f.DB.Save(&asset).Error)
 
 		t.Run("should update existing ticket when vuln already has ticket ID", func(t *testing.T) {
