@@ -13,6 +13,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+// the mappings are not seeded anymore, the file is kept until mapped_controls are reworked
+//
+//nolint:unused
 package compliance
 
 import (

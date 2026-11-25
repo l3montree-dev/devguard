@@ -52,7 +52,7 @@ func (_m *FrameworkControlRepository) EXPECT() *FrameworkControlRepository_Expec
 }
 
 // Activate provides a mock function for the type FrameworkControlRepository
-func (_mock *FrameworkControlRepository) Activate(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+func (_mock *FrameworkControlRepository) Activate(ctx context.Context, tx shared.DB, id string) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -60,7 +60,7 @@ func (_mock *FrameworkControlRepository) Activate(ctx context.Context, tx shared
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -76,12 +76,12 @@ type FrameworkControlRepository_Activate_Call struct {
 // Activate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id uuid.UUID
+//   - id string
 func (_e *FrameworkControlRepository_Expecter) Activate(ctx any, tx any, id any) *FrameworkControlRepository_Activate_Call {
 	return &FrameworkControlRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, tx, id)}
 }
 
-func (_c *FrameworkControlRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *FrameworkControlRepository_Activate_Call {
+func (_c *FrameworkControlRepository_Activate_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *FrameworkControlRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -91,9 +91,9 @@ func (_c *FrameworkControlRepository_Activate_Call) Run(run func(ctx context.Con
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -109,7 +109,7 @@ func (_c *FrameworkControlRepository_Activate_Call) Return(err error) *Framework
 	return _c
 }
 
-func (_c *FrameworkControlRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *FrameworkControlRepository_Activate_Call {
+func (_c *FrameworkControlRepository_Activate_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *FrameworkControlRepository_Activate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -413,7 +413,7 @@ func (_c *FrameworkControlRepository_CreateBatch_Call) RunAndReturn(run func(ctx
 }
 
 // Delete provides a mock function for the type FrameworkControlRepository
-func (_mock *FrameworkControlRepository) Delete(ctx context.Context, tx shared.DB, id uuid.UUID) error {
+func (_mock *FrameworkControlRepository) Delete(ctx context.Context, tx shared.DB, id string) error {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -421,7 +421,7 @@ func (_mock *FrameworkControlRepository) Delete(ctx context.Context, tx shared.D
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) error); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -437,12 +437,12 @@ type FrameworkControlRepository_Delete_Call struct {
 // Delete is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id uuid.UUID
+//   - id string
 func (_e *FrameworkControlRepository_Expecter) Delete(ctx any, tx any, id any) *FrameworkControlRepository_Delete_Call {
 	return &FrameworkControlRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, tx, id)}
 }
 
-func (_c *FrameworkControlRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *FrameworkControlRepository_Delete_Call {
+func (_c *FrameworkControlRepository_Delete_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *FrameworkControlRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -452,9 +452,9 @@ func (_c *FrameworkControlRepository_Delete_Call) Run(run func(ctx context.Conte
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -470,7 +470,7 @@ func (_c *FrameworkControlRepository_Delete_Call) Return(err error) *FrameworkCo
 	return _c
 }
 
-func (_c *FrameworkControlRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) error) *FrameworkControlRepository_Delete_Call {
+func (_c *FrameworkControlRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) error) *FrameworkControlRepository_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -538,48 +538,49 @@ func (_c *FrameworkControlRepository_DeleteBatch_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
-// GetAll provides a mock function for the type FrameworkControlRepository
-func (_mock *FrameworkControlRepository) GetAll(ctx context.Context, tx shared.DB, framework *string) ([]models.FrameworkControl, error) {
-	ret := _mock.Called(ctx, tx, framework)
+// DeleteScopeFramework provides a mock function for the type FrameworkControlRepository
+func (_mock *FrameworkControlRepository) DeleteScopeFramework(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, framework string) (bool, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, framework)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAll")
+		panic("no return value specified for DeleteScopeFramework")
 	}
 
-	var r0 []models.FrameworkControl
+	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string) ([]models.FrameworkControl, error)); ok {
-		return returnFunc(ctx, tx, framework)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string) (bool, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID, assetID, framework)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *string) []models.FrameworkControl); ok {
-		r0 = returnFunc(ctx, tx, framework)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string) bool); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, framework)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.FrameworkControl)
-		}
+		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, *string) error); ok {
-		r1 = returnFunc(ctx, tx, framework)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID, assetID, framework)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// FrameworkControlRepository_GetAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAll'
-type FrameworkControlRepository_GetAll_Call struct {
+// FrameworkControlRepository_DeleteScopeFramework_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteScopeFramework'
+type FrameworkControlRepository_DeleteScopeFramework_Call struct {
 	*mock.Call
 }
 
-// GetAll is a helper method to define mock.On call
+// DeleteScopeFramework is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - framework *string
-func (_e *FrameworkControlRepository_Expecter) GetAll(ctx any, tx any, framework any) *FrameworkControlRepository_GetAll_Call {
-	return &FrameworkControlRepository_GetAll_Call{Call: _e.mock.On("GetAll", ctx, tx, framework)}
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - framework string
+func (_e *FrameworkControlRepository_Expecter) DeleteScopeFramework(ctx any, tx any, orgID any, projectID any, assetID any, framework any) *FrameworkControlRepository_DeleteScopeFramework_Call {
+	return &FrameworkControlRepository_DeleteScopeFramework_Call{Call: _e.mock.On("DeleteScopeFramework", ctx, tx, orgID, projectID, assetID, framework)}
 }
 
-func (_c *FrameworkControlRepository_GetAll_Call) Run(run func(ctx context.Context, tx shared.DB, framework *string)) *FrameworkControlRepository_GetAll_Call {
+func (_c *FrameworkControlRepository_DeleteScopeFramework_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, framework string)) *FrameworkControlRepository_DeleteScopeFramework_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -589,25 +590,40 @@ func (_c *FrameworkControlRepository_GetAll_Call) Run(run func(ctx context.Conte
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 *string
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].(*string)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
+			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *FrameworkControlRepository_GetAll_Call) Return(frameworkControls []models.FrameworkControl, err error) *FrameworkControlRepository_GetAll_Call {
-	_c.Call.Return(frameworkControls, err)
+func (_c *FrameworkControlRepository_DeleteScopeFramework_Call) Return(b bool, err error) *FrameworkControlRepository_DeleteScopeFramework_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *FrameworkControlRepository_GetAll_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, framework *string) ([]models.FrameworkControl, error)) *FrameworkControlRepository_GetAll_Call {
+func (_c *FrameworkControlRepository_DeleteScopeFramework_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, framework string) (bool, error)) *FrameworkControlRepository_DeleteScopeFramework_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -667,6 +683,92 @@ func (_c *FrameworkControlRepository_GetDB_Call) Return(dB shared.DB) *Framework
 }
 
 func (_c *FrameworkControlRepository_GetDB_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) shared.DB) *FrameworkControlRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEffectiveScopeFrameworks provides a mock function for the type FrameworkControlRepository
+func (_mock *FrameworkControlRepository) GetEffectiveScopeFrameworks(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.ScopeFramework, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEffectiveScopeFrameworks")
+	}
+
+	var r0 []models.ScopeFramework
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID) ([]models.ScopeFramework, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID) []models.ScopeFramework); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ScopeFramework)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// FrameworkControlRepository_GetEffectiveScopeFrameworks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEffectiveScopeFrameworks'
+type FrameworkControlRepository_GetEffectiveScopeFrameworks_Call struct {
+	*mock.Call
+}
+
+// GetEffectiveScopeFrameworks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+func (_e *FrameworkControlRepository_Expecter) GetEffectiveScopeFrameworks(ctx any, tx any, orgID any, projectID any, assetID any) *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call {
+	return &FrameworkControlRepository_GetEffectiveScopeFrameworks_Call{Call: _e.mock.On("GetEffectiveScopeFrameworks", ctx, tx, orgID, projectID, assetID)}
+}
+
+func (_c *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID)) *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call) Return(scopeFrameworks []models.ScopeFramework, err error) *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call {
+	_c.Call.Return(scopeFrameworks, err)
+	return _c
+}
+
+func (_c *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.ScopeFramework, error)) *FrameworkControlRepository_GetEffectiveScopeFrameworks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -737,7 +839,7 @@ func (_c *FrameworkControlRepository_InBatches_Call) RunAndReturn(run func(ctx c
 }
 
 // List provides a mock function for the type FrameworkControlRepository
-func (_mock *FrameworkControlRepository) List(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.FrameworkControl, error) {
+func (_mock *FrameworkControlRepository) List(ctx context.Context, tx shared.DB, ids []string) ([]models.FrameworkControl, error) {
 	ret := _mock.Called(ctx, tx, ids)
 
 	if len(ret) == 0 {
@@ -746,17 +848,17 @@ func (_mock *FrameworkControlRepository) List(ctx context.Context, tx shared.DB,
 
 	var r0 []models.FrameworkControl
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) ([]models.FrameworkControl, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) ([]models.FrameworkControl, error)); ok {
 		return returnFunc(ctx, tx, ids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []uuid.UUID) []models.FrameworkControl); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []string) []models.FrameworkControl); ok {
 		r0 = returnFunc(ctx, tx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.FrameworkControl)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []string) error); ok {
 		r1 = returnFunc(ctx, tx, ids)
 	} else {
 		r1 = ret.Error(1)
@@ -772,12 +874,12 @@ type FrameworkControlRepository_List_Call struct {
 // List is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - ids []uuid.UUID
+//   - ids []string
 func (_e *FrameworkControlRepository_Expecter) List(ctx any, tx any, ids any) *FrameworkControlRepository_List_Call {
 	return &FrameworkControlRepository_List_Call{Call: _e.mock.On("List", ctx, tx, ids)}
 }
 
-func (_c *FrameworkControlRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID)) *FrameworkControlRepository_List_Call {
+func (_c *FrameworkControlRepository_List_Call) Run(run func(ctx context.Context, tx shared.DB, ids []string)) *FrameworkControlRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -787,9 +889,9 @@ func (_c *FrameworkControlRepository_List_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []uuid.UUID
+		var arg2 []string
 		if args[2] != nil {
-			arg2 = args[2].([]uuid.UUID)
+			arg2 = args[2].([]string)
 		}
 		run(
 			arg0,
@@ -805,81 +907,13 @@ func (_c *FrameworkControlRepository_List_Call) Return(frameworkControls []model
 	return _c
 }
 
-func (_c *FrameworkControlRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []uuid.UUID) ([]models.FrameworkControl, error)) *FrameworkControlRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListFrameworkControls provides a mock function for the type FrameworkControlRepository
-func (_mock *FrameworkControlRepository) ListFrameworkControls(ctx context.Context, tx shared.DB) ([]string, error) {
-	ret := _mock.Called(ctx, tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListFrameworkControls")
-	}
-
-	var r0 []string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) ([]string, error)); ok {
-		return returnFunc(ctx, tx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB) []string); ok {
-		r0 = returnFunc(ctx, tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB) error); ok {
-		r1 = returnFunc(ctx, tx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// FrameworkControlRepository_ListFrameworkControls_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListFrameworkControls'
-type FrameworkControlRepository_ListFrameworkControls_Call struct {
-	*mock.Call
-}
-
-// ListFrameworkControls is a helper method to define mock.On call
-//   - ctx context.Context
-//   - tx shared.DB
-func (_e *FrameworkControlRepository_Expecter) ListFrameworkControls(ctx any, tx any) *FrameworkControlRepository_ListFrameworkControls_Call {
-	return &FrameworkControlRepository_ListFrameworkControls_Call{Call: _e.mock.On("ListFrameworkControls", ctx, tx)}
-}
-
-func (_c *FrameworkControlRepository_ListFrameworkControls_Call) Run(run func(ctx context.Context, tx shared.DB)) *FrameworkControlRepository_ListFrameworkControls_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 shared.DB
-		if args[1] != nil {
-			arg1 = args[1].(shared.DB)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *FrameworkControlRepository_ListFrameworkControls_Call) Return(strings []string, err error) *FrameworkControlRepository_ListFrameworkControls_Call {
-	_c.Call.Return(strings, err)
-	return _c
-}
-
-func (_c *FrameworkControlRepository_ListFrameworkControls_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB) ([]string, error)) *FrameworkControlRepository_ListFrameworkControls_Call {
+func (_c *FrameworkControlRepository_List_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ids []string) ([]models.FrameworkControl, error)) *FrameworkControlRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function for the type FrameworkControlRepository
-func (_mock *FrameworkControlRepository) Read(ctx context.Context, tx shared.DB, id uuid.UUID) (models.FrameworkControl, error) {
+func (_mock *FrameworkControlRepository) Read(ctx context.Context, tx shared.DB, id string) (models.FrameworkControl, error) {
 	ret := _mock.Called(ctx, tx, id)
 
 	if len(ret) == 0 {
@@ -888,15 +922,15 @@ func (_mock *FrameworkControlRepository) Read(ctx context.Context, tx shared.DB,
 
 	var r0 models.FrameworkControl
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (models.FrameworkControl, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) (models.FrameworkControl, error)); ok {
 		return returnFunc(ctx, tx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) models.FrameworkControl); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, string) models.FrameworkControl); ok {
 		r0 = returnFunc(ctx, tx, id)
 	} else {
 		r0 = ret.Get(0).(models.FrameworkControl)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, string) error); ok {
 		r1 = returnFunc(ctx, tx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -912,12 +946,12 @@ type FrameworkControlRepository_Read_Call struct {
 // Read is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
-//   - id uuid.UUID
+//   - id string
 func (_e *FrameworkControlRepository_Expecter) Read(ctx any, tx any, id any) *FrameworkControlRepository_Read_Call {
 	return &FrameworkControlRepository_Read_Call{Call: _e.mock.On("Read", ctx, tx, id)}
 }
 
-func (_c *FrameworkControlRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *FrameworkControlRepository_Read_Call {
+func (_c *FrameworkControlRepository_Read_Call) Run(run func(ctx context.Context, tx shared.DB, id string)) *FrameworkControlRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -927,9 +961,9 @@ func (_c *FrameworkControlRepository_Read_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 uuid.UUID
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -945,7 +979,7 @@ func (_c *FrameworkControlRepository_Read_Call) Return(frameworkControl models.F
 	return _c
 }
 
-func (_c *FrameworkControlRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (models.FrameworkControl, error)) *FrameworkControlRepository_Read_Call {
+func (_c *FrameworkControlRepository_Read_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id string) (models.FrameworkControl, error)) *FrameworkControlRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1072,6 +1106,69 @@ func (_c *FrameworkControlRepository_SaveBatch_Call) Return(err error) *Framewor
 }
 
 func (_c *FrameworkControlRepository_SaveBatch_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, ts []models.FrameworkControl) error) *FrameworkControlRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveScopeFramework provides a mock function for the type FrameworkControlRepository
+func (_mock *FrameworkControlRepository) SaveScopeFramework(ctx context.Context, tx shared.DB, scopeFramework *models.ScopeFramework) error {
+	ret := _mock.Called(ctx, tx, scopeFramework)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveScopeFramework")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, *models.ScopeFramework) error); ok {
+		r0 = returnFunc(ctx, tx, scopeFramework)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FrameworkControlRepository_SaveScopeFramework_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveScopeFramework'
+type FrameworkControlRepository_SaveScopeFramework_Call struct {
+	*mock.Call
+}
+
+// SaveScopeFramework is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - scopeFramework *models.ScopeFramework
+func (_e *FrameworkControlRepository_Expecter) SaveScopeFramework(ctx any, tx any, scopeFramework any) *FrameworkControlRepository_SaveScopeFramework_Call {
+	return &FrameworkControlRepository_SaveScopeFramework_Call{Call: _e.mock.On("SaveScopeFramework", ctx, tx, scopeFramework)}
+}
+
+func (_c *FrameworkControlRepository_SaveScopeFramework_Call) Run(run func(ctx context.Context, tx shared.DB, scopeFramework *models.ScopeFramework)) *FrameworkControlRepository_SaveScopeFramework_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 *models.ScopeFramework
+		if args[2] != nil {
+			arg2 = args[2].(*models.ScopeFramework)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *FrameworkControlRepository_SaveScopeFramework_Call) Return(err error) *FrameworkControlRepository_SaveScopeFramework_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FrameworkControlRepository_SaveScopeFramework_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, scopeFramework *models.ScopeFramework) error) *FrameworkControlRepository_SaveScopeFramework_Call {
 	_c.Call.Return(run)
 	return _c
 }

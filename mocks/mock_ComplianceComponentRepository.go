@@ -123,6 +123,96 @@ func (_c *ComplianceComponentRepository_CreateStatement_Call) RunAndReturn(run f
 	return _c
 }
 
+// DeleteComponentDefinition provides a mock function for the type ComplianceComponentRepository
+func (_mock *ComplianceComponentRepository) DeleteComponentDefinition(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string) (bool, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, componentDefinition)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteComponentDefinition")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string) (bool, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID, assetID, componentDefinition)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string) bool); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, componentDefinition)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID, assetID, componentDefinition)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComplianceComponentRepository_DeleteComponentDefinition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteComponentDefinition'
+type ComplianceComponentRepository_DeleteComponentDefinition_Call struct {
+	*mock.Call
+}
+
+// DeleteComponentDefinition is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - componentDefinition string
+func (_e *ComplianceComponentRepository_Expecter) DeleteComponentDefinition(ctx any, tx any, orgID any, projectID any, assetID any, componentDefinition any) *ComplianceComponentRepository_DeleteComponentDefinition_Call {
+	return &ComplianceComponentRepository_DeleteComponentDefinition_Call{Call: _e.mock.On("DeleteComponentDefinition", ctx, tx, orgID, projectID, assetID, componentDefinition)}
+}
+
+func (_c *ComplianceComponentRepository_DeleteComponentDefinition_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string)) *ComplianceComponentRepository_DeleteComponentDefinition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *ComplianceComponentRepository_DeleteComponentDefinition_Call) Return(b bool, err error) *ComplianceComponentRepository_DeleteComponentDefinition_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *ComplianceComponentRepository_DeleteComponentDefinition_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string) (bool, error)) *ComplianceComponentRepository_DeleteComponentDefinition_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteStatement provides a mock function for the type ComplianceComponentRepository
 func (_mock *ComplianceComponentRepository) DeleteStatement(ctx context.Context, tx shared.DB, statementID uuid.UUID) (*models.ComplianceComponentImplementsControlStatement, error) {
 	ret := _mock.Called(ctx, tx, statementID)
@@ -198,8 +288,8 @@ func (_c *ComplianceComponentRepository_DeleteStatement_Call) RunAndReturn(run f
 }
 
 // GetDetails provides a mock function for the type ComplianceComponentRepository
-func (_mock *ComplianceComponentRepository) GetDetails(ctx context.Context, tx shared.DB, id uuid.UUID) (*models.ComplianceComponent, error) {
-	ret := _mock.Called(ctx, tx, id)
+func (_mock *ComplianceComponentRepository) GetDetails(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, id uuid.UUID) (*models.ComplianceComponent, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDetails")
@@ -207,18 +297,18 @@ func (_mock *ComplianceComponentRepository) GetDetails(ctx context.Context, tx s
 
 	var r0 *models.ComplianceComponent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) (*models.ComplianceComponent, error)); ok {
-		return returnFunc(ctx, tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) (*models.ComplianceComponent, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID, assetID, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID) *models.ComplianceComponent); ok {
-		r0 = returnFunc(ctx, tx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) *models.ComplianceComponent); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.ComplianceComponent)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, tx, id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID, assetID, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -233,12 +323,15 @@ type ComplianceComponentRepository_GetDetails_Call struct {
 // GetDetails is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
 //   - id uuid.UUID
-func (_e *ComplianceComponentRepository_Expecter) GetDetails(ctx any, tx any, id any) *ComplianceComponentRepository_GetDetails_Call {
-	return &ComplianceComponentRepository_GetDetails_Call{Call: _e.mock.On("GetDetails", ctx, tx, id)}
+func (_e *ComplianceComponentRepository_Expecter) GetDetails(ctx any, tx any, orgID any, projectID any, assetID any, id any) *ComplianceComponentRepository_GetDetails_Call {
+	return &ComplianceComponentRepository_GetDetails_Call{Call: _e.mock.On("GetDetails", ctx, tx, orgID, projectID, assetID, id)}
 }
 
-func (_c *ComplianceComponentRepository_GetDetails_Call) Run(run func(ctx context.Context, tx shared.DB, id uuid.UUID)) *ComplianceComponentRepository_GetDetails_Call {
+func (_c *ComplianceComponentRepository_GetDetails_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, id uuid.UUID)) *ComplianceComponentRepository_GetDetails_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -252,10 +345,25 @@ func (_c *ComplianceComponentRepository_GetDetails_Call) Run(run func(ctx contex
 		if args[2] != nil {
 			arg2 = args[2].(uuid.UUID)
 		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 uuid.UUID
+		if args[5] != nil {
+			arg5 = args[5].(uuid.UUID)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -266,14 +374,14 @@ func (_c *ComplianceComponentRepository_GetDetails_Call) Return(complianceCompon
 	return _c
 }
 
-func (_c *ComplianceComponentRepository_GetDetails_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, id uuid.UUID) (*models.ComplianceComponent, error)) *ComplianceComponentRepository_GetDetails_Call {
+func (_c *ComplianceComponentRepository_GetDetails_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, id uuid.UUID) (*models.ComplianceComponent, error)) *ComplianceComponentRepository_GetDetails_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListAll provides a mock function for the type ComplianceComponentRepository
-func (_mock *ComplianceComponentRepository) ListAll(ctx context.Context, tx shared.DB, filter []shared.FilterQuery) ([]models.ComplianceComponent, error) {
-	ret := _mock.Called(ctx, tx, filter)
+func (_mock *ComplianceComponentRepository) ListAll(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, filter []shared.FilterQuery) ([]models.ComplianceComponent, error) {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListAll")
@@ -281,18 +389,18 @@ func (_mock *ComplianceComponentRepository) ListAll(ctx context.Context, tx shar
 
 	var r0 []models.ComplianceComponent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []shared.FilterQuery) ([]models.ComplianceComponent, error)); ok {
-		return returnFunc(ctx, tx, filter)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, []shared.FilterQuery) ([]models.ComplianceComponent, error)); ok {
+		return returnFunc(ctx, tx, orgID, projectID, assetID, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, []shared.FilterQuery) []models.ComplianceComponent); ok {
-		r0 = returnFunc(ctx, tx, filter)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, []shared.FilterQuery) []models.ComplianceComponent); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, filter)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComplianceComponent)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, []shared.FilterQuery) error); ok {
-		r1 = returnFunc(ctx, tx, filter)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, []shared.FilterQuery) error); ok {
+		r1 = returnFunc(ctx, tx, orgID, projectID, assetID, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -307,12 +415,15 @@ type ComplianceComponentRepository_ListAll_Call struct {
 // ListAll is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tx shared.DB
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
 //   - filter []shared.FilterQuery
-func (_e *ComplianceComponentRepository_Expecter) ListAll(ctx any, tx any, filter any) *ComplianceComponentRepository_ListAll_Call {
-	return &ComplianceComponentRepository_ListAll_Call{Call: _e.mock.On("ListAll", ctx, tx, filter)}
+func (_e *ComplianceComponentRepository_Expecter) ListAll(ctx any, tx any, orgID any, projectID any, assetID any, filter any) *ComplianceComponentRepository_ListAll_Call {
+	return &ComplianceComponentRepository_ListAll_Call{Call: _e.mock.On("ListAll", ctx, tx, orgID, projectID, assetID, filter)}
 }
 
-func (_c *ComplianceComponentRepository_ListAll_Call) Run(run func(ctx context.Context, tx shared.DB, filter []shared.FilterQuery)) *ComplianceComponentRepository_ListAll_Call {
+func (_c *ComplianceComponentRepository_ListAll_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, filter []shared.FilterQuery)) *ComplianceComponentRepository_ListAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -322,14 +433,29 @@ func (_c *ComplianceComponentRepository_ListAll_Call) Run(run func(ctx context.C
 		if args[1] != nil {
 			arg1 = args[1].(shared.DB)
 		}
-		var arg2 []shared.FilterQuery
+		var arg2 uuid.UUID
 		if args[2] != nil {
-			arg2 = args[2].([]shared.FilterQuery)
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 []shared.FilterQuery
+		if args[5] != nil {
+			arg5 = args[5].([]shared.FilterQuery)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
+			arg4,
+			arg5,
 		)
 	})
 	return _c
@@ -340,7 +466,94 @@ func (_c *ComplianceComponentRepository_ListAll_Call) Return(complianceComponent
 	return _c
 }
 
-func (_c *ComplianceComponentRepository_ListAll_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, filter []shared.FilterQuery) ([]models.ComplianceComponent, error)) *ComplianceComponentRepository_ListAll_Call {
+func (_c *ComplianceComponentRepository_ListAll_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, filter []shared.FilterQuery) ([]models.ComplianceComponent, error)) *ComplianceComponentRepository_ListAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveComponentDefinition provides a mock function for the type ComplianceComponentRepository
+func (_mock *ComplianceComponentRepository) SaveComponentDefinition(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string, components []models.ComplianceComponent) error {
+	ret := _mock.Called(ctx, tx, orgID, projectID, assetID, componentDefinition, components)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveComponentDefinition")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, shared.DB, uuid.UUID, *uuid.UUID, *uuid.UUID, string, []models.ComplianceComponent) error); ok {
+		r0 = returnFunc(ctx, tx, orgID, projectID, assetID, componentDefinition, components)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ComplianceComponentRepository_SaveComponentDefinition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveComponentDefinition'
+type ComplianceComponentRepository_SaveComponentDefinition_Call struct {
+	*mock.Call
+}
+
+// SaveComponentDefinition is a helper method to define mock.On call
+//   - ctx context.Context
+//   - tx shared.DB
+//   - orgID uuid.UUID
+//   - projectID *uuid.UUID
+//   - assetID *uuid.UUID
+//   - componentDefinition string
+//   - components []models.ComplianceComponent
+func (_e *ComplianceComponentRepository_Expecter) SaveComponentDefinition(ctx any, tx any, orgID any, projectID any, assetID any, componentDefinition any, components any) *ComplianceComponentRepository_SaveComponentDefinition_Call {
+	return &ComplianceComponentRepository_SaveComponentDefinition_Call{Call: _e.mock.On("SaveComponentDefinition", ctx, tx, orgID, projectID, assetID, componentDefinition, components)}
+}
+
+func (_c *ComplianceComponentRepository_SaveComponentDefinition_Call) Run(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string, components []models.ComplianceComponent)) *ComplianceComponentRepository_SaveComponentDefinition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 shared.DB
+		if args[1] != nil {
+			arg1 = args[1].(shared.DB)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 *uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(*uuid.UUID)
+		}
+		var arg4 *uuid.UUID
+		if args[4] != nil {
+			arg4 = args[4].(*uuid.UUID)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 []models.ComplianceComponent
+		if args[6] != nil {
+			arg6 = args[6].([]models.ComplianceComponent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *ComplianceComponentRepository_SaveComponentDefinition_Call) Return(err error) *ComplianceComponentRepository_SaveComponentDefinition_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ComplianceComponentRepository_SaveComponentDefinition_Call) RunAndReturn(run func(ctx context.Context, tx shared.DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string, components []models.ComplianceComponent) error) *ComplianceComponentRepository_SaveComponentDefinition_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -888,16 +888,18 @@ type CompliancePostureRepository interface {
 	ApplyAndSave(ctx context.Context, tx DB, posture *models.CompliancePosture, ev *models.VulnEvent) error
 	FindOrCreate(ctx context.Context, tx DB, posture models.CompliancePosture) (*models.CompliancePosture, error)
 
-	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
-	GetAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
-	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
+	GetForAllControlsPaged(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
+	GetAllControls(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
+	GetStatsForAllControls(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
 
-	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+	GetForControl(ctx context.Context, tx DB, scopeFrameworkIDs []uuid.UUID, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
 type ComplianceComponentRepository interface {
-	ListAll(ctx context.Context, tx DB, filter []FilterQuery) ([]models.ComplianceComponent, error)
-	GetDetails(ctx context.Context, tx DB, id uuid.UUID) (*models.ComplianceComponent, error)
+	ListAll(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, filter []FilterQuery) ([]models.ComplianceComponent, error)
+	GetDetails(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, id uuid.UUID) (*models.ComplianceComponent, error)
+	SaveComponentDefinition(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string, components []models.ComplianceComponent) error
+	DeleteComponentDefinition(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, componentDefinition string) (bool, error)
 
 	CreateStatement(ctx context.Context, tx DB, statement models.ComplianceComponentImplementsControlStatement) (*models.ComplianceComponentImplementsControlStatement, error)
 	UpdateStatement(ctx context.Context, tx DB, statementID uuid.UUID, implementationStatus string, description string) (*models.ComplianceComponentImplementsControlStatement, error)
@@ -905,9 +907,21 @@ type ComplianceComponentRepository interface {
 }
 
 type FrameworkControlRepository interface {
-	utils.Repository[uuid.UUID, models.FrameworkControl, DB]
-	GetAll(ctx context.Context, tx DB, framework *string) ([]models.FrameworkControl, error)
-	ListFrameworkControls(ctx context.Context, tx DB) ([]string, error)
+	utils.Repository[string, models.FrameworkControl, DB]
+	SaveScopeFramework(ctx context.Context, tx DB, scopeFramework *models.ScopeFramework) error
+	DeleteScopeFramework(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, framework string) (bool, error)
+	GetEffectiveScopeFrameworks(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]models.ScopeFramework, error)
+}
+
+type ComplianceCatalogService interface {
+	SaveCatalog(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string, data []byte) error
+	DeleteCatalog(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string) error
+	ListCatalogs(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID) ([]dtos.ScopeFramework, error)
+}
+
+type ComplianceComponentDefinitionService interface {
+	SaveComponentDefinition(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string, data []byte) error
+	DeleteComponentDefinition(ctx context.Context, tx DB, orgID uuid.UUID, projectID *uuid.UUID, assetID *uuid.UUID, name string) error
 }
 
 type CompliancePostureService interface {
@@ -916,7 +930,7 @@ type CompliancePostureService interface {
 	GetForAllControlsPaged(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[dtos.CompliancePostureWithControl], error)
 	GetAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, search string, filter []FilterQuery, sort []SortQuery) ([]dtos.CompliancePostureWithDetails, error)
 	GetStatsForAllControls(ctx context.Context, tx DB, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID, filter []FilterQuery) (dtos.CompliancePostureStats, error)
-	GetForControl(ctx context.Context, tx DB, controlID string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
+	GetForControl(ctx context.Context, tx DB, controlHash string, assetVersionID *uuid.UUID, assetID *uuid.UUID, projectID *uuid.UUID, orgID uuid.UUID) (*models.CompliancePosture, error)
 }
 
 type RBACProvider interface {

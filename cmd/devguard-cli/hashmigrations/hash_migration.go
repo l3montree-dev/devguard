@@ -31,7 +31,7 @@ import (
 
 const (
 	// Increment this when the hash calculation algorithm changes
-	CurrentHashVersion = 12
+	CurrentHashVersion = 13
 	// Config key for tracking hash migration version
 	HashMigrationVersionKey = "hash_migration_version"
 )
@@ -190,6 +190,13 @@ func RunHashMigrationsIfNeeded(pool *pgxpool.Pool, daemonRunner shared.DaemonRun
 			// npm registries switched from a single url to a list of scoped registries
 			if err := runNpmRegistryListMigration(pool); err != nil {
 				return fmt.Errorf("failed to migrate npm registries to list format (v12): %w", err)
+			}
+		}
+
+		if currentVersion < 13 {
+			// compliance controls are identified by their content hash and catalogs and components are scoped
+			if err := runComplianceScopeMigration(pool); err != nil {
+				return fmt.Errorf("failed to migrate compliance data to scoped catalogs (v13): %w", err)
 			}
 		}
 

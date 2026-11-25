@@ -130,6 +130,7 @@ func (r *eventRepository) ReadEventsByAssetVersionID(ctx context.Context, tx *go
 			Joins("LEFT JOIN first_party_vulnerabilities fv ON e.first_party_vuln_id = fv.id").
 			Joins("LEFT JOIN license_risks lr ON e.license_risk_id = lr.id").
 			Joins("LEFT JOIN compliance_postures cp ON e.compliance_posture_id = cp.id").
+			Joins("LEFT JOIN compliance_controls cc ON cp.control_hash = cc.control_hash").
 			// id breaks ties - batched events share a created_at, and without it
 			// the same row lands on two pages while another lands on none
 			Order("e.created_at DESC, e.id DESC")
@@ -159,7 +160,7 @@ func (r *eventRepository) ReadEventsByAssetVersionID(ctx context.Context, tx *go
 	}
 
 	// a license risk names its component in the same field a dependency vuln does
-	if err := page.Select("e.*, COALESCE(dv.cve_id, cp.framework_control_id) AS resource_identifier, COALESCE(dv.component_purl, lr.component_purl) AS component_purl, fv.uri").
+	if err := page.Select("e.*, COALESCE(dv.cve_id, cc.control_id) AS resource_identifier, COALESCE(dv.component_purl, lr.component_purl) AS component_purl, fv.uri").
 		Scan(&events).Error; err != nil {
 		return shared.Paged[models.VulnEventDetail]{}, err
 	}

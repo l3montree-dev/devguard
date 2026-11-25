@@ -41,6 +41,8 @@ func NewAssetRouter(
 	assetRepository shared.AssetRepository,
 	patController *controllers.PatController,
 	logController *controllers.LogController,
+	complianceComponentController *controllers.ComplianceComponentController,
+	complianceCatalogController *controllers.ComplianceCatalogController,
 	secretController *controllers.SecretController,
 ) AssetRouter {
 	/**
@@ -65,6 +67,9 @@ func NewAssetRouter(
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
 	assetRouter.GET("/logs/", logController.ListPagedForAsset, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead))
+	assetRouter.GET("/compliance-postures/catalogs/", complianceCatalogController.AssetListCatalogs)
+	assetRouter.GET("/compliance-components/", complianceComponentController.AssetList)
+	assetRouter.GET("/compliance-components/:complianceComponentID/", complianceComponentController.AssetDetails)
 
 	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
@@ -88,6 +93,10 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
 	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
 	assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
+	assetUpdateAccessControlRequired.POST("/compliance-postures/catalogs/", complianceCatalogController.AssetSaveCatalog, middlewares.DisallowPublicRequests)
+	assetUpdateAccessControlRequired.DELETE("/compliance-postures/catalogs/:name/", complianceCatalogController.AssetDeleteCatalog, middlewares.DisallowPublicRequests)
+	assetUpdateAccessControlRequired.POST("/compliance-components/definitions/", complianceComponentController.AssetSaveComponentDefinition, middlewares.DisallowPublicRequests)
+	assetUpdateAccessControlRequired.DELETE("/compliance-components/definitions/:name/", complianceComponentController.AssetDeleteComponentDefinition, middlewares.DisallowPublicRequests)
 
 	return AssetRouter{Group: assetRouter}
 }

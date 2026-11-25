@@ -111,6 +111,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewCSAFController),
 	fx.Provide(NewComplianceController),
 	fx.Provide(NewCompliancePostureController),
+	fx.Provide(NewComplianceCatalogController),
 	fx.Provide(NewComplianceComponentController),
 	fx.Provide(NewAttestationController),
 	fx.Provide(NewInToToController),

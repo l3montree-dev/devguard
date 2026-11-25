@@ -16,8 +16,8 @@
 package transformer
 
 import (
-	"encoding/json"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -25,13 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
-	"gorm.io/datatypes"
 )
-
-func mustMarshalJSON(v any) datatypes.JSON {
-	b, _ := json.Marshal(v)
-	return datatypes.JSON(b)
-}
 
 var urlRegex = regexp.MustCompile(`https?://[^\s)\]"'<>]+`)
 
@@ -51,36 +45,39 @@ func evidenceLinks(texts ...string) []oscalTypes.Link {
 	return links
 }
 
+// CompliancePostureToDTO expects FrameworkControl.ScopeFrameworks to contain only the frameworks which apply to the scope.
 func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWithDetails {
+	frameworks := make([]string, len(c.FrameworkControl.ScopeFrameworks))
+	for i, sf := range c.FrameworkControl.ScopeFrameworks {
+		frameworks[i] = sf.Framework
+	}
+	slices.Sort(frameworks)
 
-	mappedControls := make([]dtos.MappedControl, len(c.FrameworkControl.MappedControls))
-	for i, m := range c.FrameworkControl.MappedControls {
-		mappedControls[i] = dtos.MappedControl{
-			FrameworkControlID: m.FrameworkControlID,
-			RelatedFramework:   m.RelatedFramework,
-			RelatedControlID:   m.RelatedControlID,
-			Relationship:       m.Relationship,
-		}
+	frameworkControlIDs := make([]string, len(frameworks))
+	for i, framework := range frameworks {
+		frameworkControlIDs[i] = framework + ":" + c.FrameworkControl.ControlID
 	}
 
 	p := dtos.CompliancePostureWithControl{
-		FrameworkControlID:       c.FrameworkControlID,
-		CompliancePostureID:      c.ID.String(),
-		ControlID:                c.FrameworkControl.ControlID,
-		Framework:                c.FrameworkControl.Framework,
-		Title:                    c.FrameworkControl.Title,
-		Description:              c.FrameworkControl.Description,
-		Class:                    c.FrameworkControl.Class,
-		Additional:               mustMarshalJSON(c.FrameworkControl.Additional),
-		ParentFrameworkControlID: c.FrameworkControl.ParentFrameworkControlID,
-		AssetVersionName:         c.AssetVersionName,
-		AssetID:                  c.AssetID,
-		ProjectID:                c.ProjectID,
-		OrgID:                    &c.OrgID,
-		State:                    c.State,
-		TicketID:                 c.TicketID,
-		TicketURL:                c.TicketURL,
-		MappedControls:           mappedControls,
+		ControlHash:         c.ControlHash,
+		FrameworkControlIDs: frameworkControlIDs,
+		Frameworks:          frameworks,
+		CompliancePostureID: c.ID.String(),
+		ControlID:           c.FrameworkControl.ControlID,
+		Title:               c.FrameworkControl.Title,
+		Description:         c.FrameworkControl.Description,
+		Importance:          c.FrameworkControl.Importance,
+		SecurityLevel:       c.FrameworkControl.SecurityLevel,
+		Class:               c.FrameworkControl.Class,
+		Additional:          c.FrameworkControl.Additional,
+		ParentControlID:     c.FrameworkControl.ParentControlID,
+		AssetVersionName:    c.AssetVersionName,
+		AssetID:             c.AssetID,
+		ProjectID:           c.ProjectID,
+		OrgID:               &c.OrgID,
+		State:               c.State,
+		TicketID:            c.TicketID,
+		TicketURL:           c.TicketURL,
 	}
 	events := make([]dtos.VulnEvent, len(c.Events))
 	for i, e := range c.Events {
@@ -97,7 +94,9 @@ func CompliancePostureToDTO(c models.CompliancePosture) dtos.CompliancePostureWi
 	}
 }
 
-func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dtos.CompliancePostureWithDetails, frameworkControls []models.FrameworkControl) (oscalTypes.OscalCompleteSchema, error) {
+// ConvertCompliancePosturesToSystemSecurityPlanOSCAL creates an implemented requirement for every framework of a posture,
+// or only for the given framework.
+func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dtos.CompliancePostureWithDetails, framework *string) (oscalTypes.OscalCompleteSchema, error) {
 
 	//OscalCompleteSchema
 	var schema oscalTypes.OscalCompleteSchema
@@ -186,12 +185,6 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 				}})
 		}
 
-		implementedRequirement := oscalTypes.ImplementedRequirement{
-			ControlId: strings.ReplaceAll(strings.ReplaceAll(compliancePosture.FrameworkControlID, "++", ""), ":", "_"),
-			UUID:      uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
-			Props:     props,
-		}
-
 		description := ""
 		state := string(compliancePosture.State)
 		if state == "open" {
@@ -205,51 +198,67 @@ func ConvertCompliancePosturesToSystemSecurityPlanOSCAL(compliancePostures []dto
 			}
 		}
 
-		// DevGuard's own direct assessment of this control is always present.
-		devGuardByComponent := oscalTypes.ByComponent{
-			ComponentUuid: devGuardComponent.UUID,
-			Description:   description,
-			ImplementationStatus: &oscalTypes.ImplementationStatus{
-				State: state,
-			},
-			UUID: uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID)).String(),
+		frameworkControlIDs := compliancePosture.FrameworkControlIDs
+		if framework != nil {
+			frameworkControlIDs = []string{*framework + ":" + compliancePosture.ControlID}
 		}
-		if links := evidenceLinks(description); len(links) > 0 {
-			devGuardByComponent.Links = &links
-		}
-		byComponents := []oscalTypes.ByComponent{devGuardByComponent}
-
-		// Plus any real-world components tracked for this control.
-		for _, statement := range compliancePosture.ByComponents {
-			if _, ok := seenComponents[statement.ComplianceComponentID]; !ok {
-				seenComponents[statement.ComplianceComponentID] = oscalTypes.SystemComponent{
-					UUID:        statement.ComplianceComponentID,
-					Title:       statement.ComplianceComponentTitle,
-					Description: statement.ComplianceComponentDescription,
-					Status: oscalTypes.SystemComponentStatus{
-						State: "operational",
-					},
-					Type: "software",
-				}
+		for _, frameworkControlID := range frameworkControlIDs {
+			requirementUUID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(compliancePosture.CompliancePostureID+":"+frameworkControlID)).String()
+			implementedRequirement := oscalTypes.ImplementedRequirement{
+				ControlId: strings.ReplaceAll(strings.ReplaceAll(frameworkControlID, "++", ""), ":", "_"),
+				UUID:      requirementUUID,
+				Props:     props,
 			}
 
-			statementByComponent := oscalTypes.ByComponent{
-				ComponentUuid: statement.ComplianceComponentID,
-				Description:   statement.Description,
+			// DevGuard's own direct assessment of this control is always present.
+			devGuardByComponent := oscalTypes.ByComponent{
+				ComponentUuid: devGuardComponent.UUID,
+				Description:   description,
 				ImplementationStatus: &oscalTypes.ImplementationStatus{
-					State: statement.ImplementationStatus,
+					State: state,
 				},
-				UUID: statement.ID,
+				UUID: requirementUUID,
 			}
-			if links := evidenceLinks(statement.Description); len(links) > 0 {
-				statementByComponent.Links = &links
+			if links := evidenceLinks(description); len(links) > 0 {
+				devGuardByComponent.Links = &links
 			}
-			byComponents = append(byComponents, statementByComponent)
+			byComponents := []oscalTypes.ByComponent{devGuardByComponent}
+
+			// Plus any real-world components tracked for this control.
+			for _, statement := range compliancePosture.ByComponents {
+				if statement.FrameworkControlID != frameworkControlID {
+					continue
+				}
+				if _, ok := seenComponents[statement.ComplianceComponentID]; !ok {
+					seenComponents[statement.ComplianceComponentID] = oscalTypes.SystemComponent{
+						UUID:        statement.ComplianceComponentID,
+						Title:       statement.ComplianceComponentTitle,
+						Description: statement.ComplianceComponentDescription,
+						Status: oscalTypes.SystemComponentStatus{
+							State: "operational",
+						},
+						Type: "software",
+					}
+				}
+
+				statementByComponent := oscalTypes.ByComponent{
+					ComponentUuid: statement.ComplianceComponentID,
+					Description:   statement.Description,
+					ImplementationStatus: &oscalTypes.ImplementationStatus{
+						State: statement.ImplementationStatus,
+					},
+					UUID: statement.ID,
+				}
+				if links := evidenceLinks(statement.Description); len(links) > 0 {
+					statementByComponent.Links = &links
+				}
+				byComponents = append(byComponents, statementByComponent)
+			}
+
+			implementedRequirement.ByComponents = &byComponents
+
+			implementedRequirements = append(implementedRequirements, implementedRequirement)
 		}
-
-		implementedRequirement.ByComponents = &byComponents
-
-		implementedRequirements = append(implementedRequirements, implementedRequirement)
 	}
 
 	components := make([]oscalTypes.SystemComponent, 0, len(seenComponents))

@@ -142,6 +142,28 @@ components:
       - count
       - license
       type: object
+    controllers.saveCatalogRequest:
+      properties:
+        catalog:
+          type: object
+        name:
+          description: optional, defaults to the title of the catalog
+          type: string
+      required:
+      - catalog
+      - name
+      type: object
+    controllers.saveComponentDefinitionRequest:
+      properties:
+        componentDefinition:
+          type: object
+        name:
+          description: optional, defaults to the title of the component definition
+          type: string
+      required:
+      - componentDefinition
+      - name
+      type: object
     controllers.statementPayload:
       properties:
         description:
@@ -5282,20 +5304,32 @@ components:
       type: object
     dtos.ComplianceComponentDetails:
       properties:
+        assetId:
+          type: string
+        componentDefinition:
+          type: string
         description:
+          type: string
+        id:
           type: string
         implementedControls:
           items:
             $ref: '#/components/schemas/dtos.ComplianceComponentImplementsControl'
           type: array
           uniqueItems: false
+        projectId:
+          type: string
         title:
           type: string
         uuid:
           type: string
       required:
+      - assetId
+      - componentDefinition
       - description
+      - id
       - implementedControls
+      - projectId
       - title
       - uuid
       type: object
@@ -5368,24 +5402,27 @@ components:
           type: string
         compliancePostureId:
           type: string
+        controlHash:
+          type: string
         controlId:
           type: string
         description:
           type: string
-        framework:
-          type: string
-        frameworkControlId:
-          type: string
-        importance:
-          type: string
-        mappedControls:
+        frameworkControlIds:
           items:
-            $ref: '#/components/schemas/dtos.MappedControl'
+            type: string
           type: array
           uniqueItems: false
+        frameworks:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        importance:
+          type: string
         orgId:
           type: string
-        parentFrameworkControlId:
+        parentControlId:
           type: string
         projectId:
           type: string
@@ -5405,14 +5442,14 @@ components:
       - assetVersionName
       - class
       - compliancePostureId
+      - controlHash
       - controlId
       - description
-      - framework
-      - frameworkControlId
+      - frameworkControlIds
+      - frameworks
       - importance
-      - mappedControls
       - orgId
-      - parentFrameworkControlId
+      - parentControlId
       - projectId
       - securityLevel
       - state
@@ -5437,6 +5474,8 @@ components:
           type: string
         compliancePostureId:
           type: string
+        controlHash:
+          type: string
         controlId:
           type: string
         description:
@@ -5446,20 +5485,21 @@ components:
             $ref: '#/components/schemas/dtos.VulnEvent'
           type: array
           uniqueItems: false
-        framework:
-          type: string
-        frameworkControlId:
-          type: string
-        importance:
-          type: string
-        mappedControls:
+        frameworkControlIds:
           items:
-            $ref: '#/components/schemas/dtos.MappedControl'
+            type: string
           type: array
           uniqueItems: false
+        frameworks:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        importance:
+          type: string
         orgId:
           type: string
-        parentFrameworkControlId:
+        parentControlId:
           type: string
         projectId:
           type: string
@@ -5480,15 +5520,15 @@ components:
       - byComponents
       - class
       - compliancePostureId
+      - controlHash
       - controlId
       - description
       - events
-      - framework
-      - frameworkControlId
+      - frameworkControlIds
+      - frameworks
       - importance
-      - mappedControls
       - orgId
-      - parentFrameworkControlId
+      - parentControlId
       - projectId
       - securityLevel
       - state
@@ -6832,22 +6872,6 @@ components:
       - component
       - maliciousPackageID
       - projectName
-      type: object
-    dtos.MappedControl:
-      properties:
-        frameworkControlId:
-          type: string
-        relatedControlId:
-          type: string
-        relatedFramework:
-          type: string
-        relationship:
-          type: string
-      required:
-      - frameworkControlId
-      - relatedControlId
-      - relatedFramework
-      - relationship
       type: object
     dtos.MechanicalJustificationType:
       enum:
@@ -11038,24 +11062,15 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
-      - 1
-      - 1000
-      - 1000000
-      - 1000000000
-      - 60000000000
-      - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
@@ -11104,24 +11119,15 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
-      - Nanosecond
-      - Microsecond
-      - Millisecond
-      - Second
-      - Minute
-      - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
@@ -11817,47 +11823,6 @@ paths:
       summary: Create attestation
       tags:
       - Attestations
-  /compliance-components/:
-    get:
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
-                type: array
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: List all compliance components
-      tags:
-      - Compliance Components
-  /compliance-components/{complianceComponentID}/:
-    get:
-      parameters:
-      - description: Compliance component ID
-        in: path
-        name: complianceComponentID
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
-          description: OK
-      security:
-      - CookieAuth: []
-      - PATAuth: []
-      - BearerAuth: []
-      summary: Get compliance component details
-      tags:
-      - Compliance Components
   /dependency-proxy/{secret}/apk/{path}:
     get:
       parameters:
@@ -12497,6 +12462,113 @@ paths:
       summary: Update organization
       tags:
       - Organizations
+  /organizations/{organization}/compliance-components/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List the compliance components which apply to the organization
+      tags:
+      - Compliance Components
+  /organizations/{organization}/compliance-components/{complianceComponentID}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Compliance component ID
+        in: path
+        name: complianceComponentID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get compliance component details
+      tags:
+      - Compliance Components
+  /organizations/{organization}/compliance-components/definitions/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.saveComponentDefinitionRequest'
+              description: OSCAL component definition
+              summary: body
+        description: OSCAL component definition
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Upload a component definition for the organization
+      tags:
+      - Compliance Component Definitions
+  /organizations/{organization}/compliance-components/definitions/{name}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Component definition name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove a component definition from the organization
+      tags:
+      - Compliance Component Definitions
   /organizations/{organization}/compliance-postures:
     get:
       parameters:
@@ -12520,7 +12592,7 @@ paths:
       summary: List compliance postures paged
       tags:
       - Compliance Postures
-  /organizations/{organization}/compliance-postures/{frameworkControlID}:
+  /organizations/{organization}/compliance-postures/{controlHash}:
     get:
       parameters:
       - description: Organization slug
@@ -12529,9 +12601,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework Control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -12546,7 +12618,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get compliance posture for a framework control
+      summary: Get compliance posture for a control
       tags:
       - Compliance Postures
     post:
@@ -12557,9 +12629,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework Control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -12590,7 +12662,7 @@ paths:
       summary: Create a compliance posture event
       tags:
       - Compliance Postures
-  /organizations/{organization}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}/:
+  /organizations/{organization}/compliance-postures/{controlHash}/components/{complianceComponentID}/:
     post:
       parameters:
       - description: Organization slug
@@ -12599,9 +12671,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -12634,6 +12706,83 @@ paths:
       summary: Create a compliance statement for a component
       tags:
       - Compliance Components
+  /organizations/{organization}/compliance-postures/catalogs/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ScopeFramework'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List the catalogs which apply to the organization
+      tags:
+      - Compliance Catalogs
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.saveCatalogRequest'
+              description: OSCAL catalog
+              summary: body
+        description: OSCAL catalog
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Activate or upload a catalog for the organization
+      tags:
+      - Compliance Catalogs
+  /organizations/{organization}/compliance-postures/catalogs/{name}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Catalog name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove a catalog from the organization
+      tags:
+      - Compliance Catalogs
   /organizations/{organization}/compliance-postures/components/{statementID}/:
     delete:
       parameters:
@@ -14444,6 +14593,274 @@ paths:
       summary: Get asset compliance
       tags:
       - Compliance
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List the compliance components which apply to the asset
+      tags:
+      - Compliance Components
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/{complianceComponentID}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Compliance component ID
+        in: path
+        name: complianceComponentID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get compliance component details
+      tags:
+      - Compliance Components
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/definitions/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.saveComponentDefinitionRequest'
+              description: OSCAL component definition
+              summary: body
+        description: OSCAL component definition
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Upload a component definition for the asset
+      tags:
+      - Compliance Component Definitions
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-components/definitions/{name}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Component definition name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove a component definition from the asset
+      tags:
+      - Compliance Component Definitions
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-postures/catalogs/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ScopeFramework'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List the catalogs which apply to the asset
+      tags:
+      - Compliance Catalogs
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.saveCatalogRequest'
+              description: OSCAL catalog
+              summary: body
+        description: OSCAL catalog
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Activate or upload a catalog for the asset
+      tags:
+      - Compliance Catalogs
+  /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance-postures/catalogs/{name}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Asset slug
+        in: path
+        name: assetSlug
+        required: true
+        schema:
+          type: string
+      - description: Catalog name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove a catalog from the asset
+      tags:
+      - Compliance Catalogs
   /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/compliance/{policy}:
     get:
       parameters:
@@ -16941,7 +17358,7 @@ paths:
       summary: List compliance postures paged
       tags:
       - Compliance Postures
-  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{controlHash}
   : get:
       parameters:
       - description: Organization slug
@@ -16968,9 +17385,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework Control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -16985,7 +17402,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get compliance posture for a framework control
+      summary: Get compliance posture for a control
       tags:
       - Compliance Postures
     post:
@@ -17014,9 +17431,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework Control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -17047,7 +17464,7 @@ paths:
       summary: Create a compliance posture event
       tags:
       - Compliance Postures
-  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}
+  ? /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/compliance-postures/{controlHash}/components/{complianceComponentID}
   : post:
       parameters:
       - description: Organization slug
@@ -17074,9 +17491,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -19620,6 +20037,137 @@ paths:
       summary: Get project compliance
       tags:
       - Compliance
+  /organizations/{organization}/projects/{projectSlug}/compliance-components/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List the compliance components which apply to the project
+      tags:
+      - Compliance Components
+  /organizations/{organization}/projects/{projectSlug}/compliance-components/{complianceComponentID}/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Compliance component ID
+        in: path
+        name: complianceComponentID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dtos.ComplianceComponentDetails'
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Get compliance component details
+      tags:
+      - Compliance Components
+  /organizations/{organization}/projects/{projectSlug}/compliance-components/definitions/:
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.saveComponentDefinitionRequest'
+              description: OSCAL component definition
+              summary: body
+        description: OSCAL component definition
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Upload a component definition for the project
+      tags:
+      - Compliance Component Definitions
+  /organizations/{organization}/projects/{projectSlug}/compliance-components/definitions/{name}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Component definition name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove a component definition from the project
+      tags:
+      - Compliance Component Definitions
   /organizations/{organization}/projects/{projectSlug}/compliance-postures:
     get:
       parameters:
@@ -19649,7 +20197,7 @@ paths:
       summary: List compliance postures paged
       tags:
       - Compliance Postures
-  /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}:
+  /organizations/{organization}/projects/{projectSlug}/compliance-postures/{controlHash}:
     get:
       parameters:
       - description: Organization slug
@@ -19664,9 +20212,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework Control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -19681,7 +20229,7 @@ paths:
       - CookieAuth: []
       - PATAuth: []
       - BearerAuth: []
-      summary: Get compliance posture for a framework control
+      summary: Get compliance posture for a control
       tags:
       - Compliance Postures
     post:
@@ -19698,9 +20246,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework Control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -19731,7 +20279,7 @@ paths:
       summary: Create a compliance posture event
       tags:
       - Compliance Postures
-  /organizations/{organization}/projects/{projectSlug}/compliance-postures/{frameworkControlID}/components/{complianceComponentID}:
+  /organizations/{organization}/projects/{projectSlug}/compliance-postures/{controlHash}/components/{complianceComponentID}:
     post:
       parameters:
       - description: Organization slug
@@ -19746,9 +20294,9 @@ paths:
         required: true
         schema:
           type: string
-      - description: Framework control ID
+      - description: Control hash
         in: path
-        name: frameworkControlID
+        name: controlHash
         required: true
         schema:
           type: string
@@ -19781,6 +20329,101 @@ paths:
       summary: Create a compliance statement for a component
       tags:
       - Compliance Components
+  /organizations/{organization}/projects/{projectSlug}/compliance-postures/catalogs/:
+    get:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/dtos.ScopeFramework'
+                type: array
+          description: OK
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: List the catalogs which apply to the project
+      tags:
+      - Compliance Catalogs
+    post:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/controllers.saveCatalogRequest'
+              description: OSCAL catalog
+              summary: body
+        description: OSCAL catalog
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Activate or upload a catalog for the project
+      tags:
+      - Compliance Catalogs
+  /organizations/{organization}/projects/{projectSlug}/compliance-postures/catalogs/{name}/:
+    delete:
+      parameters:
+      - description: Organization slug
+        in: path
+        name: organization
+        required: true
+        schema:
+          type: string
+      - description: Project slug
+        in: path
+        name: projectSlug
+        required: true
+        schema:
+          type: string
+      - description: Catalog name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - CookieAuth: []
+      - PATAuth: []
+      - BearerAuth: []
+      summary: Remove a catalog from the project
+      tags:
+      - Compliance Catalogs
   /organizations/{organization}/projects/{projectSlug}/compliance-postures/components/{statementID}:
     delete:
       parameters:
