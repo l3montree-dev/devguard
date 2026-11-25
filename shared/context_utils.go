@@ -405,6 +405,10 @@ func HasProject(c Context) bool {
 	_, ok := c.Get(ctxKeyProject).(models.Project)
 	return ok
 }
+func HasArtifact(c Context) bool {
+	_, ok := c.Get(ctxKeyArtifact).(models.Artifact)
+	return ok
+}
 func GetRBAC(ctx Context) AccessControl {
 	return ctx.Get(ctxKeyRBAC).(AccessControl)
 }

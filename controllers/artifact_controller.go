@@ -1007,31 +1007,3 @@ func parseAverageRemediationTimes(avgs dtos.RemediationTimeAverages) (low, mediu
 		time.Duration(avgs.RiskAvgHigh * float64(time.Second)),
 		time.Duration(avgs.RiskAvgCritical * float64(time.Second))
 }
-
-// @Summary Attach label to artifact
-// @Tags Label
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param assetSlug path string true "Asset slug"
-// @Param assetVersionSlug path string true "Asset version slug"
-// @Param artifactName path string true "Artifact name"
-// @Param labelID path string true "Label ID"
-// @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
-func (c *ArtifactController) AttachLabelToArtifact(ctx shared.Context) error {
-	artifact := shared.GetArtifact(ctx)
-	labelID, err := uuid.Parse(ctx.Param("labelID"))
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid label id")
-	}
-	tx := c.artifactRepository.GetDB(ctx.Request().Context(), nil)
-	org, project, asset := shared.GetOrg(ctx), shared.GetProject(ctx), shared.GetAsset(ctx)
-	err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, &artifact.ID, &labelID)
-	if err != nil {
-		return attachLabelError(err, "artifact")
-	}
-	return ctx.NoContent(204)
-}

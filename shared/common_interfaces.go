@@ -1011,6 +1011,7 @@ type InstanceSettings struct {
 }
 
 type LabelRepository interface {
+	GetDB(ctx context.Context, db DB) DB
 	Create(ctx context.Context, tx DB, label *models.Label) error
 	Save(ctx context.Context, tx DB, label *models.Label) error
 	Delete(ctx context.Context, tx DB, labelID uuid.UUID) error

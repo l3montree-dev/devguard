@@ -255,3 +255,76 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 	})
 	return ctx.JSON(200, labelDTOs)
 }
+
+// @Summary Attach label to artifact
+// @Tags Label
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Param assetVersionSlug path string true "Asset version slug"
+// @Param artifactName path string true "Artifact name"
+// @Success 204
+// @Router /organizations/{organization}/projects/{projectSlug}/labels/attach/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/ [post]
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
+func (c *LabelController) AttachLabel(ctx shared.Context) error {
+	var org models.Org
+	var project models.Project
+	var asset models.Asset
+	var artifact models.Artifact
+
+	labelID, err := uuid.Parse(ctx.Param("labelID"))
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid label id")
+	}
+
+	if !shared.HasOrganization(ctx) {
+		return echo.NewHTTPError(400, "missing organization ID")
+	}
+	tx := c.labelRepository.GetDB(ctx.Request().Context(), nil)
+	org = shared.GetOrg(ctx)
+
+	if !shared.HasProject(ctx) {
+		return echo.NewHTTPError(400, "attaching labels requires at least a project ID")
+	}
+	project = shared.GetProject(ctx)
+
+	if org.ID != project.OrganizationID {
+		return echo.NewHTTPError(403, "project does not belong to organization")
+	}
+
+	if !shared.HasAsset(ctx) {
+		err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, nil, nil, &labelID)
+		if err != nil {
+			return attachLabelError(err, "project")
+		}
+		return ctx.NoContent(204)
+	}
+
+	asset = shared.GetAsset(ctx)
+	if project.ID != asset.ProjectID {
+		return echo.NewHTTPError(403, "asset does not belong to project")
+	}
+
+	if !shared.HasArtifact(ctx) {
+		err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, nil, &labelID)
+		if err != nil {
+			return attachLabelError(err, "asset")
+		}
+		return ctx.NoContent(204)
+	}
+
+	artifact = shared.GetArtifact(ctx)
+	if asset.ID != artifact.AssetID {
+		return echo.NewHTTPError(403, "artifact does not belong to asset")
+	}
+
+	err = c.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, &asset.ID, &artifact.ID, &labelID)
+	if err != nil {
+		return attachLabelError(err, "artifact")
+	}
+	return ctx.NoContent(204)
+}

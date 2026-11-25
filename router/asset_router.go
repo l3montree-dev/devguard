@@ -86,7 +86,7 @@ func NewAssetRouter(
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
 	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
 	assetUpdateAccessControlRequired.POST("/labels/", labelController.Create)
-	assetUpdateAccessControlRequired.POST("/labels/attach/", assetController.AttachLabelToAsset)
+	assetUpdateAccessControlRequired.POST("/labels/attach/", labelController.AttachLabel)
 
 	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
 	assetUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)

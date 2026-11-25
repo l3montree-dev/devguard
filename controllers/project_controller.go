@@ -847,28 +847,3 @@ func (projectController *ProjectController) ListExternalSubprojects(ctx shared.C
 
 	return ctx.JSON(200, transformer.BuildExternalProjectTree(projects, subProjects, allAssets, allAssetVersions, allArtifacts))
 }
-
-// @Summary Attach label to project
-// @Tags Label
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Param labelID path string true "Label ID"
-// @Success 204
-// @Router /organizations/{organization}/projects/{projectSlug}/labels/attach/ [post]
-func (projectController *ProjectController) AttachLabelToProject(ctx shared.Context) error {
-	project := shared.GetProject(ctx)
-	labelID, err := uuid.Parse(ctx.Param("labelID"))
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid label id")
-	}
-	tx := projectController.assetRepository.GetDB(ctx.Request().Context(), nil)
-	org := shared.GetOrg(ctx)
-	err = projectController.labelService.AttachLabel(ctx.Request().Context(), tx, org.ID, &project.ID, nil, nil, &labelID)
-	if err != nil {
-		return attachLabelError(err, "project")
-	}
-	return ctx.NoContent(204)
-}
