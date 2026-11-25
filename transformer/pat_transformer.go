@@ -40,5 +40,6 @@ func PATModelToDTO(pat models.PAT) dtos.PAT {
 		LastUsedAt:     lastUsedAt,
 		ExpiryDateUnix: expiryDateUnix,
 		Scopes:         pat.Scopes,
+		PubKey:         pat.PubKey,
 	}
 }
