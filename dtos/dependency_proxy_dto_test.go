@@ -79,7 +79,7 @@ func TestDependencyProxyConfigMavenRegistry(t *testing.T) {
 	})
 
 	t.Run("accepts a registry with login auth", func(t *testing.T) {
-		content := "registries:\n  maven:\n    url: https://nexus.firma.de\n    auth:\n      type: login\n      username: ci-user\n      password: $nexus_password\n"
+		content := "registries:\n  maven:\n    url: https://nexus.firma.de\n    auth:\n      type: basic-auth\n      username: ci-user\n      password: $nexus_password\n"
 		if err := dtos.ValidateDependencyProxyConfigFile([]byte(content)); err != nil {
 			t.Fatalf("expected valid, got %v", err)
 		}
