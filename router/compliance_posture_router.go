@@ -18,6 +18,7 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -33,7 +34,7 @@ func NewCompliancePostureRouter(
 	compliancePostureRouter.GET("/", compliancePostureController.AssetVersionListPaged)
 	compliancePostureRouter.GET("/stats/", compliancePostureController.AssetVersionStats)
 	compliancePostureRouter.GET("/:frameworkControlID/", compliancePostureController.AssetVersionRead)
-	compliancePostureRouter.POST("/:frameworkControlID/", compliancePostureController.AssetVersionCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.POST("/:frameworkControlID/", compliancePostureController.AssetVersionCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	compliancePostureRouter.GET("/oscal/", compliancePostureController.AssetVersionGetOSCAL)
 
 	return CompliancePostureRouter{Group: compliancePostureRouter}

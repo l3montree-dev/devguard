@@ -18,6 +18,7 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
+	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -50,9 +51,9 @@ func NewComplianceComponentStatementRouter(
 	complianceComponentController *controllers.ComplianceComponentController,
 ) ComplianceComponentStatementRouter {
 	compliancePostureRouter := assetVersionGroup.Group.Group("/compliance-postures")
-	compliancePostureRouter.POST("/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.AssetVersionCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	compliancePostureRouter.PUT("/components/:statementID/", complianceComponentController.AssetVersionUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	compliancePostureRouter.DELETE("/components/:statementID/", complianceComponentController.AssetVersionDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	compliancePostureRouter.POST("/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.AssetVersionCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	compliancePostureRouter.PUT("/components/:statementID/", complianceComponentController.AssetVersionUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	compliancePostureRouter.DELETE("/components/:statementID/", complianceComponentController.AssetVersionDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	return ComplianceComponentStatementRouter{Group: compliancePostureRouter}
 }
