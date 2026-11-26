@@ -6726,7 +6726,7 @@ components:
       type: object
     dtos.LabelRequest:
       properties:
-        background_color:
+        backgroundColor:
           maxLength: 7
           type: string
         description:
@@ -6736,7 +6736,7 @@ components:
           maxLength: 256
           type: string
       required:
-      - background_color
+      - backgroundColor
       - description
       - label
       type: object
@@ -11137,32 +11137,30 @@ components:
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
       - 1
       - 1000
       - 1000000
       - 1000000000
       - 60000000000
       - 3600000000000
-      - -9223372036854775808
-      - 9223372036854775807
+      - 1
+      - 1000
+      - 1000000
+      - 1000000000
+      - 60000000000
+      - 3600000000000
       - 1
       - 1000
       - 1000000
@@ -11179,32 +11177,30 @@ components:
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
       - Nanosecond
       - Microsecond
       - Millisecond
       - Second
       - Minute
       - Hour
-      - minDuration
-      - maxDuration
+      - Nanosecond
+      - Microsecond
+      - Millisecond
+      - Second
+      - Minute
+      - Hour
       - Nanosecond
       - Microsecond
       - Millisecond
