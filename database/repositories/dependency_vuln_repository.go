@@ -153,6 +153,9 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(ctx
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
+	if err := repository.AttachGroupEvents(ctx, tx, dependencyVulns, nil); err != nil {
+		return nil, err
+	}
 	return dependencyVulns, nil
 }
 
@@ -234,6 +237,9 @@ func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersion(ct
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
+		return nil, err
+	}
+	if err := repository.AttachGroupEvents(ctx, tx, dependencyVulns, nil); err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
@@ -430,6 +436,9 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsPaged(ctx context.
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&dependencyVulns).Error
 
 	if err != nil {
+		return shared.Paged[models.DependencyVuln]{}, err
+	}
+	if err := repository.AttachGroupEvents(ctx, tx, dependencyVulns, nil); err != nil {
 		return shared.Paged[models.DependencyVuln]{}, err
 	}
 
@@ -812,6 +821,9 @@ func (repository *dependencyVulnRepository) GetAllVulnsByAssetID(ctx context.Con
 	}).Where("asset_id = ?", assetID).Find(&vulns).Error; err != nil {
 		return nil, err
 	}
+	if err := repository.AttachGroupEvents(ctx, tx, vulns, nil); err != nil {
+		return nil, err
+	}
 	return vulns, nil
 }
 
@@ -879,7 +891,13 @@ func (repository *dependencyVulnRepository) GetDependencyVulnByCVEIDAndAssetID(c
 	err := repository.Repository.GetDB(ctx, tx).Preload("Events", func(db *gorm.DB) *gorm.DB {
 		return db.Order("created_at ASC")
 	}).Preload("Artifacts").Preload("CVE").Where("LOWER(cve_id) = LOWER(?) AND asset_id = ?", cveID, assetID).Find(&vuln).Error
-	return vuln, err
+	if err != nil {
+		return nil, err
+	}
+	if err := repository.AttachGroupEvents(ctx, tx, vuln, nil); err != nil {
+		return nil, err
+	}
+	return vuln, nil
 }
 
 func (repository *dependencyVulnRepository) GetDirectDependencyFixedVersionByPackageName(ctx context.Context, tx *gorm.DB, packageName string) (*string, error) {
