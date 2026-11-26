@@ -140,3 +140,75 @@ func TestVEXRuleGroupEventLeavesVulnsWithoutOwnEvent(t *testing.T) {
 			"last_state_change must move with the group UPDATE")
 	})
 }
+
+func TestVEXRuleCountIncludesGroupEvents(t *testing.T) {
+	t.Parallel()
+	WithTestApp(t, "../initdb.sql", func(f *TestFixture) {
+		org := f.CreateOrg("test-org-group-event-count")
+		project := f.CreateProject(org.ID, "test-project-group-event-count")
+		asset := f.CreateAsset(project.ID, "test-asset-group-event-count")
+		mainVersion := f.CreateAssetVersion(asset.ID, "main", true)
+		branchVersion := f.CreateAssetVersion(asset.ID, "feature", false)
+
+		cve := models.CVE{CVE: "CVE-2025-TEST-GROUP-EVENT-COUNT", CVSS: 7.5}
+		require.NoError(t, f.DB.Create(&cve).Error)
+
+		createVuln := func(version models.AssetVersion) {
+			t.Helper()
+			artifact := models.Artifact{
+				ArtifactName:   "artifact-" + version.Name,
+				AssetVersionID: version.ID,
+				AssetID:        asset.ID,
+			}
+			require.NoError(t, f.DB.Create(&artifact).Error)
+
+			vuln := models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetVersionID:  version.ID,
+					AssetID:         asset.ID,
+					State:           dtos.VulnStateOpen,
+					LastStateChange: time.Now().Add(-1 * time.Hour),
+				},
+				AssetVersionName:  version.Name,
+				CVEID:             cve.CVE,
+				ComponentPurl:     "pkg:npm/group-event-count@1.0.0",
+				VulnerabilityPath: []string{"pkg:npm/group-event-count@1.0.0"},
+				Artifacts:         []models.Artifact{artifact},
+			}
+			require.NoError(t, f.DB.Create(&vuln).Error)
+		}
+
+		createVuln(mainVersion)
+		createVuln(branchVersion)
+
+		app := echo.New()
+		body, err := json.Marshal(dtos.CreateVEXRuleRequest{
+			Title:         "withdrawn advisory",
+			Justification: "advisory withdrawn - not a security issue",
+			CELExpression: fmt.Sprintf(`vuln.cveId == %q`, cve.CVE),
+			EventType:     dtos.EventTypeAccepted,
+		})
+		require.NoError(t, err)
+
+		req := httptest.NewRequest("POST", "/vex-rules", strings.NewReader(string(body)))
+		req.Header.Set("Content-Type", "application/json")
+		recorder := httptest.NewRecorder()
+		ctx := app.NewContext(req, recorder)
+		shared.SetAsset(ctx, asset)
+		shared.SetProject(ctx, project)
+		shared.SetOrg(ctx, org)
+		shared.SetSession(ctx, NewUserSession(t, "reporter"))
+		require.NoError(t, f.App.VEXRuleController.Create(ctx))
+		require.Equal(t, 201, recorder.Code, recorder.Body.String())
+
+		var created dtos.VEXRule
+		require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &created))
+
+		// one group event, but it applies to the vuln on both asset versions
+		assert.Equal(t, 2, created.AppliesToAmountOfDependencyVulns)
+
+		counts, err := f.App.VulnEventRepository.CountByVexRuleIDs(t.Context(), nil, []string{created.ID})
+		require.NoError(t, err)
+		assert.Equal(t, 2, counts[created.ID])
+	})
+}
