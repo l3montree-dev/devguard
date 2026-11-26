@@ -61,7 +61,7 @@ WITH events AS (
 		LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
 		LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at
 	FROM dependency_vulns
-	JOIN vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
+	JOIN vuln_events fe ON fe.dependency_vuln_id = dependency_vulns.id OR fe.asset_signature = dependency_vulns.asset_signature
 	LEFT JOIN cves c ON dependency_vulns.cve_id = c.cve
 	WHERE fe.type = ANY (?)
 	AND dependency_vulns.asset_version_id = ?
@@ -89,7 +89,7 @@ WITH events AS (
 		LAG(fe.type)       OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
 		LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at
 	FROM dependency_vulns
-	JOIN vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
+	JOIN vuln_events fe ON fe.dependency_vuln_id = dependency_vulns.id OR fe.asset_signature = dependency_vulns.asset_signature
 	LEFT JOIN cves c ON dependency_vulns.cve_id = c.cve
 	JOIN (
 		SELECT DISTINCT artifact_dependency_vulns.dependency_vuln_id
@@ -343,7 +343,7 @@ func (r *statisticsRepository) GetWeeklyAveragePerVulnEventType(ctx context.Cont
 	JOIN projects p ON p.organization_id = org.id
 	JOIN assets a ON a.project_id = p.id
 	JOIN dependency_vulns dv ON dv.asset_id = a.id
-	JOIN vuln_events ve ON ve.dependency_vuln_id = dv.id
+	JOIN vuln_events ve ON ve.dependency_vuln_id = dv.id OR ve.asset_signature = dv.asset_signature
 	WHERE org.id = ?
 	AND ve.type = ANY (?)
 	GROUP BY ve.type, ow.weeks;`, orgID, orgID, pq.Array(remediationEvents)).Find(&averageByType).Error
@@ -494,7 +494,7 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.C
 		COALESCE(EXTRACT(EPOCH FROM AVG(now() - dv.created_at) FILTER (WHERE sub.created_at IS NULL AND dv.cvss >= 9 AND dv.cvss <= 10)), 0) AS critical_cvss_open
 	FROM (
 		SELECT DISTINCT ON (dv.cve_id, dv.component_purl)			--deduplicate based on cve_id and purl
-			dv.id, dv.created_at, dv.risk_assessment, cves.cvss
+			dv.id, dv.asset_signature, dv.created_at, dv.risk_assessment, cves.cvss
 		FROM dependency_vulns dv
 		JOIN assets a ON dv.asset_id = a.id
 		JOIN projects p ON a.project_id = p.id
@@ -505,7 +505,7 @@ func (r *statisticsRepository) GetAverageRemediationTimesAcrossOrg(ctx context.C
 	LEFT JOIN LATERAL (
 		SELECT created_at
 		FROM vuln_events ve
-		WHERE ve.dependency_vuln_id = dv.id
+		WHERE (ve.dependency_vuln_id = dv.id OR ve.asset_signature = dv.asset_signature)
 		AND ve.type = ANY (?)
 		ORDER BY created_at ASC			--only get the earliest remediation event
 		LIMIT 1
@@ -526,7 +526,7 @@ func (r *statisticsRepository) GetRemediationTypeDistributionAcrossOrg(ctx conte
 	JOIN LATERAL( 						-- lateral join the latest vuln event to each dependency vuln present in the org
 		SELECT ve.type FROM vuln_events ve 
 		WHERE ve.type = ANY (?)
-		AND ve.dependency_vuln_id = dv.id 
+		AND (ve.dependency_vuln_id = dv.id OR ve.asset_signature = dv.asset_signature)
 		ORDER BY ve.created_at DESC  	-- order by created_at + limit 1 to only get the latest
 		LIMIT 1) as ve_filtered ON TRUE
 	WHERE p.organization_id = ?
