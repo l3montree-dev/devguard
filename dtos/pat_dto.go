@@ -50,6 +50,7 @@ type PAT struct {
 	LastUsedAt     *string `json:"lastUsedAt"`
 	ExpiryDateUnix int64   `json:"expiryDateUnix"`
 	Scopes         string  `json:"scopes"`
+	PubKey         *string `json:"pubKey"`
 }
 
 // PATCreateResponse is returned once on PAT creation.
