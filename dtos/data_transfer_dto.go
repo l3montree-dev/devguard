@@ -22,9 +22,10 @@ type DataTransferExportOptions struct {
 
 // org archives are imported as a new org, project and asset archives get attached to an existing entity
 type DataTransferImportOptions struct {
-	OwnerID         string     // gets the highest role on the imported entity
-	TargetOrgID     uuid.UUID  // org of an imported root project, resolved from the target project otherwise
-	TargetProjectID *uuid.UUID // parent of an imported sub project, project of an imported asset
+	EntityType      DataTransferEntityType // archive type the caller expects, decides which tables may be imported
+	OwnerID         string                 // gets the highest role on the imported entity
+	TargetOrgID     uuid.UUID              // org of an imported root project, resolved from the target project otherwise
+	TargetProjectID *uuid.UUID             // parent of an imported sub project, project of an imported asset
 }
 
 type DataTransferMetadata struct {

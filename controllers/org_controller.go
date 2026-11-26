@@ -17,11 +17,9 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
 	"slices"
 	"time"
 
@@ -826,81 +824,4 @@ func (controller *OrgController) ExportOrg(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "organization export failed").WithInternal(err)
 	}
 	return nil
-}
-
-// @Summary Import organization
-// @Description Upload a DevGuard organization export archive which then gets created as a new organization.
-// @Tags Organizations
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Accept application/x-tar
-// @Param exportFile body []byte true "Export archive"
-// @Success 200
-// @Router /organizations/import [post]
-func (controller *OrgController) ImportOrg(ctx shared.Context) error {
-	if ctx.Request().Header.Get(echo.HeaderContentType) != "application/x-tar" {
-		return echo.NewHTTPError(415, "invalid content type, expected a tar archive (application/x-tar)")
-	}
-
-	var maxSize int64 = 5 * 1024 * 1024 * 1024 // Max Upload Size 5gb, the archive gets extracted to disk
-
-	// the archive is read sequentially, so the body is streamed into the import without buffering
-	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxSize)
-	defer ctx.Request().Body.Close()
-
-	// the org archive creates its own org, so no import target is needed
-	importOptions := dtos.DataTransferImportOptions{
-		OwnerID: shared.GetSession(ctx).GetActorID(),
-	}
-
-	err := controller.dataTransferService.ImportFile(ctx.Request().Context(), ctx.Request().Body, importOptions)
-	if err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			return echo.NewHTTPError(413, "export archive is too large").WithInternal(err)
-		}
-		return echo.NewHTTPError(500, "organization import failed").WithInternal(err)
-	}
-
-	return ctx.JSON(200, nil)
-}
-
-// @Summary Import organization
-// @Description Upload a DevGuard export file which then gets loaded into your organization.
-// @Tags Organizations
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Accept application/x-tar
-// @Param exportFile body []byte true "Export archive"
-// @Success 200
-// @Router /organizations/{organization}/import [post]
-func (controller *OrgController) ImportProject(ctx shared.Context) error {
-	if ctx.Request().Header.Get(echo.HeaderContentType) != "application/x-tar" {
-		return echo.NewHTTPError(415, "invalid content type, expected a tar archive (application/x-tar)")
-	}
-
-	var maxSize int64 = 1024 * 1024 * 1024 // Max Upload Size 1GB, the archive gets extracted to disk
-
-	// wrap the body into max bytes reader to limit the file size
-	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxSize)
-	defer ctx.Request().Body.Close()
-
-	importOptions := dtos.DataTransferImportOptions{
-		OwnerID:     shared.GetSession(ctx).GetActorID(),
-		TargetOrgID: shared.GetOrg(ctx).GetID(),
-	}
-
-	err := controller.dataTransferService.ImportFile(ctx.Request().Context(), ctx.Request().Body, importOptions)
-	if err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			return echo.NewHTTPError(413, "export archive is too large").WithInternal(err)
-		}
-		return echo.NewHTTPError(500, "organization import failed").WithInternal(err)
-	}
-
-	return ctx.JSON(200, nil)
 }

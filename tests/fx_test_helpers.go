@@ -22,10 +22,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/l3montree-dev/devguard/database"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/events/listeners"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/l3montree-dev/devguard/shared"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -156,6 +158,36 @@ func (f *TestFixture) CreateAssetVersion(assetID uuid.UUID, name string, isDefau
 	err := f.DB.Create(&assetVersion).Error
 	require.NoError(f.T, err)
 	return assetVersion
+}
+
+// truncates all tables effectively clearing all data from the database except metadata tables like schema migrations
+func (f *TestFixture) ClearUserData() {
+	_, err := f.Pool.Exec(context.Background(), `
+	DO $$
+		DECLARE
+			tableNames text;
+		BEGIN
+			SELECT string_agg(format('%I.%I', schemaname, tablename), ', ')
+			INTO tableNames
+			FROM pg_tables
+			WHERE schemaname = 'public'
+			AND tablename NOT IN (
+				'schema_migrations',
+				'river_migration'
+			);
+
+			EXECUTE 'TRUNCATE TABLE ' || tableNames || ' RESTART IDENTITY CASCADE';
+	END $$;`)
+	assert.NoError(f.T, err)
+}
+
+// drops the public schema, recreates it and runs the database migrations for a clean database state
+func (f *TestFixture) ResetDatabase() {
+	_, err := f.Pool.Exec(context.Background(), `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`)
+	assert.NoError(f.T, err)
+	f.Pool.Reset() // reset pgx pool cache
+	assert.NoError(f.T, database.RunMigrations(f.DB))
+	splitMerkleEdges(f.DB) // same post migration step as InitDatabaseContainer
 }
 
 // CreateDaemonRunner creates a DaemonRunner instance with all dependencies from the test app

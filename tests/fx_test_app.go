@@ -66,6 +66,7 @@ type TestApp struct {
 	OpenSourceInsightService shared.OpenSourceInsightService
 	MaliciousPackageChecker  shared.MaliciousPackageChecker
 	LogService               shared.LogService
+	DataTransferService      shared.DataTransferService
 
 	// Controllers
 	AssetController             *controllers.AssetController

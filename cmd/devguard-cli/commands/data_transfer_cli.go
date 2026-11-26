@@ -101,7 +101,7 @@ func exportOptionsFromFlags(orgID, projectID, assetID string) (dtos.DataTransfer
 }
 
 func newDataTransferImportCommand() *cobra.Command {
-	var ownerID, targetOrgID, targetProjectID string
+	var entityType, ownerID, targetOrgID, targetProjectID string
 
 	importCmd := &cobra.Command{
 		Use:   "import <archive>",
@@ -114,12 +114,12 @@ What has to be passed depends on what the archive contains:
   asset archive    needs --targetProject, --owner becomes admin of the asset
 
 Slugs are kept as they are, the import fails if one is already taken in the target.`,
-		Example: `  devguard-cli data-transfer import my-org.tar --owner 5d4e...
-  devguard-cli data-transfer import my-project.tar --owner 5d4e... --targetOrg 3f1c...
-  devguard-cli data-transfer import my-asset.tar --owner 5d4e... --targetProject 9a2b...`,
+		Example: `  devguard-cli data-transfer import my-org.tar --type org --owner 5d4e...
+  devguard-cli data-transfer import my-project.tar --type project --owner 5d4e... --targetOrg 3f1c...
+  devguard-cli data-transfer import my-asset.tar --type asset --owner 5d4e... --targetProject 9a2b...`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			options, err := importOptionsFromFlags(ownerID, targetOrgID, targetProjectID)
+			options, err := importOptionsFromFlags(entityType, ownerID, targetOrgID, targetProjectID)
 			if err != nil {
 				return err
 			}
@@ -140,20 +140,27 @@ Slugs are kept as they are, the import fails if one is already taken in the targ
 		},
 	}
 
+	importCmd.Flags().StringVar(&entityType, "type", "", "Type of the archive: org, project or asset, the import is rejected if the archive is of another type")
 	importCmd.Flags().StringVar(&ownerID, "owner", "", "ID of the user who gets the highest role on the imported entity")
 	importCmd.Flags().StringVar(&targetOrgID, "targetOrg", "", "ID of the org a project archive gets imported into as a root project")
 	importCmd.Flags().StringVar(&targetProjectID, "targetProject", "", "ID of the parent project of an imported project, or the project of an imported asset, the org is taken from this project")
+	importCmd.MarkFlagRequired("type")  // nolint
 	importCmd.MarkFlagRequired("owner") // nolint
 	importCmd.MarkFlagsMutuallyExclusive("targetOrg", "targetProject")
 
 	return importCmd
 }
 
-func importOptionsFromFlags(ownerID, targetOrgID, targetProjectID string) (dtos.DataTransferImportOptions, error) {
+func importOptionsFromFlags(entityType, ownerID, targetOrgID, targetProjectID string) (dtos.DataTransferImportOptions, error) {
+	switch dtos.DataTransferEntityType(entityType) {
+	case dtos.DataTransferEntityOrg, dtos.DataTransferEntityProject, dtos.DataTransferEntityAsset:
+	default:
+		return dtos.DataTransferImportOptions{}, fmt.Errorf("invalid type %q, expected org, project or asset", entityType)
+	}
 	if _, err := uuid.Parse(ownerID); err != nil {
 		return dtos.DataTransferImportOptions{}, fmt.Errorf("invalid owner id: %w", err)
 	}
-	options := dtos.DataTransferImportOptions{OwnerID: ownerID}
+	options := dtos.DataTransferImportOptions{EntityType: dtos.DataTransferEntityType(entityType), OwnerID: ownerID}
 
 	if targetOrgID != "" {
 		orgID, err := uuid.Parse(targetOrgID)

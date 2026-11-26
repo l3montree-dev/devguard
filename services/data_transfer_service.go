@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -67,58 +66,66 @@ type scopeFilter struct {
 
 type tableProperties struct {
 	filters          []scopeFilter
-	importOrder      int      // tables only reference tables on lower import order values
-	conflictsAllowed bool     // true = on conflict do nothing, else fail on conflict
-	clearedColumns   []string // instance specific columns which are not exported, they are imported as NULL
+	importOrder      int                           // tables only reference tables on lower import order values
+	conflictsAllowed bool                          // true = on conflict do nothing, else fail on conflict
+	clearedColumns   []string                      // instance specific columns which are not exported, they are imported as NULL
+	allowedInScopes  []dtos.DataTransferEntityType // each archive type this table is exported in and allowed to be imported from
 }
+
+// shortcut for the archive types, entities above the archived one are never part of the archive
+const (
+	orgScope     = dtos.DataTransferEntityOrg
+	projectScope = dtos.DataTransferEntityProject
+	assetScope   = dtos.DataTransferEntityAsset
+)
 
 // shortcut for common scope filters
 var (
-	assetScope    = scopeFilter{column: "asset_id", ids: "assetIDs", arrayType: "uuid[]"}
-	artifactScope = scopeFilter{column: "artifact_id", ids: "artifactIDs", arrayType: "uuid[]"}
+	assetFilter    = scopeFilter{column: "asset_id", ids: "assetIDs", arrayType: "uuid[]"}
+	artifactFilter = scopeFilter{column: "artifact_id", ids: "artifactIDs", arrayType: "uuid[]"}
 )
 
 // all tables with a simple syntax, keyed by table name
-var tablesToSync = map[string]tableProperties{
+var TablesToSync = map[string]tableProperties{
 	// org level
-	"organizations":       {importOrder: 0, clearedColumns: []string{"external_entity_provider_id"}, filters: []scopeFilter{{column: "id", ids: "orgIDs", arrayType: "uuid[]"}}},
-	"projects":            {importOrder: 1, clearedColumns: []string{"external_entity_provider_id", "external_entity_id"}, filters: []scopeFilter{{column: "id", ids: "projectIDs", arrayType: "uuid[]"}}},
-	"compliance_postures": {importOrder: 4, filters: []scopeFilter{{column: "org_id", ids: "orgIDs", arrayType: "uuid[]"}}}, // only org exports, the posture id is a hash over the org so it does not make sense to export on project or asset level
-	"external_users":      {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "id", ids: "externalUserIDs", arrayType: "text[]"}}},
-	"external_user_orgs":  {importOrder: 1, filters: []scopeFilter{{column: "org_id", ids: "orgIDs", arrayType: "uuid[]"}}},
+	"organizations":       {importOrder: 0, allowedInScopes: []dtos.DataTransferEntityType{orgScope}, clearedColumns: []string{"external_entity_provider_id"}, filters: []scopeFilter{{column: "id", ids: "orgIDs", arrayType: "uuid[]"}}},
+	"projects":            {importOrder: 1, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope}, clearedColumns: []string{"external_entity_provider_id", "external_entity_id"}, filters: []scopeFilter{{column: "id", ids: "projectIDs", arrayType: "uuid[]"}}},
+	"compliance_postures": {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope}, filters: []scopeFilter{{column: "org_id", ids: "orgIDs", arrayType: "uuid[]"}}}, // only org exports, the posture id is a hash over the org so it does not make sense to export on project or asset level
+	"external_users":      {importOrder: 0, allowedInScopes: []dtos.DataTransferEntityType{orgScope}, conflictsAllowed: true, filters: []scopeFilter{{column: "id", ids: "externalUserIDs", arrayType: "text[]"}}},
+	"external_user_orgs":  {importOrder: 1, allowedInScopes: []dtos.DataTransferEntityType{orgScope}, filters: []scopeFilter{{column: "org_id", ids: "orgIDs", arrayType: "uuid[]"}}},
 
 	// project level
-	"assets": {importOrder: 2, clearedColumns: []string{"external_entity_provider_id", "external_entity_id"}, filters: []scopeFilter{{column: "id", ids: "assetIDs", arrayType: "uuid[]"}}},
+	"assets": {importOrder: 2, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, clearedColumns: []string{"external_entity_provider_id", "external_entity_id"}, filters: []scopeFilter{{column: "id", ids: "assetIDs", arrayType: "uuid[]"}}},
 
 	// asset level
-	"external_references": {importOrder: 3, filters: []scopeFilter{assetScope}},
-	"vex_rules":           {importOrder: 3, filters: []scopeFilter{assetScope}},
-	"asset_versions":      {importOrder: 3, filters: []scopeFilter{assetScope}},
+	"external_references": {importOrder: 3, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"vex_rules":           {importOrder: 3, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"asset_versions":      {importOrder: 3, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
 
 	// asset version level
-	"license_risks":               {importOrder: 4, filters: []scopeFilter{assetScope}},
-	"first_party_vulnerabilities": {importOrder: 4, filters: []scopeFilter{assetScope}},
-	"dependency_vulns":            {importOrder: 4, filters: []scopeFilter{assetScope}},
-	"advisories":                  {importOrder: 4, filters: []scopeFilter{assetScope}},
-	"artifacts":                   {importOrder: 4, filters: []scopeFilter{assetScope}},
+	"license_risks":               {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"first_party_vulnerabilities": {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"dependency_vulns":            {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"advisories":                  {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"artifacts":                   {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
 
 	// artifact level
-	"attestations":              {importOrder: 5, filters: []scopeFilter{assetScope}},
-	"sboms":                     {importOrder: 5, filters: []scopeFilter{assetScope}},
-	"artifact_dependency_vulns": {importOrder: 5, filters: []scopeFilter{artifactScope}},
-	"artifact_license_risks":    {importOrder: 5, filters: []scopeFilter{artifactScope}},
+	"attestations":              {importOrder: 5, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"sboms":                     {importOrder: 5, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
+	"artifact_dependency_vulns": {importOrder: 5, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{artifactFilter}},
+	"artifact_license_risks":    {importOrder: 5, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{artifactFilter}},
 
 	// sbom data
-	"sbom_merkle_nodes": {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "node_hash", ids: "sbomMerkleNodeHashes", arrayType: "uuid[]"}}},
-	"sbom_merkle_edges": {importOrder: 1, conflictsAllowed: true, filters: []scopeFilter{{column: "subtree_hash", ids: "sbomMerkleNodeHashes", arrayType: "uuid[]"}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
+	"sbom_merkle_nodes": {importOrder: 0, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, conflictsAllowed: true, filters: []scopeFilter{{column: "node_hash", ids: "sbomMerkleNodeHashes", arrayType: "uuid[]"}}},
+	"sbom_merkle_edges": {importOrder: 1, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, conflictsAllowed: true, filters: []scopeFilter{{column: "subtree_hash", ids: "sbomMerkleNodeHashes", arrayType: "uuid[]"}}}, // a node hash fixes its children, so all edges of a reachable parent are in scope
 
 	// shared reference data
-	"component_projects":  {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "project_key", ids: "componentProjectKeys", arrayType: "text[]"}}},
-	"components":          {importOrder: 1, conflictsAllowed: true, filters: []scopeFilter{{column: "id", ids: "componentIDs", arrayType: "text[]"}}},
-	"frameworks_controls": {importOrder: 0, conflictsAllowed: true, filters: []scopeFilter{{column: "framework_control_id", ids: "frameworkControlIDs", arrayType: "text[]"}}},
+	"component_projects":  {importOrder: 0, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, conflictsAllowed: true, filters: []scopeFilter{{column: "project_key", ids: "componentProjectKeys", arrayType: "text[]"}}},
+	"components":          {importOrder: 1, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, conflictsAllowed: true, filters: []scopeFilter{{column: "id", ids: "componentIDs", arrayType: "text[]"}}},
+	"frameworks_controls": {importOrder: 0, allowedInScopes: []dtos.DataTransferEntityType{orgScope}, conflictsAllowed: true, filters: []scopeFilter{{column: "framework_control_id", ids: "frameworkControlIDs", arrayType: "text[]"}}},
 
 	// vuln events
-	"vuln_events": {importOrder: 5, filters: []scopeFilter{
+	"vuln_events": {importOrder: 5, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{
 		{column: "dependency_vuln_id", ids: "dependencyVulnIDs", arrayType: "uuid[]"},
 		{column: "first_party_vuln_id", ids: "firstPartyVulnIDs", arrayType: "uuid[]"},
 		{column: "license_risk_id", ids: "licenseRiskIDs", arrayType: "uuid[]"},
@@ -126,6 +133,20 @@ var tablesToSync = map[string]tableProperties{
 		{column: "security_advisory_id", ids: "securityAdvisoryIDs", arrayType: "uuid[]"},
 		{column: "asset_signature", ids: "assetSignatures", arrayType: "bigint[]"}, // group events of all dependency vulns sharing the signature
 	}},
+}
+
+// tables which are part of an archive of the entity type, sorted by import order to ensure no FK violations
+func tablesInScope(entityType dtos.DataTransferEntityType) []string {
+	tableNames := make([]string, 0, len(TablesToSync))
+	for tableName, properties := range TablesToSync {
+		if slices.Contains(properties.allowedInScopes, entityType) {
+			tableNames = append(tableNames, tableName)
+		}
+	}
+	slices.SortFunc(tableNames, func(table1, table2 string) int {
+		return cmp.Compare(TablesToSync[table1].importOrder, TablesToSync[table2].importOrder)
+	})
+	return tableNames
 }
 
 //-------------------------------------------------------------------
@@ -238,8 +259,9 @@ func (service *DataTransferService) StartExport(ctx context.Context, options dto
 
 	// now we resolved the export scope into a set of ids for each affected table
 	// this makes each table lookup an independent job, thus allowing for concurrent reads
-	jobs := make(chan string, len(tablesToSync)) // small number of jobs, all can be queued at once
-	for tableID := range tablesToSync {
+	tableNames := tablesInScope(options.EntityType)
+	jobs := make(chan string, len(tableNames)) // small number of jobs, all can be queued at once
+	for _, tableID := range tableNames {
 		jobs <- tableID
 	}
 	close(jobs)
@@ -344,7 +366,7 @@ func (service *DataTransferService) databaseQueryWorker(ctx context.Context, bas
 }
 
 func exportTable(ctx context.Context, tx pgx.Tx, baseFolder string, tableID string, scope exportScope) error {
-	sql, args, err := sqlFromTableProperties(tableID, tablesToSync[tableID], scope)
+	sql, args, err := sqlFromTableProperties(tableID, TablesToSync[tableID], scope)
 	if err != nil {
 		return fmt.Errorf("could not build export query: %w", err)
 	}
@@ -526,6 +548,12 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 	slog.Info("start importing data...")
 	start := time.Now()
 
+	// the caller decides the archive type, so an archive can only write the tables of its own level
+	tableNames := tablesInScope(options.EntityType)
+	if len(tableNames) == 0 {
+		return fmt.Errorf("unknown import entity type: %s", options.EntityType)
+	}
+
 	// unpack the files locally into a temp folder so we are able to handle them in the appropriate order
 	importDirectoryPath, err := os.MkdirTemp("", "devguard-import-*")
 	if err != nil {
@@ -539,7 +567,7 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 	}()
 
 	// write the imported file to the temp directory, it now lives there
-	if err := extractImportArchive(importFile, importDirectoryPath); err != nil {
+	if err := extractImportArchive(importFile, importDirectoryPath, tableNames); err != nil {
 		return fmt.Errorf("could not extract import archive: %w", err)
 	}
 
@@ -561,17 +589,16 @@ func (service *DataTransferService) ImportFile(ctx context.Context, importFile i
 		return err // errors are detailed in the called function
 	}
 
+	if importMetadata.EntityType != options.EntityType {
+		return fmt.Errorf("archive contains a %s export, expected a %s export", importMetadata.EntityType, options.EntityType)
+	}
+
 	// imported projects and the rbac rules need the org, which a target project already defines
 	if options.TargetProjectID != nil {
 		if err := importTx.QueryRow(ctx, `SELECT organization_id FROM projects WHERE id = $1`, *options.TargetProjectID).Scan(&options.TargetOrgID); err != nil {
 			return fmt.Errorf("could not find target project %s: %w", *options.TargetProjectID, err)
 		}
 	}
-
-	// sort the tables to ensure no FK violations
-	tableNames := slices.SortedFunc(maps.Keys(tablesToSync), func(table1, table2 string) int {
-		return cmp.Compare(tablesToSync[table1].importOrder, tablesToSync[table2].importOrder)
-	})
 
 	// every table is copied into this staging table first, so postgres can convert the json rows itself
 	if _, err := importTx.Exec(ctx, "CREATE TEMP TABLE import_staging (data jsonb) ON COMMIT DROP"); err != nil {
@@ -765,7 +792,7 @@ func importTable(ctx context.Context, tx pgx.Tx, importDirectoryPath string, tab
 	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT r.* FROM import_staging, jsonb_populate_record(NULL::%s, data) r", table, table)
 
 	// determine conflict handling: content hashes mean no conflict handling needed since its the same entry
-	if tablesToSync[tableName].conflictsAllowed {
+	if TablesToSync[tableName].conflictsAllowed {
 		insertSQL += " ON CONFLICT DO NOTHING"
 	}
 	insertTag, err := tx.Exec(ctx, insertSQL)
@@ -782,9 +809,10 @@ func importTable(ctx context.Context, tx pgx.Tx, importDirectoryPath string, tab
 	return nil
 }
 
-func extractImportArchive(importFile io.Reader, importDirectoryPath string) error {
+// only the metadata and the tables of the archive type are accepted
+func extractImportArchive(importFile io.Reader, importDirectoryPath string, tableNames []string) error {
 	allowedFiles := map[string]bool{metadataFileName: true}
-	for tableID := range tablesToSync {
+	for _, tableID := range tableNames {
 		allowedFiles[tableID+tableFileExtension] = true
 	}
 

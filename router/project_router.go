@@ -93,7 +93,6 @@ func NewProjectRouter(
 
 	// only project admins are allowed to export a project
 	projectRouter.GET("/export/", projectController.ExportProject, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionDelete))
-	projectRouter.POST("/import/", assetController.ImportAsset, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
 
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 

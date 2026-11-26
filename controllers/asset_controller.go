@@ -2,11 +2,9 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
@@ -829,45 +827,4 @@ func (a *AssetController) ExportAsset(ctx shared.Context) error {
 		return echo.NewHTTPError(500, "asset export failed").WithInternal(err)
 	}
 	return nil
-}
-
-// @Summary Import asset
-// @Description Upload a DevGuard asset export archive which then gets loaded into your project.
-// @Tags Assets
-// @Security CookieAuth
-// @Security PATAuth
-// @Security BearerAuth
-// @Param organization path string true "Organization slug"
-// @Param projectSlug path string true "Project slug"
-// @Accept application/x-tar
-// @Param exportFile body []byte true "Export archive"
-// @Success 200
-// @Router /organizations/{organization}/projects/{projectSlug}/import [post]
-func (a *AssetController) ImportAsset(ctx shared.Context) error {
-	if ctx.Request().Header.Get(echo.HeaderContentType) != "application/x-tar" {
-		return echo.NewHTTPError(415, "invalid content type, expected a tar archive (application/x-tar)")
-	}
-
-	var maxSize int64 = 1024 * 1024 * 1024 // Max Upload Size 1GB, the archive gets extracted to disk
-
-	// wrap the body into max bytes reader to limit the file size
-	ctx.Request().Body = http.MaxBytesReader(ctx.Response(), ctx.Request().Body, maxSize)
-	defer ctx.Request().Body.Close()
-
-	projectID := shared.GetProject(ctx).ID
-	importOptions := dtos.DataTransferImportOptions{
-		OwnerID:         shared.GetSession(ctx).GetActorID(),
-		TargetProjectID: &projectID,
-	}
-
-	err := a.dataTransferService.ImportFile(ctx.Request().Context(), ctx.Request().Body, importOptions)
-	if err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			return echo.NewHTTPError(413, "export archive is too large").WithInternal(err)
-		}
-		return echo.NewHTTPError(500, "asset import failed").WithInternal(err)
-	}
-
-	return ctx.JSON(200, nil)
 }
