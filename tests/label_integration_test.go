@@ -581,7 +581,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 
 		// the body tries to place the label into org B
-		body := fmt.Sprintf(`{"label":"new","background_color":"#123456","organization_id":%q,"project_id":%q}`, f.orgB.ID, f.pB.ID)
+		body := fmt.Sprintf(`{"label":"new","backgroundColor":"#123456","organization_id":%q,"project_id":%q}`, f.orgB.ID, f.pB.ID)
 
 		for _, tc := range []struct {
 			lvl     level
@@ -606,11 +606,11 @@ func TestLabelControllerIntegration(t *testing.T) {
 		target := f.labels["org-a"]
 
 		for name, body := range map[string]string{
-			"missing label":      `{"background_color":"#123456"}`,
+			"missing label":      `{"backgroundColor":"#123456"}`,
 			"missing color":      `{"label":"x"}`,
-			"color without hash": `{"label":"x","background_color":"123456"}`,
-			"not a color":        `{"label":"x","background_color":"red"}`,
-			"label too long":     fmt.Sprintf(`{"label":%q,"background_color":"#123456"}`, strings.Repeat("a", 257)),
+			"color without hash": `{"label":"x","backgroundColor":"123456"}`,
+			"not a color":        `{"label":"x","backgroundColor":"red"}`,
+			"label too long":     fmt.Sprintf(`{"label":%q,"backgroundColor":"#123456"}`, strings.Repeat("a", 257)),
 		} {
 			c, rec := newCtx(f, http.MethodPost, orgLevel, "", body)
 			assert.Equal(t, http.StatusBadRequest, statusOf(f.controller.Create(c), rec), "create: "+name)
@@ -625,7 +625,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 
 		for name, lvl := range map[string]level{"org-a": orgLevel, "p1": projectLevel, "a1": assetLevel} {
 			label := f.labels[name]
-			c, rec := newCtx(f, http.MethodPut, lvl, label.ID.String(), `{"label":"renamed","background_color":"#abcdef"}`)
+			c, rec := newCtx(f, http.MethodPut, lvl, label.ID.String(), `{"label":"renamed","backgroundColor":"#abcdef"}`)
 			require.Equal(t, http.StatusOK, statusOf(f.controller.Update(c), rec), name)
 
 			read, err := f.repo.Read(context.Background(), nil, label.ID)
@@ -642,7 +642,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 		f := newLabelFixture(t, db)
 		target, other := f.labels["org-a"], f.labels["org-b"]
 
-		body := fmt.Sprintf(`{"id":%q,"label":"hijack","background_color":"#123456","organization_id":%q}`, other.ID, f.orgB.ID)
+		body := fmt.Sprintf(`{"id":%q,"label":"hijack","backgroundColor":"#123456","organization_id":%q}`, other.ID, f.orgB.ID)
 		c, rec := newCtx(f, http.MethodPut, orgLevel, target.ID.String(), body)
 		require.Equal(t, http.StatusOK, statusOf(f.controller.Update(c), rec))
 
@@ -754,7 +754,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 
 	t.Run("create and update reject duplicates on every level", func(t *testing.T) {
 		f := newLabelFixture(t, db)
-		body := `{"label":"dup","background_color":"#123456"}`
+		body := `{"label":"dup","backgroundColor":"#123456"}`
 
 		for _, lvl := range []level{orgLevel, projectLevel, assetLevel} {
 			c, rec := newCtx(f, http.MethodPost, lvl, "", body)
@@ -769,7 +769,7 @@ func TestLabelControllerIntegration(t *testing.T) {
 		assert.Equal(t, http.StatusConflict, statusOf(f.controller.Update(c), rec))
 
 		// the same label on a different level is fine
-		c, rec = newCtx(f, http.MethodPost, projectLevel, "", `{"label":"org-a","background_color":"#ff0000"}`)
+		c, rec = newCtx(f, http.MethodPost, projectLevel, "", `{"label":"org-a","backgroundColor":"#ff0000"}`)
 		assert.Equal(t, http.StatusOK, statusOf(f.controller.Create(c), rec))
 	})
 
