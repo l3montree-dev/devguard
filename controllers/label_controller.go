@@ -21,13 +21,6 @@ func NewLabelController(labelRepository shared.LabelRepository) *LabelController
 	}
 }
 
-func attachLabelError(err error, target string) error {
-	if shared.IsNotFound(err) {
-		return echo.NewHTTPError(404, "label not found").WithInternal(err)
-	}
-	return echo.NewHTTPError(500, fmt.Sprintf("could not attach label to %s", target)).WithInternal(err)
-}
-
 func saveLabelError(err error, msg string) error {
 	if shared.IsUniqueViolation(err) {
 		return echo.NewHTTPError(409, "a label with this name and color already exists on this level").WithInternal(err)
@@ -228,7 +221,7 @@ func (l *LabelController) ListOnAssetLevel(ctx shared.Context) error {
 // @Router /organizations/{organization}/projects/{projectSlug}/labels/attach/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/ [post]
 // @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/ [post]
-func (c *LabelController) AttachLabel(ctx shared.Context) error {
+func (l *LabelController) AttachLabel(ctx shared.Context) error {
 	var org models.Org
 	var projectID *uuid.UUID
 	var assetID *uuid.UUID
@@ -237,7 +230,7 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 	var req dtos.AttachLabelRequest
 	var err error
 	requestCtx := ctx.Request().Context()
-	tx := c.labelRepository.GetDB(requestCtx, nil)
+	tx := l.labelRepository.GetDB(requestCtx, nil)
 
 	if err = ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not parse request body").WithInternal(err)
@@ -284,7 +277,7 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 		parsedLabels = append(parsedLabels, parsed)
 	}
 
-	existingLabels, err := c.labelRepository.FindLabelsByIDsThroughHierarchy(requestCtx, tx, parsedLabels, &org.ID, projectID, assetID)
+	existingLabels, err := l.labelRepository.FindLabelsByIDsThroughHierarchy(requestCtx, tx, parsedLabels, &org.ID, projectID, assetID)
 	if err != nil {
 		return err
 	}
@@ -292,7 +285,7 @@ func (c *LabelController) AttachLabel(ctx shared.Context) error {
 		return echo.NewHTTPError(400, "could not find all labels, labelID list might contain invalid IDs")
 	}
 
-	err = c.labelRepository.CreateLabelAttachmentBatch(requestCtx, tx, parsedLabels, projectID, assetID, artifactID)
+	err = l.labelRepository.CreateLabelAttachmentBatch(requestCtx, tx, parsedLabels, projectID, assetID, artifactID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not attach labels to resources")
 	}
