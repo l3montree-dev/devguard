@@ -1022,3 +1022,16 @@ type InstanceSettings struct {
 	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
 	BearerTokenAuthDisabled bool `json:"bearerTokenAuthDisabled"`
 }
+
+type LabelRepository interface {
+	GetDB(ctx context.Context, db DB) DB
+	Create(ctx context.Context, tx DB, label *models.Label) error
+	Save(ctx context.Context, tx DB, label *models.Label) error
+	Delete(ctx context.Context, tx DB, labelID uuid.UUID) error
+	Read(ctx context.Context, tx DB, labelID uuid.UUID) (models.Label, error)
+	FindLabelByIDThroughHierarchy(ctx context.Context, tx *gorm.DB, labelID, orgID, projectID, assetID *uuid.UUID) (models.Label, error)
+	FindLabelsByIDsThroughHierarchy(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error)
+	CreateLabelAttachment(ctx context.Context, tx *gorm.DB, labelID, projectID, assetID, artifactID *uuid.UUID) error
+	CreateLabelAttachmentBatch(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID, assetID, artifactID *uuid.UUID) error
+	ListThroughHierarchy(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error)
+}

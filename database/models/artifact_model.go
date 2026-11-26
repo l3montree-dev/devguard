@@ -20,6 +20,7 @@ type Artifact struct {
 
 	DependencyVuln []DependencyVuln `json:"dependencyVulns" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE;"`
 	LicenseRisks   []LicenseRisk    `json:"licenseRisks" gorm:"many2many:artifact_license_risks;constraint:OnDelete:CASCADE;"`
+	Labels         []Label          `json:"labels" gorm:"many2many:projects_assets_artifacts_labels"`
 }
 
 func (a Artifact) TableName() string {

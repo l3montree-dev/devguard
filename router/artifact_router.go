@@ -33,6 +33,7 @@ func NewArtifactRouter(
 	externalReferenceController *controllers.ExternalReferenceController,
 	artifactRepository shared.ArtifactRepository,
 	assetRepository shared.AssetRepository,
+	labelController *controllers.LabelController,
 ) ArtifactRouter {
 	artifactRouter := assetVersionGroup.Group.Group("/artifacts/:artifactName", middlewares.ArtifactMiddleware(artifactRepository))
 
@@ -49,6 +50,7 @@ func NewArtifactRouter(
 	artifactRouter.DELETE("/", artifactController.DeleteArtifact, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	artifactRouter.PUT("/", artifactController.UpdateArtifact, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	artifactRouter.POST("/sync-external-sources/", externalReferenceController.SyncArtifact, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	artifactRouter.POST("/labels/attach/", labelController.AttachLabel, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
 	return ArtifactRouter{Group: artifactRouter}
 }

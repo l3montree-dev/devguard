@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/joho/godotenv"
 
 	"github.com/labstack/echo/v4"
@@ -23,6 +24,11 @@ type DB = *gorm.DB
 func SanitizeParam(s string) string {
 	// remove trailing or leading slashes
 	return strings.Trim(s, "/")
+}
+
+func IsUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func IsNotFound(err error) bool {

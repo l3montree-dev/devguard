@@ -715,10 +715,11 @@ func (repository *dependencyVulnRepository) getAllOpenVulnsDistinctBySignature(c
 			ids = ids.Order("signature ASC, id ASC").Limit(batchSize)
 
 			var vulns = []models.DependencyVuln{}
-			// nosemgrep:sql-use-of-where-in its a subquery not a slice
+			// nosemgrep: sql-use-of-where-in -- ids queried through subquery, WHERE <var> ANY (?) not possible
 			if err := db.Preload("CVE", func(db *gorm.DB) *gorm.DB {
 				return db.Omit("Description", "References")
-			}).Where("id IN (?)", ids).Order("signature ASC").Find(&vulns).Error; err != nil {
+			}).
+				Where("id IN (?)", ids).Order("signature ASC").Find(&vulns).Error; err != nil {
 				yield(nil, err)
 				return
 			}

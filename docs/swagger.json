@@ -763,7 +763,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "issuerName": {
                         "type": "string"
@@ -2490,7 +2491,6 @@
                 "type": "object"
             },
             "cyclonedx.Hash": {
-                "description": "New in 1.7",
                 "properties": {
                     "alg": {
                         "$ref": "#/components/schemas/cyclonedx.HashAlgorithm"
@@ -3667,7 +3667,8 @@
                         "uniqueItems": false
                     },
                     "manufacture": {
-                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
+                        "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity",
+                        "description": "Deprecated: Use Component Manufacturer instead."
                     },
                     "manufacturer": {
                         "$ref": "#/components/schemas/cyclonedx.OrganizationalEntity"
@@ -3743,7 +3744,6 @@
                 "type": "object"
             },
             "cyclonedx.OrganizationalEntity": {
-                "description": "Deprecated: Use Component Manufacturer instead.",
                 "properties": {
                     "address": {
                         "$ref": "#/components/schemas/cyclonedx.PostalAddress"
@@ -4047,7 +4047,8 @@
                         "type": "string"
                     },
                     "fingerprint": {
-                        "$ref": "#/components/schemas/cyclonedx.Hash"
+                        "$ref": "#/components/schemas/cyclonedx.Hash",
+                        "description": "New in 1.7"
                     },
                     "format": {
                         "type": "string"
@@ -6760,6 +6761,24 @@
                 ],
                 "type": "object"
             },
+            "dtos.AttachLabelRequest": {
+                "properties": {
+                    "label": {
+                        "items": {
+                            "maxLength": 256,
+                            "type": "string"
+                        },
+                        "maxItems": 256,
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "label"
+                ],
+                "type": "object"
+            },
             "dtos.AverageRemediationTimes": {
                 "properties": {
                     "criticalCVSSOpen": {
@@ -7693,7 +7712,12 @@
                         "type": "string"
                     },
                     "type": {
-                        "$ref": "#/components/schemas/dtos.ExternalReferenceType"
+                        "$ref": "#/components/schemas/dtos.ExternalReferenceType",
+                        "enum": [
+                            "cyclonedx",
+                            "csaf",
+                            "openvex"
+                        ]
                     },
                     "url": {
                         "maxLength": 2048,
@@ -7746,7 +7770,12 @@
                         "type": "string"
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     },
                     "justification": {
                         "maxLength": 4000,
@@ -7845,7 +7874,6 @@
                 "type": "object"
             },
             "dtos.DatabaseSpecifics": {
-                "description": "specific additional information, not standardized",
                 "properties": {
                     "cwe_ids": {
                         "description": "array of cwe ids associated with this vulnerability",
@@ -8526,10 +8554,7 @@
                     "cyclonedx",
                     "csaf",
                     "openvex",
-                    "unknown",
-                    "cyclonedx",
-                    "csaf",
-                    "openvex"
+                    "unknown"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9045,6 +9070,28 @@
                 ],
                 "type": "object"
             },
+            "dtos.LabelRequest": {
+                "properties": {
+                    "backgroundColor": {
+                        "maxLength": 7,
+                        "type": "string"
+                    },
+                    "description": {
+                        "maxLength": 2000,
+                        "type": "string"
+                    },
+                    "label": {
+                        "maxLength": 256,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "backgroundColor",
+                    "description",
+                    "label"
+                ],
+                "type": "object"
+            },
             "dtos.LicenseRiskArtifact": {
                 "properties": {
                     "artifactName": {
@@ -9284,13 +9331,7 @@
                 "enum": [
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "low",
-                    "high",
-                    "X",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9305,17 +9346,7 @@
                     "adjacent",
                     "local",
                     "physical",
-                    "X",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical",
-                    "X",
-                    "network",
-                    "adjacent",
-                    "local",
-                    "physical"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9331,15 +9362,7 @@
                     "none",
                     "low",
                     "high",
-                    "X",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9351,30 +9374,6 @@
             },
             "dtos.ModifiedRequirementLevel": {
                 "enum": [
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
-                    "X",
-                    "none",
-                    "low",
-                    "high",
                     "X",
                     "none",
                     "low",
@@ -9392,13 +9391,7 @@
                 "enum": [
                     "unchanged",
                     "changed",
-                    "X",
-                    "X",
-                    "unchanged",
-                    "changed",
-                    "X",
-                    "unchanged",
-                    "changed"
+                    "X"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -9409,12 +9402,6 @@
             },
             "dtos.ModifiedUserInteraction": {
                 "enum": [
-                    "X",
-                    "none",
-                    "required",
-                    "X",
-                    "none",
-                    "required",
                     "X",
                     "none",
                     "required"
@@ -9443,7 +9430,8 @@
                         "uniqueItems": false
                     },
                     "database_specific": {
-                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics"
+                        "$ref": "#/components/schemas/dtos.DatabaseSpecifics",
+                        "description": "specific additional information, not standardized"
                     },
                     "details": {
                         "type": "string"
@@ -10394,6 +10382,9 @@
                     "lastUsedAt": {
                         "type": "string"
                     },
+                    "pubKey": {
+                        "type": "string"
+                    },
                     "scopes": {
                         "type": "string"
                     }
@@ -10405,6 +10396,7 @@
                     "fingerprint",
                     "id",
                     "lastUsedAt",
+                    "pubKey",
                     "scopes"
                 ],
                 "type": "object"
@@ -10432,6 +10424,9 @@
                     "lastUsedAt": {
                         "type": "string"
                     },
+                    "pubKey": {
+                        "type": "string"
+                    },
                     "scopes": {
                         "type": "string"
                     }
@@ -10444,6 +10439,7 @@
                     "fingerprint",
                     "id",
                     "lastUsedAt",
+                    "pubKey",
                     "scopes"
                 ],
                 "type": "object"
@@ -10634,7 +10630,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.Project"
+                        "$ref": "#/components/schemas/dtos.Project",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -10831,7 +10828,8 @@
                         "type": "string"
                     },
                     "parent": {
-                        "$ref": "#/components/schemas/dtos.Project"
+                        "$ref": "#/components/schemas/dtos.Project",
+                        "description": "recursive structure"
                     },
                     "parentId": {
                         "type": "string"
@@ -11390,24 +11388,6 @@
             },
             "dtos.RequirementLevel": {
                 "enum": [
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
-                    "low",
-                    "medium",
-                    "high",
                     "low",
                     "medium",
                     "high"
@@ -12064,7 +12044,12 @@
                         "uniqueItems": false
                     },
                     "eventType": {
-                        "$ref": "#/components/schemas/dtos.VulnEventType"
+                        "$ref": "#/components/schemas/dtos.VulnEventType",
+                        "enum": [
+                            "accepted",
+                            "falsePositive",
+                            "reopened"
+                        ]
                     }
                 },
                 "required": [
@@ -12361,13 +12346,7 @@
                     "detected",
                     "detectedInArtifact",
                     "fixedInArtifact",
-                    "rawRiskAssessmentUpdated",
-                    "accepted",
-                    "falsePositive",
-                    "reopened",
-                    "accepted",
-                    "falsePositive",
-                    "reopened"
+                    "rawRiskAssessmentUpdated"
                 ],
                 "type": "string",
                 "x-enum-varnames": [
@@ -12835,6 +12814,13 @@
                     "id": {
                         "type": "string"
                     },
+                    "labels": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "licenseRisks": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk"
@@ -12853,6 +12839,7 @@
                     "createdAt",
                     "dependencyVulns",
                     "id",
+                    "labels",
                     "licenseRisks",
                     "vulnAssetId"
                 ],
@@ -12902,6 +12889,13 @@
                     },
                     "isPublic": {
                         "type": "boolean"
+                    },
+                    "labels": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "metadata": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB"
@@ -12999,6 +12993,7 @@
                     "importance",
                     "integrityRequirement",
                     "isPublic",
+                    "labels",
                     "metadata",
                     "modifiedAttackComplexity",
                     "modifiedAttackVector",
@@ -13310,7 +13305,8 @@
                         "type": "string"
                     },
                     "target_cve_data": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.CVE",
+                        "description": "TargetCVEData is populated by GORM nested preload. It is nil when the target\nCVE does not exist in this database — no DB-level FK constraint is added."
                     }
                 },
                 "required": [
@@ -13789,6 +13785,69 @@
                 ],
                 "type": "object"
             },
+            "github_com_l3montree-dev_devguard_database_models.Label": {
+                "properties": {
+                    "artifacts": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "assetID": {
+                        "type": "string"
+                    },
+                    "assets": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "backgroundColor": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "organizationID": {
+                        "type": "string"
+                    },
+                    "projectID": {
+                        "type": "string"
+                    },
+                    "projects": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "artifacts",
+                    "assetID",
+                    "assets",
+                    "backgroundColor",
+                    "createdAt",
+                    "description",
+                    "id",
+                    "label",
+                    "organizationID",
+                    "projectID",
+                    "projects"
+                ],
+                "type": "object"
+            },
             "github_com_l3montree-dev_devguard_database_models.LicenseRisk": {
                 "properties": {
                     "artifacts": {
@@ -14166,6 +14225,13 @@
                     "isPublic": {
                         "type": "boolean"
                     },
+                    "labels": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -14220,6 +14286,7 @@
                     "externalEntityProviderParentId",
                     "id",
                     "isPublic",
+                    "labels",
                     "name",
                     "organization",
                     "organizationId",
@@ -14366,7 +14433,8 @@
             "github_com_l3montree-dev_devguard_database_models.VEXRule": {
                 "properties": {
                     "asset": {
-                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset",
+                        "description": "Relationships"
                     },
                     "assetId": {
                         "description": "Composite key components (for indexing and queries)",
@@ -14975,48 +15043,30 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -15034,48 +15084,30 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -19294,6 +19326,258 @@
                 ]
             }
         },
+        "/organizations/{organization}/labels/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List labels on organization level",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/labels/{labelID}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete label",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
         "/organizations/{organization}/logs/": {
             "get": {
                 "parameters": [
@@ -22178,6 +22462,370 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List labels on asset level",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.AttachLabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Attach label to artifact",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/{labelID}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete label",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/logs/": {
             "get": {
                 "parameters": [
@@ -24106,6 +24754,100 @@
                 "summary": "Get an aggregated CSAF VEX for all of the artifact's vulnerabilities",
                 "tags": [
                     "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.AttachLabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Attach label to artifact",
+                "tags": [
+                    "Label"
                 ]
             }
         },
@@ -28542,10 +29284,19 @@
                 ],
                 "requestBody": {
                     "content": {
-                        "application/x-www-form-urlencoded": {
+                        "multipart/form-data": {
                             "schema": {
-                                "title": "file",
-                                "type": "file"
+                                "properties": {
+                                    "file": {
+                                        "description": "SBOM file",
+                                        "format": "binary",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ],
+                                "type": "object"
                             }
                         }
                     },
@@ -30762,6 +31513,361 @@
                 "summary": "Update webhook integration (project)",
                 "tags": [
                     "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/labels/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List labels on project level",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/labels/attach/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.AttachLabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Attach label to artifact",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/labels/{labelID}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete label",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update label",
+                "tags": [
+                    "Label"
                 ]
             }
         },
