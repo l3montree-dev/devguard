@@ -319,6 +319,78 @@ func TestProjectAccessControl(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		mockPAT.AssertExpectations(t)
 	})
+
+	t.Run("denies asset token on project route without asset", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest("GET", "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockPAT := mocks.AccessControl{}
+		shared.SetRBAC(ctx, &mockPAT)
+		org := models.Org{Model: models.Model{ID: uuid.New()}}
+		project := models.Project{
+			Model:          models.Model{ID: uuid.New()},
+			Slug:           "test-project",
+			OrganizationID: org.ID,
+		}
+		asset := models.Asset{Model: models.Model{ID: uuid.New()}, ProjectID: project.ID}
+		mockSession := shared.NewSession(asset.ID.String(), shared.SessionActorAsset, []string{"scan"}, false)
+
+		mockPAT.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead, mock.Anything).Return(true, nil)
+
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, org)
+		shared.SetProject(ctx, project)
+		shared.SetActorScope(ctx, shared.ActorScope{Asset: &asset})
+
+		middleware := ProjectAccessControl(shared.ObjectProject, shared.ActionRead)
+
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		var httpErr *echo.HTTPError
+		assert.ErrorAs(t, err, &httpErr)
+		assert.Equal(t, http.StatusNotFound, httpErr.Code)
+		mockPAT.AssertExpectations(t)
+	})
+
+	t.Run("allows asset token on project route with asset", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest("GET", "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockPAT := mocks.AccessControl{}
+		shared.SetRBAC(ctx, &mockPAT)
+		org := models.Org{Model: models.Model{ID: uuid.New()}}
+		project := models.Project{
+			Model:          models.Model{ID: uuid.New()},
+			Slug:           "test-project",
+			OrganizationID: org.ID,
+		}
+		asset := models.Asset{Model: models.Model{ID: uuid.New()}, ProjectID: project.ID}
+		mockSession := shared.NewSession(asset.ID.String(), shared.SessionActorAsset, []string{"scan"}, false)
+
+		mockPAT.On("IsAllowedInProject", mock.Anything, &project, mockSession, shared.ObjectProject, shared.ActionRead, mock.Anything).Return(true, nil)
+
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, org)
+		shared.SetProject(ctx, project)
+		shared.SetAsset(ctx, asset)
+		shared.SetActorScope(ctx, shared.ActorScope{Asset: &asset})
+
+		middleware := ProjectAccessControl(shared.ObjectProject, shared.ActionRead)
+
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		mockPAT.AssertExpectations(t)
+	})
 }
 
 // TestAssetAccessControl tests asset-level access control.

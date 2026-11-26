@@ -161,6 +161,12 @@ func ProjectAccessControl(obj shared.Object, act shared.Action) shared.Middlewar
 				return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
 			}
 
+			if allowed && !project.IsPublic && session.GetSessionActorType() == shared.SessionActorAsset {
+				if _, err := shared.MaybeGetAsset(ctx); err != nil {
+					allowed = false
+				}
+			}
+
 			// check if the user has the required role
 			if !allowed {
 				slog.Warn("access denied in ProjectAccess", "actor", session.GetActorID(), "actorType", session.GetSessionActorType(), "object", obj, "action", act, "projectSlug", project.Slug)
