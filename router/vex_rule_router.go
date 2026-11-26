@@ -18,7 +18,6 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -42,7 +41,7 @@ func NewVEXRuleRouter(
 	ruleGroup.GET("/recommendations/:dependencyVulnID/", vexRecommendationController.Recommend)
 	ruleGroup.GET("/recommendations/", vexRecommendationController.RecommendForAsset)
 	// Write access - requires asset update permission
-	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	ruleWriteGroup := ruleGroup.Group("", middlewares.NeededScope([]string{"manage"}))
 	ruleWriteGroup.POST("/", vexRuleController.Create, middlewares.DisallowPublicRequests)           // Create rule
 	ruleWriteGroup.DELETE("/:ruleId/", vexRuleController.Delete, middlewares.DisallowPublicRequests) // Delete rule by ID
 

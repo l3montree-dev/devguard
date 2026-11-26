@@ -18,7 +18,6 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -37,9 +36,9 @@ func NewDependencyVulnRouter(
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
-	dependencyVulnRouter.POST("/batch/", dependencyVulnController.BatchCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	dependencyVulnRouter.POST("/batch/", dependencyVulnController.BatchCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	return DependencyVulnRouter{Group: dependencyVulnRouter}
 }

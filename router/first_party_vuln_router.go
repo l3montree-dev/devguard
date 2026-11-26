@@ -18,7 +18,6 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -36,9 +35,9 @@ func NewFirstPartyVulnRouter(
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/", firstPartyVulnController.Read)
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
-	firstPartyVulnRouter.POST("/batch/", firstPartyVulnController.BatchCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	firstPartyVulnRouter.POST("/:firstPartyVulnID/", firstPartyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	firstPartyVulnRouter.POST("/batch/", firstPartyVulnController.BatchCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	firstPartyVulnRouter.POST("/:firstPartyVulnID/", firstPartyVulnController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	return FirstPartyVulnRouter{Group: firstPartyVulnRouter}
 }

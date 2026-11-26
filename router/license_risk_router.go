@@ -18,7 +18,6 @@ package router
 import (
 	"github.com/l3montree-dev/devguard/controllers"
 	"github.com/l3montree-dev/devguard/middlewares"
-	"github.com/l3montree-dev/devguard/shared"
 	"github.com/labstack/echo/v4"
 )
 
@@ -33,10 +32,10 @@ func NewLicenseRiskRouter(
 	licenseRiskRouter := assetVersionGroup.Group.Group("/license-risks")
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
 	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
-	licenseRiskRouter.POST("/", licenseRiskController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	licenseRiskRouter.POST("/:licenseRiskID/mitigate/", licenseRiskController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
-	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision/", licenseRiskController.MakeFinalLicenseDecision, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	licenseRiskRouter.POST("/", licenseRiskController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	licenseRiskRouter.POST("/:licenseRiskID/mitigate/", licenseRiskController.Mitigate, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision/", licenseRiskController.MakeFinalLicenseDecision, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	return LicenseRiskRouter{Group: licenseRiskRouter}
 }

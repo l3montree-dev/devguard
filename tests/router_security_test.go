@@ -681,9 +681,7 @@ var selfDestructivePaths = map[string]bool{
 	"DELETE /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/": true,
 }
 
-func runAccessLevelSweep(t *testing.T, e *echo.Echo, app *TestApp, public bool) {
-	t.Helper()
-
+func orderedRoutes(e *echo.Echo) []*echo.Route {
 	var routes, deferred []*echo.Route
 	for _, route := range e.Routes() {
 		if selfDestructivePaths[route.Method+" "+route.Path] {
@@ -692,7 +690,13 @@ func runAccessLevelSweep(t *testing.T, e *echo.Echo, app *TestApp, public bool) 
 		}
 		routes = append(routes, route)
 	}
-	routes = append(routes, deferred...)
+	return append(routes, deferred...)
+}
+
+func runAccessLevelSweep(t *testing.T, e *echo.Echo, app *TestApp, public bool) {
+	t.Helper()
+
+	routes := orderedRoutes(e)
 
 	for _, a := range actorsByLevel {
 		t.Run(string(a.role), func(t *testing.T) {
@@ -736,26 +740,41 @@ func TestRoutesEnforceAccessLevelsOnPrivateResources(t *testing.T) {
 	runAccessLevelSweep(t, e, app, false)
 }
 
+func TestAuthenticatedOutsiderCannotWritePublicResources(t *testing.T) {
+	e, app := buildFullRouterServer(t, true)
+
+	victim := seedRBACFixture(t, e, app, true, "victim")
+	outsiderID := uuid.NewString()
+
+	for _, route := range orderedRoutes(e) {
+		if route.Method == "echo_route_not_found" || !strings.Contains(route.Path, ":organization") {
+			continue
+		}
+		required := accessLevelFor(t, route.Method, route.Path)
+		if required == shared.RoleGuest || (route.Method == http.MethodGet && required == shared.RoleMember) {
+			continue
+		}
+
+		req := httptest.NewRequest(route.Method, fillParams(route.Path, victim), nil)
+		req.Header.Set("X-Test-Actor", outsiderID)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		assert.Contains(t, []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound}, rec.Code,
+			"route %s %s returned %d for an authenticated user without membership on a public resource (want 401/403/404)", route.Method, route.Path, rec.Code)
+	}
+}
+
 func TestOrgTokenCannotAccessForeignOrganizationRoutes(t *testing.T) {
 	e, app := buildFullRouterServer(t, false)
 
 	attacker := seedRBACFixture(t, e, app, false, "attacker")
 	victim := seedRBACFixture(t, e, app, false, "victim")
 
-	var routes, deferred []*echo.Route
-	for _, route := range e.Routes() {
+	for _, route := range orderedRoutes(e) {
 		if route.Method == "echo_route_not_found" || !strings.Contains(route.Path, ":organization") {
 			continue
 		}
-		if selfDestructivePaths[route.Method+" "+route.Path] {
-			deferred = append(deferred, route)
-			continue
-		}
-		routes = append(routes, route)
-	}
-	routes = append(routes, deferred...)
-
-	for _, route := range routes {
 		if accessLevelFor(t, route.Method, route.Path) == shared.RoleGuest {
 			continue
 		}

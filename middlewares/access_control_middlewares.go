@@ -109,12 +109,39 @@ func NeededScope(NeededScopes []string) shared.MiddlewareFunc {
 
 func DisallowPublicRequests(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx shared.Context) error {
-		if shared.GetSession(ctx).IsAnonymousSession() {
+		session := shared.GetSession(ctx)
+		if session.IsAnonymousSession() {
 			slog.Warn("access denied for public request in DisallowPublicRequests middleware")
 			return echo.NewHTTPError(401, "this endpoint is not accessible for public requests")
 		}
+
+		allowed, err := isAllowedWithoutPublicAccess(ctx, session)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not determine if the user has access").WithInternal(err)
+		}
+		if !allowed {
+			slog.Warn("access denied for non-member request in DisallowPublicRequests middleware", "actor", session.GetActorID(), "actorType", session.GetSessionActorType())
+			return echo.NewHTTPError(403, "this endpoint is only accessible for members")
+		}
 		return next(ctx)
 	}
+}
+
+func isAllowedWithoutPublicAccess(ctx shared.Context, session shared.AuthSession) (bool, error) {
+	reqCtx := ctx.Request().Context()
+	if asset, err := shared.MaybeGetAsset(ctx); err == nil {
+		asset.IsPublic = false
+		return shared.GetRBAC(ctx).IsAllowedInAsset(reqCtx, &asset, session, shared.ObjectAsset, shared.ActionRead)
+	}
+	if project, err := shared.MaybeGetProject(ctx); err == nil {
+		project.IsPublic = false
+		return shared.GetRBAC(ctx).IsAllowedInProject(reqCtx, &project, session, shared.ObjectProject, shared.ActionRead, shared.GetActorScope(ctx))
+	}
+	if org, err := shared.MaybeGetOrganization(ctx); err == nil {
+		org.IsPublic = false
+		return shared.GetRBAC(ctx).IsAllowed(reqCtx, session, &org, shared.ObjectOrganization, shared.ActionRead, shared.GetActorScope(ctx))
+	}
+	return true, nil
 }
 
 // AssetAccessControl assumes ResourceFetchMiddleware has already resolved the
