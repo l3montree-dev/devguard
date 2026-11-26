@@ -17,21 +17,30 @@ package celrules
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/google/cel-go/cel"
 	"github.com/l3montree-dev/devguard/database/models"
 )
 
+var ticketRangeCelEnv = sync.OnceValues(func() (*cel.Env, error) {
+	return withRefs(VEXCelEnv())
+})
+
 func CompileTicketRangeRule(expression string) (cel.Program, error) {
-	env, err := VEXCelEnv()
+	env, err := ticketRangeCelEnv()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CEL environment: %w", err)
 	}
 	return compile(env, expression)
 }
 
-func EvalTicketRangeRule(expression string, vuln models.DependencyVuln, assetVersion models.AssetVersion) (bool, error) {
+func EvalTicketRangeRule(expression string, vuln models.DependencyVuln, refs Refs) (bool, error) {
 	prg, err := CompileTicketRangeRule(expression)
+	if err != nil {
+		return false, err
+	}
+	activation, err := refs.Activation(vuln.AssetVersionID)
 	if err != nil {
 		return false, err
 	}
@@ -39,6 +48,6 @@ func EvalTicketRangeRule(expression string, vuln models.DependencyVuln, assetVer
 	if err != nil {
 		return false, err
 	}
-	vulnMap["ref"] = assetVersion.ToCELMap()
-	return evalBool(prg, map[string]any{"vuln": vulnMap})
+	activation["vuln"] = vulnMap
+	return evalBool(prg, activation)
 }

@@ -428,11 +428,11 @@ func (i *RedmineIntegration) updateDependencyVulnTicket(
 	priority := riskToPriorityID(*settings, *dependencyVuln.RiskAssessment)
 	componentTree := FormatComponentTree(*settings, dependencyVuln)
 
-	assetVersion, err := i.assetVersionRepository.Read(ctx, nil, dependencyVuln.GetAssetVersionID())
+	expectedState, err := commonint.LoadExpectedIssueState(ctx, i.assetVersionRepository, asset, dependencyVuln)
 	if err != nil {
-		return fmt.Errorf("could not read asset version: %w", err)
+		return err
 	}
-	expectedIssueState, err := expectedIssueStateToID(ctx, client, ticketID, *settings, commonint.GetExpectedIssueState(asset, dependencyVuln, assetVersion))
+	expectedIssueState, err := expectedIssueStateToID(ctx, client, ticketID, *settings, expectedState)
 	if err != nil {
 		slog.Warn("failed to get expected issue state for dependency vuln, status will not be updated", "err", err, "vulnID", dependencyVuln.GetID(), "ticketID", ticketID)
 		expectedIssueState = nil

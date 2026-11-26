@@ -41,17 +41,19 @@ type DependencyVulnService struct {
 	dependencyVulnRepository shared.DependencyVulnRepository
 	vulnEventRepository      shared.VulnEventRepository
 	thirdPartyIntegration    shared.IntegrationAggregate
+	assetVersionRepository   shared.AssetVersionRepository
 }
 
 var _ shared.DependencyVulnService = (*DependencyVulnService)(nil)
 
 const ticketSyncWindow = 48 * time.Hour
 
-func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate) *DependencyVulnService {
+func NewDependencyVulnService(dependencyVulnRepository shared.DependencyVulnRepository, vulnEventRepository shared.VulnEventRepository, thirdPartyIntegration shared.IntegrationAggregate, assetVersionRepository shared.AssetVersionRepository) *DependencyVulnService {
 	return &DependencyVulnService{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
+		assetVersionRepository:   assetVersionRepository,
 	}
 }
 
@@ -424,11 +426,16 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 		}
 	}
 
+	refs, err := commonint.LoadRefs(ctx, s.assetVersionRepository, asset.ID)
+	if err != nil {
+		return err
+	}
+
 	errgroup := utils.ErrGroup[any](10)
 	for _, vulnerability := range vulnMap {
 		if vulnerability.TicketID == nil {
 			// ask if we should create an issue AFTER checking if a ticket already exists - this way, we keep manually created tickets up to date.
-			if !commonint.ShouldCreateThisIssue(asset, &vulnerability, assetVersion) {
+			if !commonint.ShouldCreateThisIssue(asset, &vulnerability, refs) {
 				continue
 			}
 			errgroup.Go(func() (any, error) {
@@ -443,7 +450,7 @@ func (s *DependencyVulnService) SyncIssues(ctx context.Context, org models.Org, 
 		}
 	}
 
-	_, err := errgroup.WaitAndCollect()
+	_, err = errgroup.WaitAndCollect()
 	return err
 }
 

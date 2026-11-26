@@ -16,7 +16,7 @@
 ALTER TABLE public.assets ADD COLUMN IF NOT EXISTS ticket_range_cel_expression text;
 
 UPDATE public.assets
-SET ticket_range_cel_expression = 'vuln.ref.defaultBranch == true && (' || concat_ws(' || ',
+SET ticket_range_cel_expression = 'ref.defaultBranch == true && (' || concat_ws(' || ',
     CASE WHEN cvss_automatic_ticket_threshold IS NOT NULL
         THEN '(vuln.cve != null && vuln.cve.cvss >= ' || trim_scale(cvss_automatic_ticket_threshold)::text || ')'
     END,

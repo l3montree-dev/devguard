@@ -37,11 +37,11 @@ func (d *dryRunIntegration) UpdateIssue(ctx context.Context, org models.Org, pro
 	var expectedState string
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		assetVersion, err := d.assetVersionRepository.Read(ctx, nil, v.GetAssetVersionID())
+		state, err := commonint.LoadExpectedIssueState(ctx, d.assetVersionRepository, asset, v)
 		if err != nil {
-			return fmt.Errorf("could not read asset version: %w", err)
+			return err
 		}
-		expectedState = string(commonint.GetExpectedIssueState(asset, v, assetVersion))
+		expectedState = string(state)
 	case *models.FirstPartyVuln:
 		expectedState = string(commonint.GetExpectedIssueStateForFirstPartyVuln(asset, v))
 	default:

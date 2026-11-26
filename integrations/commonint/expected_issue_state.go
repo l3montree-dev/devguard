@@ -1,11 +1,15 @@
 package commonint
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/celrules"
 	"github.com/l3montree-dev/devguard/database/models"
 	"github.com/l3montree-dev/devguard/dtos"
+	"github.com/l3montree-dev/devguard/shared"
 )
 
 type ExpectedIssueState string
@@ -58,10 +62,26 @@ func GetExpectedIssueStateForFirstPartyVuln(asset models.Asset, firstPartyVuln *
 	}
 }
 
-func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln, assetVersion models.AssetVersion) ExpectedIssueState {
+func LoadRefs(ctx context.Context, assetVersionRepository shared.AssetVersionRepository, assetID uuid.UUID) (celrules.Refs, error) {
+	assetVersions, err := assetVersionRepository.GetAssetVersionsByAssetID(ctx, nil, assetID)
+	if err != nil {
+		return celrules.Refs{}, fmt.Errorf("could not read asset versions: %w", err)
+	}
+	return celrules.NewRefs(assetVersions), nil
+}
+
+func LoadExpectedIssueState(ctx context.Context, assetVersionRepository shared.AssetVersionRepository, asset models.Asset, dependencyVuln *models.DependencyVuln) (ExpectedIssueState, error) {
+	refs, err := LoadRefs(ctx, assetVersionRepository, asset.ID)
+	if err != nil {
+		return "", err
+	}
+	return GetExpectedIssueState(asset, dependencyVuln, refs), nil
+}
+
+func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln, refs celrules.Refs) ExpectedIssueState {
 	ruleMatches := false
 	if asset.TicketRangeCelExpression != nil && *asset.TicketRangeCelExpression != "" {
-		matches, err := celrules.EvalTicketRangeRule(*asset.TicketRangeCelExpression, *dependencyVuln, assetVersion)
+		matches, err := celrules.EvalTicketRangeRule(*asset.TicketRangeCelExpression, *dependencyVuln, refs)
 		if err != nil {
 			slog.Warn("could not evaluate ticket range rule", "assetID", asset.ID, "vulnID", dependencyVuln.ID, "err", err)
 		}
@@ -76,6 +96,6 @@ func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.Dependency
 	return ExpectedIssueStateClosed
 }
 
-func ShouldCreateThisIssue(asset models.Asset, dependencyVuln *models.DependencyVuln, assetVersion models.AssetVersion) bool {
-	return GetExpectedIssueState(asset, dependencyVuln, assetVersion) == ExpectedIssueStateOpen
+func ShouldCreateThisIssue(asset models.Asset, dependencyVuln *models.DependencyVuln, refs celrules.Refs) bool {
+	return GetExpectedIssueState(asset, dependencyVuln, refs) == ExpectedIssueStateOpen
 }

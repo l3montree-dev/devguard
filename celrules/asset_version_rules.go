@@ -29,14 +29,7 @@ import (
 const DefaultAssetVersionRetentionPolicy = `ref.type == "tag" || ref.defaultBranch || timestamp(ref.createdAt) > now() - duration("168h") || (has(ref.lastUploadAt) && timestamp(ref.lastUploadAt) > now() - duration("168h"))`
 
 var assetVersionCelEnv = sync.OnceValues(func() (*cel.Env, error) {
-	base, err := baseEnv()
-	if err != nil {
-		return nil, err
-	}
-	return base.Extend(
-		cel.Variable("ref", cel.AnyType),
-		cel.Variable("otherRefs", cel.ListType(cel.AnyType)),
-	)
+	return withRefs(baseEnv())
 })
 
 func CompileAssetVersionRetentionPolicy(expression string) (cel.Program, error) {
@@ -55,23 +48,10 @@ func AssetVersionsToDelete(policy string, assetVersions []models.AssetVersion) (
 		return nil, err
 	}
 
-	celMaps := make([]any, len(assetVersions))
-	for i, assetVersion := range assetVersions {
-		celMaps[i] = assetVersion.ToCELMap()
-	}
-
+	refs := NewRefs(assetVersions)
 	var toDelete []models.AssetVersion
 	for i, assetVersion := range assetVersions {
-
-		others := make([]any, 0, len(celMaps)-1)
-		others = append(others, celMaps[:i]...)
-		others = append(others, celMaps[i+1:]...)
-
-		keep, err := evalBool(prg, map[string]any{
-			"ref":       celMaps[i],
-			"otherRefs": others,
-		})
-
+		keep, err := evalBool(prg, refs.activationAt(i))
 		if err != nil {
 			slog.Warn("could not evaluate asset version retention policy, keeping asset version", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 			continue

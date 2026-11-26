@@ -32,7 +32,7 @@ func TestCompileTicketRangeRule(t *testing.T) {
 }
 
 func TestEvalTicketRangeRule(t *testing.T) {
-	const migrated = `vuln.ref.defaultBranch == true && ((vuln.cve != null && vuln.cve.cvss >= 8) || (vuln.riskAssessment != null && vuln.riskAssessment >= 7.5))`
+	const migrated = `ref.defaultBranch == true && ((vuln.cve != null && vuln.cve.cvss >= 8) || (vuln.riskAssessment != null && vuln.riskAssessment >= 7.5))`
 	risk := 7.6
 	mainBranch := models.AssetVersion{Name: "main", Type: models.AssetVersionBranch, DefaultBranch: true}
 	featureBranch := models.AssetVersion{Name: "feature", Type: models.AssetVersionBranch}
@@ -50,13 +50,13 @@ func TestEvalTicketRangeRule(t *testing.T) {
 		{"risk above threshold without cve", migrated, models.DependencyVuln{RiskAssessment: &risk}, mainBranch, true, false},
 		{"neither cve nor risk", migrated, models.DependencyVuln{}, mainBranch, false, false},
 		{"not the default branch", migrated, models.DependencyVuln{CVE: &models.CVE{CVSS: 9}}, featureBranch, false, false},
-		{"tag", `vuln.ref.type == "tag"`, models.DependencyVuln{}, models.AssetVersion{Type: models.AssetVersionTag}, true, false},
+		{"tag", `ref.type == "tag"`, models.DependencyVuln{}, models.AssetVersion{Type: models.AssetVersionTag}, true, false},
 		{"missing cve without null guard", `vuln.cve.cvss >= 8`, models.DependencyVuln{}, mainBranch, false, true},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			result, err := EvalTicketRangeRule(c.expr, c.vuln, c.assetVersion)
+			result, err := EvalTicketRangeRule(c.expr, c.vuln, NewRefs([]models.AssetVersion{c.assetVersion}))
 			if c.expectErr {
 				assert.Error(t, err)
 				return

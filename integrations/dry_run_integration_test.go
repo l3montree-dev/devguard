@@ -75,7 +75,7 @@ func TestDryRunIntegration(t *testing.T) {
 	t.Run("UpdateIssue does not delegate to real integration", func(t *testing.T) {
 		real := setupNeverCalledIntegration(t)
 		assetVersionRepository := mocks.NewAssetVersionRepository(t)
-		assetVersionRepository.On("Read", mock.Anything, mock.Anything, mock.Anything).Return(models.AssetVersion{DefaultBranch: true}, nil)
+		assetVersionRepository.On("GetAssetVersionsByAssetID", mock.Anything, mock.Anything, mock.Anything).Return([]models.AssetVersion{{DefaultBranch: true}}, nil)
 		dr := NewDryRunIntegration(real, assetVersionRepository)
 
 		vuln := &models.DependencyVuln{}

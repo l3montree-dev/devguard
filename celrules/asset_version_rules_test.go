@@ -98,6 +98,12 @@ func TestAssetVersionsToDelete(t *testing.T) {
 		assert.Equal(t, []string{"main", "feature", "fresh-feature", "v1.9.0"}, names(toDelete))
 	})
 
+	t.Run("keeps only the latest ref", func(t *testing.T) {
+		toDelete, err := AssetVersionsToDelete(`ref.isLatest || ref.defaultBranch`, assetVersions)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature", "fresh-feature", "v1.9.0"}, names(toDelete))
+	})
+
 	t.Run("keeps an asset version the policy fails to evaluate for", func(t *testing.T) {
 		toDelete, err := AssetVersionsToDelete(`semver(ref.name) >= semver("v1.10.0")`, assetVersions)
 		require.NoError(t, err)
