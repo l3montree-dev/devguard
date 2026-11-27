@@ -4,12 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [v1.20.1] - 2026-11-27
 
+Thanks to external contributor [@Zayed2006](https://github.com/Zayed2006) for scoping first party vulnerabilities to their asset version! 🎉
+
 ### Added
 
 - The personal access token API returns the token's `pubKey`
 
 ### Fixed
 
+- **First party vulnerabilities are scoped to their asset version** — findings with a fingerprint got the same id in every asset version (and every asset), so the same finding on different branches collided. The id now includes the asset version. A migration recalculates the ids of existing first party vulnerabilities and their events
 - **OAuth2 error for anonymous users** — users who are not logged in are no longer redirected to the oauth2 error page when visiting a public organization managed by an external entity provider
 - **VEX rule group events** — events which a VEX rule applies to all vulnerabilities with the same asset signature are now loaded with the dependency vulnerabilities, counted in the number of vulnerabilities matched by a VEX rule, and included in the remediation statistics
 
