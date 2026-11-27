@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.20.1] - 2026-11-27
+
+### Added
+
+- The personal access token API returns the token's `pubKey`
+
+### Fixed
+
+- **OAuth2 error for anonymous users** — users who are not logged in are no longer redirected to the oauth2 error page when visiting a public organization managed by an external entity provider
+- **VEX rule group events** — events which a VEX rule applies to all vulnerabilities with the same asset signature are now loaded with the dependency vulnerabilities, counted in the number of vulnerabilities matched by a VEX rule, and included in the remediation statistics
+
+---
+
 ## [v1.20.0] - 2026-11-25
 
 Thanks to external contributors [@Xenira](https://github.com/Xenira) for the Redmine integration and for fixing the integration test sharding, and [@tridev-tej](https://github.com/tridev-tej) for fixing the vulnerable components statistics! 🎉
