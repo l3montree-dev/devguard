@@ -21,10 +21,10 @@ func NewDataTransferCommand() *cobra.Command {
 	dataTransferCmd := cobra.Command{
 		Use:   "data-transfer",
 		Short: "Move an org, project or asset between DevGuard instances",
-		Long: `Moves an org, project or asset including everything below it from one DevGuard instance to another, e.g. from the SaaS to a self-hosted instance.
+		Long: `Moves an org, project or asset including everything below it from one DevGuard instance to another.
 
-Run "export" against the source database and "import" with the produced archive against the target database.
-Both instances must run the same DevGuard version, the import is rejected if the database schema versions differ.`,
+		Run "export" against the source database and "import" with the produced archive against the target database.
+		Both instances must run the same DevGuard version, the import is rejected if the database schema versions differ.`,
 	}
 
 	dataTransferCmd.AddCommand(newDataTransferExportCommand())
@@ -64,12 +64,11 @@ Entities above the exported one are never part of the archive.`,
 			err = dataTransferService.StartExport(cmd.Context(), options, exportFile)
 			exportFile.Close()
 			if err != nil {
-				// a partial archive must not be mistaken for a complete one
 				os.Remove(outputPath) // nolint
 				return err
 			}
 
-			slog.Info("wrote export archive", "path", outputPath)
+			slog.Info("finished writing export archive", "path", outputPath)
 			return nil
 		},
 	}

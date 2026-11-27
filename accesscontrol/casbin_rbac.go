@@ -566,7 +566,7 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 	return err
 }
 
-// same rules as BootstrapProject and BootstrapAsset, but written at once so the db is hit in bulk and other instances only reload the policy once
+// bulk bootstrap tailored for the RBAC setup after importing a devguard state
 func (c *casbinRBAC) BootstrapProjectsAndAssets(ctx context.Context, projects []models.Project, assets []models.Asset) error {
 	domain := "domain::" + c.domain
 	var groupingPolicies, policies [][]string
@@ -608,20 +608,20 @@ func (c *casbinRBAC) BootstrapProjectsAndAssets(ctx context.Context, projects []
 		allow(admin, object, shared.ActionRead, shared.ActionUpdate, shared.ActionDelete)
 	}
 
-	_, err := withLock(func() (struct{}, error) {
-		if len(groupingPolicies) > 0 {
-			if _, err := c.enforcer.AddGroupingPoliciesExCtx(ctx, groupingPolicies); err != nil {
-				return struct{}{}, err
-			}
+	concurrencyMutex.Lock()
+	defer concurrencyMutex.Unlock()
+	if len(groupingPolicies) > 0 {
+		if _, err := c.enforcer.AddGroupingPoliciesExCtx(ctx, groupingPolicies); err != nil {
+			return err
 		}
-		if len(policies) > 0 {
-			if _, err := c.enforcer.AddPoliciesExCtx(ctx, policies); err != nil {
-				return struct{}{}, err
-			}
+	}
+	if len(policies) > 0 {
+		if _, err := c.enforcer.AddPoliciesExCtx(ctx, policies); err != nil {
+			return err
 		}
-		return struct{}{}, nil
-	})
-	return err
+	}
+
+	return nil
 }
 
 func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, org *models.Org, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
