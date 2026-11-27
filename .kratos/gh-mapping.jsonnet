@@ -10,6 +10,8 @@ local firstNonNull(values) =
   else if values[0] != null then values[0]
   else firstNonNull(values[1:]);
 
+local verifiedEmail = if 'email' in claims && claims.email_verified then claims.email else null;
+
 {
   identity: {
     traits: {
@@ -19,7 +21,7 @@ local firstNonNull(values) =
       //
       // Therefore we only return the email if it (a) exists and (b) is marked verified
       // by GitHub.
-      [if 'email' in claims && claims.email_verified then 'email' else null]: claims.email,
+      [if verifiedEmail != null then 'email' else null]: verifiedEmail,
       // Keep this value strictly string for Kratos schema compatibility.
       name: firstNonNull([
         if 'name' in claims then stringOrNull(claims.name) else null,
@@ -32,5 +34,8 @@ local firstNonNull(values) =
       ]),
       confirmedTerms: true,
     },
+    verified_addresses: std.prune([
+      if verifiedEmail != null then { via: 'email', value: verifiedEmail },
+    ]),
   },
 }
