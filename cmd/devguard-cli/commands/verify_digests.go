@@ -46,7 +46,7 @@ func (p imagePair) tagFor(ref string) string {
 	if p.upstreamVersion == "" {
 		return ref
 	}
-	return p.upstreamVersion
+	return p.upstreamVersion + "-" + ref
 }
 
 var imageRepoPairs = []imagePair{
