@@ -685,6 +685,36 @@ func TestMultiOrganizationMiddlewareRBAC(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		mockAccessControl.AssertExpectations(t)
 	})
+
+	t.Run("does not check the external entity provider token for anonymous sessions", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		providerID := "opencode"
+		org := models.Org{Model: models.Model{ID: uuid.New()}, Slug: "test-org", IsPublic: true, ExternalEntityProviderID: &providerID}
+		mockAccessControl := mocks.AccessControl{}
+		mockSession := shared.AnonymousSession
+
+		mockAccessControl.On("HasAccess", mock.Anything, mockSession, mock.Anything, mock.Anything).Return(true, nil)
+
+		shared.SetSession(ctx, mockSession)
+		shared.SetOrg(ctx, org)
+		shared.SetRBAC(ctx, &mockAccessControl)
+		// no expectations: any HasAccessToExternalEntityProvider call fails the test
+		shared.SetThirdPartyIntegration(ctx, mocks.NewIntegrationAggregate(t))
+
+		middleware := MultiOrganizationMiddlewareRBAC()
+
+		err := middleware(func(ctx shared.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		mockAccessControl.AssertExpectations(t)
+	})
 }
 
 // TestResourceFetchMiddleware tests the single entity-resolution middleware:

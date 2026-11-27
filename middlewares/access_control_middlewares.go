@@ -196,7 +196,7 @@ func MultiOrganizationMiddlewareRBAC() shared.MiddlewareFunc {
 
 			allowed, err := domainRBAC.HasAccess(ctx.Request().Context(), session, &org, actorScope)
 
-			if err == nil && allowed && org.IsExternalEntity() && session.GetSessionActorType() == shared.SessionActorUser {
+			if err == nil && allowed && org.IsExternalEntity() && session.GetSessionActorType() == shared.SessionActorUser && !session.IsAnonymousSession() {
 				// if the organization is an external entity, we need to make sure, that we check if the token is still valid.
 				// we cache successfull results for 15 minutes. This is important for the ErrOauth2TokenNotValidRedirectionRequired if statement returning 403 if we need the user to reauthorize.
 				providerID := *org.ExternalEntityProviderID
