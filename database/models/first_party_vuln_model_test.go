@@ -65,10 +65,30 @@ func TestCalculateHash(t *testing.T) {
 		firstPartyVuln := FirstPartyVuln{
 			RuleID:           "no smoking on airplanes",
 			URI:              "",
-			Vulnerability:    Vulnerability{AssetID: uuid.New()},
+			Vulnerability:    Vulnerability{AssetID: uuid.New(), AssetVersionID: uuid.New()},
 			AssetVersionName: "bombardini krokodili",
 		}
-		expectedHash := uuid.MustParse(utils.HashString(firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName)[:32])
+		expectedHash := uuid.MustParse(utils.HashString(firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetVersionID.String())[:32])
 		assert.Equal(t, expectedHash, firstPartyVuln.CalculateHash())
+	})
+
+	t.Run("Fingerprint is scoped to the asset version", func(t *testing.T) {
+		fingerprint := "same-finding"
+		assetVersionID := uuid.New()
+		firstPartyVuln := FirstPartyVuln{
+			Vulnerability: Vulnerability{AssetVersionID: assetVersionID},
+			Fingerprint:   fingerprint,
+		}
+		sameVersionVuln := FirstPartyVuln{
+			Vulnerability: Vulnerability{AssetVersionID: assetVersionID},
+			Fingerprint:   fingerprint,
+		}
+		otherVersionVuln := FirstPartyVuln{
+			Vulnerability: Vulnerability{AssetVersionID: uuid.New()},
+			Fingerprint:   fingerprint,
+		}
+
+		assert.Equal(t, firstPartyVuln.CalculateHash(), sameVersionVuln.CalculateHash())
+		assert.NotEqual(t, firstPartyVuln.CalculateHash(), otherVersionVuln.CalculateHash())
 	})
 }
