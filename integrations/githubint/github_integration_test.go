@@ -537,3 +537,33 @@ func TestIsGithubUserAuthorized(t *testing.T) {
 		assert.False(t, isAuthorized)
 	})
 }
+
+func TestFinishInstallationDoesNotLeakInstallationState(t *testing.T) {
+	foreignOrgID := uuid.New()
+
+	cases := map[string]struct {
+		installation models.GithubAppInstallation
+		readErr      error
+	}{
+		"unknown installation":        {readErr: fmt.Errorf("record not found")},
+		"installation of another org": {installation: models.GithubAppInstallation{InstallationID: 222, OrgID: &foreignOrgID}},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ctx := echo.New().NewContext(httptest.NewRequest("GET", "/?installationId=222", nil), httptest.NewRecorder())
+			shared.SetOrg(ctx, models.Org{Model: models.Model{ID: uuid.New()}})
+
+			installationRepository := mocks.NewGithubAppInstallationRepository(t)
+			installationRepository.On("Read", mock.Anything, mock.Anything, 222).Return(tc.installation, tc.readErr).Once()
+
+			githubIntegration := GithubIntegration{githubAppInstallationRepository: installationRepository}
+			err := githubIntegration.FinishInstallation(ctx)
+
+			httpErr, ok := err.(*echo.HTTPError)
+			assert.True(t, ok)
+			assert.Equal(t, 400, httpErr.Code)
+			assert.Equal(t, "could not finish github app installation", httpErr.Message)
+		})
+	}
+}
