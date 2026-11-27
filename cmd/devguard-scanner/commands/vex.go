@@ -25,6 +25,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/scanner"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -75,7 +76,7 @@ VEX documents use the CycloneDX format. Most tools that generate SBOMs can also 
 			defer resp.Body.Close()
 
 			if resp.StatusCode > 399 {
-				return fmt.Errorf("could not upload VEX, status code: %d", resp.StatusCode)
+				return fmt.Errorf("could not upload VEX: %w", devguard.NewAPIError(resp))
 			}
 			slog.Info("vex document uploaded successfully")
 			return nil

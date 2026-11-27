@@ -122,6 +122,7 @@ type ProjectRepository interface {
 	Create(ctx context.Context, tx DB, project *models.Project) error
 	Activate(ctx context.Context, tx DB, projectID uuid.UUID) error
 	RecursivelyGetChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
+	GetAncestors(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(ctx context.Context, tx DB, projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjectsWithProviderID(ctx context.Context, tx DB, parentID uuid.UUID, providerID string) ([]models.Project, error)
 	GetChildProjectsForParents(ctx context.Context, tx DB, parentIDs []uuid.UUID, providerID string) ([]models.Project, error)
@@ -638,6 +639,14 @@ type JiraIntegrationRepository interface {
 	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.JiraIntegration, error)
 }
 
+type RedmineIntegrationRepository interface {
+	Save(ctx context.Context, tx DB, model *models.RedmineIntegration) error
+	Read(ctx context.Context, tx DB, id uuid.UUID) (models.RedmineIntegration, error)
+	FindByOrganizationID(ctx context.Context, tx DB, orgID uuid.UUID) ([]models.RedmineIntegration, error)
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.RedmineIntegration, error)
+}
+
 type WebhookIntegrationRepository interface {
 	Save(ctx context.Context, tx DB, model *models.WebhookIntegration) error
 	Read(ctx context.Context, tx DB, id uuid.UUID) (models.WebhookIntegration, error)
@@ -645,6 +654,18 @@ type WebhookIntegrationRepository interface {
 	Delete(ctx context.Context, tx DB, id uuid.UUID) error
 	GetClientByIntegrationID(ctx context.Context, tx DB, integrationID uuid.UUID) (models.WebhookIntegration, error)
 	GetProjectWebhooks(ctx context.Context, tx DB, orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
+}
+
+type SecretRepository interface {
+	Save(ctx context.Context, tx DB, model *models.Secret) error
+	Delete(ctx context.Context, tx DB, id uuid.UUID) error
+	All(ctx context.Context, tx DB, orgID uuid.UUID, projectID, assetID *uuid.UUID) ([]models.Secret, error)
+	DeleteOwned(ctx context.Context, tx DB, id, orgID uuid.UUID, projectID, assetID *uuid.UUID) error
+}
+
+type SecretService interface {
+	ReplaceSecretsInString(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string, payload string) (string, error)
+	GetSecrets(ctx context.Context, orgID uuid.UUID, projectID, assetID *uuid.UUID, orgName string, assetName *string) ([]dtos.SecretDTO, error)
 }
 
 type GitlabIntegrationRepository interface {
@@ -1008,4 +1029,17 @@ const (
 type InstanceSettings struct {
 	SingleOrganizationMode  bool `json:"singleOrganizationMode"`
 	BearerTokenAuthDisabled bool `json:"bearerTokenAuthDisabled"`
+}
+
+type LabelRepository interface {
+	GetDB(ctx context.Context, db DB) DB
+	Create(ctx context.Context, tx DB, label *models.Label) error
+	Save(ctx context.Context, tx DB, label *models.Label) error
+	Delete(ctx context.Context, tx DB, labelID uuid.UUID) error
+	Read(ctx context.Context, tx DB, labelID uuid.UUID) (models.Label, error)
+	FindLabelByIDThroughHierarchy(ctx context.Context, tx *gorm.DB, labelID, orgID, projectID, assetID *uuid.UUID) (models.Label, error)
+	FindLabelsByIDsThroughHierarchy(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error)
+	CreateLabelAttachment(ctx context.Context, tx *gorm.DB, labelID, projectID, assetID, artifactID *uuid.UUID) error
+	CreateLabelAttachmentBatch(ctx context.Context, tx *gorm.DB, labelIDs []uuid.UUID, projectID, assetID, artifactID *uuid.UUID) error
+	ListThroughHierarchy(ctx context.Context, tx *gorm.DB, orgID, projectID, assetID *uuid.UUID) ([]models.Label, error)
 }

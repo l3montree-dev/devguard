@@ -41,11 +41,13 @@ func NewProjectRouter(
 	releaseController *controllers.ReleaseController,
 	statisticsController *controllers.StatisticsController,
 	webhookIntegration *controllers.WebhookController,
+	secretController *controllers.SecretController,
 	projectRepository shared.ProjectRepository,
 	componentController *controllers.ComponentController,
 	gitlabIntegrations map[string]*gitlabint.GitlabOauth2Config,
 	patController *controllers.PatController,
 	logController *controllers.LogController,
+	labelController *controllers.LabelController,
 ) ProjectRouter {
 	/**
 	Project scoped router
@@ -63,16 +65,11 @@ func NewProjectRouter(
 	projectRouter.GET("/compliance-postures/oscal/", compliancePostureController.ProjectGetOSCAL)
 	projectRouter.GET("/compliance-postures/stats/", compliancePostureController.ProjectStats)
 	projectRouter.GET("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectRead)
-	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.ProjectCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.ProjectUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
-	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.ProjectDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 	projectRouter.GET("/assets/", assetController.List)
 	projectRouter.GET("/members/", projectController.Members)
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
 	projectRouter.GET("/dependency-proxy-urls/", dependencyProxyController.GetProjectDependencyProxyURLs)
 	projectRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
-	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 	projectRouter.GET("/releases/:releaseID/sbom.json/", releaseController.SBOMJSON)
 	projectRouter.GET("/releases/:releaseID/sbom.xml/", releaseController.SBOMXML)
 	projectRouter.GET("/releases/:releaseID/vex.json/", releaseController.CycloneDXVexJSON)
@@ -84,23 +81,35 @@ func NewProjectRouter(
 	projectRouter.GET("/releases/:releaseID/", releaseController.Read)
 	projectRouter.GET("/releases/", releaseController.List)
 	projectRouter.GET("/components/", componentController.SearchComponentOccurrences, middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
-
-	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
+	projectRouter.GET("/labels/", labelController.ListOnProjectLevel)
 	projectRouter.GET("/external/:providerID/", projectController.ListExternalSubprojects, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 
+	projectRouter.POST("/external/:providerID/", projectController.HandleExternalSubprojectRequest, middlewares.ProviderIDMiddleware(gitlabIntegrations), middlewares.NeededScope([]string{"manage"}))
 	projectRouter.POST("/assets/", assetController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectAsset, shared.ActionCreate))
 	projectRouter.POST("/releases/", releaseController.Create, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionCreate))
+	projectRouter.POST("/compliance-postures/:frameworkControlID/", compliancePostureController.ProjectCreateEvent, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+	projectRouter.POST("/compliance-postures/:frameworkControlID/components/:complianceComponentID/", complianceComponentController.ProjectCreateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+
+	projectRouter.PUT("/config-files/:config-file/", projectController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
+	projectRouter.PUT("/compliance-postures/components/:statementID/", complianceComponentController.ProjectUpdateStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
+
+	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.ProjectDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
 	// only project admins are allowed to export a project
 	projectRouter.GET("/export/", projectController.ExportProject, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionDelete))
 
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
+	projectUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.ProjectList)
+	projectUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.ProjectCreate)
+	projectUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.ProjectDelete)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test-and-save/", webhookIntegration.ProjectSave)
 	projectUpdateAccessControlRequired.POST("/integrations/webhook/test/", webhookIntegration.ProjectTest)
 	projectUpdateAccessControlRequired.POST("/members/", projectController.InviteMembers)
 	projectUpdateAccessControlRequired.POST("/releases/:releaseID/items/", releaseController.AddItem)
 	projectUpdateAccessControlRequired.POST("/pats/", patController.CreateForProject)
+	projectUpdateAccessControlRequired.POST("/labels/", labelController.Create)
+	projectUpdateAccessControlRequired.POST("/labels/attach/", labelController.AttachLabel)
 	projectUpdateAccessControlRequired.GET("/pats/", patController.ListByProject)
 
 	projectUpdateAccessControlRequired.DELETE("/integrations/webhook/:id/", webhookIntegration.ProjectDelete)
@@ -110,8 +119,10 @@ func NewProjectRouter(
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/", releaseController.Delete)
 	projectUpdateAccessControlRequired.DELETE("/releases/:releaseID/items/:itemID/", releaseController.RemoveItem)
 	projectUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByProject)
+	projectUpdateAccessControlRequired.DELETE("/labels/:labelID/", labelController.Delete)
 
 	projectUpdateAccessControlRequired.PUT("/integrations/webhook/:id/", webhookIntegration.ProjectUpdate)
+	projectUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)
 	projectUpdateAccessControlRequired.PUT("/policies/:policyID/", policyController.EnablePolicyForProject)
 	projectUpdateAccessControlRequired.PATCH("/", projectController.Update)
 	projectUpdateAccessControlRequired.PUT("/members/:userID/", projectController.ChangeRole)

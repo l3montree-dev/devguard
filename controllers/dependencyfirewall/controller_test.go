@@ -16,18 +16,27 @@
 package dependencyfirewall
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/celrules"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCheckNotAllowedPackage(t *testing.T) {
-	d := &DependencyProxyController{}
+	secretService := mocks.NewSecretService(t)
+	secretService.EXPECT().ReplaceSecretsInString(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ uuid.UUID, _, _ *uuid.UUID, _ string, _ *string, payload string) (string, error) {
+			return payload, nil
+		})
+	d := &DependencyProxyController{secretService: secretService}
 
-	configs, err := parseDependencyProxyConfigs(`rules:
+	configs, err := d.parseDependencyProxyConfigs(context.Background(), uuid.New(), nil, nil, "org", nil, `rules:
   - name: block-new
     action: deny
     expr: now() - timestamp(pkg.releasedAt) < duration("120h")

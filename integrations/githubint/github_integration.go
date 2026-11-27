@@ -902,7 +902,7 @@ func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState),
 		Title:  new(firstPartyVuln.Title()),
-		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels: &labels,
 	}
 
@@ -926,7 +926,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 	issueRequest := &github.IssueRequest{
 		State:  new(expectedIssueState.ToGithub()),
 		Title:  new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID, utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree)),
+		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, componentTree, true)),
 		Labels: &labels,
 	}
 
@@ -1013,7 +1013,7 @@ func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx contex
 	labels := commonint.GetLabels(firstPartyVuln, orgSlug, projectSlug, asset.Slug)
 	issue := &github.IssueRequest{
 		Title:  new(firstPartyVuln.Title()),
-		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug)),
+		Body:   new(commonint.RenderMarkdownForFirstPartyVuln(*firstPartyVuln, githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, assetVersionSlug, true)),
 		Labels: &labels,
 	}
 
@@ -1090,7 +1090,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 	issue := &github.IssueRequest{
 		Title: new(fmt.Sprintf("%s found in %s", dependencyVuln.CVEID,
 			utils.RemovePrefixInsensitive(dependencyVuln.ComponentPurl, "pkg:"))),
-		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree)),
+		Body:   new(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionSlug, componentTree, true)),
 		Labels: &labels,
 	}
 

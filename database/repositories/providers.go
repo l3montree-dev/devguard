@@ -46,6 +46,7 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewPolicyRepository, fx.As(new(shared.PolicyRepository)))),
 	fx.Provide(fx.Annotate(NewLicenseRiskRepository, fx.As(new(shared.LicenseRiskRepository)))),
 	fx.Provide(fx.Annotate(NewWebhookRepository, fx.As(new(shared.WebhookIntegrationRepository)))),
+	fx.Provide(fx.Annotate(NewSecretRepository, fx.As(new(shared.SecretRepository)))),
 	fx.Provide(fx.Annotate(NewArtifactRepository, fx.As(new(shared.ArtifactRepository)))),
 	fx.Provide(fx.Annotate(NewInvitationRepository, fx.As(new(shared.InvitationRepository)))),
 	fx.Provide(fx.Annotate(NewExternalUserRepository, fx.As(new(shared.ExternalUserRepository)))),
@@ -55,6 +56,7 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewAggregatedVulnRepository, fx.As(new(shared.VulnRepository)))),
 	fx.Provide(fx.Annotate(NewGithubAppInstallationRepository, fx.As(new(shared.GithubAppInstallationRepository)))),
 	fx.Provide(fx.Annotate(NewJiraIntegrationRepository, fx.As(new(shared.JiraIntegrationRepository)))),
+	fx.Provide(fx.Annotate(NewRedmineIntegrationRepository, fx.As(new(shared.RedmineIntegrationRepository)))),
 	fx.Provide(fx.Annotate(NewCveRelationshipRepository, fx.As(new(shared.CVERelationshipRepository)))),
 	fx.Provide(fx.Annotate(NewVEXRuleRepository, fx.As(new(shared.VEXRuleRepository)))),
 	fx.Provide(fx.Annotate(NewExternalReferenceRepository, fx.As(new(shared.ExternalReferenceRepository)))),
@@ -67,4 +69,5 @@ var Module = fx.Options(
 	fx.Provide(fx.Annotate(NewUpstreamVEXRuleRepository, fx.As(new(shared.UpstreamVEXRuleRepository)))),
 	fx.Provide(fx.Annotate(NewVEXRuleRecommendationRepository, fx.As(new(shared.VEXRuleRecommendationRepository)))),
 	fx.Provide(fx.Annotate(NewLogRepository, fx.As(new(shared.LogRepository)))),
+	fx.Provide(fx.Annotate(NewLabelRepository, fx.As(new(shared.LabelRepository)))),
 )

@@ -15,7 +15,86 @@
 
 package dependencyfirewall
 
-import "testing"
+import (
+	"net/http"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/dtos"
+)
+
+type recordingMavenTransport struct {
+	lastModified string
+	requests     []*http.Request
+}
+
+func (r *recordingMavenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.requests = append(r.requests, req)
+	header := http.Header{}
+	if r.lastModified != "" {
+		header.Set("Last-Modified", r.lastModified)
+	}
+	return &http.Response{StatusCode: http.StatusOK, Header: header, Body: http.NoBody, Request: req}, nil
+}
+
+func newMavenAuthTestController(t *testing.T, transport *recordingMavenTransport) (*MavenDependencyProxyController, *cache) {
+	t.Helper()
+	d := &DependencyProxyController{client: &http.Client{Transport: transport}, caches: newSecretCaches(t.TempDir(), 10)}
+	secretCache, err := d.caches.forSecret(uuid.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return NewMavenDependencyProxyController(d), secretCache
+}
+
+func TestMavenCustomRegistryAuth(t *testing.T) {
+	const registry = "https://nexus.example.com/maven"
+	configs := DependencyProxyConfigs{Registries: dtos.RegistryConfigs{
+		"maven": dtos.MavenRegistryConfig{
+			URLRegistryConfig: dtos.URLRegistryConfig{URL: registry},
+			Auth:              &dtos.RegistryAuth{Type: "basic-auth", Username: "ci-user", Password: "resolved-password"},
+		},
+	}}
+
+	t.Run("sends basic auth to the custom registry", func(t *testing.T) {
+		transport := &recordingMavenTransport{lastModified: "Mon, 02 Jan 2023 15:04:05 GMT"}
+		d, secretCache := newMavenAuthTestController(t, transport)
+
+		if _, err := d.fetchMavenReleaseTime(t.Context(), "org.example/lib", "1.0.0", registry, secretCache, configs); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		user, password, ok := transport.requests[0].BasicAuth()
+		if !ok || user != "ci-user" || password != "resolved-password" {
+			t.Fatalf("expected basic auth ci-user/resolved-password, got %q/%q (%v)", user, password, ok)
+		}
+	})
+
+	t.Run("does not ask maven central for a registry with auth", func(t *testing.T) {
+		transport := &recordingMavenTransport{}
+		d, secretCache := newMavenAuthTestController(t, transport)
+
+		if _, err := d.fetchMavenReleaseTime(t.Context(), "org.example/lib", "1.0.0", registry, secretCache, configs); err == nil {
+			t.Fatal("expected an error for a missing Last-Modified header")
+		}
+		for _, req := range transport.requests {
+			if req.URL.Host == "repo1.maven.org" {
+				t.Fatalf("expected no request to maven central, got %s", req.URL)
+			}
+		}
+	})
+
+	t.Run("works without a maven registry config", func(t *testing.T) {
+		transport := &recordingMavenTransport{lastModified: "Mon, 02 Jan 2023 15:04:05 GMT"}
+		d, secretCache := newMavenAuthTestController(t, transport)
+
+		if _, err := d.fetchMavenReleaseTime(t.Context(), "org.example/lib", "1.0.0", mavenRegistry, secretCache, DependencyProxyConfigs{}); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if transport.requests[0].Header.Get("Authorization") != "" {
+			t.Fatal("expected no Authorization header without a maven registry config")
+		}
+	})
+}
 
 func TestMavenParsePackage(t *testing.T) {
 	cases := []struct {

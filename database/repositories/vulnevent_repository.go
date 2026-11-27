@@ -178,10 +178,16 @@ func (r *eventRepository) CountByVexRuleIDs(ctx context.Context, tx *gorm.DB, ru
 		Count     int
 	}
 	var rows []row
-	err := r.Repository.GetDB(ctx, tx).Table("vuln_events").
-		Select("vex_rule_id, COUNT(DISTINCT dependency_vuln_id) AS count").
-		Where("vex_rule_id = ANY (?)", pq.Array(ruleIDs)).
-		Group("vex_rule_id").
+	err := r.Repository.GetDB(ctx, tx).Raw(`
+		SELECT vex_rule_id, COUNT(DISTINCT vuln_id) AS count FROM (
+			SELECT e.vex_rule_id, e.dependency_vuln_id AS vuln_id FROM vuln_events e
+				WHERE e.vex_rule_id = ANY (?) AND e.dependency_vuln_id IS NOT NULL
+			UNION
+			SELECT e.vex_rule_id, dv.id AS vuln_id FROM vuln_events e
+				JOIN dependency_vulns dv ON dv.asset_signature = e.asset_signature
+				WHERE e.vex_rule_id = ANY (?) AND e.asset_signature IS NOT NULL
+		) matched
+		GROUP BY vex_rule_id`, pq.Array(ruleIDs), pq.Array(ruleIDs)).
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err

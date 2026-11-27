@@ -53,6 +53,7 @@ func TestUploadBOM(t *testing.T) {
 		// Configure runtime config
 		config.RuntimeBaseConfig.APIURL = server.URL
 		config.RuntimeBaseConfig.Token = validToken
+		config.RuntimeBaseConfig.AssetName = "test-org/projects/test-project/assets/test-asset"
 		config.RuntimeBaseConfig.ScannerID = "test-scanner"
 		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
 		config.RuntimeBaseConfig.Origin = "test-origin"
@@ -121,6 +122,7 @@ func TestUploadBOM(t *testing.T) {
 		// Configure runtime config with IgnoreExternalReferences enabled
 		config.RuntimeBaseConfig.APIURL = server.URL
 		config.RuntimeBaseConfig.Token = validToken
+		config.RuntimeBaseConfig.AssetName = "test-org/projects/test-project/assets/test-asset"
 		config.RuntimeBaseConfig.ScannerID = "test-scanner"
 		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
 		config.RuntimeBaseConfig.Origin = "test-origin"
@@ -187,6 +189,7 @@ func TestUploadBOM(t *testing.T) {
 		// Configure runtime config
 		config.RuntimeBaseConfig.APIURL = server.URL
 		config.RuntimeBaseConfig.Token = validToken
+		config.RuntimeBaseConfig.AssetName = "test-org/projects/test-project/assets/test-asset"
 		config.RuntimeBaseConfig.ScannerID = "test-scanner"
 		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
 		config.RuntimeBaseConfig.Origin = "test-origin"
@@ -233,6 +236,7 @@ func TestUploadBOM(t *testing.T) {
 		// Configure runtime config
 		config.RuntimeBaseConfig.APIURL = server.URL
 		config.RuntimeBaseConfig.Token = validToken
+		config.RuntimeBaseConfig.AssetName = "test-org/projects/test-project/assets/test-asset"
 		config.RuntimeBaseConfig.Timeout = 5
 
 		// Invalid JSON
@@ -296,6 +300,7 @@ func TestUploadBOM(t *testing.T) {
 
 		config.RuntimeBaseConfig.APIURL = server.URL
 		config.RuntimeBaseConfig.Token = validToken
+		config.RuntimeBaseConfig.AssetName = "test-org/projects/test-project/assets/test-asset"
 		config.RuntimeBaseConfig.ScannerID = "test-scanner"
 		config.RuntimeBaseConfig.ArtifactName = "test-artifact"
 		config.RuntimeBaseConfig.Origin = "test-origin"

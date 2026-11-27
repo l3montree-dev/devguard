@@ -120,6 +120,7 @@ var ControllerModule = fx.Options(
 	fx.Provide(NewIntegrationController),
 	fx.Provide(NewVulnDBController),
 	fx.Provide(NewWebhookController),
+	fx.Provide(NewSecretController),
 
 	// Release & Statistics
 	fx.Provide(NewReleaseController),
@@ -150,4 +151,6 @@ var ControllerModule = fx.Options(
 
 	fx.Provide(NewAdvisoryController),
 	fx.Provide(NewSLSAController),
+
+	fx.Provide(NewLabelController),
 )

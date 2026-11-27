@@ -41,6 +41,8 @@ func NewAssetRouter(
 	assetRepository shared.AssetRepository,
 	patController *controllers.PatController,
 	logController *controllers.LogController,
+	labelController *controllers.LabelController,
+	secretController *controllers.SecretController,
 ) AssetRouter {
 	/**
 	Asset scoped router
@@ -59,33 +61,46 @@ func NewAssetRouter(
 	assetRouter.GET("/dependency-proxy/cache-stats/", dependencyProxyController.GetSecretCacheStats, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
-	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
 	assetRouter.GET("/logs/", logController.ListPagedForAsset, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead))
-
-	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	// only asset admins are allowed to export an asset
 	assetRouter.GET("/export/", assetController.ExportAsset, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+	assetRouter.GET("/labels/", labelController.ListOnAssetLevel)
+
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.POST("/in-toto/", intotoController.Create, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
+	assetRouter.PUT("/config-files/:config-file/", assetController.UpdateConfigFile, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
+
+	assetRouter.DELETE("/", assetController.Delete, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
+
 	assetUpdateAccessControlRequired := assetRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 
+	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
+	assetUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.AssetList)
+
+	assetUpdateAccessControlRequired.POST("/devguard-secrets/", secretController.AssetCreate)
 	assetUpdateAccessControlRequired.POST("/sbom-file/", scanController.ScanSbomFile)
 	assetUpdateAccessControlRequired.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	assetUpdateAccessControlRequired.POST("/members/", assetController.InviteMembers)
-	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
-	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
 	assetUpdateAccessControlRequired.POST("/retention-policy/test/", assetController.TestAssetVersionRetentionPolicy)
-	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.POST("/refs/", assetVersionController.Create)
-	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
 	assetUpdateAccessControlRequired.POST("/pats/", patController.CreateForAsset)
-	assetUpdateAccessControlRequired.GET("/pats/", patController.ListByAsset)
+	assetUpdateAccessControlRequired.POST("/pipeline-trigger/", assetController.RunDaemonPipeline)
+	assetUpdateAccessControlRequired.POST("/labels/", labelController.Create)
+	assetUpdateAccessControlRequired.POST("/labels/attach/", labelController.AttachLabel)
+
+	assetUpdateAccessControlRequired.PUT("/members/:userID/", assetController.ChangeRole)
+	assetUpdateAccessControlRequired.PUT("/labels/:labelID/", labelController.Update)
+	assetUpdateAccessControlRequired.PATCH("/", assetController.Update)
+
+	assetUpdateAccessControlRequired.DELETE("/members/:userID/", assetController.RemoveMember)
 	assetUpdateAccessControlRequired.DELETE("/pats/:tokenID/", patController.DeleteByAsset)
+	assetUpdateAccessControlRequired.DELETE("/labels/:labelID/", labelController.Delete)
+	assetUpdateAccessControlRequired.DELETE("/devguard-secrets/:id/", secretController.AssetDelete)
 
 	return AssetRouter{Group: assetRouter}
 }

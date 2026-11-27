@@ -6761,6 +6761,24 @@
                 ],
                 "type": "object"
             },
+            "dtos.AttachLabelRequest": {
+                "properties": {
+                    "label": {
+                        "items": {
+                            "maxLength": 256,
+                            "type": "string"
+                        },
+                        "maxItems": 256,
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "label"
+                ],
+                "type": "object"
+            },
             "dtos.AverageRemediationTimes": {
                 "properties": {
                     "criticalCVSSOpen": {
@@ -9052,6 +9070,28 @@
                 ],
                 "type": "object"
             },
+            "dtos.LabelRequest": {
+                "properties": {
+                    "backgroundColor": {
+                        "maxLength": 7,
+                        "type": "string"
+                    },
+                    "description": {
+                        "maxLength": 2000,
+                        "type": "string"
+                    },
+                    "label": {
+                        "maxLength": 256,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "backgroundColor",
+                    "description",
+                    "label"
+                ],
+                "type": "object"
+            },
             "dtos.LicenseRiskArtifact": {
                 "properties": {
                     "artifactName": {
@@ -9540,6 +9580,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9571,6 +9618,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -9742,6 +9790,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -9775,6 +9830,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt"
@@ -10193,6 +10249,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -10233,6 +10296,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -10318,6 +10382,9 @@
                     "lastUsedAt": {
                         "type": "string"
                     },
+                    "pubKey": {
+                        "type": "string"
+                    },
                     "scopes": {
                         "type": "string"
                     }
@@ -10329,6 +10396,7 @@
                     "fingerprint",
                     "id",
                     "lastUsedAt",
+                    "pubKey",
                     "scopes"
                 ],
                 "type": "object"
@@ -10356,6 +10424,9 @@
                     "lastUsedAt": {
                         "type": "string"
                     },
+                    "pubKey": {
+                        "type": "string"
+                    },
                     "scopes": {
                         "type": "string"
                     }
@@ -10368,6 +10439,7 @@
                     "fingerprint",
                     "id",
                     "lastUsedAt",
+                    "pubKey",
                     "scopes"
                 ],
                 "type": "object"
@@ -10977,6 +11049,137 @@
                 },
                 "required": [
                     "recommendedVersion"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "obfuscatedToken": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "obfuscatedToken",
+                    "trackerId",
+                    "url"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineIntegrationProperties": {
+                "properties": {
+                    "priorities": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedminePriority"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "statuses": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineStatus"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "trackers": {
+                        "items": {
+                            "$ref": "#/components/schemas/dtos.RedmineTracker"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "priorities",
+                    "statuses",
+                    "trackers"
+                ],
+                "type": "object"
+            },
+            "dtos.RedminePriority": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineStatus": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "type": "object"
+            },
+            "dtos.RedmineTracker": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
                 ],
                 "type": "object"
             },
@@ -11668,6 +11871,59 @@
                     "dependencyVulns"
                 ],
                 "type": "object"
+            },
+            "dtos.SecretCreateRequest": {
+                "properties": {
+                    "name": {
+                        "maxLength": 256,
+                        "type": "string"
+                    },
+                    "value": {
+                        "maxLength": 8192,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "value"
+                ],
+                "type": "object"
+            },
+            "dtos.SecretDTO": {
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "inheritedFrom": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "$ref": "#/components/schemas/dtos.SecretScope"
+                    }
+                },
+                "required": [
+                    "id",
+                    "inheritedFrom",
+                    "name",
+                    "scope"
+                ],
+                "type": "object"
+            },
+            "dtos.SecretScope": {
+                "enum": [
+                    "organization",
+                    "project",
+                    "asset"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "ScopeOrganization",
+                    "ScopeProject",
+                    "ScopeAsset"
+                ]
             },
             "dtos.SemverEvent": {
                 "properties": {
@@ -12558,6 +12814,13 @@
                     "id": {
                         "type": "string"
                     },
+                    "labels": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "licenseRisks": {
                         "items": {
                             "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.LicenseRisk"
@@ -12576,6 +12839,7 @@
                     "createdAt",
                     "dependencyVulns",
                     "id",
+                    "labels",
                     "licenseRisks",
                     "vulnAssetId"
                 ],
@@ -12625,6 +12889,13 @@
                     },
                     "isPublic": {
                         "type": "boolean"
+                    },
+                    "labels": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
                     },
                     "metadata": {
                         "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_types.JSONB"
@@ -12722,6 +12993,7 @@
                     "importance",
                     "integrityRequirement",
                     "isPublic",
+                    "labels",
                     "metadata",
                     "modifiedAttackComplexity",
                     "modifiedAttackVector",
@@ -13513,6 +13785,69 @@
                 ],
                 "type": "object"
             },
+            "github_com_l3montree-dev_devguard_database_models.Label": {
+                "properties": {
+                    "artifacts": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Artifact"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "assetID": {
+                        "type": "string"
+                    },
+                    "assets": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Asset"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
+                    "backgroundColor": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "organizationID": {
+                        "type": "string"
+                    },
+                    "projectID": {
+                        "type": "string"
+                    },
+                    "projects": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Project"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    }
+                },
+                "required": [
+                    "artifacts",
+                    "assetID",
+                    "assets",
+                    "backgroundColor",
+                    "createdAt",
+                    "description",
+                    "id",
+                    "label",
+                    "organizationID",
+                    "projectID",
+                    "projects"
+                ],
+                "type": "object"
+            },
             "github_com_l3montree-dev_devguard_database_models.LicenseRisk": {
                 "properties": {
                     "artifacts": {
@@ -13599,6 +13934,19 @@
                 ],
                 "type": "object"
             },
+            "github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType": {
+                "enum": [
+                    "none",
+                    "macro",
+                    "commonmark"
+                ],
+                "type": "string",
+                "x-enum-varnames": [
+                    "None",
+                    "Macro",
+                    "CommonMark"
+                ]
+            },
             "github_com_l3montree-dev_devguard_database_models.Org": {
                 "properties": {
                     "configFiles": {
@@ -13677,6 +14025,13 @@
                         "type": "array",
                         "uniqueItems": false
                     },
+                    "redmineIntegrations": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.RedmineIntegration"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "sharesVulnInformation": {
                         "type": "boolean"
                     },
@@ -13715,6 +14070,7 @@
                     "nist",
                     "numberOfEmployees",
                     "projects",
+                    "redmineIntegrations",
                     "sharesVulnInformation",
                     "slug",
                     "updatedAt",
@@ -13869,6 +14225,13 @@
                     "isPublic": {
                         "type": "boolean"
                     },
+                    "labels": {
+                        "items": {
+                            "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                        },
+                        "type": "array",
+                        "uniqueItems": false
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -13923,6 +14286,7 @@
                     "externalEntityProviderParentId",
                     "id",
                     "isPublic",
+                    "labels",
                     "name",
                     "organization",
                     "organizationId",
@@ -13959,6 +14323,73 @@
                     "ProjectTypeDefault",
                     "ProjectTypeDynamic"
                 ]
+            },
+            "github_com_l3montree-dev_devguard_database_models.RedmineIntegration": {
+                "properties": {
+                    "closeStatusId": {
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "criticalPriorityId": {
+                        "type": "integer"
+                    },
+                    "defaultStatusId": {
+                        "type": "integer"
+                    },
+                    "highPriorityId": {
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "lowPriorityId": {
+                        "type": "integer"
+                    },
+                    "mediumPriorityId": {
+                        "type": "integer"
+                    },
+                    "mermaidIntegration": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.MermaidIntegrationType"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "org": {
+                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Org"
+                    },
+                    "orgId": {
+                        "type": "string"
+                    },
+                    "trackerId": {
+                        "type": "integer"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "closeStatusId",
+                    "createdAt",
+                    "criticalPriorityId",
+                    "defaultStatusId",
+                    "highPriorityId",
+                    "id",
+                    "lowPriorityId",
+                    "mediumPriorityId",
+                    "mermaidIntegration",
+                    "name",
+                    "org",
+                    "orgId",
+                    "trackerId",
+                    "updatedAt",
+                    "url"
+                ],
+                "type": "object"
             },
             "github_com_l3montree-dev_devguard_database_models.SupplyChain": {
                 "properties": {
@@ -14612,24 +15043,6 @@
                     1000000000,
                     60000000000,
                     3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
-                    1,
-                    1000,
-                    1000000,
-                    1000000000,
-                    60000000000,
-                    3600000000000,
-                    -9223372036854775808,
-                    9223372036854775807,
                     1,
                     1000,
                     1000000,
@@ -14640,6 +15053,14 @@
                     1000,
                     1000000,
                     1000000000,
+                    60000000000,
+                    3600000000000,
+                    1,
+                    1000,
+                    1000000,
+                    1000000000,
+                    60000000000,
+                    3600000000000,
                     1,
                     1000,
                     1000000,
@@ -14663,24 +15084,6 @@
                     "Second",
                     "Minute",
                     "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
-                    "Nanosecond",
-                    "Microsecond",
-                    "Millisecond",
-                    "Second",
-                    "Minute",
-                    "Hour",
-                    "minDuration",
-                    "maxDuration",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -14691,6 +15094,14 @@
                     "Microsecond",
                     "Millisecond",
                     "Second",
+                    "Minute",
+                    "Hour",
+                    "Nanosecond",
+                    "Microsecond",
+                    "Millisecond",
+                    "Second",
+                    "Minute",
+                    "Hour",
                     "Nanosecond",
                     "Microsecond",
                     "Millisecond",
@@ -17887,6 +18298,148 @@
                 ]
             }
         },
+        "/organizations/{organization}/devguard-secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List organization secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create organization secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/devguard-secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete organization secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
         "/organizations/{organization}/first-party-vulns": {
             "get": {
                 "parameters": [
@@ -18208,6 +18761,258 @@
                 ]
             }
         },
+        "/organizations/{organization}/integrations/redmine/test-and-save/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "string"
+                                    },
+                                    "url": {
+                                        "type": "string"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine credentials",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Test and save Redmine integration credentials",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete a Redmine integration access token",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/properties/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegrationProperties"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Retrieve Redmine integration properties (trackers, statuses, priorities)",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/integrations/redmine/{redmine_integration_id}/settings/": {
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Redmine integration ID",
+                        "in": "path",
+                        "name": "redmine_integration_id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "closeStatus": {
+                                        "type": "integer"
+                                    },
+                                    "criticalPriority": {
+                                        "type": "integer"
+                                    },
+                                    "defaultStatus": {
+                                        "type": "integer"
+                                    },
+                                    "highPriority": {
+                                        "type": "integer"
+                                    },
+                                    "lowPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mediumPriority": {
+                                        "type": "integer"
+                                    },
+                                    "mermaidIntegration": {
+                                        "type": "string"
+                                    },
+                                    "tracker": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "title": "body",
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "description": "Redmine integration settings",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.RedmineIntegration"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update Redmine integration settings",
+                "tags": [
+                    "Integrations"
+                ]
+            }
+        },
         "/organizations/{organization}/integrations/repositories": {
             "get": {
                 "parameters": [
@@ -18518,6 +19323,258 @@
                 "summary": "Revoke an organization invitation",
                 "tags": [
                     "Organizations"
+                ]
+            }
+        },
+        "/organizations/{organization}/labels/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List labels on organization level",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/labels/{labelID}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete label",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update label",
+                "tags": [
+                    "Label"
                 ]
             }
         },
@@ -20774,6 +21831,202 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List repository secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create repository secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/devguard-secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete repository secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/external-references": {
             "get": {
                 "parameters": [
@@ -21206,6 +22459,370 @@
                 "summary": "Auto-setup the GitLab integration for an asset",
                 "tags": [
                     "Integrations"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List labels on asset level",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/attach/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.AttachLabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Attach label to artifact",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/labels/{labelID}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete label",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update label",
+                "tags": [
+                    "Label"
                 ]
             }
         },
@@ -23137,6 +24754,100 @@
                 "summary": "Get an aggregated CSAF VEX for all of the artifact's vulnerabilities",
                 "tags": [
                     "Artifacts"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/refs/{assetVersionSlug}/artifacts/{artifactName}/labels/attach/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.AttachLabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Attach label to artifact",
+                "tags": [
+                    "Label"
                 ]
             }
         },
@@ -29247,6 +30958,175 @@
                 ]
             }
         },
+        "/organizations/{organization}/projects/{projectSlug}/devguard-secrets": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/dtos.SecretDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List project secrets",
+                "tags": [
+                    "Secrets"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.SecretCreateRequest",
+                                "summary": "body",
+                                "description": "Request body"
+                            }
+                        }
+                    },
+                    "description": "Request body",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/dtos.SecretDTO"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create project secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/devguard-secrets/{id}": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Secret ID",
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete project secret",
+                "tags": [
+                    "Secrets"
+                ]
+            }
+        },
         "/organizations/{organization}/projects/{projectSlug}/external/{providerID}": {
             "get": {
                 "description": "Returns the full tree of projects, sub-projects, assets, asset versions and artifacts that were dynamically created by an external inventory provider (e.g. k8s-devguard-image-inventory) for the given providerID.",
@@ -29633,6 +31513,361 @@
                 "summary": "Update webhook integration (project)",
                 "tags": [
                     "Webhooks"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/labels/": {
+            "get": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "List labels on project level",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Create label",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/labels/attach/": {
+            "post": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset version slug",
+                        "in": "path",
+                        "name": "assetVersionSlug",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Artifact name",
+                        "in": "path",
+                        "name": "artifactName",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.AttachLabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Attach label to artifact",
+                "tags": [
+                    "Label"
+                ]
+            }
+        },
+        "/organizations/{organization}/projects/{projectSlug}/labels/{labelID}/": {
+            "delete": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Delete label",
+                "tags": [
+                    "Label"
+                ]
+            },
+            "put": {
+                "parameters": [
+                    {
+                        "description": "Organization slug",
+                        "in": "path",
+                        "name": "organization",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Project slug (project and asset level)",
+                        "in": "path",
+                        "name": "projectSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Asset slug (asset level)",
+                        "in": "path",
+                        "name": "assetSlug",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Label ID",
+                        "in": "path",
+                        "name": "labelID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dtos.LabelRequest",
+                                "summary": "body",
+                                "description": "Label data"
+                            }
+                        }
+                    },
+                    "description": "Label data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/github_com_l3montree-dev_devguard_database_models.Label"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "PATAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "summary": "Update label",
+                "tags": [
+                    "Label"
                 ]
             }
         },

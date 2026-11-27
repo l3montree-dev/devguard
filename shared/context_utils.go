@@ -397,8 +397,16 @@ func HasOrganization(c Context) bool {
 	_, ok := c.Get(ctxKeyOrg).(models.Org)
 	return ok
 }
+func HasAsset(c Context) bool {
+	_, ok := c.Get(ctxKeyAsset).(models.Asset)
+	return ok
+}
 func HasProject(c Context) bool {
 	_, ok := c.Get(ctxKeyProject).(models.Project)
+	return ok
+}
+func HasArtifact(c Context) bool {
+	_, ok := c.Get(ctxKeyArtifact).(models.Artifact)
 	return ok
 }
 func GetRBAC(ctx Context) AccessControl {
