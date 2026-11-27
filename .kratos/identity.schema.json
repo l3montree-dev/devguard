@@ -44,8 +44,8 @@
                 },
                 "confirmedTerms": {
                     "type": "boolean",
-                    "title": "I agree to the terms of use ",
-                    "description": "You must agree to the terms of use to use this service.",
+                    "title": "I agree to the terms of use and privacy policy",
+                    "description": "You must agree to the terms of use and privacy policy to use this service.",
                     "default": false,
                     "const": true
                 }
