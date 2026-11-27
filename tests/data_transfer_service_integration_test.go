@@ -176,12 +176,13 @@ func (f *TestFixture) CreateTestData() (models.Org, error) {
 	return org, nil
 }
 
+// calculate the content hash for all tables synced by the export/import
 func (f *TestFixture) calculateDatabaseContentHash(ctx context.Context) (string, error) {
 	tx, err := f.Pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return "", err
 	}
-	defer tx.Commit(ctx)
+	defer tx.Commit(ctx) // nolint
 
 	hash := ""
 	// map iteration and row order are not deterministic, so sort both to get a stable hash
