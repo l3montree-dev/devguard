@@ -1,6 +1,4 @@
--- First-party vulnerability IDs must distinguish the same fingerprint in
--- different asset versions. Keep the Go HashToUUID algorithm (first 128 bits
--- of SHA-256) so future scans calculate the same IDs as this backfill.
+-- recalculates FirstPartyVuln.CalculateHash: first 128 bits of sha256((fingerprint or rule_id/uri/scanner_ids) || '/' || asset_version_id)
 CREATE TEMPORARY TABLE first_party_vulnerability_id_map ON COMMIT DROP AS
 SELECT
     id AS old_id,
@@ -13,9 +11,7 @@ SELECT
                             WHEN COALESCE(fingerprint, '') <> '' THEN fingerprint
                             ELSE COALESCE(rule_id, '') || '/' ||
                                 COALESCE(uri, '') || '/' ||
-                                COALESCE(scanner_ids, '') || '/' ||
-                                asset_id::text || '/' ||
-                                asset_version_name
+                                COALESCE(scanner_ids, '')
                         END
                     ) || '/' || asset_version_id::text,
                     'UTF8'
@@ -28,6 +24,7 @@ SELECT
     )::uuid AS new_id
 FROM public.first_party_vulnerabilities;
 
+-- the foreign key has no ON UPDATE CASCADE, so it has to be dropped while the ids are rewritten
 ALTER TABLE public.vuln_events
     DROP CONSTRAINT vuln_events_first_party_vuln_id_fkey;
 

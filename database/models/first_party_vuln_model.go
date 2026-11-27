@@ -14,7 +14,6 @@ import (
 type FirstPartyVuln struct {
 	Vulnerability
 
-	// Included in the fallback hash when a scanner does not provide a fingerprint.
 	AssetVersionName string `json:"assetVersionName" gorm:"type:text;not null;"`
 
 	Events []VulnEvent `gorm:"foreignKey:FirstPartyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
@@ -68,14 +67,17 @@ func (firstPartyVuln FirstPartyVuln) TableName() string {
 }
 
 func (firstPartyVuln *FirstPartyVuln) CalculateHash() uuid.UUID {
-	stringToHash := firstPartyVuln.Fingerprint
-	if stringToHash == "" {
-		stringToHash = firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
+	// first hash the body/content of the first party vuln
+	var stringToHash string
+	if firstPartyVuln.Fingerprint != "" {
+		stringToHash = firstPartyVuln.Fingerprint
+	} else {
+		stringToHash = firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs
 	}
+	// then scope the content to the assetVersion it lives in
 	stringToHash += "/" + firstPartyVuln.AssetVersionID.String()
-	id := utils.HashToUUID(stringToHash)
-	firstPartyVuln.ID = id
-	return id
+	firstPartyVuln.ID = utils.HashToUUID(stringToHash)
+	return firstPartyVuln.ID
 }
 
 func (firstPartyVuln FirstPartyVuln) CalculateAssetVersionIndependentHash() string {
