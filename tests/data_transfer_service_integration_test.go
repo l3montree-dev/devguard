@@ -68,7 +68,7 @@ const dataTransferTestCVEID = "CVE-2026-0001"
 
 // creates at least one row in every table of services.TablesToSync, all reachable from the returned org
 func (f *TestFixture) CreateTestData() (models.Org, error) {
-	org, _, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
+	org, project, asset, assetVersion := f.CreateOrgProjectAssetAndVersion()
 
 	// fills artifacts, sboms, sbom_merkle_nodes and sbom_merkle_edges
 	if err := SeedDirectDependencies(f.DB, assetVersion, "test-artifact", "pkg:npm/test-component@1.0.0"); err != nil {
@@ -122,6 +122,19 @@ func (f *TestFixture) CreateTestData() (models.Org, error) {
 	}
 	vexRule.EnsureID()
 	if err := f.DB.Create(&vexRule).Error; err != nil {
+		return org, err
+	}
+
+	// the projects, assets and artifacts fields also fill the projects_assets_artifacts_labels pivot table
+	label := models.Label{
+		OrganizationID:  org.ID,
+		Label:           "test-label",
+		BackgroundColor: "#ffffff",
+		Projects:        []models.Project{project},
+		Assets:          []models.Asset{asset},
+		Artifacts:       []models.Artifact{artifact},
+	}
+	if err := f.DB.Create(&label).Error; err != nil {
 		return org, err
 	}
 
@@ -237,9 +250,11 @@ var dataTransferExportedTables = []string{
 	"external_users",
 	"first_party_vulnerabilities",
 	"frameworks_controls",
+	"labels",
 	"license_risks",
 	"organizations",
 	"projects",
+	"projects_assets_artifacts_labels",
 	"sbom_merkle_edges",
 	"sbom_merkle_nodes",
 	"sboms",
@@ -290,6 +305,8 @@ var dataTransferNotExportedTables = []string{
 	"vuln_state_intervals",
 	"weaknesses",
 	"webhook_integrations",
+	"secrets",
+	"redmine_integrations",
 }
 
 // called from TestRunMigrations to reuse its migrated database instead of starting another container

@@ -102,6 +102,10 @@ var TablesToSync = map[string]tableProperties{
 	"vex_rules":           {importOrder: 3, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
 	"asset_versions":      {importOrder: 3, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
 
+	// labels
+	"labels":                           {importOrder: 3, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{{column: "id", ids: "labelIDs", arrayType: "uuid[]"}}},
+	"projects_assets_artifacts_labels": {importOrder: 5, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{{column: "label_id", ids: "labelIDs", arrayType: "uuid[]"}}}, // labels are only attachable inside their own level, so the exported labels imply the attachments in scope
+
 	// asset version level
 	"license_risks":               {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
 	"first_party_vulnerabilities": {importOrder: 4, allowedInScopes: []dtos.DataTransferEntityType{orgScope, projectScope, assetScope}, filters: []scopeFilter{assetFilter}},
@@ -179,6 +183,9 @@ const resolveSecurityAdvisoryIDsSQL = `SELECT id FROM advisories WHERE asset_id 
 
 // same filter as the compliance_postures table export
 const resolveCompliancePostureIDsSQL = `SELECT id FROM compliance_postures WHERE org_id = ANY($1::uuid[])`
+
+// labels defined on the scoped entities, labels of the levels above are not part of project or asset exports
+const resolveLabelIDsSQL = `SELECT id FROM labels WHERE organization_id = ANY($1::uuid[]) OR project_id = ANY($2::uuid[]) OR asset_id = ANY($3::uuid[])`
 
 // the asset id is part of the signature hash, so signatures never span multiple assets
 const resolveAssetSignaturesSQL = `SELECT DISTINCT asset_signature::text FROM dependency_vulns WHERE asset_id = ANY($1::uuid[])`
@@ -486,6 +493,10 @@ func resolveScope(ctx context.Context, tx pgx.Tx, options dtos.DataTransferExpor
 		return scope, fmt.Errorf("could not resolve artifact ids: %w", err)
 	}
 
+	if scope["labelIDs"], err = collectIDs(ctx, tx, resolveLabelIDsSQL, scope["orgIDs"], scope["projectIDs"], scope["assetIDs"]); err != nil {
+		return scope, fmt.Errorf("could not resolve label ids: %w", err)
+	}
+
 	if scope["externalUserIDs"], err = collectIDs(ctx, tx, resolveExternalUserIDsSQL, scope["orgIDs"]); err != nil {
 		return scope, fmt.Errorf("could not resolve external user ids: %w", err)
 	}
@@ -751,6 +762,15 @@ func attachToImportTarget(ctx context.Context, tx pgx.Tx, tableName string, impo
 		// assets get attached to a project
 		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{project_id}', to_jsonb($1::uuid))`, options.TargetProjectID); err != nil {
 			return fmt.Errorf("could not attach imported asset to project: %w", err)
+		}
+	case importMetadata.EntityType == dtos.DataTransferEntityProject && tableName == "labels":
+		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(data, '{organization_id}', to_jsonb($1::uuid))`, options.TargetOrgID); err != nil {
+			return fmt.Errorf("could not attach imported labels to organization: %w", err)
+		}
+	case importMetadata.EntityType == dtos.DataTransferEntityAsset && tableName == "labels":
+		// an asset archive only contains asset labels, which also reference the project of the asset
+		if _, err := tx.Exec(ctx, `UPDATE import_staging SET data = jsonb_set(jsonb_set(data, '{organization_id}', to_jsonb($1::uuid)), '{project_id}', to_jsonb($2::uuid))`, options.TargetOrgID, options.TargetProjectID); err != nil {
+			return fmt.Errorf("could not attach imported labels to project: %w", err)
 		}
 	}
 	return nil
