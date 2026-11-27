@@ -126,7 +126,7 @@ func NewGithubIntegration(
 		FireAndForgetSynchronizer:       synchronizer,
 
 		githubClientFactory: func(repoID string) (shared.GithubClientFacade, error) {
-			return NewGithubClient(installationIDFromRepositoryID(repoID))
+			return NewGithubClient(InstallationIDFromRepositoryID(repoID))
 		},
 	}
 }
@@ -595,12 +595,12 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	// check if the installation id exists in the database
 	appInstallation, err := githubIntegration.githubAppInstallationRepository.Read(reqCtx, nil, installationIDInt)
 	if err != nil {
-		return echo.NewHTTPError(400, "could not read github app installation").WithInternal(err)
+		return echo.NewHTTPError(400, "could not finish github app installation").WithInternal(err)
 	}
 
 	// check if app installation is already associated with an organization
 	if appInstallation.OrgID != nil && *appInstallation.OrgID != organization.GetID() {
-		return echo.NewHTTPError(400, "github app installation already associated with an organization")
+		return echo.NewHTTPError(400, "could not finish github app installation")
 	} else if appInstallation.OrgID != nil && *appInstallation.OrgID == organization.GetID() {
 		slog.Info("github app installation already associated with the organization")
 		return nil
@@ -618,7 +618,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx shared.Contex
 	return nil
 }
 
-func installationIDFromRepositoryID(repositoryID string) int {
+func InstallationIDFromRepositoryID(repositoryID string) int {
 	split := strings.Split(repositoryID, ":")
 	if len(split) != 3 {
 		return 0

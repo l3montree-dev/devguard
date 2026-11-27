@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/dtos"
 	"github.com/l3montree-dev/devguard/events"
 	"github.com/l3montree-dev/devguard/integrations/commonint"
+	"github.com/l3montree-dev/devguard/integrations/githubint"
 	"github.com/l3montree-dev/devguard/services"
 	"github.com/l3montree-dev/devguard/shared"
 	"github.com/l3montree-dev/devguard/transformer"
@@ -21,28 +22,30 @@ import (
 )
 
 type AssetController struct {
-	assetRepository               shared.AssetRepository
-	assetVersionRepository        shared.AssetVersionRepository
-	artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository
-	assetService                  shared.AssetService
-	dependencyVulnService         shared.DependencyVulnService
-	statisticsService             shared.StatisticsService
-	thirdPartyIntegration         shared.IntegrationAggregate
-	daemonRunner                  shared.DaemonRunner
-	broker                        events.Broker
+	assetRepository                 shared.AssetRepository
+	assetVersionRepository          shared.AssetVersionRepository
+	artifactRiskHistoryRepository   shared.ArtifactRiskHistoryRepository
+	assetService                    shared.AssetService
+	dependencyVulnService           shared.DependencyVulnService
+	statisticsService               shared.StatisticsService
+	thirdPartyIntegration           shared.IntegrationAggregate
+	daemonRunner                    shared.DaemonRunner
+	broker                          events.Broker
+	githubAppInstallationRepository shared.GithubAppInstallationRepository
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner, githubAppInstallationRepository shared.GithubAppInstallationRepository) *AssetController {
 	return &AssetController{
-		assetRepository:               repository,
-		assetVersionRepository:        assetVersionRepository,
-		artifactRiskHistoryRepository: artifactRiskHistoryRepository,
-		assetService:                  assetService,
-		dependencyVulnService:         dependencyVulnService,
-		statisticsService:             statisticsService,
-		thirdPartyIntegration:         thirdPartyIntegration,
-		broker:                        broker,
-		daemonRunner:                  daemonRunner,
+		githubAppInstallationRepository: githubAppInstallationRepository,
+		assetRepository:                 repository,
+		assetVersionRepository:          assetVersionRepository,
+		artifactRiskHistoryRepository:   artifactRiskHistoryRepository,
+		assetService:                    assetService,
+		dependencyVulnService:           dependencyVulnService,
+		statisticsService:               statisticsService,
+		thirdPartyIntegration:           thirdPartyIntegration,
+		broker:                          broker,
+		daemonRunner:                    daemonRunner,
 	}
 }
 
@@ -355,6 +358,13 @@ func (a *AssetController) Update(ctx shared.Context) error {
 
 	if err := dtos.V.Struct(patchRequest); err != nil {
 		return echo.NewHTTPError(400, fmt.Sprintf("could not validate request: %s", err.Error()))
+	}
+
+	if patchRequest.RepositoryID != nil && strings.HasPrefix(*patchRequest.RepositoryID, "github:") {
+		installation, err := a.githubAppInstallationRepository.Read(reqCtx, nil, githubint.InstallationIDFromRepositoryID(*patchRequest.RepositoryID))
+		if err != nil || installation.OrgID == nil || *installation.OrgID != shared.GetOrg(ctx).GetID() {
+			return echo.NewHTTPError(403, "github app installation does not belong to this organization")
+		}
 	}
 
 	if patchRequest.AssetVersionRetentionPolicy != nil && *patchRequest.AssetVersionRetentionPolicy != "" {

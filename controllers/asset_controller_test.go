@@ -460,3 +460,39 @@ func TestAssetControllerGetBadges(t *testing.T) {
 		assert.Equal(t, "<svg>artifact</svg>", rec.Body.String())
 	})
 }
+
+func TestAssetControllerUpdateRepositoryIDInstallationOwnership(t *testing.T) {
+	e := echo.New()
+	orgID := uuid.New()
+	foreignOrgID := uuid.New()
+
+	cases := map[string]struct {
+		installation models.GithubAppInstallation
+		readErr      error
+	}{
+		"rejects installation bound to another organization": {installation: models.GithubAppInstallation{InstallationID: 222, OrgID: &foreignOrgID}},
+		"rejects installation not bound to any organization": {installation: models.GithubAppInstallation{InstallationID: 222}},
+		"rejects unknown installation":                       {readErr: errors.New("record not found")},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPatch, "/", bytes.NewBufferString(`{"repositoryId":"github:222:victim/repo"}`))
+			rec := httptest.NewRecorder()
+			ctx := e.NewContext(req, rec)
+
+			shared.SetOrg(ctx, models.Org{Model: models.Model{ID: orgID}})
+			shared.SetAsset(ctx, models.Asset{Model: models.Model{ID: uuid.New()}, Name: "asset", Slug: "asset"})
+
+			installationRepository := mocks.NewGithubAppInstallationRepository(t)
+			installationRepository.On("Read", mock.Anything, mock.Anything, 222).Return(tc.installation, tc.readErr).Once()
+
+			controller := &AssetController{githubAppInstallationRepository: installationRepository}
+			err := controller.Update(ctx)
+
+			httpErr, ok := err.(*echo.HTTPError)
+			assert.True(t, ok)
+			assert.Equal(t, http.StatusForbidden, httpErr.Code)
+		})
+	}
+}
