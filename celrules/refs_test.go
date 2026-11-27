@@ -17,6 +17,7 @@ package celrules
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/database/models"
@@ -38,34 +39,55 @@ func TestRefs(t *testing.T) {
 		return result
 	}
 
-	main := models.AssetVersion{ID: uuid.New(), Name: "main", Type: models.AssetVersionBranch, DefaultBranch: true}
-	v1_9 := models.AssetVersion{ID: uuid.New(), Name: "v1.9.0", Type: models.AssetVersionTag}
-	v1_12 := models.AssetVersion{ID: uuid.New(), Name: "1.12.1", Type: models.AssetVersionTag}
-	rc := models.AssetVersion{ID: uuid.New(), Name: "v2.0.0-rc1", Type: models.AssetVersionTag}
-	cryptic := models.AssetVersion{ID: uuid.New(), Name: "release-final", Type: models.AssetVersionTag}
-	semverBranch := models.AssetVersion{ID: uuid.New(), Name: "3.0.0", Type: models.AssetVersionBranch}
-	refs := NewRefs([]models.AssetVersion{main, v1_9, v1_12, rc, cryptic, semverBranch})
+	now := time.Now()
+	main := models.AssetVersion{ID: uuid.New(), Name: "main", Type: models.AssetVersionBranch, DefaultBranch: true, CreatedAt: now}
+	v1_9_0 := models.AssetVersion{ID: uuid.New(), Name: "v1.9.0", Type: models.AssetVersionTag, CreatedAt: now.Add(-4 * time.Hour)}
+	v1_9_3 := models.AssetVersion{ID: uuid.New(), Name: "v1.9.3", Type: models.AssetVersionTag, CreatedAt: now.Add(-1 * time.Hour)}
+	v1_12 := models.AssetVersion{ID: uuid.New(), Name: "1.12.1", Type: models.AssetVersionTag, CreatedAt: now.Add(-2 * time.Hour)}
+	v0_9 := models.AssetVersion{ID: uuid.New(), Name: "0.9.1", Type: models.AssetVersionTag, CreatedAt: now.Add(-5 * time.Hour)}
+	rc := models.AssetVersion{ID: uuid.New(), Name: "v2.0.0-rc1", Type: models.AssetVersionTag, CreatedAt: now.Add(-3 * time.Hour)}
+	cryptic := models.AssetVersion{ID: uuid.New(), Name: "release-final", Type: models.AssetVersionTag, CreatedAt: now.Add(-6 * time.Hour)}
+	semverBranch := models.AssetVersion{ID: uuid.New(), Name: "3.0.0", Type: models.AssetVersionBranch, CreatedAt: now}
+	all := []models.AssetVersion{main, v1_9_0, v1_9_3, v1_12, v0_9, rc, cryptic, semverBranch}
+	refs := NewRefs(all)
 
-	t.Run("the highest semver tag is the latest", func(t *testing.T) {
-		assert.True(t, eval(t, `ref.isLatest`, refs, v1_12.ID))
-		assert.False(t, eval(t, `ref.isLatest`, refs, v1_9.ID))
+	latestBy := func(t *testing.T, field string) []string {
+		var names []string
+		for _, av := range all {
+			if eval(t, "ref."+field, refs, av.ID) {
+				names = append(names, av.Name)
+			}
+		}
+		return names
+	}
+
+	t.Run("isLatestBySemverIncludingPrereleases includes prereleases", func(t *testing.T) {
+		assert.Equal(t, []string{"v2.0.0-rc1"}, latestBy(t, "isLatestBySemverIncludingPrereleases"))
 	})
 
-	t.Run("prereleases, branches and non semver tags are never the latest", func(t *testing.T) {
-		assert.False(t, eval(t, `ref.isLatest`, refs, rc.ID))
-		assert.False(t, eval(t, `ref.isLatest`, refs, semverBranch.ID))
-		assert.False(t, eval(t, `ref.isLatest`, refs, cryptic.ID))
+	t.Run("isLatestBySemverStable ignores prereleases", func(t *testing.T) {
+		assert.Equal(t, []string{"1.12.1"}, latestBy(t, "isLatestBySemverStable"))
 	})
 
-	t.Run("every ref knows the latest ref", func(t *testing.T) {
-		assert.True(t, eval(t, `ref.latestRef.name == "1.12.1"`, refs, main.ID))
-		assert.True(t, eval(t, `otherRefs.exists(o, o.isLatest && o.name == ref.latestRef.name)`, refs, main.ID))
+	t.Run("isLatestBySemverInMajor marks one stable tag per major", func(t *testing.T) {
+		assert.Equal(t, []string{"1.12.1", "0.9.1"}, latestBy(t, "isLatestBySemverInMajor"))
 	})
 
-	t.Run("latestRef is absent without any semver tag", func(t *testing.T) {
-		refs := NewRefs([]models.AssetVersion{main, cryptic})
-		assert.False(t, eval(t, `has(ref.latestRef)`, refs, main.ID))
-		assert.False(t, eval(t, `ref.isLatest`, refs, cryptic.ID))
+	t.Run("isLatestBySemverInMinor marks one stable tag per minor", func(t *testing.T) {
+		assert.Equal(t, []string{"v1.9.3", "1.12.1", "0.9.1"}, latestBy(t, "isLatestBySemverInMinor"))
+	})
+
+	t.Run("isLatestByCreatedAt only considers tags", func(t *testing.T) {
+		assert.Equal(t, []string{"v1.9.3"}, latestBy(t, "isLatestByCreatedAt"))
+	})
+
+	t.Run("other refs expose the latest fields", func(t *testing.T) {
+		assert.True(t, eval(t, `otherRefs.exists(o, o.isLatestBySemverStable && o.name == "1.12.1")`, refs, main.ID))
+	})
+
+	t.Run("all fields are false without any tag", func(t *testing.T) {
+		refs := NewRefs([]models.AssetVersion{main})
+		assert.False(t, eval(t, `ref.isLatestBySemverIncludingPrereleases || ref.isLatestBySemverStable || ref.isLatestBySemverInMajor || ref.isLatestBySemverInMinor || ref.isLatestByCreatedAt`, refs, main.ID))
 	})
 
 	t.Run("an unknown asset version is an error", func(t *testing.T) {

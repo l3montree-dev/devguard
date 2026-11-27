@@ -17,6 +17,7 @@ package celrules
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/google/cel-go/cel"
@@ -31,36 +32,55 @@ type Refs struct {
 
 func NewRefs(assetVersions []models.AssetVersion) Refs {
 	refs := Refs{celMaps: make([]any, len(assetVersions)), index: make(map[uuid.UUID]int, len(assetVersions))}
-	latest := -1
-	var latestVersion *semver.Version
-	for i, assetVersion := range assetVersions {
-		refs.index[assetVersion.ID] = i
-		if assetVersion.Type != models.AssetVersionTag {
-			continue
-		}
-		version, err := semver.NewVersion(assetVersion.Name)
-		if err != nil || version.Prerelease() != "" {
-			continue
-		}
-		if latestVersion == nil || version.GreaterThan(latestVersion) {
-			latest, latestVersion = i, version
+	versions := make([]*semver.Version, len(assetVersions))
+	latest := map[string]int{}
+	keep := func(key string, i int, greater func(j int) bool) {
+		if j, ok := latest[key]; !ok || greater(j) {
+			latest[key] = i
 		}
 	}
 
-	var latestRef map[string]any
-	if latest >= 0 {
-		latestRef = assetVersions[latest].ToCELMap()
-		latestRef["isLatest"] = true
-	}
 	for i, assetVersion := range assetVersions {
+		refs.index[assetVersion.ID] = i
 		celMap := assetVersion.ToCELMap()
-		celMap["isLatest"] = i == latest
-		if latestRef != nil {
-			celMap["latestRef"] = latestRef
+		for _, field := range latestFields {
+			celMap[field] = false
 		}
 		refs.celMaps[i] = celMap
+
+		if assetVersion.Type != models.AssetVersionTag {
+			continue
+		}
+		keep("isLatestByCreatedAt", i, func(j int) bool { return assetVersion.CreatedAt.After(assetVersions[j].CreatedAt) })
+
+		version, err := semver.NewVersion(assetVersion.Name)
+		if err != nil {
+			continue
+		}
+		versions[i] = version
+		greater := func(j int) bool { return version.GreaterThan(versions[j]) }
+		keep("isLatestBySemverIncludingPrereleases", i, greater)
+		if version.Prerelease() != "" {
+			continue
+		}
+		keep("isLatestBySemverStable", i, greater)
+		keep(fmt.Sprintf("isLatestBySemverInMajor/%d", version.Major()), i, greater)
+		keep(fmt.Sprintf("isLatestBySemverInMinor/%d.%d", version.Major(), version.Minor()), i, greater)
+	}
+
+	for key, i := range latest {
+		field, _, _ := strings.Cut(key, "/")
+		refs.celMaps[i].(map[string]any)[field] = true
 	}
 	return refs
+}
+
+var latestFields = []string{
+	"isLatestBySemverIncludingPrereleases",
+	"isLatestBySemverStable",
+	"isLatestBySemverInMajor",
+	"isLatestBySemverInMinor",
+	"isLatestByCreatedAt",
 }
 
 func (r Refs) activationAt(i int) map[string]any {
