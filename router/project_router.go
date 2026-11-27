@@ -95,6 +95,9 @@ func NewProjectRouter(
 
 	projectRouter.DELETE("/compliance-postures/components/:statementID/", complianceComponentController.ProjectDeleteStatement, middlewares.NeededScope([]string{"manage"}), middlewares.DisallowPublicRequests)
 
+	// only project admins are allowed to export a project
+	projectRouter.GET("/export/", projectController.ExportProject, middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionDelete))
+
 	projectUpdateAccessControlRequired := projectRouter.Group("", middlewares.NeededScope([]string{"manage"}), middlewares.ProjectAccessControl(shared.ObjectProject, shared.ActionUpdate))
 
 	projectUpdateAccessControlRequired.GET("/devguard-secrets/", secretController.ProjectList)

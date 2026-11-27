@@ -566,6 +566,64 @@ func (c *casbinRBAC) AllowRoleInAsset(ctx context.Context, asset string, role sh
 	return err
 }
 
+// bulk bootstrap tailored for the RBAC setup after importing a devguard state
+func (c *casbinRBAC) BootstrapProjectsAndAssets(ctx context.Context, projects []models.Project, assets []models.Asset) error {
+	domain := "domain::" + c.domain
+	var groupingPolicies, policies [][]string
+	allow := func(role string, object string, actions ...shared.Action) {
+		for _, action := range actions {
+			policies = append(policies, []string{role, domain, object, "act::" + string(action)})
+		}
+	}
+
+	for _, project := range projects {
+		projectID := project.ID.String()
+		admin := c.getProjectRoleName(shared.RoleAdmin, projectID)
+		member := c.getProjectRoleName(shared.RoleMember, projectID)
+		groupingPolicies = append(groupingPolicies,
+			[]string{"role::" + string(shared.RoleAdmin), admin, domain},
+			[]string{admin, member, domain},
+		)
+		if project.ParentID != nil {
+			groupingPolicies = append(groupingPolicies, []string{c.getProjectRoleName(shared.RoleAdmin, project.ParentID.String()), admin, domain})
+		}
+		object := "project::" + projectID + "|obj::"
+		allow(admin, object+string(shared.ObjectUser), shared.ActionCreate, shared.ActionDelete, shared.ActionUpdate)
+		allow(admin, object+string(shared.ObjectAsset), shared.ActionCreate, shared.ActionDelete, shared.ActionUpdate)
+		allow(admin, object+string(shared.ObjectProject), shared.ActionDelete, shared.ActionUpdate)
+		allow(member, object+string(shared.ObjectProject), shared.ActionRead)
+		allow(member, object+string(shared.ObjectAsset), shared.ActionRead)
+	}
+
+	for _, asset := range assets {
+		assetID := asset.ID.String()
+		admin := c.getAssetRoleName(shared.RoleAdmin, assetID)
+		member := c.getAssetRoleName(shared.RoleMember, assetID)
+		groupingPolicies = append(groupingPolicies,
+			[]string{c.getProjectRoleName(shared.RoleAdmin, asset.ProjectID.String()), admin, domain},
+			[]string{admin, member, domain},
+		)
+		object := "asset::" + assetID + "|obj::" + string(shared.ObjectAsset)
+		allow(member, object, shared.ActionRead)
+		allow(admin, object, shared.ActionRead, shared.ActionUpdate, shared.ActionDelete)
+	}
+
+	concurrencyMutex.Lock()
+	defer concurrencyMutex.Unlock()
+	if len(groupingPolicies) > 0 {
+		if _, err := c.enforcer.AddGroupingPoliciesExCtx(ctx, groupingPolicies); err != nil {
+			return err
+		}
+	}
+	if len(policies) > 0 {
+		if _, err := c.enforcer.AddPoliciesExCtx(ctx, policies); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *casbinRBAC) IsAllowed(ctx context.Context, session shared.AuthSession, org *models.Org, object shared.Object, action shared.Action, actorScope shared.ActorScope) (bool, error) {
 	if org.IsPublic && action == shared.ActionRead {
 		return true, nil

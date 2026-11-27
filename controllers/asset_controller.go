@@ -30,9 +30,10 @@ type AssetController struct {
 	thirdPartyIntegration         shared.IntegrationAggregate
 	daemonRunner                  shared.DaemonRunner
 	broker                        events.Broker
+	dataTransferService           shared.DataTransferService
 }
 
-func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner) *AssetController {
+func NewAssetController(repository shared.AssetRepository, assetVersionRepository shared.AssetVersionRepository, artifactRiskHistoryRepository shared.ArtifactRiskHistoryRepository, assetService shared.AssetService, dependencyVulnService shared.DependencyVulnService, statisticsService shared.StatisticsService, thirdPartyIntegration shared.IntegrationAggregate, broker events.Broker, daemonRunner shared.DaemonRunner, dataTransferService shared.DataTransferService) *AssetController {
 	return &AssetController{
 		assetRepository:               repository,
 		assetVersionRepository:        assetVersionRepository,
@@ -43,6 +44,7 @@ func NewAssetController(repository shared.AssetRepository, assetVersionRepositor
 		thirdPartyIntegration:         thirdPartyIntegration,
 		broker:                        broker,
 		daemonRunner:                  daemonRunner,
+		dataTransferService:           dataTransferService,
 	}
 }
 
@@ -796,4 +798,33 @@ func (a *AssetController) ChangeRole(c shared.Context) error {
 	}
 
 	return c.NoContent(200)
+}
+
+// @Summary Export asset
+// @Description Exports the asset as an archive which can be imported into another DevGuard instance.
+// @Tags Assets
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Param projectSlug path string true "Project slug"
+// @Param assetSlug path string true "Asset slug"
+// @Produce application/x-tar
+// @Success 200 {file} file "Export archive"
+// @Router /organizations/{organization}/projects/{projectSlug}/assets/{assetSlug}/export [get]
+func (a *AssetController) ExportAsset(ctx shared.Context) error {
+	exportOptions := dtos.DataTransferExportOptions{
+		EntityType: dtos.DataTransferEntityAsset,
+		EntityID:   shared.GetAsset(ctx).GetID(),
+	}
+
+	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")
+	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="devguard-export.tar"`)
+
+	err := a.dataTransferService.StartExport(ctx.Request().Context(), exportOptions, ctx.Response())
+	if err != nil {
+		ctx.Response().Header().Del(echo.HeaderContentDisposition)
+		return echo.NewHTTPError(500, "asset export failed").WithInternal(err)
+	}
+	return nil
 }

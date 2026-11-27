@@ -65,6 +65,8 @@ func NewAssetRouter(
 	assetRouter.GET("/members/", assetController.Members)
 	assetRouter.GET("/badges/:badge/", assetController.GetBadges)
 	assetRouter.GET("/logs/", logController.ListPagedForAsset, middlewares.NeededScope([]string{"scan"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionRead))
+	// only asset admins are allowed to export an asset
+	assetRouter.GET("/export/", assetController.ExportAsset, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionDelete))
 	assetRouter.GET("/secrets/", assetController.GetSecrets, middlewares.NeededScope([]string{"manage"}), middlewares.AssetAccessControl(shared.ObjectAsset, shared.ActionUpdate))
 	assetRouter.GET("/labels/", labelController.ListOnAssetLevel)
 

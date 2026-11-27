@@ -46,6 +46,7 @@ type OrgController struct {
 	adminService           shared.AdminService
 	projectRepository      shared.ProjectRepository
 	assetRepository        shared.AssetRepository
+	dataTransferService    shared.DataTransferService
 }
 
 func isInvitationExpired(invite models.Invitation) bool {
@@ -53,7 +54,7 @@ func isInvitationExpired(invite models.Invitation) bool {
 	return now.After(invite.CreatedAt.Add(expiryDuration))
 }
 
-func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository) *OrgController {
+func NewOrganizationController(repository shared.OrganizationRepository, orgService shared.OrgService, rbacProvider shared.RBACProvider, projectService shared.ProjectService, invitationRepository shared.InvitationRepository, adminService shared.AdminService, projectRepository shared.ProjectRepository, assetRepository shared.AssetRepository, dataTransferService shared.DataTransferService) *OrgController {
 	return &OrgController{
 		organizationRepository: repository,
 		orgService:             orgService,
@@ -63,6 +64,7 @@ func NewOrganizationController(repository shared.OrganizationRepository, orgServ
 		adminService:           adminService,
 		projectRepository:      projectRepository,
 		assetRepository:        assetRepository,
+		dataTransferService:    dataTransferService,
 	}
 }
 
@@ -795,4 +797,31 @@ func (controller *OrgController) ResolvePermalink(ctx shared.Context) error {
 
 		return ctx.JSON(200, dtos.PermalinkResponse{OrganizationSlug: organization.Slug})
 	}
+}
+
+// @Summary Export organization
+// @Description Exports the organization with all its projects and assets as an archive which can be imported into another DevGuard instance.
+// @Tags Organizations
+// @Security CookieAuth
+// @Security PATAuth
+// @Security BearerAuth
+// @Param organization path string true "Organization slug"
+// @Produce application/x-tar
+// @Success 200 {file} file "Export archive"
+// @Router /organizations/{organization}/export [get]
+func (controller *OrgController) ExportOrg(ctx shared.Context) error {
+	exportOptions := dtos.DataTransferExportOptions{
+		EntityType: dtos.DataTransferEntityOrg,
+		EntityID:   shared.GetOrg(ctx).GetID(),
+	}
+
+	ctx.Response().Header().Set(echo.HeaderContentType, "application/x-tar")
+	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="devguard-export.tar"`)
+
+	err := controller.dataTransferService.StartExport(ctx.Request().Context(), exportOptions, ctx.Response())
+	if err != nil {
+		ctx.Response().Header().Del(echo.HeaderContentDisposition)
+		return echo.NewHTTPError(500, "organization export failed").WithInternal(err)
+	}
+	return nil
 }

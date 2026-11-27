@@ -63,7 +63,6 @@ func (s *LicenseRiskService) FindLicenseRisksInComponents(ctx context.Context, t
 		}
 
 		if comp.License == nil {
-			slog.Warn("license is nil, avoided nil pointer dereference")
 			continue
 		}
 

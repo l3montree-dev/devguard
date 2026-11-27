@@ -416,6 +416,10 @@ var routeMinLevel = map[string]shared.Role{
 	"PUT /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/:labelID/":                                               shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/labels/attach/":                                                shared.RoleAdmin,
 	"POST /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/refs/:assetVersionSlug/artifacts/:artifactName/labels/attach/": shared.RoleAdmin,
+
+	"GET /api/v1/organizations/:organization/export/":                                         shared.RoleOwner,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/export/":                   shared.RoleAdmin,
+	"GET /api/v1/organizations/:organization/projects/:projectSlug/assets/:assetSlug/export/": shared.RoleAdmin,
 }
 
 // accessLevelFor is a strict lookup - every route from e.Routes() must be

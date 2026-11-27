@@ -267,6 +267,69 @@ func (_c *AccessControl_AllowRoleInProject_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// BootstrapProjectsAndAssets provides a mock function for the type AccessControl
+func (_mock *AccessControl) BootstrapProjectsAndAssets(ctx context.Context, projects []models.Project, assets []models.Asset) error {
+	ret := _mock.Called(ctx, projects, assets)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BootstrapProjectsAndAssets")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []models.Project, []models.Asset) error); ok {
+		r0 = returnFunc(ctx, projects, assets)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_BootstrapProjectsAndAssets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BootstrapProjectsAndAssets'
+type AccessControl_BootstrapProjectsAndAssets_Call struct {
+	*mock.Call
+}
+
+// BootstrapProjectsAndAssets is a helper method to define mock.On call
+//   - ctx context.Context
+//   - projects []models.Project
+//   - assets []models.Asset
+func (_e *AccessControl_Expecter) BootstrapProjectsAndAssets(ctx any, projects any, assets any) *AccessControl_BootstrapProjectsAndAssets_Call {
+	return &AccessControl_BootstrapProjectsAndAssets_Call{Call: _e.mock.On("BootstrapProjectsAndAssets", ctx, projects, assets)}
+}
+
+func (_c *AccessControl_BootstrapProjectsAndAssets_Call) Run(run func(ctx context.Context, projects []models.Project, assets []models.Asset)) *AccessControl_BootstrapProjectsAndAssets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []models.Project
+		if args[1] != nil {
+			arg1 = args[1].([]models.Project)
+		}
+		var arg2 []models.Asset
+		if args[2] != nil {
+			arg2 = args[2].([]models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_BootstrapProjectsAndAssets_Call) Return(err error) *AccessControl_BootstrapProjectsAndAssets_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_BootstrapProjectsAndAssets_Call) RunAndReturn(run func(ctx context.Context, projects []models.Project, assets []models.Asset) error) *AccessControl_BootstrapProjectsAndAssets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAdminsOfOrganization provides a mock function for the type AccessControl
 func (_mock *AccessControl) GetAdminsOfOrganization() ([]string, error) {
 	ret := _mock.Called()

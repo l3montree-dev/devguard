@@ -18,6 +18,7 @@ package shared
 import (
 	"context"
 	"errors"
+	"io"
 	"iter"
 	"net/http"
 	"time"
@@ -795,6 +796,11 @@ type ImportOptions struct {
 	LocalArchive bool
 }
 
+type DataTransferService interface {
+	StartExport(ctx context.Context, options dtos.DataTransferExportOptions, out io.Writer) error
+	ImportFile(ctx context.Context, importFile io.Reader, options dtos.DataTransferImportOptions) error
+}
+
 type VulnDBService interface {
 	ImportRC(ctx context.Context, opts ImportOptions) error
 	ExportRC(ctx context.Context) error
@@ -865,6 +871,8 @@ type AccessControl interface {
 
 	AllowRoleInProject(ctx context.Context, project string, role Role, object Object, action []Action) error
 	AllowRoleInAsset(ctx context.Context, asset string, role Role, object Object, action []Action) error
+
+	BootstrapProjectsAndAssets(ctx context.Context, projects []models.Project, assets []models.Asset) error
 
 	GetAllProjectsForSession(ctx context.Context, session AuthSession) ([]string, error)
 	GetAllAssetsForSession(ctx context.Context, session AuthSession) ([]string, error)

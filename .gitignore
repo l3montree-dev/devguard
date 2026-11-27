@@ -41,3 +41,4 @@ app_side_encryption_key.key
 *.prof
 .*.sh
 admin-key.pem
+transfer-files/
