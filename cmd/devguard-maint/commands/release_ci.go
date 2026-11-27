@@ -79,18 +79,19 @@ func runReleaseCI(_ *cobra.Command, args []string) error {
 		cl.Fail("DEVGUARD_SCANNER entry not found in container-image-versions.ts — verify the file")
 	}
 
-	// the crane of the scanner image and the crane flake output have to come from the same release
-	craneOld := `"github:l3montree-dev/devguard#crane"`
-	craneNew := `"github:l3montree-dev/devguard/` + scannerTag + `#crane"`
+	// the flake outputs (crane, devguardScanner) have to come from the same release as the scanner image, which ships
+	// the same crane
+	flakeOld := `"github:l3montree-dev/devguard#`
+	flakeNew := `"github:l3montree-dev/devguard/` + scannerTag + `#`
 
-	changed, err = i.ReplaceInFile(versionsFile, craneOld, craneNew)
+	changed, err = i.ReplaceInFile(versionsFile, flakeOld, flakeNew)
 	if err != nil {
 		return fmt.Errorf("update container-image-versions.ts: %w", err)
 	}
 	if changed {
-		cl.Change(fmt.Sprintf("Pinned CRANE_FLAKE to %s in container-image-versions.ts", scannerTag))
+		cl.Change(fmt.Sprintf("Pinned CRANE_FLAKE and DEVGUARD_SCANNER_FLAKE to %s in container-image-versions.ts", scannerTag))
 	} else {
-		cl.Fail("CRANE_FLAKE entry not found in container-image-versions.ts — verify the file")
+		cl.Fail("CRANE_FLAKE / DEVGUARD_SCANNER_FLAKE entries not found in container-image-versions.ts — verify the file")
 	}
 
 	// Regenerate all templates from the TypeScript source.
@@ -135,12 +136,12 @@ func runReleaseCI(_ *cobra.Command, args []string) error {
 	i.GitPushTags("devguard-ci-components")
 	cl.Change("Tagged devguard-ci-components with " + tag + " and pushed")
 
-	// Revert scanner and crane back to main in the source and regenerate.
+	// Revert scanner and flake outputs back to main in the source and regenerate.
 	_, err = i.ReplaceInFile(versionsFile, scannerNew, scannerOld)
 	if err != nil {
 		return fmt.Errorf("revert container-image-versions.ts: %w", err)
 	}
-	_, err = i.ReplaceInFile(versionsFile, craneNew, craneOld)
+	_, err = i.ReplaceInFile(versionsFile, flakeNew, flakeOld)
 	if err != nil {
 		return fmt.Errorf("revert container-image-versions.ts: %w", err)
 	}
