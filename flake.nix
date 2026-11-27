@@ -258,6 +258,9 @@
         # the image builds across an amd64 and an arm64 runner.
         packages = {
           default = hostBinaries.devguard;
+          # the same crane the scanner image ships - CI pipelines (devguard-ci-components) compute image digests and push
+          # image tarballs only with this binary, since crane builds with another Go version compress layers differently
+          crane = sbomImages.craneFromSource.package;
         }
         // hostBinaries
         // sbomOutputs
