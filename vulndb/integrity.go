@@ -152,7 +152,7 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 		),
 		cve_relationships_integrity AS (
 			SELECT 'cve_relationships' AS table_name, count(*) AS row_count,
-			       md5(string_agg(row_hash, '' ORDER BY source_cve, target_cve, relationship_type)) AS checksum
+			       md5(string_agg(row_hash, '' ORDER BY source_cve COLLATE "C", target_cve COLLATE "C", relationship_type COLLATE "C")) AS checksum
 			FROM (
 				SELECT source_cve, target_cve, relationship_type,
 				       md5(source_cve || '|' || target_cve || '|' || relationship_type) AS row_hash
@@ -175,7 +175,7 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 		),
 		exploits_integrity AS (
 			SELECT 'exploits' AS table_name, count(*) AS row_count,
-			       md5(string_agg(row_hash, '' ORDER BY id, cve_id, source_url, row_hash)) AS checksum
+			       md5(string_agg(row_hash, '' ORDER BY id COLLATE "C", cve_id COLLATE "C", source_url COLLATE "C", row_hash COLLATE "C")) AS checksum
 			FROM (
 				SELECT id, cve_id, source_url, md5(
 					coalesce(id, '\0') || '|' ||
@@ -186,7 +186,7 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 		),
 		malicious_packages_integrity AS (
 			SELECT 'malicious_packages' AS table_name, count(*) AS row_count,
-			       md5(string_agg(row_hash, '' ORDER BY id)) AS checksum
+			       md5(string_agg(row_hash, '' ORDER BY id COLLATE "C")) AS checksum
 			FROM (
 				SELECT id, md5(coalesce(id, '\0') || '|' || coalesce(modified::text, '\0')) AS row_hash
 				FROM malicious_packages WHERE id NOT LIKE 'MAL-FAKE-TEST-%'
@@ -194,12 +194,12 @@ func CalculateTotalIntegrityInformation(ctx context.Context, tx pgx.Tx) ([]Table
 		),
 		malicious_affected_components_integrity AS (
 			SELECT 'malicious_affected_components' AS table_name, count(*) AS row_count,
-			       md5(string_agg(id::text, '' ORDER BY id)) AS checksum
+			       md5(string_agg(id::text, '' ORDER BY id COLLATE "C")) AS checksum
 			FROM malicious_affected_components WHERE malicious_package_id NOT LIKE 'MAL-FAKE-TEST-%'
 		),
 		upstream_vex_rules_integrity AS (
 			SELECT 'upstream_vex_rules' AS table_name, count(*) AS row_count,
-			       md5(coalesce(string_agg(row_hash, '' ORDER BY id), '')) AS checksum
+			       md5(coalesce(string_agg(row_hash, '' ORDER BY id COLLATE "C"), '')) AS checksum
 			FROM (
 				SELECT id, md5(
 					id || '|' ||
