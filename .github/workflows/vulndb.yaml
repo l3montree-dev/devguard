@@ -81,5 +81,5 @@ jobs:
             vulndb.tar.zst
       - name: Push the archive signature to the GitHub Container Registry
         run: |
-          oras push ghcr.io/l3montree-dev/devguard/vulndb/v6:latest.sig \
+          oras push ghcr.io/l3montree-dev/devguard/vulndb/v5.1:latest.sig \
             vulndb.tar.zst.sig

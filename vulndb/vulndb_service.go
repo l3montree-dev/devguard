@@ -28,7 +28,7 @@ import (
 )
 
 const vulnDBArchiveName = "vulndb.tar.zst"
-const vulnDBURI = "ghcr.io/l3montree-dev/devguard/vulndb/v6"
+const vulnDBURI = "ghcr.io/l3montree-dev/devguard/vulndb/v5.1"
 
 var _ shared.VulnDBService = (*VulnDBService)(nil)
 
